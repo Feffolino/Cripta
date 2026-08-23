@@ -30,6 +30,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoLock(minutes: Int) = viewModelScope.launch { store.setAutoLockMinutes(minutes) }
     fun setDeletePolicy(p: DeleteOriginalPolicy) = viewModelScope.launch { store.setDeleteOriginalPolicy(p) }
+    fun createTag(name: String) = viewModelScope.launch { repo.createTag(name) }
     fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
