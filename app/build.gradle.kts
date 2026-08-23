@@ -14,8 +14,8 @@ android {
         applicationId = "com.cripta.app"
         minSdk = 31
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ((project.findProperty("buildNumber") as String?)?.toIntOrNull()) ?: 1
+        versionName = "0.1.0" + ((project.findProperty("buildLabel") as String?)?.let { "-$it" } ?: "")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -26,7 +26,7 @@ class EncryptedDataSource(
         uri = dataSpec.uri
         transferInitializing(dataSpec)
         channel.position(dataSpec.position)
-        bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET) {
+        bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
             dataSpec.length
         } else {
             plaintextLength - dataSpec.position
