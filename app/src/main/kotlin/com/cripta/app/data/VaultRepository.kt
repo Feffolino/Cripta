@@ -169,6 +169,19 @@ class VaultRepository @Inject constructor(
         db.tagDao().purgeUnusedTags()
     }
 
+    /** Best-effort deletion of the original picked files (SAF documents). */
+    suspend fun deleteOriginals(uris: List<Uri>) = withContext(Dispatchers.IO) {
+        uris.forEach { uri ->
+            runCatching {
+                android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri)
+            }.onFailure {
+                runCatching {
+                    androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
+                }
+            }
+        }
+    }
+
     private fun queryNameSize(uri: Uri): Pair<String, Long> {
         var name = "file"
         var size = 0L
