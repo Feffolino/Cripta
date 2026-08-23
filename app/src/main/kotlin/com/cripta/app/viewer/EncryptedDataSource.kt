@@ -12,20 +12,26 @@ import java.nio.channels.SeekableByteChannel
 /**
  * Media3 DataSource that streams plaintext from a Tink seekable decrypting channel.
  * Nothing is ever written to disk in the clear — ExoPlayer reads decrypted bytes on demand.
+ *
+ * A fresh channel is opened on every [open] (and closed on [close]) so ExoPlayer can
+ * re-open the same DataSource instance for seeks without hitting a closed channel.
  */
 @UnstableApi
 class EncryptedDataSource(
-    private val channel: SeekableByteChannel,
+    private val channelProvider: () -> SeekableByteChannel,
     private val plaintextLength: Long,
 ) : BaseDataSource(true) {
 
     private var uri: Uri? = null
+    private var channel: SeekableByteChannel? = null
     private var bytesRemaining: Long = 0
 
     override fun open(dataSpec: DataSpec): Long {
         uri = dataSpec.uri
         transferInitializing(dataSpec)
-        channel.position(dataSpec.position)
+        val ch = channelProvider()
+        ch.position(dataSpec.position)
+        channel = ch
         bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
             dataSpec.length
         } else {
@@ -38,11 +44,12 @@ class EncryptedDataSource(
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (length == 0) return 0
         if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
+        val ch = channel ?: return C.RESULT_END_OF_INPUT
         val toRead = minOf(length.toLong(), bytesRemaining).toInt()
         val bb = ByteBuffer.wrap(buffer, offset, toRead)
         var read = 0
         while (bb.hasRemaining()) {
-            val n = channel.read(bb)
+            val n = ch.read(bb)
             if (n <= 0) break
             read += n
         }
@@ -56,7 +63,8 @@ class EncryptedDataSource(
 
     override fun close() {
         uri = null
-        runCatching { channel.close() }
+        runCatching { channel?.close() }
+        channel = null
         transferEnded()
     }
 
@@ -66,6 +74,6 @@ class EncryptedDataSource(
         private val plaintextLength: Long,
     ) : DataSource.Factory {
         override fun createDataSource(): DataSource =
-            EncryptedDataSource(channelProvider(), plaintextLength)
+            EncryptedDataSource(channelProvider, plaintextLength)
     }
 }

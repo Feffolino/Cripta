@@ -52,6 +52,15 @@ class ViewerViewModel @Inject constructor(
         runCatching { repo.export(file, dest) }
     }
 
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message
+    fun clearMessage() { _message.value = null }
+
+    fun restoreToGallery(file: FileEntity) = viewModelScope.launch {
+        val ok = runCatching { repo.restoreToGallery(file) != null }.getOrDefault(false)
+        _message.value = if (ok) "Ripristinato in galleria" else "Ripristino non riuscito"
+    }
+
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
         repo.secureDelete(fileId)
         onDone()
