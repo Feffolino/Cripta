@@ -7,7 +7,10 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,8 +36,10 @@ import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
@@ -74,6 +80,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileWithTags
@@ -110,12 +117,20 @@ fun VaultScreen(
     val pendingOriginals by vm.pendingOriginals.collectAsState()
     val viewMode by vm.viewMode.collectAsState()
     val gridColumns by vm.gridColumns.collectAsState()
+    val allFolders by vm.allFolders.collectAsState()
+    val sortKey by vm.sortKey.collectAsState()
+    val sortAscending by vm.sortAscending.collectAsState()
 
     var selection by remember { mutableStateOf(setOf<String>()) }
     var showNewFolder by remember { mutableStateOf(false) }
     var tagTargetId by remember { mutableStateOf<String?>(null) }
     var renameTargetId by remember { mutableStateOf<String?>(null) }
+    var folderMenu by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToDelete by remember { mutableStateOf<FolderEntity?>(null) }
+    var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
+    var showSort by remember { mutableStateOf(false) }
+    var confirmMultiDelete by remember { mutableStateOf(false) }
+    var showMove by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selection.isNotEmpty() || filters.active || path.isNotEmpty()) {
         when {
@@ -148,6 +163,9 @@ fun VaultScreen(
                         IconButton(onClick = { vm.setFavorite(selection.toList(), !allFav); selection = emptySet() }) {
                             Icon(Icons.Filled.Star, if (allFav) "Rimuovi preferito" else "Aggiungi preferito")
                         }
+                        IconButton(onClick = { showMove = true }) {
+                            Icon(Icons.Filled.DriveFileMove, "Sposta")
+                        }
                         if (selection.size == 1) {
                             IconButton(onClick = { renameTargetId = selection.first() }) {
                                 Icon(Icons.Filled.DriveFileRenameOutline, "Rinomina")
@@ -156,10 +174,11 @@ fun VaultScreen(
                                 Icon(Icons.Filled.Label, "Etichette")
                             }
                         }
-                        IconButton(onClick = { vm.deleteFiles(selection.toList()); selection = emptySet() }) {
+                        IconButton(onClick = { confirmMultiDelete = true }) {
                             Icon(Icons.Filled.Delete, "Elimina")
                         }
                     } else {
+                        IconButton(onClick = { showSort = true }) { Icon(Icons.Filled.Sort, "Ordina") }
                         if (viewMode == ViewMode.GRID) {
                             IconButton(onClick = { vm.setGridColumns(if (gridColumns >= 5) 2 else gridColumns + 1) }) {
                                 Icon(Icons.Filled.ViewModule, "Dimensione griglia")
@@ -200,6 +219,9 @@ fun VaultScreen(
             FilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(!filters.favoritesOnly) }, vm::toggleTag)
 
             val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
+            if (folders.isEmpty() && files.isEmpty())
+                EmptyState(filters.active, Modifier.fillMaxSize())
+            else
             LazyVerticalGrid(
                 columns = columns,
                 modifier = Modifier.fillMaxSize(),
@@ -212,7 +234,7 @@ fun VaultScreen(
                     items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
                         FolderCell(folder, viewMode,
                             modifier = Modifier.animateItem(),
-                            onOpen = { vm.enterFolder(folder) }, onLongPress = { folderToDelete = folder })
+                            onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                     }
                 }
                 groupByDay(files).forEach { (label, group) ->
@@ -258,6 +280,52 @@ fun VaultScreen(
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
             onDismiss = { tagTargetId = null },
         )
+    }
+
+    folderMenu?.let { folder ->
+        AlertDialog(
+            onDismissRequest = { folderMenu = null },
+            title = { Text(folder.name) },
+            text = { Text("Scegli un'azione per la cartella.") },
+            confirmButton = { TextButton(onClick = { folderToRename = folder; folderMenu = null }) { Text("Rinomina") } },
+            dismissButton = {
+                TextButton(onClick = { folderToDelete = folder; folderMenu = null }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
+    }
+
+    folderToRename?.let { folder ->
+        TextPromptDialog("Rinomina cartella", "Nome", initial = folder.name,
+            onConfirm = { vm.renameFolder(folder, it); folderToRename = null },
+            onDismiss = { folderToRename = null })
+    }
+
+    if (showSort) {
+        SortDialog(sortKey, sortAscending,
+            onPick = { k, a -> vm.setSort(k, a); showSort = false },
+            onDismiss = { showSort = false })
+    }
+
+    if (confirmMultiDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmMultiDelete = false },
+            title = { Text("Eliminare ${selection.size} file?") },
+            text = { Text("Eliminazione sicura (crypto-shredding). Irreversibile.") },
+            confirmButton = {
+                TextButton(onClick = { vm.deleteFiles(selection.toList()); selection = emptySet(); confirmMultiDelete = false }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmMultiDelete = false }) { Text("Annulla") } },
+        )
+    }
+
+    if (showMove) {
+        MoveToFolderDialog(allFolders,
+            onPick = { fid -> vm.moveFiles(selection.toList(), fid); selection = emptySet(); showMove = false },
+            onDismiss = { showMove = false })
     }
 
     folderToDelete?.let { folder ->
@@ -445,5 +513,75 @@ private fun FilterBar(
         tags.forEach { tag ->
             FilterChip(selected = tag.id in filters.tagIds, onClick = { onTag(tag.id) }, label = { Text("#${tag.name}") })
         }
+    }
+}
+
+@Composable
+private fun SortDialog(current: SortKey, ascending: Boolean, onPick: (SortKey, Boolean) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ordina") },
+        text = {
+            Column {
+                listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Dimensione").forEach { (k, lbl) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(k, ascending) }.padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(lbl, Modifier.weight(1f),
+                            color = if (k == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                        if (k == current) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().clickable { onPick(current, !ascending) }.padding(vertical = 12.dp)) {
+                    Text(if (ascending) "Crescente ↑" else "Decrescente ↓", color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
+    )
+}
+
+@Composable
+private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
+    val byId = remember(folders) { folders.associateBy { it.id } }
+    fun depth(f: FolderEntity): Int {
+        var d = 0; var p = f.parentId; var guard = 0
+        while (p != null && guard < 50) { d++; p = byId[p]?.parentId; guard++ }
+        return d
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sposta in…") },
+        text = {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                Row(Modifier.fillMaxWidth().clickable { onPick(null) }.padding(vertical = 10.dp)) {
+                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Text("Radice", Modifier.padding(start = 8.dp))
+                }
+                folders.forEach { f ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(f.id) }
+                            .padding(vertical = 10.dp).padding(start = (12 * depth(f)).dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(f.name, Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
+}
+
+@Composable
+private fun EmptyState(filtering: Boolean, modifier: Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
+        Text(if (filtering) "Nessun risultato" else "Vault vuoto",
+            style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        Text(if (filtering) "Prova a cambiare i filtri." else "Tocca + per importare file.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

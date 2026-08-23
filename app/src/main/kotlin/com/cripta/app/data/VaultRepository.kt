@@ -145,6 +145,15 @@ class VaultRepository @Inject constructor(
         db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null })
     }
 
+    suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
+        db.tagDao().rename(tagId, newName.trim())
+    }
+
+    suspend fun deleteTag(tagId: Long) = withContext(Dispatchers.IO) {
+        db.tagDao().unlinkAll(tagId)
+        db.tagDao().deleteById(tagId)
+    }
+
     // --- Read / open ---
     suspend fun fileById(id: String): FileEntity? = withContext(Dispatchers.IO) {
         db.fileDao().byId(id)
