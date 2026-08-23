@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -20,12 +22,19 @@ abstract class CriptaDatabase : RoomDatabase() {
     companion object {
         private const val NAME = "cripta.db"
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE tags ADD COLUMN alias TEXT")
+            }
+        }
+
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
             SQLiteDatabase.loadLibs(context)
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
+                .addMigrations(MIGRATION_1_2)
                 .fallbackToDestructiveMigration()
                 .build()
         }

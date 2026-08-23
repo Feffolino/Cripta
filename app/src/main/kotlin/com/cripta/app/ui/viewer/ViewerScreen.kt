@@ -1,8 +1,6 @@
 package com.cripta.app.ui.viewer
 
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
@@ -14,15 +12,18 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +56,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.ui.vault.TagEditorDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +68,7 @@ fun ViewerScreen(
     LaunchedEffect(fileId) { vm.load(fileId) }
     val state by vm.state.collectAsState()
     val message by vm.message.collectAsState()
+    val allTags by vm.allTags.collectAsState()
     val ctx = LocalContext.current
 
     LaunchedEffect(message) {
@@ -78,9 +82,9 @@ fun ViewerScreen(
         else -> null
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(file?.mimeType ?: "application/octet-stream")
-    ) { uri -> if (uri != null && file != null) vm.export(file, uri) }
+    var showTags by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDownload by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -95,15 +99,9 @@ fun ViewerScreen(
                                 if (file.isFavorite) "Rimuovi preferito" else "Aggiungi preferito",
                             )
                         }
-                        IconButton(onClick = { vm.restoreToGallery(file) }) {
-                            Icon(Icons.Filled.Restore, "Ripristina in galleria")
-                        }
-                        IconButton(onClick = { exportLauncher.launch(file.originalName) }) {
-                            Icon(Icons.Filled.Download, "Esporta")
-                        }
-                        IconButton(onClick = { vm.delete(file.id) { onBack() } }) {
-                            Icon(Icons.Filled.Delete, "Elimina")
-                        }
+                        IconButton(onClick = { showTags = true }) { Icon(Icons.Filled.Label, "Etichette") }
+                        IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }
+                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Elimina") }
                     }
                 },
             )
@@ -117,10 +115,45 @@ fun ViewerScreen(
                 is ViewerState.Video -> VideoPlayer(s.file, vm)
                 is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Nessun viewer interno per questo tipo.")
-                    Text("Usa Esporta o Ripristina per aprirlo con un'altra app.")
+                    Text("Usa Scarica per aprirlo con un'altra app.")
                 }
             }
         }
+    }
+
+    if (showTags && file != null) {
+        val initial by produceState(initialValue = emptyList<String>(), file.id) { value = vm.tagNamesOf(file.id) }
+        TagEditorDialog(
+            allTags = allTags,
+            initialSelected = initial,
+            onConfirm = { vm.setTags(file.id, it); showTags = false },
+            onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
+            onDismiss = { showTags = false },
+        )
+    }
+
+    if (confirmDelete && file != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Eliminare il file?") },
+            text = { Text("\"${file.originalName}\" verrà eliminato in modo sicuro (crypto-shredding). Irreversibile.") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; vm.delete(file.id) { onBack() } }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annulla") } },
+        )
+    }
+
+    if (confirmDownload && file != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDownload = false },
+            title = { Text("Scaricare in galleria?") },
+            text = { Text("Una copia in chiaro di \"${file.originalName}\" verrà salvata sul dispositivo (galleria/Download).") },
+            confirmButton = { TextButton(onClick = { confirmDownload = false; vm.download(file) }) { Text("Scarica") } },
+            dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("Annulla") } },
+        )
     }
 }
 
@@ -133,7 +166,7 @@ private fun ZoomableImage(s: ViewerState.Photo) {
     AsyncImage(
         model = ImageRequest.Builder(ctx)
             .data(s.bytes)
-            .diskCachePolicy(CachePolicy.DISABLED)   // never persist plaintext
+            .diskCachePolicy(CachePolicy.DISABLED)
             .build(),
         contentDescription = s.file.originalName,
         contentScale = ContentScale.Fit,
@@ -174,7 +207,6 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel) {
             playWhenReady = true
         }
     }
-    // FIT (bands) -> ZOOM (crop to fill, removes side bands) -> FILL (stretch)
     val modes = listOf(
         AspectRatioFrameLayout.RESIZE_MODE_FIT,
         AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
