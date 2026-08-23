@@ -25,16 +25,29 @@ decrypt-on-demand export, and secure deletion (crypto-shredding).
 
 | # | Plan | Status |
 |---|------|--------|
-| 1 | Crypto foundation | **DONE** (code + JVM unit tests written; NOT yet compiled/run) |
-| 2 | Data layer (Room+SQLCipher, repository) | TODO |
-| 3 | Import + storage + crypto-shred | TODO |
-| 4 | Folders (tree) + tags | TODO |
-| 5 | Auth gate + app hardening (FLAG_SECURE, auto-lock) | TODO |
-| 6 | Vault UI (tree nav, list, multi-select) | TODO |
-| 7 | Viewer (photo in-RAM, video seekable ExoPlayer) | TODO |
-| 8 | Search/filters/favorites/random + settings | TODO |
+| 1 | Crypto foundation | **DONE** — compiles, JVM unit tests pass on CI |
+| 2 | Data layer (Room+SQLCipher, repository) | **DONE** |
+| 3 | Import + storage + crypto-shred | **DONE** |
+| 4 | Folders (tree) + tags | **DONE** |
+| 5 | Auth gate + app hardening (FLAG_SECURE, auto-lock) | **DONE** |
+| 6 | Vault UI (tree nav, list, multi-select) | **DONE** |
+| 7 | Viewer (photo in-RAM, video seekable ExoPlayer) | **DONE** |
+| 8 | Search/filters/favorites/random + settings | **DONE** |
 
-Only plan 1 is written. Plans 2–8 not yet authored in detail; they exist as the roadmap above.
+All plans implemented in a single pass. **The app builds to a debug APK on GitHub Actions**
+and each build publishes a versioned GitHub Release (tag `v0.1.0-bN`, APK attached).
+
+**Not yet done:** on-device testing (never run on a real device), UX polish pass
+(ui-ux-pro-max), code-level security review, image thumbnails in the grid (viewer decrypts
+full image on open; grid shows type icons), and MediaStore original-delete after import
+(the setting exists; the delete-original flow is not wired yet).
+
+## How to get the APK
+
+- GitHub → repo → **Releases** → latest `v0.1.0-bN` → download `cripta-*.apk`.
+- Or Actions → latest run → artifact `cripta-*`.
+- Every push to `main` bumps the build number `bN` so versions are distinguishable
+  (also embedded in the app's versionName).
 
 ## What's in the repo now
 

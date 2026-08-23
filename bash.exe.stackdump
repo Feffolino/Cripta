@@ -32,8 +32,8 @@ Loaded modules:
 7FFB0E510000 combase.dll
 7FFB0FE10000 OLEAUT32.dll
 7FFB0EF10000 SHELL32.dll
-7FFAE92C0000 libunwind.whl
 7FFB08080000 PROPSYS.dll
+7FFAE92C0000 libunwind.whl
 7FFAE8D40000 libc++.whl
 7FFB0B2E0000 windows.storage.dll
 7FFAE8C30000 slick-window-arrangement_1.0.2_688908.dll
