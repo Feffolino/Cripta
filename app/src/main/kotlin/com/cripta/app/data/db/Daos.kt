@@ -39,6 +39,15 @@ interface TagDao {
     @Query("UPDATE tags SET alias = :alias WHERE name = :name")
     suspend fun setAlias(name: String, alias: String?)
 
+    @Query("UPDATE tags SET name = :newName WHERE id = :id")
+    suspend fun rename(id: Long, newName: String)
+
+    @Query("DELETE FROM tags WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM file_tags WHERE tagId = :id")
+    suspend fun unlinkAll(id: Long)
+
     @Query("DELETE FROM file_tags WHERE fileId = :fileId")
     suspend fun clearTagsOf(fileId: String)
 

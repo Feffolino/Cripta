@@ -70,13 +70,41 @@ class VaultViewModel @Inject constructor(
     fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
     fun setGridColumns(cols: Int) = viewModelScope.launch { settings.setGridColumns(cols) }
 
+    val allFolders: StateFlow<List<FolderEntity>> =
+        repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val sortFlow = settings.settings.map { it.sortKey to it.sortAscending }
+
+    val sortKey: StateFlow<com.cripta.app.data.SortKey> =
+        settings.settings.map { it.sortKey }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.cripta.app.data.SortKey.DATE)
+    val sortAscending: StateFlow<Boolean> =
+        settings.settings.map { it.sortAscending }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setSort(key: com.cripta.app.data.SortKey, ascending: Boolean) =
+        viewModelScope.launch { settings.setSort(key, ascending) }
+
     val files: StateFlow<List<FileWithTags>> =
-        combine(currentFolderId, filters) { folder, f -> folder to f }
-            .flatMapLatest { (folder, f) ->
+        combine(currentFolderId, filters, sortFlow) { folder, f, sort -> Triple(folder, f, sort) }
+            .flatMapLatest { (folder, f, sort) ->
                 val source = if (f.active) repo.allFiles() else repo.files(folder)
-                source.combine(MutableStateFlow(f)) { list, ff -> applyFilters(list, ff) }
+                source.map { list -> applySort(applyFilters(list, f), sort.first, sort.second) }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun applySort(
+        list: List<FileWithTags>,
+        key: com.cripta.app.data.SortKey,
+        ascending: Boolean,
+    ): List<FileWithTags> {
+        val sorted = when (key) {
+            com.cripta.app.data.SortKey.DATE -> list.sortedBy { it.file.importedAt }
+            com.cripta.app.data.SortKey.NAME -> list.sortedBy { it.file.originalName.lowercase() }
+            com.cripta.app.data.SortKey.SIZE -> list.sortedBy { it.file.sizeBytes }
+        }
+        return if (ascending) sorted else sorted.reversed()
+    }
 
     private fun applyFilters(list: List<FileWithTags>, f: Filters): List<FileWithTags> {
         return list.filter { fwt ->
