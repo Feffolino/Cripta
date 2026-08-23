@@ -161,6 +161,46 @@ class VaultRepository @Inject constructor(
         }
     }
 
+    /**
+     * Decrypt the file back into shared storage (MediaStore) so it reappears in the gallery.
+     * The exact original folder isn't recorded, so images go to Pictures/Cripta, videos to
+     * Movies/Cripta, everything else to Download/Cripta. Returns the new MediaStore uri.
+     * Note: this intentionally writes plaintext to shared storage (user-requested restore).
+     */
+    suspend fun restoreToGallery(file: FileEntity): android.net.Uri? = withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val (collection, relPath) = when {
+            isImage(file.mimeType) ->
+                android.provider.MediaStore.Images.Media.getContentUri(
+                    android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY
+                ) to "${android.os.Environment.DIRECTORY_PICTURES}/Cripta"
+            isVideo(file.mimeType) ->
+                android.provider.MediaStore.Video.Media.getContentUri(
+                    android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY
+                ) to "${android.os.Environment.DIRECTORY_MOVIES}/Cripta"
+            else ->
+                android.provider.MediaStore.Downloads.getContentUri(
+                    android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY
+                ) to "${android.os.Environment.DIRECTORY_DOWNLOADS}/Cripta"
+        }
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, file.originalName)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, file.mimeType)
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, relPath)
+            put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(collection, values) ?: return@withContext null
+        resolver.openOutputStream(uri)!!.use { out ->
+            FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
+                it.copyTo(out)
+            }
+        }
+        values.clear()
+        values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        uri
+    }
+
     // --- Secure delete (crypto-shred) ---
     suspend fun secureDelete(fileId: String) = withContext(Dispatchers.IO) {
         val f = db.fileDao().byId(fileId) ?: return@withContext
