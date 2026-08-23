@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,15 +32,54 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Compute version
+        id: ver
+        run: |
+          BASE=0.1.0
+          LABEL="b${{ github.run_number }}"
+          SHA=$(git rev-parse --short HEAD)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "label=$LABEL" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "version=${BASE}-${LABEL}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${BASE}-${LABEL}" >> "$GITHUB_OUTPUT"
+
       - name: Crypto unit tests
         run: gradle :crypto:testDebugUnitTest --stacktrace --no-daemon
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
+        run: >
+          gradle :app:assembleDebug --stacktrace --no-daemon
+          -PbuildLabel=${{ steps.ver.outputs.label }}
+          -PbuildNumber=${{ github.run_number }}
 
-      - name: Upload debug APK
+      - name: Rename APK
+        id: apk
+        run: |
+          SRC=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          DST="cripta-${{ steps.ver.outputs.version }}-${{ steps.ver.outputs.sha }}.apk"
+          cp "$SRC" "$DST"
+          echo "path=$DST" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cripta-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: cripta-${{ steps.ver.outputs.version }}
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Cripta ${{ steps.ver.outputs.version }}
+          body: |
+            Build automatica da CI.
+            - Versione: ${{ steps.ver.outputs.version }}
+            - Commit: ${{ steps.ver.outputs.sha }}
+            - Build #${{ github.run_number }}
+
+            APK debug allegato qui sotto. Debug build, non firmata per il Play Store.
+          files: ${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: true
