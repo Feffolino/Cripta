@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.graphics.Bitmap
 import com.cripta.app.data.SettingsStore
+import com.cripta.app.data.ViewMode
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FileWithTags
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -56,6 +58,17 @@ class VaultViewModel @Inject constructor(
 
     val tags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val viewMode: StateFlow<ViewMode> =
+        settings.settings.map { it.viewMode }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ViewMode.GRID)
+
+    val gridColumns: StateFlow<Int> =
+        settings.settings.map { it.gridColumns }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+
+    fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
+    fun setGridColumns(cols: Int) = viewModelScope.launch { settings.setGridColumns(cols) }
 
     val files: StateFlow<List<FileWithTags>> =
         combine(currentFolderId, filters) { folder, f -> folder to f }
@@ -159,6 +172,14 @@ class VaultViewModel @Inject constructor(
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
         repo.setTags(fileId, tagNames)
+    }
+
+    fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
+        repo.renameFile(fileId, newName)
+    }
+
+    fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
+        repo.setTagAlias(tagName, alias)
     }
 
     fun moveFiles(fileIds: List<String>, folderId: Long?) = viewModelScope.launch {

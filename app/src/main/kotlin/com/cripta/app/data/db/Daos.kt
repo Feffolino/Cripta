@@ -36,6 +36,9 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
     suspend fun byName(name: String): TagEntity?
 
+    @Query("UPDATE tags SET alias = :alias WHERE name = :name")
+    suspend fun setAlias(name: String, alias: String?)
+
     @Query("DELETE FROM file_tags WHERE fileId = :fileId")
     suspend fun clearTagsOf(fileId: String)
 
@@ -56,6 +59,10 @@ interface FileDao {
     suspend fun byId(id: String): FileEntity?
 
     @Transaction
+    @Query("SELECT * FROM files WHERE id = :id")
+    suspend fun withTagsById(id: String): FileWithTags?
+
+    @Transaction
     @Query("SELECT * FROM files ORDER BY importedAt DESC")
     fun allWithTags(): Flow<List<FileWithTags>>
 
@@ -68,6 +75,9 @@ interface FileDao {
 
     @Query("UPDATE files SET isFavorite = :fav WHERE id = :id")
     suspend fun setFavorite(id: String, fav: Boolean)
+
+    @Query("UPDATE files SET originalName = :name WHERE id = :id")
+    suspend fun rename(id: String, name: String)
 
     @Query("UPDATE files SET folderId = :folderId WHERE id = :id")
     suspend fun move(id: String, folderId: Long?)

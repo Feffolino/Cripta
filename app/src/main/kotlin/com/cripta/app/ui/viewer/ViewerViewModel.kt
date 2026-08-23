@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.data.db.TagEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.nio.channels.SeekableByteChannel
 import javax.inject.Inject
@@ -27,6 +30,23 @@ class ViewerViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<ViewerState>(ViewerState.Loading)
     val state: StateFlow<ViewerState> = _state
+
+    val allTags: StateFlow<List<TagEntity>> =
+        repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    suspend fun tagNamesOf(fileId: String): List<String> = repo.tagNamesOf(fileId)
+
+    fun setTags(fileId: String, names: List<String>) = viewModelScope.launch {
+        repo.setTags(fileId, names)
+        load(fileId)
+    }
+
+    fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
+
+    fun download(file: FileEntity) = viewModelScope.launch {
+        val ok = runCatching { repo.restoreToGallery(file) != null }.getOrDefault(false)
+        _message.value = if (ok) "Scaricato in galleria" else "Download non riuscito"
+    }
 
     fun load(fileId: String) = viewModelScope.launch {
         runCatching {

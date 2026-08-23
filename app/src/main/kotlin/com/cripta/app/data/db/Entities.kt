@@ -43,6 +43,8 @@ data class FileEntity(
 data class TagEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    /** Short alias (emoji or acronym) shown as a badge on thumbnails. */
+    val alias: String? = null,
 )
 
 @Entity(

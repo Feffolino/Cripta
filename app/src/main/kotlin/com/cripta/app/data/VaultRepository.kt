@@ -137,9 +137,21 @@ class VaultRepository @Inject constructor(
         db.fileDao().setFavorite(fileId, fav)
     }
 
+    suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
+        db.fileDao().rename(fileId, newName.trim())
+    }
+
+    suspend fun setTagAlias(tagName: String, alias: String?) = withContext(Dispatchers.IO) {
+        db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null })
+    }
+
     // --- Read / open ---
     suspend fun fileById(id: String): FileEntity? = withContext(Dispatchers.IO) {
         db.fileDao().byId(id)
+    }
+
+    suspend fun tagNamesOf(fileId: String): List<String> = withContext(Dispatchers.IO) {
+        db.fileDao().withTagsById(fileId)?.tags?.map { it.name } ?: emptyList()
     }
 
     suspend fun decryptBytes(file: FileEntity): ByteArray = withContext(Dispatchers.IO) {
