@@ -2,11 +2,14 @@ package com.cripta.app.ui.vault
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.Bitmap
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.data.db.TagEntity
+import com.cripta.app.media.ThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +38,10 @@ data class Filters(
 class VaultViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val settings: SettingsStore,
+    private val thumbs: ThumbnailLoader,
 ) : ViewModel() {
+
+    suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
     private val _path = MutableStateFlow<List<FolderEntity>>(emptyList())
     val path: StateFlow<List<FolderEntity>> = _path
@@ -122,6 +128,33 @@ class VaultViewModel @Inject constructor(
 
     fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
         repo.toggleFavorite(fileId, fav)
+    }
+
+    fun setFavorite(fileIds: List<String>, fav: Boolean) = viewModelScope.launch {
+        fileIds.forEach { repo.toggleFavorite(it, fav) }
+    }
+
+    /** Import picked files, then apply the delete-original policy. Returns nothing;
+     *  when policy is ASK the screen collects the uris via [pendingOriginals]. */
+    fun importThenHandleOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
+        val folder = currentFolderId.value
+        uris.forEach { runCatching { repo.import(it, folder) } }
+        val policy = settings.settingsOnce().deleteOriginalPolicy
+        when (policy) {
+            com.cripta.app.data.DeleteOriginalPolicy.ALWAYS -> deleteOriginals(uris)
+            com.cripta.app.data.DeleteOriginalPolicy.ASK -> _pendingOriginals.value = uris
+            com.cripta.app.data.DeleteOriginalPolicy.NEVER -> {}
+        }
+    }
+
+    private val _pendingOriginals = MutableStateFlow<List<android.net.Uri>>(emptyList())
+    val pendingOriginals: StateFlow<List<android.net.Uri>> = _pendingOriginals
+
+    fun clearPendingOriginals() { _pendingOriginals.value = emptyList() }
+
+    fun deleteOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
+        repo.deleteOriginals(uris)
+        _pendingOriginals.value = emptyList()
     }
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {

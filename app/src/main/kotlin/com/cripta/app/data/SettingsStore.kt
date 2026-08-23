@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,6 +36,8 @@ class SettingsStore @Inject constructor(
                 .getOrElse(p[delPolicy] ?: 0) { DeleteOriginalPolicy.ASK },
         )
     }
+
+    suspend fun settingsOnce(): Settings = settings.first()
 
     suspend fun setAutoLockMinutes(minutes: Int) {
         context.dataStore.edit { it[autoLock] = minutes }

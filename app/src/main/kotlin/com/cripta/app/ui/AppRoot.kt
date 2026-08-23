@@ -1,5 +1,8 @@
 package com.cripta.app.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -22,7 +25,14 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
     }
 
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = "vault") {
+    NavHost(
+        navController = nav,
+        startDestination = "vault",
+        enterTransition = { fadeIn(tween(120)) },
+        exitTransition = { fadeOut(tween(80)) },
+        popEnterTransition = { fadeIn(tween(120)) },
+        popExitTransition = { fadeOut(tween(80)) },
+    ) {
         composable("vault") {
             VaultScreen(
                 onOpenFile = { fileId -> nav.navigate("viewer/$fileId") },

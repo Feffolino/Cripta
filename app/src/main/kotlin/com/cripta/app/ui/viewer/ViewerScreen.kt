@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,6 +68,12 @@ fun ViewerScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     if (file != null) {
+                        IconButton(onClick = { vm.toggleFavorite(file) }) {
+                            Icon(
+                                if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                if (file.isFavorite) "Rimuovi preferito" else "Aggiungi preferito",
+                            )
+                        }
                         IconButton(onClick = { exportLauncher.launch(file.originalName) }) {
                             Icon(Icons.Filled.Download, "Esporta")
                         }

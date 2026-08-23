@@ -43,6 +43,11 @@ class ViewerViewModel @Inject constructor(
 
     fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)
 
+    fun toggleFavorite(file: FileEntity) = viewModelScope.launch {
+        repo.toggleFavorite(file.id, !file.isFavorite)
+        load(file.id)
+    }
+
     fun export(file: FileEntity, dest: Uri) = viewModelScope.launch {
         runCatching { repo.export(file, dest) }
     }
