@@ -1,0 +1,54 @@
+package com.cripta.app.ui.viewer
+
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.db.FileEntity
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import java.nio.channels.SeekableByteChannel
+import javax.inject.Inject
+
+sealed interface ViewerState {
+    data object Loading : ViewerState
+    data class Photo(val file: FileEntity, val bytes: ByteArray) : ViewerState
+    data class Video(val file: FileEntity) : ViewerState
+    data class Other(val file: FileEntity) : ViewerState
+    data class Error(val message: String) : ViewerState
+}
+
+@HiltViewModel
+class ViewerViewModel @Inject constructor(
+    private val repo: VaultRepository,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow<ViewerState>(ViewerState.Loading)
+    val state: StateFlow<ViewerState> = _state
+
+    fun load(fileId: String) = viewModelScope.launch {
+        runCatching {
+            val file = repo.fileById(fileId) ?: error("File non trovato")
+            when {
+                VaultRepository.isImage(file.mimeType) ->
+                    ViewerState.Photo(file, repo.decryptBytes(file))
+                VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
+                else -> ViewerState.Other(file)
+            }
+        }.onSuccess { _state.value = it }
+            .onFailure { _state.value = ViewerState.Error(it.message ?: "Errore") }
+    }
+
+    fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)
+
+    fun export(file: FileEntity, dest: Uri) = viewModelScope.launch {
+        runCatching { repo.export(file, dest) }
+    }
+
+    fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
+        repo.secureDelete(fileId)
+        onDone()
+    }
+}
