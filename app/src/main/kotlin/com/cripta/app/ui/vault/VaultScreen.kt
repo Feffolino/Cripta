@@ -6,10 +6,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,12 +46,18 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -73,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -131,6 +140,7 @@ fun VaultScreen(
     var showSort by remember { mutableStateOf(false) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
+    var filtersExpanded by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selection.isNotEmpty() || filters.active || path.isNotEmpty()) {
         when {
@@ -149,7 +159,12 @@ fun VaultScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (inSelection) "${selection.size} selezionati" else (path.lastOrNull()?.name ?: "Cripta")) },
+                title = {
+                    Text(
+                        if (inSelection) "${selection.size} selezionati" else (path.lastOrNull()?.name ?: "Cripta"),
+                        maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
                     if (inSelection) {
                         IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Filled.ArrowBack, "Annulla") }
@@ -163,19 +178,17 @@ fun VaultScreen(
                         IconButton(onClick = { vm.setFavorite(selection.toList(), !allFav); selection = emptySet() }) {
                             Icon(Icons.Filled.Star, if (allFav) "Rimuovi preferito" else "Aggiungi preferito")
                         }
-                        IconButton(onClick = { showMove = true }) {
-                            Icon(Icons.Filled.DriveFileMove, "Sposta")
-                        }
-                        if (selection.size == 1) {
-                            IconButton(onClick = { renameTargetId = selection.first() }) {
-                                Icon(Icons.Filled.DriveFileRenameOutline, "Rinomina")
-                            }
-                            IconButton(onClick = { tagTargetId = selection.first() }) {
-                                Icon(Icons.Filled.Label, "Etichette")
-                            }
-                        }
                         IconButton(onClick = { confirmMultiDelete = true }) {
                             Icon(Icons.Filled.Delete, "Elimina")
+                        }
+                        var selMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
+                        DropdownMenu(expanded = selMenu, onDismissRequest = { selMenu = false }) {
+                            DropdownMenuItem(text = { Text("Sposta") }, onClick = { selMenu = false; showMove = true })
+                            if (selection.size == 1) {
+                                DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
+                                DropdownMenuItem(text = { Text("Etichette") }, onClick = { selMenu = false; tagTargetId = selection.first() })
+                            }
                         }
                     } else {
                         IconButton(onClick = { showSort = true }) { Icon(Icons.Filled.Sort, "Ordina") }
@@ -198,7 +211,7 @@ fun VaultScreen(
                     SmallFloatingActionButton(onClick = { showNewFolder = true }) {
                         Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
                     }
-                    SmallFloatingActionButton(onClick = { vm.randomPick()?.let(onOpenFile) }) {
+                    SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
                         Icon(Icons.Filled.Casino, "Casuale")
                     }
                     FloatingActionButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
@@ -216,7 +229,8 @@ fun VaultScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
-            FilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(!filters.favoritesOnly) }, vm::toggleTag)
+            FilterSection(filtersExpanded, { filtersExpanded = !filtersExpanded },
+                filters, tags, vm::setType, { vm.setFavoritesOnly(!filters.favoritesOnly) }, vm::toggleTag)
 
             val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
             if (folders.isEmpty() && files.isEmpty())
@@ -247,7 +261,7 @@ fun VaultScreen(
                             selectionMode = inSelection,
                             modifier = Modifier.animateItem(),
                             thumb = { vm.thumb(fwt.file) },
-                            onOpen = { onOpenFile(fwt.file.id) },
+                            onOpen = { vm.publishViewerQueue(); onOpenFile(fwt.file.id) },
                             onToggleSelect = {
                                 selection = if (fwt.file.id in selection) selection - fwt.file.id else selection + fwt.file.id
                             },
@@ -407,9 +421,10 @@ private fun FileCell(
     onToggleSelect: () -> Unit,
 ) {
     val mime = item.file.mimeType
+    val isVideo = VaultRepository.isVideo(mime)
     val fallbackIcon = when {
         VaultRepository.isImage(mime) -> Icons.Filled.Image
-        VaultRepository.isVideo(mime) -> Icons.Filled.Movie
+        isVideo -> Icons.Filled.Movie
         else -> Icons.Filled.InsertDriveFile
     }
     val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id) { value = thumb() }
@@ -423,7 +438,7 @@ private fun FileCell(
         Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium,
             modifier = modifier.fillMaxWidth().then(clickMod)) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ThumbBox(bmp, fallbackIcon, item.file.originalName, selected, item.file.isFavorite, item.tags, Modifier.size(56.dp))
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags, Modifier.size(56.dp))
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     if (item.tags.isNotEmpty()) {
@@ -438,7 +453,7 @@ private fun FileCell(
     }
 
     Column(modifier.fillMaxWidth().then(clickMod)) {
-        ThumbBox(bmp, fallbackIcon, item.file.originalName, selected, item.file.isFavorite, item.tags,
+        ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags,
             Modifier.fillMaxWidth().aspectRatio(1f))
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
@@ -450,6 +465,7 @@ private fun FileCell(
 private fun ThumbBox(
     bmp: android.graphics.Bitmap?,
     fallbackIcon: ImageVector,
+    isVideo: Boolean,
     name: String,
     selected: Boolean,
     favorite: Boolean,
@@ -468,13 +484,23 @@ private fun ThumbBox(
                 }
             }
         }
+        // Clear video marker regardless of the thumbnail behind it.
+        if (isVideo) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(30.dp))
+            }
+        }
         if (favorite) {
-            Icon(Icons.Filled.Star, "Preferito", tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(18.dp))
+            Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(24.dp).clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Star, "Preferito", tint = Color(0xFFFFC531), modifier = Modifier.size(18.dp))
+            }
         }
         if (selected) {
-            Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp))
+            Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
         }
         if (tags.isNotEmpty()) {
             FlowRow(
@@ -495,23 +521,45 @@ private fun ThumbBox(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FilterBar(
+private fun FilterSection(
+    expanded: Boolean,
+    onToggle: () -> Unit,
     filters: Filters,
     tags: List<TagEntity>,
     onType: (TypeFilter) -> Unit,
     onFav: () -> Unit,
     onTag: (Long) -> Unit,
 ) {
-    FlowRow(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TypeFilter.entries.forEach { t ->
-            FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Filtri", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            if (filters.active) {
+                Text("attivi", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(end = 6.dp))
+            }
+            Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (expanded) "Comprimi" else "Espandi")
         }
-        FilterChip(selected = filters.favoritesOnly, onClick = onFav, label = { Text("Preferiti") })
-        tags.forEach { tag ->
-            FilterChip(selected = tag.id in filters.tagIds, onClick = { onTag(tag.id) }, label = { Text("#${tag.name}") })
+        if (expanded) {
+            Text("Tipo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TypeFilter.entries.forEach { t ->
+                    FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
+                }
+                FilterChip(selected = filters.favoritesOnly, onClick = onFav, label = { Text("Preferiti") })
+            }
+            if (tags.isNotEmpty()) {
+                Text("Tag", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tags.forEach { tag ->
+                        FilterChip(selected = tag.id in filters.tagIds, onClick = { onTag(tag.id) },
+                            label = { Text(if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}") })
+                    }
+                }
+            }
         }
     }
 }

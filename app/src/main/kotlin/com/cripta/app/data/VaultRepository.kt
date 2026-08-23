@@ -145,6 +145,11 @@ class VaultRepository @Inject constructor(
         db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null })
     }
 
+    suspend fun createTag(name: String) = withContext(Dispatchers.IO) {
+        val n = name.trim()
+        if (n.isNotEmpty()) db.tagDao().insert(com.cripta.app.data.db.TagEntity(name = n))
+    }
+
     suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
         db.tagDao().rename(tagId, newName.trim())
     }

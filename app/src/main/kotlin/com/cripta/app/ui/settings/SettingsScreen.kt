@@ -54,6 +54,7 @@ fun SettingsScreen(
     var renameTag by remember { mutableStateOf<TagEntity?>(null) }
     var aliasTag by remember { mutableStateOf<TagEntity?>(null) }
     var deleteTag by remember { mutableStateOf<TagEntity?>(null) }
+    var addTag by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -98,6 +99,7 @@ fun SettingsScreen(
             }
 
             Section("Etichette") {
+                TextButton(onClick = { addTag = true }) { Text("+ Aggiungi etichetta") }
                 if (tags.isEmpty()) {
                     Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -130,6 +132,11 @@ fun SettingsScreen(
         }
     }
 
+    if (addTag) {
+        TextPromptDialog("Nuova etichetta", "Nome",
+            onConfirm = { vm.createTag(it); addTag = false },
+            onDismiss = { addTag = false })
+    }
     renameTag?.let { tag ->
         TextPromptDialog("Rinomina etichetta", "Nome", initial = tag.name,
             onConfirm = { vm.renameTag(tag.id, it); renameTag = null },

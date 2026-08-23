@@ -41,9 +41,13 @@ class VaultViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val settings: SettingsStore,
     private val thumbs: ThumbnailLoader,
+    private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
 ) : ViewModel() {
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
+
+    /** Publish the current display order so the viewer can swipe through it. */
+    fun publishViewerQueue() { viewerQueue.set(files.value.map { it.file.id }) }
 
     private val _path = MutableStateFlow<List<FolderEntity>>(emptyList())
     val path: StateFlow<List<FolderEntity>> = _path
@@ -52,12 +56,19 @@ class VaultViewModel @Inject constructor(
 
     val filters = MutableStateFlow(Filters())
 
+    /** Bumped after any DB mutation to force the observed flows to re-query immediately,
+     *  independent of Room/SQLCipher invalidation timing. */
+    private val refresh = MutableStateFlow(0)
+    private fun bump() { refresh.value++ }
+
     val folders: StateFlow<List<FolderEntity>> =
-        currentFolderId.flatMapLatest { repo.folders(it) }
+        combine(currentFolderId, refresh) { id, _ -> id }
+            .flatMapLatest { repo.folders(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val tags: StateFlow<List<TagEntity>> =
-        repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        refresh.flatMapLatest { repo.tags() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val viewMode: StateFlow<ViewMode> =
         settings.settings.map { it.viewMode }
@@ -86,7 +97,7 @@ class VaultViewModel @Inject constructor(
         viewModelScope.launch { settings.setSort(key, ascending) }
 
     val files: StateFlow<List<FileWithTags>> =
-        combine(currentFolderId, filters, sortFlow) { folder, f, sort -> Triple(folder, f, sort) }
+        combine(currentFolderId, filters, sortFlow, refresh) { folder, f, sort, _ -> Triple(folder, f, sort) }
             .flatMapLatest { (folder, f, sort) ->
                 val source = if (f.active) repo.allFiles() else repo.files(folder)
                 source.map { list -> applySort(applyFilters(list, f), sort.first, sort.second) }
@@ -151,28 +162,29 @@ class VaultViewModel @Inject constructor(
 
     // --- Actions ---
     fun createFolder(name: String) = viewModelScope.launch {
-        repo.createFolder(name, currentFolderId.value)
+        repo.createFolder(name, currentFolderId.value); bump()
     }
 
     fun deleteFolder(folder: FolderEntity) = viewModelScope.launch {
-        repo.deleteFolderRecursive(folder.id)
+        repo.deleteFolderRecursive(folder.id); bump()
     }
 
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
-        repo.renameFolder(folder, name)
+        repo.renameFolder(folder, name); bump()
     }
 
     fun importUris(uris: List<android.net.Uri>) = viewModelScope.launch {
         val folder = currentFolderId.value
         uris.forEach { runCatching { repo.import(it, folder) } }
+        bump()
     }
 
     fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
-        repo.toggleFavorite(fileId, fav)
+        repo.toggleFavorite(fileId, fav); bump()
     }
 
     fun setFavorite(fileIds: List<String>, fav: Boolean) = viewModelScope.launch {
-        fileIds.forEach { repo.toggleFavorite(it, fav) }
+        fileIds.forEach { repo.toggleFavorite(it, fav) }; bump()
     }
 
     /** Import picked files, then apply the delete-original policy. Returns nothing;
@@ -180,6 +192,7 @@ class VaultViewModel @Inject constructor(
     fun importThenHandleOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
         val folder = currentFolderId.value
         uris.forEach { runCatching { repo.import(it, folder) } }
+        bump()
         val policy = settings.settingsOnce().deleteOriginalPolicy
         when (policy) {
             com.cripta.app.data.DeleteOriginalPolicy.ALWAYS -> deleteOriginals(uris)
@@ -199,23 +212,23 @@ class VaultViewModel @Inject constructor(
     }
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
-        repo.setTags(fileId, tagNames)
+        repo.setTags(fileId, tagNames); bump()
     }
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
-        repo.renameFile(fileId, newName)
+        repo.renameFile(fileId, newName); bump()
     }
 
     fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
-        repo.setTagAlias(tagName, alias)
+        repo.setTagAlias(tagName, alias); bump()
     }
 
     fun moveFiles(fileIds: List<String>, folderId: Long?) = viewModelScope.launch {
-        fileIds.forEach { repo.moveFile(it, folderId) }
+        fileIds.forEach { repo.moveFile(it, folderId) }; bump()
     }
 
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
-        fileIds.forEach { repo.secureDelete(it) }
+        fileIds.forEach { repo.secureDelete(it) }; bump()
     }
 
     fun randomPick(): String? = files.value.randomOrNull()?.file?.id
