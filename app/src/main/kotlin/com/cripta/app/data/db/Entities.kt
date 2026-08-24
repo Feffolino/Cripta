@@ -35,10 +35,35 @@ data class FileEntity(
     /** Media duration in milliseconds for video/audio; null for other types or unknown. */
     val durationMs: Long? = null,
 ) {
-    override fun equals(other: Any?): Boolean =
-        this === other || (other is FileEntity && other.id == id)
+    // Include every display-affecting field so Compose/StateFlow detect changes such as
+    // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant
+    // for a given id and ByteArray reference-equality would break diffing.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is FileEntity) return false
+        return id == other.id &&
+            originalName == other.originalName &&
+            mimeType == other.mimeType &&
+            sizeBytes == other.sizeBytes &&
+            folderId == other.folderId &&
+            isFavorite == other.isFavorite &&
+            createdAt == other.createdAt &&
+            importedAt == other.importedAt &&
+            durationMs == other.durationMs
+    }
 
-    override fun hashCode(): Int = id.hashCode()
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + originalName.hashCode()
+        result = 31 * result + mimeType.hashCode()
+        result = 31 * result + sizeBytes.hashCode()
+        result = 31 * result + (folderId?.hashCode() ?: 0)
+        result = 31 * result + isFavorite.hashCode()
+        result = 31 * result + createdAt.hashCode()
+        result = 31 * result + importedAt.hashCode()
+        result = 31 * result + (durationMs?.hashCode() ?: 0)
+        return result
+    }
 }
 
 @Entity(tableName = "tags", indices = [Index(value = ["name"], unique = true)])

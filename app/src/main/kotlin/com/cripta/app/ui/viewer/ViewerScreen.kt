@@ -14,8 +14,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -248,16 +252,28 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale.value * zoom).coerceIn(1f, 6f)
-                    scope.launch { scale.snapTo(newScale) }
-                    if (newScale > 1f) {
-                        scope.launch { offX.snapTo(offX.value + pan.x) }
-                        scope.launch { offY.snapTo(offY.value + pan.y) }
-                    } else {
-                        scope.launch { offX.snapTo(0f) }
-                        scope.launch { offY.snapTo(0f) }
-                    }
+                // Pinch to zoom / drag to pan, but only CONSUME the gesture while zoomed or
+                // actively pinching. At 1x a single-finger horizontal drag is left unconsumed
+                // so the HorizontalPager can swipe between media (fixes swipe stuck on a page).
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+                        val newScale = (scale.value * zoom).coerceIn(1f, 6f)
+                        if (newScale != scale.value) scope.launch { scale.snapTo(newScale) }
+                        if (newScale > 1f) {
+                            scope.launch { offX.snapTo(offX.value + pan.x) }
+                            scope.launch { offY.snapTo(offY.value + pan.y) }
+                        } else if (offX.value != 0f || offY.value != 0f) {
+                            scope.launch { offX.snapTo(0f) }
+                            scope.launch { offY.snapTo(0f) }
+                        }
+                        if (newScale > 1f || zoom != 1f) {
+                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
                 }
             }
             .pointerInput(Unit) {
