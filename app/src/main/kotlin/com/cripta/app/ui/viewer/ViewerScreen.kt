@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -143,6 +144,7 @@ fun ViewerScreen(
     }
 
     var showTags by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
 
@@ -155,6 +157,7 @@ fun ViewerScreen(
                 chromeVisible = chromeVisible,
                 vm = vm,
                 setChrome = { chromeVisible = it },
+                onToggleChrome = { chromeVisible = !chromeVisible },
             )
         }
 
@@ -184,6 +187,7 @@ fun ViewerScreen(
                             Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
                         }
                         IconButton(onClick = { showTags = true }) { Icon(Icons.Filled.Label, "Etichette") }
+                        IconButton(onClick = { showInfo = true }) { Icon(Icons.Filled.Info, "Informazioni") }
                         IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Elimina") }
                     }
@@ -217,6 +221,28 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annulla") } },
         )
     }
+    if (showInfo && file != null) {
+        val infoTags by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = { Text("Informazioni") },
+            text = {
+                Column {
+                    InfoLine("Nome", file.originalName)
+                    InfoLine("Tipo", file.mimeType)
+                    InfoLine("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
+                    com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { InfoLine("Durata", it) }
+                    InfoLine(
+                        "Aggiunto",
+                        java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                            .format(java.util.Date(file.createdAt)),
+                    )
+                    if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
+                }
+            },
+            confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Chiudi") } },
+        )
+    }
     if (confirmDownload && file != null) {
         AlertDialog(
             onDismissRequest = { confirmDownload = false },
@@ -229,6 +255,14 @@ fun ViewerScreen(
 }
 
 @Composable
+private fun InfoLine(label: String, value: String) {
+    Column(Modifier.padding(vertical = 3.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
 private fun MediaPage(
     id: String,
     refreshKey: Int,
@@ -236,6 +270,7 @@ private fun MediaPage(
     chromeVisible: Boolean,
     vm: ViewerViewModel,
     setChrome: (Boolean) -> Unit,
+    onToggleChrome: () -> Unit,
 ) {
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
         value = vm.stateFor(id)
@@ -244,9 +279,9 @@ private fun MediaPage(
         when (val s = state) {
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
-            is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = { setChrome(!chromeVisible) })
+            is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
             is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome) else CircularProgressIndicator(color = Color.White)
-            is ViewerState.Note -> NoteView(s.text, onSingleTap = { setChrome(!chromeVisible) })
+            is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Nessun viewer interno per questo tipo.", color = Color.White)
@@ -401,6 +436,7 @@ private fun VideoPlayer(
                 plaintextLength = file.sizeBytes,
             )
             setMediaSource(ProgressiveMediaSource.Factory(factory).createMediaSource(MediaItem.fromUri("cripta://${file.id}")))
+            repeatMode = Player.REPEAT_MODE_ONE   // loop the video
             prepare()
             playWhenReady = true
         }

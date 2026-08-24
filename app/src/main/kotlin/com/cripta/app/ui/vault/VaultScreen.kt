@@ -109,9 +109,17 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.withTimeout
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.height
@@ -319,6 +327,7 @@ fun VaultScreen(
             }
             val orderedIds = remember(grouped) { grouped.flatMap { it.second.map { f -> f.file.id } } }
             val idSet = remember(orderedIds) { orderedIds.toSet() }
+            val inSelState = rememberUpdatedState(inSelection)
 
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
@@ -355,7 +364,7 @@ fun VaultScreen(
                         }
                         // Long-press a file then drag = gallery-style range select (or deselect if
                         // the anchor was already selected). Long-press a folder = its action menu.
-                        .pointerInput(orderedIds, inSelection) {
+                        .pointerInput(orderedIds) {
                             val onStart: (Offset) -> Unit = { off ->
                                 selPointer = off
                                 hoverFolder = null
@@ -372,9 +381,8 @@ fun VaultScreen(
                                     }
                                 }
                             }
-                            val onMove: (androidx.compose.ui.input.pointer.PointerInputChange, Offset) -> Unit = { change, amount ->
-                                change.consume()
-                                selPointer += amount
+                            val onMove: (Offset) -> Unit = { delta ->
+                                selPointer += delta
                                 val anchor = dragAnchor
                                 if (anchor != null) {
                                     val curKey = keyAt(selPointer, gridState) as? String
@@ -402,13 +410,26 @@ fun VaultScreen(
                                 }
                                 dragAnchor = null; hoverFolder = null
                             }
-                            val onCancel: () -> Unit = { dragAnchor = null; hoverFolder = null }
-                            // Already selecting: drag immediately (no hold) to keep adding/removing.
-                            // Not selecting yet: require a long-press to enter selection first.
-                            if (inSelection) {
-                                detectDragGestures(onDragStart = onStart, onDrag = onMove, onDragEnd = onEnd, onDragCancel = onCancel)
-                            } else {
-                                detectDragGesturesAfterLongPress(onDragStart = onStart, onDrag = onMove, onDragEnd = onEnd, onDragCancel = onCancel)
+                            // Single gesture (never rebuilt mid-drag): if already selecting, a drag starts
+                            // on touch-slop with no hold; otherwise it starts after a long-press. Either
+                            // way the SAME gesture keeps extending the selection while the finger moves.
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val begin = if (inSelState.value) {
+                                    awaitTouchSlopOrCancellation(down.id) { c, _ -> c.consume() } != null
+                                } else {
+                                    try {
+                                        withTimeout(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
+                                        false // lifted before long-press → treat as a tap
+                                    } catch (_: PointerEventTimeoutCancellationException) {
+                                        true  // long-press reached
+                                    }
+                                }
+                                if (begin) {
+                                    onStart(down.position)
+                                    drag(down.id) { change -> change.consume(); onMove(change.positionChange()) }
+                                    onEnd()
+                                }
                             }
                         },
                     contentPadding = PaddingValues(12.dp),
