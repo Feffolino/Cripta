@@ -11,7 +11,7 @@ import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -34,13 +34,21 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE files ADD COLUMN sortWeight INTEGER NOT NULL DEFAULT 0")
+                // Seed the manual order with import time so it starts sensible before the user drags.
+                db.execSQL("UPDATE files SET sortWeight = importedAt")
+            }
+        }
+
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
             SQLiteDatabase.loadLibs(context)
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
         }

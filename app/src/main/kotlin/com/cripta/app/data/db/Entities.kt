@@ -34,6 +34,8 @@ data class FileEntity(
     val wrappedKeyset: ByteArray,
     /** Media duration in milliseconds for video/audio; null for other types or unknown. */
     val durationMs: Long? = null,
+    /** User-assigned position for the Manual sort mode (ascending = higher priority / top). */
+    val sortWeight: Long = 0,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant

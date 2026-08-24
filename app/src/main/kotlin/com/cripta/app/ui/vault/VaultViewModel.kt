@@ -123,8 +123,10 @@ class VaultViewModel @Inject constructor(
             com.cripta.app.data.SortKey.DATE -> list.sortedBy { it.file.importedAt }
             com.cripta.app.data.SortKey.NAME -> list.sortedBy { it.file.originalName.lowercase() }
             com.cripta.app.data.SortKey.SIZE -> list.sortedBy { it.file.sizeBytes }
+            com.cripta.app.data.SortKey.MANUAL -> list.sortedBy { it.file.sortWeight }
         }
-        return if (ascending) sorted else sorted.reversed()
+        // Manual order is intrinsically directional (weight ascending = top); ignore asc/desc.
+        return if (key == com.cripta.app.data.SortKey.MANUAL || ascending) sorted else sorted.reversed()
     }
 
     private fun applyFilters(list: List<FileWithTags>, f: Filters): List<FileWithTags> {
@@ -236,6 +238,9 @@ class VaultViewModel @Inject constructor(
 
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
         fileIds.forEach { repo.secureDelete(it) }    }
+
+    /** Persist a user drag-reorder (Manual sort). */
+    fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
 
     fun randomPick(): String? = files.value.randomOrNull()?.file?.id
 }

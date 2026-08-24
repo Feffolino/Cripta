@@ -62,6 +62,12 @@ class VaultRepository @Inject constructor(
         db.fileDao().move(fileId, folderId); notifyChanged()
     }
 
+    /** Persist a manual order: assign ascending weights matching the given id order. */
+    suspend fun setSortWeights(orderedIds: List<String>) = withContext(Dispatchers.IO) {
+        orderedIds.forEachIndexed { index, id -> db.fileDao().setWeight(id, index.toLong()) }
+        notifyChanged()
+    }
+
     /** Recursively crypto-shred every file in the folder subtree, then delete the folders. */
     suspend fun deleteFolderRecursive(folderId: Long) = withContext(Dispatchers.IO) {
         // Gather subtree by walking children via a snapshot query set.
@@ -127,6 +133,7 @@ class VaultRepository @Inject constructor(
             importedAt = now(),
             wrappedKeyset = wrappedKeyset,
             durationMs = duration,
+            sortWeight = now(),   // new files append to the bottom of the manual order
         )
         db.fileDao().insert(entity)
         notifyChanged()
@@ -459,7 +466,7 @@ class VaultRepository @Inject constructor(
         val e = FileEntity(
             id = uuid, originalName = name.ifBlank { "Nota" }, mimeType = MIME_NOTE,
             sizeBytes = bytes.size.toLong(), folderId = folderId,
-            createdAt = now(), importedAt = now(), wrappedKeyset = wrapped,
+            createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
         )
         db.fileDao().insert(e)
         notifyChanged()
