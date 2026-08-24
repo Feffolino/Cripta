@@ -19,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +69,28 @@ fun SettingsScreen(
             Modifier.fillMaxSize().padding(pad).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            Section("Aspetto") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.cripta.app.data.ThemeMode.entries.forEach { m ->
+                        FilterChip(
+                            selected = s.themeMode == m,
+                            onClick = { vm.setThemeMode(m) },
+                            label = {
+                                Text(when (m) {
+                                    com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
+                                    com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
+                                    com.cripta.app.data.ThemeMode.DARK -> "Scuro"
+                                })
+                            },
+                        )
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Colori dinamici (Material You)", Modifier.weight(1f))
+                    Switch(checked = s.dynamicColor, onCheckedChange = { vm.setDynamicColor(it) })
+                }
+            }
+
             Section("Blocco automatico") {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0, 1, 5, 15).forEach { m ->

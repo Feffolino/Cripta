@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.cripta.app.data.SettingsStore
@@ -34,7 +36,8 @@ class MainActivity : FragmentActivity() {
             WindowManager.LayoutParams.FLAG_SECURE
         )
         setContent {
-            CriptaTheme {
+            val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
+            CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
                 AppRoot(
                     session = session,
                     onAuthenticate = { authenticate() },

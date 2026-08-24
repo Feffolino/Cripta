@@ -19,6 +19,7 @@ enum class DeleteOriginalPolicy { ASK, ALWAYS, NEVER }
 
 enum class ViewMode { GRID, LIST }
 enum class SortKey { DATE, NAME, SIZE }
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 data class Settings(
     val autoLockMinutes: Int = 1,
@@ -27,6 +28,8 @@ data class Settings(
     val gridColumns: Int = 3,
     val sortKey: SortKey = SortKey.DATE,
     val sortAscending: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.DARK,
+    val dynamicColor: Boolean = false,
 )
 
 @Singleton
@@ -39,6 +42,8 @@ class SettingsStore @Inject constructor(
     private val gridColsKey = intPreferencesKey("grid_columns")
     private val sortKeyKey = intPreferencesKey("sort_key")
     private val sortAscKey = booleanPreferencesKey("sort_asc")
+    private val themeKey = intPreferencesKey("theme_mode")
+    private val dynamicKey = booleanPreferencesKey("dynamic_color")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -49,7 +54,17 @@ class SettingsStore @Inject constructor(
             gridColumns = (p[gridColsKey] ?: 3).coerceIn(2, 5),
             sortKey = SortKey.entries.getOrElse(p[sortKeyKey] ?: 0) { SortKey.DATE },
             sortAscending = p[sortAscKey] ?: false,
+            themeMode = ThemeMode.entries.getOrElse(p[themeKey] ?: ThemeMode.DARK.ordinal) { ThemeMode.DARK },
+            dynamicColor = p[dynamicKey] ?: false,
         )
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[themeKey] = mode.ordinal }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.dataStore.edit { it[dynamicKey] = enabled }
     }
 
     suspend fun setSort(key: SortKey, ascending: Boolean) {
