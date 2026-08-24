@@ -41,7 +41,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .fallbackToDestructiveMigration()
+                // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
         }
     }

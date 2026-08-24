@@ -13,6 +13,8 @@ import com.cripta.crypto.FileCrypto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -32,6 +34,12 @@ class VaultRepository @Inject constructor(
     private val db get() = session.requireDb()
     private val dek get() = session.requireDek()
 
+    /** Bumped after every DB mutation. VMs observe this to re-query reliably,
+     *  independent of Room/SQLCipher invalidation timing (which is flaky here). */
+    private val _changes = MutableStateFlow(0)
+    val changes: StateFlow<Int> = _changes
+    private fun notifyChanged() { _changes.value++ }
+
     // --- Flows ---
     fun folders(parentId: Long?): Flow<List<FolderEntity>> = db.folderDao().childrenOf(parentId)
     fun allFolders(): Flow<List<FolderEntity>> = db.folderDao().all()
@@ -42,20 +50,20 @@ class VaultRepository @Inject constructor(
 
     // --- Folders ---
     suspend fun createFolder(name: String, parentId: Long?): Long = withContext(Dispatchers.IO) {
-        db.folderDao().insert(FolderEntity(name = name.trim(), parentId = parentId, createdAt = now()))
+        val id = db.folderDao().insert(FolderEntity(name = name.trim(), parentId = parentId, createdAt = now()))
+        notifyChanged(); id
     }
 
     suspend fun renameFolder(folder: FolderEntity, newName: String) = withContext(Dispatchers.IO) {
-        db.folderDao().update(folder.copy(name = newName.trim()))
+        db.folderDao().update(folder.copy(name = newName.trim())); notifyChanged()
     }
 
     suspend fun moveFile(fileId: String, folderId: Long?) = withContext(Dispatchers.IO) {
-        db.fileDao().move(fileId, folderId)
+        db.fileDao().move(fileId, folderId); notifyChanged()
     }
 
     /** Recursively crypto-shred every file in the folder subtree, then delete the folders. */
     suspend fun deleteFolderRecursive(folderId: Long) = withContext(Dispatchers.IO) {
-        val allFolders = db.folderDao().all()
         // Gather subtree by walking children via a snapshot query set.
         val toVisit = ArrayDeque<Long>().apply { add(folderId) }
         val subtree = mutableListOf<Long>()
@@ -72,8 +80,7 @@ class VaultRepository @Inject constructor(
         for (fid in subtree.reversed()) {
             db.folderDao().byId(fid)?.let { db.folderDao().delete(it) }
         }
-        // Suppress unused warning for allFolders (kept for clarity of intent)
-        allFolders
+        notifyChanged()
     }
 
     private suspend fun snapshotChildren(): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
@@ -122,8 +129,13 @@ class VaultRepository @Inject constructor(
             durationMs = duration,
         )
         db.fileDao().insert(entity)
+        notifyChanged()
         entity
     }
+
+    /** Decrypting input stream for a file's plaintext (no full-file buffer in RAM). */
+    fun decryptingStream(file: FileEntity): java.io.InputStream =
+        FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id))
 
     /** Best-effort media duration (ms) read directly from a content uri; null on failure. */
     private fun durationOf(uri: Uri): Long? {
@@ -151,18 +163,19 @@ class VaultRepository @Inject constructor(
             dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
         }
         dao.purgeUnusedTags()
+        notifyChanged()
     }
 
     suspend fun toggleFavorite(fileId: String, fav: Boolean) = withContext(Dispatchers.IO) {
-        db.fileDao().setFavorite(fileId, fav)
+        db.fileDao().setFavorite(fileId, fav); notifyChanged()
     }
 
     suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
-        db.fileDao().rename(fileId, newName.trim())
+        db.fileDao().rename(fileId, newName.trim()); notifyChanged()
     }
 
     suspend fun setTagAlias(tagName: String, alias: String?) = withContext(Dispatchers.IO) {
-        db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null })
+        db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null }); notifyChanged()
     }
 
     /** Add [tagNames] to a file without clearing its existing tags (used for batch tagging). */
@@ -175,6 +188,7 @@ class VaultRepository @Inject constructor(
             }
             dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
         }
+        notifyChanged()
     }
 
     suspend fun createTag(name: String, alias: String? = null) = withContext(Dispatchers.IO) {
@@ -184,15 +198,17 @@ class VaultRepository @Inject constructor(
         val id = db.tagDao().insert(TagEntity(name = n, alias = a))
         // Tag already existed (insert ignored): just refresh its alias if one was provided.
         if (id == -1L && a != null) db.tagDao().setAlias(n, a)
+        notifyChanged()
     }
 
     suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
-        db.tagDao().rename(tagId, newName.trim())
+        db.tagDao().rename(tagId, newName.trim()); notifyChanged()
     }
 
     suspend fun deleteTag(tagId: Long) = withContext(Dispatchers.IO) {
         db.tagDao().unlinkAll(tagId)
         db.tagDao().deleteById(tagId)
+        notifyChanged()
     }
 
     // --- Read / open ---
@@ -269,6 +285,7 @@ class VaultRepository @Inject constructor(
         db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
         blobs.shred(fileId)         // best-effort overwrite + delete of the blob
         db.tagDao().purgeUnusedTags()
+        notifyChanged()
     }
 
     /** Best-effort deletion of the original picked files (SAF documents). */
@@ -417,6 +434,7 @@ class VaultRepository @Inject constructor(
                     val names = (0 until tagNames.length()).map { tagNames.getString(it) }
                     if (names.isNotEmpty()) setTags(uuid, names)
                 }
+                notifyChanged()
                 return@withContext fileArr.length()
             }
         }
@@ -444,6 +462,7 @@ class VaultRepository @Inject constructor(
             createdAt = now(), importedAt = now(), wrappedKeyset = wrapped,
         )
         db.fileDao().insert(e)
+        notifyChanged()
         e
     }
 
@@ -454,6 +473,7 @@ class VaultRepository @Inject constructor(
             FileCrypto.encryptingStream(f.wrappedKeyset, dek, fileId, out).use { it.write(bytes) }
         }
         db.fileDao().update(f.copy(originalName = name.ifBlank { f.originalName }, sizeBytes = bytes.size.toLong()))
+        notifyChanged()
     }
 
     suspend fun noteText(file: FileEntity): String = String(decryptBytes(file))

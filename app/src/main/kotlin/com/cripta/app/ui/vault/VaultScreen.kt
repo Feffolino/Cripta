@@ -247,6 +247,8 @@ fun VaultScreen(
                 filters, tags, vm::setType, { vm.setFavoritesOnly(!filters.favoritesOnly) }, vm::toggleTag)
 
             val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
+            // Group once per file-list change, not on every recomposition of the grid.
+            val grouped = remember(files) { groupByDay(files) }
             if (folders.isEmpty() && files.isEmpty())
                 EmptyState(filters.active, Modifier.fillMaxSize())
             else
@@ -265,7 +267,7 @@ fun VaultScreen(
                             onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                     }
                 }
-                groupByDay(files).forEach { (label, group) ->
+                grouped.forEach { (label, group) ->
                     header(label)
                     items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                         FileCell(
