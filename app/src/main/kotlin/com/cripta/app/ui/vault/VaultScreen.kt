@@ -107,6 +107,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -169,6 +170,11 @@ fun VaultScreen(
     val display by vm.display.collectAsState()
 
     var selection by remember { mutableStateOf(setOf<String>()) }
+    // Swipe/range multi-select (gallery-style) drag state.
+    val gridState = rememberLazyGridState()
+    var dragAnchor by remember { mutableStateOf<String?>(null) }
+    var dragBase by remember { mutableStateOf(setOf<String>()) }
+    var selPointer by remember { mutableStateOf(Offset.Zero) }
     var batchTag by remember { mutableStateOf(false) }
     var showNewFolder by remember { mutableStateOf(false) }
     var tagTargetId by remember { mutableStateOf<String?>(null) }
@@ -307,6 +313,8 @@ fun VaultScreen(
             val grouped = remember(files, display.showDateHeaders) {
                 if (display.showDateHeaders) groupByDay(files) else listOf("" to files)
             }
+            val orderedIds = remember(grouped) { grouped.flatMap { it.second.map { f -> f.file.id } } }
+            val idSet = remember(orderedIds) { orderedIds.toSet() }
 
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
@@ -328,7 +336,33 @@ fun VaultScreen(
                     )
                 else -> LazyVerticalGrid(
                     columns = columns,
-                    modifier = Modifier.fillMaxSize(),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize().pointerInput(orderedIds) {
+                        // Gallery-style swipe select: long-press an item, then drag to extend
+                        // the selection over a range of items.
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { off ->
+                                selPointer = off
+                                val id = fileIdAt(off, gridState, idSet)
+                                if (id != null) { dragAnchor = id; dragBase = selection; selection = selection + id }
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                selPointer += amount
+                                val anchor = dragAnchor
+                                val cur = fileIdAt(selPointer, gridState, idSet)
+                                if (anchor != null && cur != null) {
+                                    val ai = orderedIds.indexOf(anchor)
+                                    val ci = orderedIds.indexOf(cur)
+                                    if (ai >= 0 && ci >= 0) {
+                                        selection = dragBase + orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1)
+                                    }
+                                }
+                            },
+                            onDragEnd = { dragAnchor = null },
+                            onDragCancel = { dragAnchor = null },
+                        )
+                    },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -488,6 +522,13 @@ private fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWi
         }
 }
 
+/** File id of the grid cell under [pos] (viewport coords), or null if it's a folder/header/empty. */
+private fun fileIdAt(pos: Offset, state: LazyGridState, idSet: Set<String>): String? =
+    state.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+        pos.x >= info.offset.x && pos.x <= info.offset.x + info.size.width &&
+            pos.y >= info.offset.y && pos.y <= info.offset.y + info.size.height
+    }?.key?.let { it as? String }?.takeIf { it in idSet }
+
 private fun folderSubtitle(stat: FolderStat?): String {
     if (stat == null || stat.count == 0) return "Vuota"
     val n = stat.count
@@ -567,9 +608,9 @@ private fun FileCell(
     }
     val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id) { value = thumb() }
 
+    // No long-press here: the grid owns long-press-drag for gallery-style range selection.
     val clickMod = Modifier.combinedClickable(
         onClick = { if (selectionMode) onToggleSelect() else onOpen() },
-        onLongClick = onToggleSelect,
     )
 
     if (viewMode == ViewMode.LIST) {
