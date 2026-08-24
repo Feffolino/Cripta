@@ -187,6 +187,10 @@ class VaultViewModel @Inject constructor(
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
         repo.renameFolder(folder, name)    }
 
+    fun setFolderStyle(folderId: Long, color: Int?, emoji: String?) = viewModelScope.launch {
+        repo.setFolderStyle(folderId, color, emoji)
+    }
+
     fun importUris(uris: List<android.net.Uri>) = viewModelScope.launch {
         val folder = currentFolderId.value
         uris.forEach { runCatching { repo.import(it, folder) } }

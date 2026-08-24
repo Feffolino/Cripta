@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Movie
@@ -40,7 +41,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 
@@ -121,6 +124,25 @@ fun MediaThumb(
                 Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
         }
+    }
+}
+
+/** Preset folder tint colors (ARGB) offered in the customization dialog. */
+val FOLDER_COLORS: List<Int> = listOf(
+    0xFF4F86C6, 0xFF63B76C, 0xFFE0A030, 0xFFD9645B,
+    0xFF9B6BCC, 0xFF3FB0B3, 0xFFC65B9B, 0xFF7A8794,
+).map { it.toInt() }
+
+/** Folder icon tinted by [color], or an [emoji] shown in its place when set. */
+@Composable
+fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
+    if (!emoji.isNullOrBlank()) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            Text(emoji, fontSize = (size.value * 0.72f).sp)
+        }
+    } else {
+        val tint = color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
+        Icon(Icons.Filled.Folder, null, tint = tint, modifier = Modifier.size(size))
     }
 }
 

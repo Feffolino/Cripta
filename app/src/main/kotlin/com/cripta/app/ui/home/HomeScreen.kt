@@ -139,7 +139,7 @@ private fun FolderShelf(
             ) {
                 Column(Modifier.clickable(onClick = onOpenFolders).padding(12.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 36.dp)
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                     Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,

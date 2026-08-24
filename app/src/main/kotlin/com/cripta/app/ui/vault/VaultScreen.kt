@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -111,15 +112,13 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.runtime.rememberUpdatedState
-import kotlinx.coroutines.withTimeout
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.height
@@ -193,6 +192,7 @@ fun VaultScreen(
     var folderMenu by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToDelete by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
+    var folderToStyle by remember { mutableStateOf<FolderEntity?>(null) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -418,12 +418,7 @@ fun VaultScreen(
                                 val begin = if (inSelState.value) {
                                     awaitTouchSlopOrCancellation(down.id) { c, _ -> c.consume() } != null
                                 } else {
-                                    try {
-                                        withTimeout(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
-                                        false // lifted before long-press → treat as a tap
-                                    } catch (_: PointerEventTimeoutCancellationException) {
-                                        true  // long-press reached
-                                    }
+                                    awaitLongPressOrCancellation(down.id) != null
                                 }
                                 if (begin) {
                                     onStart(down.position)
@@ -498,6 +493,7 @@ fun VaultScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
                 SheetAction(Icons.Filled.Folder, "Apri") { vm.enterFolder(folder); folderMenu = null }
                 SheetAction(Icons.Filled.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
+                SheetAction(Icons.Filled.Palette, "Personalizza") { folderToStyle = folder; folderMenu = null }
                 SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
             }
         }
@@ -507,6 +503,15 @@ fun VaultScreen(
         TextPromptDialog("Rinomina cartella", "Nome", initial = folder.name,
             onConfirm = { vm.renameFolder(folder, it); folderToRename = null },
             onDismiss = { folderToRename = null })
+    }
+
+    folderToStyle?.let { folder ->
+        FolderStyleDialog(
+            initialColor = folder.color,
+            initialEmoji = folder.emoji,
+            onConfirm = { c, e -> vm.setFolderStyle(folder.id, c, e); folderToStyle = null },
+            onDismiss = { folderToStyle = null },
+        )
     }
 
     if (showFilterSheet) {
@@ -624,7 +629,7 @@ private fun FolderCell(
             modifier = modifier.fillMaxWidth(),
         ) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 32.dp)
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     if (showInfo) {
@@ -642,7 +647,7 @@ private fun FolderCell(
         modifier = modifier.fillMaxWidth().aspectRatio(1f),
     ) {
         Column(Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
+            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 36.dp)
             Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(top = 6.dp), textAlign = TextAlign.Center)
             if (showInfo) {
@@ -1075,6 +1080,68 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FolderStyleDialog(
+    initialColor: Int?,
+    initialEmoji: String?,
+    onConfirm: (Int?, String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var color by remember { mutableStateOf(initialColor) }
+    var emoji by remember { mutableStateOf(initialEmoji ?: "") }
+    val emojis = listOf("📁", "⭐", "🔒", "❤️", "📷", "🎬", "🎵", "📄", "💼", "🎨", "🔑", "🎁", "🌍", "🔥", "💡", "✅")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Personalizza cartella") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Colore", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    ColorSwatch(null, color == null) { color = null }
+                    com.cripta.app.ui.components.FOLDER_COLORS.forEach { c -> ColorSwatch(c, color == c) { color = c } }
+                }
+                Text("Emoji", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    EmojiPick("✕", emoji.isBlank()) { emoji = "" }
+                    emojis.forEach { e -> EmojiPick(e, emoji == e) { emoji = e } }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(color, emoji.ifBlank { null }) }) { Text("Salva") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
+}
+
+@Composable
+private fun ColorSwatch(color: Int?, selected: Boolean, onClick: () -> Unit) {
+    val fill = color?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        Modifier.size(36.dp).clip(CircleShape).background(fill)
+            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (color == null) Icon(Icons.Filled.Close, "Nessun colore", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun EmojiPick(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
     }
 }
 

@@ -11,6 +11,10 @@ data class FolderEntity(
     val name: String,
     val parentId: Long? = null,
     val createdAt: Long,
+    /** Optional ARGB tint for the folder icon. */
+    val color: Int? = null,
+    /** Optional emoji shown in place of the folder icon. */
+    val emoji: String? = null,
 )
 
 /**
