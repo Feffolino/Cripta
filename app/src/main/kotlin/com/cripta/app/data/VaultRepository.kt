@@ -13,10 +13,12 @@ import com.cripta.crypto.FileCrypto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.channels.SeekableByteChannel
+import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -262,12 +264,172 @@ class VaultRepository @Inject constructor(
         return name to size
     }
 
+    // --- Encrypted backup (cross-device, passphrase-derived key) ---
+
+    suspend fun exportBackup(dest: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
+        val folders = db.folderDao().all().first()
+        val tags = db.tagDao().all().first()
+        val files = db.fileDao().allWithTags().first()
+
+        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
+        val key = deriveBackupKey(passphrase, salt)
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, iv))
+
+        val manifest = org.json.JSONObject().apply {
+            put("v", 1)
+            put("folders", org.json.JSONArray().apply {
+                folders.forEach { put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL).put("createdAt", it.createdAt)) }
+            })
+            put("tags", org.json.JSONArray().apply {
+                tags.forEach { put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)) }
+            })
+            put("files", org.json.JSONArray().apply {
+                files.forEach { fwt ->
+                    put(org.json.JSONObject()
+                        .put("name", fwt.file.originalName).put("mime", fwt.file.mimeType)
+                        .put("favorite", fwt.file.isFavorite).put("createdAt", fwt.file.createdAt)
+                        .put("folderId", fwt.file.folderId ?: org.json.JSONObject.NULL)
+                        .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } }))
+                }
+            })
+        }.toString().toByteArray()
+
+        context.contentResolver.openOutputStream(dest)!!.use { raw ->
+            raw.write(BACKUP_MAGIC); raw.write(salt); raw.write(iv)
+            javax.crypto.CipherOutputStream(raw, cipher).use { cos ->
+                val out = java.io.DataOutputStream(cos)
+                out.writeInt(manifest.size); out.write(manifest)
+                files.forEach { fwt ->
+                    val bytes = decryptBytes(fwt.file)
+                    out.writeLong(bytes.size.toLong()); out.write(bytes)
+                }
+                out.flush()
+            }
+        }
+        files.size
+    }
+
+    suspend fun importBackup(src: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
+        context.contentResolver.openInputStream(src)!!.use { raw ->
+            val magic = ByteArray(BACKUP_MAGIC.size); raw.read(magic)
+            require(magic.contentEquals(BACKUP_MAGIC)) { "Formato non valido" }
+            val salt = ByteArray(16); raw.read(salt)
+            val iv = ByteArray(12); raw.read(iv)
+            val key = deriveBackupKey(passphrase, salt)
+            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, iv))
+            javax.crypto.CipherInputStream(raw, cipher).use { cis ->
+                val inp = java.io.DataInputStream(cis)
+                val mLen = inp.readInt()
+                require(mLen in 1..50_000_000) { "Passphrase errata o file corrotto" }
+                val mBytes = ByteArray(mLen); inp.readFully(mBytes)
+                val manifest = org.json.JSONObject(String(mBytes))
+
+                // Folders: remap old ids to new, inserting parents before children.
+                val fArr = manifest.getJSONArray("folders")
+                val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
+                val idMap = HashMap<Long, Long>()
+                var guard = 0
+                while (pending.isNotEmpty() && guard < 10000) {
+                    guard++
+                    val it = pending.iterator()
+                    var progressed = false
+                    while (it.hasNext()) {
+                        val o = it.next()
+                        val oldId = o.getLong("id")
+                        val parentOld = if (o.isNull("parentId")) null else o.getLong("parentId")
+                        val newParent = if (parentOld == null) null else idMap[parentOld]
+                        if (parentOld != null && newParent == null) continue // parent not yet inserted
+                        val newId = db.folderDao().insert(FolderEntity(name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now())))
+                        idMap[oldId] = newId; it.remove(); progressed = true
+                    }
+                    if (!progressed) break
+                }
+
+                // Tags with alias.
+                val tArr = manifest.getJSONArray("tags")
+                for (i in 0 until tArr.length()) {
+                    val o = tArr.getJSONObject(i)
+                    val name = o.getString("name")
+                    db.tagDao().insert(TagEntity(name = name))
+                    if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
+                }
+
+                // Files: order matches the blob stream order.
+                val fileArr = manifest.getJSONArray("files")
+                for (i in 0 until fileArr.length()) {
+                    val o = fileArr.getJSONObject(i)
+                    val len = inp.readLong()
+                    require(len in 0..2_000_000_000L) { "File corrotto" }
+                    val bytes = ByteArray(len.toInt()); inp.readFully(bytes)
+                    val uuid = UUID.randomUUID().toString()
+                    val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+                    blobs.blob(uuid).outputStream().use { out ->
+                        FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
+                    }
+                    val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
+                    val entity = FileEntity(
+                        id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
+                        sizeBytes = bytes.size.toLong(), folderId = folderOld?.let { idMap[it] },
+                        isFavorite = o.optBoolean("favorite", false),
+                        createdAt = o.optLong("createdAt", now()), importedAt = now(), wrappedKeyset = wrapped,
+                    )
+                    db.fileDao().insert(entity)
+                    val tagNames = o.getJSONArray("tags")
+                    val names = (0 until tagNames.length()).map { tagNames.getString(it) }
+                    if (names.isNotEmpty()) setTags(uuid, names)
+                }
+                return@withContext fileArr.length()
+            }
+        }
+    }
+
+    private fun deriveBackupKey(passphrase: CharArray, salt: ByteArray): javax.crypto.SecretKey {
+        val spec = javax.crypto.spec.PBEKeySpec(passphrase, salt, 210_000, 256)
+        val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        return javax.crypto.spec.SecretKeySpec(factory.generateSecret(spec).encoded, "AES")
+    }
+
     private fun now() = System.currentTimeMillis()
 
+    // --- Notes ---
+    suspend fun createNote(folderId: Long?, name: String, text: String): FileEntity = withContext(Dispatchers.IO) {
+        val uuid = UUID.randomUUID().toString()
+        val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+        val bytes = text.toByteArray()
+        blobs.blob(uuid).outputStream().use { out ->
+            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
+        }
+        val e = FileEntity(
+            id = uuid, originalName = name.ifBlank { "Nota" }, mimeType = MIME_NOTE,
+            sizeBytes = bytes.size.toLong(), folderId = folderId,
+            createdAt = now(), importedAt = now(), wrappedKeyset = wrapped,
+        )
+        db.fileDao().insert(e)
+        e
+    }
+
+    suspend fun updateNote(fileId: String, name: String, text: String) = withContext(Dispatchers.IO) {
+        val f = db.fileDao().byId(fileId) ?: return@withContext
+        val bytes = text.toByteArray()
+        blobs.blob(fileId).outputStream().use { out ->
+            FileCrypto.encryptingStream(f.wrappedKeyset, dek, fileId, out).use { it.write(bytes) }
+        }
+        db.fileDao().update(f.copy(originalName = name.ifBlank { f.originalName }, sizeBytes = bytes.size.toLong()))
+    }
+
+    suspend fun noteText(file: FileEntity): String = String(decryptBytes(file))
+
     companion object {
+        private val BACKUP_MAGIC = "CRIPTABK".toByteArray()
+        const val MIME_NOTE = "text/cripta-note"
         fun isImage(mime: String) = mime.startsWith("image/")
         fun isVideo(mime: String) = mime.startsWith("video/")
         fun isPlayable(mime: String) = isVideo(mime) || mime.startsWith("audio/")
+        fun isNote(mime: String) = mime == MIME_NOTE
+        fun isPdf(mime: String) = mime == "application/pdf"
     }
 }
 

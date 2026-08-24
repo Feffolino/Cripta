@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
@@ -116,6 +117,7 @@ fun tagAlias(tag: TagEntity): String =
 fun VaultScreen(
     onOpenFile: (String) -> Unit,
     onSettings: () -> Unit,
+    onNewNote: () -> Unit = {},
     vm: VaultViewModel = hiltViewModel(),
 ) {
     val folders by vm.folders.collectAsState()
@@ -208,6 +210,9 @@ fun VaultScreen(
         floatingActionButton = {
             if (!inSelection) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SmallFloatingActionButton(onClick = onNewNote) {
+                        Icon(Icons.Filled.Description, "Nuova nota")
+                    }
                     SmallFloatingActionButton(onClick = { showNewFolder = true }) {
                         Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
                     }

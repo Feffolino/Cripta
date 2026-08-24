@@ -98,6 +98,7 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 VaultScreen(
                     onOpenFile = { nav.navigate("viewer/$it") },
                     onSettings = { nav.navigate("settings") { launchSingleTop = true } },
+                    onNewNote = { nav.navigate("note/new") },
                 )
             }
             composable("favorites") {
@@ -107,7 +108,17 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 SettingsScreen(onBack = { nav.popBackStack() })
             }
             composable("viewer/{fileId}") { entry ->
-                ViewerScreen(fileId = entry.arguments?.getString("fileId").orEmpty(), onBack = { nav.popBackStack() })
+                ViewerScreen(
+                    fileId = entry.arguments?.getString("fileId").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                    onEditNote = { nav.navigate("note/$it") },
+                )
+            }
+            composable("note/new") {
+                com.cripta.app.ui.note.NoteEditorScreen(fileId = null, onBack = { nav.popBackStack() })
+            }
+            composable("note/{id}") { entry ->
+                com.cripta.app.ui.note.NoteEditorScreen(fileId = entry.arguments?.getString("id"), onBack = { nav.popBackStack() })
             }
         }
     }

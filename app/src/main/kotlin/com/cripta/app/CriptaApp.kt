@@ -9,5 +9,6 @@ class CriptaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         TinkInit.ensureInitialized()
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
     }
 }

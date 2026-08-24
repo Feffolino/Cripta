@@ -1,18 +1,25 @@
 package com.cripta.app.ui.viewer
 
+import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -48,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -66,14 +74,20 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.ui.vault.TagEditorDialog
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.rendering.PDFRenderer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewerScreen(
     fileId: String,
     onBack: () -> Unit,
+    onEditNote: (String) -> Unit = {},
     vm: ViewerViewModel = hiltViewModel(),
 ) {
     val ctx = LocalContext.current
@@ -132,6 +146,11 @@ fun ViewerScreen(
                 ),
                 actions = {
                     currentFile?.let { file ->
+                        if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) {
+                            IconButton(onClick = { onEditNote(file.id) }) {
+                                Icon(androidx.compose.material.icons.Icons.Filled.Edit, "Modifica")
+                            }
+                        }
                         IconButton(onClick = { vm.toggleFavorite(file) }) {
                             Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
                         }
@@ -196,6 +215,8 @@ private fun MediaPage(
             is ViewerState.Error -> Text(s.message, color = Color.White)
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onToggleChrome)
             is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, onToggleChrome) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Note -> NoteView(s.text, onToggleChrome)
+            is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Nessun viewer interno per questo tipo.", color = Color.White)
                 Text("Usa Scarica per aprirlo con un'altra app.", color = Color.White)
@@ -257,6 +278,44 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                 translationX = offX.value; translationY = offY.value
             },
     )
+}
+
+@Composable
+private fun NoteView(text: String, onSingleTap: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0A0C10))
+            .verticalScroll(rememberScrollState())
+            .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }
+            .padding(20.dp),
+    ) {
+        Text(text.ifBlank { "(nota vuota)" }, color = Color.White)
+    }
+}
+
+@Composable
+private fun PdfView(bytes: ByteArray) {
+    val pages by produceState<List<Bitmap>?>(initialValue = null, bytes) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
+                    val renderer = PDFRenderer(doc)
+                    (0 until doc.numberOfPages).map { renderer.renderImageWithDPI(it, 150f) }
+                }
+            }.getOrDefault(emptyList())
+        }
+    }
+    val p = pages
+    when {
+        p == null -> CircularProgressIndicator(color = Color.White)
+        p.isEmpty() -> Text("Impossibile aprire il PDF", color = Color.White)
+        else -> LazyColumn(Modifier.fillMaxSize().background(Color(0xFF0A0C10))) {
+            items(p) { bmp ->
+                Image(bmp.asImageBitmap(), null, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+            }
+        }
+    }
 }
 
 @OptIn(UnstableApi::class)

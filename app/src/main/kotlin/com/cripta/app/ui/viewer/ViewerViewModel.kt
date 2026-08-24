@@ -19,6 +19,8 @@ sealed interface ViewerState {
     data object Loading : ViewerState
     data class Photo(val file: FileEntity, val bytes: ByteArray) : ViewerState
     data class Video(val file: FileEntity) : ViewerState
+    data class Note(val file: FileEntity, val text: String) : ViewerState
+    data class Pdf(val file: FileEntity, val bytes: ByteArray) : ViewerState
     data class Other(val file: FileEntity) : ViewerState
     data class Error(val message: String) : ViewerState
 }
@@ -48,6 +50,8 @@ class ViewerViewModel @Inject constructor(
         when {
             VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, repo.decryptBytes(file))
             VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
+            VaultRepository.isNote(file.mimeType) -> ViewerState.Note(file, repo.noteText(file))
+            VaultRepository.isPdf(file.mimeType) -> ViewerState.Pdf(file, repo.decryptBytes(file))
             else -> ViewerState.Other(file)
         }
     }.getOrElse { ViewerState.Error(it.message ?: "Errore") }
