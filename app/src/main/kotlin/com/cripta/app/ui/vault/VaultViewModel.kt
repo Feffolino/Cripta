@@ -3,9 +3,11 @@ package com.cripta.app.ui.vault
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.graphics.Bitmap
+import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.ViewMode
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.computeFolderStats
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.data.db.FolderEntity
@@ -83,6 +85,12 @@ class VaultViewModel @Inject constructor(
 
     val allFolders: StateFlow<List<FolderEntity>> =
         repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Recursive per-folder stats (file count + total bytes, including all descendant folders). */
+    val folderStats: StateFlow<Map<Long, FolderStat>> =
+        combine(repo.allFolders(), repo.folderAggregates(), refresh) { folders, aggs, _ ->
+            computeFolderStats(folders, aggs)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val sortFlow = settings.settings.map { it.sortKey to it.sortAscending }
 
@@ -213,6 +221,16 @@ class VaultViewModel @Inject constructor(
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
         repo.setTags(fileId, tagNames); bump()
+    }
+
+    /** Add the given tags to every selected file without touching their other tags. */
+    fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>) = viewModelScope.launch {
+        fileIds.forEach { repo.addTags(it, tagNames) }; bump()
+    }
+
+    /** Create a tag (optionally with an emoji/acronym alias) up front. */
+    fun createTag(name: String, alias: String?) = viewModelScope.launch {
+        repo.createTag(name, alias); bump()
     }
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {

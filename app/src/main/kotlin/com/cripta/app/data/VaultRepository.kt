@@ -38,6 +38,7 @@ class VaultRepository @Inject constructor(
     fun files(folderId: Long?): Flow<List<FileWithTags>> = db.fileDao().inFolderWithTags(folderId)
     fun allFiles(): Flow<List<FileWithTags>> = db.fileDao().allWithTags()
     fun tags(): Flow<List<TagEntity>> = db.tagDao().all()
+    fun folderAggregates(): Flow<List<com.cripta.app.data.db.FolderAgg>> = db.fileDao().folderAggregates()
 
     // --- Folders ---
     suspend fun createFolder(name: String, parentId: Long?): Long = withContext(Dispatchers.IO) {
@@ -97,6 +98,8 @@ class VaultRepository @Inject constructor(
     suspend fun import(uri: Uri, folderId: Long?): FileEntity = withContext(Dispatchers.IO) {
         val (name, size) = queryNameSize(uri)
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        // Read media duration from the still-plaintext source before it is encrypted.
+        val duration = if (isPlayable(mime)) durationOf(uri) else null
         val uuid = UUID.randomUUID().toString()
         val wrappedKeyset = FileCrypto.createWrappedFileKeyset(dek)
         val blob = blobs.blob(uuid)
@@ -116,9 +119,24 @@ class VaultRepository @Inject constructor(
             createdAt = now(),
             importedAt = now(),
             wrappedKeyset = wrappedKeyset,
+            durationMs = duration,
         )
         db.fileDao().insert(entity)
         entity
+    }
+
+    /** Best-effort media duration (ms) read directly from a content uri; null on failure. */
+    private fun durationOf(uri: Uri): Long? {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull()?.takeIf { it > 0 }
+        } catch (e: Exception) {
+            null
+        } finally {
+            runCatching { retriever.release() }
+        }
     }
 
     // --- Tags ---
@@ -147,9 +165,25 @@ class VaultRepository @Inject constructor(
         db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null })
     }
 
-    suspend fun createTag(name: String) = withContext(Dispatchers.IO) {
+    /** Add [tagNames] to a file without clearing its existing tags (used for batch tagging). */
+    suspend fun addTags(fileId: String, tagNames: List<String>) = withContext(Dispatchers.IO) {
+        val dao = db.tagDao()
+        for (raw in tagNames.map { it.trim() }.filter { it.isNotEmpty() }.distinct()) {
+            val existing = dao.byName(raw)
+            val tagId = existing?.id ?: dao.insert(TagEntity(name = raw)).let {
+                if (it == -1L) dao.byName(raw)!!.id else it
+            }
+            dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
+        }
+    }
+
+    suspend fun createTag(name: String, alias: String? = null) = withContext(Dispatchers.IO) {
         val n = name.trim()
-        if (n.isNotEmpty()) db.tagDao().insert(com.cripta.app.data.db.TagEntity(name = n))
+        if (n.isEmpty()) return@withContext
+        val a = alias?.trim()?.ifEmpty { null }
+        val id = db.tagDao().insert(TagEntity(name = n, alias = a))
+        // Tag already existed (insert ignored): just refresh its alias if one was provided.
+        if (id == -1L && a != null) db.tagDao().setAlias(n, a)
     }
 
     suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
@@ -291,6 +325,7 @@ class VaultRepository @Inject constructor(
                         .put("name", fwt.file.originalName).put("mime", fwt.file.mimeType)
                         .put("favorite", fwt.file.isFavorite).put("createdAt", fwt.file.createdAt)
                         .put("folderId", fwt.file.folderId ?: org.json.JSONObject.NULL)
+                        .put("durationMs", fwt.file.durationMs ?: org.json.JSONObject.NULL)
                         .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } }))
                 }
             })
@@ -375,6 +410,7 @@ class VaultRepository @Inject constructor(
                         sizeBytes = bytes.size.toLong(), folderId = folderOld?.let { idMap[it] },
                         isFavorite = o.optBoolean("favorite", false),
                         createdAt = o.optLong("createdAt", now()), importedAt = now(), wrappedKeyset = wrapped,
+                        durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
                     )
                     db.fileDao().insert(entity)
                     val tagNames = o.getJSONArray("tags")

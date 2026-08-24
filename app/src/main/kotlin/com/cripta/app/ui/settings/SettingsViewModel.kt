@@ -46,9 +46,17 @@ class SettingsViewModel @Inject constructor(
             .fold({ "Ripristinati $it file" }, { "Import fallito (passphrase errata?)" })
     }
 
-    fun createTag(name: String) = viewModelScope.launch { repo.createTag(name) }
+    fun createTag(name: String, alias: String? = null) = viewModelScope.launch { repo.createTag(name, alias) }
     fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
+
+    /** Edit a label's name and alias together (used by the merged edit dialog). */
+    fun editTag(id: Long, newName: String, alias: String?) = viewModelScope.launch {
+        val n = newName.trim()
+        if (n.isEmpty()) return@launch
+        repo.renameTag(id, n)
+        repo.setTagAlias(n, alias)
+    }
     fun lockNow() = session.lock()
 }

@@ -172,6 +172,7 @@ fun ViewerScreen(
             initialSelected = initial,
             onConfirm = { vm.setTags(file.id, it); showTags = false },
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
+            onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { showTags = false },
         )
     }

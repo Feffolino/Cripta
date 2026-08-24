@@ -97,7 +97,6 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             composable("folders") {
                 VaultScreen(
                     onOpenFile = { nav.navigate("viewer/$it") },
-                    onSettings = { nav.navigate("settings") { launchSingleTop = true } },
                     onNewNote = { nav.navigate("note/new") },
                 )
             }

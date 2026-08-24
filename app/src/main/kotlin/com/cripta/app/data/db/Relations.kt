@@ -4,6 +4,13 @@ import androidx.room.Embedded
 import androidx.room.Junction
 import androidx.room.Relation
 
+/** Per-folder direct aggregate: how many files sit directly in [folderId] and their total size. */
+data class FolderAgg(
+    val folderId: Long,
+    val cnt: Int,
+    val bytes: Long,
+)
+
 /** A file together with its tags, assembled by Room. */
 data class FileWithTags(
     @Embedded val file: FileEntity,

@@ -32,10 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.cripta.app.data.FolderStat
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.ui.components.MediaThumb
 import com.cripta.app.ui.components.MediaThumbCell
+import com.cripta.app.ui.components.formatBytes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +50,7 @@ fun HomeScreen(
     val recents by vm.recents.collectAsState()
     val favorites by vm.favorites.collectAsState()
     val folders by vm.folders.collectAsState()
+    val folderStats by vm.folderStats.collectAsState()
 
     Scaffold(
         topBar = {
@@ -83,7 +86,7 @@ fun HomeScreen(
             }
             if (folders.isNotEmpty()) {
                 item { ShelfHeader("Cartelle") }
-                item { FolderShelf(folders, onOpenFolders) }
+                item { FolderShelf(folders, folderStats, onOpenFolders) }
             }
         }
     }
@@ -110,9 +113,16 @@ private fun MediaShelf(items: List<FileEntity>, onOpen: (String) -> Unit, vm: Ho
 }
 
 @Composable
-private fun FolderShelf(folders: List<FolderEntity>, onOpenFolders: () -> Unit) {
+private fun FolderShelf(
+    folders: List<FolderEntity>,
+    stats: Map<Long, FolderStat>,
+    onOpenFolders: () -> Unit,
+) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(folders, key = { it.id }) { folder ->
+            val stat = stats[folder.id]
+            val subtitle = if (stat == null || stat.count == 0) "Vuota"
+                else "${stat.count} · ${formatBytes(stat.bytes)}"
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.medium,
@@ -123,6 +133,9 @@ private fun FolderShelf(folders: List<FolderEntity>, onOpenFolders: () -> Unit) 
                     Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                    Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp))
                 }
             }
         }

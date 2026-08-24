@@ -11,7 +11,7 @@ import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -28,13 +28,19 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE files ADD COLUMN durationMs INTEGER")
+            }
+        }
+
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
             SQLiteDatabase.loadLibs(context)
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration()
                 .build()
         }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -52,7 +53,6 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.ViewModule
@@ -90,12 +90,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.data.db.TagEntity
+import com.cripta.app.ui.components.fileMeta
+import com.cripta.app.ui.components.formatBytes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -116,7 +119,6 @@ fun tagAlias(tag: TagEntity): String =
 @Composable
 fun VaultScreen(
     onOpenFile: (String) -> Unit,
-    onSettings: () -> Unit,
     onNewNote: () -> Unit = {},
     vm: VaultViewModel = hiltViewModel(),
 ) {
@@ -131,8 +133,10 @@ fun VaultScreen(
     val allFolders by vm.allFolders.collectAsState()
     val sortKey by vm.sortKey.collectAsState()
     val sortAscending by vm.sortAscending.collectAsState()
+    val folderStats by vm.folderStats.collectAsState()
 
     var selection by remember { mutableStateOf(setOf<String>()) }
+    var batchTag by remember { mutableStateOf(false) }
     var showNewFolder by remember { mutableStateOf(false) }
     var tagTargetId by remember { mutableStateOf<String?>(null) }
     var renameTargetId by remember { mutableStateOf<String?>(null) }
@@ -187,9 +191,15 @@ fun VaultScreen(
                         IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
                         DropdownMenu(expanded = selMenu, onDismissRequest = { selMenu = false }) {
                             DropdownMenuItem(text = { Text("Sposta") }, onClick = { selMenu = false; showMove = true })
+                            DropdownMenuItem(
+                                text = { Text(if (selection.size == 1) "Etichette" else "Etichette (${selection.size})") },
+                                onClick = {
+                                    selMenu = false
+                                    if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
+                                },
+                            )
                             if (selection.size == 1) {
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
-                                DropdownMenuItem(text = { Text("Etichette") }, onClick = { selMenu = false; tagTargetId = selection.first() })
                             }
                         }
                     } else {
@@ -202,7 +212,6 @@ fun VaultScreen(
                         IconButton(onClick = { vm.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID) }) {
                             Icon(if (viewMode == ViewMode.GRID) Icons.Filled.ViewList else Icons.Filled.GridView, "Vista")
                         }
-                        IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Impostazioni") }
                     }
                 },
             )
@@ -251,7 +260,7 @@ fun VaultScreen(
                 if (folders.isNotEmpty() && !filters.active) {
                     header("Cartelle")
                     items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
-                        FolderCell(folder, viewMode,
+                        FolderCell(folder, viewMode, folderStats[folder.id],
                             modifier = Modifier.animateItem(),
                             onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                     }
@@ -297,7 +306,18 @@ fun VaultScreen(
             initialSelected = target?.tags?.map { it.name } ?: emptyList(),
             onConfirm = { vm.setTags(id, it); tagTargetId = null; selection = emptySet() },
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
+            onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { tagTargetId = null },
+        )
+    }
+
+    if (batchTag) {
+        BatchTagDialog(
+            count = selection.size,
+            allTags = tags,
+            onConfirm = { names -> vm.addTagsToFiles(selection.toList(), names); batchTag = false; selection = emptySet() },
+            onCreateTag = { name, alias -> vm.createTag(name, alias) },
+            onDismiss = { batchTag = false },
         )
     }
 
@@ -394,21 +414,54 @@ private fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWi
         }
 }
 
+private fun folderSubtitle(stat: FolderStat?): String {
+    if (stat == null || stat.count == 0) return "Vuota"
+    val n = stat.count
+    val items = if (n == 1) "1 elemento" else "$n elementi"
+    return "$items · ${formatBytes(stat.bytes)}"
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FolderCell(folder: FolderEntity, viewMode: ViewMode, modifier: Modifier, onOpen: () -> Unit, onLongPress: () -> Unit) {
+private fun FolderCell(
+    folder: FolderEntity,
+    viewMode: ViewMode,
+    stat: FolderStat?,
+    modifier: Modifier,
+    onOpen: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    val subtitle = folderSubtitle(stat)
+    if (viewMode == ViewMode.LIST) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.medium,
+            modifier = modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+        ) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                    Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        return
+    }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (viewMode == ViewMode.GRID) Modifier.aspectRatio(1f) else Modifier)
+        modifier = modifier.fillMaxWidth().aspectRatio(1f)
             .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
     ) {
         Column(Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
             Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(top = 6.dp), textAlign = TextAlign.Center)
+            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -443,9 +496,13 @@ private fun FileCell(
         Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium,
             modifier = modifier.fillMaxWidth().then(clickMod)) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags, Modifier.size(56.dp))
+                // List mode: no tag badges on the cover — tags are shown as text below the name.
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
+                    emptyList(), Modifier.size(56.dp))
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                    Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (item.tags.isNotEmpty()) {
                         Text(item.tags.joinToString(" ") { "#${it.name}" }, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium,
@@ -462,6 +519,9 @@ private fun FileCell(
             Modifier.fillMaxWidth().aspectRatio(1f))
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 2.dp))
     }
 }
 
@@ -549,7 +609,11 @@ private fun FilterSection(
         }
         if (expanded) {
             Text("Tipo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Single horizontally-scrollable row so type chips never wrap when space is tight.
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 TypeFilter.entries.forEach { t ->
                     FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
                 }

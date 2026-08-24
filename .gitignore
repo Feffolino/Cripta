@@ -8,3 +8,6 @@ captures/
 .externalNativeBuild/
 .cxx/
 .cripta-toolchain/
+
+# Windows/MSYS crash dumps
+*.stackdump
