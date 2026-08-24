@@ -1,9 +1,11 @@
 package com.cripta.app.ui.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,8 +31,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.cripta.app.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.db.FileEntity
@@ -55,7 +59,12 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cripta") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(painterResource(R.drawable.ic_launcher_foreground), null, modifier = Modifier.size(36.dp))
+                        Text("Cripta", modifier = Modifier.padding(start = 2.dp))
+                    }
+                },
                 actions = { IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") } },
             )
         },

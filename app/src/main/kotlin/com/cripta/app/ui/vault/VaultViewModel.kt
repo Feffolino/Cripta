@@ -3,6 +3,7 @@ package com.cripta.app.ui.vault
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.graphics.Bitmap
+import com.cripta.app.data.DisplayPrefs
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.ViewMode
@@ -79,6 +80,10 @@ class VaultViewModel @Inject constructor(
     val gridColumns: StateFlow<Int> =
         settings.settings.map { it.gridColumns }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+
+    val display: StateFlow<DisplayPrefs> =
+        settings.settings.map { it.display }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DisplayPrefs())
 
     fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
     fun setGridColumns(cols: Int) = viewModelScope.launch { settings.setGridColumns(cols) }
