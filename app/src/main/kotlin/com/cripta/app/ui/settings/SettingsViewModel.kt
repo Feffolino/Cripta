@@ -32,6 +32,10 @@ class SettingsViewModel @Inject constructor(
     fun setDeletePolicy(p: DeleteOriginalPolicy) = viewModelScope.launch { store.setDeleteOriginalPolicy(p) }
     fun setThemeMode(m: com.cripta.app.data.ThemeMode) = viewModelScope.launch { store.setThemeMode(m) }
     fun setDynamicColor(b: Boolean) = viewModelScope.launch { store.setDynamicColor(b) }
+    fun setViewMode(m: com.cripta.app.data.ViewMode) = viewModelScope.launch { store.setViewMode(m) }
+    fun setGridColumns(n: Int) = viewModelScope.launch { store.setGridColumns(n) }
+    fun setSort(k: com.cripta.app.data.SortKey, asc: Boolean) = viewModelScope.launch { store.setSort(k, asc) }
+    fun setAllowScreenshots(b: Boolean) = viewModelScope.launch { store.setAllowScreenshots(b) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
     fun clearMessage() { _message.value = null }

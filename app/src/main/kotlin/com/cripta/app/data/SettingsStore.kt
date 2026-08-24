@@ -30,6 +30,8 @@ data class Settings(
     val sortAscending: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DARK,
     val dynamicColor: Boolean = false,
+    /** When false (default) the window keeps FLAG_SECURE: screenshots blocked, hidden in recents. */
+    val allowScreenshots: Boolean = false,
 )
 
 @Singleton
@@ -44,6 +46,7 @@ class SettingsStore @Inject constructor(
     private val sortAscKey = booleanPreferencesKey("sort_asc")
     private val themeKey = intPreferencesKey("theme_mode")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
+    private val allowShotsKey = booleanPreferencesKey("allow_screenshots")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -56,7 +59,12 @@ class SettingsStore @Inject constructor(
             sortAscending = p[sortAscKey] ?: false,
             themeMode = ThemeMode.entries.getOrElse(p[themeKey] ?: ThemeMode.DARK.ordinal) { ThemeMode.DARK },
             dynamicColor = p[dynamicKey] ?: false,
+            allowScreenshots = p[allowShotsKey] ?: false,
         )
+    }
+
+    suspend fun setAllowScreenshots(enabled: Boolean) {
+        context.dataStore.edit { it[allowShotsKey] = enabled }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Remove
+import com.cripta.app.data.SortKey
+import com.cripta.app.data.ViewMode
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -113,13 +117,51 @@ fun SettingsScreen(
             }
 
             item {
+                Section("Visualizzazione") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = s.viewMode == ViewMode.GRID, onClick = { vm.setViewMode(ViewMode.GRID) }, label = { Text("Griglia") })
+                        FilterChip(selected = s.viewMode == ViewMode.LIST, onClick = { vm.setViewMode(ViewMode.LIST) }, label = { Text("Elenco") })
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Colonne griglia", Modifier.weight(1f))
+                        IconButton(onClick = { vm.setGridColumns(s.gridColumns - 1) }, enabled = s.gridColumns > 2) {
+                            Icon(Icons.Filled.Remove, "Meno colonne")
+                        }
+                        Text("${s.gridColumns}", style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { vm.setGridColumns(s.gridColumns + 1) }, enabled = s.gridColumns < 5) {
+                            Icon(Icons.Filled.Add, "Più colonne")
+                        }
+                    }
+                }
+            }
+
+            item {
+                Section("Ordinamento predefinito") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            SortKey.DATE to "Data", SortKey.NAME to "Nome",
+                            SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale",
+                        ).forEach { (k, lbl) ->
+                            FilterChip(selected = s.sortKey == k, onClick = { vm.setSort(k, s.sortAscending) }, label = { Text(lbl) })
+                        }
+                    }
+                    if (s.sortKey != SortKey.MANUAL) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Crescente", Modifier.weight(1f))
+                            Switch(checked = s.sortAscending, onCheckedChange = { vm.setSort(s.sortKey, it) })
+                        }
+                    }
+                }
+            }
+
+            item {
                 Section("Blocco automatico") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0, 1, 5, 15).forEach { m ->
+                        listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
                             FilterChip(
                                 selected = s.autoLockMinutes == m,
                                 onClick = { vm.setAutoLock(m) },
-                                label = { Text(if (m == 0) "Subito" else "$m min") },
+                                label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
                             )
                         }
                     }
@@ -187,6 +229,19 @@ fun SettingsScreen(
             item {
                 Button(onClick = { vm.lockNow(); onBack() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Blocca ora")
+                }
+            }
+
+            item {
+                Section("Privacy") {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Consenti screenshot")
+                            Text("Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(checked = s.allowScreenshots, onCheckedChange = { vm.setAllowScreenshots(it) })
+                    }
                 }
             }
 

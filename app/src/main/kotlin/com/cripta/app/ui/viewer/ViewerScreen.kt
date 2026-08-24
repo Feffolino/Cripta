@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -42,6 +43,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -135,6 +137,7 @@ fun ViewerScreen(
                 id = ids[page],
                 refreshKey = refresh,
                 isCurrent = page == pagerState.currentPage,
+                chromeVisible = chromeVisible,
                 vm = vm,
                 onToggleChrome = { chromeVisible = !chromeVisible },
             )
@@ -215,6 +218,7 @@ private fun MediaPage(
     id: String,
     refreshKey: Int,
     isCurrent: Boolean,
+    chromeVisible: Boolean,
     vm: ViewerViewModel,
     onToggleChrome: () -> Unit,
 ) {
@@ -226,7 +230,7 @@ private fun MediaPage(
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, onToggleChrome) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, chromeVisible, onToggleChrome) else CircularProgressIndicator(color = Color.White)
             is ViewerState.Note -> NoteView(s.text, onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -359,7 +363,7 @@ private fun PdfView(bytes: ByteArray) {
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, onSingleTap: () -> Unit) {
+private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, controlsVisible: Boolean, onSingleTap: () -> Unit) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
@@ -415,9 +419,19 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, onSingleTap: () -
         if (buffering) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
         }
-        IconButton(
-            onClick = { modeIdx = (modeIdx + 1) % modes.size },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-        ) { Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White) }
+        // Aspect toggle parked on the right edge, clear of the top bar and the bottom seek bar,
+        // and only while the controls are showing.
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+        ) {
+            Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                IconButton(onClick = { modeIdx = (modeIdx + 1) % modes.size }) {
+                    Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White)
+                }
+            }
+        }
     }
 }
