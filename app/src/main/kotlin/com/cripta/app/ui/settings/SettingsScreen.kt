@@ -127,6 +127,13 @@ fun SettingsScreen(
             }
 
             item {
+                Section("Pulsanti azione", "Nascondi i pulsanti flottanti che non usi.") {
+                    ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
+                    ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
+                }
+            }
+
+            item {
                 Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(-1, 0, 1, 5, 15, 30).forEach { m ->

@@ -27,6 +27,8 @@ data class DisplayPrefs(
     val showTagsOnCover: Boolean = true,  // tag badges over grid thumbnails
     val showDateHeaders: Boolean = true,  // "Oggi / Ieri / date" grouping
     val showFolderInfo: Boolean = true,   // per-folder item count + size
+    val showNoteFab: Boolean = true,      // the "new note" floating button
+    val showRandomFab: Boolean = true,    // the "random" floating button
 )
 
 data class Settings(
@@ -60,6 +62,8 @@ class SettingsStore @Inject constructor(
     private val showTagsCoverKey = booleanPreferencesKey("show_tags_cover")
     private val showDateHeadersKey = booleanPreferencesKey("show_date_headers")
     private val showFolderInfoKey = booleanPreferencesKey("show_folder_info")
+    private val showNoteFabKey = booleanPreferencesKey("show_note_fab")
+    private val showRandomFabKey = booleanPreferencesKey("show_random_fab")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -78,6 +82,8 @@ class SettingsStore @Inject constructor(
                 showTagsOnCover = p[showTagsCoverKey] ?: true,
                 showDateHeaders = p[showDateHeadersKey] ?: true,
                 showFolderInfo = p[showFolderInfoKey] ?: true,
+                showNoteFab = p[showNoteFabKey] ?: true,
+                showRandomFab = p[showRandomFabKey] ?: true,
             ),
         )
     }
@@ -90,6 +96,8 @@ class SettingsStore @Inject constructor(
     suspend fun setShowTagsOnCover(v: Boolean) { context.dataStore.edit { it[showTagsCoverKey] = v } }
     suspend fun setShowDateHeaders(v: Boolean) { context.dataStore.edit { it[showDateHeadersKey] = v } }
     suspend fun setShowFolderInfo(v: Boolean) { context.dataStore.edit { it[showFolderInfoKey] = v } }
+    suspend fun setShowNoteFab(v: Boolean) { context.dataStore.edit { it[showNoteFabKey] = v } }
+    suspend fun setShowRandomFab(v: Boolean) { context.dataStore.edit { it[showRandomFabKey] = v } }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[themeKey] = mode.ordinal }

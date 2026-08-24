@@ -1,7 +1,10 @@
 package com.cripta.app
 
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.core.view.WindowCompat
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +39,14 @@ class MainActivity : FragmentActivity() {
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
         )
+        // Edge-to-edge with transparent system bars (Compose Scaffolds handle the insets).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= 29) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent {
             val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
             // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.
