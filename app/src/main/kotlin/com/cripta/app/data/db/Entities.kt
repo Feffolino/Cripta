@@ -32,6 +32,8 @@ data class FileEntity(
     val createdAt: Long,
     val importedAt: Long,
     val wrappedKeyset: ByteArray,
+    /** Media duration in milliseconds for video/audio; null for other types or unknown. */
+    val durationMs: Long? = null,
 ) {
     override fun equals(other: Any?): Boolean =
         this === other || (other is FileEntity && other.id == id)

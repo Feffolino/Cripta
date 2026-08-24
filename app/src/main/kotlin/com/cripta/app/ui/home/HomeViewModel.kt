@@ -3,7 +3,9 @@ package com.cripta.app.ui.home
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cripta.app.data.FolderStat
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.computeFolderStats
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.media.ThumbnailLoader
@@ -11,6 +13,7 @@ import com.cripta.app.viewer.ViewerQueue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -34,6 +37,11 @@ class HomeViewModel @Inject constructor(
 
     val folders: StateFlow<List<FolderEntity>> =
         repo.folders(null).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val folderStats: StateFlow<Map<Long, FolderStat>> =
+        combine(repo.allFolders(), repo.folderAggregates()) { folders, aggs ->
+            computeFolderStats(folders, aggs)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun publishQueue(ids: List<String>) = viewerQueue.set(ids)
 }

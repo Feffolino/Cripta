@@ -72,6 +72,8 @@ class ViewerViewModel @Inject constructor(
 
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
+    fun createTag(name: String, alias: String?) = viewModelScope.launch { repo.createTag(name, alias); _refresh.value++ }
+
     fun download(file: FileEntity) = viewModelScope.launch {
         val ok = runCatching { repo.restoreToGallery(file) != null }.getOrDefault(false)
         _message.value = if (ok) "Scaricato in galleria" else "Download non riuscito"

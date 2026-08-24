@@ -44,6 +44,36 @@ import com.cripta.app.data.db.FileEntity
 
 const val MIME_NOTE = "text/cripta-note"
 
+private val sizeUnits = arrayOf("B", "KB", "MB", "GB", "TB")
+
+/** Human-readable byte size, e.g. "3.1 MB". */
+fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    var value = bytes.toDouble()
+    var unit = 0
+    while (value >= 1024.0 && unit < sizeUnits.size - 1) { value /= 1024.0; unit++ }
+    val pattern = if (unit == 0) "%.0f %s" else "%.1f %s"
+    return String.format(java.util.Locale.getDefault(), pattern, value, sizeUnits[unit])
+}
+
+/** Media duration as "m:ss" or "h:mm:ss"; null when unknown/not applicable. */
+fun formatDuration(ms: Long?): String? {
+    if (ms == null || ms <= 0) return null
+    val totalSec = ms / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", h, m, s)
+    else String.format(java.util.Locale.getDefault(), "%d:%02d", m, s)
+}
+
+/** Caption line for a media item: "1:23 · 3.1 MB" for timed media, otherwise just the size. */
+fun fileMeta(file: FileEntity): String {
+    val size = formatBytes(file.sizeBytes)
+    val dur = formatDuration(file.durationMs)
+    return if (dur != null) "$dur · $size" else size
+}
+
 fun typeIconFor(mime: String): ImageVector = when {
     VaultRepository.isImage(mime) -> Icons.Filled.Image
     VaultRepository.isVideo(mime) -> Icons.Filled.Movie
@@ -104,5 +134,8 @@ fun MediaThumbCell(
         MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f))
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+        Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 2.dp))
     }
 }
