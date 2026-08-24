@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -148,7 +149,7 @@ fun ViewerScreen(
                     currentFile?.let { file ->
                         if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) {
                             IconButton(onClick = { onEditNote(file.id) }) {
-                                Icon(androidx.compose.material.icons.Icons.Filled.Edit, "Modifica")
+                                Icon(Icons.Filled.Edit, "Modifica")
                             }
                         }
                         IconButton(onClick = { vm.toggleFavorite(file) }) {
