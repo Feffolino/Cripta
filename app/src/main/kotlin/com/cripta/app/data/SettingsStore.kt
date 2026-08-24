@@ -18,7 +18,7 @@ private val Context.dataStore by preferencesDataStore(name = "cripta_settings")
 enum class DeleteOriginalPolicy { ASK, ALWAYS, NEVER }
 
 enum class ViewMode { GRID, LIST }
-enum class SortKey { DATE, NAME, SIZE }
+enum class SortKey { DATE, NAME, SIZE, MANUAL }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 data class Settings(

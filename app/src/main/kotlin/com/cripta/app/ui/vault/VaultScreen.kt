@@ -90,6 +90,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
@@ -143,10 +164,9 @@ fun VaultScreen(
     var folderMenu by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToDelete by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
-    var showSort by remember { mutableStateOf(false) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
-    var filtersExpanded by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selection.isNotEmpty() || filters.active || path.isNotEmpty()) {
         when {
@@ -203,7 +223,10 @@ fun VaultScreen(
                             }
                         }
                     } else {
-                        IconButton(onClick = { showSort = true }) { Icon(Icons.Filled.Sort, "Ordina") }
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            Icon(Icons.Filled.Tune, "Filtri e ordinamento",
+                                tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        }
                         if (viewMode == ViewMode.GRID) {
                             IconButton(onClick = { vm.setGridColumns(if (gridColumns >= 5) 2 else gridColumns + 1) }) {
                                 Icon(Icons.Filled.ViewModule, "Dimensione griglia")
@@ -243,45 +266,59 @@ fun VaultScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
-            FilterSection(filtersExpanded, { filtersExpanded = !filtersExpanded },
-                filters, tags, vm::setType, { vm.setFavoritesOnly(!filters.favoritesOnly) }, vm::toggleTag)
+            ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) }, vm::toggleTag, vm::clearFilters)
 
+            val manual = sortKey == SortKey.MANUAL
+            val showFolders = folders.isNotEmpty() && !filters.active && !manual
             val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
-            // Group once per file-list change, not on every recomposition of the grid.
             val grouped = remember(files) { groupByDay(files) }
-            if (folders.isEmpty() && files.isEmpty())
-                EmptyState(filters.active, Modifier.fillMaxSize())
-            else
-            LazyVerticalGrid(
-                columns = columns,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                if (folders.isNotEmpty() && !filters.active) {
-                    header("Cartelle")
-                    items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
-                        FolderCell(folder, viewMode, folderStats[folder.id],
-                            modifier = Modifier.animateItem(),
-                            onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
+
+            fun toggleSel(id: String) {
+                selection = if (id in selection) selection - id else selection + id
+            }
+
+            when {
+                folders.isEmpty() && files.isEmpty() ->
+                    EmptyState(filters.active, Modifier.fillMaxSize())
+                manual && viewMode == ViewMode.LIST ->
+                    ReorderableFileList(
+                        items = files,
+                        selection = selection,
+                        selectionMode = inSelection,
+                        thumb = { vm.thumb(it) },
+                        onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
+                        onToggleSelect = { toggleSel(it) },
+                        onReorder = { vm.reorder(it) },
+                    )
+                else -> LazyVerticalGrid(
+                    columns = columns,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (showFolders) {
+                        header("Cartelle")
+                        items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
+                            FolderCell(folder, viewMode, folderStats[folder.id],
+                                modifier = Modifier.animateItem(),
+                                onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
+                        }
                     }
-                }
-                grouped.forEach { (label, group) ->
-                    header(label)
-                    items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
-                        FileCell(
-                            item = fwt,
-                            viewMode = viewMode,
-                            selected = fwt.file.id in selection,
-                            selectionMode = inSelection,
-                            modifier = Modifier.animateItem(),
-                            thumb = { vm.thumb(fwt.file) },
-                            onOpen = { vm.publishViewerQueue(); onOpenFile(fwt.file.id) },
-                            onToggleSelect = {
-                                selection = if (fwt.file.id in selection) selection - fwt.file.id else selection + fwt.file.id
-                            },
-                        )
+                    if (manual) {
+                        header("Ordine manuale · passa a Lista per trascinare")
+                        items(files, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
+                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, Modifier.animateItem(),
+                                { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
+                        }
+                    } else {
+                        grouped.forEach { (label, group) ->
+                            header(label)
+                            items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
+                                FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, Modifier.animateItem(),
+                                    { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
+                            }
+                        }
                     }
                 }
             }
@@ -343,10 +380,19 @@ fun VaultScreen(
             onDismiss = { folderToRename = null })
     }
 
-    if (showSort) {
-        SortDialog(sortKey, sortAscending,
-            onPick = { k, a -> vm.setSort(k, a); showSort = false },
-            onDismiss = { showSort = false })
+    if (showFilterSheet) {
+        FilterSortSheet(
+            filters = filters,
+            tags = tags,
+            sortKey = sortKey,
+            sortAscending = sortAscending,
+            onType = vm::setType,
+            onFav = { vm.setFavoritesOnly(!filters.favoritesOnly) },
+            onTag = vm::toggleTag,
+            onSort = { k, a -> vm.setSort(k, a) },
+            onClear = { vm.clearFilters() },
+            onDismiss = { showFilterSheet = false },
+        )
     }
 
     if (confirmMultiDelete) {
@@ -586,44 +632,107 @@ private fun ThumbBox(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** Compact, at-a-glance summary of active filters with one-tap removal. Hidden when none active. */
 @Composable
-private fun FilterSection(
-    expanded: Boolean,
-    onToggle: () -> Unit,
+private fun ActiveFilterBar(
     filters: Filters,
     tags: List<TagEntity>,
     onType: (TypeFilter) -> Unit,
-    onFav: () -> Unit,
+    onClearFav: () -> Unit,
     onTag: (Long) -> Unit,
+    onClearAll: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    if (!filters.active) return
+    val tagById = remember(tags) { tags.associateBy { it.id } }
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (filters.type != TypeFilter.ALL) DismissChip(typeLabel(filters.type)) { onType(TypeFilter.ALL) }
+        if (filters.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
+        filters.tagIds.forEach { id ->
+            val t = tagById[id] ?: return@forEach
+            DismissChip("#${t.name}") { onTag(id) }
+        }
+        TextButton(onClick = onClearAll) { Text("Azzera") }
+    }
+}
+
+@Composable
+private fun DismissChip(label: String, onClear: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp),
+            Modifier.clickable(onClick = onClear).padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Filtri", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            if (filters.active) {
-                Text("attivi", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(end = 6.dp))
-            }
-            Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (expanded) "Comprimi" else "Espandi")
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Icon(Icons.Filled.Close, "Rimuovi", tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(start = 4.dp).size(16.dp))
         }
-        if (expanded) {
-            Text("Tipo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            // Single horizontally-scrollable row so type chips never wrap when space is tight.
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+    }
+}
+
+/** Unified sort + filter menu as a Material3 bottom sheet. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSortSheet(
+    filters: Filters,
+    tags: List<TagEntity>,
+    sortKey: SortKey,
+    sortAscending: Boolean,
+    onType: (TypeFilter) -> Unit,
+    onFav: () -> Unit,
+    onTag: (Long) -> Unit,
+    onSort: (SortKey, Boolean) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("Ordina", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    SortKey.DATE to "Data", SortKey.NAME to "Nome",
+                    SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale",
+                ).forEach { (k, lbl) ->
+                    FilterChip(selected = sortKey == k, onClick = { onSort(k, sortAscending) }, label = { Text(lbl) })
+                }
+            }
+            if (sortKey == SortKey.MANUAL) {
+                Text("Trascina gli elementi in modalità Lista per riordinarli a piacere.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                FilterChip(
+                    selected = false,
+                    onClick = { onSort(sortKey, !sortAscending) },
+                    leadingIcon = { Icon(Icons.Filled.SwapVert, null) },
+                    label = { Text(if (sortAscending) "Crescente" else "Decrescente") },
+                )
+            }
+
+            HorizontalDivider()
+
+            Text("Tipo", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TypeFilter.entries.forEach { t ->
                     FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
                 }
-                FilterChip(selected = filters.favoritesOnly, onClick = onFav, label = { Text("Preferiti") })
             }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Solo preferiti", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Switch(checked = filters.favoritesOnly, onCheckedChange = { onFav() })
+            }
+
             if (tags.isNotEmpty()) {
-                Text("Tag", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp))
+                HorizontalDivider()
+                Text("Tag", style = MaterialTheme.typography.titleSmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     tags.forEach { tag ->
                         FilterChip(selected = tag.id in filters.tagIds, onClick = { onTag(tag.id) },
@@ -631,34 +740,115 @@ private fun FilterSection(
                     }
                 }
             }
+
+            if (filters.active) {
+                TextButton(onClick = onClear, modifier = Modifier.align(Alignment.End)) { Text("Azzera filtri") }
+            }
         }
     }
 }
 
+/** Drag-to-reorder list used when the Manual sort is active (List mode). */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SortDialog(current: SortKey, ascending: Boolean, onPick: (SortKey, Boolean) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Ordina") },
-        text = {
-            Column {
-                listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Dimensione").forEach { (k, lbl) ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onPick(k, ascending) }.padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(lbl, Modifier.weight(1f),
-                            color = if (k == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                        if (k == current) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+private fun ReorderableFileList(
+    items: List<FileWithTags>,
+    selection: Set<String>,
+    selectionMode: Boolean,
+    thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+    onOpen: (String) -> Unit,
+    onToggleSelect: (String) -> Unit,
+    onReorder: (List<String>) -> Unit,
+) {
+    val list = remember { mutableStateListOf<FileWithTags>() }
+    var dragging by remember { mutableStateOf(false) }
+    LaunchedEffect(items) { if (!dragging) { list.clear(); list.addAll(items) } }
+
+    var draggedId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    val rowPitchPx = with(LocalDensity.current) { 72.dp.toPx() }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+        itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
+            val isDragged = fwt.file.id == draggedId
+            val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id) { value = thumb(fwt.file) }
+            ReorderRow(
+                item = fwt,
+                bmp = bmp,
+                selected = fwt.file.id in selection,
+                dragged = isDragged,
+                modifier = Modifier
+                    .then(if (!isDragged) Modifier.animateItem() else Modifier)
+                    .zIndex(if (isDragged) 1f else 0f)
+                    .graphicsLayer { translationY = if (isDragged) dragOffset else 0f },
+                onClick = { if (selectionMode) onToggleSelect(fwt.file.id) else onOpen(fwt.file.id) },
+                onLongClick = { onToggleSelect(fwt.file.id) },
+                onDragStart = { draggedId = fwt.file.id; dragOffset = 0f; dragging = true },
+                onDrag = { dy ->
+                    dragOffset += dy
+                    val from = list.indexOfFirst { it.file.id == draggedId }
+                    if (from >= 0) {
+                        val target = (from + (dragOffset / rowPitchPx).roundToInt()).coerceIn(0, list.size - 1)
+                        if (target != from) {
+                            list.add(target, list.removeAt(from))
+                            dragOffset -= (target - from) * rowPitchPx
+                        }
                     }
-                }
-                Row(Modifier.fillMaxWidth().clickable { onPick(current, !ascending) }.padding(vertical = 12.dp)) {
-                    Text(if (ascending) "Crescente ↑" else "Decrescente ↓", color = MaterialTheme.colorScheme.secondary)
-                }
+                },
+                onDragEnd = { dragging = false; draggedId = null; dragOffset = 0f; onReorder(list.map { it.file.id }) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ReorderRow(
+    item: FileWithTags,
+    bmp: android.graphics.Bitmap?,
+    selected: Boolean,
+    dragged: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+) {
+    val mime = item.file.mimeType
+    val isVideo = VaultRepository.isVideo(mime)
+    val fallbackIcon = when {
+        VaultRepository.isImage(mime) -> Icons.Filled.Image
+        isVideo -> Icons.Filled.Movie
+        else -> Icons.Filled.InsertDriveFile
+    }
+    Surface(
+        color = if (dragged) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = if (dragged) 6.dp else 0.dp,
+        modifier = modifier.fillMaxWidth().height(72.dp).combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp))
+            Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
-    )
+            Icon(
+                Icons.Filled.DragHandle, "Trascina per riordinare",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp).size(28.dp).pointerInput(item.file.id) {
+                    detectDragGestures(
+                        onDragStart = { onDragStart() },
+                        onDrag = { change, amount -> change.consume(); onDrag(amount.y) },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragEnd() },
+                    )
+                },
+            )
+        }
+    }
 }
 
 @Composable

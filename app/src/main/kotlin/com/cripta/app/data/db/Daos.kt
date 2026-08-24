@@ -94,4 +94,7 @@ interface FileDao {
 
     @Query("UPDATE files SET folderId = :folderId WHERE id = :id")
     suspend fun move(id: String, folderId: Long?)
+
+    @Query("UPDATE files SET sortWeight = :weight WHERE id = :id")
+    suspend fun setWeight(id: String, weight: Long)
 }
