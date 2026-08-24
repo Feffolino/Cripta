@@ -389,17 +389,15 @@ fun VaultScreen(
     }
 
     folderMenu?.let { folder ->
-        AlertDialog(
-            onDismissRequest = { folderMenu = null },
-            title = { Text(folder.name) },
-            text = { Text("Scegli un'azione per la cartella.") },
-            confirmButton = { TextButton(onClick = { folderToRename = folder; folderMenu = null }) { Text("Rinomina") } },
-            dismissButton = {
-                TextButton(onClick = { folderToDelete = folder; folderMenu = null }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
-                }
-            },
-        )
+        ModalBottomSheet(onDismissRequest = { folderMenu = null }) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                Text(folder.name, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+                SheetAction(Icons.Filled.Folder, "Apri") { vm.enterFolder(folder); folderMenu = null }
+                SheetAction(Icons.Filled.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
+                SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
+            }
+        }
     }
 
     folderToRename?.let { folder ->
@@ -941,6 +939,7 @@ private fun ReorderCell(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
     val byId = remember(folders) { folders.associateBy { it.id } }
@@ -949,29 +948,41 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
         while (p != null && guard < 50) { d++; p = byId[p]?.parentId; guard++ }
         return d
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Sposta in…") },
-        text = {
-            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                Row(Modifier.fillMaxWidth().clickable { onPick(null) }.padding(vertical = 10.dp)) {
-                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Text("Radice", Modifier.padding(start = 8.dp))
-                }
-                folders.forEach { f ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onPick(f.id) }
-                            .padding(vertical = 10.dp).padding(start = (12 * depth(f)).dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(f.name, Modifier.padding(start = 8.dp))
-                    }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+            Text("Sposta in…", style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+            Row(
+                Modifier.fillMaxWidth().clickable { onPick(null) }.padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                Text("Radice", Modifier.padding(start = 16.dp))
+            }
+            folders.forEach { f ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { onPick(f.id) }
+                        .padding(horizontal = 20.dp, vertical = 12.dp).padding(start = (12 * depth(f)).dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Text(f.name, Modifier.padding(start = 16.dp))
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
-    )
+        }
+    }
+}
+
+@Composable
+private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean = false, onClick: () -> Unit) {
+    val tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = tint)
+        Text(label, Modifier.padding(start = 16.dp), color = tint, style = MaterialTheme.typography.bodyLarge)
+    }
 }
 
 @Composable
