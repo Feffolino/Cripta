@@ -3,7 +3,15 @@ package com.cripta.app.ui.vault
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -170,6 +178,19 @@ fun VaultScreen(
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
+    // Collapse the secondary FABs while scrolling down so they don't cover the content
+    // (they otherwise block dragging items in Manual reorder); bring them back on scroll up.
+    var fabsVisible by remember { mutableStateOf(true) }
+    val fabScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -3f) fabsVisible = false
+                else if (available.y > 3f) fabsVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+
     BackHandler(enabled = selection.isNotEmpty() || filters.active || path.isNotEmpty()) {
         when {
             selection.isNotEmpty() -> selection = emptySet()
@@ -244,14 +265,22 @@ fun VaultScreen(
         floatingActionButton = {
             if (!inSelection) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SmallFloatingActionButton(onClick = onNewNote) {
-                        Icon(Icons.Filled.Description, "Nuova nota")
-                    }
-                    SmallFloatingActionButton(onClick = { showNewFolder = true }) {
-                        Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
-                    }
-                    SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
-                        Icon(Icons.Filled.Casino, "Casuale")
+                    AnimatedVisibility(
+                        visible = fabsVisible,
+                        enter = fadeIn() + slideInVertically { it / 2 },
+                        exit = fadeOut() + slideOutVertically { it / 2 },
+                    ) {
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SmallFloatingActionButton(onClick = onNewNote) {
+                                Icon(Icons.Filled.Description, "Nuova nota")
+                            }
+                            SmallFloatingActionButton(onClick = { showNewFolder = true }) {
+                                Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
+                            }
+                            SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
+                                Icon(Icons.Filled.Casino, "Casuale")
+                            }
+                        }
                     }
                     FloatingActionButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
                         Icon(Icons.Filled.Add, "Importa")
@@ -260,7 +289,7 @@ fun VaultScreen(
             }
         },
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad)) {
+        Column(Modifier.fillMaxSize().padding(pad).nestedScroll(fabScroll)) {
             OutlinedTextField(
                 value = filters.query,
                 onValueChange = vm::setQuery,
