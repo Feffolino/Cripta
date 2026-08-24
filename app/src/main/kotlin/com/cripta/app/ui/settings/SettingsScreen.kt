@@ -62,6 +62,7 @@ fun SettingsScreen(
     val tags by vm.tags.collectAsState()
     val message by vm.message.collectAsState()
     val ctx = LocalContext.current
+    val pkgInfo = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull() }
     LaunchedEffect(message) {
         message?.let { android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_LONG).show(); vm.clearMessage() }
     }
@@ -117,40 +118,11 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Visualizzazione") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = s.viewMode == ViewMode.GRID, onClick = { vm.setViewMode(ViewMode.GRID) }, label = { Text("Griglia") })
-                        FilterChip(selected = s.viewMode == ViewMode.LIST, onClick = { vm.setViewMode(ViewMode.LIST) }, label = { Text("Elenco") })
-                    }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Colonne griglia", Modifier.weight(1f))
-                        IconButton(onClick = { vm.setGridColumns(s.gridColumns - 1) }, enabled = s.gridColumns > 2) {
-                            Icon(Icons.Filled.Remove, "Meno colonne")
-                        }
-                        Text("${s.gridColumns}", style = MaterialTheme.typography.titleMedium)
-                        IconButton(onClick = { vm.setGridColumns(s.gridColumns + 1) }, enabled = s.gridColumns < 5) {
-                            Icon(Icons.Filled.Add, "Più colonne")
-                        }
-                    }
-                }
-            }
-
-            item {
-                Section("Ordinamento predefinito") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            SortKey.DATE to "Data", SortKey.NAME to "Nome",
-                            SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale",
-                        ).forEach { (k, lbl) ->
-                            FilterChip(selected = s.sortKey == k, onClick = { vm.setSort(k, s.sortAscending) }, label = { Text(lbl) })
-                        }
-                    }
-                    if (s.sortKey != SortKey.MANUAL) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Crescente", Modifier.weight(1f))
-                            Switch(checked = s.sortAscending, onCheckedChange = { vm.setSort(s.sortKey, it) })
-                        }
-                    }
+                Section("Dettagli visualizzati") {
+                    ToggleRow("Dimensione e durata", s.display.showFileInfo) { vm.setShowFileInfo(it) }
+                    ToggleRow("Tag sulle copertine", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
+                    ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
+                    ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                 }
             }
 
@@ -256,6 +228,15 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            item {
+                Section("Informazioni") {
+                    InfoRow("Versione", pkgInfo?.versionName ?: "—")
+                    InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
+                    InfoRow("Pacchetto", ctx.packageName)
+                    InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
+                }
+            }
         }
     }
 
@@ -325,5 +306,21 @@ private fun Section(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         content()
+    }
+}
+
+@Composable
+private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }

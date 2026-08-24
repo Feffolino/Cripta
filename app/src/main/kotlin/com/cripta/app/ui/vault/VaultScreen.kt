@@ -121,6 +121,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
+import com.cripta.app.data.DisplayPrefs
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
@@ -165,6 +166,7 @@ fun VaultScreen(
     val sortKey by vm.sortKey.collectAsState()
     val sortAscending by vm.sortAscending.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
+    val display by vm.display.collectAsState()
 
     var selection by remember { mutableStateOf(setOf<String>()) }
     var batchTag by remember { mutableStateOf(false) }
@@ -302,7 +304,9 @@ fun VaultScreen(
             val manual = sortKey == SortKey.MANUAL
             val showFolders = folders.isNotEmpty() && !filters.active && !manual
             val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
-            val grouped = remember(files) { groupByDay(files) }
+            val grouped = remember(files, display.showDateHeaders) {
+                if (display.showDateHeaders) groupByDay(files) else listOf("" to files)
+            }
 
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
@@ -317,6 +321,7 @@ fun VaultScreen(
                         columns = if (viewMode == ViewMode.GRID) gridColumns else 1,
                         asList = viewMode == ViewMode.LIST,
                         selection = selection,
+                        display = display,
                         thumb = { vm.thumb(it) },
                         onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
                         onReorder = { vm.reorder(it) },
@@ -331,15 +336,15 @@ fun VaultScreen(
                     if (showFolders) {
                         header("Cartelle")
                         items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
-                            FolderCell(folder, viewMode, folderStats[folder.id],
+                            FolderCell(folder, viewMode, folderStats[folder.id], display.showFolderInfo,
                                 modifier = Modifier.animateItem(),
                                 onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                         }
                     }
                     grouped.forEach { (label, group) ->
-                        header(label)
+                        if (label.isNotEmpty()) header(label)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
-                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, Modifier.animateItem(),
+                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display, Modifier.animateItem(),
                                 { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
                         }
                     }
@@ -498,6 +503,7 @@ private fun FolderCell(
     folder: FolderEntity,
     viewMode: ViewMode,
     stat: FolderStat?,
+    showInfo: Boolean,
     modifier: Modifier,
     onOpen: () -> Unit,
     onLongPress: () -> Unit,
@@ -513,8 +519,10 @@ private fun FolderCell(
                 Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (showInfo) {
+                        Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
@@ -530,9 +538,11 @@ private fun FolderCell(
             Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
             Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(top = 6.dp), textAlign = TextAlign.Center)
-            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 2.dp))
+            if (showInfo) {
+                Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 2.dp))
+            }
         }
     }
 }
@@ -544,6 +554,7 @@ private fun FileCell(
     viewMode: ViewMode,
     selected: Boolean,
     selectionMode: Boolean,
+    display: DisplayPrefs,
     modifier: Modifier,
     thumb: suspend () -> android.graphics.Bitmap?,
     onOpen: () -> Unit,
@@ -572,8 +583,10 @@ private fun FileCell(
                     emptyList(), Modifier.size(56.dp))
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (display.showFileInfo) {
+                        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if (item.tags.isNotEmpty()) {
                         Text(item.tags.joinToString(" ") { "#${it.name}" }, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium,
@@ -586,13 +599,16 @@ private fun FileCell(
     }
 
     Column(modifier.fillMaxWidth().then(clickMod)) {
-        ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags,
+        ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
+            if (display.showTagsOnCover) item.tags else emptyList(),
             Modifier.fillMaxWidth().aspectRatio(1f))
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
-        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 2.dp))
+        if (display.showFileInfo) {
+            Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 2.dp))
+        }
     }
 }
 
@@ -783,6 +799,7 @@ private fun ReorderableFileGrid(
     columns: Int,
     asList: Boolean,
     selection: Set<String>,
+    display: DisplayPrefs,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onOpen: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
@@ -817,6 +834,7 @@ private fun ReorderableFileGrid(
                     selected = fwt.file.id in selection,
                     dragged = isDragged,
                     asList = asList,
+                    display = display,
                     modifier = Modifier
                         .zIndex(if (isDragged) 1f else 0f)
                         .then(if (!isDragged) Modifier.animateItem() else Modifier)
@@ -869,6 +887,7 @@ private fun ReorderCell(
     selected: Boolean,
     dragged: Boolean,
     asList: Boolean,
+    display: DisplayPrefs,
     modifier: Modifier,
 ) {
     val mime = item.file.mimeType
@@ -889,8 +908,10 @@ private fun ReorderCell(
                 ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp))
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (display.showFileInfo) {
+                        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 Icon(Icons.Filled.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 8.dp).size(22.dp))
@@ -899,7 +920,8 @@ private fun ReorderCell(
     } else {
         Column(modifier.fillMaxWidth()) {
             Box {
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags,
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
+                    if (display.showTagsOnCover) item.tags else emptyList(),
                     Modifier.fillMaxWidth().aspectRatio(1f))
                 if (dragged) {
                     Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
@@ -910,9 +932,11 @@ private fun ReorderCell(
             }
             Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
-            Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 2.dp))
+            if (display.showFileInfo) {
+                Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 2.dp))
+            }
         }
     }
 }
