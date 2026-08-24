@@ -219,10 +219,11 @@ fun VaultScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        if (inSelection) "${selection.size} selezionati" else (path.lastOrNull()?.name ?: "Cripta"),
-                        maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
-                    )
+                    if (inSelection) {
+                        Text("${selection.size} selezionati", maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        com.cripta.app.ui.components.HeaderTitle(path.lastOrNull()?.name ?: "Cripta")
+                    }
                 },
                 navigationIcon = {
                     if (inSelection) {
