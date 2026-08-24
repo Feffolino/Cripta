@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
@@ -37,6 +38,11 @@ class MainActivity : FragmentActivity() {
         )
         setContent {
             val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
+            // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.
+            LaunchedEffect(set.allowScreenshots) {
+                if (set.allowScreenshots) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
                 AppRoot(
                     session = session,
@@ -90,7 +96,8 @@ class MainActivity : FragmentActivity() {
             lifecycleScope.launch {
                 val minutes = settings.settings.first().autoLockMinutes
                 val elapsed = System.currentTimeMillis() - backgroundedAt
-                if (elapsed >= minutes * 60_000L) session.lock()
+                // minutes < 0 means "Mai" (never auto-lock).
+                if (minutes >= 0 && elapsed >= minutes * 60_000L) session.lock()
             }
         }
     }
