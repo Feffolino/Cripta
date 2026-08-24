@@ -109,6 +109,7 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -354,59 +355,61 @@ fun VaultScreen(
                         }
                         // Long-press a file then drag = gallery-style range select (or deselect if
                         // the anchor was already selected). Long-press a folder = its action menu.
-                        .pointerInput(orderedIds) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { off ->
-                                    selPointer = off
-                                    hoverFolder = null
-                                    val key = keyAt(off, gridState) as? String
-                                    when {
-                                        key == null -> {}
-                                        key.startsWith("f-") ->
-                                            folders.firstOrNull { "f-${it.id}" == key }?.let { folderMenu = it }
-                                        key in idSet -> {
-                                            dragAnchor = key
-                                            dragDeselect = key in selection
-                                            dragBase = selection
-                                            // Picking an unselected item starts a selection; a selected
-                                            // anchor keeps the set intact (may deselect-drag or move-drag).
-                                            if (!dragDeselect) selection = selection + key
-                                        }
+                        .pointerInput(orderedIds, inSelection) {
+                            val onStart: (Offset) -> Unit = { off ->
+                                selPointer = off
+                                hoverFolder = null
+                                val key = keyAt(off, gridState) as? String
+                                when {
+                                    key == null -> {}
+                                    key.startsWith("f-") ->
+                                        folders.firstOrNull { "f-${it.id}" == key }?.let { folderMenu = it }
+                                    key in idSet -> {
+                                        dragAnchor = key
+                                        dragDeselect = key in selection
+                                        dragBase = selection
+                                        if (!dragDeselect) selection = selection + key
                                     }
-                                },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    selPointer += amount
-                                    val anchor = dragAnchor
-                                    if (anchor != null) {
-                                        val curKey = keyAt(selPointer, gridState) as? String
-                                        if (curKey != null && curKey.startsWith("f-")) {
-                                            // Hovering a folder: intent is to MOVE the selection there.
-                                            hoverFolder = folders.firstOrNull { "f-${it.id}" == curKey }?.id
-                                        } else {
-                                            hoverFolder = null
-                                            val cur = curKey?.takeIf { it in idSet }
-                                            if (cur != null) {
-                                                val ai = orderedIds.indexOf(anchor)
-                                                val ci = orderedIds.indexOf(cur)
-                                                if (ai >= 0 && ci >= 0) {
-                                                    val range = orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
-                                                    selection = if (dragDeselect) dragBase - range else dragBase + range
-                                                }
+                                }
+                            }
+                            val onMove: (androidx.compose.ui.input.pointer.PointerInputChange, Offset) -> Unit = { change, amount ->
+                                change.consume()
+                                selPointer += amount
+                                val anchor = dragAnchor
+                                if (anchor != null) {
+                                    val curKey = keyAt(selPointer, gridState) as? String
+                                    if (curKey != null && curKey.startsWith("f-")) {
+                                        hoverFolder = folders.firstOrNull { "f-${it.id}" == curKey }?.id
+                                    } else {
+                                        hoverFolder = null
+                                        val cur = curKey?.takeIf { it in idSet }
+                                        if (cur != null) {
+                                            val ai = orderedIds.indexOf(anchor)
+                                            val ci = orderedIds.indexOf(cur)
+                                            if (ai >= 0 && ci >= 0) {
+                                                val range = orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
+                                                selection = if (dragDeselect) dragBase - range else dragBase + range
                                             }
                                         }
                                     }
-                                },
-                                onDragEnd = {
-                                    val target = hoverFolder
-                                    if (target != null && selection.isNotEmpty()) {
-                                        vm.moveFiles(selection.toList(), target)
-                                        selection = emptySet()
-                                    }
-                                    dragAnchor = null; hoverFolder = null
-                                },
-                                onDragCancel = { dragAnchor = null; hoverFolder = null },
-                            )
+                                }
+                            }
+                            val onEnd: () -> Unit = {
+                                val target = hoverFolder
+                                if (target != null && selection.isNotEmpty()) {
+                                    vm.moveFiles(selection.toList(), target)
+                                    selection = emptySet()
+                                }
+                                dragAnchor = null; hoverFolder = null
+                            }
+                            val onCancel: () -> Unit = { dragAnchor = null; hoverFolder = null }
+                            // Already selecting: drag immediately (no hold) to keep adding/removing.
+                            // Not selecting yet: require a long-press to enter selection first.
+                            if (inSelection) {
+                                detectDragGestures(onDragStart = onStart, onDrag = onMove, onDragEnd = onEnd, onDragCancel = onCancel)
+                            } else {
+                                detectDragGesturesAfterLongPress(onDragStart = onStart, onDrag = onMove, onDragEnd = onEnd, onDragCancel = onCancel)
+                            }
                         },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
