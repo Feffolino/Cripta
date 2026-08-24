@@ -22,9 +22,11 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import android.view.View
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -139,7 +141,7 @@ fun ViewerScreen(
                 isCurrent = page == pagerState.currentPage,
                 chromeVisible = chromeVisible,
                 vm = vm,
-                onToggleChrome = { chromeVisible = !chromeVisible },
+                setChrome = { chromeVisible = it },
             )
         }
 
@@ -220,7 +222,7 @@ private fun MediaPage(
     isCurrent: Boolean,
     chromeVisible: Boolean,
     vm: ViewerViewModel,
-    onToggleChrome: () -> Unit,
+    setChrome: (Boolean) -> Unit,
 ) {
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
         value = vm.stateFor(id)
@@ -229,9 +231,9 @@ private fun MediaPage(
         when (val s = state) {
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
-            is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, chromeVisible, onToggleChrome) else CircularProgressIndicator(color = Color.White)
-            is ViewerState.Note -> NoteView(s.text, onToggleChrome)
+            is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = { setChrome(!chromeVisible) })
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Note -> NoteView(s.text, onSingleTap = { setChrome(!chromeVisible) })
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Nessun viewer interno per questo tipo.", color = Color.White)
@@ -363,7 +365,12 @@ private fun PdfView(bytes: ByteArray) {
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, controlsVisible: Boolean, onSingleTap: () -> Unit) {
+private fun VideoPlayer(
+    file: FileEntity,
+    vm: ViewerViewModel,
+    controlsVisible: Boolean,
+    onControlsVisibilityChanged: (Boolean) -> Unit,
+) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
@@ -391,6 +398,10 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, controlsVisible: 
         AspectRatioFrameLayout.RESIZE_MODE_FILL,
     )
     var modeIdx by remember { mutableIntStateOf(0) }
+    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    var seekLabel by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(seekLabel) { if (seekLabel != null) { delay(650); seekLabel = null } }
+
     DisposableEffect(file.id) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
@@ -401,7 +412,16 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, controlsVisible: 
         onDispose { player.removeListener(listener); player.release() }
     }
 
-    Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }) {
+    fun seekBy(deltaMs: Long) {
+        val dur = player.duration
+        val max = if (dur > 0) dur else Long.MAX_VALUE
+        player.seekTo((player.currentPosition + deltaMs).coerceIn(0L, max))
+    }
+    fun toggleController() {
+        playerViewRef?.let { if (it.isControllerFullyVisible) it.hideController() else it.showController() }
+    }
+
+    Box(Modifier.fillMaxSize()) {
         AndroidView(
             factory = {
                 PlayerView(it).apply {
@@ -411,16 +431,53 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, controlsVisible: 
                     setShowPreviousButton(false)
                     keepScreenOn = true            // don't let the screen dim during playback
                     controllerShowTimeoutMs = 2500
+                    // Mirror the ExoPlayer controller's visibility onto the app chrome
+                    // (top bar with the name + the aspect toggle) so a tap reveals both.
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener { vis -> onControlsVisibilityChanged(vis == View.VISIBLE) }
+                    )
+                    playerViewRef = this
                 }
             },
             update = { it.resizeMode = modes[modeIdx] },
             modifier = Modifier.fillMaxSize(),
         )
+
+        // Left / right edge zones: double-tap to jump 10s; single tap toggles the controls.
+        Box(
+            Modifier.align(Alignment.CenterStart).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = { seekBy(-10_000); seekLabel = "-10s" },
+                        onTap = { toggleController() },
+                    )
+                }
+        )
+        Box(
+            Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = { seekBy(10_000); seekLabel = "+10s" },
+                        onTap = { toggleController() },
+                    )
+                }
+        )
+
         if (buffering) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
         }
-        // Aspect toggle parked on the right edge, clear of the top bar and the bottom seek bar,
-        // and only while the controls are showing.
+
+        seekLabel?.let { lbl ->
+            val side = if (lbl.startsWith("+")) Alignment.CenterEnd else Alignment.CenterStart
+            Surface(
+                color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
+                modifier = Modifier.align(side).padding(horizontal = 44.dp),
+            ) {
+                Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            }
+        }
+
+        // Aspect toggle on the right edge (drawn above the seek zone), only while controls show.
         AnimatedVisibility(
             visible = controlsVisible,
             enter = fadeIn(),
