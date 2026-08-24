@@ -64,7 +64,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -324,8 +327,17 @@ private fun PdfView(bytes: ByteArray) {
 @Composable
 private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, onSingleTap: () -> Unit) {
     val ctx = LocalContext.current
+    var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
         ExoPlayer.Builder(ctx).build().apply {
+            // Route audio properly and cooperate with other apps (pause on focus loss).
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                true,
+            )
             val factory = com.cripta.app.viewer.EncryptedDataSource.Factory(
                 channelProvider = { vm.channelFor(file) },
                 plaintextLength = file.sizeBytes,
@@ -341,7 +353,15 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, onSingleTap: () -
         AspectRatioFrameLayout.RESIZE_MODE_FILL,
     )
     var modeIdx by remember { mutableIntStateOf(0) }
-    DisposableEffect(file.id) { onDispose { player.release() } }
+    DisposableEffect(file.id) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                buffering = state == Player.STATE_BUFFERING
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener); player.release() }
+    }
 
     Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }) {
         AndroidView(
@@ -351,11 +371,16 @@ private fun VideoPlayer(file: FileEntity, vm: ViewerViewModel, onSingleTap: () -
                     resizeMode = modes[modeIdx]
                     setShowNextButton(false)
                     setShowPreviousButton(false)
+                    keepScreenOn = true            // don't let the screen dim during playback
+                    controllerShowTimeoutMs = 2500
                 }
             },
             update = { it.resizeMode = modes[modeIdx] },
             modifier = Modifier.fillMaxSize(),
         )
+        if (buffering) {
+            CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
+        }
         IconButton(
             onClick = { modeIdx = (modeIdx + 1) % modes.size },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),

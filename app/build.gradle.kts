@@ -32,6 +32,10 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             signingConfig = signingConfigs.getByName("shared")
+            // Ship the CI "debug" APK as a non-debuggable build: keeps the same
+            // applicationId (updates in place) and debug cert, but lets ART fully
+            // optimize and drops Compose debug overhead -> much smoother scrolling.
+            isDebuggable = false
         }
         release {
             isMinifyEnabled = false
