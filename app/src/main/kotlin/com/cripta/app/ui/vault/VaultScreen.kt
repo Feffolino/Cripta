@@ -291,14 +291,18 @@ fun VaultScreen(
                         exit = fadeOut() + slideOutVertically { it / 2 },
                     ) {
                         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            SmallFloatingActionButton(onClick = onNewNote) {
-                                Icon(Icons.Filled.Description, "Nuova nota")
+                            if (display.showNoteFab) {
+                                SmallFloatingActionButton(onClick = onNewNote) {
+                                    Icon(Icons.Filled.Description, "Nuova nota")
+                                }
                             }
                             SmallFloatingActionButton(onClick = { showNewFolder = true }) {
                                 Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
                             }
-                            SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
-                                Icon(Icons.Filled.Casino, "Casuale")
+                            if (display.showRandomFab) {
+                                SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
+                                    Icon(Icons.Filled.Casino, "Casuale")
+                                }
                             }
                         }
                     }
@@ -410,22 +414,13 @@ fun VaultScreen(
                                 }
                                 dragAnchor = null; hoverFolder = null
                             }
-                            // Single gesture (never rebuilt mid-drag): if already selecting, a drag starts
-                            // on touch-slop with no hold; otherwise it starts after a long-press. Either
-                            // way the SAME gesture keeps extending the selection while the finger moves.
-                            awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                val begin = if (inSelState.value) {
-                                    awaitTouchSlopOrCancellation(down.id) { c, _ -> c.consume() } != null
-                                } else {
-                                    awaitLongPressOrCancellation(down.id) != null
-                                }
-                                if (begin) {
-                                    onStart(down.position)
-                                    drag(down.id) { change -> change.consume(); onMove(change.positionChange()) }
-                                    onEnd()
-                                }
-                            }
+                            // Long-press an item then drag to range-select; a plain long-press selects one.
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { off -> onStart(off) },
+                                onDrag = { _, amount -> onMove(amount) },
+                                onDragEnd = { onEnd() },
+                                onDragCancel = { dragAnchor = null; hoverFolder = null },
+                            )
                         },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),

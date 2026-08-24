@@ -136,13 +136,16 @@ val FOLDER_COLORS: List<Int> = listOf(
 /** Folder icon tinted by [color], or an [emoji] shown in its place when set. */
 @Composable
 fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
-    if (!emoji.isNullOrBlank()) {
-        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
-            Text(emoji, fontSize = (size.value * 0.72f).sp)
+    val c = color?.let { Color(it) }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        if (c != null) {
+            Box(Modifier.matchParentSize().clip(CircleShape).background(c.copy(alpha = 0.22f)))
         }
-    } else {
-        val tint = color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-        Icon(Icons.Filled.Folder, null, tint = tint, modifier = Modifier.size(size))
+        if (!emoji.isNullOrBlank()) {
+            Text(emoji, fontSize = (size.value * 0.6f).sp)
+        } else {
+            Icon(Icons.Filled.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
+        }
     }
 }
 
