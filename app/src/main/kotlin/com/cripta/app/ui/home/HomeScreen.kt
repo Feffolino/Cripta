@@ -1,5 +1,6 @@
 package com.cripta.app.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,7 +118,7 @@ private fun FolderShelf(folders: List<FolderEntity>, onOpenFolders: () -> Unit) 
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.width(120.dp),
             ) {
-                Column(Modifier.padding(12.dp).fillMaxWidth().clickableNoRipple(onOpenFolders),
+                Column(Modifier.clickable(onClick = onOpenFolders).padding(12.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -127,9 +128,3 @@ private fun FolderShelf(folders: List<FolderEntity>, onOpenFolders: () -> Unit) 
         }
     }
 }
-
-@Composable
-private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(
-        interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-        indication = null, onClick = onClick))
