@@ -174,6 +174,8 @@ fun VaultScreen(
     val gridState = rememberLazyGridState()
     var dragAnchor by remember { mutableStateOf<String?>(null) }
     var dragBase by remember { mutableStateOf(setOf<String>()) }
+    var dragDeselect by remember { mutableStateOf(false) }
+    var hoverFolder by remember { mutableStateOf<Long?>(null) }
     var selPointer by remember { mutableStateOf(Offset.Zero) }
     var batchTag by remember { mutableStateOf(false) }
     var showNewFolder by remember { mutableStateOf(false) }
@@ -337,32 +339,74 @@ fun VaultScreen(
                 else -> LazyVerticalGrid(
                     columns = columns,
                     state = gridState,
-                    modifier = Modifier.fillMaxSize().pointerInput(orderedIds) {
-                        // Gallery-style swipe select: long-press an item, then drag to extend
-                        // the selection over a range of items.
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { off ->
-                                selPointer = off
-                                val id = fileIdAt(off, gridState, idSet)
-                                if (id != null) { dragAnchor = id; dragBase = selection; selection = selection + id }
-                            },
-                            onDrag = { change, amount ->
-                                change.consume()
-                                selPointer += amount
-                                val anchor = dragAnchor
-                                val cur = fileIdAt(selPointer, gridState, idSet)
-                                if (anchor != null && cur != null) {
-                                    val ai = orderedIds.indexOf(anchor)
-                                    val ci = orderedIds.indexOf(cur)
-                                    if (ai >= 0 && ci >= 0) {
-                                        selection = dragBase + orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1)
-                                    }
+                    modifier = Modifier.fillMaxSize()
+                        // Tap: open a file (or toggle it in selection mode), open a folder.
+                        .pointerInput(orderedIds, inSelection) {
+                            detectTapGestures(onTap = { off ->
+                                val key = keyAt(off, gridState) as? String ?: return@detectTapGestures
+                                if (key.startsWith("f-")) {
+                                    folders.firstOrNull { "f-${it.id}" == key }?.let { vm.enterFolder(it) }
+                                } else if (key in idSet) {
+                                    if (inSelection) toggleSel(key) else { vm.publishViewerQueue(); onOpenFile(key) }
                                 }
-                            },
-                            onDragEnd = { dragAnchor = null },
-                            onDragCancel = { dragAnchor = null },
-                        )
-                    },
+                            })
+                        }
+                        // Long-press a file then drag = gallery-style range select (or deselect if
+                        // the anchor was already selected). Long-press a folder = its action menu.
+                        .pointerInput(orderedIds) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { off ->
+                                    selPointer = off
+                                    hoverFolder = null
+                                    val key = keyAt(off, gridState) as? String
+                                    when {
+                                        key == null -> {}
+                                        key.startsWith("f-") ->
+                                            folders.firstOrNull { "f-${it.id}" == key }?.let { folderMenu = it }
+                                        key in idSet -> {
+                                            dragAnchor = key
+                                            dragDeselect = key in selection
+                                            dragBase = selection
+                                            // Picking an unselected item starts a selection; a selected
+                                            // anchor keeps the set intact (may deselect-drag or move-drag).
+                                            if (!dragDeselect) selection = selection + key
+                                        }
+                                    }
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    selPointer += amount
+                                    val anchor = dragAnchor
+                                    if (anchor != null) {
+                                        val curKey = keyAt(selPointer, gridState) as? String
+                                        if (curKey != null && curKey.startsWith("f-")) {
+                                            // Hovering a folder: intent is to MOVE the selection there.
+                                            hoverFolder = folders.firstOrNull { "f-${it.id}" == curKey }?.id
+                                        } else {
+                                            hoverFolder = null
+                                            val cur = curKey?.takeIf { it in idSet }
+                                            if (cur != null) {
+                                                val ai = orderedIds.indexOf(anchor)
+                                                val ci = orderedIds.indexOf(cur)
+                                                if (ai >= 0 && ci >= 0) {
+                                                    val range = orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
+                                                    selection = if (dragDeselect) dragBase - range else dragBase + range
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    val target = hoverFolder
+                                    if (target != null && selection.isNotEmpty()) {
+                                        vm.moveFiles(selection.toList(), target)
+                                        selection = emptySet()
+                                    }
+                                    dragAnchor = null; hoverFolder = null
+                                },
+                                onDragCancel = { dragAnchor = null; hoverFolder = null },
+                            )
+                        },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -522,12 +566,12 @@ private fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWi
         }
 }
 
-/** File id of the grid cell under [pos] (viewport coords), or null if it's a folder/header/empty. */
-private fun fileIdAt(pos: Offset, state: LazyGridState, idSet: Set<String>): String? =
+/** Lazy-grid item key under [pos] (viewport coords): a file id, "f-<id>" folder key, or null. */
+private fun keyAt(pos: Offset, state: LazyGridState): Any? =
     state.layoutInfo.visibleItemsInfo.firstOrNull { info ->
         pos.x >= info.offset.x && pos.x <= info.offset.x + info.size.width &&
             pos.y >= info.offset.y && pos.y <= info.offset.y + info.size.height
-    }?.key?.let { it as? String }?.takeIf { it in idSet }
+    }?.key
 
 private fun folderSubtitle(stat: FolderStat?): String {
     if (stat == null || stat.count == 0) return "Vuota"
@@ -552,7 +596,7 @@ private fun FolderCell(
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = MaterialTheme.shapes.medium,
-            modifier = modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+            modifier = modifier.fillMaxWidth(),
         ) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
@@ -570,8 +614,7 @@ private fun FolderCell(
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth().aspectRatio(1f)
-            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+        modifier = modifier.fillMaxWidth().aspectRatio(1f),
     ) {
         Column(Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
@@ -608,14 +651,10 @@ private fun FileCell(
     }
     val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id) { value = thumb() }
 
-    // No long-press here: the grid owns long-press-drag for gallery-style range selection.
-    val clickMod = Modifier.combinedClickable(
-        onClick = { if (selectionMode) onToggleSelect() else onOpen() },
-    )
-
+    // Tap/long-press are handled by the grid container (unified gesture), not per cell.
     if (viewMode == ViewMode.LIST) {
         Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium,
-            modifier = modifier.fillMaxWidth().then(clickMod)) {
+            modifier = modifier.fillMaxWidth()) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // List mode: no tag badges on the cover — tags are shown as text below the name.
                 ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
@@ -637,7 +676,7 @@ private fun FileCell(
         return
     }
 
-    Column(modifier.fillMaxWidth().then(clickMod)) {
+    Column(modifier.fillMaxWidth()) {
         ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
             if (display.showTagsOnCover) item.tags else emptyList(),
             Modifier.fillMaxWidth().aspectRatio(1f))
