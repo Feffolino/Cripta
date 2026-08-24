@@ -11,7 +11,7 @@ import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -42,13 +42,20 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE folders ADD COLUMN color INTEGER")
+                db.execSQL("ALTER TABLE folders ADD COLUMN emoji TEXT")
+            }
+        }
+
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
             SQLiteDatabase.loadLibs(context)
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
         }

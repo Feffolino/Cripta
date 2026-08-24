@@ -23,6 +23,9 @@ interface FolderDao {
 
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: Long): FolderEntity?
+
+    @Query("UPDATE folders SET color = :color, emoji = :emoji WHERE id = :id")
+    suspend fun setStyle(id: Long, color: Int?, emoji: String?)
 }
 
 @Dao

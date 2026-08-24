@@ -58,6 +58,10 @@ class VaultRepository @Inject constructor(
         db.folderDao().update(folder.copy(name = newName.trim())); notifyChanged()
     }
 
+    suspend fun setFolderStyle(id: Long, color: Int?, emoji: String?) = withContext(Dispatchers.IO) {
+        db.folderDao().setStyle(id, color, emoji?.trim()?.ifEmpty { null }); notifyChanged()
+    }
+
     suspend fun moveFile(fileId: String, folderId: Long?) = withContext(Dispatchers.IO) {
         db.fileDao().move(fileId, folderId); notifyChanged()
     }
