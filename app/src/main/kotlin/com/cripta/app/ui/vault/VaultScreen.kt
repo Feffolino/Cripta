@@ -99,9 +99,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -280,14 +282,14 @@ fun VaultScreen(
             when {
                 folders.isEmpty() && files.isEmpty() ->
                     EmptyState(filters.active, Modifier.fillMaxSize())
-                manual && viewMode == ViewMode.LIST ->
-                    ReorderableFileList(
+                manual ->
+                    ReorderableFileGrid(
                         items = files,
+                        columns = if (viewMode == ViewMode.GRID) gridColumns else 1,
+                        asList = viewMode == ViewMode.LIST,
                         selection = selection,
-                        selectionMode = inSelection,
                         thumb = { vm.thumb(it) },
                         onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
-                        onToggleSelect = { toggleSel(it) },
                         onReorder = { vm.reorder(it) },
                     )
                 else -> LazyVerticalGrid(
@@ -305,19 +307,11 @@ fun VaultScreen(
                                 onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                         }
                     }
-                    if (manual) {
-                        header("Ordine manuale · passa a Lista per trascinare")
-                        items(files, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
+                    grouped.forEach { (label, group) ->
+                        header(label)
+                        items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                             FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, Modifier.animateItem(),
                                 { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
-                        }
-                    } else {
-                        grouped.forEach { (label, group) ->
-                            header(label)
-                            items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
-                                FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, Modifier.animateItem(),
-                                    { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
-                            }
                         }
                     }
                 }
@@ -748,72 +742,105 @@ private fun FilterSortSheet(
     }
 }
 
-/** Drag-to-reorder list used when the Manual sort is active (List mode). */
+/**
+ * Drag-to-reorder used by the Manual sort in BOTH grid and list. Reorder starts only after a
+ * long press (so a stray tap never changes the order), then the item follows the finger and the
+ * target slot is found by hit-testing the grid's layout info (works for any cell size / column count).
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ReorderableFileList(
+private fun ReorderableFileGrid(
     items: List<FileWithTags>,
+    columns: Int,
+    asList: Boolean,
     selection: Set<String>,
-    selectionMode: Boolean,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onOpen: (String) -> Unit,
-    onToggleSelect: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
 ) {
     val list = remember { mutableStateListOf<FileWithTags>() }
     var dragging by remember { mutableStateOf(false) }
     LaunchedEffect(items) { if (!dragging) { list.clear(); list.addAll(items) } }
 
+    val gridState = rememberLazyGridState()
     var draggedId by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-    val rowPitchPx = with(LocalDensity.current) { 72.dp.toPx() }
+    var pointer by remember { mutableStateOf(Offset.Zero) }    // finger position in the grid viewport
+    var pressLocal by remember { mutableStateOf(Offset.Zero) } // grab point inside the cell
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-        itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
-            val isDragged = fwt.file.id == draggedId
-            val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id) { value = thumb(fwt.file) }
-            ReorderRow(
-                item = fwt,
-                bmp = bmp,
-                selected = fwt.file.id in selection,
-                dragged = isDragged,
-                modifier = Modifier
-                    .then(if (!isDragged) Modifier.animateItem() else Modifier)
-                    .zIndex(if (isDragged) 1f else 0f)
-                    .graphicsLayer { translationY = if (isDragged) dragOffset else 0f },
-                onClick = { if (selectionMode) onToggleSelect(fwt.file.id) else onOpen(fwt.file.id) },
-                onLongClick = { onToggleSelect(fwt.file.id) },
-                onDragStart = { draggedId = fwt.file.id; dragOffset = 0f; dragging = true },
-                onDrag = { dy ->
-                    dragOffset += dy
-                    val from = list.indexOfFirst { it.file.id == draggedId }
-                    if (from >= 0) {
-                        val target = (from + (dragOffset / rowPitchPx).roundToInt()).coerceIn(0, list.size - 1)
-                        if (target != from) {
-                            list.add(target, list.removeAt(from))
-                            dragOffset -= (target - from) * rowPitchPx
+    Column(Modifier.fillMaxSize()) {
+        Text("Ordine manuale · tieni premuto e trascina per riordinare",
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            state = gridState,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 96.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
+                val isDragged = fwt.file.id == draggedId
+                val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id) { value = thumb(fwt.file) }
+                ReorderCell(
+                    item = fwt,
+                    bmp = bmp,
+                    selected = fwt.file.id in selection,
+                    dragged = isDragged,
+                    asList = asList,
+                    modifier = Modifier
+                        .zIndex(if (isDragged) 1f else 0f)
+                        .then(if (!isDragged) Modifier.animateItem() else Modifier)
+                        .graphicsLayer {
+                            if (isDragged) {
+                                val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedId }
+                                if (info != null) {
+                                    translationX = pointer.x - pressLocal.x - info.offset.x
+                                    translationY = pointer.y - pressLocal.y - info.offset.y
+                                }
+                            }
                         }
-                    }
-                },
-                onDragEnd = { dragging = false; draggedId = null; dragOffset = 0f; onReorder(list.map { it.file.id }) },
-            )
+                        .pointerInput(fwt.file.id) { detectTapGestures(onTap = { onOpen(fwt.file.id) }) }
+                        .pointerInput(fwt.file.id) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { local ->
+                                    draggedId = fwt.file.id
+                                    dragging = true
+                                    pressLocal = local
+                                    val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == fwt.file.id }
+                                    pointer = Offset((info?.offset?.x ?: 0) + local.x, (info?.offset?.y ?: 0) + local.y)
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    pointer += amount
+                                    val from = list.indexOfFirst { it.file.id == draggedId }
+                                    val target = gridState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                                        pointer.x >= info.offset.x && pointer.x <= info.offset.x + info.size.width &&
+                                            pointer.y >= info.offset.y && pointer.y <= info.offset.y + info.size.height
+                                    }?.index
+                                    if (from >= 0 && target != null && target != from && target < list.size) {
+                                        list.add(target, list.removeAt(from))
+                                    }
+                                },
+                                onDragEnd = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
+                                onDragCancel = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
+                            )
+                        },
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReorderRow(
+private fun ReorderCell(
     item: FileWithTags,
     bmp: android.graphics.Bitmap?,
     selected: Boolean,
     dragged: Boolean,
+    asList: Boolean,
     modifier: Modifier,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit,
 ) {
     val mime = item.file.mimeType
     val isVideo = VaultRepository.isVideo(mime)
@@ -822,31 +849,41 @@ private fun ReorderRow(
         isVideo -> Icons.Filled.Movie
         else -> Icons.Filled.InsertDriveFile
     }
-    Surface(
-        color = if (dragged) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = if (dragged) 6.dp else 0.dp,
-        modifier = modifier.fillMaxWidth().height(72.dp).combinedClickable(onClick = onClick, onLongClick = onLongClick),
-    ) {
-        Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp))
-            Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (asList) {
+        Surface(
+            color = if (dragged) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = if (dragged) 8.dp else 0.dp,
+            modifier = modifier.fillMaxWidth().height(72.dp),
+        ) {
+            Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp))
+                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                    Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.Filled.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp).size(22.dp))
             }
-            Icon(
-                Icons.Filled.DragHandle, "Trascina per riordinare",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp).size(28.dp).pointerInput(item.file.id) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDrag = { change, amount -> change.consume(); onDrag(amount.y) },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragEnd() },
-                    )
-                },
-            )
+        }
+    } else {
+        Column(modifier.fillMaxWidth()) {
+            Box {
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, item.tags,
+                    Modifier.fillMaxWidth().aspectRatio(1f))
+                if (dragged) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.DragHandle, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+            Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 2.dp))
         }
     }
 }
