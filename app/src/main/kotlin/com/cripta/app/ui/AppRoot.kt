@@ -90,7 +90,15 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             composable("home") {
                 HomeScreen(
                     onOpenFile = { nav.navigate("viewer/$it") },
-                    onOpenFolders = { nav.navigate("folders") { launchSingleTop = true } },
+                    onOpenFolders = {
+                        // Switch to the Cartelle tab with the same semantics as the bottom bar,
+                        // so the back stack stays consistent and the Home tab keeps working.
+                        nav.navigate("folders") {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     onLock = { session.lock() },
                 )
             }

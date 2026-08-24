@@ -94,7 +94,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item {
-                Section("Aspetto") {
+                Section("Aspetto", "Tema e colori dell'app.") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         com.cripta.app.data.ThemeMode.entries.forEach { m ->
                             FilterChip(
@@ -118,7 +118,7 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Dettagli visualizzati") {
+                Section("Dettagli visualizzati", "Scegli quali informazioni mostrare su file e cartelle.") {
                     ToggleRow("Dimensione e durata", s.display.showFileInfo) { vm.setShowFileInfo(it) }
                     ToggleRow("Tag sulle copertine", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
                     ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
@@ -127,7 +127,7 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Blocco automatico") {
+                Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
                             FilterChip(
@@ -141,7 +141,7 @@ fun SettingsScreen(
             }
 
             item {
-                Section("Originale dopo import") {
+                Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DeleteOriginalPolicy.entries.forEach { p ->
                             FilterChip(
@@ -302,9 +302,13 @@ private fun PassphraseDialog(title: String, onConfirm: (String) -> Unit, onDismi
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+private fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
+        if (description != null) {
+            Text(description, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         content()
     }
 }
