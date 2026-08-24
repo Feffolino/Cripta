@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -83,6 +84,8 @@ import com.tom_roush.pdfbox.rendering.PDFRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 
@@ -299,25 +302,40 @@ private fun NoteView(text: String, onSingleTap: () -> Unit) {
     }
 }
 
+/** Keeps a PDF open and renders pages on demand (one visible page at a time), so a large
+ *  document doesn't rasterize every page into RAM up front. Render calls are serialized. */
+private class PdfDoc(bytes: ByteArray) {
+    private val doc = PDDocument.load(ByteArrayInputStream(bytes))
+    private val renderer = PDFRenderer(doc)
+    private val mutex = Mutex()
+    val pageCount: Int = doc.numberOfPages
+    suspend fun render(index: Int): Bitmap? = mutex.withLock {
+        withContext(Dispatchers.IO) { runCatching { renderer.renderImageWithDPI(index, 150f) }.getOrNull() }
+    }
+    fun close() { runCatching { doc.close() } }
+}
+
 @Composable
 private fun PdfView(bytes: ByteArray) {
-    val pages by produceState<List<Bitmap>?>(initialValue = null, bytes) {
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
-                    val renderer = PDFRenderer(doc)
-                    (0 until doc.numberOfPages).map { renderer.renderImageWithDPI(it, 150f) }
-                }
-            }.getOrDefault(emptyList())
-        }
+    val result by produceState<Result<PdfDoc>?>(initialValue = null, bytes) {
+        value = withContext(Dispatchers.IO) { runCatching { PdfDoc(bytes) } }
     }
-    val p = pages
+    val doc = result?.getOrNull()
+    DisposableEffect(doc) { onDispose { doc?.close() } }
     when {
-        p == null -> CircularProgressIndicator(color = Color.White)
-        p.isEmpty() -> Text("Impossibile aprire il PDF", color = Color.White)
+        result == null -> CircularProgressIndicator(color = Color.White)
+        doc == null -> Text("Impossibile aprire il PDF", color = Color.White)
         else -> LazyColumn(Modifier.fillMaxSize().background(Color(0xFF0A0C10))) {
-            items(p) { bmp ->
-                Image(bmp.asImageBitmap(), null, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+            items(doc.pageCount) { index ->
+                val bmp by produceState<Bitmap?>(initialValue = null, index, doc) { value = doc.render(index) }
+                val b = bmp
+                if (b != null) {
+                    Image(b.asImageBitmap(), null, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                } else {
+                    Box(Modifier.fillMaxWidth().height(480.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.White)
+                    }
+                }
             }
         }
     }

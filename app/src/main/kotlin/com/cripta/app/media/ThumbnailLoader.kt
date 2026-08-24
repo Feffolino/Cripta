@@ -42,13 +42,14 @@ class ThumbnailLoader @Inject constructor(
         bmp
     }
 
-    private suspend fun imageThumb(file: FileEntity): Bitmap? {
-        val bytes = repo.decryptBytes(file)
+    private fun imageThumb(file: FileEntity): Bitmap? {
+        // Two decrypt passes over a stream instead of holding the whole file in a ByteArray:
+        // first reads only the bounds, second decodes downsampled to ~target.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, bounds) }
         val sample = calcSample(bounds.outWidth, bounds.outHeight, target)
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+        return repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, opts) }
     }
 
     private fun videoThumb(file: FileEntity): Bitmap? {

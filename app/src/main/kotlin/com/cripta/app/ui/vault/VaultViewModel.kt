@@ -14,12 +14,14 @@ import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.media.ThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -58,10 +60,8 @@ class VaultViewModel @Inject constructor(
 
     val filters = MutableStateFlow(Filters())
 
-    /** Bumped after any DB mutation to force the observed flows to re-query immediately,
-     *  independent of Room/SQLCipher invalidation timing. */
-    private val refresh = MutableStateFlow(0)
-    private fun bump() { refresh.value++ }
+    /** Re-query trigger driven by the repository's global change signal (reliable across VMs). */
+    private val refresh get() = repo.changes
 
     val folders: StateFlow<List<FolderEntity>> =
         combine(currentFolderId, refresh) { id, _ -> id }
@@ -90,7 +90,8 @@ class VaultViewModel @Inject constructor(
     val folderStats: StateFlow<Map<Long, FolderStat>> =
         combine(repo.allFolders(), repo.folderAggregates(), refresh) { folders, aggs, _ ->
             computeFolderStats(folders, aggs)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val sortFlow = settings.settings.map { it.sortKey to it.sortAscending }
 
@@ -109,6 +110,7 @@ class VaultViewModel @Inject constructor(
             .flatMapLatest { (folder, f, sort) ->
                 val source = if (f.active) repo.allFiles() else repo.files(folder)
                 source.map { list -> applySort(applyFilters(list, f), sort.first, sort.second) }
+                    .flowOn(Dispatchers.Default)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -170,37 +172,30 @@ class VaultViewModel @Inject constructor(
 
     // --- Actions ---
     fun createFolder(name: String) = viewModelScope.launch {
-        repo.createFolder(name, currentFolderId.value); bump()
-    }
+        repo.createFolder(name, currentFolderId.value)    }
 
     fun deleteFolder(folder: FolderEntity) = viewModelScope.launch {
-        repo.deleteFolderRecursive(folder.id); bump()
-    }
+        repo.deleteFolderRecursive(folder.id)    }
 
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
-        repo.renameFolder(folder, name); bump()
-    }
+        repo.renameFolder(folder, name)    }
 
     fun importUris(uris: List<android.net.Uri>) = viewModelScope.launch {
         val folder = currentFolderId.value
         uris.forEach { runCatching { repo.import(it, folder) } }
-        bump()
     }
 
     fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
-        repo.toggleFavorite(fileId, fav); bump()
-    }
+        repo.toggleFavorite(fileId, fav)    }
 
     fun setFavorite(fileIds: List<String>, fav: Boolean) = viewModelScope.launch {
-        fileIds.forEach { repo.toggleFavorite(it, fav) }; bump()
-    }
+        fileIds.forEach { repo.toggleFavorite(it, fav) }    }
 
     /** Import picked files, then apply the delete-original policy. Returns nothing;
      *  when policy is ASK the screen collects the uris via [pendingOriginals]. */
     fun importThenHandleOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
         val folder = currentFolderId.value
         uris.forEach { runCatching { repo.import(it, folder) } }
-        bump()
         val policy = settings.settingsOnce().deleteOriginalPolicy
         when (policy) {
             com.cripta.app.data.DeleteOriginalPolicy.ALWAYS -> deleteOriginals(uris)
@@ -220,34 +215,27 @@ class VaultViewModel @Inject constructor(
     }
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
-        repo.setTags(fileId, tagNames); bump()
-    }
+        repo.setTags(fileId, tagNames)    }
 
     /** Add the given tags to every selected file without touching their other tags. */
     fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>) = viewModelScope.launch {
-        fileIds.forEach { repo.addTags(it, tagNames) }; bump()
-    }
+        fileIds.forEach { repo.addTags(it, tagNames) }    }
 
     /** Create a tag (optionally with an emoji/acronym alias) up front. */
     fun createTag(name: String, alias: String?) = viewModelScope.launch {
-        repo.createTag(name, alias); bump()
-    }
+        repo.createTag(name, alias)    }
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
-        repo.renameFile(fileId, newName); bump()
-    }
+        repo.renameFile(fileId, newName)    }
 
     fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
-        repo.setTagAlias(tagName, alias); bump()
-    }
+        repo.setTagAlias(tagName, alias)    }
 
     fun moveFiles(fileIds: List<String>, folderId: Long?) = viewModelScope.launch {
-        fileIds.forEach { repo.moveFile(it, folderId) }; bump()
-    }
+        fileIds.forEach { repo.moveFile(it, folderId) }    }
 
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
-        fileIds.forEach { repo.secureDelete(it) }; bump()
-    }
+        fileIds.forEach { repo.secureDelete(it) }    }
 
     fun randomPick(): String? = files.value.randomOrNull()?.file?.id
 }
