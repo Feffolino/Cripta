@@ -34,7 +34,7 @@ fun FavoritesScreen(
 ) {
     val favorites by vm.favorites.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Preferiti") }) }) { pad ->
+    Scaffold(topBar = { TopAppBar(title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") }) }) { pad ->
         if (favorites.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
