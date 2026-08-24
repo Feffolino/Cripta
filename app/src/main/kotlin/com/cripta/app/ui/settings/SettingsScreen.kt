@@ -3,6 +3,8 @@ package com.cripta.app.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,11 +25,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,6 +57,20 @@ fun SettingsScreen(
 ) {
     val s by vm.settings.collectAsState()
     val tags by vm.tags.collectAsState()
+    val message by vm.message.collectAsState()
+    val ctx = LocalContext.current
+    LaunchedEffect(message) {
+        message?.let { android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_LONG).show(); vm.clearMessage() }
+    }
+
+    var pendingExport by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImport by remember { mutableStateOf<android.net.Uri?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri -> pendingExport = uri }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> pendingImport = uri }
 
     var renameTag by remember { mutableStateOf<TagEntity?>(null) }
     var aliasTag by remember { mutableStateOf<TagEntity?>(null) }
@@ -139,6 +159,20 @@ fun SettingsScreen(
                 }
             }
 
+            Section("Backup cifrato") {
+                Text("Esporta/importa un archivio cifrato del vault, protetto da una passphrase. " +
+                    "Ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
+                        Text("Esporta")
+                    }
+                    Button(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                        Text("Ripristina")
+                    }
+                }
+            }
+
             Button(onClick = { vm.lockNow(); onBack() }, modifier = Modifier.fillMaxWidth()) {
                 Text("Blocca ora")
             }
@@ -159,6 +193,17 @@ fun SettingsScreen(
         TextPromptDialog("Nuova etichetta", "Nome",
             onConfirm = { vm.createTag(it); addTag = false },
             onDismiss = { addTag = false })
+    }
+    if (pendingExport != null || pendingImport != null) {
+        PassphraseDialog(
+            title = if (pendingExport != null) "Passphrase del backup" else "Passphrase del ripristino",
+            onConfirm = { pass ->
+                pendingExport?.let { vm.exportBackup(it, pass) }
+                pendingImport?.let { vm.importBackup(it, pass) }
+                pendingExport = null; pendingImport = null
+            },
+            onDismiss = { pendingExport = null; pendingImport = null },
+        )
     }
     renameTag?.let { tag ->
         TextPromptDialog("Rinomina etichetta", "Nome", initial = tag.name,
@@ -183,6 +228,25 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { deleteTag = null }) { Text("Annulla") } },
         )
     }
+}
+
+@Composable
+private fun PassphraseDialog(title: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var pass by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = pass, onValueChange = { pass = it },
+                label = { Text("Passphrase (min 6)") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+        },
+        confirmButton = { TextButton(onClick = { if (pass.length >= 6) onConfirm(pass) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
 }
 
 @Composable
