@@ -91,8 +91,10 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.media3.datasource)
+    implementation(libs.media3.extractor)
 
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.documentfile)
