@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import android.view.View
 import androidx.compose.foundation.layout.padding
@@ -205,26 +206,29 @@ fun ViewerScreen(
                 },
             )
         }
+
+        // Tag editor as a non-modal panel anchored to the bottom: it leaves the video visible
+        // above and, being part of the screen (not a Dialog), taps on the video/controls above
+        // it keep working. Loads the file's current tags first so they open pre-selected.
+        val tagFile = currentFile
+        if (showTags && tagFile != null) {
+            val initial by produceState<List<String>?>(initialValue = null, tagFile.id, refresh) { value = vm.tagNamesOf(tagFile.id) }
+            initial?.let { current ->
+                com.cripta.app.ui.vault.ViewerTagPanel(
+                    allTags = allTags,
+                    initialSelected = current,
+                    onConfirm = { vm.setTags(tagFile.id, it); showTags = false },
+                    onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
+                    onCreateTag = { name, alias -> vm.createTag(name, alias) },
+                    onDismiss = { showTags = false },
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .navigationBarsPadding().padding(8.dp),
+                )
+            }
+        }
     }
 
     val file = currentFile
-    if (showTags && file != null) {
-        // Load the file's current tags first (null = not loaded yet) and only then open the
-        // editor, so it opens with those tags pre-selected instead of empty. TagEditorDialog
-        // captures its initial selection once on first composition, so showing it before the
-        // async load finished would leave every current tag unselected.
-        val initial by produceState<List<String>?>(initialValue = null, file.id, refresh) { value = vm.tagNamesOf(file.id) }
-        initial?.let { current ->
-            TagEditorDialog(
-                allTags = allTags,
-                initialSelected = current,
-                onConfirm = { vm.setTags(file.id, it); showTags = false },
-                onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
-                onCreateTag = { name, alias -> vm.createTag(name, alias) },
-                onDismiss = { showTags = false },
-            )
-        }
-    }
     if (confirmDelete && file != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

@@ -35,9 +35,11 @@ data class Filters(
     val tagIds: Set<Long> = emptySet(),
     val type: TypeFilter = TypeFilter.ALL,
     val favoritesOnly: Boolean = false,
+    val untaggedOnly: Boolean = false,
 ) {
     val active: Boolean
-        get() = query.isNotBlank() || tagIds.isNotEmpty() || type != TypeFilter.ALL || favoritesOnly
+        get() = query.isNotBlank() || tagIds.isNotEmpty() || type != TypeFilter.ALL ||
+            favoritesOnly || untaggedOnly
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -140,6 +142,7 @@ class VaultViewModel @Inject constructor(
                 fwt.file.originalName.contains(f.query, ignoreCase = true) ||
                 fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
             val tagsOk = f.tagIds.isEmpty() || fwt.tags.map { it.id }.containsAll(f.tagIds)
+            val untaggedOk = !f.untaggedOnly || fwt.tags.isEmpty()
             val typeOk = when (f.type) {
                 TypeFilter.ALL -> true
                 TypeFilter.IMAGE -> VaultRepository.isImage(fwt.file.mimeType)
@@ -148,7 +151,7 @@ class VaultViewModel @Inject constructor(
                     !VaultRepository.isVideo(fwt.file.mimeType)
             }
             val favOk = !f.favoritesOnly || fwt.file.isFavorite
-            nameOk && tagsOk && typeOk && favOk
+            nameOk && tagsOk && typeOk && favOk && untaggedOk
         }
     }
 
@@ -171,10 +174,18 @@ class VaultViewModel @Inject constructor(
     fun setQuery(q: String) { filters.value = filters.value.copy(query = q) }
     fun toggleTag(id: Long) {
         val cur = filters.value.tagIds
-        filters.value = filters.value.copy(tagIds = if (id in cur) cur - id else cur + id)
+        // Picking a specific tag turns off the "untagged only" filter (they're contradictory).
+        filters.value = filters.value.copy(
+            tagIds = if (id in cur) cur - id else cur + id,
+            untaggedOnly = false,
+        )
     }
     fun setType(t: TypeFilter) { filters.value = filters.value.copy(type = t) }
     fun setFavoritesOnly(b: Boolean) { filters.value = filters.value.copy(favoritesOnly = b) }
+    /** Show only media with no tags. Mutually exclusive with picking specific tags. */
+    fun setUntaggedOnly(b: Boolean) {
+        filters.value = filters.value.copy(untaggedOnly = b, tagIds = if (b) emptySet() else filters.value.tagIds)
+    }
     fun clearFilters() { filters.value = Filters() }
 
     // --- Actions ---
