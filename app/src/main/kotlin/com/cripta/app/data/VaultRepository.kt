@@ -190,7 +190,8 @@ class VaultRepository @Inject constructor(
             }
             dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
         }
-        dao.purgeUnusedTags()
+        // Tags are a reusable library: keep unlinked ones available for other files. They are
+        // removed only when the user explicitly deletes them (see deleteTag).
         notifyChanged()
     }
 
@@ -322,7 +323,8 @@ class VaultRepository @Inject constructor(
         val f = db.fileDao().byId(fileId) ?: return@withContext
         db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
         blobs.shred(fileId)         // best-effort overwrite + delete of the blob
-        db.tagDao().purgeUnusedTags()
+        // Deleting a file must not remove its tags from the library: they stay available for
+        // other files. Tags are only removed via an explicit deleteTag.
         notifyChanged()
     }
 

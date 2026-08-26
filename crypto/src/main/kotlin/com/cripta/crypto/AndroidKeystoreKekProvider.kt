@@ -36,7 +36,13 @@ class AndroidKeystoreKekProvider(
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
             .setUserAuthenticationRequired(requireAuth)
-            .setInvalidatedByBiometricEnrollment(true)
+            // Do NOT invalidate the KEK when biometrics are added/changed. This KEK is the root
+            // of the whole key hierarchy (KEK -> DEK -> DB key + per-file keys); invalidating it
+            // makes every encrypted file permanently unrecoverable the moment the user enrols a
+            // new fingerprint/face. That is unacceptable for a personal vault. The key still
+            // requires user authentication and the device credential (PIN/pattern/password) stays
+            // a valid unlock path, which matches the app's threat model (casual snoopers).
+            .setInvalidatedByBiometricEnrollment(false)
         try {
             builder.setIsStrongBoxBacked(true)
             buildKey(builder)

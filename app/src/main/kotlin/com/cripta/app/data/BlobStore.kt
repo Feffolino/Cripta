@@ -17,6 +17,11 @@ class BlobStore @Inject constructor(
 
     fun blob(uuid: String): File = File(dir, uuid)
 
+    /** Delete every blob. Used when resetting a vault whose key was permanently invalidated. */
+    fun wipeAll() {
+        dir.listFiles()?.forEach { runCatching { it.delete() } }
+    }
+
     /** Best-effort overwrite then delete. Real guarantee is crypto-shredding the keyset. */
     fun shred(uuid: String) {
         val f = blob(uuid)
