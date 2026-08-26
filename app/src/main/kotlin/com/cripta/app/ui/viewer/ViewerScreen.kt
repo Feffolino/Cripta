@@ -441,7 +441,16 @@ private fun VideoPlayer(
                 channelProvider = { vm.channelFor(file) },
                 plaintextLength = file.sizeBytes,
             )
-            setMediaSource(ProgressiveMediaSource.Factory(factory).createMediaSource(MediaItem.fromUri("cripta://${file.id}")))
+            // Enable constant-bitrate seeking so formats without a built-in seek index
+            // (e.g. MPEG program/transport streams, MP3/ADTS/AMR) can still be scrubbed by
+            // estimating the byte position from time. Also broadens what plays/seeks overall.
+            val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
+                .setConstantBitrateSeekingEnabled(true)
+                .setConstantBitrateSeekingAlwaysEnabled(true)
+            setMediaSource(
+                ProgressiveMediaSource.Factory(factory, extractors)
+                    .createMediaSource(MediaItem.fromUri("cripta://${file.id}"))
+            )
             repeatMode = Player.REPEAT_MODE_ONE   // loop the video
             prepare()
             playWhenReady = true
