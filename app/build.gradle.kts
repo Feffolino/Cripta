@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.media3.datasource)
     implementation(libs.media3.extractor)
+    implementation(libs.media3.transformer)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

@@ -22,10 +22,12 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import android.view.View
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -40,6 +42,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Transform
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -147,6 +150,9 @@ fun ViewerScreen(
     var showInfo by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
+    var confirmConvert by remember { mutableStateOf(false) }
+    val converting by vm.converting.collectAsState()
+    val convertedId by vm.convertedId.collectAsState()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
@@ -187,6 +193,11 @@ fun ViewerScreen(
                             Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
                         }
                         IconButton(onClick = { showTags = true }) { Icon(Icons.Filled.Label, "Etichette") }
+                        // Offer MP4 conversion for videos in containers that aren't already MP4
+                        // (e.g. MPEG program streams that play but can't be seeked).
+                        if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
+                            IconButton(onClick = { confirmConvert = true }) { Icon(Icons.Filled.Transform, "Converti in MP4") }
+                        }
                         IconButton(onClick = { showInfo = true }) { Icon(Icons.Filled.Info, "Informazioni") }
                         IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Elimina") }
@@ -256,6 +267,50 @@ fun ViewerScreen(
             text = { Text("Una copia in chiaro di \"${file.originalName}\" verrà salvata sul dispositivo.") },
             confirmButton = { TextButton(onClick = { confirmDownload = false; vm.download(file) }) { Text("Scarica") } },
             dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("Annulla") } },
+        )
+    }
+    if (confirmConvert && file != null) {
+        AlertDialog(
+            onDismissRequest = { confirmConvert = false },
+            title = { Text("Convertire in MP4?") },
+            text = {
+                Text(
+                    "Questo formato non permette di scorrere il video. La conversione crea una " +
+                        "copia MP4 (ri-codifica H.264) scorribile, con le stesse etichette e cartella. " +
+                        "Può richiedere qualche minuto; l'originale viene conservato."
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmConvert = false; vm.convertToMp4(file) }) { Text("Converti") } },
+            dismissButton = { TextButton(onClick = { confirmConvert = false }) { Text("Annulla") } },
+        )
+    }
+    if (converting) {
+        AlertDialog(
+            onDismissRequest = { /* non-cancellable: conversion is running */ },
+            title = { Text("Conversione in corso") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Text("Ricodifica in MP4… può richiedere qualche minuto.",
+                        modifier = Modifier.padding(start = 16.dp))
+                }
+            },
+            confirmButton = {},
+        )
+    }
+    if (convertedId != null && file != null) {
+        AlertDialog(
+            onDismissRequest = { vm.clearConverted() },
+            title = { Text("Video convertito") },
+            text = { Text("La copia MP4 scorribile è nella stessa cartella. Vuoi eliminare l'originale?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = file.id
+                    vm.clearConverted()
+                    vm.delete(id) { onBack() }
+                }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { vm.clearConverted() }) { Text("Mantieni") } },
         )
     }
 }
