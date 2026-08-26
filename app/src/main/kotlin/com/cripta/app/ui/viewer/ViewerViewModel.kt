@@ -2,16 +2,20 @@ package com.cripta.app.ui.viewer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.util.UnstableApi
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.TagEntity
+import com.cripta.app.media.VideoConverter
 import com.cripta.app.viewer.ViewerQueue
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.nio.channels.SeekableByteChannel
 import javax.inject.Inject
 
@@ -25,9 +29,11 @@ sealed interface ViewerState {
     data class Error(val message: String) : ViewerState
 }
 
+@OptIn(UnstableApi::class)
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
     private val repo: VaultRepository,
+    private val converter: VideoConverter,
     queue: ViewerQueue,
 ) : ViewModel() {
 
@@ -82,5 +88,44 @@ class ViewerViewModel @Inject constructor(
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
         repo.secureDelete(fileId)
         onDone()
+    }
+
+    /** True while a video conversion is running (drives a progress dialog). */
+    val converting = MutableStateFlow(false)
+
+    /** Set to the new MP4's id after a successful conversion; consumed by the UI. */
+    private val _convertedId = MutableStateFlow<String?>(null)
+    val convertedId: StateFlow<String?> = _convertedId
+    fun clearConverted() { _convertedId.value = null }
+
+    /**
+     * Transcode a video (e.g. a non-seekable MPEG) into MP4, encrypt it into the vault, and keep
+     * the original. Temp plaintext files live only in app-private cache and are shredded after.
+     */
+    fun convertToMp4(file: FileEntity) = viewModelScope.launch {
+        if (converting.value) return@launch
+        converting.value = true
+        val srcSuffix = file.originalName.substringAfterLast('.', "mpg")
+        var src: java.io.File? = null
+        var out: java.io.File? = null
+        val result = runCatching {
+            src = repo.decryptToTempFile(file, srcSuffix)
+            out = repo.newTempFile("mp4")
+            // Transformer must run on the main thread.
+            withContext(Dispatchers.Main) { converter.toMp4(src!!, out!!) }
+            repo.importConvertedMp4(file, out!!)
+        }
+        withContext(Dispatchers.IO) {
+            src?.let { repo.shredTempFile(it) }
+            out?.let { repo.shredTempFile(it) }
+        }
+        converting.value = false
+        result.onSuccess { newFile ->
+            _convertedId.value = newFile.id
+            _refresh.value++
+            _message.value = "Convertito in MP4"
+        }.onFailure {
+            _message.value = "Conversione non riuscita: ${it.message ?: "errore"}"
+        }
     }
 }
