@@ -149,16 +149,17 @@ fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
     }
 }
 
-/** App logo + title, for the top bar of the main screens. */
+/** App logo + title, for the top bar of the main screens. Kept identical across every screen so
+ *  the logo is the same size everywhere and the bar stays compact. */
 @Composable
 fun HeaderTitle(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Image(
             painterResource(com.cripta.app.R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(28.dp),
         )
-        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 2.dp))
+        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
