@@ -63,7 +63,12 @@ full image on open; grid shows type icons), and MediaStore original-delete after
 ## Key design of the key hierarchy (for whoever implements plan 5)
 
 - KEK = Android Keystore AES-256-GCM, StrongBox, `setUserAuthenticationRequired(true)`,
-  `setInvalidatedByBiometricEnrollment(true)`. Unlocked via BiometricPrompt `CryptoObject`.
+  `setInvalidatedByBiometricEnrollment(false)`. Unlocked via BiometricPrompt `CryptoObject`.
+  (The flag is intentionally `false`: this KEK is the root of the whole key hierarchy, so
+  invalidating it on a biometric change would make **all** vault data permanently unrecoverable.
+  The device credential remains a valid unlock path, which fits the casual-snooper threat model.
+  A key that is already invalidated — legacy install, or the device lock removed — is detected at
+  unlock and the user is offered a vault reset, since its data is unrecoverable anyway.)
 - The biometric-authorized Keystore cipher unwraps the **DEK keyset bytes**
   (`DekManager.newDekKeysetBytes()` at setup → `dekAeadFromBytes()` after unlock).
 - DEK (a Tink AEAD) then decrypts the **SQLCipher DB passphrase** (stored DEK-wrapped) and

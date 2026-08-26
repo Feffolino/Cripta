@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -51,4 +53,31 @@ fun AuthScreen(onAuthenticate: () -> Unit) {
             Button(onClick = onAuthenticate) { Text("Sblocca") }
         }
     }
+}
+
+/**
+ * Shown when the Keystore key was permanently invalidated (e.g. an older install whose key was
+ * tied to biometric enrollment, or the device lock was removed). The data behind it can no longer
+ * be decrypted, so the only way forward is to reset the vault and start over.
+ */
+@Composable
+fun KeyInvalidatedDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Impossibile sbloccare") },
+        text = {
+            Text(
+                "La chiave di sicurezza non è più valida perché la biometria del dispositivo è " +
+                    "cambiata o il blocco schermo è stato rimosso. I dati protetti non sono più " +
+                    "recuperabili. Puoi reimpostare il vault per ricominciare da capo. " +
+                    "L'operazione è irreversibile ed elimina tutti i file cifrati."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onReset) {
+                Text("Reimposta vault", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
 }
