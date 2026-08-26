@@ -167,6 +167,74 @@ class VaultRepository @Inject constructor(
     fun decryptingStream(file: FileEntity): java.io.InputStream =
         FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id))
 
+    // --- Video conversion (transcode to MP4) support ---
+
+    /** Decrypt a file's plaintext to a fresh temp file in app-private cache. Caller deletes it. */
+    suspend fun decryptToTempFile(file: FileEntity, suffix: String): File = withContext(Dispatchers.IO) {
+        val tmp = File(context.cacheDir, "conv-${UUID.randomUUID()}.$suffix")
+        decryptingStream(file).use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        tmp
+    }
+
+    /** A fresh empty temp path in app-private cache (not created). */
+    fun newTempFile(suffix: String): File = File(context.cacheDir, "conv-${UUID.randomUUID()}.$suffix")
+
+    /** Best-effort overwrite + delete of a plaintext temp file produced during conversion. */
+    fun shredTempFile(f: File) {
+        if (!f.exists()) return
+        runCatching {
+            val len = f.length()
+            java.io.RandomAccessFile(f, "rw").use { raf ->
+                val rnd = java.security.SecureRandom()
+                val chunk = ByteArray(64 * 1024)
+                var written = 0L
+                while (written < len) {
+                    rnd.nextBytes(chunk)
+                    val n = minOf(chunk.size.toLong(), len - written).toInt()
+                    raf.write(chunk, 0, n); written += n
+                }
+                raf.fd.sync()
+            }
+        }
+        f.delete()
+    }
+
+    /**
+     * Encrypt a converted plaintext MP4 into the vault as a new file, inheriting the original's
+     * folder, favorite and tags. The original is left untouched (the caller decides whether to
+     * delete it). Returns the new file entity.
+     */
+    suspend fun importConvertedMp4(original: FileEntity, mp4: File): FileEntity = withContext(Dispatchers.IO) {
+        val uuid = UUID.randomUUID().toString()
+        val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+        val written = mp4.inputStream().use { input ->
+            blobs.blob(uuid).outputStream().use { out ->
+                FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
+            }
+        }
+        val baseName = original.originalName.substringBeforeLast('.', original.originalName)
+        val entity = FileEntity(
+            id = uuid,
+            originalName = "$baseName.mp4",
+            mimeType = "video/mp4",
+            sizeBytes = written,
+            folderId = original.folderId,
+            isFavorite = original.isFavorite,
+            createdAt = original.createdAt,
+            importedAt = now(),
+            wrappedKeyset = wrapped,
+            durationMs = original.durationMs,
+            sortWeight = now(),
+        )
+        db.fileDao().insert(entity)
+        // Carry over the original's tags.
+        db.fileDao().withTagsById(original.id)?.tags?.forEach {
+            db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
+        }
+        notifyChanged()
+        entity
+    }
+
     /** Best-effort media duration (ms) read directly from a content uri; null on failure. */
     private fun durationOf(uri: Uri): Long? {
         val retriever = android.media.MediaMetadataRetriever()
