@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -95,6 +96,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -758,18 +760,64 @@ private fun ThumbBox(
             }
         }
         if (tags.isNotEmpty()) {
-            FlowRow(
-                Modifier.align(Alignment.BottomStart).padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                tags.take(3).forEach { tag ->
-                    Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall) {
-                        Text(tagAlias(tag), style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
-                    }
-                }
+            TagBadges(
+                tags = tags,
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(3.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TagBadge(text: String) {
+    Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall) {
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary,
+            maxLines = 1, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+    }
+}
+
+/**
+ * Acronym/emoji tag badges sized to the thumbnail: fit as many as the available width allows on a
+ * single row (measuring each alias), with a "+N" chip for the rest. Bigger thumbnails (fewer grid
+ * columns) therefore show more badges; small ones show fewer. No fixed cap.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagBadges(tags: List<TagEntity>, modifier: Modifier) {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelMedium
+    val density = LocalDensity.current
+
+    BoxWithConstraints(modifier) {
+        val availPx = with(density) { maxWidth.toPx() }
+        val hPadPx = with(density) { 8.dp.toPx() }   // 4dp padding on each side of a badge
+        val spacingPx = with(density) { 3.dp.toPx() }
+        // Measured on-screen width of each badge (alias text + horizontal padding).
+        val widths = remember(tags) {
+            tags.map { measurer.measure(tagAlias(it), style).size.width + hPadPx }
+        }
+
+        // Greedily fit badges on one row; how many depends purely on the thumbnail width.
+        fun fit(budgetPx: Float): Int {
+            var used = 0f; var n = 0
+            for (w in widths) {
+                val add = w + if (n > 0) spacingPx else 0f
+                if (used + add <= budgetPx) { used += add; n++ } else break
             }
+            return n
+        }
+
+        var count = fit(availPx)
+        if (count < tags.size) {
+            // Some overflow -> reserve room for a "+N" chip, then refit.
+            val overflowPx = measurer.measure("+${tags.size}", style).size.width + hPadPx + spacingPx
+            count = fit(availPx - overflowPx).coerceAtLeast(1)
+        }
+
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            tags.take(count).forEach { TagBadge(tagAlias(it)) }
+            val extra = tags.size - count
+            if (extra > 0) TagBadge("+$extra")
         }
     }
 }
