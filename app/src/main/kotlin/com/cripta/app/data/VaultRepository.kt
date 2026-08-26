@@ -130,14 +130,16 @@ class VaultRepository @Inject constructor(
 
     // --- Import ---
     suspend fun import(uri: Uri, folderId: Long?): FileEntity = withContext(Dispatchers.IO) {
-        val (name, size) = queryNameSize(uri)
+        val (name, _) = queryNameSize(uri)
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
         // Read media duration from the still-plaintext source before it is encrypted.
         val duration = if (isPlayable(mime)) durationOf(uri) else null
         val uuid = UUID.randomUUID().toString()
         val wrappedKeyset = FileCrypto.createWrappedFileKeyset(dek)
         val blob = blobs.blob(uuid)
-        context.contentResolver.openInputStream(uri)!!.use { input ->
+        // Count the actual plaintext bytes streamed in, rather than trusting OpenableColumns.SIZE
+        // (some providers report it wrong). The exact length is what the seekable player needs.
+        val written = context.contentResolver.openInputStream(uri)!!.use { input ->
             blob.outputStream().use { out ->
                 FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
                     input.copyTo(enc)
@@ -148,7 +150,7 @@ class VaultRepository @Inject constructor(
             id = uuid,
             originalName = name,
             mimeType = mime,
-            sizeBytes = size,
+            sizeBytes = written,
             folderId = folderId,
             createdAt = now(),
             importedAt = now(),

@@ -30,12 +30,18 @@ class EncryptedDataSource(
         uri = dataSpec.uri
         transferInitializing(dataSpec)
         val ch = channelProvider()
+        // Use the channel's true decrypted plaintext length as the authoritative total. The
+        // caller-supplied plaintextLength comes from OpenableColumns.SIZE at import time, which
+        // some content providers report inaccurately. When it's too small, ExoPlayer can't reach
+        // an MP4 whose moov (seek table) sits at the end of the file, so the video plays but is
+        // not seekable. Deriving the length from the channel fixes seeking for those files.
+        val total = runCatching { ch.size() }.getOrNull()?.takeIf { it > 0 } ?: plaintextLength
         ch.position(dataSpec.position)
         channel = ch
         bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
             dataSpec.length
         } else {
-            plaintextLength - dataSpec.position
+            total - dataSpec.position
         }
         transferStarted(dataSpec)
         return bytesRemaining
