@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -266,91 +263,6 @@ fun BatchTagDialog(
             onConfirm = { name, alias ->
                 onCreateTag(name, alias)
                 if (toAdd.none { it.equals(name, ignoreCase = true) }) toAdd.add(name)
-                creating = false
-            },
-            onDismiss = { creating = false },
-        )
-    }
-}
-
-/**
- * Same tag-picking behaviour as [TagEditorDialog] but rendered as a non-modal panel (a Surface,
- * not a Dialog). Meant to be anchored at the bottom of the media viewer: it leaves the video
- * visible above it and, since it isn't a Dialog, taps on the video/controls above keep working.
- */
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
-@Composable
-fun ViewerTagPanel(
-    allTags: List<TagEntity>,
-    initialSelected: List<String>,
-    onConfirm: (List<String>) -> Unit,
-    onSetAlias: (String, String?) -> Unit,
-    onCreateTag: (name: String, alias: String?) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val selected: SnapshotStateList<String> = remember {
-        initialSelected.map { it.trim() }.filter { it.isNotEmpty() }.toMutableStateList()
-    }
-    var aliasTarget by remember { mutableStateOf<String?>(null) }
-    var creating by remember { mutableStateOf(false) }
-
-    val aliasByName = remember(allTags) { allTags.associate { it.name to it.alias } }
-    val known = remember(allTags, selected.size) {
-        (allTags.map { it.name } + selected).distinct().sortedBy { it.lowercase() }
-    }
-
-    Surface(
-        color = Color.Black.copy(alpha = 0.88f),
-        contentColor = Color.White,
-        shape = MaterialTheme.shapes.large,
-        modifier = modifier,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Etichette", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("Chiudi", color = Color.White) }
-                TextButton(onClick = { onConfirm(selected.toList()) }) { Text("Salva") }
-            }
-            FlowRow(
-                Modifier.fillMaxWidth().heightIn(max = 160.dp).verticalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                known.forEach { name ->
-                    val isSel = selected.any { it.equals(name, ignoreCase = true) }
-                    TagChip(
-                        label = chipLabel(name, aliasByName[name]),
-                        selected = isSel,
-                        onClick = {
-                            if (isSel) selected.removeAll { it.equals(name, ignoreCase = true) }
-                            else selected.add(name)
-                        },
-                        onLongClick = { aliasTarget = name },
-                    )
-                }
-            }
-            TextButton(onClick = { creating = true }) {
-                Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
-                Text("Nuova etichetta", color = Color.White)
-            }
-        }
-    }
-
-    aliasTarget?.let { name ->
-        LabelEditorDialog(
-            title = "Modifica #$name",
-            initialName = name,
-            initialAlias = aliasByName[name] ?: "",
-            onConfirm = { _, alias -> onSetAlias(name, alias); aliasTarget = null },
-            onDismiss = { aliasTarget = null },
-        )
-    }
-    if (creating) {
-        LabelEditorDialog(
-            title = "Nuova etichetta",
-            onConfirm = { name, alias ->
-                onCreateTag(name, alias)
-                if (selected.none { it.equals(name, ignoreCase = true) }) selected.add(name)
                 creating = false
             },
             onDismiss = { creating = false },
