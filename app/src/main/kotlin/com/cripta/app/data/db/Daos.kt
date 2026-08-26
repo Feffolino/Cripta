@@ -56,9 +56,6 @@ interface TagDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun link(ref: FileTagCrossRef)
-
-    @Query("DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tagId FROM file_tags)")
-    suspend fun purgeUnusedTags()
 }
 
 @Dao

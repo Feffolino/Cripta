@@ -17,8 +17,10 @@ import com.cripta.app.security.BiometricAuth
 import com.cripta.app.security.KeyVault
 import com.cripta.app.security.SessionManager
 import com.cripta.app.ui.AppRoot
+import com.cripta.app.ui.auth.KeyInvalidatedDialog
 import com.cripta.app.ui.theme.CriptaTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,6 +33,9 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var settings: SettingsStore
 
     private var backgroundedAt = 0L
+
+    /** Set when the Keystore key is permanently invalidated; drives the reset-vault dialog. */
+    private val keyInvalidated = MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,11 +59,24 @@ class MainActivity : FragmentActivity() {
                 if (set.allowScreenshots) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
+            val invalidated by keyInvalidated.collectAsState()
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
                 AppRoot(
                     session = session,
                     onAuthenticate = { authenticate() },
                 )
+                if (invalidated) {
+                    KeyInvalidatedDialog(
+                        onReset = {
+                            lifecycleScope.launch {
+                                runCatching { keyVault.resetVault() }
+                                keyInvalidated.value = false
+                                authenticate() // key gone -> this now runs first-time setup
+                            }
+                        },
+                        onDismiss = { keyInvalidated.value = false },
+                    )
+                }
             }
         }
     }
@@ -73,7 +91,11 @@ class MainActivity : FragmentActivity() {
         val cipher = runCatching {
             if (setup) keyVault.cipherForSetup() else keyVault.cipherForUnlock()
         }.getOrElse {
-            Toast.makeText(this, "Errore chiave: ${it.message}", Toast.LENGTH_LONG).show()
+            if (keyVault.isKeyInvalidated(it)) {
+                keyInvalidated.value = true
+            } else {
+                Toast.makeText(this, "Errore chiave: ${it.message}", Toast.LENGTH_LONG).show()
+            }
             return
         }
         BiometricAuth.authenticate(
@@ -86,7 +108,11 @@ class MainActivity : FragmentActivity() {
                     runCatching {
                         if (setup) keyVault.completeSetup(authed) else keyVault.completeUnlock(authed)
                     }.onFailure {
-                        Toast.makeText(this@MainActivity, "Sblocco fallito: ${it.message}", Toast.LENGTH_LONG).show()
+                        if (keyVault.isKeyInvalidated(it)) {
+                            keyInvalidated.value = true
+                        } else {
+                            Toast.makeText(this@MainActivity, "Sblocco fallito: ${it.message}", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             },
