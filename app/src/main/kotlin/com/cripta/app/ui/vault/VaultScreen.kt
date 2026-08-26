@@ -324,7 +324,8 @@ fun VaultScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
-            ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) }, vm::toggleTag, vm::clearFilters)
+            ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
+                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::clearFilters)
 
             val manual = sortKey == SortKey.MANUAL
             val showFolders = folders.isNotEmpty() && !filters.active && !manual
@@ -520,6 +521,7 @@ fun VaultScreen(
             sortAscending = sortAscending,
             onType = vm::setType,
             onFav = { vm.setFavoritesOnly(!filters.favoritesOnly) },
+            onUntagged = { vm.setUntaggedOnly(!filters.untaggedOnly) },
             onTag = vm::toggleTag,
             onSort = { k, a -> vm.setSort(k, a) },
             onClear = { vm.clearFilters() },
@@ -830,6 +832,7 @@ private fun ActiveFilterBar(
     tags: List<TagEntity>,
     onType: (TypeFilter) -> Unit,
     onClearFav: () -> Unit,
+    onClearUntagged: () -> Unit,
     onTag: (Long) -> Unit,
     onClearAll: () -> Unit,
 ) {
@@ -842,6 +845,7 @@ private fun ActiveFilterBar(
     ) {
         if (filters.type != TypeFilter.ALL) DismissChip(typeLabel(filters.type)) { onType(TypeFilter.ALL) }
         if (filters.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
+        if (filters.untaggedOnly) DismissChip("Senza etichette") { onClearUntagged() }
         filters.tagIds.forEach { id ->
             val t = tagById[id] ?: return@forEach
             DismissChip("#${t.name}") { onTag(id) }
@@ -874,6 +878,7 @@ private fun FilterSortSheet(
     sortAscending: Boolean,
     onType: (TypeFilter) -> Unit,
     onFav: () -> Unit,
+    onUntagged: () -> Unit,
     onTag: (Long) -> Unit,
     onSort: (SortKey, Boolean) -> Unit,
     onClear: () -> Unit,
@@ -919,6 +924,11 @@ private fun FilterSortSheet(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Solo preferiti", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                 Switch(checked = filters.favoritesOnly, onCheckedChange = { onFav() })
+            }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Senza etichette", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Switch(checked = filters.untaggedOnly, onCheckedChange = { onUntagged() })
             }
 
             if (tags.isNotEmpty()) {

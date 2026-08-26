@@ -59,12 +59,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(painterResource(R.drawable.ic_launcher_foreground), null, modifier = Modifier.size(36.dp))
-                        Text("Cripta", modifier = Modifier.padding(start = 2.dp))
-                    }
-                },
+                title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
                 actions = { IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") } },
             )
         },
