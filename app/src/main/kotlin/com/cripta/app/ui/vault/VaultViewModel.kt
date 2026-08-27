@@ -251,5 +251,16 @@ class VaultViewModel @Inject constructor(
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
 
-    fun randomPick(): String? = files.value.randomOrNull()?.file?.id
+    /**
+     * Build a shuffled queue over the whole library (ids only, cheap for big libraries),
+     * publish it to the viewer, and open the first item. Falls back to the current view
+     * if the id query yields nothing.
+     */
+    fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
+        val ids = repo.allFileIds()
+        val order = if (ids.isNotEmpty()) ids.shuffled() else files.value.map { it.file.id }.shuffled()
+        if (order.isEmpty()) return@launch
+        viewerQueue.set(order)
+        open(order.first())
+    }
 }
