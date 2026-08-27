@@ -78,6 +78,8 @@ data class TagEntity(
     val name: String,
     /** Short alias (emoji or acronym) shown as a badge on thumbnails. */
     val alias: String? = null,
+    /** User-defined position for the Custom tag order (ascending = first). */
+    val orderIndex: Int = 0,
 )
 
 @Entity(

@@ -36,6 +36,12 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name COLLATE NOCASE")
     fun all(): Flow<List<TagEntity>>
 
+    @Query("SELECT * FROM tags ORDER BY orderIndex ASC, name COLLATE NOCASE")
+    fun allByOrder(): Flow<List<TagEntity>>
+
+    @Query("UPDATE tags SET orderIndex = :idx WHERE id = :id")
+    suspend fun setOrder(id: Long, idx: Int)
+
     @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
     suspend fun byName(name: String): TagEntity?
 

@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Remove
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
@@ -173,16 +176,36 @@ fun SettingsScreen(
             item {
                 TextButton(onClick = { addTag = true }) { Text("+ Aggiungi etichetta") }
             }
+            item {
+                val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !custom,
+                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
+                        label = { Text("Alfabetico") })
+                    FilterChip(selected = custom,
+                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
+                        label = { Text("Personalizzato") })
+                }
+            }
             if (tags.isEmpty()) {
                 item {
                     Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                items(tags, key = { it.id }) { tag ->
+                val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                itemsIndexed(tags, key = { _, t -> t.id }) { index, tag ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f),
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (custom) {
+                            IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
+                                Icon(Icons.Filled.KeyboardArrowUp, "Su")
+                            }
+                            IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
+                                Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                            }
+                        }
                         IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
                         IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
                     }

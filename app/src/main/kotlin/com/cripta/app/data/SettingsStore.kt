@@ -20,6 +20,7 @@ enum class DeleteOriginalPolicy { ASK, ALWAYS, NEVER }
 enum class ViewMode { GRID, LIST }
 enum class SortKey { DATE, NAME, SIZE, MANUAL }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class TagSortMode { ALPHA, CUSTOM }
 
 /** Which optional details are drawn on file/folder cells. */
 data class DisplayPrefs(
@@ -42,6 +43,7 @@ data class Settings(
     val dynamicColor: Boolean = false,
     /** When false (default) the window keeps FLAG_SECURE: screenshots blocked, hidden in recents. */
     val allowScreenshots: Boolean = false,
+    val tagSortMode: TagSortMode = TagSortMode.ALPHA,
     val display: DisplayPrefs = DisplayPrefs(),
 )
 
@@ -64,6 +66,7 @@ class SettingsStore @Inject constructor(
     private val showFolderInfoKey = booleanPreferencesKey("show_folder_info")
     private val showNoteFabKey = booleanPreferencesKey("show_note_fab")
     private val showRandomFabKey = booleanPreferencesKey("show_random_fab")
+    private val tagSortModeKey = intPreferencesKey("tag_sort_mode")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -77,6 +80,7 @@ class SettingsStore @Inject constructor(
             themeMode = ThemeMode.entries.getOrElse(p[themeKey] ?: ThemeMode.DARK.ordinal) { ThemeMode.DARK },
             dynamicColor = p[dynamicKey] ?: false,
             allowScreenshots = p[allowShotsKey] ?: false,
+            tagSortMode = TagSortMode.entries.getOrElse(p[tagSortModeKey] ?: 0) { TagSortMode.ALPHA },
             display = DisplayPrefs(
                 showFileInfo = p[showFileInfoKey] ?: true,
                 showTagsOnCover = p[showTagsCoverKey] ?: true,
@@ -109,6 +113,10 @@ class SettingsStore @Inject constructor(
 
     suspend fun setSort(key: SortKey, ascending: Boolean) {
         context.dataStore.edit { it[sortKeyKey] = key.ordinal; it[sortAscKey] = ascending }
+    }
+
+    suspend fun setTagSortMode(mode: TagSortMode) {
+        context.dataStore.edit { it[tagSortModeKey] = mode.ordinal }
     }
 
     suspend fun setViewMode(mode: ViewMode) {

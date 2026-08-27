@@ -12,10 +12,14 @@ import com.cripta.app.security.SessionManager
 import com.cripta.crypto.FileCrypto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -30,9 +34,11 @@ class VaultRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val session: SessionManager,
     private val blobs: BlobStore,
+    private val settings: SettingsStore,
 ) {
     private val db get() = session.requireDb()
     private val dek get() = session.requireDek()
+    private val THUMB_AAD = "cripta-thumb".toByteArray()
 
     /** Bumped after every DB mutation. VMs observe this to re-query reliably,
      *  independent of Room/SQLCipher invalidation timing (which is flaky here). */
@@ -45,7 +51,18 @@ class VaultRepository @Inject constructor(
     fun allFolders(): Flow<List<FolderEntity>> = db.folderDao().all()
     fun files(folderId: Long?): Flow<List<FileWithTags>> = db.fileDao().inFolderWithTags(folderId)
     fun allFiles(): Flow<List<FileWithTags>> = db.fileDao().allWithTags()
-    fun tags(): Flow<List<TagEntity>> = db.tagDao().all()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun tags(): Flow<List<TagEntity>> =
+        settings.settings.map { it.tagSortMode }.distinctUntilChanged()
+            .flatMapLatest { mode ->
+                if (mode == TagSortMode.CUSTOM) db.tagDao().allByOrder() else db.tagDao().all()
+            }
+
+    /** Persist a custom tag order (position = index in [orderedIds]). */
+    suspend fun reorderTags(orderedIds: List<Long>) = withContext(Dispatchers.IO) {
+        orderedIds.forEachIndexed { i, id -> db.tagDao().setOrder(id, i) }
+        notifyChanged()
+    }
     fun folderAggregates(): Flow<List<com.cripta.app.data.db.FolderAgg>> = db.fileDao().folderAggregates()
 
     // --- Folders ---
@@ -183,6 +200,13 @@ class VaultRepository @Inject constructor(
 
     /** All file ids only (cheap) — for building a random queue over large libraries. */
     suspend fun allFileIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().allIds() }
+
+    // --- Thumbnail sealing (persistent cover cache) ---
+    /** Encrypt small thumbnail bytes with the session DEK (safe to persist on disk). */
+    fun sealThumb(bytes: ByteArray): ByteArray = dek.encrypt(bytes, THUMB_AAD)
+    /** Decrypt a sealed thumbnail; null on any failure (stale/locked). */
+    fun openThumb(sealed: ByteArray): ByteArray? = runCatching { dek.decrypt(sealed, THUMB_AAD) }.getOrNull()
+    val hasKey: Boolean get() = session.isUnlocked
 
     suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
         db.fileDao().rename(fileId, newName.trim()); notifyChanged()
