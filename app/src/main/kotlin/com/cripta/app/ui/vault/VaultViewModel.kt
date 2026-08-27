@@ -43,6 +43,7 @@ data class Filters(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class VaultViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
     private val settings: SettingsStore,
     private val thumbs: ThumbnailLoader,
@@ -191,9 +192,8 @@ class VaultViewModel @Inject constructor(
         repo.setFolderStyle(folderId, color, emoji)
     }
 
-    fun importUris(uris: List<android.net.Uri>) = viewModelScope.launch {
-        val folder = currentFolderId.value
-        uris.forEach { runCatching { repo.import(it, folder) } }
+    fun importUris(uris: List<android.net.Uri>) {
+        com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
 
     fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
@@ -204,15 +204,11 @@ class VaultViewModel @Inject constructor(
 
     /** Import picked files, then apply the delete-original policy. Returns nothing;
      *  when policy is ASK the screen collects the uris via [pendingOriginals]. */
-    fun importThenHandleOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
-        val folder = currentFolderId.value
-        uris.forEach { runCatching { repo.import(it, folder) } }
-        val policy = settings.settingsOnce().deleteOriginalPolicy
-        when (policy) {
-            com.cripta.app.data.DeleteOriginalPolicy.ALWAYS -> deleteOriginals(uris)
-            com.cripta.app.data.DeleteOriginalPolicy.ASK -> _pendingOriginals.value = uris
-            com.cripta.app.data.DeleteOriginalPolicy.NEVER -> {}
-        }
+    fun importThenHandleOriginals(uris: List<android.net.Uri>) {
+        // Encryption now runs in a foreground service (background-safe, progress notification).
+        // The delete-original policy (Elimina/Mantieni) is applied by the service; "Chiedi"
+        // behaves as keep in the background since no dialog is available there.
+        com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
 
     private val _pendingOriginals = MutableStateFlow<List<android.net.Uri>>(emptyList())

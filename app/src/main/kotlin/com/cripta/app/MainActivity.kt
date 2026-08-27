@@ -34,6 +34,12 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Notification permission (Android 13+) so the conversion progress notification can show.
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching { requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 42) }
+        }
         // Block screenshots and hide content in the recents switcher.
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,

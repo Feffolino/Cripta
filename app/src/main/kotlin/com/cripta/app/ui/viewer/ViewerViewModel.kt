@@ -27,6 +27,7 @@ sealed interface ViewerState {
 
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
     queue: ViewerQueue,
 ) : ViewModel() {
@@ -74,9 +75,10 @@ class ViewerViewModel @Inject constructor(
 
     fun createTag(name: String, alias: String?) = viewModelScope.launch { repo.createTag(name, alias); _refresh.value++ }
 
-    fun download(file: FileEntity) = viewModelScope.launch {
-        val ok = runCatching { repo.restoreToGallery(file) != null }.getOrDefault(false)
-        _message.value = if (ok) "Scaricato in galleria" else "Download non riuscito"
+    fun download(file: FileEntity) {
+        // Run decryption in the foreground service so it survives backgrounding and shows progress.
+        com.cripta.app.work.ConversionService.startDownload(appContext, listOf(file.id))
+        _message.value = "Download avviato"
     }
 
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {

@@ -68,5 +68,18 @@ class SettingsViewModel @Inject constructor(
         repo.renameTag(id, n)
         repo.setTagAlias(n, alias)
     }
+    fun setTagSortMode(m: com.cripta.app.data.TagSortMode) = viewModelScope.launch { store.setTagSortMode(m) }
+
+    /** Move a tag up/down in the custom order by swapping with its neighbor. */
+    fun moveTag(id: Long, up: Boolean) = viewModelScope.launch {
+        val ordered = tags.value.map { it.id }.toMutableList()
+        val i = ordered.indexOf(id)
+        if (i < 0) return@launch
+        val j = if (up) i - 1 else i + 1
+        if (j < 0 || j >= ordered.size) return@launch
+        ordered[i] = ordered[j].also { ordered[j] = ordered[i] }
+        repo.reorderTags(ordered)
+    }
+
     fun lockNow() = session.lock()
 }
