@@ -181,6 +181,9 @@ class VaultRepository @Inject constructor(
         db.fileDao().setFavorite(fileId, fav); notifyChanged()
     }
 
+    /** All file ids only (cheap) — for building a random queue over large libraries. */
+    suspend fun allFileIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().allIds() }
+
     suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
         db.fileDao().rename(fileId, newName.trim()); notifyChanged()
     }

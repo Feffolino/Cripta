@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.GridView
@@ -300,14 +301,14 @@ fun VaultScreen(
                                 Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
                             }
                             if (display.showRandomFab) {
-                                SmallFloatingActionButton(onClick = { vm.randomPick()?.let { vm.publishViewerQueue(); onOpenFile(it) } }) {
+                                SmallFloatingActionButton(onClick = { vm.randomShuffleOpen(onOpenFile) }) {
                                     Icon(Icons.Filled.Casino, "Casuale")
                                 }
                             }
                         }
                     }
                     FloatingActionButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
-                        Icon(Icons.Filled.Add, "Importa")
+                        Icon(Icons.Filled.EnhancedEncryption, "Cifra e importa")
                     }
                 }
             }

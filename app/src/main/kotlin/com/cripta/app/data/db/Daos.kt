@@ -85,6 +85,9 @@ interface FileDao {
     @Query("SELECT id FROM files WHERE folderId = :folderId")
     suspend fun idsInFolder(folderId: Long): List<String>
 
+    @Query("SELECT id FROM files")
+    suspend fun allIds(): List<String>
+
     /** Direct (non-recursive) file count + total size per folder. Root files (null folder) are excluded. */
     @Query("SELECT folderId AS folderId, COUNT(*) AS cnt, COALESCE(SUM(sizeBytes), 0) AS bytes FROM files WHERE folderId IS NOT NULL GROUP BY folderId")
     fun folderAggregates(): Flow<List<FolderAgg>>
