@@ -35,20 +35,14 @@ class KeyVault @Inject constructor(
      * with `setInvalidatedByBiometricEnrollment(false)`); pre-fix installs still carry their key
      * under the legacy alias and are migrated on first unlock (see [needsKekMigration]).
      */
-    private var activeAlias: String = when {
+    private val activeAlias: String = when {
         prefs.contains(KEY_KEK_ALIAS) -> prefs.getString(KEY_KEK_ALIAS, ALIAS_V2)!!
         prefs.contains(KEY_WRAPPED_DEK) -> LEGACY_ALIAS   // existing pre-fix install
         else -> ALIAS_V2                                   // fresh install
     }
-    private var kek = AndroidKeystoreKekProvider(requireAuth = true, alias = activeAlias)
-
-    /** Plaintext DEK held transiently between a successful unlock and a KEK migration. */
-    private var pendingDek: ByteArray? = null
+    private val kek = AndroidKeystoreKekProvider(requireAuth = true, alias = activeAlias)
 
     val isInitialized: Boolean get() = prefs.contains(KEY_WRAPPED_DEK)
-
-    /** True for a pre-fix install whose KEK must be re-wrapped under a safe key (one-time). */
-    fun needsKekMigration(): Boolean = isInitialized && !prefs.contains(KEY_KEK_ALIAS)
 
     // --- Cipher factories to feed BiometricPrompt.CryptoObject ---
 
@@ -87,8 +81,6 @@ class KeyVault @Inject constructor(
     fun completeUnlock(authorizedDecryptCipher: Cipher) {
         val wrappedDek = loadBytes(KEY_WRAPPED_DEK) ?: error("Not initialized")
         val dekBytes = kek.unwrapWith(authorizedDecryptCipher, wrappedDek)
-        // Retain for a possible one-time KEK migration; cleared once migrated or on lock.
-        if (needsKekMigration()) pendingDek = dekBytes.copyOf()
         val dek = DekManager.dekAeadFromBytes(dekBytes)
 
         val wrappedDbKey = loadBytes(KEY_WRAPPED_DBKEY) ?: error("Missing DB key")
@@ -96,45 +88,19 @@ class KeyVault @Inject constructor(
 
         val db = CriptaDatabase.open(context, dbKey)
         session.activate(dek, db)
+
+        // Record the alias marker for pre-marker installs so this only happens once. We do NOT
+        // re-wrap under a new key here: a proactive rewrap would need a second BiometricPrompt,
+        // which fails back-to-back on many devices (double prompt every unlock). Keys created by
+        // the biometric-fix build onward already carry setInvalidatedByBiometricEnrollment(false);
+        // a genuinely invalidated pre-fix key is still caught reactively by isKeyInvalidated ->
+        // KeyInvalidatedDialog.
+        if (!prefs.contains(KEY_KEK_ALIAS)) {
+            prefs.edit().putString(KEY_KEK_ALIAS, activeAlias).apply()
+        }
     }
 
-    fun lock() {
-        pendingDek?.fill(0); pendingDek = null
-        session.lock()
-    }
-
-    // --- One-time KEK migration for pre-fix installs (Option 1: second biometric prompt) ---
-
-    /**
-     * Create the safe replacement key ([ALIAS_V2]) and return its encrypt cipher to be authorized
-     * by a BiometricPrompt. The old key is left intact until [completeKekMigration] succeeds, so an
-     * interrupted migration is always recoverable. Must follow a successful unlock (needs [pendingDek]).
-     */
-    fun migrationCipher(): Cipher {
-        check(pendingDek != null) { "migration requires a prior successful unlock" }
-        val v2 = AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2)
-        v2.ensureKey()
-        return v2.encryptCipher()
-    }
-
-    /**
-     * Re-wrap the DEK under the safe key using the authorized cipher, switch the vault to it, then
-     * delete the old key. Ordering guarantees the DEK is recoverable at every step: the new wrapped
-     * blob and alias marker are persisted before the legacy key is removed.
-     */
-    fun completeKekMigration(authorizedEncryptCipher: Cipher) {
-        val dekBytes = pendingDek ?: error("no DEK to migrate")
-        val v2 = AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2)
-        val rewrapped = v2.wrapWith(authorizedEncryptCipher, dekBytes)
-        storeBytes(KEY_WRAPPED_DEK, rewrapped)
-        prefs.edit().putString(KEY_KEK_ALIAS, ALIAS_V2).apply()
-        // From here the vault unlocks via the safe key; drop the now-unused legacy key.
-        val legacy = AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS)
-        runCatching { legacy.deleteKey() }
-        activeAlias = ALIAS_V2
-        kek = v2
-        pendingDek?.fill(0); pendingDek = null
-    }
+    fun lock() = session.lock()
 
     /**
      * True when [throwable] (or any cause in its chain) is a permanently invalidated Keystore key.
@@ -159,7 +125,6 @@ class KeyVault @Inject constructor(
      */
     fun resetVault() {
         session.lock()
-        pendingDek?.fill(0); pendingDek = null
         // Drop both possible keys (legacy + safe) so no orphan alias survives the reset.
         runCatching { kek.deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }
