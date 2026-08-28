@@ -113,6 +113,8 @@ class MainActivity : FragmentActivity() {
                 lifecycleScope.launch {
                     runCatching {
                         if (setup) keyVault.completeSetup(authed) else keyVault.completeUnlock(authed)
+                    }.onSuccess {
+                        if (!setup && keyVault.needsKekMigration()) migrateKek()
                     }.onFailure {
                         if (keyVault.isKeyInvalidated(it)) {
                             keyInvalidated.value = true
@@ -125,6 +127,29 @@ class MainActivity : FragmentActivity() {
             onError = { msg ->
                 Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
             },
+        )
+    }
+
+    /**
+     * One-time, non-destructive migration of a pre-fix install's Keystore key. The vault is already
+     * unlocked; we ask for a second biometric confirmation to authorize wrapping the DEK under a new
+     * key that survives biometric re-enrollment. Best-effort: if the user cancels or it fails, the
+     * vault keeps working under the old key and we retry on the next unlock.
+     */
+    private fun migrateKek() {
+        val cipher = runCatching { keyVault.migrationCipher() }.getOrNull() ?: return
+        BiometricAuth.authenticate(
+            activity = this,
+            cipher = cipher,
+            title = "Aggiornamento sicurezza",
+            subtitle = "Conferma per proteggere il vault dai cambi di biometria",
+            onSuccess = { authed ->
+                lifecycleScope.launch {
+                    runCatching { keyVault.completeKekMigration(authed) }
+                        .onSuccess { Toast.makeText(this@MainActivity, "Sicurezza aggiornata", Toast.LENGTH_SHORT).show() }
+                }
+            },
+            onError = { /* silent; retried on next unlock */ },
         )
     }
 
