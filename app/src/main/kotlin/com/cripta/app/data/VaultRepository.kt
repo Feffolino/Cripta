@@ -46,6 +46,31 @@ class VaultRepository @Inject constructor(
     val changes: StateFlow<Int> = _changes
     private fun notifyChanged() { _changes.value++ }
 
+    // --- Video conversion events (foreground service -> UI) ---
+    /** Emitted after a video is successfully transcoded+encrypted into the vault. */
+    data class ConversionEvent(val originalId: String, val newId: String)
+    private val _convertEvents =
+        kotlinx.coroutines.flow.MutableSharedFlow<ConversionEvent>(extraBufferCapacity = 16)
+    val convertEvents: kotlinx.coroutines.flow.SharedFlow<ConversionEvent> = _convertEvents
+    private val _convertingIds = MutableStateFlow<Set<String>>(emptySet())
+    /** File ids with a conversion in flight; drives the viewer's progress indicator. */
+    val convertingIds: StateFlow<Set<String>> = _convertingIds
+    fun setConverting(id: String, active: Boolean) {
+        _convertingIds.value = if (active) _convertingIds.value + id else _convertingIds.value - id
+    }
+    fun emitConvertResult(event: ConversionEvent) { _convertEvents.tryEmit(event) }
+
+    /**
+     * Shred+delete any orphaned conversion temp files (conv-*) left in cache by a process that was
+     * killed mid-transcode. Safe to call at cold start (no conversion can be in flight then), which
+     * guarantees decrypted plaintext never lingers on disk across app restarts.
+     */
+    fun sweepConversionTemp() {
+        runCatching {
+            context.cacheDir.listFiles { f -> f.name.startsWith("conv-") }?.forEach { shredTempFile(it) }
+        }
+    }
+
     // --- Flows ---
     fun folders(parentId: Long?): Flow<List<FolderEntity>> = db.folderDao().childrenOf(parentId)
     fun allFolders(): Flow<List<FolderEntity>> = db.folderDao().all()

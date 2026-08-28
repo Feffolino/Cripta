@@ -6,16 +6,14 @@ import androidx.media3.common.util.UnstableApi
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.TagEntity
-import com.cripta.app.media.VideoConverter
 import com.cripta.app.viewer.ViewerQueue
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.nio.channels.SeekableByteChannel
 import javax.inject.Inject
 
@@ -34,7 +32,6 @@ sealed interface ViewerState {
 class ViewerViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
-    private val converter: VideoConverter,
     queue: ViewerQueue,
 ) : ViewModel() {
 
@@ -92,42 +89,34 @@ class ViewerViewModel @Inject constructor(
         onDone()
     }
 
-    /** True while a video conversion is running (drives a progress dialog). */
-    val converting = MutableStateFlow(false)
+    /** True while any video conversion is running (drives a progress indicator). Backed by the
+     *  foreground service, so it stays correct even if the viewer is closed and reopened. */
+    val converting: StateFlow<Boolean> =
+        repo.convertingIds.map { it.isNotEmpty() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** Set to the new MP4's id after a successful conversion; consumed by the UI. */
     private val _convertedId = MutableStateFlow<String?>(null)
     val convertedId: StateFlow<String?> = _convertedId
     fun clearConverted() { _convertedId.value = null }
 
+    init {
+        // Surface completions from the service (which may outlive a single viewer instance).
+        viewModelScope.launch {
+            repo.convertEvents.collect { event ->
+                _convertedId.value = event.newId
+                _refresh.value++
+            }
+        }
+    }
+
     /**
-     * Transcode a video (e.g. a non-seekable MPEG) into MP4, encrypt it into the vault, and keep
-     * the original. Temp plaintext files live only in app-private cache and are shredded after.
+     * Transcode a video (e.g. a non-seekable MPEG) into MP4 and encrypt it into the vault, keeping
+     * the original. Runs in the foreground service so it survives leaving the viewer/backgrounding
+     * and never leaves decrypted plaintext on disk.
      */
-    fun convertToMp4(file: FileEntity) = viewModelScope.launch {
-        if (converting.value) return@launch
-        converting.value = true
-        val srcSuffix = file.originalName.substringAfterLast('.', "mpg")
-        var src: java.io.File? = null
-        var out: java.io.File? = null
-        val result = runCatching {
-            src = repo.decryptToTempFile(file, srcSuffix)
-            out = repo.newTempFile("mp4")
-            // Transformer must run on the main thread.
-            withContext(Dispatchers.Main) { converter.toMp4(src!!, out!!) }
-            repo.importConvertedMp4(file, out!!)
-        }
-        withContext(Dispatchers.IO) {
-            src?.let { repo.shredTempFile(it) }
-            out?.let { repo.shredTempFile(it) }
-        }
-        converting.value = false
-        result.onSuccess { newFile ->
-            _convertedId.value = newFile.id
-            _refresh.value++
-            _message.value = "Convertito in MP4"
-        }.onFailure {
-            _message.value = "Conversione non riuscita: ${it.message ?: "errore"}"
-        }
+    fun convertToMp4(file: FileEntity) {
+        com.cripta.app.work.ConversionService.startConvert(appContext, file.id)
+        _message.value = "Conversione avviata"
     }
 }
