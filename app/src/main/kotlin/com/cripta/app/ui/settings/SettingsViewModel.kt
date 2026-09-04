@@ -100,6 +100,9 @@ class SettingsViewModel @Inject constructor(
     val exactGroups: StateFlow<List<DuplicateScanner.ExactGroup>> = _exactGroups
     private val _similarGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.SimilarGroup>>(emptyList())
     val similarGroups: StateFlow<List<DuplicateScanner.SimilarGroup>> = _similarGroups
+    /** How many files/images the last scan actually examined — shown so the user sees it ran. */
+    private val _dupScannedCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val dupScannedCount: StateFlow<Int> = _dupScannedCount
     private var scanJob: kotlinx.coroutines.Job? = null
 
     fun scanExact() {
@@ -111,8 +114,11 @@ class SettingsViewModel @Inject constructor(
                 scanner.scanExact { done, total -> _dupProgress.value = done to total }
             }
             _dupScanning.value = false
-            result.onSuccess { _exactGroups.value = it; _dupMode.value = DupMode.EXACT }
-                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
+            result.onSuccess {
+                _exactGroups.value = it.groups
+                _dupScannedCount.value = it.filesScanned
+                _dupMode.value = DupMode.EXACT
+            }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
         }
     }
 
@@ -125,8 +131,11 @@ class SettingsViewModel @Inject constructor(
                 scanner.scanSimilar { done, total -> _dupProgress.value = done to total }
             }
             _dupScanning.value = false
-            result.onSuccess { _similarGroups.value = it; _dupMode.value = DupMode.SIMILAR }
-                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
+            result.onSuccess {
+                _similarGroups.value = it.groups
+                _dupScannedCount.value = it.imagesScanned
+                _dupMode.value = DupMode.SIMILAR
+            }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
         }
     }
 

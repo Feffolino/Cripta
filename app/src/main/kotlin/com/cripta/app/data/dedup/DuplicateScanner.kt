@@ -37,6 +37,12 @@ class DuplicateScanner @Inject constructor(
     /** A cluster of images that look the same (re-encodes, resizes, minor edits). */
     data class SimilarGroup(val files: List<FileEntity>, val maxDistance: Int)
 
+    /** Exact-scan outcome plus how many files were examined (for user feedback). */
+    data class ExactResult(val groups: List<ExactGroup>, val filesScanned: Int)
+
+    /** Similar-scan outcome plus how many images were examined (for user feedback). */
+    data class SimilarResult(val groups: List<SimilarGroup>, val imagesScanned: Int)
+
     // --- Exact duplicates ------------------------------------------------------------------
 
     /**
@@ -50,9 +56,10 @@ class DuplicateScanner @Inject constructor(
      * Groups of 2+ are returned, each sorted oldest-import-first (the natural "keep" candidate),
      * ordered by reclaimable space descending. [onProgress] reports (processed, total) files.
      */
-    suspend fun scanExact(onProgress: (Int, Int) -> Unit = { _, _ -> }): List<ExactGroup> =
+    suspend fun scanExact(onProgress: (Int, Int) -> Unit = { _, _ -> }): ExactResult =
         withContext(Dispatchers.IO) {
-            val bySize = repo.allFilesSnapshot().groupBy { it.sizeBytes }.filterValues { it.size > 1 }
+            val all = repo.allFilesSnapshot()
+            val bySize = all.groupBy { it.sizeBytes }.filterValues { it.size > 1 }
             val total = bySize.values.sumOf { it.size }
             var done = 0
             onProgress(0, total)
@@ -80,7 +87,7 @@ class DuplicateScanner @Inject constructor(
                     }
                 }
             }
-            confirmed.sortedByDescending { it.sizeBytes * (it.files.size - 1) }
+            ExactResult(confirmed.sortedByDescending { it.sizeBytes * (it.files.size - 1) }, all.size)
         }
 
     /** SHA-256 over size + the first and last [WINDOW] bytes, read via the seekable channel. */
@@ -140,7 +147,7 @@ class DuplicateScanner @Inject constructor(
     suspend fun scanSimilar(
         threshold: Int = DEFAULT_SIMILARITY_THRESHOLD,
         onProgress: (Int, Int) -> Unit = { _, _ -> },
-    ): List<SimilarGroup> = withContext(Dispatchers.IO) {
+    ): SimilarResult = withContext(Dispatchers.IO) {
         val images = repo.allFilesSnapshot().filter { it.mimeType.startsWith("image/") }
         val total = images.size
         onProgress(0, total)
@@ -172,7 +179,7 @@ class DuplicateScanner @Inject constructor(
         val clusters = HashMap<Int, MutableList<Int>>()
         for (i in 0 until n) clusters.getOrPut(find(i)) { mutableListOf() }.add(i)
 
-        clusters.values.filter { it.size > 1 }.map { idxs ->
+        val groups = clusters.values.filter { it.size > 1 }.map { idxs ->
             var maxD = 0
             for (a in idxs.indices) for (b in a + 1 until idxs.size) {
                 val d = java.lang.Long.bitCount(entries[idxs[a]].second xor entries[idxs[b]].second)
@@ -180,6 +187,7 @@ class DuplicateScanner @Inject constructor(
             }
             SimilarGroup(idxs.map { entries[it].first }.sortedBy { it.importedAt }, maxD)
         }.sortedByDescending { g -> g.files.sumOf { it.sizeBytes } }
+        SimilarResult(groups, total)
     }
 
     /** Decode an image (downscaled, in memory) and return its 64-bit dHash, or null if undecodable. */

@@ -325,7 +325,7 @@ fun VaultScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
-                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::clearFilters)
+                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
 
             val manual = sortKey == SortKey.MANUAL
             val showFolders = folders.isNotEmpty() && !filters.active && !manual
@@ -523,6 +523,7 @@ fun VaultScreen(
             onFav = { vm.setFavoritesOnly(!filters.favoritesOnly) },
             onUntagged = { vm.setUntaggedOnly(!filters.untaggedOnly) },
             onTag = vm::toggleTag,
+            onExcludeTag = vm::toggleExcludedTag,
             onSort = { k, a -> vm.setSort(k, a) },
             onClear = { vm.clearFilters() },
             onDismiss = { showFilterSheet = false },
@@ -834,6 +835,7 @@ private fun ActiveFilterBar(
     onClearFav: () -> Unit,
     onClearUntagged: () -> Unit,
     onTag: (Long) -> Unit,
+    onExcludeTag: (Long) -> Unit,
     onClearAll: () -> Unit,
 ) {
     if (!filters.active) return
@@ -849,6 +851,10 @@ private fun ActiveFilterBar(
         filters.tagIds.forEach { id ->
             val t = tagById[id] ?: return@forEach
             DismissChip("#${t.name}") { onTag(id) }
+        }
+        filters.excludedTagIds.forEach { id ->
+            val t = tagById[id] ?: return@forEach
+            DismissChip("⊘ #${t.name}") { onExcludeTag(id) }
         }
         TextButton(onClick = onClearAll) { Text("Azzera") }
     }
@@ -868,6 +874,32 @@ private fun DismissChip(label: String, onClear: () -> Unit) {
     }
 }
 
+private enum class TagFilterState { NEUTRAL, INCLUDE, EXCLUDE }
+
+/** Tri-state tag chip: neutral, include (primary), exclude (error). Colour-coded, no icons. */
+@Composable
+private fun TagFilterChip(label: String, state: TagFilterState, onClick: () -> Unit) {
+    val bg = when (state) {
+        TagFilterState.INCLUDE -> MaterialTheme.colorScheme.primary
+        TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.errorContainer
+        TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val fg = when (state) {
+        TagFilterState.INCLUDE -> MaterialTheme.colorScheme.onPrimary
+        TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.onErrorContainer
+        TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.onSurface
+    }
+    Surface(color = bg, shape = MaterialTheme.shapes.small, modifier = Modifier.clickable(onClick = onClick)) {
+        Text(
+            // A leading "⊘" marks an excluded (hidden) tag at a glance.
+            if (state == TagFilterState.EXCLUDE) "⊘ $label" else label,
+            style = MaterialTheme.typography.labelLarge,
+            color = fg,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
 /** Unified sort + filter menu as a Material3 bottom sheet. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -880,6 +912,7 @@ private fun FilterSortSheet(
     onFav: () -> Unit,
     onUntagged: () -> Unit,
     onTag: (Long) -> Unit,
+    onExcludeTag: (Long) -> Unit,
     onSort: (SortKey, Boolean) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
@@ -934,10 +967,22 @@ private fun FilterSortSheet(
             if (tags.isNotEmpty()) {
                 HorizontalDivider()
                 Text("Tag", style = MaterialTheme.typography.titleSmall)
+                Text("Tocca per includere, ancora per escludere (nascondi), ancora per azzerare.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     tags.forEach { tag ->
-                        FilterChip(selected = tag.id in filters.tagIds, onClick = { onTag(tag.id) },
-                            label = { Text(if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}") })
+                        val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
+                        val state = when {
+                            tag.id in filters.tagIds -> TagFilterState.INCLUDE
+                            tag.id in filters.excludedTagIds -> TagFilterState.EXCLUDE
+                            else -> TagFilterState.NEUTRAL
+                        }
+                        TagFilterChip(
+                            label = label,
+                            state = state,
+                            // neutral -> include; include -> exclude; exclude -> neutral.
+                            onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
+                        )
                     }
                 }
             }
