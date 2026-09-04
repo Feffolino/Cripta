@@ -242,7 +242,7 @@ fun ViewerScreen(
             onDismissRequest = { showInfo = false },
             title = { Text("Informazioni") },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     InfoLine("Nome", file.originalName)
                     InfoLine("Tipo", file.mimeType)
                     InfoLine("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))

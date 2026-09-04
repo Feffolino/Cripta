@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -82,6 +84,11 @@ fun SettingsScreen(
     var editTag by remember { mutableStateOf<TagEntity?>(null) }
     var deleteTag by remember { mutableStateOf<TagEntity?>(null) }
     var addTag by remember { mutableStateOf(false) }
+
+    val dupScanning by vm.dupScanning.collectAsState()
+    val dupScanned by vm.dupScanned.collectAsState()
+    val dupProgress by vm.dupProgress.collectAsState()
+    val duplicates by vm.duplicates.collectAsState()
 
     Scaffold(
         topBar = {
@@ -229,6 +236,23 @@ fun SettingsScreen(
             }
 
             item {
+                Section("File duplicati", "Cerca file con contenuto identico (confronto sul testo in chiaro) per liberare spazio.") {
+                    Button(
+                        onClick = { vm.scanDuplicates() },
+                        enabled = !dupScanning,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (dupScanning) {
+                            val (done, total) = dupProgress
+                            Text(if (total > 0) "Scansione… $done/$total" else "Scansione…")
+                        } else {
+                            Text("Scansiona duplicati")
+                        }
+                    }
+                }
+            }
+
+            item {
                 Button(onClick = { vm.lockNow(); onBack() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Blocca ora")
                 }
@@ -297,6 +321,13 @@ fun SettingsScreen(
             onDismiss = { editTag = null },
         )
     }
+    if (dupScanned && !dupScanning) {
+        DuplicatesDialog(
+            groups = duplicates,
+            onDelete = { vm.deleteDuplicate(it) },
+            onDismiss = { vm.clearDuplicates() },
+        )
+    }
     deleteTag?.let { tag ->
         AlertDialog(
             onDismissRequest = { deleteTag = null },
@@ -310,6 +341,62 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { deleteTag = null }) { Text("Annulla") } },
         )
     }
+}
+
+@Composable
+private fun DuplicatesDialog(
+    groups: List<com.cripta.app.data.VaultRepository.DuplicateGroup>,
+    onDelete: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("File duplicati") },
+        text = {
+            if (groups.isEmpty()) {
+                Text("Nessun duplicato trovato.", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Column(
+                    Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    val waste = groups.sumOf { it.sizeBytes * (it.files.size - 1) }
+                    Text(
+                        "Recuperabili ${com.cripta.app.ui.components.formatBytes(waste)} eliminando le copie in eccesso.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    groups.forEach { g ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                "${g.files.size} copie · ${com.cripta.app.ui.components.formatBytes(g.sizeBytes)} ciascuna",
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            g.files.forEachIndexed { i, f ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            (if (i == 0) "Più vecchio · " else "") +
+                                                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+                                                    .format(java.util.Date(f.createdAt)),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    IconButton(onClick = { onDelete(f.id) }) {
+                                        Icon(Icons.Filled.Delete, "Elimina", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
+    )
 }
 
 @Composable

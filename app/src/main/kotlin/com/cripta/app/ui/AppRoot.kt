@@ -3,6 +3,7 @@ package com.cripta.app.ui
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
@@ -56,6 +57,12 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
     val showBar = currentRoute in tabs.map { it.route }
 
     Scaffold(
+        // Each child screen has its own Scaffold that applies the status-bar inset to its
+        // TopAppBar. If this outer Scaffold also consumed the top inset into `pad`, the content
+        // (and thus the child TopAppBar) would be pushed down by the status bar height twice,
+        // making every top bar look too tall / too low. Zero it here; children own the top inset.
+        // The bottom NavigationBar still handles its own navigation-bar inset internally.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBar) {
                 NavigationBar {
