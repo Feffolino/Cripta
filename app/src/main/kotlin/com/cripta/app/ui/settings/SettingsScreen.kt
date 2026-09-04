@@ -85,10 +85,11 @@ fun SettingsScreen(
     var deleteTag by remember { mutableStateOf<TagEntity?>(null) }
     var addTag by remember { mutableStateOf(false) }
 
+    val dupMode by vm.dupMode.collectAsState()
     val dupScanning by vm.dupScanning.collectAsState()
-    val dupScanned by vm.dupScanned.collectAsState()
     val dupProgress by vm.dupProgress.collectAsState()
-    val duplicates by vm.duplicates.collectAsState()
+    val exactGroups by vm.exactGroups.collectAsState()
+    val similarGroups by vm.similarGroups.collectAsState()
 
     Scaffold(
         topBar = {
@@ -236,18 +237,23 @@ fun SettingsScreen(
             }
 
             item {
-                Section("File duplicati", "Cerca file con contenuto identico (confronto sul testo in chiaro) per liberare spazio.") {
-                    Button(
-                        onClick = { vm.scanDuplicates() },
-                        enabled = !dupScanning,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (dupScanning) {
-                            val (done, total) = dupProgress
-                            Text(if (total > 0) "Scansione… $done/$total" else "Scansione…")
-                        } else {
-                            Text("Scansiona duplicati")
+                Section("File duplicati", "Trova file identici o immagini simili per liberare spazio. Tutto avviene sul dispositivo, sui dati decifrati in memoria.") {
+                    if (dupScanning) {
+                        val (done, total) = dupProgress
+                        Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Button(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Annulla")
                         }
+                    } else {
+                        Button(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Duplicati esatti")
+                        }
+                        Button(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Immagini simili")
+                        }
+                        Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto uguali anche se ri-salvate o ridimensionate.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -321,12 +327,36 @@ fun SettingsScreen(
             onDismiss = { editTag = null },
         )
     }
-    if (dupScanned && !dupScanning) {
-        DuplicatesDialog(
-            groups = duplicates,
+    when (dupMode) {
+        SettingsViewModel.DupMode.EXACT -> DuplicatesDialog(
+            title = "Duplicati esatti",
+            groups = exactGroups.map { g ->
+                DupUiGroup(
+                    header = "${g.files.size} copie · ${com.cripta.app.ui.components.formatBytes(g.sizeBytes)} ciascuna",
+                    files = g.files,
+                )
+            },
+            footer = exactGroups.sumOf { it.sizeBytes * (it.files.size - 1) }.takeIf { it > 0 }?.let {
+                "Recuperabili ${com.cripta.app.ui.components.formatBytes(it)} eliminando le copie in eccesso."
+            },
+            emptyText = "Nessun duplicato esatto trovato.",
             onDelete = { vm.deleteDuplicate(it) },
-            onDismiss = { vm.clearDuplicates() },
+            onDismiss = { vm.closeDuplicates() },
         )
+        SettingsViewModel.DupMode.SIMILAR -> DuplicatesDialog(
+            title = "Immagini simili",
+            groups = similarGroups.map { g ->
+                DupUiGroup(
+                    header = "${g.files.size} immagini simili · ${com.cripta.app.ui.components.formatBytes(g.files.sumOf { it.sizeBytes })} in totale",
+                    files = g.files,
+                )
+            },
+            footer = null,
+            emptyText = "Nessuna immagine simile trovata.",
+            onDelete = { vm.deleteDuplicate(it) },
+            onDismiss = { vm.closeDuplicates() },
+        )
+        SettingsViewModel.DupMode.NONE -> Unit
     }
     deleteTag?.let { tag ->
         AlertDialog(
@@ -343,35 +373,39 @@ fun SettingsScreen(
     }
 }
 
+private data class DupUiGroup(
+    val header: String,
+    val files: List<com.cripta.app.data.db.FileEntity>,
+)
+
 @Composable
 private fun DuplicatesDialog(
-    groups: List<com.cripta.app.data.VaultRepository.DuplicateGroup>,
+    title: String,
+    groups: List<DupUiGroup>,
+    footer: String?,
+    emptyText: String,
     onDelete: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("File duplicati") },
+        title = { Text(title) },
         text = {
             if (groups.isEmpty()) {
-                Text("Nessun duplicato trovato.", style = MaterialTheme.typography.bodyMedium,
+                Text(emptyText, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Column(
                     Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    val waste = groups.sumOf { it.sizeBytes * (it.files.size - 1) }
-                    Text(
-                        "Recuperabili ${com.cripta.app.ui.components.formatBytes(waste)} eliminando le copie in eccesso.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (footer != null) {
+                        Text(footer, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     groups.forEach { g ->
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "${g.files.size} copie · ${com.cripta.app.ui.components.formatBytes(g.sizeBytes)} ciascuna",
-                                style = MaterialTheme.typography.labelLarge,
-                            )
+                            Text(g.header, style = MaterialTheme.typography.labelLarge)
                             g.files.forEachIndexed { i, f ->
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
