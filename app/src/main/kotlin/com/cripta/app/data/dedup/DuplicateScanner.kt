@@ -40,8 +40,8 @@ class DuplicateScanner @Inject constructor(
     /** Exact-scan outcome plus how many files were examined (for user feedback). */
     data class ExactResult(val groups: List<ExactGroup>, val filesScanned: Int)
 
-    /** Similar-scan outcome plus how many images were examined (for user feedback). */
-    data class SimilarResult(val groups: List<SimilarGroup>, val imagesScanned: Int)
+    /** Similar-scan outcome plus how many media items were examined (for user feedback). */
+    data class SimilarResult(val groups: List<SimilarGroup>, val mediaScanned: Int)
 
     // --- Exact duplicates ------------------------------------------------------------------
 
@@ -145,22 +145,30 @@ class DuplicateScanner @Inject constructor(
      * but only over 64-bit longs, which is cheap next to decryption. [onProgress] reports images.
      */
     suspend fun scanSimilar(
-        threshold: Int = DEFAULT_SIMILARITY_THRESHOLD,
+        imageThreshold: Int = DEFAULT_SIMILARITY_THRESHOLD,
         onProgress: (Int, Int) -> Unit = { _, _ -> },
     ): SimilarResult = withContext(Dispatchers.IO) {
-        val images = repo.allFilesSnapshot().filter { it.mimeType.startsWith("image/") }
-        val total = images.size
+        val media = repo.allFilesSnapshot().filter {
+            VaultRepository.isImage(it.mimeType) || VaultRepository.isVideo(it.mimeType)
+        }
+        val total = media.size
         onProgress(0, total)
-        val entries = ArrayList<Pair<FileEntity, Long>>(total)
-        images.forEachIndexed { i, f ->
+
+        // Fingerprint each item: an image is one dHash; a video is a dHash per sampled frame.
+        val fps = ArrayList<Fingerprint>(total)
+        media.forEachIndexed { i, f ->
             coroutineContext.ensureActive()
-            val h = runCatching { imageDHash(f) }.getOrNull()
+            val video = VaultRepository.isVideo(f.mimeType)
+            val hashes = runCatching {
+                if (video) videoFingerprint(f) else imageDHash(f)?.let { longArrayOf(it) }
+            }.getOrNull()
             onProgress(i + 1, total)
-            if (h != null) entries += f to h
+            if (hashes != null && hashes.isNotEmpty()) fps += Fingerprint(f, hashes, video)
         }
 
-        // Union-find clustering by Hamming distance.
-        val n = entries.size
+        // Union-find clustering. Only same-modality fingerprints of equal length are comparable,
+        // so images never merge with videos.
+        val n = fps.size
         val parent = IntArray(n) { it }
         fun find(x: Int): Int {
             var root = x
@@ -172,8 +180,9 @@ class DuplicateScanner @Inject constructor(
         for (a in 0 until n) {
             coroutineContext.ensureActive()
             for (b in a + 1 until n) {
-                val d = java.lang.Long.bitCount(entries[a].second xor entries[b].second)
-                if (d <= threshold) parent[find(a)] = find(b)
+                val d = distance(fps[a], fps[b]) ?: continue
+                val limit = if (fps[a].isVideo) VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD else imageThreshold
+                if (d <= limit) parent[find(a)] = find(b)
             }
         }
         val clusters = HashMap<Int, MutableList<Int>>()
@@ -182,12 +191,21 @@ class DuplicateScanner @Inject constructor(
         val groups = clusters.values.filter { it.size > 1 }.map { idxs ->
             var maxD = 0
             for (a in idxs.indices) for (b in a + 1 until idxs.size) {
-                val d = java.lang.Long.bitCount(entries[idxs[a]].second xor entries[idxs[b]].second)
-                if (d > maxD) maxD = d
+                (distance(fps[idxs[a]], fps[idxs[b]]) ?: 0).let { if (it > maxD) maxD = it }
             }
-            SimilarGroup(idxs.map { entries[it].first }.sortedBy { it.importedAt }, maxD)
+            SimilarGroup(idxs.map { fps[it].file }.sortedBy { it.importedAt }, maxD)
         }.sortedByDescending { g -> g.files.sumOf { it.sizeBytes } }
         SimilarResult(groups, total)
+    }
+
+    private data class Fingerprint(val file: FileEntity, val hashes: LongArray, val isVideo: Boolean)
+
+    /** Total Hamming distance between two fingerprints, or null if they aren't comparable. */
+    private fun distance(a: Fingerprint, b: Fingerprint): Int? {
+        if (a.isVideo != b.isVideo || a.hashes.size != b.hashes.size) return null
+        var d = 0
+        for (i in a.hashes.indices) d += java.lang.Long.bitCount(a.hashes[i] xor b.hashes[i])
+        return d
     }
 
     /** Decode an image (downscaled, in memory) and return its 64-bit dHash, or null if undecodable. */
@@ -204,8 +222,47 @@ class DuplicateScanner @Inject constructor(
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
         val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+        return bitmapDHash(bmp).also { bmp.recycle() }
+    }
+
+    /**
+     * Video fingerprint: decrypt to a temp file (shredded afterwards, like the transcoder), then
+     * dHash [VIDEO_FRAMES] frames sampled at even interior time points. Returns null if the video
+     * can't be read or any frame is missing.
+     */
+    private suspend fun videoFingerprint(f: FileEntity): LongArray? {
+        val tmp = repo.decryptToTempFile(f, "vid")
+        try {
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(tmp.absolutePath)
+                val durMs = f.durationMs
+                    ?: retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                    ?: return null
+                if (durMs <= 0) return null
+                val out = LongArray(VIDEO_FRAMES)
+                for (i in 0 until VIDEO_FRAMES) {
+                    coroutineContext.ensureActive()
+                    val frac = (i + 1.0) / (VIDEO_FRAMES + 1)
+                    val us = (durMs * frac * 1000).toLong()
+                    val frame = retriever.getFrameAtTime(us, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                        ?: retriever.getFrameAtTime(us, android.media.MediaMetadataRetriever.OPTION_CLOSEST)
+                        ?: return null
+                    out[i] = bitmapDHash(frame)
+                    frame.recycle()
+                }
+                return out
+            } finally {
+                runCatching { retriever.release() }
+            }
+        } finally {
+            repo.shredTempFile(tmp)
+        }
+    }
+
+    /** 64-bit difference hash of a bitmap (scaled to 9x8 greyscale, sign of horizontal deltas). */
+    private fun bitmapDHash(bmp: Bitmap): Long {
         val small = Bitmap.createScaledBitmap(bmp, 9, 8, true)
-        if (small != bmp) bmp.recycle()
         var hash = 0L
         var bit = 0
         for (y in 0 until 8) {
@@ -216,7 +273,7 @@ class DuplicateScanner @Inject constructor(
                 bit++
             }
         }
-        small.recycle()
+        if (small !== bmp) small.recycle()
         return hash
     }
 
@@ -240,5 +297,9 @@ class DuplicateScanner @Inject constructor(
         private const val WINDOW = 64 * 1024L
         /** ~18% of 64 bits: tolerant enough for re-encodes, tight enough to avoid false matches. */
         const val DEFAULT_SIMILARITY_THRESHOLD = 12
+        /** Frames sampled per video for its fingerprint. */
+        private const val VIDEO_FRAMES = 5
+        /** Per-frame Hamming tolerance; a video pair matches within VIDEO_FRAMES * this bits total. */
+        private const val VIDEO_PER_FRAME_THRESHOLD = 10
     }
 }

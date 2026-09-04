@@ -251,9 +251,9 @@ fun SettingsScreen(
                             Text("Duplicati esatti")
                         }
                         Button(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Immagini simili")
+                            Text("Media simili")
                         }
-                        Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto uguali anche se ri-salvate o ridimensionate.",
+                        Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati (i video vengono decifrati temporaneamente per campionare i fotogrammi).",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -347,15 +347,15 @@ fun SettingsScreen(
             onDismiss = { vm.closeDuplicates() },
         )
         SettingsViewModel.DupMode.SIMILAR -> DuplicatesDialog(
-            title = "Immagini simili",
+            title = "Media simili",
             groups = similarGroups.map { g ->
                 DupUiGroup(
-                    header = "${g.files.size} immagini simili · ${com.cripta.app.ui.components.formatBytes(g.files.sumOf { it.sizeBytes })} in totale",
+                    header = "${g.files.size} elementi simili · ${com.cripta.app.ui.components.formatBytes(g.files.sumOf { it.sizeBytes })} in totale",
                     files = g.files,
                 )
             },
-            footer = "Analizzate $dupScannedCount immagini.",
-            emptyText = "Analizzate $dupScannedCount immagini. Nessuna immagine simile trovata.",
+            footer = "Analizzati $dupScannedCount elementi (foto e video).",
+            emptyText = "Analizzati $dupScannedCount elementi. Nessun media simile trovato.",
             onDelete = { vm.deleteDuplicate(it) },
             onDismiss = { vm.closeDuplicates() },
         )

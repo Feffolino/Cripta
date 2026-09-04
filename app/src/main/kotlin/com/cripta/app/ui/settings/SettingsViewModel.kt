@@ -133,7 +133,7 @@ class SettingsViewModel @Inject constructor(
             _dupScanning.value = false
             result.onSuccess {
                 _similarGroups.value = it.groups
-                _dupScannedCount.value = it.imagesScanned
+                _dupScannedCount.value = it.mediaScanned
                 _dupMode.value = DupMode.SIMILAR
             }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
         }
