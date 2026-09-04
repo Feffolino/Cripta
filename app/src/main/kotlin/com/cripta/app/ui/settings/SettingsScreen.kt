@@ -88,6 +88,7 @@ fun SettingsScreen(
     val dupMode by vm.dupMode.collectAsState()
     val dupScanning by vm.dupScanning.collectAsState()
     val dupProgress by vm.dupProgress.collectAsState()
+    val dupScannedCount by vm.dupScannedCount.collectAsState()
     val exactGroups by vm.exactGroups.collectAsState()
     val similarGroups by vm.similarGroups.collectAsState()
 
@@ -336,10 +337,12 @@ fun SettingsScreen(
                     files = g.files,
                 )
             },
-            footer = exactGroups.sumOf { it.sizeBytes * (it.files.size - 1) }.takeIf { it > 0 }?.let {
-                "Recuperabili ${com.cripta.app.ui.components.formatBytes(it)} eliminando le copie in eccesso."
+            footer = buildString {
+                append("Scansionati $dupScannedCount file.")
+                val waste = exactGroups.sumOf { it.sizeBytes * (it.files.size - 1) }
+                if (waste > 0) append(" Recuperabili ${com.cripta.app.ui.components.formatBytes(waste)} eliminando le copie in eccesso.")
             },
-            emptyText = "Nessun duplicato esatto trovato.",
+            emptyText = "Scansionati $dupScannedCount file. Nessun duplicato esatto trovato.",
             onDelete = { vm.deleteDuplicate(it) },
             onDismiss = { vm.closeDuplicates() },
         )
@@ -351,8 +354,8 @@ fun SettingsScreen(
                     files = g.files,
                 )
             },
-            footer = null,
-            emptyText = "Nessuna immagine simile trovata.",
+            footer = "Analizzate $dupScannedCount immagini.",
+            emptyText = "Analizzate $dupScannedCount immagini. Nessuna immagine simile trovata.",
             onDelete = { vm.deleteDuplicate(it) },
             onDismiss = { vm.closeDuplicates() },
         )

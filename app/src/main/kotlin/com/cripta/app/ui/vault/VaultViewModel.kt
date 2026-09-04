@@ -33,13 +33,15 @@ enum class TypeFilter { ALL, IMAGE, VIDEO, OTHER }
 data class Filters(
     val query: String = "",
     val tagIds: Set<Long> = emptySet(),
+    /** Files carrying any of these tags are hidden from the results. */
+    val excludedTagIds: Set<Long> = emptySet(),
     val type: TypeFilter = TypeFilter.ALL,
     val favoritesOnly: Boolean = false,
     val untaggedOnly: Boolean = false,
 ) {
     val active: Boolean
-        get() = query.isNotBlank() || tagIds.isNotEmpty() || type != TypeFilter.ALL ||
-            favoritesOnly || untaggedOnly
+        get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
+            type != TypeFilter.ALL || favoritesOnly || untaggedOnly
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -143,6 +145,7 @@ class VaultViewModel @Inject constructor(
                 fwt.file.originalName.contains(f.query, ignoreCase = true) ||
                 fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
             val tagsOk = f.tagIds.isEmpty() || fwt.tags.map { it.id }.containsAll(f.tagIds)
+            val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
             val untaggedOk = !f.untaggedOnly || fwt.tags.isEmpty()
             val typeOk = when (f.type) {
                 TypeFilter.ALL -> true
@@ -152,7 +155,7 @@ class VaultViewModel @Inject constructor(
                     !VaultRepository.isVideo(fwt.file.mimeType)
             }
             val favOk = !f.favoritesOnly || fwt.file.isFavorite
-            nameOk && tagsOk && typeOk && favOk && untaggedOk
+            nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk
         }
     }
 
@@ -175,9 +178,21 @@ class VaultViewModel @Inject constructor(
     fun setQuery(q: String) { filters.value = filters.value.copy(query = q) }
     fun toggleTag(id: Long) {
         val cur = filters.value.tagIds
-        // Picking a specific tag turns off the "untagged only" filter (they're contradictory).
+        // Including a specific tag turns off "untagged only" and drops it from the exclude set
+        // (a tag can't be both required and forbidden).
         filters.value = filters.value.copy(
             tagIds = if (id in cur) cur - id else cur + id,
+            excludedTagIds = filters.value.excludedTagIds - id,
+            untaggedOnly = false,
+        )
+    }
+
+    /** Toggle a tag in the *exclude* set: files with it are hidden. Mutually exclusive with include. */
+    fun toggleExcludedTag(id: Long) {
+        val cur = filters.value.excludedTagIds
+        filters.value = filters.value.copy(
+            excludedTagIds = if (id in cur) cur - id else cur + id,
+            tagIds = filters.value.tagIds - id,
             untaggedOnly = false,
         )
     }
