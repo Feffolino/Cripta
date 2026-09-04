@@ -297,6 +297,55 @@ class VaultRepository @Inject constructor(
     /** All file ids only (cheap) — for building a random queue over large libraries. */
     suspend fun allFileIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().allIds() }
 
+    // --- Duplicate scan ---
+    /** A set of files whose decrypted plaintext is byte-identical. */
+    data class DuplicateGroup(val sizeBytes: Long, val files: List<FileEntity>)
+
+    /**
+     * Find groups of files with identical plaintext content. Candidates are grouped first by exact
+     * byte size (cheap, no decryption), then within each size collision the plaintext SHA-256 is
+     * computed by streaming-decrypting each blob — nothing is ever written to disk in the clear.
+     * Only groups of 2+ are returned, each sorted oldest-import-first (a sensible "keep" candidate),
+     * and the whole list is ordered by reclaimable space descending. [onProgress] reports
+     * (hashed, total) where total is the count of files that actually needed hashing.
+     */
+    suspend fun scanDuplicates(onProgress: (Int, Int) -> Unit = { _, _ -> }): List<DuplicateGroup> =
+        withContext(Dispatchers.IO) {
+            val files = db.fileDao().allWithTags().first().map { it.file }
+            // Only sizes shared by more than one file can possibly contain duplicates.
+            val bySize = files.groupBy { it.sizeBytes }.filterValues { it.size > 1 }
+            val toHash = bySize.values.sumOf { it.size }
+            var hashed = 0
+            onProgress(0, toHash)
+            val groups = mutableListOf<DuplicateGroup>()
+            for ((size, candidates) in bySize) {
+                val byHash = HashMap<String, MutableList<FileEntity>>()
+                for (f in candidates) {
+                    val hash = runCatching { plaintextSha256(f) }.getOrNull()
+                    hashed++; onProgress(hashed, toHash)
+                    if (hash != null) byHash.getOrPut(hash) { mutableListOf() }.add(f)
+                }
+                byHash.values.filter { it.size > 1 }.forEach { dupes ->
+                    groups += DuplicateGroup(size, dupes.sortedBy { it.importedAt })
+                }
+            }
+            groups.sortedByDescending { it.sizeBytes * (it.files.size - 1) }
+        }
+
+    /** Streaming SHA-256 of a file's decrypted plaintext (constant memory, no temp file). */
+    private fun plaintextSha256(file: FileEntity): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        decryptingStream(file).use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    }
+
     // --- Thumbnail sealing (persistent cover cache) ---
     /** Encrypt small thumbnail bytes with the session DEK (safe to persist on disk). */
     fun sealThumb(bytes: ByteArray): ByteArray = dek.encrypt(bytes, THUMB_AAD)

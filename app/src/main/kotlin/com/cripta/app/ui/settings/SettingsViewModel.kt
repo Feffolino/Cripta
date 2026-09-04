@@ -82,4 +82,38 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun lockNow() = session.lock()
+
+    // --- Duplicate scan ---
+    private val _dupScanning = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val dupScanning: StateFlow<Boolean> = _dupScanning
+    private val _dupScanned = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val dupScanned: StateFlow<Boolean> = _dupScanned
+    private val _dupProgress = kotlinx.coroutines.flow.MutableStateFlow(0 to 0)
+    val dupProgress: StateFlow<Pair<Int, Int>> = _dupProgress
+    private val _duplicates = kotlinx.coroutines.flow.MutableStateFlow<List<VaultRepository.DuplicateGroup>>(emptyList())
+    val duplicates: StateFlow<List<VaultRepository.DuplicateGroup>> = _duplicates
+
+    fun scanDuplicates() = viewModelScope.launch {
+        if (_dupScanning.value) return@launch
+        _dupScanning.value = true
+        _dupProgress.value = 0 to 0
+        _duplicates.value = runCatching {
+            repo.scanDuplicates { done, total -> _dupProgress.value = done to total }
+        }.getOrElse { _message.value = "Scansione fallita: ${it.message}"; emptyList() }
+        _dupScanned.value = true
+        _dupScanning.value = false
+    }
+
+    /** Crypto-shred one duplicate and drop it from the shown groups (removing now-singleton groups). */
+    fun deleteDuplicate(fileId: String) = viewModelScope.launch {
+        repo.secureDelete(fileId)
+        _duplicates.value = _duplicates.value
+            .map { g -> g.copy(files = g.files.filterNot { it.id == fileId }) }
+            .filter { it.files.size > 1 }
+    }
+
+    fun clearDuplicates() {
+        _duplicates.value = emptyList()
+        _dupScanned.value = false
+    }
 }
