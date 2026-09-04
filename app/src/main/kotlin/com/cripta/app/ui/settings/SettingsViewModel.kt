@@ -6,6 +6,7 @@ import com.cripta.app.data.DeleteOriginalPolicy
 import com.cripta.app.data.Settings
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.dedup.DuplicateScanner
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.security.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ class SettingsViewModel @Inject constructor(
     private val store: SettingsStore,
     private val session: SessionManager,
     private val repo: VaultRepository,
+    private val scanner: DuplicateScanner,
 ) : ViewModel() {
 
     val settings: StateFlow<Settings> =
@@ -83,37 +85,70 @@ class SettingsViewModel @Inject constructor(
 
     fun lockNow() = session.lock()
 
-    // --- Duplicate scan ---
+    // --- Duplicate scan (delegates to the dedicated DuplicateScanner module) ---
+
+    /** Which result set the UI should show, if any. */
+    enum class DupMode { NONE, EXACT, SIMILAR }
+
+    private val _dupMode = kotlinx.coroutines.flow.MutableStateFlow(DupMode.NONE)
+    val dupMode: StateFlow<DupMode> = _dupMode
     private val _dupScanning = kotlinx.coroutines.flow.MutableStateFlow(false)
     val dupScanning: StateFlow<Boolean> = _dupScanning
-    private val _dupScanned = kotlinx.coroutines.flow.MutableStateFlow(false)
-    val dupScanned: StateFlow<Boolean> = _dupScanned
     private val _dupProgress = kotlinx.coroutines.flow.MutableStateFlow(0 to 0)
     val dupProgress: StateFlow<Pair<Int, Int>> = _dupProgress
-    private val _duplicates = kotlinx.coroutines.flow.MutableStateFlow<List<VaultRepository.DuplicateGroup>>(emptyList())
-    val duplicates: StateFlow<List<VaultRepository.DuplicateGroup>> = _duplicates
+    private val _exactGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.ExactGroup>>(emptyList())
+    val exactGroups: StateFlow<List<DuplicateScanner.ExactGroup>> = _exactGroups
+    private val _similarGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.SimilarGroup>>(emptyList())
+    val similarGroups: StateFlow<List<DuplicateScanner.SimilarGroup>> = _similarGroups
+    private var scanJob: kotlinx.coroutines.Job? = null
 
-    fun scanDuplicates() = viewModelScope.launch {
-        if (_dupScanning.value) return@launch
+    fun scanExact() {
+        if (_dupScanning.value) return
         _dupScanning.value = true
         _dupProgress.value = 0 to 0
-        _duplicates.value = runCatching {
-            repo.scanDuplicates { done, total -> _dupProgress.value = done to total }
-        }.getOrElse { _message.value = "Scansione fallita: ${it.message}"; emptyList() }
-        _dupScanned.value = true
+        scanJob = viewModelScope.launch {
+            val result = runCatching {
+                scanner.scanExact { done, total -> _dupProgress.value = done to total }
+            }
+            _dupScanning.value = false
+            result.onSuccess { _exactGroups.value = it; _dupMode.value = DupMode.EXACT }
+                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
+        }
+    }
+
+    fun scanSimilar() {
+        if (_dupScanning.value) return
+        _dupScanning.value = true
+        _dupProgress.value = 0 to 0
+        scanJob = viewModelScope.launch {
+            val result = runCatching {
+                scanner.scanSimilar { done, total -> _dupProgress.value = done to total }
+            }
+            _dupScanning.value = false
+            result.onSuccess { _similarGroups.value = it; _dupMode.value = DupMode.SIMILAR }
+                .onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
+        }
+    }
+
+    fun cancelScan() {
+        scanJob?.cancel()
         _dupScanning.value = false
     }
 
-    /** Crypto-shred one duplicate and drop it from the shown groups (removing now-singleton groups). */
+    /** Crypto-shred one file and drop it from whichever result set is shown (removing singletons). */
     fun deleteDuplicate(fileId: String) = viewModelScope.launch {
         repo.secureDelete(fileId)
-        _duplicates.value = _duplicates.value
+        _exactGroups.value = _exactGroups.value
+            .map { g -> g.copy(files = g.files.filterNot { it.id == fileId }) }
+            .filter { it.files.size > 1 }
+        _similarGroups.value = _similarGroups.value
             .map { g -> g.copy(files = g.files.filterNot { it.id == fileId }) }
             .filter { it.files.size > 1 }
     }
 
-    fun clearDuplicates() {
-        _duplicates.value = emptyList()
-        _dupScanned.value = false
+    fun closeDuplicates() {
+        _dupMode.value = DupMode.NONE
+        _exactGroups.value = emptyList()
+        _similarGroups.value = emptyList()
     }
 }
