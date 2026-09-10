@@ -17,7 +17,6 @@ import com.cripta.app.R
 import com.cripta.app.data.DeleteOriginalPolicy
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.VaultRepository
-import com.cripta.app.media.ThumbnailLoader
 import com.cripta.app.media.VideoConverter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -40,7 +39,6 @@ class ConversionService : Service() {
     @Inject lateinit var repo: VaultRepository
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var converter: VideoConverter
-    @Inject lateinit var thumbs: ThumbnailLoader
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -62,11 +60,7 @@ class ConversionService : Service() {
                     MODE_IMPORT -> {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
-                        run("Cifratura", uris.size) { i ->
-                            val file = repo.import(uris[i], folderId)
-                            // Generate the cover now so it's cached before the grid asks for it.
-                            runCatching { thumbs.load(file) }
-                        }
+                        run("Cifratura", uris.size) { i -> repo.import(uris[i], folderId) }
                         applyDeletePolicy(uris)
                     }
                     MODE_DOWNLOAD -> {
@@ -118,7 +112,6 @@ class ConversionService : Service() {
             // Transformer requires a Looper; the service main thread has one.
             withContext(Dispatchers.Main) { converter.toMp4(src!!, out!!) }
             val newFile = repo.importConvertedMp4(file, out!!)
-            runCatching { thumbs.load(newFile) }   // warm the converted file's cover
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
         } finally {
             withContext(NonCancellable) {
