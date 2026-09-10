@@ -10,8 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -169,8 +167,11 @@ fun ViewerScreen(
 
         AnimatedVisibility(
             visible = chromeVisible,
-            enter = fadeIn() + slideInVertically { -it },
-            exit = fadeOut() + slideOutVertically { -it },
+            // Fade only (no slide): a sliding bar moves the action icons under the finger, so a tap
+            // on e.g. the tags button could miss while the bar was animating — it looked visible but
+            // did nothing. Fading keeps each button in place and hittable the whole time it shows.
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
             TopAppBar(
@@ -547,7 +548,7 @@ private fun VideoPlayer(
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     keepScreenOn = true            // don't let the screen dim during playback
-                    controllerShowTimeoutMs = 2500
+                    controllerShowTimeoutMs = 4000 // keep the top-bar actions (tags, info…) reachable longer
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
                     setControllerVisibilityListener(
