@@ -85,19 +85,71 @@ class ThumbnailLoader @Inject constructor(
         return repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, opts) }
     }
 
-    private fun videoThumb(file: FileEntity): Bitmap? {
+    /** Which frame of a video to use as its cover, chosen by the user when regenerating. */
+    enum class VideoCover { AUTO, START, MIDDLE, END, RANDOM }
+
+    /**
+     * Regenerate the cover of a video using [cover] and replace the cached thumbnail (memory +
+     * sealed disk cache) with it, so the new cover survives app restarts. Returns the new bitmap,
+     * or the existing cover unchanged if extraction produced nothing (so a failed pick never wipes
+     * a good cover). No-op for non-video files.
+     */
+    suspend fun regenerateVideoCover(file: FileEntity, cover: VideoCover): Bitmap? =
+        withContext(Dispatchers.IO) {
+            if (!VaultRepository.isVideo(file.mimeType)) return@withContext cache.get(file.id)
+            val bmp = withRetriever(file) { coverFrame(it, cover) }
+                ?: return@withContext cache.get(file.id)
+            cache.put(file.id, bmp)
+            runCatching { writeDisk(file.id, bmp) }
+            bmp
+        }
+
+    private fun videoThumb(file: FileEntity): Bitmap? = withRetriever(file) { extractFrame(it) }
+
+    /** Open a [MediaMetadataRetriever] over the decrypted video and run [block], releasing after. */
+    private inline fun <T> withRetriever(file: FileEntity, block: (MediaMetadataRetriever) -> T): T? {
         val retriever = MediaMetadataRetriever()
         var channel: SeekableByteChannel? = null
         return try {
             channel = repo.seekableChannel(file)
             retriever.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            extractFrame(retriever)
+            block(retriever)
         } catch (e: Exception) {
             null
         } finally {
             runCatching { retriever.release() }
             runCatching { channel?.close() }
         }
+    }
+
+    /** Pick a frame according to [cover]; falls back to the automatic best frame when the chosen
+     *  position yields nothing (e.g. unknown duration or an undecodable spot). */
+    private fun coverFrame(r: MediaMetadataRetriever, cover: VideoCover): Bitmap? {
+        if (cover == VideoCover.AUTO) return extractFrame(r)
+        val durationUs =
+            (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) * 1000L
+        val timeUs = when (cover) {
+            VideoCover.START -> 0L
+            VideoCover.MIDDLE -> durationUs / 2
+            VideoCover.END -> durationUs * 9 / 10
+            VideoCover.RANDOM -> if (durationUs > 0) (Math.random() * durationUs).toLong() else 0L
+            VideoCover.AUTO -> 0L // handled above
+        }
+        return frameAt(r, timeUs) ?: extractFrame(r)
+    }
+
+    /** Frame closest to [timeUs], trying the scaled paths first and a hand-scaled full decode last. */
+    private fun frameAt(r: MediaMetadataRetriever, timeUs: Long): Bitmap? {
+        runCatching {
+            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
+        }.getOrNull()?.let { return it }
+        runCatching {
+            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        val full = runCatching {
+            r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+        }.getOrNull() ?: return null
+        return scaleDown(full, target)
     }
 
     /**
