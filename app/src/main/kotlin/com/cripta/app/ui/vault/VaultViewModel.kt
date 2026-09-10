@@ -17,6 +17,7 @@ import com.cripta.app.media.ThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -139,6 +140,18 @@ class VaultViewModel @Inject constructor(
                     .flowOn(Dispatchers.Default)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Proactively generate covers for the current file set in the background, so thumbnails are
+    // ready as cells scroll in instead of each one being generated on demand (slow for videos).
+    private var prewarmJob: Job? = null
+    init {
+        viewModelScope.launch {
+            files.collect { list ->
+                prewarmJob?.cancel()
+                prewarmJob = launch { thumbs.prewarm(list.map { it.file }) }
+            }
+        }
+    }
 
     private fun applySort(
         list: List<FileWithTags>,

@@ -10,6 +10,8 @@ import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -36,6 +38,9 @@ class ThumbnailLoader @Inject constructor(
     private val diskDir = File(context.cacheDir, "thumbs").apply { mkdirs() }
     private val target = 320
 
+    /** How many covers to generate at once during a background [prewarm] pass. */
+    private val PREWARM_CONCURRENCY = 3
+
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(file.id)?.let { return@withContext it }
         // Persistent sealed cache.
@@ -52,6 +57,18 @@ class ThumbnailLoader @Inject constructor(
             runCatching { writeDisk(file.id, bmp) }
         }
         bmp
+    }
+
+    /**
+     * Warm the cover cache for [files] in the background so thumbnails are ready before their cell
+     * scrolls into view (otherwise each cover is only generated on demand — a slow decrypt+decode
+     * for videos — so covers "appear only after lingering" on the screen). Processed a few at a
+     * time to avoid saturating the codec/CPU; already-cached items return immediately inside load().
+     */
+    suspend fun prewarm(files: List<FileEntity>) = withContext(Dispatchers.IO) {
+        files.chunked(PREWARM_CONCURRENCY).forEach { chunk ->
+            supervisorScope { chunk.forEach { f -> launch { runCatching { load(f) } } } }
+        }
     }
 
     private fun readDisk(id: String): Bitmap? {
