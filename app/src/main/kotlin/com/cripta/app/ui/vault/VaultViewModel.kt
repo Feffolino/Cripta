@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -154,7 +155,13 @@ class VaultViewModel @Inject constructor(
         viewModelScope.launch {
             files.collect { list ->
                 prewarmJob?.cancel()
-                prewarmJob = launch { thumbs.prewarm(list.map { it.file }) }
+                prewarmJob = launch {
+                    // Debounce bursts (e.g. a multi-file import fires a change per file) so the
+                    // background decode doesn't compete with encryption and only runs once things
+                    // settle.
+                    delay(400)
+                    thumbs.prewarm(list.map { it.file })
+                }
             }
         }
     }
