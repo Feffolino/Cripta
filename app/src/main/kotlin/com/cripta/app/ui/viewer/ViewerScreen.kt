@@ -561,8 +561,13 @@ private fun VideoPlayer(
         )
 
         // Left / right edge zones: double-tap to jump 10s; single tap toggles the controls.
+        // These consume the pointer-down (detectTapGestures does), so they must stay clear of
+        // the bottom seek bar — otherwise, in landscape where the screen is short, they overlap
+        // the time bar's ends and swallow the drag, making the slider impossible to move.
+        val seekBarClearance = 96.dp
         Box(
-            Modifier.align(Alignment.CenterStart).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+            Modifier.align(Alignment.TopStart).fillMaxWidth(0.3f).fillMaxHeight()
+                .padding(bottom = seekBarClearance)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(-10_000); seekLabel = "-10s" },
@@ -571,7 +576,8 @@ private fun VideoPlayer(
                 }
         )
         Box(
-            Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+            Modifier.align(Alignment.TopEnd).fillMaxWidth(0.3f).fillMaxHeight()
+                .padding(bottom = seekBarClearance)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(10_000); seekLabel = "+10s" },

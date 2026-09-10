@@ -91,15 +91,55 @@ class ThumbnailLoader @Inject constructor(
         return try {
             channel = repo.seekableChannel(file)
             retriever.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            retriever.getScaledFrameAtTime(
-                -1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target
-            )
+            extractFrame(retriever)
         } catch (e: Exception) {
             null
         } finally {
             runCatching { retriever.release() }
             runCatching { channel?.close() }
         }
+    }
+
+    /**
+     * Grab a representative frame, trying progressively looser strategies. A single call to
+     * [MediaMetadataRetriever.getScaledFrameAtTime] returns null for some containers/codecs
+     * (no sync frame near the requested time, or the scaled decode path unsupported), which is
+     * what left those videos with a gray cover. Falling back to a non-sync frame, then to an
+     * unscaled decode downscaled by hand, recovers a thumbnail in those cases.
+     */
+    private fun extractFrame(r: MediaMetadataRetriever): Bitmap? {
+        // 1. Representative frame, scaled by the framework (fast, works for most videos).
+        runCatching {
+            r.getScaledFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        // 2. First sync frame from the start.
+        runCatching {
+            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        // 3. Closest frame (not necessarily a keyframe) — handles clips whose only sync frame
+        //    sits well past the start.
+        runCatching {
+            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
+        }.getOrNull()?.let { return it }
+        // 4. Last resort: full-size decode, downscaled here. Some codecs fail the scaled path
+        //    above but decode a full frame fine.
+        val full = runCatching { r.getFrameAtTime(-1L) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
+            ?: return null
+        return scaleDown(full, target)
+    }
+
+    /** Scale [src] down so its longest side is at most [target] px, preserving aspect ratio. */
+    private fun scaleDown(src: Bitmap, target: Int): Bitmap {
+        val w = src.width
+        val h = src.height
+        if (w <= 0 || h <= 0 || (w <= target && h <= target)) return src
+        val ratio = minOf(target.toFloat() / w, target.toFloat() / h)
+        val dst = Bitmap.createScaledBitmap(
+            src, (w * ratio).toInt().coerceAtLeast(1), (h * ratio).toInt().coerceAtLeast(1), true
+        )
+        if (dst != src) src.recycle()
+        return dst
     }
 
     private fun calcSample(w: Int, h: Int, target: Int): Int {
