@@ -56,6 +56,22 @@ class VaultViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
+    /** Bumped whenever covers are regenerated, so grid cells keyed on it reload their bitmap. */
+    private val _thumbVersion = MutableStateFlow(0)
+    val thumbVersion: StateFlow<Int> = _thumbVersion
+
+    /**
+     * Regenerate the cover of every selected video using [cover] (ignoring non-video files),
+     * then bump [thumbVersion] so the visible thumbnails refresh.
+     */
+    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = viewModelScope.launch {
+        val ids = fileIds.toSet()
+        val targets = files.value.map { it.file }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
+        targets.forEach { thumbs.regenerateVideoCover(it, cover) }
+        _thumbVersion.value++
+    }
+
     /** Publish the current display order so the viewer can swipe through it. */
     fun publishViewerQueue() { viewerQueue.set(files.value.map { it.file.id }) }
 
