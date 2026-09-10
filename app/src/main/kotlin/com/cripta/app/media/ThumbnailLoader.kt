@@ -38,8 +38,9 @@ class ThumbnailLoader @Inject constructor(
     private val diskDir = File(context.cacheDir, "thumbs").apply { mkdirs() }
     private val target = 320
 
-    /** How many covers to generate at once during a background [prewarm] pass. */
-    private val PREWARM_CONCURRENCY = 3
+    /** How many covers to generate at once during a background [prewarm] pass. Kept at 1 so the
+     *  background video decodes never pile up on the device's few hardware codec instances. */
+    private val PREWARM_CONCURRENCY = 1
 
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(file.id)?.let { return@withContext it }
