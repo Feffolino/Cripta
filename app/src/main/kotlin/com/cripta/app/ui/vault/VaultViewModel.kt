@@ -17,8 +17,6 @@ import com.cripta.app.media.ThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -148,23 +146,13 @@ class VaultViewModel @Inject constructor(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Proactively generate covers for the current file set in the background, so thumbnails are
-    // ready as cells scroll in instead of each one being generated on demand (slow for videos).
-    private var prewarmJob: Job? = null
-    init {
-        viewModelScope.launch {
-            files.collect { list ->
-                prewarmJob?.cancel()
-                prewarmJob = launch {
-                    // Debounce bursts (e.g. a multi-file import fires a change per file) so the
-                    // background decode doesn't compete with encryption and only runs once things
-                    // settle.
-                    delay(400)
-                    thumbs.prewarm(list.map { it.file })
-                }
-            }
-        }
-    }
+    /**
+     * Proactively generate covers for [items] so thumbnails are ready as cells scroll in instead
+     * of each being generated on demand. Driven from the vault screen (not the ViewModel) so it
+     * only runs while the grid is visible and stops when the viewer opens — otherwise the
+     * background video decodes would contend with the player for the device's hardware codecs.
+     */
+    suspend fun prewarmCovers(items: List<FileWithTags>) = thumbs.prewarm(items.map { it.file })
 
     private fun applySort(
         list: List<FileWithTags>,

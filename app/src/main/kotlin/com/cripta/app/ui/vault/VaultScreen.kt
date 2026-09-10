@@ -185,6 +185,14 @@ fun VaultScreen(
     val coverOverrides by vm.coverOverrides.collectAsState()
     val ctx = LocalContext.current
 
+    // Warm covers only while the grid is on screen; leaving for the viewer cancels this so the
+    // background video decodes don't compete with the player for hardware codecs. Debounced so a
+    // multi-file import (a change per file) doesn't restart it constantly.
+    LaunchedEffect(files) {
+        kotlinx.coroutines.delay(500)
+        vm.prewarmCovers(files)
+    }
+
     var selection by remember { mutableStateOf(setOf<String>()) }
     // Swipe/range multi-select (gallery-style) drag state.
     val gridState = rememberLazyGridState()
