@@ -57,20 +57,26 @@ class VaultViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
-    /** Bumped whenever covers are regenerated, so grid cells keyed on it reload their bitmap. */
-    private val _thumbVersion = MutableStateFlow(0)
-    val thumbVersion: StateFlow<Int> = _thumbVersion
+    /**
+     * Freshly regenerated covers, by file id. Grid cells show the override for their id when
+     * present, so a regenerated cover appears immediately without depending on a cache reload.
+     * Cleared on folder navigation (by then the sealed disk cache already serves the new cover).
+     */
+    private val _coverOverrides = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    val coverOverrides: StateFlow<Map<String, Bitmap>> = _coverOverrides
 
     /**
-     * Regenerate the cover of every selected video using [cover] (ignoring non-video files),
-     * then bump [thumbVersion] so the visible thumbnails refresh.
+     * Regenerate the cover of every selected video using [cover] (ignoring non-video files) and
+     * publish each new bitmap as an override so the visible thumbnail updates right away.
      */
     fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = viewModelScope.launch {
         val ids = fileIds.toSet()
         val targets = files.value.map { it.file }
             .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
-        targets.forEach { thumbs.regenerateVideoCover(it, cover) }
-        _thumbVersion.value++
+        targets.forEach { f ->
+            val bmp = thumbs.regenerateVideoCover(f, cover)
+            if (bmp != null) _coverOverrides.value = _coverOverrides.value + (f.id to bmp)
+        }
     }
 
     /** Publish the current display order so the viewer can swipe through it. */
@@ -190,12 +196,14 @@ class VaultViewModel @Inject constructor(
 
     // --- Navigation ---
     fun enterFolder(folder: FolderEntity) {
+        _coverOverrides.value = emptyMap()
         _path.value = _path.value + folder
         currentFolderId.value = folder.id
     }
 
     fun goUp() {
         if (_path.value.isNotEmpty()) {
+            _coverOverrides.value = emptyMap()
             _path.value = _path.value.dropLast(1)
             currentFolderId.value = _path.value.lastOrNull()?.id
         }
