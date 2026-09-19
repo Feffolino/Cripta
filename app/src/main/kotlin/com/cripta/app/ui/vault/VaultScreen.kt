@@ -380,7 +380,10 @@ fun VaultScreen(
 
             val manual = sortKey == SortKey.MANUAL
             val showFolders = folders.isNotEmpty() && !filters.active && !manual
-            val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(gridColumns) else GridCells.Fixed(1)
+            // Landscape is wide and short: add columns so cells are smaller and more rows are
+            // visible at once (otherwise a few huge thumbnails fill the short height).
+            val effectiveColumns = if (landscape) gridColumns + 2 else gridColumns
+            val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(effectiveColumns) else GridCells.Fixed(1)
             val grouped = remember(files, display.showDateHeaders) {
                 if (display.showDateHeaders) groupByDay(files) else listOf("" to files)
             }

@@ -405,16 +405,11 @@ class ThumbnailLoader @Inject constructor(
 
     /** Frame closest to [timeUs], trying the scaled paths first and a hand-scaled full decode last. */
     private fun frameAt(r: MediaMetadataRetriever, timeUs: Long): Bitmap? {
-        runCatching {
-            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
-        }.getOrNull()?.let { return it }
-        runCatching {
-            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
-        }.getOrNull()?.let { return it }
-        val full = runCatching {
-            r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
-        }.getOrNull() ?: return null
-        return scaleDown(full, target)
+        // Full-resolution frames only (getFrameAtTime preserves aspect + applies rotation).
+        // getScaledFrameAtTime(w,h) forces the frame into w x h, squishing non-square videos into a
+        // square — the caller crops to a square itself via centerSquare().
+        return runCatching { r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
     }
 
     /**
@@ -425,25 +420,12 @@ class ThumbnailLoader @Inject constructor(
      * unscaled decode downscaled by hand, recovers a thumbnail in those cases.
      */
     private fun extractFrame(r: MediaMetadataRetriever): Bitmap? {
-        // 1. Representative frame, scaled by the framework (fast, works for most videos).
-        runCatching {
-            r.getScaledFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
-        }.getOrNull()?.let { return it }
-        // 2. First sync frame from the start.
-        runCatching {
-            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
-        }.getOrNull()?.let { return it }
-        // 3. Closest frame (not necessarily a keyframe) — handles clips whose only sync frame
-        //    sits well past the start.
-        runCatching {
-            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
-        }.getOrNull()?.let { return it }
-        // 4. Last resort: full-size decode, downscaled here. Some codecs fail the scaled path
-        //    above but decode a full frame fine.
-        val full = runCatching { r.getFrameAtTime(-1L) }.getOrNull()
+        // Full-resolution frames only (preserve aspect ratio + auto-rotation); the caller squares
+        // them via centerSquare(). getScaledFrameAtTime(w,h) would distort non-square videos.
+        return runCatching { r.getFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
             ?: runCatching { r.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
-            ?: return null
-        return scaleDown(full, target)
+            ?: runCatching { r.getFrameAtTime() }.getOrNull()
     }
 
     /** Scale [src] down so its longest side is at most [target] px, preserving aspect ratio. */
