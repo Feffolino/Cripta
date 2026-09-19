@@ -6,8 +6,13 @@ import androidx.compose.animation.fadeOut
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
@@ -97,9 +102,19 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             }
         },
     ) { pad ->
-        Row(Modifier.padding(pad).fillMaxSize()) {
+        // Keep content out of the display cutout (the window draws into it so the strip shows the
+        // app background, not a black letterbox).
+        Row(
+            Modifier.padding(pad).fillMaxSize()
+                .windowInsetsPadding(WindowInsets.displayCutout),
+        ) {
             if (showBar && landscape) {
-                NavigationRail {
+                // Inset the rail from the left edge / status bar so its labels don't touch it.
+                NavigationRail(
+                    windowInsets = WindowInsets.systemBars.only(
+                        WindowInsetsSides.Start + WindowInsetsSides.Vertical,
+                    ),
+                ) {
                     tabs.forEach { tab ->
                         val selected = backStack?.destination?.hierarchy?.any { it.route == tab.route } == true
                         NavigationRailItem(

@@ -57,6 +57,19 @@ class ConversionService : Service() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
+        // Completion-notification actions: delete or keep the original video.
+        if (mode == MODE_DELETE_ORIG) {
+            val oid = intent.getStringExtra(EX_ID)
+            getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            scope.launch { oid?.let { runCatching { repo.secureDelete(it) } } }
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        if (mode == MODE_DISMISS) {
+            getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         ensureChannel()
         startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
         active.incrementAndGet()
@@ -121,9 +134,11 @@ class ConversionService : Service() {
             out = repo.newTempFile("mp4")
             // Transformer requires a Looper; the service main thread has one. Progress drives the
             // notification so the user sees percentage and can leave the app / lock the screen.
+            repo.setConversionProgress(0)
             notify(build("Conversione in MP4", 0, sub = "0%", cancelable = true))
             withContext(Dispatchers.Main) {
                 converter.toMp4(src!!, out!!) { pct ->
+                    repo.setConversionProgress(pct)
                     notify(build("Conversione in MP4", pct, sub = "$pct%", cancelable = true))
                 }
             }
@@ -136,6 +151,7 @@ class ConversionService : Service() {
             }
             val newFile = repo.importConvertedMp4(file, out!!)
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
+            postConvertDone(id)
         } catch (e: kotlinx.coroutines.CancellationException) {
             notify(build("Conversione annullata", 0, sub = "File originale intatto"))
             throw e
@@ -222,6 +238,25 @@ class ConversionService : Service() {
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
     }
 
+    /** Dismissible completion notification offering to delete or keep the original video. */
+    private fun postConvertDone(originalId: String) {
+        fun pi(mode: String, req: Int) = android.app.PendingIntent.getService(
+            this, req,
+            Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).putExtra(EX_ID, originalId),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Video convertito")
+            .setContentText("Copia MP4 creata. Eliminare l'originale?")
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .addAction(0, "Elimina originale", pi(MODE_DELETE_ORIG, 2))
+            .addAction(0, "Mantieni", pi(MODE_DISMISS, 3))
+            .build()
+        getSystemService(NotificationManager::class.java).notify(DONE_NOTIF_ID, n)
+    }
+
     private fun Intent.getParcelableArrayListExtraCompat(key: String): ArrayList<Uri> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             getParcelableArrayListExtra(key, Uri::class.java) ?: arrayListOf()
@@ -239,6 +274,9 @@ class ConversionService : Service() {
         private const val MODE_DOWNLOAD = "download"
         private const val MODE_CONVERT = "convert"
         private const val MODE_CANCEL = "cancel"
+        private const val MODE_DELETE_ORIG = "delete_orig"
+        private const val MODE_DISMISS = "dismiss"
+        private const val DONE_NOTIF_ID = 4212
 
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
             val i = Intent(ctx, ConversionService::class.java).apply {
@@ -255,6 +293,13 @@ class ConversionService : Service() {
                 putStringArrayListExtra(EX_IDS, ArrayList(ids))
             }
             ContextCompat.startForegroundService(ctx, i)
+        }
+
+        /** Cancel the running transcode (service is already up while converting). */
+        fun cancelConvert(ctx: Context) {
+            runCatching {
+                ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL))
+            }
         }
 
         fun startConvert(ctx: Context, id: String) {
