@@ -131,6 +131,56 @@ class ThumbnailLoader @Inject constructor(
     fun invalidate(id: String) = bumpVersion(id)
 
     /**
+     * Detailed diagnostics for a video (codec, coded size, crop rect, pixel aspect, rotation,
+     * color info) — used by the viewer's Info dialog so the user can share why a cover looks wrong.
+     * Reads over the in-memory channel; returns a human-readable multi-line string.
+     */
+    suspend fun videoDiagnostics(file: FileEntity): String = withContext(Dispatchers.IO) {
+        if (!VaultRepository.isVideo(file.mimeType)) return@withContext ""
+        val sb = StringBuilder()
+        // MediaExtractor track format (has crop/sar/coded size keys via toString()).
+        run {
+            val extractor = MediaExtractor()
+            var channel: SeekableByteChannel? = null
+            try {
+                channel = repo.seekableChannel(file)
+                extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+                for (i in 0 until extractor.trackCount) {
+                    val f = extractor.getTrackFormat(i)
+                    val mime = f.getString(MediaFormat.KEY_MIME) ?: "?"
+                    if (mime.startsWith("video/")) {
+                        val w = if (f.containsKey(MediaFormat.KEY_WIDTH)) f.getInteger(MediaFormat.KEY_WIDTH) else -1
+                        val h = if (f.containsKey(MediaFormat.KEY_HEIGHT)) f.getInteger(MediaFormat.KEY_HEIGHT) else -1
+                        val rot = if (f.containsKey(MediaFormat.KEY_ROTATION)) f.getInteger(MediaFormat.KEY_ROTATION) else 0
+                        sb.append("Codec: ").append(mime).append('\n')
+                        sb.append("Risoluzione: ").append(w).append("x").append(h).append('\n')
+                        sb.append("Rotazione: ").append(rot).append("°\n")
+                        sb.append("Track format:\n").append(f.toString()).append('\n')
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                sb.append("Probe extractor fallito: ").append(e.javaClass.simpleName).append('\n')
+            } finally {
+                runCatching { extractor.release() }
+                runCatching { channel?.close() }
+            }
+        }
+        // MediaMetadataRetriever metadata (rotation/dimensions as MMR sees them).
+        withRetriever(file) { r ->
+            fun meta(key: Int, label: String) {
+                r.extractMetadata(key)?.let { sb.append(label).append(": ").append(it).append('\n') }
+            }
+            meta(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH, "MMR width")
+            meta(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT, "MMR height")
+            meta(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION, "MMR rotation")
+            meta(MediaMetadataRetriever.METADATA_KEY_BITRATE, "Bitrate")
+            meta(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE, "Capture fps")
+        }
+        sb.toString().trim()
+    }
+
+    /**
      * Force-rebuild a cover: drop both cache levels, recompute from the source, and bump the
      * file's [versions] entry so any on-screen thumbnail re-keyed on it reloads the fresh bitmap.
      * Returns the new bitmap (null if extraction still fails, e.g. an unreadable file).

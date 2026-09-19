@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
@@ -111,6 +112,13 @@ class ConversionService : Service() {
             out = repo.newTempFile("mp4")
             // Transformer requires a Looper; the service main thread has one.
             withContext(Dispatchers.Main) { converter.toMp4(src!!, out!!) }
+            // Never import a broken transcode: a corrupt/truncated output that still got saved would
+            // look like a valid file and could lead the user to delete the (good) original and lose
+            // the media. Verify the result is a playable video of plausible duration first.
+            if (!isPlayableVideo(out!!, file.durationMs)) {
+                notify(build("Conversione fallita", 0, sub = "File originale intatto"))
+                return
+            }
             val newFile = repo.importConvertedMp4(file, out!!)
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
         } finally {
@@ -119,6 +127,26 @@ class ConversionService : Service() {
                 out?.let { repo.shredTempFile(it) }
                 repo.setConverting(id, false)
             }
+        }
+    }
+
+    /**
+     * True only if [f] is a decodable video with a plausible duration (>= half the source's, when
+     * known). Guards against importing a corrupt/truncated transcode.
+     */
+    private fun isPlayableVideo(f: java.io.File, srcDurMs: Long?): Boolean {
+        if (!f.exists() || f.length() <= 0L) return false
+        val r = MediaMetadataRetriever()
+        return try {
+            r.setDataSource(f.absolutePath)
+            val hasVideo = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes"
+            val durMs = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            val durOk = durMs > 0 && (srcDurMs == null || srcDurMs <= 0 || durMs >= srcDurMs / 2)
+            hasVideo && durOk
+        } catch (e: Exception) {
+            false
+        } finally {
+            runCatching { r.release() }
         }
     }
 
