@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -97,6 +98,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -141,6 +143,7 @@ import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.data.db.TagEntity
+import com.cripta.app.media.ThumbnailLoader
 import com.cripta.app.ui.components.fileMeta
 import com.cripta.app.ui.components.formatBytes
 import java.time.Instant
@@ -179,7 +182,16 @@ fun VaultScreen(
     val sortAscending by vm.sortAscending.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
     val display by vm.display.collectAsState()
-    val coverVersions by vm.coverVersions.collectAsState()
+    val coverOverrides by vm.coverOverrides.collectAsState()
+    val ctx = LocalContext.current
+
+    // Warm covers only while the grid is on screen; leaving for the viewer cancels this so the
+    // background video decodes don't compete with the player for hardware codecs. Debounced so a
+    // multi-file import (a change per file) doesn't restart it constantly.
+    LaunchedEffect(files) {
+        kotlinx.coroutines.delay(500)
+        vm.prewarmCovers(files)
+    }
 
     var selection by remember { mutableStateOf(setOf<String>()) }
     // Swipe/range multi-select (gallery-style) drag state.
@@ -198,6 +210,7 @@ fun VaultScreen(
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToStyle by remember { mutableStateOf<FolderEntity?>(null) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
+    var showRegenCover by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
@@ -267,6 +280,13 @@ fun VaultScreen(
                             )
                             if (selection.size == 1) {
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
+                            }
+                            val videoCount = files.count { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }
+                            if (videoCount > 0) {
+                                DropdownMenuItem(
+                                    text = { Text(if (videoCount == 1) "Rigenera copertina" else "Rigenera copertina ($videoCount)") },
+                                    onClick = { selMenu = false; showRegenCover = true },
+                                )
                             }
                         }
                     } else {
@@ -352,7 +372,7 @@ fun VaultScreen(
                         asList = viewMode == ViewMode.LIST,
                         selection = selection,
                         display = display,
-                        coverVersions = coverVersions,
+                        coverOverrides = coverOverrides,
                         thumb = { vm.thumb(it) },
                         onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
                         onReorder = { vm.reorder(it) },
@@ -444,8 +464,7 @@ fun VaultScreen(
                         if (label.isNotEmpty()) header(label)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                             FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display, Modifier.animateItem(),
-                                coverVersions[fwt.file.id] ?: 0,
-                                { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
+                                coverOverrides[fwt.file.id], { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
                         }
                     }
                 }
@@ -544,6 +563,20 @@ fun VaultScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { confirmMultiDelete = false }) { Text("Annulla") } },
+        )
+    }
+
+    if (showRegenCover) {
+        val videoIds = files.filter { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }.map { it.file.id }
+        CoverOptionDialog(
+            count = videoIds.size,
+            onPick = { cover ->
+                vm.regenerateCovers(videoIds, cover)
+                showRegenCover = false
+                selection = emptySet()
+                Toast.makeText(ctx, "Rigenerazione copertine…", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showRegenCover = false },
         )
     }
 
@@ -672,7 +705,7 @@ private fun FileCell(
     selectionMode: Boolean,
     display: DisplayPrefs,
     modifier: Modifier,
-    coverVersion: Int,
+    coverOverride: android.graphics.Bitmap?,
     thumb: suspend () -> android.graphics.Bitmap?,
     onOpen: () -> Unit,
     onToggleSelect: () -> Unit,
@@ -684,7 +717,9 @@ private fun FileCell(
         isVideo -> Icons.Filled.Movie
         else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
-    val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id, coverVersion) { value = thumb() }
+    val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id) { value = thumb() }
+    // A freshly regenerated cover (override) wins over the cached/loaded one so it shows at once.
+    val bmp = coverOverride ?: loaded
 
     // Tap/long-press are handled by the grid container (unified gesture), not per cell.
     if (viewMode == ViewMode.LIST) {
@@ -1011,7 +1046,7 @@ private fun ReorderableFileGrid(
     asList: Boolean,
     selection: Set<String>,
     display: DisplayPrefs,
-    coverVersions: Map<String, Int>,
+    coverOverrides: Map<String, android.graphics.Bitmap>,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onOpen: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
@@ -1039,7 +1074,8 @@ private fun ReorderableFileGrid(
         ) {
             itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
                 val isDragged = fwt.file.id == draggedId
-                val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
+                val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id) { value = thumb(fwt.file) }
+                val bmp = coverOverrides[fwt.file.id] ?: loaded
                 ReorderCell(
                     item = fwt,
                     bmp = bmp,
@@ -1185,6 +1221,47 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
             }
         }
     }
+}
+
+/** Lets the user pick which frame of the selected video(s) becomes the new cover. */
+@Composable
+private fun CoverOptionDialog(
+    count: Int,
+    onPick: (ThumbnailLoader.VideoCover) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = listOf(
+        ThumbnailLoader.VideoCover.AUTO to "Automatica (fotogramma migliore)",
+        ThumbnailLoader.VideoCover.START to "Inizio",
+        ThumbnailLoader.VideoCover.MIDDLE to "Metà",
+        ThumbnailLoader.VideoCover.END to "Fine",
+        ThumbnailLoader.VideoCover.RANDOM to "Fotogramma casuale",
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (count == 1) "Rigenera copertina" else "Rigenera copertina ($count)") },
+        text = {
+            Column {
+                Text(
+                    "Scegli da quale punto del video generare la copertina.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                options.forEach { (cover, label) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(cover) }.padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.Image, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Text(label, Modifier.padding(start = 16.dp), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
 }
 
 @Composable

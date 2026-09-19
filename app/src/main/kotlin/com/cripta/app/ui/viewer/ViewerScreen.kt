@@ -10,8 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -170,8 +168,11 @@ fun ViewerScreen(
 
         AnimatedVisibility(
             visible = chromeVisible,
-            enter = fadeIn() + slideInVertically { -it },
-            exit = fadeOut() + slideOutVertically { -it },
+            // Fade only (no slide): a sliding bar moves the action icons under the finger, so a tap
+            // on e.g. the tags button could miss while the bar was animating — it looked visible but
+            // did nothing. Fading keeps each button in place and hittable the whole time it shows.
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
             TopAppBar(
@@ -562,7 +563,7 @@ private fun VideoPlayer(
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     keepScreenOn = true            // don't let the screen dim during playback
-                    controllerShowTimeoutMs = 2500
+                    controllerShowTimeoutMs = 4000 // keep the top-bar actions (tags, info…) reachable longer
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
                     setControllerVisibilityListener(
@@ -576,8 +577,13 @@ private fun VideoPlayer(
         )
 
         // Left / right edge zones: double-tap to jump 10s; single tap toggles the controls.
+        // These consume the pointer-down (detectTapGestures does), so they must stay clear of
+        // the bottom seek bar — otherwise, in landscape where the screen is short, they overlap
+        // the time bar's ends and swallow the drag, making the slider impossible to move.
+        val seekBarClearance = 96.dp
         Box(
-            Modifier.align(Alignment.CenterStart).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+            Modifier.align(Alignment.TopStart).fillMaxWidth(0.3f).fillMaxHeight()
+                .padding(bottom = seekBarClearance)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(-10_000); seekLabel = "-10s" },
@@ -586,7 +592,8 @@ private fun VideoPlayer(
                 }
         )
         Box(
-            Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.3f).fillMaxHeight(0.7f)
+            Modifier.align(Alignment.TopEnd).fillMaxWidth(0.3f).fillMaxHeight()
+                .padding(bottom = seekBarClearance)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(10_000); seekLabel = "+10s" },

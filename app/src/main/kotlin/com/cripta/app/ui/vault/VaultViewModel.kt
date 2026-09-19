@@ -56,8 +56,31 @@ class VaultViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
-    /** Per-file cover version; a cover re-keyed on its entry reloads after [ThumbnailLoader.regenerate]. */
+    /** Per-file cover version; a cover re-keyed on its entry reloads after [ThumbnailLoader.regenerate]
+     *  (used by the Home/Favorites shelves). */
     val coverVersions: StateFlow<Map<String, Int>> = thumbs.versions
+
+    /**
+     * Freshly regenerated covers, by file id. Grid cells show the override for their id when
+     * present, so a regenerated cover appears immediately without depending on a cache reload.
+     * Cleared on folder navigation (by then the sealed disk cache already serves the new cover).
+     */
+    private val _coverOverrides = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    val coverOverrides: StateFlow<Map<String, Bitmap>> = _coverOverrides
+
+    /**
+     * Regenerate the cover of every selected video using [cover] (ignoring non-video files) and
+     * publish each new bitmap as an override so the visible thumbnail updates right away.
+     */
+    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = viewModelScope.launch {
+        val ids = fileIds.toSet()
+        val targets = files.value.map { it.file }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
+        targets.forEach { f ->
+            val bmp = thumbs.regenerateVideoCover(f, cover)
+            if (bmp != null) _coverOverrides.value = _coverOverrides.value + (f.id to bmp)
+        }
+    }
 
     /** Publish the current display order so the viewer can swipe through it. */
     fun publishViewerQueue() { viewerQueue.set(files.value.map { it.file.id }) }
@@ -127,6 +150,14 @@ class VaultViewModel @Inject constructor(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * Proactively generate covers for [items] so thumbnails are ready as cells scroll in instead
+     * of each being generated on demand. Driven from the vault screen (not the ViewModel) so it
+     * only runs while the grid is visible and stops when the viewer opens — otherwise the
+     * background video decodes would contend with the player for the device's hardware codecs.
+     */
+    suspend fun prewarmCovers(items: List<FileWithTags>) = thumbs.prewarm(items.map { it.file })
+
     private fun applySort(
         list: List<FileWithTags>,
         key: com.cripta.app.data.SortKey,
@@ -164,12 +195,14 @@ class VaultViewModel @Inject constructor(
 
     // --- Navigation ---
     fun enterFolder(folder: FolderEntity) {
+        _coverOverrides.value = emptyMap()
         _path.value = _path.value + folder
         currentFolderId.value = folder.id
     }
 
     fun goUp() {
         if (_path.value.isNotEmpty()) {
+            _coverOverrides.value = emptyMap()
             _path.value = _path.value.dropLast(1)
             currentFolderId.value = _path.value.lastOrNull()?.id
         }
