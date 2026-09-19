@@ -138,6 +138,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
+import android.content.res.Configuration
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import com.cripta.app.data.DisplayPrefs
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.SortKey
@@ -343,13 +351,18 @@ fun VaultScreen(
             }
         },
     ) { pad ->
+        val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
         Column(Modifier.fillMaxSize().padding(pad).nestedScroll(fabScroll)) {
+            // Landscape has little vertical room: drop the floating label (use a placeholder) and
+            // trim the vertical padding so the search bar doesn't crowd out the media grid.
             OutlinedTextField(
                 value = filters.query,
                 onValueChange = vm::setQuery,
-                label = { Text("Cerca nome o tag") },
+                label = if (landscape) null else ({ Text("Cerca nome o tag") }),
+                placeholder = if (landscape) ({ Text("Cerca nome o tag") }) else null,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp),
             )
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
@@ -370,20 +383,22 @@ fun VaultScreen(
 
             when {
                 folders.isEmpty() && files.isEmpty() ->
-                    EmptyState(filters.active, Modifier.fillMaxSize())
+                    EmptyState(filters.active, Modifier.weight(1f).fillMaxWidth())
                 manual ->
-                    ReorderableFileGrid(
-                        items = files,
-                        columns = if (viewMode == ViewMode.GRID) gridColumns else 1,
-                        asList = viewMode == ViewMode.LIST,
-                        selection = selection,
-                        display = display,
-                        coverOverrides = coverOverrides,
-                        coverVersions = coverVersions,
-                        thumb = { vm.thumb(it) },
-                        onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
-                        onReorder = { vm.reorder(it) },
-                    )
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        ReorderableFileGrid(
+                            items = files,
+                            columns = if (viewMode == ViewMode.GRID) gridColumns else 1,
+                            asList = viewMode == ViewMode.LIST,
+                            selection = selection,
+                            display = display,
+                            coverOverrides = coverOverrides,
+                            coverVersions = coverVersions,
+                            thumb = { vm.thumb(it) },
+                            onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
+                            onReorder = { vm.reorder(it) },
+                        )
+                    }
                 else -> PullToRefreshBox(
                     isRefreshing = refreshingCovers,
                     onRefresh = {
@@ -394,7 +409,7 @@ fun VaultScreen(
                             refreshingCovers = false
                         }
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
                     LazyVerticalGrid(
                     columns = columns,
@@ -488,6 +503,7 @@ fun VaultScreen(
                         }
                     }
                     }
+                    FastScroller(gridState, Modifier.align(Alignment.CenterEnd))
                 }
             }
         }
@@ -714,6 +730,58 @@ private fun FolderCell(
                     modifier = Modifier.padding(top = 2.dp))
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
+    state: androidx.compose.foundation.lazy.grid.LazyGridState,
+    modifier: Modifier = Modifier,
+) {
+    val total = state.layoutInfo.totalItemsCount
+    if (total <= 0) return
+    val scope = rememberCoroutineScope()
+    var trackH by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val fraction = if (total <= 1) 0f
+        else (state.firstVisibleItemIndex.toFloat() / (total - 1)).coerceIn(0f, 1f)
+    val active = state.isScrollInProgress || dragging
+    val alpha by animateFloatAsState(if (active) 1f else 0f, label = "fastscroll")
+    val density = LocalDensity.current
+    val thumbH = 48.dp
+    Box(
+        modifier
+            .fillMaxHeight()
+            .width(28.dp)
+            .onGloballyPositioned { trackH = it.size.height.toFloat() }
+            .pointerInput(total, trackH) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragging = true },
+                    onDragEnd = { dragging = false },
+                    onDragCancel = { dragging = false },
+                    onVerticalDrag = { change, _ ->
+                        if (trackH > 0f) {
+                            val f = (change.position.y / trackH).coerceIn(0f, 1f)
+                            scope.launch { state.scrollToItem((f * (total - 1)).roundToInt()) }
+                        }
+                    },
+                )
+            },
+    ) {
+        val thumbPx = with(density) { thumbH.toPx() }
+        val maxOffset = (trackH - thumbPx).coerceAtLeast(0f)
+        val offsetY = with(density) { (fraction * maxOffset).toDp() }
+        Box(
+            Modifier.align(Alignment.TopEnd)
+                .padding(end = 3.dp)
+                .offset(y = offsetY)
+                .width(6.dp)
+                .height(thumbH)
+                .graphicsLayer { this.alpha = alpha }
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+        )
     }
 }
 
