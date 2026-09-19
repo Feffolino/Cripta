@@ -33,6 +33,7 @@ fun FavoritesScreen(
     vm: FavoritesViewModel = hiltViewModel(),
 ) {
     val favorites by vm.favorites.collectAsState()
+    val coverVersions by vm.coverVersions.collectAsState()
 
     Scaffold(topBar = { TopAppBar(title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") }) }) { pad ->
         if (favorites.isEmpty()) {
@@ -56,7 +57,7 @@ fun FavoritesScreen(
             items(favorites, key = { it.id }) { file ->
                 MediaThumbCell(file, vm::thumb, onClick = {
                     vm.publishQueue(favorites.map { it.id }); onOpenFile(file.id)
-                })
+                }, coverVersion = coverVersions[file.id] ?: 0)
             }
         }
     }

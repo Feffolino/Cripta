@@ -32,6 +32,9 @@ class HomeViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
+    /** Per-file cover version; shelves re-key on it so covers refresh after a regeneration. */
+    val coverVersions: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = thumbs.versions
+
     val recents: StateFlow<List<FileEntity>> =
         repo.changes.flatMapLatest { repo.allFiles() }
             .map { list -> list.map { it.file }.take(24) }

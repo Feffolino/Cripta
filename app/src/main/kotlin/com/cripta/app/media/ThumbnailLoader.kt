@@ -10,6 +10,8 @@ import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -36,10 +38,28 @@ class ThumbnailLoader @Inject constructor(
     private val diskDir = File(context.cacheDir, "thumbs").apply { mkdirs() }
     private val target = 320
 
+    /**
+     * Per-file cover version. Bumped by [regenerate] so on-screen thumbnails whose Compose
+     * `produceState` keys include this version re-run their loader after a manual regeneration
+     * (eviction alone can't re-trigger a producer keyed on the file id).
+     */
+    private val _versions = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val versions: StateFlow<Map<String, Int>> = _versions
+
+    /**
+     * Ids whose extraction already failed this session. Without this, a file that can't produce a
+     * thumbnail (corrupt/unsupported) is re-decrypted in full and re-run through
+     * MediaMetadataRetriever on every scroll/recomposition — a needless CPU/battery drain that also
+     * janks large grids. Cleared per id by [evict]/[regenerate] so a manual retry still runs.
+     */
+    private val failed = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(file.id)?.let { return@withContext it }
         // Persistent sealed cache.
         readDisk(file.id)?.let { cache.put(file.id, it); return@withContext it }
+        // Skip files already known to yield nothing this session.
+        if (file.id in failed) return@withContext null
         val bmp = runCatching {
             when {
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
@@ -50,6 +70,8 @@ class ThumbnailLoader @Inject constructor(
         if (bmp != null) {
             cache.put(file.id, bmp)
             runCatching { writeDisk(file.id, bmp) }
+        } else {
+            failed.add(file.id)
         }
         bmp
     }
@@ -72,7 +94,20 @@ class ThumbnailLoader @Inject constructor(
     /** Remove a cached thumbnail (call after a file is deleted). */
     fun evict(id: String) {
         cache.remove(id)
+        failed.remove(id)
         runCatching { File(diskDir, id).delete() }
+    }
+
+    /**
+     * Force-rebuild a cover: drop both cache levels, recompute from the source, and bump the
+     * file's [versions] entry so any on-screen thumbnail re-keyed on it reloads the fresh bitmap.
+     * Returns the new bitmap (null if extraction still fails, e.g. an unreadable file).
+     */
+    suspend fun regenerate(file: FileEntity): Bitmap? {
+        evict(file.id)
+        val bmp = load(file)
+        _versions.value = _versions.value + (file.id to ((_versions.value[file.id] ?: 0) + 1))
+        return bmp
     }
 
     private fun imageThumb(file: FileEntity): Bitmap? {
@@ -91,15 +126,53 @@ class ThumbnailLoader @Inject constructor(
         return try {
             channel = repo.seekableChannel(file)
             retriever.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            retriever.getScaledFrameAtTime(
-                -1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target
-            )
+            extractFrame(retriever, file)
         } catch (e: Exception) {
             null
         } finally {
             runCatching { retriever.release() }
             runCatching { channel?.close() }
         }
+    }
+
+    /**
+     * Robust video-frame extraction. The single `getScaledFrameAtTime(-1, CLOSEST_SYNC)` call
+     * returns null for many videos (sparse keyframes, VBR, some HEVC/MPEG containers), which left
+     * their cover permanently grey. Try progressively looser strategies — matching the fallback
+     * chain proven in DuplicateScanner — and downscale manually when only a full-size frame is
+     * available. Returns the first non-null frame, or null only when nothing can be decoded.
+     */
+    private fun extractFrame(retriever: MediaMetadataRetriever, file: FileEntity): Bitmap? {
+        // Fast path: representative scaled sync frame.
+        retriever.getScaledFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+            ?.let { return it }
+
+        val durMs = file.durationMs
+            ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+        // Candidate timestamps (µs): an interior point (avoids black lead-in), then the very start.
+        val candidates = buildList {
+            if (durMs != null && durMs > 0) add((durMs * 1000L) / 3)
+            add(0L)
+        }
+        for (us in candidates) {
+            val frame = retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)
+            if (frame != null) return downscale(frame)
+        }
+        // Last resort: any frame at all.
+        return retriever.getFrameAtTime()?.let { downscale(it) }
+    }
+
+    /** Downscale a decoded frame to roughly [target] on its long edge, recycling the source. */
+    private fun downscale(bmp: Bitmap): Bitmap {
+        val longEdge = maxOf(bmp.width, bmp.height)
+        if (longEdge <= target) return bmp
+        val scale = target.toFloat() / longEdge
+        val w = (bmp.width * scale).toInt().coerceAtLeast(1)
+        val h = (bmp.height * scale).toInt().coerceAtLeast(1)
+        val scaled = Bitmap.createScaledBitmap(bmp, w, h, true)
+        if (scaled !== bmp) bmp.recycle()
+        return scaled
     }
 
     private fun calcSample(w: Int, h: Int, target: Int): Int {

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Transform
@@ -197,6 +198,13 @@ fun ViewerScreen(
                         // (e.g. MPEG program streams that play but can't be seeked).
                         if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
                             IconButton(onClick = { confirmConvert = true }) { Icon(Icons.Filled.Transform, "Converti in MP4") }
+                        }
+                        // Rebuild the cover for media that have one (fixes grey/failed covers).
+                        if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) ||
+                            com.cripta.app.data.VaultRepository.isImage(file.mimeType)) {
+                            IconButton(onClick = { vm.regenerateCover(file) }) {
+                                Icon(Icons.Filled.Refresh, "Rigenera copertina")
+                            }
                         }
                         IconButton(onClick = { showInfo = true }) { Icon(Icons.Filled.Info, "Informazioni") }
                         IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }
@@ -509,15 +517,22 @@ private fun VideoPlayer(
             playWhenReady = true
         }
     }
+    // Resize presets cycled by the aspect button. Covers all five ExoPlayer modes so the video
+    // can be fit, filled on either axis, cropped-to-fill, or stretched — each with a label so the
+    // active one is clear.
     val modes = listOf(
-        AspectRatioFrameLayout.RESIZE_MODE_FIT,
-        AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-        AspectRatioFrameLayout.RESIZE_MODE_FILL,
+        AspectRatioFrameLayout.RESIZE_MODE_FIT to "Adatta",
+        AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH to "Larghezza piena",
+        AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT to "Altezza piena",
+        AspectRatioFrameLayout.RESIZE_MODE_ZOOM to "Riempi (ritaglia)",
+        AspectRatioFrameLayout.RESIZE_MODE_FILL to "Allarga (deforma)",
     )
     var modeIdx by remember { mutableIntStateOf(0) }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
+    var modeLabel by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(seekLabel) { if (seekLabel != null) { delay(650); seekLabel = null } }
+    LaunchedEffect(modeLabel) { if (modeLabel != null) { delay(900); modeLabel = null } }
 
     DisposableEffect(file.id) {
         val listener = object : Player.Listener {
@@ -543,7 +558,7 @@ private fun VideoPlayer(
             factory = {
                 PlayerView(it).apply {
                     this.player = player
-                    resizeMode = modes[modeIdx]
+                    resizeMode = modes[modeIdx].first
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     keepScreenOn = true            // don't let the screen dim during playback
@@ -556,7 +571,7 @@ private fun VideoPlayer(
                     playerViewRef = this
                 }
             },
-            update = { it.resizeMode = modes[modeIdx] },
+            update = { it.resizeMode = modes[modeIdx].first },
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -602,9 +617,22 @@ private fun VideoPlayer(
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
         ) {
             Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
-                IconButton(onClick = { modeIdx = (modeIdx + 1) % modes.size }) {
+                IconButton(onClick = {
+                    modeIdx = (modeIdx + 1) % modes.size
+                    modeLabel = modes[modeIdx].second
+                }) {
                     Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White)
                 }
+            }
+        }
+
+        // Brief overlay naming the resize mode just selected.
+        modeLabel?.let { lbl ->
+            Surface(
+                color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 90.dp),
+            ) {
+                Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
         }
     }
