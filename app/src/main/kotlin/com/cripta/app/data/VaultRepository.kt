@@ -269,6 +269,43 @@ class VaultRepository @Inject constructor(
         entity
     }
 
+    /** Encrypt a freshly downloaded plaintext MP4 into the vault as a new file. */
+    suspend fun importDownloadedMp4(mp4: File, displayName: String, folderId: Long?, sourceUrl: String?): FileEntity =
+        withContext(Dispatchers.IO) {
+            val uuid = UUID.randomUUID().toString()
+            val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+            val written = mp4.inputStream().use { input ->
+                blobs.blob(uuid).outputStream().use { out ->
+                    FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
+                }
+            }
+            val duration = runCatching {
+                val r = android.media.MediaMetadataRetriever()
+                try {
+                    r.setDataSource(mp4.absolutePath)
+                    r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toLongOrNull()?.takeIf { it > 0 }
+                } finally { runCatching { r.release() } }
+            }.getOrNull()
+            val name = displayName.ifBlank { "download" }.let { if (it.endsWith(".mp4")) it else "$it.mp4" }
+            val entity = FileEntity(
+                id = uuid,
+                originalName = name,
+                mimeType = "video/mp4",
+                sizeBytes = written,
+                folderId = folderId,
+                createdAt = now(),
+                importedAt = now(),
+                wrappedKeyset = wrapped,
+                durationMs = duration,
+                sortWeight = now(),
+                sourceUrl = sourceUrl,
+            )
+            db.fileDao().insert(entity)
+            notifyChanged()
+            entity
+        }
+
     /** Best-effort media duration (ms) read directly from a content uri; null on failure. */
     private fun durationOf(uri: Uri): Long? {
         val retriever = android.media.MediaMetadataRetriever()

@@ -266,6 +266,7 @@ fun ViewerScreen(
                             java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                                 .format(java.util.Date(file.createdAt)),
                         )
+                        file.sourceUrl?.takeIf { it.isNotBlank() }?.let { InfoLine("Link", it) }
                         if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
                         if (isVid && videoDiag.isNotBlank()) {
                             Text(

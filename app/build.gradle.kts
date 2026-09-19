@@ -93,6 +93,9 @@ dependencies {
     implementation(libs.media3.datasource)
     implementation(libs.media3.extractor)
     implementation(libs.media3.transformer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.effect)
+    implementation(libs.media3.common)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

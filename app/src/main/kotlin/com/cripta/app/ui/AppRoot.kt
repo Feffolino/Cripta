@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -51,7 +52,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 private val tabs = listOf(
     Tab("home", "Home", Icons.Filled.Home),
     Tab("folders", "Cartelle", Icons.Filled.Folder),
-    Tab("favorites", "Preferiti", Icons.Filled.Star),
+    Tab("download", "Download", Icons.Filled.Download),
     Tab("settings", "Impostazioni", Icons.Filled.Settings),
 )
 
@@ -155,6 +156,9 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             }
             composable("favorites") {
                 FavoritesScreen(onOpenFile = { nav.navigate("viewer/$it") })
+            }
+            composable("download") {
+                com.cripta.app.ui.download.DownloadScreen()
             }
             composable("settings") {
                 SettingsScreen(onBack = { nav.popBackStack() })

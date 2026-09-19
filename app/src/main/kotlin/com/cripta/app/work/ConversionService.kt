@@ -90,6 +90,11 @@ class ConversionService : Service() {
                     MODE_CONVERT -> {
                         intent.getStringExtra(EX_ID)?.let { convertOne(it) }
                     }
+                    MODE_DOWNLOAD_URL -> {
+                        val url = intent.getStringExtra(EX_URL)
+                        val h = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 }
+                        if (url != null) downloadUrl(url, h)
+                    }
                 }
             } catch (_: Exception) {
                 // best-effort; individual items already guarded below
@@ -98,7 +103,7 @@ class ConversionService : Service() {
                 stopSelf(startId)
             }
         }
-        if (mode == MODE_CONVERT) convertJob = job
+        if (mode == MODE_CONVERT || mode == MODE_DOWNLOAD_URL) convertJob = job
         return START_NOT_STICKY
     }
 
@@ -181,6 +186,38 @@ class ConversionService : Service() {
             false
         } finally {
             runCatching { r.release() }
+        }
+    }
+
+    /**
+     * Download a remote video (direct link or HLS) to MP4 and encrypt it into the vault. Progress
+     * and a Cancel action live in the notification; the source link is stored on the new file.
+     */
+    private suspend fun downloadUrl(url: String, maxHeight: Int?) {
+        var out: java.io.File? = null
+        try {
+            repo.setConversionProgress(0)
+            notify(build("Download in corso", 0, sub = "0%", cancelable = true))
+            out = repo.newTempFile("mp4")
+            withContext(Dispatchers.Main) {
+                converter.downloadToMp4(url, out!!, maxHeight) { pct ->
+                    repo.setConversionProgress(pct)
+                    notify(build("Download in corso", pct, sub = "$pct%", cancelable = true))
+                }
+            }
+            if (!isPlayableVideo(out!!, null)) {
+                notify(build("Download fallito", 0, sub = "Nessun video valido"))
+                return
+            }
+            val name = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
+                ?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: "download"
+            repo.importDownloadedMp4(out!!, name, folderId = null, sourceUrl = url)
+            notify(build("Download completato", 100, sub = name))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            notify(build("Download annullato", 0))
+            throw e
+        } finally {
+            withContext(NonCancellable) { out?.let { repo.shredTempFile(it) } }
         }
     }
 
@@ -276,6 +313,9 @@ class ConversionService : Service() {
         private const val MODE_CANCEL = "cancel"
         private const val MODE_DELETE_ORIG = "delete_orig"
         private const val MODE_DISMISS = "dismiss"
+        private const val MODE_DOWNLOAD_URL = "download_url"
+        private const val EX_URL = "url"
+        private const val EX_HEIGHT = "height"
         private const val DONE_NOTIF_ID = 4212
 
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
@@ -300,6 +340,16 @@ class ConversionService : Service() {
             runCatching {
                 ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL))
             }
+        }
+
+        /** Start an in-app download of [url] to MP4, capped at [maxHeight]px (null = source quality). */
+        fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?) {
+            val i = Intent(ctx, ConversionService::class.java).apply {
+                putExtra(EX_MODE, MODE_DOWNLOAD_URL)
+                putExtra(EX_URL, url)
+                maxHeight?.let { putExtra(EX_HEIGHT, it) }
+            }
+            ContextCompat.startForegroundService(ctx, i)
         }
 
         fun startConvert(ctx: Context, id: String) {
