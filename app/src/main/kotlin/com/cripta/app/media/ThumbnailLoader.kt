@@ -3,7 +3,14 @@ package com.cripta.app.media
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
+import android.media.Image
+import android.media.MediaCodec
 import android.media.MediaDataSource
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.util.LruCache
 import com.cripta.app.data.VaultRepository
@@ -189,20 +196,159 @@ class ThumbnailLoader @Inject constructor(
         }
         // Real file path: seeks reliably and also decodes containers the channel source can't.
         // Decrypted to a temp file that is shredded afterwards (like the scanner/transcoder).
-        val tmp = repo.decryptToTempFile(file, "thumb")
-        return try {
-            val r = MediaMetadataRetriever()
+        // Everything is guarded so a failure here can never escape (which would abort a batch
+        // regeneration before it reports its result).
+        return runCatching {
+            val tmp = repo.decryptToTempFile(file, "thumb")
             try {
-                r.setDataSource(tmp.absolutePath)
-                if (cover == null) extractFrame(r) else coverFrame(r, cover)
+                val viaMmr = run {
+                    val r = MediaMetadataRetriever()
+                    try {
+                        r.setDataSource(tmp.absolutePath)
+                        if (cover == null) extractFrame(r) else coverFrame(r, cover)
+                    } catch (e: Exception) {
+                        null
+                    } finally {
+                        runCatching { r.release() }
+                    }
+                }
+                // MediaMetadataRetriever can't thumbnail some codecs (e.g. 10-bit HEVC / AV1 in mp4)
+                // even though the device decodes them for playback. Fall back to a manual
+                // MediaCodec decode of one frame, which uses the same decoders as the player.
+                viaMmr ?: decodeFrameWithCodec(tmp.absolutePath, cover)
             } finally {
-                runCatching { r.release() }
+                repo.shredTempFile(tmp)
             }
+        }.getOrNull()
+    }
+
+    /**
+     * Decode a single frame with MediaCodec/MediaExtractor and return it as a [Bitmap]. This is the
+     * last-resort path for videos that MediaMetadataRetriever refuses to thumbnail; it drives the
+     * platform decoders directly (ByteBuffer/Image output, converted YUV_420_888 -> NV21 -> JPEG ->
+     * Bitmap). Returns null on any failure.
+     */
+    private fun decodeFrameWithCodec(path: String, cover: VideoCover?): Bitmap? {
+        val extractor = MediaExtractor()
+        var codec: MediaCodec? = null
+        try {
+            extractor.setDataSource(path)
+            var track = -1
+            var format: MediaFormat? = null
+            for (i in 0 until extractor.trackCount) {
+                val f = extractor.getTrackFormat(i)
+                if (f.getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true) {
+                    track = i; format = f; break
+                }
+            }
+            val fmt = format ?: return null
+            if (track < 0) return null
+            extractor.selectTrack(track)
+            val durUs = if (fmt.containsKey(MediaFormat.KEY_DURATION)) fmt.getLong(MediaFormat.KEY_DURATION) else 0L
+            val seekUs = when (cover) {
+                null, VideoCover.AUTO, VideoCover.START -> 0L
+                VideoCover.MIDDLE -> durUs / 2
+                VideoCover.END -> durUs * 9 / 10
+                VideoCover.RANDOM -> if (durUs > 0) (Math.random() * durUs).toLong() else 0L
+            }
+            if (seekUs > 0) extractor.seekTo(seekUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+
+            val mime = fmt.getString(MediaFormat.KEY_MIME)!!
+            codec = MediaCodec.createDecoderByType(mime)
+            codec.configure(fmt, null, null, 0)   // null surface -> Image/ByteBuffer output
+            codec.start()
+            val info = MediaCodec.BufferInfo()
+            var inputDone = false
+            var guard = 0
+            while (guard++ < 300) {
+                if (!inputDone) {
+                    val inIdx = codec.dequeueInputBuffer(10_000)
+                    if (inIdx >= 0) {
+                        val buf = codec.getInputBuffer(inIdx)
+                        val size = if (buf != null) extractor.readSampleData(buf, 0) else -1
+                        if (size < 0) {
+                            codec.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            inputDone = true
+                        } else {
+                            codec.queueInputBuffer(inIdx, 0, size, extractor.sampleTime, 0)
+                            extractor.advance()
+                        }
+                    }
+                }
+                val outIdx = codec.dequeueOutputBuffer(info, 10_000)
+                if (outIdx >= 0) {
+                    val bmp = runCatching {
+                        val image = codec.getOutputImage(outIdx)
+                        image?.let { val b = imageToBitmap(it); it.close(); b }
+                    }.getOrNull()
+                    codec.releaseOutputBuffer(outIdx, false)
+                    if (bmp != null) return scaleDown(bmp, target)
+                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return null
+                } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                    return null
+                }
+            }
+            return null
         } catch (e: Exception) {
-            null
+            return null
         } finally {
-            repo.shredTempFile(tmp)
+            runCatching { codec?.stop() }
+            runCatching { codec?.release() }
+            runCatching { extractor.release() }
         }
+    }
+
+    /** Convert a decoder [Image] (YUV_420_888) to a Bitmap via NV21 + JPEG (robust across devices). */
+    private fun imageToBitmap(image: Image): Bitmap? {
+        if (image.format != ImageFormat.YUV_420_888) return null
+        val w = image.width
+        val h = image.height
+        val nv21 = yuv420ToNv21(image, w, h)
+        val yuv = YuvImage(nv21, ImageFormat.NV21, w, h, null)
+        val out = ByteArrayOutputStream()
+        if (!yuv.compressToJpeg(Rect(0, 0, w, h), 90, out)) return null
+        val bytes = out.toByteArray()
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
+    /** Pack a YUV_420_888 [Image] into an NV21 byte array, honoring row/pixel strides. */
+    private fun yuv420ToNv21(image: Image, w: Int, h: Int): ByteArray {
+        val ySize = w * h
+        val nv21 = ByteArray(ySize + ySize / 2)
+        val yPlane = image.planes[0]
+        val yBuf = yPlane.buffer
+        val yRowStride = yPlane.rowStride
+        var pos = 0
+        if (yRowStride == w) {
+            yBuf.get(nv21, 0, ySize)
+            pos = ySize
+        } else {
+            for (row in 0 until h) {
+                yBuf.position(row * yRowStride)
+                yBuf.get(nv21, pos, w)
+                pos += w
+            }
+        }
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        val uBuf = uPlane.buffer
+        val vBuf = vPlane.buffer
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        val uPixStride = uPlane.pixelStride
+        val vPixStride = vPlane.pixelStride
+        val cw = w / 2
+        val ch = h / 2
+        var offset = ySize
+        for (row in 0 until ch) {
+            val uRow = row * uRowStride
+            val vRow = row * vRowStride
+            for (col in 0 until cw) {
+                nv21[offset++] = vBuf.get(vRow + col * vPixStride)   // NV21 = Y then V,U interleaved
+                nv21[offset++] = uBuf.get(uRow + col * uPixStride)
+            }
+        }
+        return nv21
     }
 
     /** Open a [MediaMetadataRetriever] over the decrypted video and run [block], releasing after. */
