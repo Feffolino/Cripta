@@ -558,7 +558,9 @@ private fun VideoPlayer(
     // Pinch-to-zoom factor applied on top of the current resize mode (1x..5x). Reset when the mode
     // or the shown video changes.
     var userZoom by remember { mutableFloatStateOf(1f) }
-    LaunchedEffect(modeIdx, file.id) { userZoom = 1f }
+    var panX by remember { mutableFloatStateOf(0f) }
+    var panY by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(modeIdx, file.id) { userZoom = 1f; panX = 0f; panY = 0f }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
@@ -591,12 +593,32 @@ private fun VideoPlayer(
             .pointerInput(Unit) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
+                    fun clamp() {
+                        // Keep the zoomed video within the screen bounds.
+                        val total = modes[modeIdx].third * userZoom
+                        val maxX = ((total - 1f).coerceAtLeast(0f)) * size.width / 2f
+                        val maxY = ((total - 1f).coerceAtLeast(0f)) * size.height / 2f
+                        panX = panX.coerceIn(-maxX, maxX)
+                        panY = panY.coerceIn(-maxY, maxY)
+                    }
                     do {
                         val event = awaitPointerEvent()
-                        if (event.changes.count { it.pressed } >= 2) {
+                        val pressed = event.changes.count { it.pressed }
+                        if (pressed >= 2) {
+                            // Pinch: zoom + pan around the fingers.
                             val zoom = event.calculateZoom()
-                            if (zoom != 1f) {
-                                userZoom = (userZoom * zoom).coerceIn(1f, 5f)
+                            val pan = event.calculatePan()
+                            userZoom = (userZoom * zoom).coerceIn(1f, 5f)
+                            panX += pan.x; panY += pan.y
+                            clamp()
+                            event.changes.forEach { it.consume() }
+                        } else if (pressed == 1 && userZoom > 1f) {
+                            // One finger while zoomed = pan to a specific part. At 1x the swipe is
+                            // left to the pager (change video).
+                            val pan = event.calculatePan()
+                            if (pan.x != 0f || pan.y != 0f) {
+                                panX += pan.x; panY += pan.y
+                                clamp()
                                 event.changes.forEach { it.consume() }
                             }
                         }
@@ -634,6 +656,8 @@ private fun VideoPlayer(
                     (surface.parent as? android.view.ViewGroup)?.clipChildren = false
                     surface.scaleX = scale
                     surface.scaleY = scale
+                    surface.translationX = panX
+                    surface.translationY = panY
                 }
             },
             modifier = Modifier.fillMaxSize(),
