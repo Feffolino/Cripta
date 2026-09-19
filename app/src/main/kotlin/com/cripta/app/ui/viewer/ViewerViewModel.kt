@@ -100,6 +100,12 @@ class ViewerViewModel @Inject constructor(
         repo.convertingIds.map { it.isNotEmpty() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    /** 0-100 progress of the running transcode (for the in-app popup). */
+    val convertingProgress: StateFlow<Int> = repo.conversionProgress
+
+    /** Cancel the running transcode from the app. */
+    fun cancelConversion() = com.cripta.app.work.ConversionService.cancelConvert(appContext)
+
     /** Set to the new MP4's id after a successful conversion; consumed by the UI. */
     private val _convertedId = MutableStateFlow<String?>(null)
     val convertedId: StateFlow<String?> = _convertedId

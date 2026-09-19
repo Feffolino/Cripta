@@ -58,6 +58,10 @@ class VaultRepository @Inject constructor(
     fun setConverting(id: String, active: Boolean) {
         _convertingIds.value = if (active) _convertingIds.value + id else _convertingIds.value - id
     }
+    private val _conversionProgress = MutableStateFlow(0)
+    /** 0-100 progress of the current transcode; drives the in-app progress popup. */
+    val conversionProgress: StateFlow<Int> = _conversionProgress
+    fun setConversionProgress(pct: Int) { _conversionProgress.value = pct.coerceIn(0, 100) }
     fun emitConvertResult(event: ConversionEvent) { _convertEvents.tryEmit(event) }
 
     /**

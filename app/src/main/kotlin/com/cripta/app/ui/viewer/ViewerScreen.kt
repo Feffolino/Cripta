@@ -47,6 +47,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -151,6 +152,11 @@ fun ViewerScreen(
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
     val convertedId by vm.convertedId.collectAsState()
+    val converting by vm.converting.collectAsState()
+    val convertProgress by vm.convertingProgress.collectAsState()
+    // When true the user chose to let the conversion run in the background (notification only).
+    var convertInBackground by remember { mutableStateOf(false) }
+    LaunchedEffect(converting) { if (converting) convertInBackground = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
@@ -297,8 +303,30 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmConvert = false }) { Text("Annulla") } },
         )
     }
-    // Conversion runs in the background (foreground service): progress and a Cancel action live in
-    // the notification, so no blocking dialog here — the user can lock the screen or leave the app.
+    // In-app progress popup. The user can send it to the background (notification takes over) or
+    // cancel it. The transcode itself always runs in the foreground service.
+    if (converting && !convertInBackground) {
+        AlertDialog(
+            onDismissRequest = { convertInBackground = true },
+            title = { Text("Conversione in MP4") },
+            text = {
+                Column {
+                    Text("$convertProgress%")
+                    LinearProgressIndicator(
+                        progress = { convertProgress / 100f },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    Text(
+                        "Puoi lasciarla in background: continua e mostra l'avanzamento nelle notifiche.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { convertInBackground = true }) { Text("Continua in background") } },
+            dismissButton = { TextButton(onClick = { vm.cancelConversion() }) { Text("Annulla", color = MaterialTheme.colorScheme.error) } },
+        )
+    }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsState()
         AlertDialog(
