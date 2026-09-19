@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
@@ -196,6 +197,8 @@ fun VaultScreen(
     val coverOverrides by vm.coverOverrides.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
     val ctx = LocalContext.current
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var searchExpanded by remember { mutableStateOf(false) }
 
     // Warm covers only while the grid is on screen; leaving for the viewer cancels this so the
     // background video decodes don't compete with the player for hardware codecs. Debounced so a
@@ -304,6 +307,13 @@ fun VaultScreen(
                             }
                         }
                     } else {
+                        if (landscape) {
+                            IconButton(onClick = { searchExpanded = !searchExpanded }) {
+                                Icon(Icons.Filled.Search, "Cerca",
+                                    tint = if (searchExpanded || filters.query.isNotBlank())
+                                        MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                            }
+                        }
                         IconButton(onClick = { showFilterSheet = true }) {
                             Icon(Icons.Filled.Tune, "Filtri e ordinamento",
                                 tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
@@ -351,19 +361,20 @@ fun VaultScreen(
             }
         },
     ) { pad ->
-        val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
         Column(Modifier.fillMaxSize().padding(pad).nestedScroll(fabScroll)) {
-            // Landscape has little vertical room: drop the floating label (use a placeholder) and
-            // trim the vertical padding so the search bar doesn't crowd out the media grid.
-            OutlinedTextField(
-                value = filters.query,
-                onValueChange = vm::setQuery,
-                label = if (landscape) null else ({ Text("Cerca nome o tag") }),
-                placeholder = if (landscape) ({ Text("Cerca nome o tag") }) else null,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp),
-            )
+            // Landscape has little vertical room: hide the inline search bar and reveal it on demand
+            // from the top-bar search icon, so the media grid gets the full height for navigation.
+            if (!landscape || searchExpanded) {
+                OutlinedTextField(
+                    value = filters.query,
+                    onValueChange = vm::setQuery,
+                    label = if (landscape) null else ({ Text("Cerca nome o tag") }),
+                    placeholder = if (landscape) ({ Text("Cerca nome o tag") }) else null,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp),
+                )
+            }
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
 

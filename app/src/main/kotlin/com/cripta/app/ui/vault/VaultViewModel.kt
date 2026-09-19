@@ -77,7 +77,7 @@ class VaultViewModel @Inject constructor(
         thumbs.clearFailed()
         items.map { it.file }
             .filter { VaultRepository.isVideo(it.mimeType) }
-            .forEach { thumbs.invalidate(it.id) }
+            .forEach { thumbs.evict(it.id); thumbs.invalidate(it.id) }  // drop cached cover, then reload
     }
 
     /**
