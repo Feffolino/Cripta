@@ -69,18 +69,6 @@ class VaultViewModel @Inject constructor(
     val coverOverrides: StateFlow<Map<String, Bitmap>> = _coverOverrides
 
     /**
-     * Pull-to-refresh: forget failed extractions and invalidate every video cover in view so the
-     * gray ones retry the full extraction chain (channel -> file MMR -> MediaCodec). Cached covers
-     * reload instantly.
-     */
-    suspend fun retryCovers(items: List<FileWithTags>) {
-        thumbs.clearFailed()
-        items.map { it.file }
-            .filter { VaultRepository.isVideo(it.mimeType) }
-            .forEach { thumbs.evict(it.id); thumbs.invalidate(it.id) }  // drop cached cover, then reload
-    }
-
-    /**
      * Regenerate the cover of every selected video using [cover] (ignoring non-video files) and
      * publish each new bitmap as an override so the visible thumbnail updates right away.
      */

@@ -269,7 +269,10 @@ class ThumbnailLoader @Inject constructor(
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var guard = 0
-            while (guard++ < 300) {
+            // seekTo only lands on a sync frame, so Start/Middle/End/Random could resolve to the
+            // same keyframe and produce identical covers. Decode forward and keep the first frame
+            // at/after the requested time so distinct positions give distinct frames.
+            while (guard++ < 2000) {
                 if (!inputDone) {
                     val inIdx = codec.dequeueInputBuffer(10_000)
                     if (inIdx >= 0) {
@@ -286,13 +289,20 @@ class ThumbnailLoader @Inject constructor(
                 }
                 val outIdx = codec.dequeueOutputBuffer(info, 10_000)
                 if (outIdx >= 0) {
-                    val bmp = runCatching {
-                        val image = codec.getOutputImage(outIdx)
-                        image?.let { val b = imageToBitmap(it); it.close(); b }
-                    }.getOrNull()
-                    codec.releaseOutputBuffer(outIdx, false)
-                    if (bmp != null) return applyRotation(scaleDown(bmp, target), rotation)
-                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return null
+                    val isEos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
+                    val reachedTarget = seekUs <= 0L || info.presentationTimeUs >= seekUs || isEos
+                    if (reachedTarget) {
+                        val bmp = runCatching {
+                            val image = codec.getOutputImage(outIdx)
+                            image?.let { val b = imageToBitmap(it); it.close(); b }
+                        }.getOrNull()
+                        codec.releaseOutputBuffer(outIdx, false)
+                        if (bmp != null) return applyRotation(scaleDown(bmp, target), rotation)
+                        if (isEos) return null
+                    } else {
+                        // Not yet at the requested position: drop this frame and keep decoding.
+                        codec.releaseOutputBuffer(outIdx, false)
+                    }
                 } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                     return null
                 }
