@@ -35,7 +35,7 @@ import com.cripta.app.work.ConversionService
  * video is fetched with yt-dlp, encrypted into the vault and its source link stored on the file.
  * Live progress is shown both here and in the notification.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DownloadScreen(initialUrl: String? = null, vm: DownloadViewModel = hiltViewModel()) {
     val ctx = LocalContext.current
