@@ -40,6 +40,8 @@ data class FileEntity(
     val durationMs: Long? = null,
     /** User-assigned position for the Manual sort mode (ascending = higher priority / top). */
     val sortWeight: Long = 0,
+    /** Source link for files downloaded in-app (shown in the Info dialog); null otherwise. */
+    val sourceUrl: String? = null,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant

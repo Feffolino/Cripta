@@ -39,6 +39,29 @@ class MainActivity : FragmentActivity() {
     /** Set when the Keystore key is permanently invalidated; drives the reset-vault dialog. */
     private val keyInvalidated = MutableStateFlow(false)
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSharedLink(intent)
+    }
+
+    /**
+     * If a link (text/plain) was shared into Cripta, start an in-app download of it. Requires the
+     * vault to be unlocked (the download is encrypted into it); otherwise ask the user to unlock.
+     */
+    private fun handleSharedLink(intent: android.content.Intent?) {
+        if (intent?.action != android.content.Intent.ACTION_SEND) return
+        val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)?.trim() ?: return
+        val url = text.split(Regex("\\s+")).firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
+            ?: return
+        if (session.locked.value) {
+            Toast.makeText(this, "Sblocca Cripta e ricondividi il link per scaricarlo", Toast.LENGTH_LONG).show()
+            return
+        }
+        com.cripta.app.work.ConversionService.startDownloadUrl(this, url, null)
+        Toast.makeText(this, "Download avviato", Toast.LENGTH_SHORT).show()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Notification permission (Android 13+) so the conversion progress notification can show.
@@ -68,6 +91,7 @@ class MainActivity : FragmentActivity() {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
         }
+        handleSharedLink(intent)
         setContent {
             val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
             // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.
