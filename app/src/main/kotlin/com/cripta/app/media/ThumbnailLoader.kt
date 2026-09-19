@@ -12,6 +12,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -54,6 +56,10 @@ class ThumbnailLoader @Inject constructor(
      */
     private val failed = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
+    /** How many covers to generate at once during a background [prewarm] pass. Kept at 1 so the
+     *  background video decodes never pile up on the device's few hardware codec instances. */
+    private val PREWARM_CONCURRENCY = 1
+
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(file.id)?.let { return@withContext it }
         // Persistent sealed cache.
@@ -74,6 +80,18 @@ class ThumbnailLoader @Inject constructor(
             failed.add(file.id)
         }
         bmp
+    }
+
+    /**
+     * Warm the cover cache for [files] in the background so thumbnails are ready before their cell
+     * scrolls into view (otherwise each cover is only generated on demand — a slow decrypt+decode
+     * for videos — so covers "appear only after lingering" on the screen). Processed a few at a
+     * time to avoid saturating the codec/CPU; already-cached items return immediately inside load().
+     */
+    suspend fun prewarm(files: List<FileEntity>) = withContext(Dispatchers.IO) {
+        files.chunked(PREWARM_CONCURRENCY).forEach { chunk ->
+            supervisorScope { chunk.forEach { f -> launch { runCatching { load(f) } } } }
+        }
     }
 
     private fun readDisk(id: String): Bitmap? {
@@ -125,13 +143,35 @@ class ThumbnailLoader @Inject constructor(
         return repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, opts) }
     }
 
-    private fun videoThumb(file: FileEntity): Bitmap? {
+    /** Which frame of a video to use as its cover, chosen by the user when regenerating. */
+    enum class VideoCover { AUTO, START, MIDDLE, END, RANDOM }
+
+    /**
+     * Regenerate the cover of a video using [cover] and replace the cached thumbnail (memory +
+     * sealed disk cache) with it, so the new cover survives app restarts. Returns the new bitmap,
+     * or the existing cover unchanged if extraction produced nothing (so a failed pick never wipes
+     * a good cover). No-op for non-video files.
+     */
+    suspend fun regenerateVideoCover(file: FileEntity, cover: VideoCover): Bitmap? =
+        withContext(Dispatchers.IO) {
+            if (!VaultRepository.isVideo(file.mimeType)) return@withContext cache.get(file.id)
+            val bmp = withRetriever(file) { coverFrame(it, cover) }
+                ?: return@withContext cache.get(file.id)
+            cache.put(file.id, bmp)
+            runCatching { writeDisk(file.id, bmp) }
+            bmp
+        }
+
+    private fun videoThumb(file: FileEntity): Bitmap? = withRetriever(file) { extractFrame(it) }
+
+    /** Open a [MediaMetadataRetriever] over the decrypted video and run [block], releasing after. */
+    private inline fun <T> withRetriever(file: FileEntity, block: (MediaMetadataRetriever) -> T): T? {
         val retriever = MediaMetadataRetriever()
         var channel: SeekableByteChannel? = null
         return try {
             channel = repo.seekableChannel(file)
             retriever.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            extractFrame(retriever, file)
+            block(retriever)
         } catch (e: Exception) {
             null
         } finally {
@@ -140,44 +180,76 @@ class ThumbnailLoader @Inject constructor(
         }
     }
 
-    /**
-     * Robust video-frame extraction. The single `getScaledFrameAtTime(-1, CLOSEST_SYNC)` call
-     * returns null for many videos (sparse keyframes, VBR, some HEVC/MPEG containers), which left
-     * their cover permanently grey. Try progressively looser strategies — matching the fallback
-     * chain proven in DuplicateScanner — and downscale manually when only a full-size frame is
-     * available. Returns the first non-null frame, or null only when nothing can be decoded.
-     */
-    private fun extractFrame(retriever: MediaMetadataRetriever, file: FileEntity): Bitmap? {
-        // Fast path: representative scaled sync frame.
-        retriever.getScaledFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
-            ?.let { return it }
-
-        val durMs = file.durationMs
-            ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-        // Candidate timestamps (µs): an interior point (avoids black lead-in), then the very start.
-        val candidates = buildList {
-            if (durMs != null && durMs > 0) add((durMs * 1000L) / 3)
-            add(0L)
+    /** Pick a frame according to [cover]; falls back to the automatic best frame when the chosen
+     *  position yields nothing (e.g. unknown duration or an undecodable spot). */
+    private fun coverFrame(r: MediaMetadataRetriever, cover: VideoCover): Bitmap? {
+        if (cover == VideoCover.AUTO) return extractFrame(r)
+        val durationUs =
+            (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) * 1000L
+        val timeUs = when (cover) {
+            VideoCover.START -> 0L
+            VideoCover.MIDDLE -> durationUs / 2
+            VideoCover.END -> durationUs * 9 / 10
+            VideoCover.RANDOM -> if (durationUs > 0) (Math.random() * durationUs).toLong() else 0L
+            VideoCover.AUTO -> 0L // handled above
         }
-        for (us in candidates) {
-            val frame = retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                ?: retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)
-            if (frame != null) return downscale(frame)
-        }
-        // Last resort: any frame at all.
-        return retriever.getFrameAtTime()?.let { downscale(it) }
+        return frameAt(r, timeUs) ?: extractFrame(r)
     }
 
-    /** Downscale a decoded frame to roughly [target] on its long edge, recycling the source. */
-    private fun downscale(bmp: Bitmap): Bitmap {
-        val longEdge = maxOf(bmp.width, bmp.height)
-        if (longEdge <= target) return bmp
-        val scale = target.toFloat() / longEdge
-        val w = (bmp.width * scale).toInt().coerceAtLeast(1)
-        val h = (bmp.height * scale).toInt().coerceAtLeast(1)
-        val scaled = Bitmap.createScaledBitmap(bmp, w, h, true)
-        if (scaled !== bmp) bmp.recycle()
-        return scaled
+    /** Frame closest to [timeUs], trying the scaled paths first and a hand-scaled full decode last. */
+    private fun frameAt(r: MediaMetadataRetriever, timeUs: Long): Bitmap? {
+        runCatching {
+            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
+        }.getOrNull()?.let { return it }
+        runCatching {
+            r.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        val full = runCatching {
+            r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+        }.getOrNull() ?: return null
+        return scaleDown(full, target)
+    }
+
+    /**
+     * Grab a representative frame, trying progressively looser strategies. A single call to
+     * [MediaMetadataRetriever.getScaledFrameAtTime] returns null for some containers/codecs
+     * (no sync frame near the requested time, or the scaled decode path unsupported), which is
+     * what left those videos with a gray cover. Falling back to a non-sync frame, then to an
+     * unscaled decode downscaled by hand, recovers a thumbnail in those cases.
+     */
+    private fun extractFrame(r: MediaMetadataRetriever): Bitmap? {
+        // 1. Representative frame, scaled by the framework (fast, works for most videos).
+        runCatching {
+            r.getScaledFrameAtTime(-1L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        // 2. First sync frame from the start.
+        runCatching {
+            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, target, target)
+        }.getOrNull()?.let { return it }
+        // 3. Closest frame (not necessarily a keyframe) — handles clips whose only sync frame
+        //    sits well past the start.
+        runCatching {
+            r.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST, target, target)
+        }.getOrNull()?.let { return it }
+        // 4. Last resort: full-size decode, downscaled here. Some codecs fail the scaled path
+        //    above but decode a full frame fine.
+        val full = runCatching { r.getFrameAtTime(-1L) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
+            ?: return null
+        return scaleDown(full, target)
+    }
+
+    /** Scale [src] down so its longest side is at most [target] px, preserving aspect ratio. */
+    private fun scaleDown(src: Bitmap, target: Int): Bitmap {
+        val w = src.width
+        val h = src.height
+        if (w <= 0 || h <= 0 || (w <= target && h <= target)) return src
+        val ratio = minOf(target.toFloat() / w, target.toFloat() / h)
+        val dst = Bitmap.createScaledBitmap(
+            src, (w * ratio).toInt().coerceAtLeast(1), (h * ratio).toInt().coerceAtLeast(1), true
+        )
+        if (dst != src) src.recycle()
+        return dst
     }
 
     private fun calcSample(w: Int, h: Int, target: Int): Int {
