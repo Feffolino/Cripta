@@ -37,26 +37,41 @@ class VideoConverter @Inject constructor(
      * Transcode [src] into [out] as MP4 (H.264/AAC). Suspends until done; throws on failure.
      * Call on the main thread.
      */
-    suspend fun toMp4(src: File, out: File): Unit = suspendCancellableCoroutine { cont ->
-        val transformer = Transformer.Builder(context)
-            .setVideoMimeType(MimeTypes.VIDEO_H264)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    if (cont.isActive) cont.resume(Unit)
+    suspend fun toMp4(src: File, out: File, onProgress: (Int) -> Unit = {}): Unit =
+        suspendCancellableCoroutine { cont ->
+            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            lateinit var transformer: Transformer
+            val holder = androidx.media3.transformer.ProgressHolder()
+            val poll = object : Runnable {
+                override fun run() {
+                    if (!cont.isActive) return
+                    val state = runCatching { transformer.getProgress(holder) }.getOrNull()
+                    if (state == Transformer.PROGRESS_STATE_AVAILABLE) onProgress(holder.progress)
+                    handler.postDelayed(this, 500)
                 }
+            }
+            transformer = Transformer.Builder(context)
+                .setVideoMimeType(MimeTypes.VIDEO_H264)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        handler.removeCallbacks(poll)
+                        if (cont.isActive) cont.resume(Unit)
+                    }
 
-                override fun onError(
-                    composition: Composition,
-                    exportResult: ExportResult,
-                    exportException: ExportException,
-                ) {
-                    if (cont.isActive) cont.resumeWithException(exportException)
-                }
-            })
-            .build()
+                    override fun onError(
+                        composition: Composition,
+                        exportResult: ExportResult,
+                        exportException: ExportException,
+                    ) {
+                        handler.removeCallbacks(poll)
+                        if (cont.isActive) cont.resumeWithException(exportException)
+                    }
+                })
+                .build()
 
-        cont.invokeOnCancellation { runCatching { transformer.cancel() } }
-        transformer.start(MediaItem.fromUri(Uri.fromFile(src)), out.absolutePath)
-    }
+            cont.invokeOnCancellation { handler.removeCallbacks(poll); runCatching { transformer.cancel() } }
+            transformer.start(MediaItem.fromUri(Uri.fromFile(src)), out.absolutePath)
+            handler.post(poll)
+        }
 }

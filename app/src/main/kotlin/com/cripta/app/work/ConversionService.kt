@@ -51,11 +51,17 @@ class ConversionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val mode = intent?.getStringExtra(EX_MODE)
         if (mode == null) { stopSelf(startId); return START_NOT_STICKY }
+        // Cancel request from the notification action: abort the running transcode and leave.
+        if (mode == MODE_CANCEL) {
+            convertJob?.cancel()
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         ensureChannel()
         startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
         active.incrementAndGet()
 
-        scope.launch {
+        val job = scope.launch {
             try {
                 when (mode) {
                     MODE_IMPORT -> {
@@ -79,8 +85,11 @@ class ConversionService : Service() {
                 stopSelf(startId)
             }
         }
+        if (mode == MODE_CONVERT) convertJob = job
         return START_NOT_STICKY
     }
+
+    @Volatile private var convertJob: kotlinx.coroutines.Job? = null
 
     private inline fun run(label: String, total: Int, op: (Int) -> Unit) {
         if (total == 0) return
@@ -110,8 +119,14 @@ class ConversionService : Service() {
             val suffix = file.originalName.substringAfterLast('.', "mpg")
             src = repo.decryptToTempFile(file, suffix)
             out = repo.newTempFile("mp4")
-            // Transformer requires a Looper; the service main thread has one.
-            withContext(Dispatchers.Main) { converter.toMp4(src!!, out!!) }
+            // Transformer requires a Looper; the service main thread has one. Progress drives the
+            // notification so the user sees percentage and can leave the app / lock the screen.
+            notify(build("Conversione in MP4", 0, sub = "0%", cancelable = true))
+            withContext(Dispatchers.Main) {
+                converter.toMp4(src!!, out!!) { pct ->
+                    notify(build("Conversione in MP4", pct, sub = "$pct%", cancelable = true))
+                }
+            }
             // Never import a broken transcode: a corrupt/truncated output that still got saved would
             // look like a valid file and could lead the user to delete the (good) original and lose
             // the media. Verify the result is a playable video of plausible duration first.
@@ -121,6 +136,9 @@ class ConversionService : Service() {
             }
             val newFile = repo.importConvertedMp4(file, out!!)
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            notify(build("Conversione annullata", 0, sub = "File originale intatto"))
+            throw e
         } finally {
             withContext(NonCancellable) {
                 src?.let { repo.shredTempFile(it) }
@@ -175,15 +193,30 @@ class ConversionService : Service() {
         }
     }
 
-    private fun build(title: String, pct: Int, sub: String? = null, indeterminate: Boolean = false): Notification =
-        NotificationCompat.Builder(this, CHANNEL)
+    private fun build(
+        title: String,
+        pct: Int,
+        sub: String? = null,
+        indeterminate: Boolean = false,
+        cancelable: Boolean = false,
+    ): Notification {
+        val b = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(sub)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(100, pct, indeterminate)
-            .build()
+        if (cancelable) {
+            val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL)
+            val pi = android.app.PendingIntent.getService(
+                this, 1, cancelIntent,
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            b.addAction(0, "Annulla", pi)
+        }
+        return b.build()
+    }
 
     private fun notify(n: Notification) {
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
@@ -205,6 +238,7 @@ class ConversionService : Service() {
         private const val MODE_IMPORT = "import"
         private const val MODE_DOWNLOAD = "download"
         private const val MODE_CONVERT = "convert"
+        private const val MODE_CANCEL = "cancel"
 
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
             val i = Intent(ctx, ConversionService::class.java).apply {
