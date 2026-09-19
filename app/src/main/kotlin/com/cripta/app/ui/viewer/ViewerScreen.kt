@@ -210,7 +210,18 @@ fun ViewerScreen(
                 .padding(start = cutout.start, top = cutout.top, end = cutout.end),
         ) {
             TopAppBar(
-                title = { Text(currentFile?.originalName ?: "", maxLines = 1, softWrap = false) },
+                title = {
+                    Column {
+                        Text(currentFile?.originalName ?: "", maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        if (ids.size > 1) {
+                            Text(
+                                "${pagerState.currentPage + 1} / ${ids.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
+                },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 // The cutout padding is applied on the wrapper above; the bar itself adds none.
                 windowInsets = WindowInsets(0, 0, 0, 0),
