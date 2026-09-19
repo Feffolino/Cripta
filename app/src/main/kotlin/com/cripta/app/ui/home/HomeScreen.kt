@@ -65,20 +65,37 @@ fun HomeScreen(
         },
     ) { pad ->
         if (recents.isEmpty() && folders.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
-                    Text("Vault vuoto", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                    Text("Vai su Cartelle e tocca + per importare.", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.size(96.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
+                        }
+                    }
+                    Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
+                    Text(
+                        "Importa foto e video: restano cifrati e visibili solo qui.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    androidx.compose.material3.Button(
+                        onClick = onOpenFolders,
+                        modifier = Modifier.padding(top = 20.dp),
+                    ) { Text("Vai a Cartelle") }
                 }
             }
             return@Scaffold
         }
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             if (recents.isNotEmpty()) {
                 item { ShelfHeader("Recenti") }
@@ -103,8 +120,8 @@ private fun openWith(vm: HomeViewModel, list: List<FileEntity>, id: String, onOp
 
 @Composable
 private fun ShelfHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    Text(title, style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
 }
 
 @Composable
