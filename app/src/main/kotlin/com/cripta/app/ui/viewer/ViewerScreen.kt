@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Transform
@@ -199,13 +198,6 @@ fun ViewerScreen(
                         // (e.g. MPEG program streams that play but can't be seeked).
                         if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
                             IconButton(onClick = { confirmConvert = true }) { Icon(Icons.Filled.Transform, "Converti in MP4") }
-                        }
-                        // Rebuild the cover for media that have one (fixes grey/failed covers).
-                        if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) ||
-                            com.cripta.app.data.VaultRepository.isImage(file.mimeType)) {
-                            IconButton(onClick = { vm.regenerateCover(file) }) {
-                                Icon(Icons.Filled.Refresh, "Rigenera copertina")
-                            }
                         }
                         IconButton(onClick = { showInfo = true }) { Icon(Icons.Filled.Info, "Informazioni") }
                         IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }

@@ -69,7 +69,7 @@ class ThumbnailLoader @Inject constructor(
         val bmp = runCatching {
             when {
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
-                VaultRepository.isVideo(file.mimeType) -> videoThumb(file)
+                VaultRepository.isVideo(file.mimeType) -> videoFrame(file, null)
                 else -> null
             }
         }.getOrNull()
@@ -163,7 +163,7 @@ class ThumbnailLoader @Inject constructor(
     suspend fun regenerateVideoCover(file: FileEntity, cover: VideoCover): Bitmap? =
         withContext(Dispatchers.IO) {
             if (!VaultRepository.isVideo(file.mimeType)) return@withContext cache.get(file.id)
-            val bmp = withRetriever(file) { coverFrame(it, cover) }
+            val bmp = videoFrame(file, cover)
                 ?: return@withContext cache.get(file.id)
             cache.put(file.id, bmp)
             failed.remove(file.id)                 // a good cover now exists: allow reload paths
@@ -172,7 +172,32 @@ class ThumbnailLoader @Inject constructor(
             bmp
         }
 
-    private fun videoThumb(file: FileEntity): Bitmap? = withRetriever(file) { extractFrame(it) }
+    /**
+     * Extract a cover frame for a video. Tries the fast in-memory path (channel-backed data source,
+     * no plaintext on disk) first; if that yields nothing — some containers (MPEG PS/TS, certain
+     * MKV/HEVC) fail [MediaMetadataRetriever] over a custom MediaDataSource but decode fine from a
+     * real file — it falls back to decrypting to a temporary file (shredded afterwards, like the
+     * duplicate scanner and transcoder already do). [cover] null = automatic best frame.
+     */
+    private suspend fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
+        withRetriever(file) { if (cover == null) extractFrame(it) else coverFrame(it, cover) }
+            ?.let { return it }
+        // Fallback: real file path, which many stubborn containers need.
+        val tmp = repo.decryptToTempFile(file, "thumb")
+        return try {
+            val r = MediaMetadataRetriever()
+            try {
+                r.setDataSource(tmp.absolutePath)
+                if (cover == null) extractFrame(r) else coverFrame(r, cover)
+            } finally {
+                runCatching { r.release() }
+            }
+        } catch (e: Exception) {
+            null
+        } finally {
+            repo.shredTempFile(tmp)
+        }
+    }
 
     /** Open a [MediaMetadataRetriever] over the decrypted video and run [block], releasing after. */
     private inline fun <T> withRetriever(file: FileEntity, block: (MediaMetadataRetriever) -> T): T? {

@@ -121,14 +121,4 @@ class ViewerViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id)
         _message.value = "Conversione avviata"
     }
-
-    /**
-     * Rebuild this file's cover: drop the cached thumbnail and recompute from the source. The
-     * loader bumps its shared per-file version, so the grid/shelf covers (keyed on it) refresh too.
-     */
-    fun regenerateCover(file: FileEntity) = viewModelScope.launch {
-        val bmp = thumbs.regenerate(file)
-        _message.value = if (bmp != null) "Copertina rigenerata" else "Impossibile generare la copertina"
-        _refresh.value++
-    }
 }
