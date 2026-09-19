@@ -193,7 +193,25 @@ class ThumbnailLoader @Inject constructor(
      * real file — it falls back to decrypting to a temporary file (shredded afterwards, like the
      * duplicate scanner and transcoder already do). [cover] null = automatic best frame.
      */
-    private fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
+    private fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? =
+        videoFrameRaw(file, cover)?.let { centerSquare(it) }
+
+    /** Crop [src] to a centered square and scale it to [target]px, so covers are uniform 1:1 and
+     *  can't appear stretched regardless of the source frame's aspect ratio. */
+    private fun centerSquare(src: Bitmap): Bitmap {
+        val side = minOf(src.width, src.height)
+        if (side <= 0) return src
+        val x = (src.width - side) / 2
+        val y = (src.height - side) / 2
+        val cropped = if (src.width == side && src.height == side) src
+        else Bitmap.createBitmap(src, x, y, side, side)
+        val scaled = if (side <= target) cropped else Bitmap.createScaledBitmap(cropped, target, target, true)
+        if (cropped !== src) src.recycle()
+        if (scaled !== cropped) cropped.recycle()
+        return scaled
+    }
+
+    private fun videoFrameRaw(file: FileEntity, cover: VideoCover?): Bitmap? {
         // Passive cover load (cover == null): fast hardware thumbnail via the in-memory channel.
         if (cover == null) {
             withRetriever(file) { extractFrame(it) }?.let { return it }
