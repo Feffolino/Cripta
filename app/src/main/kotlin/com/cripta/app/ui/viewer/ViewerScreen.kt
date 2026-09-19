@@ -22,11 +22,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import android.view.View
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -185,6 +192,12 @@ fun ViewerScreen(
             TopAppBar(
                 title = { Text(currentFile?.originalName ?: "", maxLines = 1, softWrap = false) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
+                // In immersive mode the system bars are hidden (their inset is 0), but the physical
+                // camera cutout is still there. Pad the bar below/around it so the title and action
+                // icons never slide under the camera and the cutout strip stays empty.
+                windowInsets = WindowInsets.systemBars
+                    .union(WindowInsets.displayCutout)
+                    .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Black.copy(alpha = 0.55f),
                     titleContentColor = Color.White,
@@ -709,7 +722,9 @@ private fun VideoPlayer(
             visible = controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+            modifier = Modifier.align(Alignment.CenterEnd)
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Right))
+                .padding(end = 12.dp),
         ) {
             Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
                 IconButton(onClick = {
