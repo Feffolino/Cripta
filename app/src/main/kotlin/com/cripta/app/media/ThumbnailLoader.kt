@@ -123,6 +123,12 @@ class ThumbnailLoader @Inject constructor(
         runCatching { File(diskDir, id).delete() }
     }
 
+    /** Forget this session's failed-extraction ids so those covers are retried (pull-to-refresh). */
+    fun clearFailed() = failed.clear()
+
+    /** Bump a file's version so any cover keyed on it reloads (re-runs the full extraction chain). */
+    fun invalidate(id: String) = bumpVersion(id)
+
     /**
      * Force-rebuild a cover: drop both cache levels, recompute from the source, and bump the
      * file's [versions] entry so any on-screen thumbnail re-keyed on it reloads the fresh bitmap.
@@ -186,40 +192,18 @@ class ThumbnailLoader @Inject constructor(
      * real file — it falls back to decrypting to a temporary file (shredded afterwards, like the
      * duplicate scanner and transcoder already do). [cover] null = automatic best frame.
      */
-    private suspend fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
-        // Passive cover load (cover == null): try the fast in-memory channel first (no plaintext on
-        // disk). Explicit regeneration always uses the file path below, because the channel-backed
-        // MediaDataSource frequently can't seek — so every requested position returned the same
-        // frame and picks (Start/Middle/End/Random) appeared to do nothing.
+    private fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
+        // Passive cover load (cover == null): fast hardware thumbnail via the in-memory channel.
         if (cover == null) {
             withRetriever(file) { extractFrame(it) }?.let { return it }
         }
-        // Real file path: seeks reliably and also decodes containers the channel source can't.
-        // Decrypted to a temp file that is shredded afterwards (like the scanner/transcoder).
-        // Everything is guarded so a failure here can never escape (which would abort a batch
-        // regeneration before it reports its result).
-        return runCatching {
-            val tmp = repo.decryptToTempFile(file, "thumb")
-            try {
-                val viaMmr = run {
-                    val r = MediaMetadataRetriever()
-                    try {
-                        r.setDataSource(tmp.absolutePath)
-                        if (cover == null) extractFrame(r) else coverFrame(r, cover)
-                    } catch (e: Exception) {
-                        null
-                    } finally {
-                        runCatching { r.release() }
-                    }
-                }
-                // MediaMetadataRetriever can't thumbnail some codecs (e.g. 10-bit HEVC / AV1 in mp4)
-                // even though the device decodes them for playback. Fall back to a manual
-                // MediaCodec decode of one frame, which uses the same decoders as the player.
-                viaMmr ?: decodeFrameWithCodec(tmp.absolutePath, cover)
-            } finally {
-                repo.shredTempFile(tmp)
-            }
-        }.getOrNull()
+        // Everything else — explicit regeneration (any frame position) and passive loads that the
+        // MediaMetadataRetriever path couldn't handle — goes through MediaExtractor + MediaCodec
+        // over the SAME on-demand channel data source. This seeks correctly (unlike MMR over a
+        // custom MediaDataSource) and decodes codecs MMR refuses (10-bit HEVC / AV1), all WITHOUT
+        // decrypting the whole file to disk (the old temp-file path made large videos very slow and
+        // briefly wrote plaintext to disk).
+        return decodeFrameWithCodec(file, cover)
     }
 
     /**
@@ -228,11 +212,13 @@ class ThumbnailLoader @Inject constructor(
      * platform decoders directly (ByteBuffer/Image output, converted YUV_420_888 -> NV21 -> JPEG ->
      * Bitmap). Returns null on any failure.
      */
-    private fun decodeFrameWithCodec(path: String, cover: VideoCover?): Bitmap? {
+    private fun decodeFrameWithCodec(file: FileEntity, cover: VideoCover?): Bitmap? {
         val extractor = MediaExtractor()
+        var channel: SeekableByteChannel? = null
         var codec: MediaCodec? = null
         try {
-            extractor.setDataSource(path)
+            channel = repo.seekableChannel(file)
+            extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
             var track = -1
             var format: MediaFormat? = null
             for (i in 0 until extractor.trackCount) {
@@ -295,6 +281,7 @@ class ThumbnailLoader @Inject constructor(
             runCatching { codec?.stop() }
             runCatching { codec?.release() }
             runCatching { extractor.release() }
+            runCatching { channel?.close() }
         }
     }
 

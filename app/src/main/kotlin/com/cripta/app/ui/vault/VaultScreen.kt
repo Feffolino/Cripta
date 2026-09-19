@@ -84,8 +84,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -212,6 +215,8 @@ fun VaultScreen(
     var folderToStyle by remember { mutableStateOf<FolderEntity?>(null) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showRegenCover by remember { mutableStateOf(false) }
+    var refreshingCovers by remember { mutableStateOf(false) }
+    val refreshScope = rememberCoroutineScope()
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
@@ -379,7 +384,19 @@ fun VaultScreen(
                         onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
                         onReorder = { vm.reorder(it) },
                     )
-                else -> LazyVerticalGrid(
+                else -> PullToRefreshBox(
+                    isRefreshing = refreshingCovers,
+                    onRefresh = {
+                        refreshScope.launch {
+                            refreshingCovers = true
+                            vm.retryCovers(files)
+                            kotlinx.coroutines.delay(700)
+                            refreshingCovers = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyVerticalGrid(
                     columns = columns,
                     state = gridState,
                     modifier = Modifier.fillMaxSize()
@@ -469,6 +486,7 @@ fun VaultScreen(
                                 coverOverrides[fwt.file.id], coverVersions[fwt.file.id] ?: 0,
                                 { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
                         }
+                    }
                     }
                 }
             }
