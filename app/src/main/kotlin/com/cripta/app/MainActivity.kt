@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -67,6 +68,14 @@ class MainActivity : FragmentActivity() {
             }
             val invalidated by keyInvalidated.collectAsState()
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
+                // Paint the window background with the theme background so the transparent
+                // system-bar strips don't show up as a black band (notably in landscape).
+                val windowBg = androidx.compose.material3.MaterialTheme.colorScheme.background
+                androidx.compose.runtime.SideEffect {
+                    window.setBackgroundDrawable(
+                        android.graphics.drawable.ColorDrawable(windowBg.toArgb())
+                    )
+                }
                 AppRoot(
                     session = session,
                     onAuthenticate = { authenticate() },
