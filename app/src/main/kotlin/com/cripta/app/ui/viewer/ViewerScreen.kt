@@ -20,6 +20,7 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -527,12 +528,21 @@ private fun VideoPlayer(
     // Resize presets cycled by the aspect button. Covers all five ExoPlayer modes so the video
     // can be fit, filled on either axis, cropped-to-fill, or stretched — each with a label so the
     // active one is clear.
-    val modes = listOf(
-        AspectRatioFrameLayout.RESIZE_MODE_FIT to "Adatta",
-        AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH to "Larghezza piena",
-        AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT to "Altezza piena",
-        AspectRatioFrameLayout.RESIZE_MODE_ZOOM to "Riempi (ritaglia)",
-        AspectRatioFrameLayout.RESIZE_MODE_FILL to "Allarga (deforma)",
+    // (resizeMode, label, forcedAspect). A non-null aspect forces the video into that screen ratio
+    // (16:9 etc.) by sizing the player to it and letting FILL stretch the frame; null = native mode.
+    val modes = listOf<Triple<Int, String, Float?>>(
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Adatta", null),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "Larghezza piena", null),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT, "Altezza piena", null),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Riempi (ritaglia)", null),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Allarga (deforma)", null),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "16:9", 16f / 9f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "18:9", 18f / 9f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "19.5:9", 19.5f / 9f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "20:9", 20f / 9f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "21:9", 21f / 9f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "4:3", 4f / 3f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "1:1", 1f),
     )
     var modeIdx by remember { mutableIntStateOf(0) }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
@@ -561,6 +571,7 @@ private fun VideoPlayer(
     }
 
     Box(Modifier.fillMaxSize()) {
+        val forcedAspect = modes[modeIdx].third
         AndroidView(
             factory = {
                 PlayerView(it).apply {
@@ -579,7 +590,10 @@ private fun VideoPlayer(
                 }
             },
             update = { it.resizeMode = modes[modeIdx].first },
-            modifier = Modifier.fillMaxSize(),
+            // Native modes fill the screen; a forced ratio sizes the player to that aspect (centered)
+            // and FILL stretches the video into it.
+            modifier = if (forcedAspect != null) Modifier.align(Alignment.Center).aspectRatio(forcedAspect)
+                else Modifier.fillMaxSize(),
         )
 
         // Left / right edge zones: double-tap to jump 10s; single tap toggles the controls.
