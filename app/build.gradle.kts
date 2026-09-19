@@ -17,6 +17,9 @@ android {
         versionCode = ((project.findProperty("buildNumber") as String?)?.toIntOrNull()) ?: 1
         versionName = "0.1.0" + ((project.findProperty("buildLabel") as String?)?.let { "-$it" } ?: "")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // yt-dlp ships native Python payloads per ABI; limit to the two real-device architectures
+        // to keep the APK from ballooning with x86 emulator binaries.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     signingConfigs {
@@ -54,6 +57,8 @@ android {
     buildFeatures { compose = true }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // youtubedl-android must be able to extract its Python .so payloads at runtime.
+        jniLibs.useLegacyPackaging = true
     }
 }
 
@@ -103,6 +108,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.documentfile)
     implementation(libs.pdfbox.android)
+
+    implementation(libs.youtubedl.android)
+    implementation(libs.youtubedl.ffmpeg)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
