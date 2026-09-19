@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.Image
@@ -230,6 +231,10 @@ class ThumbnailLoader @Inject constructor(
             val fmt = format ?: return null
             if (track < 0) return null
             extractor.selectTrack(track)
+            // MediaMetadataRetriever auto-applies the container's rotation; a raw MediaCodec decode
+            // does not, so a portrait clip stored landscape + rotation=90 came out sideways and
+            // looked stretched in the square cell. Read it and rotate the decoded frame to match.
+            val rotation = if (fmt.containsKey(MediaFormat.KEY_ROTATION)) fmt.getInteger(MediaFormat.KEY_ROTATION) else 0
             val durUs = if (fmt.containsKey(MediaFormat.KEY_DURATION)) fmt.getLong(MediaFormat.KEY_DURATION) else 0L
             val seekUs = when (cover) {
                 null, VideoCover.AUTO, VideoCover.START -> 0L
@@ -268,7 +273,7 @@ class ThumbnailLoader @Inject constructor(
                         image?.let { val b = imageToBitmap(it); it.close(); b }
                     }.getOrNull()
                     codec.releaseOutputBuffer(outIdx, false)
-                    if (bmp != null) return scaleDown(bmp, target)
+                    if (bmp != null) return applyRotation(scaleDown(bmp, target), rotation)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return null
                 } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                     return null
@@ -283,6 +288,16 @@ class ThumbnailLoader @Inject constructor(
             runCatching { extractor.release() }
             runCatching { channel?.close() }
         }
+    }
+
+    /** Rotate [bmp] by [degrees] (0/90/180/270); returns the source unchanged when no rotation. */
+    private fun applyRotation(bmp: Bitmap, degrees: Int): Bitmap {
+        val d = ((degrees % 360) + 360) % 360
+        if (d == 0) return bmp
+        val m = Matrix().apply { postRotate(d.toFloat()) }
+        val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+        if (rotated !== bmp) bmp.recycle()
+        return rotated
     }
 
     /** Convert a decoder [Image] (YUV_420_888) to a Bitmap via NV21 + JPEG (robust across devices). */
