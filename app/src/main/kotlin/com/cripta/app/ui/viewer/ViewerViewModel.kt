@@ -103,13 +103,24 @@ class ViewerViewModel @Inject constructor(
     /** Set to the new MP4's id after a successful conversion; consumed by the UI. */
     private val _convertedId = MutableStateFlow<String?>(null)
     val convertedId: StateFlow<String?> = _convertedId
-    fun clearConverted() { _convertedId.value = null }
+    /** Id of the ORIGINAL file that was converted (so the keep/delete choice targets the right one,
+     *  even if the viewer has since swiped to another page). */
+    private val _convertedOriginalId = MutableStateFlow<String?>(null)
+    val convertedOriginalId: StateFlow<String?> = _convertedOriginalId
+    fun clearConverted() { _convertedId.value = null; _convertedOriginalId.value = null }
+
+    /** Delete the just-converted original (from the completion prompt). */
+    fun deleteConvertedOriginal() = viewModelScope.launch {
+        _convertedOriginalId.value?.let { repo.secureDelete(it); thumbs.evict(it) }
+        clearConverted()
+    }
 
     init {
         // Surface completions from the service (which may outlive a single viewer instance).
         viewModelScope.launch {
             repo.convertEvents.collect { event ->
                 _convertedId.value = event.newId
+                _convertedOriginalId.value = event.originalId
                 _refresh.value++
             }
         }

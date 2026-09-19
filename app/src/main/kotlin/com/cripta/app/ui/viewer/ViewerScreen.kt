@@ -150,7 +150,6 @@ fun ViewerScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
-    val converting by vm.converting.collectAsState()
     val convertedId by vm.convertedId.collectAsState()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -298,30 +297,19 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmConvert = false }) { Text("Annulla") } },
         )
     }
-    if (converting) {
-        AlertDialog(
-            onDismissRequest = { /* non-cancellable: conversion is running */ },
-            title = { Text("Conversione in corso") },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    Text("Ricodifica in MP4… può richiedere qualche minuto.",
-                        modifier = Modifier.padding(start = 16.dp))
-                }
-            },
-            confirmButton = {},
-        )
-    }
-    if (convertedId != null && file != null) {
+    // Conversion runs in the background (foreground service): progress and a Cancel action live in
+    // the notification, so no blocking dialog here — the user can lock the screen or leave the app.
+    if (convertedId != null) {
+        val originalId by vm.convertedOriginalId.collectAsState()
         AlertDialog(
             onDismissRequest = { vm.clearConverted() },
             title = { Text("Video convertito") },
             text = { Text("La copia MP4 scorribile è nella stessa cartella. Vuoi eliminare l'originale?") },
             confirmButton = {
                 TextButton(onClick = {
-                    val id = file.id
-                    vm.clearConverted()
-                    vm.delete(id) { onBack() }
+                    val wasCurrent = currentFile?.id == originalId
+                    vm.deleteConvertedOriginal()
+                    if (wasCurrent) onBack()
                 }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { vm.clearConverted() }) { Text("Mantieni") } },
