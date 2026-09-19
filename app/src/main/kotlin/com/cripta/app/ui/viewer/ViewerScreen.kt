@@ -76,6 +76,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.AudioAttributes
@@ -541,24 +542,17 @@ private fun VideoPlayer(
             playWhenReady = true
         }
     }
-    // Resize presets cycled by the aspect button. Covers all five ExoPlayer modes so the video
-    // can be fit, filled on either axis, cropped-to-fill, or stretched — each with a label so the
-    // active one is clear.
-    // (resizeMode, label, forcedAspect). A non-null aspect forces the video into that screen ratio
-    // (16:9 etc.) by sizing the player to it and letting FILL stretch the frame; null = native mode.
-    val modes = listOf<Triple<Int, String, Float?>>(
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Adatta", null),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "Larghezza piena", null),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT, "Altezza piena", null),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Riempi (ritaglia)", null),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Allarga (deforma)", null),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "16:9", 16f / 9f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "18:9", 18f / 9f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "19.5:9", 19.5f / 9f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "20:9", 20f / 9f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "21:9", 21f / 9f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "4:3", 4f / 3f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "1:1", 1f),
+    // Resize presets cycled by the aspect button: (resizeMode, label, videoScale). The PlayerView
+    // always stays full-screen so the CONTROLS never move; zoom is applied only to the video
+    // surface. "Altezza (taglio ridotto)" fills more than Adatta while cropping the sides less than
+    // Riempi/Altezza piena.
+    val modes = listOf<Triple<Int, String, Float>>(
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Adatta", 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Altezza (taglio ridotto)", 1.3f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT, "Altezza piena", 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "Larghezza piena", 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Riempi (ritaglia)", 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Allarga (deforma)", 1f),
     )
     var modeIdx by remember { mutableIntStateOf(0) }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
@@ -586,8 +580,7 @@ private fun VideoPlayer(
         playerViewRef?.let { if (it.isControllerFullyVisible) it.hideController() else it.showController() }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        val forcedAspect = modes[modeIdx].third
+    Box(Modifier.fillMaxSize().clipToBounds()) {
         AndroidView(
             factory = {
                 PlayerView(it).apply {
@@ -605,11 +598,14 @@ private fun VideoPlayer(
                     playerViewRef = this
                 }
             },
-            update = { it.resizeMode = modes[modeIdx].first },
-            // Native modes fill the screen; a forced ratio sizes the player to that aspect (centered)
-            // and FILL stretches the video into it.
-            modifier = if (forcedAspect != null) Modifier.align(Alignment.Center).aspectRatio(forcedAspect)
-                else Modifier.fillMaxSize(),
+            // The PlayerView always fills the screen so the CONTROLS never move; zoom is applied only
+            // to the video surface (scaleX/scaleY), which the surrounding Box clips.
+            update = { pv ->
+                pv.resizeMode = modes[modeIdx].first
+                val scale = modes[modeIdx].third
+                pv.videoSurfaceView?.let { it.scaleX = scale; it.scaleY = scale }
+            },
+            modifier = Modifier.fillMaxSize(),
         )
 
         // Left / right edge zones: double-tap to jump 10s; single tap toggles the controls.
