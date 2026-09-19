@@ -212,7 +212,7 @@ class VaultViewModel @Inject constructor(
         repo.createFolder(name, currentFolderId.value)    }
 
     fun deleteFolder(folder: FolderEntity) = viewModelScope.launch {
-        repo.deleteFolderRecursive(folder.id)    }
+        repo.deleteFolderRecursive(folder.id).forEach { thumbs.evict(it) }    }
 
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
         repo.renameFolder(folder, name)    }

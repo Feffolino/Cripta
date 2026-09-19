@@ -34,12 +34,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -176,7 +176,7 @@ fun ViewerScreen(
         ) {
             TopAppBar(
                 title = { Text(currentFile?.originalName ?: "", maxLines = 1, softWrap = false) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Indietro") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Black.copy(alpha = 0.55f),
                     titleContentColor = Color.White,
@@ -193,7 +193,7 @@ fun ViewerScreen(
                         IconButton(onClick = { vm.toggleFavorite(file) }) {
                             Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
                         }
-                        IconButton(onClick = { showTags = true }) { Icon(Icons.Filled.Label, "Etichette") }
+                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette") }
                         // Offer MP4 conversion for videos in containers that aren't already MP4
                         // (e.g. MPEG program streams that play but can't be seeked).
                         if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
@@ -478,7 +478,7 @@ private fun PdfView(bytes: ByteArray) {
     }
 }
 
-@OptIn(UnstableApi::class)
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun VideoPlayer(
     file: FileEntity,

@@ -27,7 +27,7 @@ sealed interface ViewerState {
     data class Error(val message: String) : ViewerState
 }
 
-@OptIn(UnstableApi::class)
+@androidx.annotation.OptIn(UnstableApi::class)
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,

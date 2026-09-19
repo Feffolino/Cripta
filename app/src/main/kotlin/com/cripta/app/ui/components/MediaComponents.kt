@@ -20,7 +20,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayCircle
@@ -84,7 +84,7 @@ fun typeIconFor(mime: String): ImageVector = when {
     VaultRepository.isVideo(mime) -> Icons.Filled.Movie
     mime == MIME_NOTE -> Icons.Filled.Description
     mime == "application/pdf" -> Icons.Filled.PictureAsPdf
-    else -> Icons.Filled.InsertDriveFile
+    else -> Icons.AutoMirrored.Filled.InsertDriveFile
 }
 
 /** Rounded thumbnail with type/favorite/selection overlays. Reusable across screens. */

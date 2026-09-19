@@ -43,7 +43,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -56,7 +56,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
@@ -65,7 +65,7 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -240,9 +240,9 @@ fun VaultScreen(
                 },
                 navigationIcon = {
                     if (inSelection) {
-                        IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Filled.ArrowBack, "Annulla") }
+                        IconButton(onClick = { selection = emptySet() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Annulla") }
                     } else if (path.isNotEmpty()) {
-                        IconButton(onClick = { vm.goUp() }) { Icon(Icons.Filled.ArrowBack, "Su") }
+                        IconButton(onClick = { vm.goUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Su") }
                     }
                 },
                 actions = {
@@ -280,7 +280,7 @@ fun VaultScreen(
                             }
                         }
                         IconButton(onClick = { vm.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID) }) {
-                            Icon(if (viewMode == ViewMode.GRID) Icons.Filled.ViewList else Icons.Filled.GridView, "Vista")
+                            Icon(if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView, "Vista")
                         }
                     }
                 },
@@ -682,7 +682,7 @@ private fun FileCell(
     val fallbackIcon = when {
         VaultRepository.isImage(mime) -> Icons.Filled.Image
         isVideo -> Icons.Filled.Movie
-        else -> Icons.Filled.InsertDriveFile
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
     val bmp by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id, coverVersion) { value = thumb() }
 
@@ -1107,7 +1107,7 @@ private fun ReorderCell(
     val fallbackIcon = when {
         VaultRepository.isImage(mime) -> Icons.Filled.Image
         isVideo -> Icons.Filled.Movie
-        else -> Icons.Filled.InsertDriveFile
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
     if (asList) {
         Surface(
