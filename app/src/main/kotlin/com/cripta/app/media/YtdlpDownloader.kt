@@ -26,13 +26,17 @@ class YtdlpDownloader @Inject constructor(
     @Volatile private var initialized = false
     private val initLock = Any()
 
-    /** Extract and initialize yt-dlp + FFmpeg once per process. Blocking; call on IO. */
+    /** Extract and initialize yt-dlp + FFmpeg once per process, then pull the latest yt-dlp so
+     *  extractors keep up with site changes (YouTube breaks the bundled binary within weeks).
+     *  Blocking; call on IO. The update is best-effort — offline just keeps the bundled version. */
     fun ensureInit() {
         if (initialized) return
         synchronized(initLock) {
             if (initialized) return
             YoutubeDL.getInstance().init(appContext)
             FFmpeg.getInstance().init(appContext)
+            runCatching { YoutubeDL.getInstance().updateYoutubeDL(appContext) }
+                .onFailure { android.util.Log.w("YtdlpDownloader", "yt-dlp self-update failed", it) }
             initialized = true
         }
     }
