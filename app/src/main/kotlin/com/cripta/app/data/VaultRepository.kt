@@ -62,6 +62,22 @@ class VaultRepository @Inject constructor(
     /** 0-100 progress of the current transcode; drives the in-app progress popup. */
     val conversionProgress: StateFlow<Int> = _conversionProgress
     fun setConversionProgress(pct: Int) { _conversionProgress.value = pct.coerceIn(0, 100) }
+
+    enum class DownloadPhase { IDLE, PREPARING, DOWNLOADING, DONE, FAILED, CANCELLED }
+
+    /** Live state of the in-app URL downloader; drives the progress UI on the Download screen. */
+    data class DownloadState(
+        val phase: DownloadPhase = DownloadPhase.IDLE,
+        val pct: Int = 0,
+        val etaSec: Long = 0,
+        val message: String? = null,
+    ) {
+        val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
+    }
+
+    private val _downloadState = MutableStateFlow(DownloadState())
+    val downloadState: StateFlow<DownloadState> = _downloadState
+    fun setDownloadState(s: DownloadState) { _downloadState.value = s }
     fun emitConvertResult(event: ConversionEvent) { _convertEvents.tryEmit(event) }
 
     /**

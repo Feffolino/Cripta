@@ -40,6 +40,7 @@ class ConversionService : Service() {
     @Inject lateinit var repo: VaultRepository
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var converter: VideoConverter
+    @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -51,8 +52,10 @@ class ConversionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val mode = intent?.getStringExtra(EX_MODE)
         if (mode == null) { stopSelf(startId); return START_NOT_STICKY }
-        // Cancel request from the notification action: abort the running transcode and leave.
+        // Cancel request from the notification action: abort the running transcode/download and leave.
         if (mode == MODE_CANCEL) {
+            cancelRequested = true
+            ytdlpProcessId?.let { ytdlp.cancel(it) }
             convertJob?.cancel()
             stopSelf(startId)
             return START_NOT_STICKY
@@ -108,6 +111,11 @@ class ConversionService : Service() {
     }
 
     @Volatile private var convertJob: kotlinx.coroutines.Job? = null
+    /** Id of the running yt-dlp process, so the Cancel action can kill the native process (a coroutine
+     *  cancel alone can't interrupt the blocking execute call). */
+    @Volatile private var ytdlpProcessId: String? = null
+    /** True when the user hit Cancel, so a resulting yt-dlp failure is reported as "annullato". */
+    @Volatile private var cancelRequested = false
 
     private inline fun run(label: String, total: Int, op: (Int) -> Unit) {
         if (total == 0) return
@@ -197,35 +205,61 @@ class ConversionService : Service() {
      * and a Cancel action live in the notification; the source link is stored on the new file.
      */
     private suspend fun downloadUrl(url: String, maxHeight: Int?) {
-        var out: java.io.File? = null
+        var produced: java.io.File? = null
+        val pid = java.util.UUID.randomUUID().toString()
+        cancelRequested = false
+        ytdlpProcessId = pid
         try {
             repo.setConversionProgress(0)
-            notify(build("Download in corso", 0, sub = "0%", cancelable = true))
-            out = repo.newTempFile("mp4")
-            withContext(Dispatchers.Main) {
-                converter.downloadToMp4(url, out!!, maxHeight) { pct ->
+            repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.PREPARING))
+            // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
+            // until real progress arrives.
+            notify(build("Preparazione…", 0, indeterminate = true, cancelable = true))
+            produced = withContext(Dispatchers.IO) {
+                ytdlp.download(url, maxHeight, pid) { pct, eta ->
                     repo.setConversionProgress(pct)
-                    notify(build("Download in corso", pct, sub = "$pct%", cancelable = true))
+                    repo.setDownloadState(
+                        VaultRepository.DownloadState(VaultRepository.DownloadPhase.DOWNLOADING, pct, eta)
+                    )
+                    val sub = if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%"
+                    notify(build("Download in corso", pct, sub = sub, cancelable = true))
                 }
             }
-            if (!isPlayableVideo(out!!, null)) {
+            if (!isPlayableVideo(produced, null)) {
+                repo.setDownloadState(
+                    VaultRepository.DownloadState(VaultRepository.DownloadPhase.FAILED, message = "Nessun video valido (link errato o DRM)")
+                )
                 notifyResult("Download fallito", "Nessun video valido (link errato o DRM)")
                 return
             }
-            val name = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
-                ?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: "download"
-            repo.importDownloadedMp4(out!!, name, folderId = null, sourceUrl = url)
+            val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
+            repo.importDownloadedMp4(produced, name, folderId = null, sourceUrl = url)
+            repo.setDownloadState(
+                VaultRepository.DownloadState(VaultRepository.DownloadPhase.DONE, 100, message = name)
+            )
             notifyResult("Download completato", name)
         } catch (e: kotlinx.coroutines.CancellationException) {
+            repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.CANCELLED))
             notifyResult("Download annullato", null)
             throw e
         } catch (e: Exception) {
-            // Surface the real cause instead of letting onStartCommand swallow it and tear the
-            // foreground notification down with no trace (the "flash then vanish" symptom).
-            android.util.Log.e("ConversionService", "download failed: $url", e)
-            notifyResult("Download fallito", e.message ?: e.javaClass.simpleName)
+            // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
+            // coroutine cancellation, so distinguish it here. Otherwise surface the real cause instead
+            // of letting onStartCommand swallow it (the old "flash then vanish" symptom).
+            if (cancelRequested) {
+                repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.CANCELLED))
+                notifyResult("Download annullato", null)
+            } else {
+                android.util.Log.e("ConversionService", "download failed: $url", e)
+                val msg = (e.message ?: e.javaClass.simpleName).take(200)
+                repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.FAILED, message = msg))
+                notifyResult("Download fallito", msg)
+            }
         } finally {
-            withContext(NonCancellable) { out?.let { repo.shredTempFile(it) } }
+            ytdlpProcessId = null
+            withContext(NonCancellable) {
+                produced?.let { repo.shredTempFile(it); it.parentFile?.deleteRecursively() }
+            }
         }
     }
 
