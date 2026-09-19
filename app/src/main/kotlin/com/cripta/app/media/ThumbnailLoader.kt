@@ -162,9 +162,9 @@ class ThumbnailLoader @Inject constructor(
      */
     suspend fun regenerateVideoCover(file: FileEntity, cover: VideoCover): Bitmap? =
         withContext(Dispatchers.IO) {
-            if (!VaultRepository.isVideo(file.mimeType)) return@withContext cache.get(file.id)
+            if (!VaultRepository.isVideo(file.mimeType)) return@withContext null
             val bmp = videoFrame(file, cover)
-                ?: return@withContext cache.get(file.id)
+                ?: return@withContext null
             cache.put(file.id, bmp)
             failed.remove(file.id)                 // a good cover now exists: allow reload paths
             runCatching { writeDisk(file.id, bmp) }
