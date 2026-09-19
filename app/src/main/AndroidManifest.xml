@@ -9,6 +9,7 @@
 
     <application
         android:name=".CriptaApp"
+        android:extractNativeLibs="true"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
