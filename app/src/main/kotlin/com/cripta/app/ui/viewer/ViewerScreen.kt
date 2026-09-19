@@ -59,6 +59,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -549,12 +550,15 @@ private fun VideoPlayer(
     val modes = listOf<Triple<Int, String, Float>>(
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Adatta", 1f),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Altezza (taglio ridotto)", 1.3f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT, "Altezza piena", 1f),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "Larghezza piena", 1f),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Riempi (ritaglia)", 1f),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Allarga (deforma)", 1f),
     )
     var modeIdx by remember { mutableIntStateOf(0) }
+    // Pinch-to-zoom factor applied on top of the current resize mode (1x..5x). Reset when the mode
+    // or the shown video changes.
+    var userZoom by remember { mutableFloatStateOf(1f) }
+    LaunchedEffect(modeIdx, file.id) { userZoom = 1f }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
@@ -580,7 +584,26 @@ private fun VideoPlayer(
         playerViewRef?.let { if (it.isControllerFullyVisible) it.hideController() else it.showController() }
     }
 
-    Box(Modifier.fillMaxSize().clipToBounds()) {
+    Box(
+        Modifier.fillMaxSize().clipToBounds()
+            // Pinch-to-zoom, but ONLY react to two or more fingers so a single-finger horizontal
+            // swipe still reaches the pager (change video) instead of being consumed here.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.count { it.pressed } >= 2) {
+                            val zoom = event.calculateZoom()
+                            if (zoom != 1f) {
+                                userZoom = (userZoom * zoom).coerceIn(1f, 5f)
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            },
+    ) {
         AndroidView(
             factory = {
                 PlayerView(it).apply {
@@ -602,7 +625,7 @@ private fun VideoPlayer(
             // to the video surface (scaleX/scaleY), which the surrounding Box clips.
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
-                val scale = modes[modeIdx].third
+                val scale = modes[modeIdx].third * userZoom
                 pv.videoSurfaceView?.let { it.scaleX = scale; it.scaleY = scale }
             },
             modifier = Modifier.fillMaxSize(),
