@@ -24,6 +24,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Skip the action's default install: it tries the obsolete 'tools' package,
+          # which no longer exists in the SDK repo and fails (exit 1). We install the
+          # packages we actually need in the next step.
+          packages: ''
 
       - name: Install SDK packages
         run: |
