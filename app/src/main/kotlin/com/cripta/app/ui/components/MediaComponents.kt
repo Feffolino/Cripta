@@ -109,19 +109,19 @@ fun MediaThumb(
             }
         }
         if (isVideo) {
-            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(32.dp).clip(CircleShape).background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(28.dp))
             }
         }
         if (file.isFavorite) {
             Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp).clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Star, "Preferito", tint = Color(0xFFFFC531), modifier = Modifier.size(16.dp))
+                .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(16.dp))
             }
         }
         if (selected) {
             Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp).clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
         }

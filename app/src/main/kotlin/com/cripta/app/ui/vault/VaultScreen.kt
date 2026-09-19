@@ -892,7 +892,7 @@ private fun ThumbBox(
         if (favorite) {
             Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(24.dp).clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Star, "Preferito", tint = Color(0xFFFFC531), modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(18.dp))
             }
         }
         if (selected) {
