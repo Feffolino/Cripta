@@ -85,6 +85,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -226,8 +227,6 @@ fun VaultScreen(
     var folderToStyle by remember { mutableStateOf<FolderEntity?>(null) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showRegenCover by remember { mutableStateOf(false) }
-    var refreshingCovers by remember { mutableStateOf(false) }
-    val refreshScope = rememberCoroutineScope()
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
@@ -258,9 +257,16 @@ fun VaultScreen(
 
     val inSelection = selection.isNotEmpty()
 
+    // Landscape: let the top bar scroll away (down hides, up reveals) to reclaim the short height.
+    // Portrait keeps it pinned.
+    val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior()
+        else TopAppBarDefaults.pinnedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
+                scrollBehavior = scrollBehavior,
                 title = {
                     if (inSelection) {
                         Text("${selection.size} selezionati", maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -413,18 +419,7 @@ fun VaultScreen(
                             onReorder = { vm.reorder(it) },
                         )
                     }
-                else -> PullToRefreshBox(
-                    isRefreshing = refreshingCovers,
-                    onRefresh = {
-                        refreshScope.launch {
-                            refreshingCovers = true
-                            vm.retryCovers(files)
-                            kotlinx.coroutines.delay(700)
-                            refreshingCovers = false
-                        }
-                    },
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                ) {
+                else -> Box(Modifier.weight(1f).fillMaxWidth()) {
                     LazyVerticalGrid(
                     columns = columns,
                     state = gridState,
