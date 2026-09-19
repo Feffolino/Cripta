@@ -180,9 +180,15 @@ class ThumbnailLoader @Inject constructor(
      * duplicate scanner and transcoder already do). [cover] null = automatic best frame.
      */
     private suspend fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
-        withRetriever(file) { if (cover == null) extractFrame(it) else coverFrame(it, cover) }
-            ?.let { return it }
-        // Fallback: real file path, which many stubborn containers need.
+        // Passive cover load (cover == null): try the fast in-memory channel first (no plaintext on
+        // disk). Explicit regeneration always uses the file path below, because the channel-backed
+        // MediaDataSource frequently can't seek — so every requested position returned the same
+        // frame and picks (Start/Middle/End/Random) appeared to do nothing.
+        if (cover == null) {
+            withRetriever(file) { extractFrame(it) }?.let { return it }
+        }
+        // Real file path: seeks reliably and also decodes containers the channel source can't.
+        // Decrypted to a temp file that is shredded afterwards (like the scanner/transcoder).
         val tmp = repo.decryptToTempFile(file, "thumb")
         return try {
             val r = MediaMetadataRetriever()
