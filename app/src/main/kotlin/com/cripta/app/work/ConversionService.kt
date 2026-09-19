@@ -151,15 +151,18 @@ class ConversionService : Service() {
             // look like a valid file and could lead the user to delete the (good) original and lose
             // the media. Verify the result is a playable video of plausible duration first.
             if (!isPlayableVideo(out!!, file.durationMs)) {
-                notify(build("Conversione fallita", 0, sub = "File originale intatto"))
+                notifyResult("Conversione fallita", "File originale intatto")
                 return
             }
             val newFile = repo.importConvertedMp4(file, out!!)
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
             postConvertDone(id)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notify(build("Conversione annullata", 0, sub = "File originale intatto"))
+            notifyResult("Conversione annullata", "File originale intatto")
             throw e
+        } catch (e: Exception) {
+            android.util.Log.e("ConversionService", "convert failed: $id", e)
+            notifyResult("Conversione fallita", e.message ?: e.javaClass.simpleName)
         } finally {
             withContext(NonCancellable) {
                 src?.let { repo.shredTempFile(it) }
@@ -206,16 +209,21 @@ class ConversionService : Service() {
                 }
             }
             if (!isPlayableVideo(out!!, null)) {
-                notify(build("Download fallito", 0, sub = "Nessun video valido"))
+                notifyResult("Download fallito", "Nessun video valido (link errato o DRM)")
                 return
             }
             val name = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
                 ?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: "download"
             repo.importDownloadedMp4(out!!, name, folderId = null, sourceUrl = url)
-            notify(build("Download completato", 100, sub = name))
+            notifyResult("Download completato", name)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notify(build("Download annullato", 0))
+            notifyResult("Download annullato", null)
             throw e
+        } catch (e: Exception) {
+            // Surface the real cause instead of letting onStartCommand swallow it and tear the
+            // foreground notification down with no trace (the "flash then vanish" symptom).
+            android.util.Log.e("ConversionService", "download failed: $url", e)
+            notifyResult("Download fallito", e.message ?: e.javaClass.simpleName)
         } finally {
             withContext(NonCancellable) { out?.let { repo.shredTempFile(it) } }
         }
@@ -275,6 +283,23 @@ class ConversionService : Service() {
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
     }
 
+    /**
+     * Post a terminal result (completed / failed / cancelled) as a dismissible notification under
+     * its own id. Must NOT reuse [NOTIF_ID]: that is the ongoing foreground notification, which
+     * onStartCommand's finally tears down with stopForeground(REMOVE) the instant the job ends —
+     * a result posted there just flashes and disappears.
+     */
+    private fun notifyResult(title: String, text: String?) {
+        val n = NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .build()
+        getSystemService(NotificationManager::class.java).notify(RESULT_NOTIF_ID, n)
+    }
+
     /** Dismissible completion notification offering to delete or keep the original video. */
     private fun postConvertDone(originalId: String) {
         fun pi(mode: String, req: Int) = android.app.PendingIntent.getService(
@@ -317,6 +342,7 @@ class ConversionService : Service() {
         private const val EX_URL = "url"
         private const val EX_HEIGHT = "height"
         private const val DONE_NOTIF_ID = 4212
+        private const val RESULT_NOTIF_ID = 4213
 
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
             val i = Intent(ctx, ConversionService::class.java).apply {
