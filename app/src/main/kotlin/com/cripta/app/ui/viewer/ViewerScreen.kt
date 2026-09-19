@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -174,6 +175,7 @@ fun ViewerScreen(
 
     var showTags by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
@@ -242,14 +244,34 @@ fun ViewerScreen(
                             Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
                         }
                         IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette") }
-                        // Offer MP4 conversion for videos in containers that aren't already MP4
-                        // (e.g. MPEG program streams that play but can't be seeked).
-                        if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
-                            IconButton(onClick = { confirmConvert = true }) { Icon(Icons.Filled.Transform, "Converti in MP4") }
+                        // The less-frequent / destructive actions live in an overflow menu so the bar
+                        // stays uncluttered and Delete is separated from the safe actions.
+                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
+                        androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Converti in MP4") },
+                                    leadingIcon = { Icon(Icons.Filled.Transform, null) },
+                                    onClick = { menuOpen = false; confirmConvert = true },
+                                )
+                            }
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("Informazioni") },
+                                leadingIcon = { Icon(Icons.Filled.Info, null) },
+                                onClick = { menuOpen = false; showInfo = true },
+                            )
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("Scarica in galleria") },
+                                leadingIcon = { Icon(Icons.Filled.Download, null) },
+                                onClick = { menuOpen = false; confirmDownload = true },
+                            )
+                            androidx.compose.material3.HorizontalDivider()
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = { menuOpen = false; confirmDelete = true },
+                            )
                         }
-                        IconButton(onClick = { showInfo = true }) { Icon(Icons.Filled.Info, "Informazioni") }
-                        IconButton(onClick = { confirmDownload = true }) { Icon(Icons.Filled.Download, "Scarica") }
-                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Elimina") }
                     }
                 },
             )

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,30 +28,58 @@ fun AuthScreen(onAuthenticate: () -> Unit) {
     LaunchedEffect(Unit) { onAuthenticate() }
 
     Scaffold { pad ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(pad).padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            MaterialTheme.colorScheme.background,
+                        ),
+                        radius = 900f,
+                    )
+                )
+                .padding(pad).padding(32.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                Icons.Filled.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                "Cripta",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(top = 16.dp),
-            )
-            Text(
-                "Vault cifrato. Autenticati per accedere.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
-            )
-            Button(onClick = onAuthenticate) { Text("Sblocca") }
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                androidx.compose.material3.Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    modifier = Modifier.size(112.dp),
+                ) {
+                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(52.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Text(
+                    "Cripta",
+                    style = MaterialTheme.typography.displayMedium,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+                Text(
+                    "Vault cifrato. Autenticati per accedere.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 28.dp),
+                )
+                Button(
+                    onClick = onAuthenticate,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 32.dp, vertical = 12.dp),
+                ) {
+                    Icon(Icons.Filled.Lock, null, modifier = Modifier.size(18.dp))
+                    Text("  Sblocca")
+                }
+            }
         }
     }
 }
