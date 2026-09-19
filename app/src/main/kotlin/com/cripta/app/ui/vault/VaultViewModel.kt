@@ -76,9 +76,17 @@ class VaultViewModel @Inject constructor(
         val ids = fileIds.toSet()
         val targets = files.value.map { it.file }
             .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
+        var applied = 0
         targets.forEach { f ->
             val bmp = thumbs.regenerateVideoCover(f, cover)
-            if (bmp != null) _coverOverrides.value = _coverOverrides.value + (f.id to bmp)
+            if (bmp != null) { _coverOverrides.value = _coverOverrides.value + (f.id to bmp); applied++ }
+        }
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+            android.widget.Toast.makeText(
+                appContext,
+                "DIAG copertine: sel=${ids.size} video=${targets.size} aggiornate=$applied",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
         }
     }
 
