@@ -52,6 +52,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 private val tabs = listOf(
     Tab("home", "Home", Icons.Filled.Home),
     Tab("folders", "Cartelle", Icons.Filled.Folder),
+    Tab("favorites", "Preferiti", Icons.Filled.Star),
     Tab("download", "Download", Icons.Filled.Download),
     Tab("settings", "Impostazioni", Icons.Filled.Settings),
 )
