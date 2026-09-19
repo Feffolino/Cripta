@@ -124,13 +124,21 @@ class ThumbnailLoader @Inject constructor(
     suspend fun regenerate(file: FileEntity): Bitmap? {
         evict(file.id)
         val bmp = load(file)
-        // Bump the file's version (most-recent last); cap the map so it can't grow without bound.
-        val next = LinkedHashMap(_versions.value)
-        val v = (next.remove(file.id) ?: 0) + 1
-        next[file.id] = v
-        while (next.size > 256) next.remove(next.keys.first())   // bound the version map
-        _versions.value = next
+        bumpVersion(file.id)
         return bmp
+    }
+
+    /**
+     * Bump a file's cover version so every surface keyed on [versions] (grid, Home/Favorites
+     * shelves, the viewer) reloads it. Most-recent last; the map is capped so it can't grow
+     * without bound.
+     */
+    private fun bumpVersion(id: String) {
+        val next = LinkedHashMap(_versions.value)
+        val v = (next.remove(id) ?: 0) + 1
+        next[id] = v
+        while (next.size > 256) next.remove(next.keys.first())
+        _versions.value = next
     }
 
     private fun imageThumb(file: FileEntity): Bitmap? {
@@ -158,7 +166,9 @@ class ThumbnailLoader @Inject constructor(
             val bmp = withRetriever(file) { coverFrame(it, cover) }
                 ?: return@withContext cache.get(file.id)
             cache.put(file.id, bmp)
+            failed.remove(file.id)                 // a good cover now exists: allow reload paths
             runCatching { writeDisk(file.id, bmp) }
+            bumpVersion(file.id)                    // refresh shelves/viewer keyed on versions
             bmp
         }
 

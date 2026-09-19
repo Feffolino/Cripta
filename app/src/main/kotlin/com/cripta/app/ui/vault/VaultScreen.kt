@@ -183,6 +183,7 @@ fun VaultScreen(
     val folderStats by vm.folderStats.collectAsState()
     val display by vm.display.collectAsState()
     val coverOverrides by vm.coverOverrides.collectAsState()
+    val coverVersions by vm.coverVersions.collectAsState()
     val ctx = LocalContext.current
 
     // Warm covers only while the grid is on screen; leaving for the viewer cancels this so the
@@ -373,6 +374,7 @@ fun VaultScreen(
                         selection = selection,
                         display = display,
                         coverOverrides = coverOverrides,
+                        coverVersions = coverVersions,
                         thumb = { vm.thumb(it) },
                         onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
                         onReorder = { vm.reorder(it) },
@@ -464,7 +466,8 @@ fun VaultScreen(
                         if (label.isNotEmpty()) header(label)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                             FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display, Modifier.animateItem(),
-                                coverOverrides[fwt.file.id], { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
+                                coverOverrides[fwt.file.id], coverVersions[fwt.file.id] ?: 0,
+                                { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
                         }
                     }
                 }
@@ -706,6 +709,7 @@ private fun FileCell(
     display: DisplayPrefs,
     modifier: Modifier,
     coverOverride: android.graphics.Bitmap?,
+    coverVersion: Int,
     thumb: suspend () -> android.graphics.Bitmap?,
     onOpen: () -> Unit,
     onToggleSelect: () -> Unit,
@@ -717,7 +721,7 @@ private fun FileCell(
         isVideo -> Icons.Filled.Movie
         else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
-    val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id) { value = thumb() }
+    val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id, coverVersion) { value = thumb() }
     // A freshly regenerated cover (override) wins over the cached/loaded one so it shows at once.
     val bmp = coverOverride ?: loaded
 
@@ -1047,6 +1051,7 @@ private fun ReorderableFileGrid(
     selection: Set<String>,
     display: DisplayPrefs,
     coverOverrides: Map<String, android.graphics.Bitmap>,
+    coverVersions: Map<String, Int>,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onOpen: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
@@ -1074,7 +1079,7 @@ private fun ReorderableFileGrid(
         ) {
             itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
                 val isDragged = fwt.file.id == draggedId
-                val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id) { value = thumb(fwt.file) }
+                val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
                 val bmp = coverOverrides[fwt.file.id] ?: loaded
                 ReorderCell(
                     item = fwt,
