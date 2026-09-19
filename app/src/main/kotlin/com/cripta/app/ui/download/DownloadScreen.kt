@@ -67,7 +67,10 @@ fun DownloadScreen(initialUrl: String? = null, vm: DownloadViewModel = hiltViewM
                 modifier = Modifier.fillMaxWidth(),
             )
             Text("Qualità", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 qualities.forEach { (h, label) ->
                     FilterChip(
                         selected = quality == h,
