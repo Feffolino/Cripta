@@ -102,12 +102,9 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             }
         },
     ) { pad ->
-        // Keep content out of the display cutout (the window draws into it so the strip shows the
-        // app background, not a black letterbox).
-        Row(
-            Modifier.padding(pad).fillMaxSize()
-                .windowInsetsPadding(WindowInsets.displayCutout),
-        ) {
+        // Content fills edge-to-edge (incl. the display cutout) so the system-bar / cutout strips
+        // show whatever screen is behind them — the app surface on the tabs, black in the player.
+        Row(Modifier.padding(pad).fillMaxSize()) {
             if (showBar && landscape) {
                 // Inset the rail from the left edge / status bar so its labels don't touch it.
                 NavigationRail(

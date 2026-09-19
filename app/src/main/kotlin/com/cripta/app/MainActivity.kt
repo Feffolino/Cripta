@@ -77,17 +77,11 @@ class MainActivity : FragmentActivity() {
             }
             val invalidated by keyInvalidated.collectAsState()
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
-                // Colour the status/navigation bars (and window background) with the theme
-                // background so the system-bar strips — including the camera-cutout band — match the
-                // app instead of showing black. Content still stays inside the bars (the Scaffolds
-                // apply the insets), so the usable area is unchanged; the bars are just tinted.
-                val windowBg = androidx.compose.material3.MaterialTheme.colorScheme.background
-                val lightBars = windowBg.luminance() > 0.5f
+                // System bars stay transparent so the content drawn behind them shows through and
+                // the bar / camera-cutout strips ADAPT to the current screen — the app surface on
+                // the library/settings, black in the video player — instead of a fixed colour.
+                val lightBars = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f
                 androidx.compose.runtime.SideEffect {
-                    val argb = windowBg.toArgb()
-                    window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(argb))
-                    window.statusBarColor = argb
-                    window.navigationBarColor = argb
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
                     controller.isAppearanceLightStatusBars = lightBars
                     controller.isAppearanceLightNavigationBars = lightBars
