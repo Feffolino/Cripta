@@ -54,6 +54,14 @@ class MainActivity : FragmentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
+        // Draw into the display cutout / status-bar region in every orientation, otherwise that
+        // strip shows as a black band in landscape.
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
         if (Build.VERSION.SDK_INT >= 29) {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
