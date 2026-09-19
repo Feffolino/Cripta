@@ -106,7 +106,12 @@ class ThumbnailLoader @Inject constructor(
     suspend fun regenerate(file: FileEntity): Bitmap? {
         evict(file.id)
         val bmp = load(file)
-        _versions.value = _versions.value + (file.id to ((_versions.value[file.id] ?: 0) + 1))
+        // Bump the file's version (most-recent last); cap the map so it can't grow without bound.
+        val next = LinkedHashMap(_versions.value)
+        val v = (next.remove(file.id) ?: 0) + 1
+        next[file.id] = v
+        while (next.size > 256) next.remove(next.keys.first())   // bound the version map
+        _versions.value = next
         return bmp
     }
 

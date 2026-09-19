@@ -114,8 +114,11 @@ class VaultRepository @Inject constructor(
         notifyChanged()
     }
 
-    /** Recursively crypto-shred every file in the folder subtree, then delete the folders. */
-    suspend fun deleteFolderRecursive(folderId: Long) = withContext(Dispatchers.IO) {
+    /**
+     * Recursively crypto-shred every file in the folder subtree, then delete the folders.
+     * Returns the ids of the deleted files so the caller can evict their cover cache.
+     */
+    suspend fun deleteFolderRecursive(folderId: Long): List<String> = withContext(Dispatchers.IO) {
         // Gather subtree by walking children via a snapshot query set.
         val toVisit = ArrayDeque<Long>().apply { add(folderId) }
         val subtree = mutableListOf<Long>()
@@ -125,14 +128,16 @@ class VaultRepository @Inject constructor(
             subtree.add(id)
             childrenMap[id]?.forEach { toVisit.add(it) }
         }
+        val deletedIds = mutableListOf<String>()
         for (fid in subtree) {
-            db.fileDao().idsInFolder(fid).forEach { secureDelete(it) }
+            db.fileDao().idsInFolder(fid).forEach { secureDelete(it); deletedIds.add(it) }
         }
         // delete deepest first
         for (fid in subtree.reversed()) {
             db.folderDao().byId(fid)?.let { db.folderDao().delete(it) }
         }
         notifyChanged()
+        deletedIds
     }
 
     private suspend fun snapshotChildren(): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {

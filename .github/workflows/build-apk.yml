@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # 22.04 ships a working Android SDK + sdkmanager; ubuntu-latest (24.04) broke
+    # android-actions/setup-android (the step that was failing after ~16s).
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
