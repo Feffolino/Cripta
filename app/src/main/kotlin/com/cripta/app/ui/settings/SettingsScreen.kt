@@ -68,8 +68,9 @@ fun SettingsScreen(
     val message by vm.message.collectAsState()
     val ctx = LocalContext.current
     val pkgInfo = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull() }
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     LaunchedEffect(message) {
-        message?.let { android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_LONG).show(); vm.clearMessage() }
+        message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
     }
 
     var pendingExport by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -99,6 +100,7 @@ fun SettingsScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
             )
         },
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -180,44 +182,41 @@ fun SettingsScreen(
             }
 
             item {
-                Text("Etichette", style = MaterialTheme.typography.titleMedium)
-            }
-            item {
-                TextButton(onClick = { addTag = true }) { Text("+ Aggiungi etichetta") }
-            }
-            item {
-                val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !custom,
-                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                        label = { Text("Alfabetico") })
-                    FilterChip(selected = custom,
-                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                        label = { Text("Personalizzato") })
-                }
-            }
-            if (tags.isEmpty()) {
-                item {
-                    Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                itemsIndexed(tags, key = { _, t -> t.id }) { index, tag ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f),
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (custom) {
-                            IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                Icon(Icons.Filled.KeyboardArrowUp, "Su")
-                            }
-                            IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                Section("Etichette", "Crea, riordina e rinomina le etichette dei file.") {
+                    val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !custom,
+                            onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
+                            label = { Text("Alfabetico") })
+                        FilterChip(selected = custom,
+                            onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
+                            label = { Text("Personalizzato") })
+                    }
+                    if (tags.isEmpty()) {
+                        Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        tags.forEachIndexed { index, tag ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f),
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (custom) {
+                                    IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
+                                        Icon(Icons.Filled.KeyboardArrowUp, "Su")
+                                    }
+                                    IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
+                                        Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                                    }
+                                }
+                                IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
+                                IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
                             }
                         }
-                        IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
-                        IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
                     }
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = { addTag = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Icon(Icons.Filled.Add, null); Text("  Aggiungi etichetta") }
                 }
             }
 
@@ -227,10 +226,10 @@ fun SettingsScreen(
                         "Ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
                             Text("Esporta")
                         }
-                        Button(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
                             Text("Ripristina")
                         }
                     }
@@ -243,14 +242,14 @@ fun SettingsScreen(
                         val (done, total) = dupProgress
                         Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
                             style = MaterialTheme.typography.bodyMedium)
-                        Button(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
                             Text("Annulla")
                         }
                     } else {
-                        Button(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
                             Text("Duplicati esatti")
                         }
-                        Button(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
                             Text("Media simili")
                         }
                         Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati (i video vengono decifrati temporaneamente per campionare i fotogrammi).",
@@ -457,13 +456,22 @@ private fun PassphraseDialog(title: String, onConfirm: (String) -> Unit, onDismi
 
 @Composable
 private fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        if (description != null) {
-            Text(description, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // Grouped, elevated card: gives the flat settings list real depth and binds each group's
+    // controls together (iOS-style grouped list / M3 setting card).
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (description != null) {
+                Text(description, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            content()
         }
-        content()
     }
 }
 
