@@ -239,21 +239,35 @@ fun ViewerScreen(
     }
     if (showInfo && file != null) {
         val infoTags by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
+        val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
+        val videoDiag by produceState(initialValue = "", file.id, isVid) {
+            value = if (isVid) vm.videoInfo(file) else ""
+        }
         AlertDialog(
             onDismissRequest = { showInfo = false },
             title = { Text("Informazioni") },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    InfoLine("Nome", file.originalName)
-                    InfoLine("Tipo", file.mimeType)
-                    InfoLine("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
-                    com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { InfoLine("Durata", it) }
-                    InfoLine(
-                        "Aggiunto",
-                        java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                            .format(java.util.Date(file.createdAt)),
-                    )
-                    if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        InfoLine("Nome", file.originalName)
+                        InfoLine("Tipo", file.mimeType)
+                        InfoLine("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
+                        com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { InfoLine("Durata", it) }
+                        InfoLine(
+                            "Aggiunto",
+                            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                                .format(java.util.Date(file.createdAt)),
+                        )
+                        if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
+                        if (isVid && videoDiag.isNotBlank()) {
+                            Text(
+                                "Dettagli tecnici",
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                            )
+                            Text(videoDiag, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Chiudi") } },

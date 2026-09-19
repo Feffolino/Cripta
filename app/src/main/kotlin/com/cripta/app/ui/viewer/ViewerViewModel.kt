@@ -62,6 +62,9 @@ class ViewerViewModel @Inject constructor(
     }.getOrElse { ViewerState.Error(it.message ?: "Errore") }
 
     suspend fun fileById(id: String): FileEntity? = repo.fileById(id)
+
+    /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */
+    suspend fun videoInfo(file: FileEntity): String = thumbs.videoDiagnostics(file)
     suspend fun tagNamesOf(id: String): List<String> = repo.tagNamesOf(id)
 
     fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)
