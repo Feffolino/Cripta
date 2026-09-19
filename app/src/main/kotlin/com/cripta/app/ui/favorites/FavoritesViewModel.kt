@@ -26,6 +26,9 @@ class FavoritesViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
+    /** Per-file cover version; the grid re-keys on it so covers refresh after a regeneration. */
+    val coverVersions: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = thumbs.versions
+
     val favorites: StateFlow<List<FileEntity>> =
         repo.changes.flatMapLatest { repo.allFiles() }
             .map { list -> list.map { it.file }.filter { it.isFavorite } }

@@ -94,8 +94,9 @@ fun MediaThumb(
     thumb: suspend (FileEntity) -> Bitmap?,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
+    coverVersion: Int = 0,
 ) {
-    val bmp by produceState<Bitmap?>(initialValue = null, file.id) { value = thumb(file) }
+    val bmp by produceState<Bitmap?>(initialValue = null, file.id, coverVersion) { value = thumb(file) }
     val icon = typeIconFor(file.mimeType)
     val isVideo = VaultRepository.isVideo(file.mimeType)
     val borderMod = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier
@@ -170,9 +171,10 @@ fun MediaThumbCell(
     thumb: suspend (FileEntity) -> Bitmap?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    coverVersion: Int = 0,
 ) {
     Column(modifier.clickable(onClick = onClick)) {
-        MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f))
+        MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
         Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,

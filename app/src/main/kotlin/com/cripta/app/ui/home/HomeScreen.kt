@@ -109,9 +109,11 @@ private fun ShelfHeader(title: String) {
 
 @Composable
 private fun MediaShelf(items: List<FileEntity>, onOpen: (String) -> Unit, vm: HomeViewModel) {
+    val coverVersions by vm.coverVersions.collectAsState()
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(items, key = { it.id }) { file ->
-            MediaThumbCell(file, vm::thumb, onClick = { onOpen(file.id) }, modifier = Modifier.width(120.dp))
+            MediaThumbCell(file, vm::thumb, onClick = { onOpen(file.id) }, modifier = Modifier.width(120.dp),
+                coverVersion = coverVersions[file.id] ?: 0)
         }
     }
 }

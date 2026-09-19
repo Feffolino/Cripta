@@ -56,6 +56,9 @@ class VaultViewModel @Inject constructor(
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
+    /** Per-file cover version; a cover re-keyed on its entry reloads after [ThumbnailLoader.regenerate]. */
+    val coverVersions: StateFlow<Map<String, Int>> = thumbs.versions
+
     /** Publish the current display order so the viewer can swipe through it. */
     fun publishViewerQueue() { viewerQueue.set(files.value.map { it.file.id }) }
 
@@ -268,7 +271,7 @@ class VaultViewModel @Inject constructor(
         fileIds.forEach { repo.moveFile(it, folderId) }    }
 
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
-        fileIds.forEach { repo.secureDelete(it) }    }
+        fileIds.forEach { repo.secureDelete(it); thumbs.evict(it) }    }
 
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
