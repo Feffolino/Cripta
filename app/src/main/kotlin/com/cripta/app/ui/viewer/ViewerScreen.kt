@@ -609,6 +609,9 @@ private fun VideoPlayer(
                 PlayerView(it).apply {
                     this.player = player
                     resizeMode = modes[modeIdx].first
+                    // Let the (zoomed) video surface overflow its content frame; the outer Box clips
+                    // it to the screen. Without this the zoom is cut at the original video rectangle.
+                    clipChildren = false
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     keepScreenOn = true            // don't let the screen dim during playback
@@ -626,7 +629,12 @@ private fun VideoPlayer(
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
                 val scale = modes[modeIdx].third * userZoom
-                pv.videoSurfaceView?.let { it.scaleX = scale; it.scaleY = scale }
+                pv.videoSurfaceView?.let { surface ->
+                    // Stop the content frame from clipping the scaled surface to the video rect.
+                    (surface.parent as? android.view.ViewGroup)?.clipChildren = false
+                    surface.scaleX = scale
+                    surface.scaleY = scale
+                }
             },
             modifier = Modifier.fillMaxSize(),
         )
