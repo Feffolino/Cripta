@@ -243,8 +243,52 @@ class ThumbnailLoader @Inject constructor(
      * real file — it falls back to decrypting to a temporary file (shredded afterwards, like the
      * duplicate scanner and transcoder already do). [cover] null = automatic best frame.
      */
-    private fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? =
-        videoFrameRaw(file, cover)?.let { centerSquare(it) }
+    private fun videoFrame(file: FileEntity, cover: VideoCover?): Bitmap? {
+        val raw = videoFrameRaw(file, cover) ?: return null
+        // Correct non-square pixels (SAR): some clips are coded e.g. 620x348 but meant to display
+        // 197x348. Decoders/MMR return the coded frame, which looks horizontally squished until the
+        // pixel aspect ratio is applied. Read at generation time only (covers are cached after).
+        return centerSquare(applyPixelAspect(raw, readSampleAspect(file)))
+    }
+
+    /** Sample aspect ratio (display pixel width / height) for the video, or 1.0 when square. */
+    private fun readSampleAspect(file: FileEntity): Double {
+        val extractor = MediaExtractor()
+        var channel: SeekableByteChannel? = null
+        try {
+            channel = repo.seekableChannel(file)
+            extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+            for (i in 0 until extractor.trackCount) {
+                val f = extractor.getTrackFormat(i)
+                if (f.getString(MediaFormat.KEY_MIME)?.startsWith("video/") != true) continue
+                fun key(k: String) = if (f.containsKey(k)) runCatching { f.getInteger(k) }.getOrNull() else null
+                val sarW = key("sar-width"); val sarH = key("sar-height")
+                if (sarW != null && sarH != null && sarW > 0 && sarH > 0) return sarW.toDouble() / sarH
+                val dispW = key("display-width"); val dispH = key("display-height")
+                val codW = key(MediaFormat.KEY_WIDTH); val codH = key(MediaFormat.KEY_HEIGHT)
+                if (dispW != null && dispH != null && codW != null && codH != null &&
+                    dispW > 0 && dispH > 0 && codW > 0 && codH > 0
+                ) return (dispW.toDouble() / dispH) / (codW.toDouble() / codH)
+                return 1.0
+            }
+            return 1.0
+        } catch (e: Exception) {
+            return 1.0
+        } finally {
+            runCatching { extractor.release() }
+            runCatching { channel?.close() }
+        }
+    }
+
+    /** Rescale a frame's width by [sar] so its pixels become square, fixing anamorphic videos. */
+    private fun applyPixelAspect(bmp: Bitmap, sar: Double): Bitmap {
+        if (sar <= 0.0 || kotlin.math.abs(sar - 1.0) < 0.02) return bmp
+        val newW = (bmp.width * sar).toInt().coerceAtLeast(1)
+        if (newW == bmp.width) return bmp
+        val out = Bitmap.createScaledBitmap(bmp, newW, bmp.height, true)
+        if (out !== bmp) bmp.recycle()
+        return out
+    }
 
     /** Crop [src] to a centered square and scale it to [target]px, so covers are uniform 1:1 and
      *  can't appear stretched regardless of the source frame's aspect ratio. */

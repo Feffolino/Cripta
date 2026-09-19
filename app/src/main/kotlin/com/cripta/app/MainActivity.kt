@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import android.widget.Toast
@@ -68,13 +69,20 @@ class MainActivity : FragmentActivity() {
             }
             val invalidated by keyInvalidated.collectAsState()
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
-                // Paint the window background with the theme background so the transparent
-                // system-bar strips don't show up as a black band (notably in landscape).
+                // Colour the status/navigation bars (and window background) with the theme
+                // background so the system-bar strips — including the camera-cutout band — match the
+                // app instead of showing black. Content still stays inside the bars (the Scaffolds
+                // apply the insets), so the usable area is unchanged; the bars are just tinted.
                 val windowBg = androidx.compose.material3.MaterialTheme.colorScheme.background
+                val lightBars = windowBg.luminance() > 0.5f
                 androidx.compose.runtime.SideEffect {
-                    window.setBackgroundDrawable(
-                        android.graphics.drawable.ColorDrawable(windowBg.toArgb())
-                    )
+                    val argb = windowBg.toArgb()
+                    window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(argb))
+                    window.statusBarColor = argb
+                    window.navigationBarColor = argb
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = lightBars
+                    controller.isAppearanceLightNavigationBars = lightBars
                 }
                 AppRoot(
                     session = session,
