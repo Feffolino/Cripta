@@ -59,6 +59,7 @@ fun HomeScreen(
     val favorites by vm.favorites.collectAsState()
     val folders by vm.folders.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
+    val loaded by vm.loaded.collectAsState()
 
     Scaffold(
         topBar = {
@@ -68,6 +69,12 @@ fun HomeScreen(
             )
         },
     ) { pad ->
+        if (!loaded) {
+            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
         if (recents.isEmpty() && folders.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
