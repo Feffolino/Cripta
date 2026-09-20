@@ -142,7 +142,13 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             NavHost(
                 navController = nav,
                 startDestination = "home",
-                modifier = Modifier.weight(1f),
+                // On the tab screens (not the fullscreen player), keep content clear of a side camera
+                // cutout in landscape. Zero in portrait / for the viewer.
+                modifier = Modifier.weight(1f).then(
+                    if (showBar) Modifier.windowInsetsPadding(
+                        WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal)
+                    ) else Modifier,
+                ),
                 // Subtle scale + fade so entering a screen feels like it comes forward, not a flat
                 // cut. Exit is quicker than enter so navigation feels responsive.
                 enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },

@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -308,6 +310,7 @@ fun ViewerScreen(
             onDismissRequest = { showInfo = false },
             title = { Text("Informazioni") },
             text = {
+                var showTech by remember { mutableStateOf(false) }
                 androidx.compose.foundation.text.selection.SelectionContainer {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         InfoLine("Nome", file.originalName)
@@ -322,12 +325,22 @@ fun ViewerScreen(
                         file.sourceUrl?.takeIf { it.isNotBlank() }?.let { CopyableInfoLine("Link", it) }
                         if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
                         if (isVid && videoDiag.isNotBlank()) {
-                            Text(
-                                "Dettagli tecnici",
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                            )
-                            Text(videoDiag, style = MaterialTheme.typography.bodySmall)
+                            Row(
+                                Modifier.fillMaxWidth().clickable { showTech = !showTech }
+                                    .padding(top = 12.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.weight(1f))
+                                Icon(
+                                    if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    if (showTech) "Comprimi" else "Espandi",
+                                )
+                            }
+                            if (showTech) {
+                                Text(videoDiag, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }
@@ -404,9 +417,10 @@ fun ViewerScreen(
 @Composable
 private fun InfoLine(label: String, value: String) {
     Column(Modifier.padding(vertical = 6.dp)) {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 2.dp))
+        Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+        Text(value, style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
     }
 }
 
@@ -424,8 +438,8 @@ private fun CopyableInfoLine(label: String, value: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface)
             Text(value, style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary, maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

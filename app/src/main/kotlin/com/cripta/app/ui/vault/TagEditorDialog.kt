@@ -158,7 +158,7 @@ fun TagEditorDialog(
             ) {
                 Text("Tocca per assegnare. Tieni premuto per modificare l'alias (emoji/acronimo).",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     known.forEach { name ->
                         val isSel = selected.any { it.equals(name, ignoreCase = true) }
                         TagChip(
@@ -242,7 +242,7 @@ fun BatchTagDialog(
                     Text("Nessuna etichetta. Creane una qui sotto.",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     known.forEach { name ->
                         val isSel = toAdd.any { it.equals(name, ignoreCase = true) }
                         TagChip(

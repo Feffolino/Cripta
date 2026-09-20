@@ -60,6 +60,8 @@ fun HomeScreen(
     val folders by vm.folders.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
     val loaded by vm.loaded.collectAsState()
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
         topBar = {
@@ -110,12 +112,17 @@ fun HomeScreen(
         ) {
             if (recents.isNotEmpty()) {
                 item { ShelfHeader("Recenti") }
-                // Featured hero: the most recent item as a large 16:9 card, breaking the uniform row.
-                item {
-                    HeroCard(recents.first(), vm, onClick = { openWith(vm, recents, recents.first().id, onOpenFile) })
-                }
-                if (recents.size > 1) {
-                    item { MediaShelf(recents.drop(1), onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
+                if (landscape) {
+                    // Landscape is short: a 16:9 hero would fill the screen, so use the normal row.
+                    item { MediaShelf(recents, onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
+                } else {
+                    // Featured hero: the most recent item as a large 16:9 card, breaking the uniform row.
+                    item {
+                        HeroCard(recents.first(), vm, onClick = { openWith(vm, recents, recents.first().id, onOpenFile) })
+                    }
+                    if (recents.size > 1) {
+                        item { MediaShelf(recents.drop(1), onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
+                    }
                 }
             }
             if (favorites.isNotEmpty()) {
