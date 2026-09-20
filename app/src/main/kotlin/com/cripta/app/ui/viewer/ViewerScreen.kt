@@ -154,9 +154,11 @@ fun ViewerScreen(
     val pagerState = rememberPagerState(initialPage = startIndex) { ids.size }
 
     var chromeVisible by remember { mutableStateOf(true) }
-    // Auto-hide the chrome a few seconds after it appears or the page changes.
-    LaunchedEffect(chromeVisible, pagerState.currentPage) {
-        if (chromeVisible) { delay(3500); chromeVisible = false }
+    var menuOpen by remember { mutableStateOf(false) }
+    // Auto-hide the chrome a few seconds after it appears or the page changes — but not while the
+    // actions overflow menu is open, otherwise the menu closes itself under the user.
+    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen) {
+        if (chromeVisible && !menuOpen) { delay(3500); chromeVisible = false }
     }
 
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
@@ -166,7 +168,6 @@ fun ViewerScreen(
 
     var showTags by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
