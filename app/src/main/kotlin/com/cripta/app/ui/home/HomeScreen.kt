@@ -48,6 +48,7 @@ import com.cripta.app.ui.components.formatBytes
 fun HomeScreen(
     onOpenFile: (String) -> Unit,
     onOpenFolders: () -> Unit,
+    onOpenFavorites: () -> Unit = {},
     onLock: () -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
@@ -102,7 +103,7 @@ fun HomeScreen(
                 item { MediaShelf(recents, onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
             }
             if (favorites.isNotEmpty()) {
-                item { ShelfHeader("Preferiti") }
+                item { ShelfHeader("Preferiti", onClick = onOpenFavorites) }
                 item { MediaShelf(favorites, onOpen = { openWith(vm, favorites, it, onOpenFile) }, vm) }
             }
             if (folders.isNotEmpty()) {
@@ -119,9 +120,23 @@ private fun openWith(vm: HomeViewModel, list: List<FileEntity>, id: String, onOp
 }
 
 @Composable
-private fun ShelfHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+private fun ShelfHeader(title: String, onClick: (() -> Unit)? = null) {
+    if (onClick == null) {
+        Text(title, style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+    } else {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text("Vedi tutti", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Icon(
+                androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                null, tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
 
 @Composable

@@ -30,12 +30,22 @@ import com.cripta.app.ui.components.MediaThumbCell
 @Composable
 fun FavoritesScreen(
     onOpenFile: (String) -> Unit,
+    onBack: () -> Unit = {},
     vm: FavoritesViewModel = hiltViewModel(),
 ) {
     val favorites by vm.favorites.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") }) }) { pad ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
+            navigationIcon = {
+                androidx.compose.material3.IconButton(onClick = onBack) {
+                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                }
+            },
+        )
+    }) { pad ->
         if (favorites.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
