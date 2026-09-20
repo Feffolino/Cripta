@@ -368,9 +368,11 @@ fun VaultScreen(
         },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).nestedScroll(fabScroll)) {
-            // Landscape has little vertical room: hide the inline search bar and reveal it on demand
-            // from the top-bar search icon, so the media grid gets the full height for navigation.
-            if (!landscape || searchExpanded) {
+            // Landscape has little vertical room: the inline search bar is revealed on demand from
+            // the top-bar search icon. Portrait: keep it, but hide it while scrolling down (same
+            // gesture that hides the FABs) so the grid gets full height, and bring it back on scroll up.
+            val showSearch = if (landscape) searchExpanded else (fabsVisible || searchExpanded)
+            AnimatedVisibility(visible = showSearch) {
                 OutlinedTextField(
                     value = filters.query,
                     onValueChange = vm::setQuery,
