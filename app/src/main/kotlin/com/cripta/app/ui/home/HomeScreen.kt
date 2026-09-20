@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -100,7 +101,13 @@ fun HomeScreen(
         ) {
             if (recents.isNotEmpty()) {
                 item { ShelfHeader("Recenti") }
-                item { MediaShelf(recents, onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
+                // Featured hero: the most recent item as a large 16:9 card, breaking the uniform row.
+                item {
+                    HeroCard(recents.first(), vm, onClick = { openWith(vm, recents, recents.first().id, onOpenFile) })
+                }
+                if (recents.size > 1) {
+                    item { MediaShelf(recents.drop(1), onOpen = { openWith(vm, recents, it, onOpenFile) }, vm) }
+                }
             }
             if (favorites.isNotEmpty()) {
                 item { ShelfHeader("Preferiti", onClick = onOpenFavorites) }
@@ -136,6 +143,22 @@ private fun ShelfHeader(title: String, onClick: (() -> Unit)? = null) {
                 null, tint = MaterialTheme.colorScheme.primary,
             )
         }
+    }
+}
+
+@Composable
+private fun HeroCard(file: FileEntity, vm: HomeViewModel, onClick: () -> Unit) {
+    val coverVersions by vm.coverVersions.collectAsState()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable(onClick = onClick)) {
+        MediaThumb(
+            file, vm::thumb,
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            coverVersion = coverVersions[file.id] ?: 0,
+        )
+        Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+        Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

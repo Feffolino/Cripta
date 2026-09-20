@@ -3,6 +3,8 @@ package com.cripta.app.ui
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -128,10 +130,12 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 navController = nav,
                 startDestination = "home",
                 modifier = Modifier.weight(1f),
-                enterTransition = { fadeIn(tween(120)) },
-                exitTransition = { fadeOut(tween(80)) },
-                popEnterTransition = { fadeIn(tween(120)) },
-                popExitTransition = { fadeOut(tween(80)) },
+                // Subtle scale + fade so entering a screen feels like it comes forward, not a flat
+                // cut. Exit is quicker than enter so navigation feels responsive.
+                enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },
+                exitTransition = { fadeOut(tween(140)) + scaleOut(targetScale = 1.02f, animationSpec = tween(140)) },
+                popEnterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 1.02f, animationSpec = tween(220)) },
+                popExitTransition = { fadeOut(tween(140)) + scaleOut(targetScale = 0.97f, animationSpec = tween(140)) },
             ) {
             composable("home") {
                 HomeScreen(
