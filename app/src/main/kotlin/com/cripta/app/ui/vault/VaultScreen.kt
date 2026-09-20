@@ -1128,7 +1128,7 @@ private fun FilterSortSheet(
                 Text("Tag", style = MaterialTheme.typography.titleSmall)
                 Text("Tocca per includere, ancora per escludere (nascondi), ancora per azzerare.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     tags.forEach { tag ->
                         val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
                         val state = when {
