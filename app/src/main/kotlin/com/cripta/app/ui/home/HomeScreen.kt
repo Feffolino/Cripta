@@ -43,6 +43,7 @@ import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.ui.components.MediaThumb
 import com.cripta.app.ui.components.MediaThumbCell
+import com.cripta.app.ui.components.fileMeta
 import com.cripta.app.ui.components.formatBytes
 
 @OptIn(ExperimentalMaterial3Api::class)
