@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,7 +42,7 @@ fun FavoritesScreen(
             title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
             navigationIcon = {
                 androidx.compose.material3.IconButton(onClick = onBack) {
-                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
                 }
             },
         )
