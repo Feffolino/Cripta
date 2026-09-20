@@ -30,11 +30,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import android.view.View
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -111,22 +112,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 
-/** Physical display-cutout insets in dp, read straight from the view's root insets. This bypasses
- *  Compose inset consumption (the outer Scaffold) and immersive-mode quirks, so the value is correct
- *  even while the system bars are hidden — unlike WindowInsets.displayCutout inside the nav graph. */
-private data class CutoutDp(val start: Dp, val top: Dp, val end: Dp)
-
-@Composable
-private fun rememberCutout(): CutoutDp {
-    val view = LocalView.current
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    return remember(config, view) {
-        val i = ViewCompat.getRootWindowInsets(view)
-            ?.getInsets(WindowInsetsCompat.Type.displayCutout())
-        with(density) { CutoutDp((i?.left ?: 0).toDp(), (i?.top ?: 0).toDp(), (i?.right ?: 0).toDp()) }
-    }
-}
+/** Live top+horizontal inset that keeps the player chrome clear of the camera cutout. Uses Compose's
+ *  WindowInsets so it updates on rotation (a one-shot read went stale and left the bar floating in one
+ *  orientation and clipped in the other). Applied as the TopAppBar's own windowInsets so the bar's
+ *  background still reaches the top edge while its title/icons sit below the camera. */
+private val chromeInsets: WindowInsets
+    @Composable get() = WindowInsets.displayCutout.union(WindowInsets.statusBars)
+        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,7 +129,6 @@ fun ViewerScreen(
     vm: ViewerViewModel = hiltViewModel(),
 ) {
     val ctx = LocalContext.current
-    val cutout = rememberCutout()
     val message by vm.message.collectAsState()
     val refresh by vm.refresh.collectAsState()
     val allTags by vm.allTags.collectAsState()
@@ -206,10 +197,7 @@ fun ViewerScreen(
             // did nothing. Fading keeps each button in place and hittable the whole time it shows.
             enter = fadeIn(),
             exit = fadeOut(),
-            // Pad the whole bar out of the camera cutout (top in portrait, side in landscape) so the
-            // title and action icons never slide under the camera and the cutout strip stays empty.
-            modifier = Modifier.align(Alignment.TopCenter)
-                .padding(start = cutout.start, top = cutout.top, end = cutout.end),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
             TopAppBar(
                 title = {
@@ -225,8 +213,8 @@ fun ViewerScreen(
                     }
                 },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
-                // The cutout padding is applied on the wrapper above; the bar itself adds none.
-                windowInsets = WindowInsets(0, 0, 0, 0),
+                // Bar background reaches the top edge; only its content is inset below the camera.
+                windowInsets = chromeInsets,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Black.copy(alpha = 0.55f),
                     titleContentColor = Color.White,
@@ -576,7 +564,6 @@ private fun VideoPlayer(
     onControlsVisibilityChanged: (Boolean) -> Unit,
 ) {
     val ctx = LocalContext.current
-    val cutout = rememberCutout()
     var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
         ExoPlayer.Builder(ctx).build().apply {
@@ -773,7 +760,8 @@ private fun VideoPlayer(
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.CenterEnd)
-                .padding(end = cutout.end + 12.dp),
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Right))
+                .padding(end = 12.dp),
         ) {
             Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
                 IconButton(onClick = {
