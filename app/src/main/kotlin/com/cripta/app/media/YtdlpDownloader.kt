@@ -4,6 +4,7 @@ import android.content.Context
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import com.yausername.youtubedl_android.mapper.VideoFormat
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -90,29 +91,53 @@ class YtdlpDownloader @Inject constructor(
 
     /**
      * Estimated output size in bytes for a download of [info] capped at [maxHeight] (null = best).
-     * Picks the best video format within the cap, adds a separate audio track when the video is
-     * muxed video-only, and falls back to bitrate*duration when a format has no declared size.
-     * Returns null when nothing can be estimated.
+     * Picks the best video format within the cap and adds a separate audio track when the video is
+     * muxed video-only.
+     *
+     * Sites frequently report a concrete size (or bitrate) for only *some* renditions — often just
+     * the top one, which is what "Auto" selects — so every other quality used to come back with no
+     * estimate. When a rendition carries no size/bitrate of its own we therefore approximate it by
+     * scaling a rendition that does by pixel area (bitrate roughly tracks height², width being
+     * proportional for a fixed aspect ratio). That way each quality shows an estimate whenever any
+     * rendition does, while exact per-rendition sizes are still used when the site provides them.
+     * Returns null only when nothing at all can be estimated.
      */
     fun estimateBytes(info: VideoInfo, maxHeight: Int?): Long? {
         val formats = info.formats ?: return null
         val dur = info.duration.toLong().coerceAtLeast(0)
-        fun sizeOf(f: com.yausername.youtubedl_android.mapper.VideoFormat, kbps: Int): Long = when {
+        fun declaredSize(f: VideoFormat): Long = when {
             f.fileSize > 0 -> f.fileSize
             f.fileSizeApproximate > 0 -> f.fileSizeApproximate
-            kbps > 0 && dur > 0 -> kbps.toLong() * 1000L / 8L * dur
             else -> 0L
         }
+        fun bytesFromKbps(kbps: Int): Long = if (kbps > 0 && dur > 0) kbps.toLong() * 1000L / 8L * dur else 0L
+        // A rendition's own size: declared first, then derived from its total bitrate. Null = unknown.
+        fun ownBytes(f: VideoFormat): Long? =
+            declaredSize(f).takeIf { it > 0 } ?: bytesFromKbps(f.tbr).takeIf { it > 0 }
+
         val videos = formats.filter { it.vcodec != null && it.vcodec != "none" && it.height > 0 }
         if (videos.isEmpty()) return null
         val video = if (maxHeight == null) videos.maxByOrNull { it.height }
         else (videos.filter { it.height <= maxHeight }.maxByOrNull { it.height } ?: videos.minByOrNull { it.height })
         video ?: return null
-        var total = sizeOf(video, video.tbr)
+
+        // Video part: the rendition's own size when known, otherwise scale the highest rendition that
+        // does have a size down (or up) to this one's pixel area.
+        val videoBytes = ownBytes(video) ?: run {
+            val ref = videos.mapNotNull { f -> ownBytes(f)?.let { f to it } }.maxByOrNull { it.first.height }
+                ?: return null
+            val h = video.height.toDouble()
+            val rh = ref.first.height.toDouble()
+            (ref.second * (h * h) / (rh * rh)).toLong()
+        }
+
+        var total = videoBytes
         // Video-only stream: add the best audio track that will be muxed in.
         if (video.acodec == null || video.acodec == "none") {
             val audios = formats.filter { (it.vcodec == null || it.vcodec == "none") && it.acodec != null && it.acodec != "none" }
-            audios.maxByOrNull { it.abr }?.let { total += sizeOf(it, if (it.abr > 0) it.abr else it.tbr) }
+            audios.maxByOrNull { it.abr }?.let { a ->
+                total += (declaredSize(a).takeIf { it > 0 } ?: bytesFromKbps(if (a.abr > 0) a.abr else a.tbr))
+            }
         }
         return total.takeIf { it > 0 }
     }
