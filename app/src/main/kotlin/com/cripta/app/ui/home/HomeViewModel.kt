@@ -49,6 +49,12 @@ class HomeViewModel @Inject constructor(
         repo.changes.flatMapLatest { repo.folders(null) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** False until the vault content has been read once, so the empty state doesn't flash on the
+     *  first frame after unlock while the DB queries are still loading. */
+    val loaded: StateFlow<Boolean> =
+        repo.changes.flatMapLatest { combine(repo.allFiles(), repo.folders(null)) { _, _ -> true } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val folderStats: StateFlow<Map<Long, FolderStat>> =
         repo.changes.flatMapLatest { combine(repo.allFolders(), repo.folderAggregates()) { folders, aggs ->
             computeFolderStats(folders, aggs)
