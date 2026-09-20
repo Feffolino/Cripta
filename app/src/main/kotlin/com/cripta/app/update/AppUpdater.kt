@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -30,23 +31,33 @@ class AppUpdater @Inject constructor() {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCode
         }.getOrDefault(0)
 
-    /** Fetch the latest public release, or null on error / no APK asset. */
+    /** Fetch the newest public release with an APK, or null. Uses the releases LIST (not
+     *  /releases/latest, which skips prereleases — our CI publishes prereleases) and picks the
+     *  highest build number that has an .apk asset. */
     suspend fun latest(): Release? = withContext(Dispatchers.IO) {
         runCatching {
-            val json = httpGet("https://api.github.com/repos/$REPO/releases/latest")
-            val obj = JSONObject(json)
-            val tag = obj.optString("tag_name")               // e.g. v0.1.0-b123
-            val build = tag.substringAfterLast("-b", "").toIntOrNull() ?: return@runCatching null
-            val assets = obj.optJSONArray("assets") ?: return@runCatching null
-            var apkUrl: String? = null; var size = 0L
-            for (i in 0 until assets.length()) {
-                val a = assets.getJSONObject(i)
-                if (a.optString("name").endsWith(".apk")) {
-                    apkUrl = a.optString("browser_download_url"); size = a.optLong("size"); break
+            val json = httpGet("https://api.github.com/repos/$REPO/releases?per_page=20")
+            val arr = JSONArray(json)
+            var best: Release? = null
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                if (obj.optBoolean("draft")) continue
+                val tag = obj.optString("tag_name")            // e.g. v0.1.0-b123
+                val build = tag.substringAfterLast("-b", "").toIntOrNull() ?: continue
+                val assets = obj.optJSONArray("assets") ?: continue
+                var apkUrl: String? = null; var size = 0L
+                for (j in 0 until assets.length()) {
+                    val a = assets.getJSONObject(j)
+                    if (a.optString("name").endsWith(".apk")) {
+                        apkUrl = a.optString("browser_download_url"); size = a.optLong("size"); break
+                    }
+                }
+                val url = apkUrl ?: continue
+                if (best == null || build > best!!.buildNumber) {
+                    best = Release(tag.removePrefix("v"), build, url, size)
                 }
             }
-            val url = apkUrl ?: return@runCatching null
-            Release(tag.removePrefix("v"), build, url, size)
+            best
         }.getOrNull()
     }
 

@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
@@ -143,10 +144,12 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 navController = nav,
                 startDestination = "home",
                 // On the tab screens (not the fullscreen player), keep content clear of a side camera
-                // cutout in landscape. Zero in portrait / for the viewer.
+                // cutout in landscape. Use asPaddingValues()+padding so the RAW cutout inset is
+                // applied even if an ancestor Scaffold consumed the inset (windowInsetsPadding
+                // returned 0 in that case). Zero in portrait / for the viewer.
                 modifier = Modifier.weight(1f).then(
-                    if (showBar) Modifier.windowInsetsPadding(
-                        WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal)
+                    if (showBar) Modifier.padding(
+                        WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal).asPaddingValues()
                     ) else Modifier,
                 ),
                 // Subtle scale + fade so entering a screen feels like it comes forward, not a flat
