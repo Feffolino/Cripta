@@ -71,7 +71,24 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showBar = currentRoute in tabs.map { it.route }
-    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val configuration = LocalConfiguration.current
+    val landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Physical camera-cutout insets read straight from the view — Compose's WindowInsets.displayCutout
+    // reports 0 here (the cutout sits within the status-bar area), so tab content would still run
+    // under the side camera. These give the real left/right camera width and adapt on rotation.
+    val view = androidx.compose.ui.platform.LocalView.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val cutoutStart: androidx.compose.ui.unit.Dp
+    val cutoutEnd: androidx.compose.ui.unit.Dp
+    run {
+        val i = androidx.core.view.ViewCompat.getRootWindowInsets(view)
+            ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout())
+        with(density) {
+            cutoutStart = (i?.left ?: 0).toDp()
+            cutoutEnd = (i?.right ?: 0).toDp()
+        }
+    }
 
     fun onTab(route: String) {
         nav.navigate(route) {
@@ -121,7 +138,13 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
     ) { pad ->
         // Content fills edge-to-edge (incl. the display cutout) so the system-bar / cutout strips
         // show whatever screen is behind them — the app surface on the tabs, black in the player.
-        Row(Modifier.padding(pad).fillMaxSize()) {
+        Row(
+            Modifier.padding(pad).fillMaxSize().then(
+                // Keep the tab screens (rail + content) clear of the side camera cutout; the
+                // fullscreen player handles its own insets.
+                if (showBar) Modifier.padding(start = cutoutStart, end = cutoutEnd) else Modifier,
+            ),
+        ) {
             if (showBar && landscape) {
                 // Inset the rail from the left edge / status bar so its labels don't touch it.
                 NavigationRail(
@@ -143,15 +166,7 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             NavHost(
                 navController = nav,
                 startDestination = "home",
-                // On the tab screens (not the fullscreen player), keep content clear of a side camera
-                // cutout in landscape. Use asPaddingValues()+padding so the RAW cutout inset is
-                // applied even if an ancestor Scaffold consumed the inset (windowInsetsPadding
-                // returned 0 in that case). Zero in portrait / for the viewer.
-                modifier = Modifier.weight(1f).then(
-                    if (showBar) Modifier.padding(
-                        WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal).asPaddingValues()
-                    ) else Modifier,
-                ),
+                modifier = Modifier.weight(1f),
                 // Subtle scale + fade so entering a screen feels like it comes forward, not a flat
                 // cut. Exit is quicker than enter so navigation feels responsive.
                 enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },
