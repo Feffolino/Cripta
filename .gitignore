@@ -1,0 +1,18 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+.cripta-toolchain/
+
+# Windows/MSYS crash dumps
+*.stackdump
+
+# Signing secrets — never commit (keeps the repo public-safe)
+keystore.properties
+*.keystore
+*.jks
