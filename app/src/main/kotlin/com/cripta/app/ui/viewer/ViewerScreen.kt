@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -317,7 +319,7 @@ fun ViewerScreen(
                             java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                                 .format(java.util.Date(file.createdAt)),
                         )
-                        file.sourceUrl?.takeIf { it.isNotBlank() }?.let { InfoLine("Link", it) }
+                        file.sourceUrl?.takeIf { it.isNotBlank() }?.let { CopyableInfoLine("Link", it) }
                         if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
                         if (isVid && videoDiag.isNotBlank()) {
                             Text(
@@ -401,9 +403,36 @@ fun ViewerScreen(
 
 @Composable
 private fun InfoLine(label: String, value: String) {
-    Column(Modifier.padding(vertical = 3.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+    Column(Modifier.padding(vertical = 6.dp)) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Info row whose value is copied to the clipboard on a single tap (used for the source link). */
+@Composable
+private fun CopyableInfoLine(label: String, value: String) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val ctx = LocalContext.current
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp)
+            .clickable {
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(value))
+                android.widget.Toast.makeText(ctx, "Link copiato", android.widget.Toast.LENGTH_SHORT).show()
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary, maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp))
+        }
+        Icon(Icons.Filled.ContentCopy, "Copia link", tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp).size(20.dp))
     }
 }
 
