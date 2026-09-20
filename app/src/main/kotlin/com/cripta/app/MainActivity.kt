@@ -47,21 +47,23 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
-     * If a link (text/plain) was shared into Cripta, start an in-app download of it. Requires the
-     * vault to be unlocked (the download is encrypted into it); otherwise ask the user to unlock.
+     * If a link (text/plain) was shared into Cripta, hand it to the Download screen (AppRoot
+     * navigates there) so the user can pick a resolution instead of downloading blind.
+     *
+     * The link is remembered even when the vault is locked: the actual download needs an unlocked
+     * vault (it is encrypted into it), but there is no reason to throw the link away and make the
+     * user re-share it. The lock screen prompts for unlock and, once in, AppRoot opens the Download
+     * screen with this link already filled in.
      */
     private fun handleSharedLink(intent: android.content.Intent?) {
         if (intent?.action != android.content.Intent.ACTION_SEND) return
         val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)?.trim() ?: return
         val url = text.split(Regex("\\s+")).firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
             ?: return
-        if (session.locked.value) {
-            Toast.makeText(this, "Sblocca Cripta e ricondividi il link per scaricarlo", Toast.LENGTH_LONG).show()
-            return
-        }
-        // Hand the link to the Download screen (AppRoot navigates there) so the user can pick a
-        // resolution, instead of starting the download blind.
         sharedLinks.set(url)
+        if (session.locked.value) {
+            Toast.makeText(this, "Sblocca Cripta per preparare il download", Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
