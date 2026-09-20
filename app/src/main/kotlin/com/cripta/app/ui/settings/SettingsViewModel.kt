@@ -22,7 +22,41 @@ class SettingsViewModel @Inject constructor(
     private val session: SessionManager,
     private val repo: VaultRepository,
     private val scanner: DuplicateScanner,
+    private val updater: com.cripta.app.update.AppUpdater,
 ) : ViewModel() {
+
+    sealed interface UpdateState {
+        data object Idle : UpdateState
+        data object Checking : UpdateState
+        data object UpToDate : UpdateState
+        data class Available(val release: com.cripta.app.update.AppUpdater.Release) : UpdateState
+        data class Downloading(val pct: Int) : UpdateState
+        data class Error(val message: String) : UpdateState
+    }
+
+    private val _update = kotlinx.coroutines.flow.MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val update: StateFlow<UpdateState> = _update
+
+    fun checkUpdate(ctx: android.content.Context) = viewModelScope.launch {
+        _update.value = UpdateState.Checking
+        val rel = updater.latest()
+        _update.value = when {
+            rel == null -> UpdateState.Error("Nessuna release trovata")
+            rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
+            else -> UpdateState.Available(rel)
+        }
+    }
+
+    fun downloadUpdate(ctx: android.content.Context) {
+        val rel = (_update.value as? UpdateState.Available)?.release ?: return
+        viewModelScope.launch {
+            _update.value = UpdateState.Downloading(0)
+            runCatching {
+                val apk = updater.download(ctx, rel.apkUrl) { pct -> _update.value = UpdateState.Downloading(pct) }
+                updater.install(ctx, apk)
+            }.onFailure { _update.value = UpdateState.Error(it.message ?: "Download fallito") }
+        }
+    }
 
     val settings: StateFlow<Settings> =
         store.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Settings())

@@ -90,3 +90,22 @@ jobs:
           files: ${{ steps.apk.outputs.path }}
           draft: false
           prerelease: true
+
+      # Mirror the release to the PUBLIC releases repo so the in-app updater (which reads a public
+      # API, no token) can find it. Skipped until the RELEASES_TOKEN secret is added.
+      - name: Publish to public releases repo
+        env:
+          REL: ${{ secrets.RELEASES_TOKEN }}
+        if: ${{ env.REL != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: Feffolino/Cripta-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Cripta ${{ steps.ver.outputs.version }}
+          body: |
+            Cripta ${{ steps.ver.outputs.version }} (build #${{ github.run_number }}, ${{ steps.ver.outputs.sha }}).
+            APK allegato. Aggiornamento in-app.
+          files: ${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: true
