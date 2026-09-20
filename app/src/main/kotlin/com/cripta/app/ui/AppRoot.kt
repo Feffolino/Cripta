@@ -80,6 +80,19 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
         }
     }
 
+    // A link shared into the app: jump to the Download tab so the user can pick a resolution.
+    // (DownloadScreen reads and clears the pending link.)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sharedLinks = androidx.compose.runtime.remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            ctx.applicationContext, com.cripta.app.CriptaApp.AppEntryPoint::class.java,
+        ).sharedLinkStore()
+    }
+    val pendingLink by sharedLinks.pending.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(pendingLink) {
+        if (pendingLink != null && currentRoute != "download") onTab("download")
+    }
+
     Scaffold(
         // Each child screen has its own Scaffold that applies the status-bar inset to its
         // TopAppBar. If this outer Scaffold also consumed the top inset into `pad`, the content

@@ -4,6 +4,7 @@ import android.content.Context
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import com.yausername.youtubedl_android.mapper.VideoInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.UUID
@@ -79,5 +80,40 @@ class YtdlpDownloader @Inject constructor(
     /** Abort a running download started with [processId]. Safe to call after it has finished. */
     fun cancel(processId: String) {
         runCatching { YoutubeDL.getInstance().destroyProcessById(processId) }
+    }
+
+    /** Probe [url] for its available formats (no download). Blocking; call on IO. */
+    fun info(url: String): VideoInfo {
+        ensureInit()
+        return YoutubeDL.getInstance().getInfo(YoutubeDLRequest(url).apply { addOption("--no-playlist") })
+    }
+
+    /**
+     * Estimated output size in bytes for a download of [info] capped at [maxHeight] (null = best).
+     * Picks the best video format within the cap, adds a separate audio track when the video is
+     * muxed video-only, and falls back to bitrate*duration when a format has no declared size.
+     * Returns null when nothing can be estimated.
+     */
+    fun estimateBytes(info: VideoInfo, maxHeight: Int?): Long? {
+        val formats = info.formats ?: return null
+        val dur = info.duration.toLong().coerceAtLeast(0)
+        fun sizeOf(f: com.yausername.youtubedl_android.mapper.VideoFormat, kbps: Int): Long = when {
+            f.fileSize > 0 -> f.fileSize
+            f.fileSizeApproximate > 0 -> f.fileSizeApproximate
+            kbps > 0 && dur > 0 -> kbps.toLong() * 1000L / 8L * dur
+            else -> 0L
+        }
+        val videos = formats.filter { it.vcodec != null && it.vcodec != "none" && it.height > 0 }
+        if (videos.isEmpty()) return null
+        val video = if (maxHeight == null) videos.maxByOrNull { it.height }
+        else (videos.filter { it.height <= maxHeight }.maxByOrNull { it.height } ?: videos.minByOrNull { it.height })
+        video ?: return null
+        var total = sizeOf(video, video.tbr)
+        // Video-only stream: add the best audio track that will be muxed in.
+        if (video.acodec == null || video.acodec == "none") {
+            val audios = formats.filter { (it.vcodec == null || it.vcodec == "none") && it.acodec != null && it.acodec != "none" }
+            audios.maxByOrNull { it.abr }?.let { total += sizeOf(it, if (it.abr > 0) it.abr else it.tbr) }
+        }
+        return total.takeIf { it > 0 }
     }
 }

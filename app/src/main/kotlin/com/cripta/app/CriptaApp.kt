@@ -19,6 +19,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
     @InstallIn(SingletonComponent::class)
     interface AppEntryPoint {
         fun vaultRepository(): VaultRepository
+        fun sharedLinkStore(): com.cripta.app.data.SharedLinkStore
     }
 
     override fun onCreate() {

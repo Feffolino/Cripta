@@ -33,6 +33,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var keyVault: KeyVault
     @Inject lateinit var session: SessionManager
     @Inject lateinit var settings: SettingsStore
+    @Inject lateinit var sharedLinks: com.cripta.app.data.SharedLinkStore
 
     private var backgroundedAt = 0L
 
@@ -58,8 +59,9 @@ class MainActivity : FragmentActivity() {
             Toast.makeText(this, "Sblocca Cripta e ricondividi il link per scaricarlo", Toast.LENGTH_LONG).show()
             return
         }
-        com.cripta.app.work.ConversionService.startDownloadUrl(this, url, null)
-        Toast.makeText(this, "Download avviato", Toast.LENGTH_SHORT).show()
+        // Hand the link to the Download screen (AppRoot navigates there) so the user can pick a
+        // resolution, instead of starting the download blind.
+        sharedLinks.set(url)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
