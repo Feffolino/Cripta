@@ -21,6 +21,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
@@ -81,6 +84,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -233,6 +237,8 @@ fun VaultScreen(
     // Collapse the secondary FABs while scrolling down so they don't cover the content
     // (they otherwise block dragging items in Manual reorder); bring them back on scroll up.
     var fabsVisible by remember { mutableStateOf(true) }
+    var fabExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(fabsVisible) { if (!fabsVisible) fabExpanded = false }
     val fabScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -344,24 +350,36 @@ fun VaultScreen(
                         enter = fadeIn() + slideInVertically { it / 2 },
                         exit = fadeOut() + slideOutVertically { it / 2 },
                     ) {
+                        // Single expanding FAB (speed-dial): collapsed it shows just "+"; tapping it
+                        // reveals the labelled actions, so the screen isn't crowded by a stack of FABs.
                         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (display.showNoteFab) {
-                                SmallFloatingActionButton(onClick = onNewNote) {
-                                    Icon(Icons.Filled.Description, "Nuova nota")
+                            AnimatedVisibility(visible = fabExpanded) {
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    MiniFabAction("Cifra e importa", Icons.Filled.EnhancedEncryption) {
+                                        fabExpanded = false; importLauncher.launch(arrayOf("*/*"))
+                                    }
+                                    MiniFabAction("Nuova cartella", Icons.Filled.CreateNewFolder) {
+                                        fabExpanded = false; showNewFolder = true
+                                    }
+                                    if (display.showNoteFab) {
+                                        MiniFabAction("Nuova nota", Icons.Filled.Description) {
+                                            fabExpanded = false; onNewNote()
+                                        }
+                                    }
+                                    if (display.showRandomFab) {
+                                        MiniFabAction("Casuale", Icons.Filled.Casino) {
+                                            fabExpanded = false; vm.randomShuffleOpen(onOpenFile)
+                                        }
+                                    }
                                 }
                             }
-                            SmallFloatingActionButton(onClick = { showNewFolder = true }) {
-                                Icon(Icons.Filled.CreateNewFolder, "Nuova cartella")
-                            }
-                            if (display.showRandomFab) {
-                                SmallFloatingActionButton(onClick = { vm.randomShuffleOpen(onOpenFile) }) {
-                                    Icon(Icons.Filled.Casino, "Casuale")
-                                }
+                            FloatingActionButton(onClick = { fabExpanded = !fabExpanded }) {
+                                Icon(
+                                    if (fabExpanded) Icons.Filled.Close else Icons.Filled.Add,
+                                    if (fabExpanded) "Chiudi" else "Azioni",
+                                )
                             }
                         }
-                    }
-                    FloatingActionButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
-                        Icon(Icons.Filled.EnhancedEncryption, "Cifra e importa")
                     }
                 }
             }
@@ -405,7 +423,8 @@ fun VaultScreen(
 
             when {
                 folders.isEmpty() && files.isEmpty() ->
-                    EmptyState(filters.active, Modifier.weight(1f).fillMaxWidth())
+                    EmptyState(filters.active, Modifier.weight(1f).fillMaxWidth(),
+                        onImport = { importLauncher.launch(arrayOf("*/*")) })
                 manual ->
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         ReorderableFileGrid(
@@ -1441,12 +1460,43 @@ private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean =
 }
 
 @Composable
-private fun EmptyState(filtering: Boolean, modifier: Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
+private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> Unit = {}) {
+    Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = CircleShape,
+            modifier = Modifier.size(96.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    if (filtering) Icons.Filled.Search else Icons.Filled.EnhancedEncryption,
+                    null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp),
+                )
+            }
+        }
         Text(if (filtering) "Nessun risultato" else "Vault vuoto",
-            style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-        Text(if (filtering) "Prova a cambiare i filtri." else "Tocca + per importare file.",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
+        Text(if (filtering) "Prova a cambiare i filtri." else "Importa foto e video: restano cifrati e visibili solo qui.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        if (!filtering) {
+            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
+                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(18.dp))
+                Text("  Importa file")
+            }
+        }
+    }
+}
+
+/** One labelled row in the speed-dial: a name pill next to a small FAB. */
+@Composable
+private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+            Text(label, style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+        }
+        SmallFloatingActionButton(onClick = onClick) { Icon(icon, label) }
     }
 }
