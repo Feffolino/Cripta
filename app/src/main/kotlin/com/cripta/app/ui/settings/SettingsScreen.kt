@@ -69,6 +69,7 @@ fun SettingsScreen(
     val ctx = LocalContext.current
     val pkgInfo = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull() }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    val updateState by vm.update.collectAsState()
     LaunchedEffect(message) {
         message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
     }
@@ -286,6 +287,39 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+
+            item {
+                Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
+                    when (val u = updateState) {
+                        SettingsViewModel.UpdateState.Checking ->
+                            Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium)
+                        SettingsViewModel.UpdateState.UpToDate ->
+                            Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
+                        is SettingsViewModel.UpdateState.Available -> {
+                            Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
+                                style = MaterialTheme.typography.bodyMedium)
+                            Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Scarica e installa")
+                            }
+                        }
+                        is SettingsViewModel.UpdateState.Downloading -> {
+                            Text("Download: ${u.pct}%", style = MaterialTheme.typography.bodyMedium)
+                            androidx.compose.material3.LinearProgressIndicator(
+                                progress = { u.pct / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        }
+                        is SettingsViewModel.UpdateState.Error ->
+                            Text("Errore: ${u.message}", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error)
+                        SettingsViewModel.UpdateState.Idle -> {}
+                    }
+                    if (updateState !is SettingsViewModel.UpdateState.Downloading) {
+                        androidx.compose.material3.FilledTonalButton(
+                            onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Controlla aggiornamenti")
+                        }
+                    }
                 }
             }
 
