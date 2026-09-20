@@ -9,13 +9,10 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
@@ -30,9 +27,14 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavHostController
@@ -76,18 +78,33 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
 
     // Physical camera-cutout insets read straight from the view — Compose's WindowInsets.displayCutout
     // reports 0 here (the cutout sits within the status-bar area), so tab content would still run
-    // under the side camera. These give the real left/right camera width and adapt on rotation.
+    // under the side camera. These give the real left/right camera width.
+    //
+    // The activity handles rotation itself (configChanges), so it is never recreated: the cutout has
+    // to be re-read every time the layout changes, not once at composition. Reading it a single time
+    // (the old approach) captured whatever orientation happened to be current and never updated — so
+    // a landscape left/right inset leaked into portrait as a stray side margin, and a portrait 0
+    // leaked into landscape leaving content under the side camera. An OnGlobalLayoutListener re-reads
+    // the settled insets after each layout pass (including the one that follows an inset dispatch),
+    // so the value tracks the real orientation instead of a stale one. We observe via the view tree
+    // rather than setOnApplyWindowInsetsListener so we don't replace Compose's own insets listener.
     val view = androidx.compose.ui.platform.LocalView.current
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val cutoutStart: androidx.compose.ui.unit.Dp
-    val cutoutEnd: androidx.compose.ui.unit.Dp
-    run {
-        val i = androidx.core.view.ViewCompat.getRootWindowInsets(view)
-            ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout())
-        with(density) {
-            cutoutStart = (i?.left ?: 0).toDp()
-            cutoutEnd = (i?.right ?: 0).toDp()
+    var cutoutStart by remember { mutableStateOf(0.dp) }
+    var cutoutEnd by remember { mutableStateOf(0.dp) }
+    DisposableEffect(view) {
+        fun readCutout() {
+            val i = androidx.core.view.ViewCompat.getRootWindowInsets(view)
+                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout())
+            with(density) {
+                cutoutStart = (i?.left ?: 0).toDp()
+                cutoutEnd = (i?.right ?: 0).toDp()
+            }
         }
+        readCutout()
+        val listener = android.view.ViewTreeObserver.OnGlobalLayoutListener { readCutout() }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
     }
 
     fun onTab(route: String) {
