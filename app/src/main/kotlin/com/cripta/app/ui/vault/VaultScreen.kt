@@ -747,7 +747,6 @@ fun VaultScreen(
                                 onMore = { folderMenu = folder },
                                 modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
                                     .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
-                                    .clip(MaterialTheme.shapes.medium)
                                     .combinedClickable(
                                         onClickLabel = "Apri",
                                         onLongClickLabel = "Azioni cartella",
@@ -1051,7 +1050,14 @@ fun VaultScreen(
         ModalBottomSheet(onDismissRequest = { folderMenu = null }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp).semantics { heading() })
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp).semantics { heading() })
+                // Folder details (moved here from under the card): contents, space, creation date.
+                Text(
+                    folderSubtitle(folderStats[folder.id]) + " · creata il " +
+                        java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(folder.createdAt)),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 10.dp),
+                )
                 SheetAction(Icons.Filled.Folder, "Apri") {
                     folderMenu = null
                     if (inSelection) notify("Esci dalla selezione per aprire una cartella") else vm.enterFolder(folder)
@@ -2936,7 +2942,7 @@ fun CoverThumb(
 
 /**
  * Folder card with a 2x2 mosaic of its newest covers, a band in the folder's colour, its emoji or
- * glyph, and a file-count badge — recognisable at a glance instead of a flat grey tile.
+ * glyph — recognisable at a glance instead of a flat grey tile. Count and size are in its menu.
  */
 @Composable
 fun FolderMosaic(
@@ -2945,6 +2951,7 @@ fun FolderMosaic(
     previews: List<com.cripta.app.data.db.FileEntity>,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     modifier: Modifier = Modifier,
+    /** Item count under the name (the size is in the folder's menu). */
     showInfo: Boolean = true,
     /** Drop target under a drag-selection: the card lifts, tints and gets a primary border. */
     highlighted: Boolean = false,
@@ -2995,16 +3002,15 @@ fun FolderMosaic(
             }
             // Colour band on top.
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(4.dp).background(accent))
-            if (stat != null && stat.count > 0) {
-                Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) { CornerBadge("${stat.count}") }
-            }
         }
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(top = 6.dp, start = 2.dp))
                 if (showInfo) {
-                    Text(folderSubtitle(stat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                    val n = stat?.count ?: 0
+                    Text(if (n == 0) "Vuota" else if (n == 1) "1 elemento" else "$n elementi",
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
                 }
             }
