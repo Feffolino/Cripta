@@ -801,6 +801,36 @@ fun SettingsScreen(
                                 InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                             }
                         }
+                        item {
+                            var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
+                            Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
+                                val c = crash
+                                if (c == null) {
+                                    Text("Nessun arresto registrato.", style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                } else {
+                                    val lines = c.lines()
+                                    Text(lines.firstOrNull().orEmpty(), style = MaterialTheme.typography.labelLarge)
+                                    Text(lines.firstOrNull { it.contains("Exception") || it.contains("Error") }.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall, maxLines = 4,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        androidx.compose.material3.FilledTonalButton(
+                                            onClick = {
+                                                clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
+                                                android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                        ) { Text("Copia dettagli") }
+                                        androidx.compose.material3.OutlinedButton(
+                                            onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
+                                            modifier = Modifier.weight(1f),
+                                        ) { Text("Elimina") }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

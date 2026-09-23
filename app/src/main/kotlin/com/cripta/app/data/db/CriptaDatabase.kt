@@ -15,6 +15,12 @@ import net.sqlcipher.database.SupportFactory
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
+    /** The SQLCipher key given to the open helper; wiped by [wipeKey] once the database is closed. */
+    @Volatile private var key: ByteArray? = null
+
+    /** Zero the key copy held for the open helper. Call only after [close], once nothing reopens it. */
+    fun wipeKey() { key?.fill(0); key = null }
+
     abstract fun folderDao(): FolderDao
     abstract fun fileDao(): FileDao
     abstract fun tagDao(): TagDao
@@ -121,12 +127,19 @@ abstract class CriptaDatabase : RoomDatabase() {
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
             SQLiteDatabase.loadLibs(context)
-            val factory = SupportFactory(passphrase.copyOf())
+            // clearPassphrase = false: SQLCipher's default zeroes the key right after the first
+            // open, and Room reopens the helper when a query Flow is cancelled around a close
+            // (InvalidationTracker.removeObserver): with a zeroed key that reopen failed with "file is
+            // not a database" on Room's thread and crashed the app when it came back from the lock.
+            // The key is wiped by SessionManager after the (delayed) close instead.
+            val key = passphrase.copyOf()
+            val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
+                .also { it.key = key }
         }
     }
 }
