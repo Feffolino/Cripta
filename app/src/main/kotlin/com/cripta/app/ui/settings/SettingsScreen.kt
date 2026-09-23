@@ -821,7 +821,7 @@ private fun MainSettingsList(
     onLock: () -> Unit,
 ) {
     // Two columns of page rows in landscape; search, group labels and the lock button span the width.
-    val full: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope) -> androidx.compose.foundation.lazy.grid.GridItemSpan =
+    val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> androidx.compose.foundation.lazy.grid.GridItemSpan =
         { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns),
