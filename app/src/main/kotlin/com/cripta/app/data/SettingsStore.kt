@@ -21,6 +21,8 @@ enum class ViewMode { GRID, LIST }
 enum class SortKey { DATE, NAME, SIZE, MANUAL }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class TagSortMode { ALPHA, CUSTOM }
+/** How a tag is written on a cover badge: its short alias/emoji, or its full name. */
+enum class CoverTagStyle { ALIAS, NAME }
 
 /** Which optional details are drawn on file/folder cells. */
 data class DisplayPrefs(
@@ -30,6 +32,14 @@ data class DisplayPrefs(
     val showFolderInfo: Boolean = true,   // per-folder item count + size
     val showNoteFab: Boolean = true,      // the "new note" floating button
     val showRandomFab: Boolean = true,    // the "random" floating button
+    /** Rows of tag badges on a grid cover: 0 = automatic (by cover size), else 1..3. */
+    val coverTagRows: Int = 0,
+    val coverTagStyle: CoverTagStyle = CoverTagStyle.ALIAS,
+    /** Give each tag its own stable colour (same tag = same colour everywhere). */
+    val tagColors: Boolean = true,
+    val showDurationBadge: Boolean = true, // "3:12" on video covers
+    val showQualityBadge: Boolean = true,  // "4K / HD / SD" on covers
+    val showStatsStrip: Boolean = true,    // the counts strip above the grid
 )
 
 data class Settings(
@@ -45,6 +55,10 @@ data class Settings(
     val allowScreenshots: Boolean = false,
     val tagSortMode: TagSortMode = TagSortMode.ALPHA,
     val display: DisplayPrefs = DisplayPrefs(),
+    /** Viewer: loop videos (default) or stop at the end. */
+    val videoLoop: Boolean = true,
+    /** Viewer: start videos muted. */
+    val videoStartMuted: Boolean = false,
 )
 
 @Singleton
@@ -67,6 +81,14 @@ class SettingsStore @Inject constructor(
     private val showNoteFabKey = booleanPreferencesKey("show_note_fab")
     private val showRandomFabKey = booleanPreferencesKey("show_random_fab")
     private val tagSortModeKey = intPreferencesKey("tag_sort_mode")
+    private val coverTagRowsKey = intPreferencesKey("cover_tag_rows")
+    private val coverTagStyleKey = intPreferencesKey("cover_tag_style")
+    private val tagColorsKey = booleanPreferencesKey("tag_colors")
+    private val durationBadgeKey = booleanPreferencesKey("duration_badge")
+    private val qualityBadgeKey = booleanPreferencesKey("quality_badge")
+    private val statsStripKey = booleanPreferencesKey("stats_strip")
+    private val videoLoopKey = booleanPreferencesKey("video_loop")
+    private val videoMutedKey = booleanPreferencesKey("video_start_muted")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -88,7 +110,15 @@ class SettingsStore @Inject constructor(
                 showFolderInfo = p[showFolderInfoKey] ?: true,
                 showNoteFab = p[showNoteFabKey] ?: true,
                 showRandomFab = p[showRandomFabKey] ?: true,
+                coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
+                coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.ALIAS },
+                tagColors = p[tagColorsKey] ?: true,
+                showDurationBadge = p[durationBadgeKey] ?: true,
+                showQualityBadge = p[qualityBadgeKey] ?: true,
+                showStatsStrip = p[statsStripKey] ?: true,
             ),
+            videoLoop = p[videoLoopKey] ?: true,
+            videoStartMuted = p[videoMutedKey] ?: false,
         )
     }
 
@@ -102,6 +132,14 @@ class SettingsStore @Inject constructor(
     suspend fun setShowFolderInfo(v: Boolean) { context.dataStore.edit { it[showFolderInfoKey] = v } }
     suspend fun setShowNoteFab(v: Boolean) { context.dataStore.edit { it[showNoteFabKey] = v } }
     suspend fun setShowRandomFab(v: Boolean) { context.dataStore.edit { it[showRandomFabKey] = v } }
+    suspend fun setCoverTagRows(v: Int) { context.dataStore.edit { it[coverTagRowsKey] = v.coerceIn(0, 3) } }
+    suspend fun setCoverTagStyle(v: CoverTagStyle) { context.dataStore.edit { it[coverTagStyleKey] = v.ordinal } }
+    suspend fun setTagColors(v: Boolean) { context.dataStore.edit { it[tagColorsKey] = v } }
+    suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
+    suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
+    suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
+    suspend fun setVideoLoop(v: Boolean) { context.dataStore.edit { it[videoLoopKey] = v } }
+    suspend fun setVideoStartMuted(v: Boolean) { context.dataStore.edit { it[videoMutedKey] = v } }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[themeKey] = mode.ordinal }

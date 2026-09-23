@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -416,7 +417,7 @@ fun VaultScreen(
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
             ImportBanner(importState, onDismiss = vm::dismissImportResult)
-            if (stats.scope.total > 0) {
+            if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, onClick = { showStats = true })
             }
 
@@ -635,6 +636,7 @@ fun VaultScreen(
             onSort = { k, a -> vm.setSort(k, a) },
             onClear = { vm.clearFilters() },
             onDismiss = { showFilterSheet = false },
+            tagColors = display.tagColors,
         )
     }
 
@@ -869,19 +871,19 @@ private fun FileCell(
         Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium,
             modifier = modifier.fillMaxWidth()) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // List mode: no tag badges on the cover — tags are shown as text below the name.
+                // List mode: no tag badges on the cover — every tag is shown as a chip beside it.
                 ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
-                    emptyList(), Modifier.size(56.dp))
-                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    emptyList(), Modifier.size(72.dp), file = item.file, display = display, compact = true)
+                Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     if (display.showFileInfo) {
-                        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(listMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (item.tags.isNotEmpty()) {
-                        Text(item.tags.joinToString(" ") { "#${it.name}" }, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            item.tags.forEach { TagChip(it, display) }
+                        }
                     }
                 }
             }
@@ -892,7 +894,7 @@ private fun FileCell(
     Column(modifier.fillMaxWidth()) {
         ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
             if (display.showTagsOnCover) item.tags else emptyList(),
-            Modifier.fillMaxWidth().aspectRatio(1f))
+            Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
         if (display.showFileInfo) {
@@ -900,6 +902,53 @@ private fun FileCell(
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp))
         }
+    }
+}
+
+/** "4K" / "HD" / "SD" from a display resolution (short side), or null when unknown. */
+fun qualityLabel(width: Int?, height: Int?): String? {
+    if (width == null || height == null || width <= 0 || height <= 0) return null
+    val short = minOf(width, height)
+    return when {
+        short >= 2000 -> "4K"
+        short >= 720 -> "HD"
+        else -> "SD"
+    }
+}
+
+/** Size · date (duration and quality are on the cover itself in list mode). */
+private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
+    val parts = mutableListOf<String>()
+    com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { parts += "⏱ $it" }
+    if (VaultRepository.isVideo(f.mimeType)) qualityLabel(f.width, f.height)?.let { parts += it }
+    parts += formatBytes(f.sizeBytes)
+    parts += java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))
+    return parts.joinToString(" · ")
+}
+
+/** Text a tag shows on a cover badge, per the user's style choice. */
+private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String =
+    if (display?.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME) tag.name else tagAlias(tag)
+
+/** Badge/chip colour of a tag: its own stable colour, or the app accent when tag colours are off. */
+@Composable
+private fun tagBg(tag: TagEntity, display: DisplayPrefs?): Color =
+    if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag.name) else MaterialTheme.colorScheme.primary
+
+@Composable
+private fun tagFg(display: DisplayPrefs?): Color =
+    if (display?.tagColors != false) Color.White else MaterialTheme.colorScheme.onPrimary
+
+/** Small rounded label on a dark scrim, for the duration/quality corner of a cover. */
+@Composable
+private fun CornerBadge(text: String, emphasis: Boolean = false) {
+    Box(
+        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .background(if (emphasis) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.62f))
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelSmall,
+            color = if (emphasis) MaterialTheme.colorScheme.onPrimary else Color.White, maxLines = 1)
     }
 }
 
@@ -914,29 +963,51 @@ private fun ThumbBox(
     favorite: Boolean,
     tags: List<TagEntity>,
     modifier: Modifier,
+    file: com.cripta.app.data.db.FileEntity? = null,
+    display: DisplayPrefs? = null,
+    /** Small list-mode thumbnail: only the duration, bottom-right. */
+    compact: Boolean = false,
 ) {
     val borderMod = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier
+    val duration = if (isVideo && display?.showDurationBadge != false)
+        com.cripta.app.ui.components.formatDuration(file?.durationMs) else null
+    val quality = if (isVideo && !compact && display?.showQualityBadge != false)
+        qualityLabel(file?.width, file?.height) else null
     Box(modifier.clip(MaterialTheme.shapes.medium).then(borderMod), contentAlignment = Alignment.Center) {
+        // Without a cover, a tint per type (video blue / photo green / other amber) instead of flat grey.
+        val typeTint = when {
+            isVideo -> Color(0xFF3B82F6)
+            fallbackIcon == Icons.Filled.Image -> Color(0xFF22C55E)
+            else -> Color(0xFFF59E0B)
+        }
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
         Crossfade(targetState = bmp, label = "thumb") { b ->
             if (b != null) {
                 Image(b.asImageBitmap(), contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(fallbackIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                Box(Modifier.fillMaxSize().background(typeTint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                    Icon(fallbackIcon, null, tint = typeTint, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
                 }
             }
         }
-        // Clear video marker regardless of the thumbnail behind it.
-        if (isVideo) {
+        // Play marker only when no duration badge already says "this is a video".
+        if (isVideo && duration == null) {
             Box(Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(30.dp))
             }
         }
+        if (tags.isNotEmpty()) {
+            TagBadges(
+                tags = tags,
+                display = display,
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
+            )
+        }
         if (favorite) {
-            Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(24.dp).clip(CircleShape)
+            Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(if (compact) 18.dp else 22.dp).clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite,
+                    modifier = Modifier.size(if (compact) 13.dp else 16.dp))
             }
         }
         if (selected) {
@@ -944,66 +1015,132 @@ private fun ThumbBox(
                 .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
             }
-        }
-        if (tags.isNotEmpty()) {
-            TagBadges(
-                tags = tags,
-                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(3.dp),
-            )
+        } else if (compact) {
+            if (duration != null) {
+                Box(Modifier.align(Alignment.BottomEnd).padding(3.dp)) { CornerBadge(duration) }
+            }
+        } else if (duration != null || quality != null) {
+            // Top-right, so the whole bottom edge stays free for tags.
+            Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                quality?.let { CornerBadge(it, emphasis = it == "4K") }
+                duration?.let { CornerBadge(it) }
+            }
         }
     }
 }
 
 @Composable
-private fun TagBadge(text: String) {
-    Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall) {
-        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary,
-            maxLines = 1, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+private fun TagBadge(tag: TagEntity?, text: String, display: DisplayPrefs?, maxWidth: androidx.compose.ui.unit.Dp) {
+    val bg = if (tag != null) tagBg(tag, display) else Color.Black.copy(alpha = 0.6f)
+    val fg = if (tag != null) tagFg(display) else Color.White
+    Box(
+        Modifier.widthIn(max = maxWidth)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .background(bg)
+            .padding(horizontal = 3.dp, vertical = 0.5.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Colored tag chip for the list view (full name, all tags visible). */
+@Composable
+private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
+    val colored = display.tagColors
+    val c = com.cripta.app.ui.theme.tagColor(tag.name)
+    Box(
+        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+            .background(if (colored) c.copy(alpha = 0.22f) else MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+    ) {
+        Text(
+            if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (colored) c else MaterialTheme.colorScheme.onSecondaryContainer,
+            maxLines = 1,
+        )
     }
 }
 
 /**
- * Acronym/emoji tag badges sized to the thumbnail: fit as many as the available width allows on a
- * single row (measuring each alias), with a "+N" chip for the rest. Bigger thumbnails (fewer grid
- * columns) therefore show more badges; small ones show fewer. No fixed cap.
+ * Tag badges over the bottom of a cover, on a dark gradient so they stay legible on any image.
+ * Up to 3 rows (automatic: by cover width — bigger covers show more rows — or fixed by the user),
+ * packed greedily by measured width; a "+N" badge appears only once every row is full.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TagBadges(tags: List<TagEntity>, modifier: Modifier) {
+private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
-    val style = MaterialTheme.typography.labelMedium
+    val style = MaterialTheme.typography.labelSmall
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
-        val availPx = with(density) { maxWidth.toPx() }
-        val hPadPx = with(density) { 8.dp.toPx() }   // 4dp padding on each side of a badge
-        val spacingPx = with(density) { 3.dp.toPx() }
-        // Measured on-screen width of each badge (alias text + horizontal padding).
-        val widths = remember(tags) {
-            tags.map { measurer.measure(tagAlias(it), style).size.width + hPadPx }
-        }
-
-        // Greedily fit badges on one row; how many depends purely on the thumbnail width.
-        fun fit(budgetPx: Float): Int {
-            var used = 0f; var n = 0
-            for (w in widths) {
-                val add = w + if (n > 0) spacingPx else 0f
-                if (used + add <= budgetPx) { used += add; n++ } else break
+        val outerPad = 3.dp
+        val availDp = maxWidth - outerPad * 2
+        val availPx = with(density) { availDp.toPx() }
+        val hPadPx = with(density) { 6.dp.toPx() }   // 3dp padding on each side of a badge
+        val spacingPx = with(density) { 2.dp.toPx() }
+        val rowsWanted = when (val r = display?.coverTagRows ?: 0) {
+            0 -> when {
+                maxWidth >= 150.dp -> 3
+                maxWidth >= 100.dp -> 2
+                else -> 1
             }
-            return n
+            else -> r
+        }
+        val texts = remember(tags, display?.coverTagStyle) { tags.map { badgeText(it, display) } }
+        // Measured on-screen width of each badge (text + padding), capped to a full row.
+        val widths = remember(texts, availPx) {
+            texts.map { minOf(measurer.measure(it, style).size.width + hPadPx, availPx) }
         }
 
-        var count = fit(availPx)
-        if (count < tags.size) {
-            // Some overflow -> reserve room for a "+N" chip, then refit.
+        // Greedy row packing: returns the tag indices of each row.
+        fun pack(reserveLastPx: Float): List<List<Int>> {
+            val rows = mutableListOf<MutableList<Int>>()
+            var i = 0
+            while (i < widths.size && rows.size < rowsWanted) {
+                val row = mutableListOf<Int>()
+                val last = rows.size == rowsWanted - 1
+                val budget = if (last) availPx - reserveLastPx else availPx
+                var used = 0f
+                while (i < widths.size) {
+                    val add = widths[i] + if (row.isNotEmpty()) spacingPx else 0f
+                    if (used + add <= budget || row.isEmpty() && budget >= widths[i]) { row += i; used += add; i++ } else break
+                }
+                if (row.isEmpty()) break
+                rows += row
+            }
+            return rows
+        }
+
+        var rows = pack(0f)
+        var shown = rows.sumOf { it.size }
+        if (shown < tags.size) {
             val overflowPx = measurer.measure("+${tags.size}", style).size.width + hPadPx + spacingPx
-            count = fit(availPx - overflowPx).coerceAtLeast(1)
+            rows = pack(overflowPx)
+            shown = rows.sumOf { it.size }
         }
+        val extra = tags.size - shown
+        val badgeH = with(density) { (measurer.measure("Ag", style).size.height).toDp() } + 1.dp
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            tags.take(count).forEach { TagBadge(tagAlias(it)) }
-            val extra = tags.size - count
-            if (extra > 0) TagBadge("+$extra")
+        Box(Modifier.fillMaxWidth()) {
+            // Scrim sized to the rows actually used.
+            Box(
+                Modifier.matchParentSize()
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))),
+            )
+            Column(
+                Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad, top = badgeH),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                rows.forEachIndexed { r, row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        row.forEach { i -> TagBadge(tags[i], texts[i], display, availDp) }
+                        if (r == rows.lastIndex && extra > 0) TagBadge(null, "+$extra", display, availDp)
+                    }
+                }
+            }
         }
     }
 }
@@ -1060,7 +1197,7 @@ private enum class TagFilterState { NEUTRAL, INCLUDE, EXCLUDE }
 
 /** Tri-state tag chip: neutral, include (primary), exclude (error). Colour-coded, no icons. */
 @Composable
-private fun TagFilterChip(label: String, state: TagFilterState, onClick: () -> Unit) {
+private fun TagFilterChip(label: String, state: TagFilterState, dot: Color?, onClick: () -> Unit) {
     val bg = when (state) {
         TagFilterState.INCLUDE -> MaterialTheme.colorScheme.primary
         TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.errorContainer
@@ -1075,14 +1212,20 @@ private fun TagFilterChip(label: String, state: TagFilterState, onClick: () -> U
         // An excluded (hidden) tag is struck through instead of getting a "⊘" prefix: the chip keeps
         // exactly the same width in every state (a width change reflows the rows and makes the sheet
         // jump) without the invisible leading space a reserved prefix would leave.
-        Text(
-            label,
-            textDecoration = if (state == TagFilterState.EXCLUDE)
-                androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-            style = MaterialTheme.typography.labelLarge,
-            color = fg,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // The tag's own colour (same as on the covers), in every state so the width never changes.
+            if (dot != null) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+                Box(Modifier.width(6.dp))
+            }
+            Text(
+                label,
+                textDecoration = if (state == TagFilterState.EXCLUDE)
+                    androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                style = MaterialTheme.typography.labelLarge,
+                color = fg,
+            )
+        }
     }
 }
 
@@ -1102,6 +1245,7 @@ private fun FilterSortSheet(
     onSort: (SortKey, Boolean) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
+    tagColors: Boolean = true,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -1169,6 +1313,7 @@ private fun FilterSortSheet(
                         TagFilterChip(
                             label = label,
                             state = state,
+                            dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag.name) else null,
                             // neutral -> include; include -> exclude; exclude -> neutral.
                             onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
                         )
@@ -1306,7 +1451,8 @@ private fun ReorderCell(
             modifier = modifier.fillMaxWidth().height(72.dp),
         ) {
             Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp))
+                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp),
+                    file = item.file, display = display, compact = true)
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     if (display.showFileInfo) {
@@ -1323,7 +1469,7 @@ private fun ReorderCell(
             Box {
                 ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
                     if (display.showTagsOnCover) item.tags else emptyList(),
-                    Modifier.fillMaxWidth().aspectRatio(1f))
+                    Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
                 if (dragged) {
                     Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
@@ -1743,4 +1889,26 @@ private fun StatTile(icon: ImageVector, label: String, shown: Int, scope: Int, f
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/**
+ * Live sample cover for the settings screen, drawn with the real cover renderer so every cover
+ * option (tag rows, style, colours, duration/quality badges) can be judged before leaving.
+ */
+@Composable
+fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier) {
+    val sample = remember {
+        listOf("Mare" to "🌊", "Famiglia" to "FA", "Estate" to "ES", "Viaggi" to "✈️", "Amici" to "AM",
+            "Festa" to "🎉", "Montagna" to "MO", "2024" to "24", "Preferiti" to "PR", "Cane" to "🐶")
+            .mapIndexed { i, (n, a) -> TagEntity(id = -1L - i, name = n, alias = a) }
+    }
+    val file = remember {
+        com.cripta.app.data.db.FileEntity(
+            id = "preview", originalName = "Esempio.mp4", mimeType = "video/mp4", sizeBytes = 48_000_000,
+            createdAt = 0, importedAt = 0, wrappedKeyset = ByteArray(0),
+            durationMs = 192_000, width = 1920, height = 1080,
+        )
+    }
+    ThumbBox(null, Icons.Filled.Movie, isVideo = true, name = "Anteprima", selected = false, favorite = true,
+        tags = if (display.showTagsOnCover) sample else emptyList(), modifier = modifier, file = file, display = display)
 }

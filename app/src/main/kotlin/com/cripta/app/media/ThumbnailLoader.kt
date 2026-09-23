@@ -108,6 +108,28 @@ class ThumbnailLoader @Inject constructor(
         files.chunked(PREWARM_CONCURRENCY).forEach { chunk ->
             supervisorScope { chunk.forEach { f -> launch { runCatching { load(f) } } } }
         }
+        backfillResolutions(files)
+    }
+
+    /** Ids already probed for a resolution this session (hit or miss), so each is read once. */
+    private val resolutionTried = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+    /**
+     * Record the resolution of media imported before it was stored (drives the HD/4K cover badge).
+     * Saved in small batches so the grid refreshes a few times, not once per file.
+     */
+    private suspend fun backfillResolutions(files: List<FileEntity>) {
+        val todo = files.filter {
+            it.width == null && it.id !in resolutionTried &&
+                (VaultRepository.isVideo(it.mimeType) || VaultRepository.isImage(it.mimeType))
+        }
+        val found = HashMap<String, Pair<Int, Int>>()
+        for (f in todo) {
+            resolutionTried += f.id
+            mediaResolution(f)?.let { found[f.id] = it }
+            if (found.size >= 24) { runCatching { repo.setResolutions(HashMap(found)) }; found.clear() }
+        }
+        runCatching { repo.setResolutions(found) }
     }
 
     private fun readDisk(id: String): Bitmap? = readSealed(File(diskDir, id))

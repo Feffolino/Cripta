@@ -79,6 +79,14 @@ class SettingsViewModel @Inject constructor(
     fun setShowFolderInfo(v: Boolean) = viewModelScope.launch { store.setShowFolderInfo(v) }
     fun setShowNoteFab(v: Boolean) = viewModelScope.launch { store.setShowNoteFab(v) }
     fun setShowRandomFab(v: Boolean) = viewModelScope.launch { store.setShowRandomFab(v) }
+    fun setCoverTagRows(v: Int) = viewModelScope.launch { store.setCoverTagRows(v) }
+    fun setCoverTagStyle(v: com.cripta.app.data.CoverTagStyle) = viewModelScope.launch { store.setCoverTagStyle(v) }
+    fun setTagColors(v: Boolean) = viewModelScope.launch { store.setTagColors(v) }
+    fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
+    fun setShowQualityBadge(v: Boolean) = viewModelScope.launch { store.setShowQualityBadge(v) }
+    fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
+    fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
+    fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
     fun clearMessage() { _message.value = null }

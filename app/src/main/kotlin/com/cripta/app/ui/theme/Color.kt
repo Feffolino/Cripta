@@ -30,3 +30,25 @@ val LightPrimary = Color(0xFF2563EB)
 val LightOnBg = Color(0xFF0F172A)
 val LightMuted = Color(0xFF475467) // darkened for >=4.5:1 on light card captions
 val LightOutline = Color(0xFFD9DFEA)
+
+/**
+ * Tag palette: saturated mid-tones that keep white text readable (>= 4.5:1) in both themes.
+ * A tag always maps to the same colour (hash of its name), so it is recognisable at a glance.
+ */
+val TagPalette = listOf(
+    Color(0xFF2563EB), // blue
+    Color(0xFF7C3AED), // violet
+    Color(0xFFDB2777), // pink
+    Color(0xFFDC2626), // red
+    Color(0xFFC2410C), // orange
+    Color(0xFFA16207), // amber
+    Color(0xFF15803D), // green
+    Color(0xFF0F766E), // teal
+    Color(0xFF0E7490), // cyan
+    Color(0xFF4F46E5), // indigo
+    Color(0xFF9333EA), // purple
+    Color(0xFFBE123C), // rose
+)
+
+fun tagColor(name: String): Color =
+    TagPalette[Math.floorMod(name.lowercase().hashCode(), TagPalette.size)]

@@ -680,10 +680,16 @@ private fun VideoPlayer(
                 ProgressiveMediaSource.Factory(factory, extractors)
                     .createMediaSource(MediaItem.fromUri("cripta://${file.id}"))
             )
-            repeatMode = Player.REPEAT_MODE_ONE   // loop the video
+            repeatMode = Player.REPEAT_MODE_ONE   // loop the video (setting applied below)
             prepare()
             playWhenReady = true
         }
+    }
+    // User playback preferences: loop on/off and start muted.
+    LaunchedEffect(player) {
+        val (loop, muted) = vm.playbackPrefs()
+        player.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        if (muted) player.volume = 0f
     }
     // Resize presets cycled by the aspect button: (resizeMode, label, videoScale). The PlayerView
     // always stays full-screen so the CONTROLS never move; zoom is applied only to the video
