@@ -89,6 +89,8 @@ data class Settings(
     val autoRotate: Boolean = true,
     /** Viewer: continue a video in a small window when leaving the app (off: privacy). */
     val pictureInPicture: Boolean = false,
+    /** Updates: also offer pre-releases (every CI build is published as one). */
+    val updatePrerelease: Boolean = true,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
@@ -139,6 +141,7 @@ class SettingsStore @Inject constructor(
     private val gestureKey = booleanPreferencesKey("gesture_controls")
     private val autoRotateKey = booleanPreferencesKey("auto_rotate")
     private val pipKey = booleanPreferencesKey("picture_in_picture")
+    private val updatePreKey = booleanPreferencesKey("update_prerelease")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
@@ -187,6 +190,7 @@ class SettingsStore @Inject constructor(
             gestureControls = p[gestureKey] ?: true,
             autoRotate = p[autoRotateKey] ?: true,
             pictureInPicture = p[pipKey] ?: false,
+            updatePrerelease = p[updatePreKey] ?: true,
         )
     }
 
@@ -210,6 +214,7 @@ class SettingsStore @Inject constructor(
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
     suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
     suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
+    suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }
