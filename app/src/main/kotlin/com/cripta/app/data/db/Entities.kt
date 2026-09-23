@@ -49,6 +49,8 @@ data class FileEntity(
     val playbackPosMs: Long? = null,
     /** Set when moved to the trash (epoch ms); null = live file. */
     val deletedAt: Long? = null,
+    /** When playback was last left unfinished (epoch ms), for "Continua a guardare". */
+    val lastPlayedAt: Long? = null,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant
@@ -69,7 +71,8 @@ data class FileEntity(
             width == other.width &&
             height == other.height &&
             playbackPosMs == other.playbackPosMs &&
-            deletedAt == other.deletedAt
+            deletedAt == other.deletedAt &&
+            lastPlayedAt == other.lastPlayedAt
     }
 
     override fun hashCode(): Int {
@@ -87,6 +90,7 @@ data class FileEntity(
         result = 31 * result + (height ?: 0)
         result = 31 * result + (playbackPosMs?.hashCode() ?: 0)
         result = 31 * result + (deletedAt?.hashCode() ?: 0)
+        result = 31 * result + (lastPlayedAt?.hashCode() ?: 0)
         return result
     }
 }

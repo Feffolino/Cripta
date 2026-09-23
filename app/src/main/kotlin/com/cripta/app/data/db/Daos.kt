@@ -106,8 +106,12 @@ interface FileDao {
     @Query("UPDATE files SET deletedAt = :at WHERE id = :id")
     suspend fun setDeletedAt(id: String, at: Long?)
 
-    @Query("UPDATE files SET playbackPosMs = :pos WHERE id = :id")
-    suspend fun setPlaybackPos(id: String, pos: Long?)
+    @Query("UPDATE files SET playbackPosMs = :pos, lastPlayedAt = :at WHERE id = :id")
+    suspend fun setPlaybackPos(id: String, pos: Long?, at: Long?)
+
+    /** Newest covers of a folder (for its 2x2 mosaic). */
+    @Query("SELECT * FROM files WHERE folderId = :folderId AND deletedAt IS NULL ORDER BY importedAt DESC LIMIT :limit")
+    suspend fun latestInFolder(folderId: Long, limit: Int): List<FileEntity>
 
     @Query("SELECT * FROM files WHERE sourceUrl = :url AND deletedAt IS NULL LIMIT 1")
     suspend fun bySourceUrl(url: String): FileEntity?

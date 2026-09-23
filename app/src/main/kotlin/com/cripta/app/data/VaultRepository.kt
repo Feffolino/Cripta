@@ -800,7 +800,7 @@ class VaultRepository @Inject constructor(
     suspend fun setPlaybackPos(fileId: String, posMs: Long?) = withContext(Dispatchers.IO) {
         val cur = db.fileDao().byId(fileId)?.playbackPosMs
         val v = posMs?.takeIf { it > 0 }
-        if (cur != v) { db.fileDao().setPlaybackPos(fileId, v); notifyChanged() }
+        if (cur != v) { db.fileDao().setPlaybackPos(fileId, v, if (v != null) now() else null); notifyChanged() }
     }
 
     // --- "Already in the vault" checks ---
@@ -828,6 +828,11 @@ class VaultRepository @Inject constructor(
     }
 
     // --- Folders / tags helpers ---
+
+    /** Up to [limit] newest files of each folder, for the folder mosaics. */
+    suspend fun folderPreviews(folderIds: List<Long>, limit: Int = 4): Map<Long, List<FileEntity>> = withContext(Dispatchers.IO) {
+        folderIds.associateWith { db.fileDao().latestInFolder(it, limit) }
+    }
 
     /** Root-to-folder chain for [folderId] (empty when it doesn't exist). */
     suspend fun folderPath(folderId: Long): List<FolderEntity> = withContext(Dispatchers.IO) {
