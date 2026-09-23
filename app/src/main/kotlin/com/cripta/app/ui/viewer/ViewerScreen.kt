@@ -6,6 +6,24 @@ import androidx.compose.foundation.layout.width
 import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
+import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -177,24 +195,53 @@ fun ViewerScreen(
         message?.let { Toast.makeText(ctx, it, Toast.LENGTH_SHORT).show(); vm.clearMessage() }
     }
 
-    val ids = remember { vm.ids.ifEmpty { listOf(fileId) } }
+    // Live list (a delete removes the page and moves on); kept in the VM so it survives a trip to
+    // the note editor.
+    val fallbackIds = remember { listOf(fileId) }
+    val ids: List<String> = vm.liveIds.ifEmpty { fallbackIds }
     val startIndex = remember { ids.indexOf(fileId).coerceAtLeast(0) }
     val pagerState = rememberPagerState(initialPage = startIndex) { ids.size }
+    val playback by vm.playback.collectAsState()
+
+    // TalkBack: never auto-hide the chrome/controls while touch exploration is on (the user could
+    // not reach them before they vanish), and honour the system "Time to take action" otherwise.
+    val sysA11y = remember(ctx) { ctx.getSystemService(android.view.accessibility.AccessibilityManager::class.java) }
+    var touchExplore by remember { mutableStateOf(sysA11y?.isTouchExplorationEnabled == true) }
+    DisposableEffect(sysA11y) {
+        val l = android.view.accessibility.AccessibilityManager.TouchExplorationStateChangeListener { touchExplore = it }
+        sysA11y?.addTouchExplorationStateChangeListener(l)
+        onDispose { sysA11y?.removeTouchExplorationStateChangeListener(l) }
+    }
+    val composeA11y = androidx.compose.ui.platform.LocalAccessibilityManager.current
+    val chromeTimeoutMs: Long = remember(playback.controlsTimeoutSec, composeA11y, touchExplore) {
+        val base = playback.controlsTimeoutSec * 1000L
+        if (touchExplore) 0L
+        else (composeA11y?.calculateRecommendedTimeoutMillis(base, containsIcons = true, containsText = true, containsControls = true) ?: base)
+            .coerceIn(base, Int.MAX_VALUE.toLong())
+    }
 
     var chromeVisible by remember { mutableStateOf(true) }
     var menuOpen by remember { mutableStateOf(false) }
-    // Auto-hide the chrome a few seconds after it appears or the page changes — but not while the
-    // actions overflow menu is open, otherwise the menu closes itself under the user.
-    // Bumped on quick-tag taps so the chrome stays up while tagging.
-    var chromeTouch by remember { mutableIntStateOf(0) }
-    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch) {
-        if (chromeVisible && !menuOpen) { delay(vm.playback.value.controlsTimeoutSec * 1000L - 500L); chromeVisible = false }
-    }
-
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
     val currentFile by produceState<FileEntity?>(initialValue = null, currentId, refresh) {
         value = vm.fileById(currentId)
     }
+    // Auto-hide the chrome a few seconds after it appears or the page changes — only over photos and
+    // videos (on a PDF, note or error page it would just hide the actions), not with TalkBack, and
+    // not while the actions overflow menu is open, otherwise the menu closes itself under the user.
+    // Bumped on quick-tag taps so the chrome stays up while tagging.
+    var chromeTouch by remember { mutableIntStateOf(0) }
+    val onMediaPage = currentFile?.let {
+        com.cripta.app.data.VaultRepository.isImage(it.mimeType) || com.cripta.app.data.VaultRepository.isPlayable(it.mimeType)
+    } == true
+    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch, onMediaPage, chromeTimeoutMs) {
+        if (chromeVisible && !menuOpen && onMediaPage && chromeTimeoutMs > 0) {
+            delay((chromeTimeoutMs - 500L).coerceAtLeast(500L)); chromeVisible = false
+        }
+    }
+    // Chrome show/hide: fade only (see the top bar below for why there is no slide).
+    val chromeEnter = fadeIn(Motion.enter(Motion.MEDIUM))
+    val chromeExit = fadeOut(Motion.exit(Motion.MEDIUM))
 
     var showTags by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
@@ -211,6 +258,17 @@ fun ViewerScreen(
     // Swipe-to-close can be seen by more than one gesture layer: pop the viewer only once.
     var closing by remember { mutableStateOf(false) }
     val closeOnce: () -> Unit = { if (!closing) { closing = true; onBack() } }
+    // A deleted (or vanished) file leaves the list and the viewer moves on to the next one (the
+    // previous, if it was the last); only the last remaining file closes the viewer.
+    val removePage: (String) -> Unit = { id ->
+        val i = vm.liveIds.indexOf(id)
+        if (vm.liveIds.size <= 1) closeOnce()
+        else if (i >= 0) {
+            vm.liveIds.removeAt(i)
+            val target = i.coerceAtMost(vm.liveIds.lastIndex)
+            pagerScope.launch { pagerState.scrollToPage(target) }
+        }
+    }
     // Measured height of the top chrome (bar + quick tags): overlays below it start there instead
     // of at a guessed offset, which overlapped the title and tags in landscape.
     var topChromeH by remember { mutableStateOf(0.dp) }
@@ -242,9 +300,15 @@ fun ViewerScreen(
                 }
             },
     ) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+        HorizontalPager(
+            state = pagerState, modifier = Modifier.fillMaxSize(),
+            // Keyed by file so removing a page never shows the neighbour's stale state.
+            key = { ids.getOrNull(it) ?: it },
+        ) { page ->
+            val pageId = ids.getOrNull(page) ?: return@HorizontalPager
             MediaPage(
-                id = ids[page],
+                id = pageId,
+                onMissing = { removePage(pageId) },
                 refreshKey = refresh,
                 isCurrent = page == pagerState.currentPage,
                 chromeVisible = chromeVisible,
@@ -256,6 +320,7 @@ fun ViewerScreen(
                 nextId = ids.getOrNull(page + 1),
                 topInset = topChromeH,
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
+                controlsTimeoutMs = chromeTimeoutMs.toInt(),
             )
         }
 
@@ -265,7 +330,6 @@ fun ViewerScreen(
         val onVideo = currentFile?.let { com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } == true
         val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val playback by vm.playback.collectAsState()
         val showStrip = ids.size > 1 && playback.filmstrip
         val pick: (Int) -> Unit = { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
         if (landscape) {
@@ -273,8 +337,8 @@ fun ViewerScreen(
             // so it never sits over the picture. The details handle is not shown: swipe up does it.
             AnimatedVisibility(
                 visible = chromeVisible && !inPip && showStrip,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = chromeEnter,
+                exit = chromeExit,
                 // Between the top chrome and the seek bar, clear of the side camera.
                 modifier = Modifier.align(Alignment.CenterStart)
                     .padding(start = 8.dp + com.cripta.app.ui.LocalSideCutout.current.start,
@@ -285,8 +349,8 @@ fun ViewerScreen(
         } else {
             AnimatedVisibility(
                 visible = chromeVisible && !inPip,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = chromeEnter,
+                exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                     // Above the player's seek bar for videos.
                     .padding(bottom = if (onVideo) 112.dp else 20.dp),
@@ -314,8 +378,8 @@ fun ViewerScreen(
             // Fade only (no slide): a sliding bar moves the action icons under the finger, so a tap
             // on e.g. the tags button could miss while the bar was animating — it looked visible but
             // did nothing. Fading keeps each button in place and hittable the whole time it shows.
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = chromeEnter,
+            exit = chromeExit,
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
           Column(Modifier.onGloballyPositioned { topChromeH = with(chromeDensity) { it.size.height.toDp() } }) {
@@ -350,8 +414,27 @@ fun ViewerScreen(
                                 Icon(Icons.Filled.Edit, "Modifica")
                             }
                         }
-                        IconButton(onClick = { vm.toggleFavorite(file) }) {
-                            Icon(if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "Preferito")
+                        IconButton(
+                            onClick = { chromeTouch++; vm.toggleFavorite(file) },
+                            modifier = Modifier.semantics {
+                                stateDescription = if (file.isFavorite) "Nei preferiti" else "Non nei preferiti"
+                            },
+                        ) {
+                            // The star pops in (0.5→1, ease-out, no overshoot) and turns gold when set.
+                            AnimatedContent(
+                                targetState = file.isFavorite,
+                                transitionSpec = {
+                                    (scaleIn(tween(Motion.MEDIUM, easing = Motion.EaseOutQuint), initialScale = 0.5f) +
+                                        fadeIn(Motion.enter(Motion.SHORT))) togetherWith fadeOut(Motion.exit(Motion.SHORT))
+                                },
+                                label = "favoriteStar",
+                            ) { fav ->
+                                Icon(
+                                    if (fav) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                    if (fav) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
+                                    tint = if (fav) com.cripta.app.ui.theme.Favorite else Color.White,
+                                )
+                            }
                         }
                         IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette") }
                         if (ids.size > 1) {
@@ -376,7 +459,7 @@ fun ViewerScreen(
                                 onClick = { menuOpen = false; showInfo = true },
                             )
                             androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Scarica in galleria") },
+                                text = { Text("Esporta sul dispositivo") },
                                 leadingIcon = { Icon(Icons.Filled.Download, null) },
                                 onClick = { menuOpen = false; confirmDownload = true },
                             )
@@ -428,7 +511,7 @@ fun ViewerScreen(
         }
 
         // Queue: side panel with every file of the list (cover, name, duration); tap to jump.
-        AnimatedVisibility(visible = showQueue, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(visible = showQueue, enter = fadeIn(Motion.enter(Motion.LONG)), exit = fadeOut(Motion.exit(Motion.LONG)), modifier = Modifier.fillMaxSize()) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
                     .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { showQueue = false },
@@ -466,7 +549,7 @@ fun ViewerScreen(
                     else "\"${file.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
             },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; vm.delete(file.id) { onBack() } }) {
+                TextButton(onClick = { confirmDelete = false; val id = file.id; vm.delete(id) { removePage(id) } }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -476,9 +559,13 @@ fun ViewerScreen(
     if (confirmDownload && file != null) {
         AlertDialog(
             onDismissRequest = { confirmDownload = false },
-            title = { Text("Scaricare in galleria?") },
-            text = { Text("Una copia in chiaro di \"${file.originalName}\" verrà salvata sul dispositivo.") },
-            confirmButton = { TextButton(onClick = { confirmDownload = false; vm.download(file) }) { Text("Scarica") } },
+            title = { Text("Esportare sul dispositivo?") },
+            text = {
+                Text("Una copia NON cifrata di \"${file.originalName}\" verrà salvata in " +
+                    "${ViewerViewModel.exportFolder(file.mimeType)}, visibile alle altre app. " +
+                    "Il file resta anche nel vault.")
+            },
+            confirmButton = { TextButton(onClick = { confirmDownload = false; vm.download(file) }) { Text("Esporta") } },
             dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("Annulla") } },
         )
     }
@@ -519,14 +606,22 @@ fun ViewerScreen(
                 androidx.compose.ui.unit.IntOffset(0, -(if (landscapeNow) 112.dp else 180.dp).roundToPx())
             },
         ) {
+            // Smooth the ring between the service's progress steps.
+            val shownProgress by animateFloatAsState(
+                targetValue = convertProgress / 100f,
+                animationSpec = tween(Motion.LONG, easing = Motion.EaseOutQuart),
+                label = "convertProgress",
+            )
             Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large) {
                 Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(progress = { convertProgress / 100f }, color = Color.White,
+                    CircularProgressIndicator(progress = { shownProgress }, color = Color.White,
                         strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Text("  Conversione MP4 · $convertProgress%", color = Color.White,
+                    Spacer(Modifier.width(10.dp))
+                    Text("Conversione MP4 · $convertProgress%", color = Color.White,
                         style = MaterialTheme.typography.labelLarge)
-                    TextButton(onClick = { vm.cancelConversion() }) { Text("Annulla", color = Color(0xFFFF8A80)) }
+                    // Not "Annulla": this stops the running transcode (the original stays as it is).
+                    TextButton(onClick = { vm.cancelConversion() }) { Text("Interrompi", color = Color(0xFFFF8A80)) }
                     IconButton(onClick = { convertInBackground = true }) {
                         Icon(Icons.Filled.Close, "Nascondi", tint = Color.White)
                     }
@@ -542,9 +637,10 @@ fun ViewerScreen(
             text = { Text("La copia MP4 scorribile è nella stessa cartella. Vuoi eliminare l'originale?") },
             confirmButton = {
                 TextButton(onClick = {
-                    val wasCurrent = currentFile?.id == originalId
+                    // The original's page leaves the list (the viewer moves on instead of closing).
+                    val orig = originalId
                     vm.deleteConvertedOriginal()
-                    if (wasCurrent) onBack()
+                    if (orig != null && orig in vm.liveIds) removePage(orig)
                 }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { vm.clearConverted() }) { Text("Mantieni") } },
@@ -554,11 +650,12 @@ fun ViewerScreen(
 
 @Composable
 private fun InfoLine(label: String, value: String) {
+    // The value is what the user came for: full contrast; the label is the quieter caption.
     Column(Modifier.padding(vertical = 6.dp)) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface)
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 2.dp))
     }
 }
 
@@ -582,7 +679,7 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
     if (value == null) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("LINK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("LINK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Nessun link", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
             }
@@ -619,7 +716,7 @@ private fun CopyableInfoLine(label: String, value: String) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface)
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary, maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -644,23 +741,98 @@ private fun MediaPage(
     nextId: String?,
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
+    controlsTimeoutMs: Int,
+    onMissing: () -> Unit,
 ) {
-    val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
+    var retry by remember(id) { mutableIntStateOf(0) }
+    val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey, retry) {
+        if (value is ViewerState.Error) value = ViewerState.Loading
         value = vm.stateFor(id)
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (val s = state) {
-            is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
-            is ViewerState.Error -> Text(s.message, color = Color.White)
+    // The file was deleted meanwhile (e.g. from the note editor): drop its page.
+    val latestMissing by androidx.compose.runtime.rememberUpdatedState(onMissing)
+    LaunchedEffect(state, isCurrent) {
+        val s = state
+        if (isCurrent && s is ViewerState.Error && s.missing) latestMissing()
+    }
+    // Crossfade between loading and content, keyed on the kind of state only, so a refresh of the
+    // same page (favorite, tags) doesn't re-animate or rebuild the player.
+    AnimatedContent(
+        targetState = state,
+        contentKey = { it::class },
+        transitionSpec = { fadeIn(Motion.enter(Motion.MEDIUM)) togetherWith fadeOut(Motion.exit(Motion.MEDIUM)) },
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize(),
+        label = "mediaPage",
+    ) { s ->
+        when (s) {
+            is ViewerState.Loading -> CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
+            is ViewerState.Error -> CenteredPage(onTap = onToggleChrome) {
+                Icon(Icons.Filled.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
+                Text(s.message, color = Color.White, textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
+                if (!s.missing) {
+                    OutlinedButton(
+                        onClick = { retry++ },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        modifier = Modifier.padding(top = 20.dp),
+                    ) {
+                        Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("Riprova")
+                    }
+                }
+            }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, controlsTimeoutMs = controlsTimeoutMs)
+                else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
-            is ViewerState.Pdf -> PdfView(s.bytes)
-            is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Nessun viewer interno per questo tipo.", color = Color.White)
-                Text("Usa Scarica per aprirlo con un'altra app.", color = Color.White)
+            is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
+            is ViewerState.Other -> CenteredPage(onTap = onToggleChrome) {
+                Text("Nessuna anteprima per questo tipo di file.", color = Color.White, textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge)
+                Text("Per aprirlo con un'altra app: ⋮ › Esporta sul dispositivo.", color = Color.White.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
             }
         }
+    }
+}
+
+/** Centred message page (loading, error, unsupported type). A tap anywhere toggles the chrome, so
+ *  the actions can always be brought back even where there is no media to tap. */
+@Composable
+private fun CenteredPage(onTap: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val latestTap by androidx.compose.runtime.rememberUpdatedState(onTap)
+    Box(
+        Modifier.fillMaxSize()
+            .pointerInput(Unit) { detectTapGestures(onTap = { latestTap() }) }
+            .padding(horizontal = 32.dp, vertical = 96.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, content = content)
+    }
+}
+
+/**
+ * Spinner that appears only after [delayMs] (fading in), so fast opens never flash it. Shared by the
+ * viewer, the note editor and the favorites grid.
+ */
+@Composable
+internal fun DelayedSpinner(
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    delayMs: Long = 250L,
+) {
+    var show by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(delayMs); show = true }
+    AnimatedVisibility(
+        visible = show,
+        modifier = modifier,
+        enter = fadeIn(Motion.enter(Motion.MEDIUM)),
+        exit = fadeOut(Motion.exit(Motion.SHORT)),
+        label = "delayedSpinner",
+    ) {
+        CircularProgressIndicator(color = if (color == Color.Unspecified) MaterialTheme.colorScheme.primary else color)
     }
 }
 
@@ -741,7 +913,10 @@ private fun NoteView(text: String, onSingleTap: () -> Unit) {
             .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }
             .padding(20.dp),
     ) {
-        Text(text.ifBlank { "(nota vuota)" }, color = Color.White)
+        // Long-press selects text to copy; a single tap still toggles the chrome.
+        SelectionContainer {
+            Text(text.ifBlank { "(nota vuota)" }, color = Color.White)
+        }
     }
 }
 
@@ -759,24 +934,97 @@ private class PdfDoc(bytes: ByteArray) {
 }
 
 @Composable
-private fun PdfView(bytes: ByteArray) {
+private fun PdfView(bytes: ByteArray, onSingleTap: () -> Unit) {
     val result by produceState<Result<PdfDoc>?>(initialValue = null, bytes) {
         value = withContext(Dispatchers.IO) { runCatching { PdfDoc(bytes) } }
     }
     val doc = result?.getOrNull()
     DisposableEffect(doc) { onDispose { doc?.close() } }
     when {
-        result == null -> CircularProgressIndicator(color = Color.White)
-        doc == null -> Text("Impossibile aprire il PDF", color = Color.White)
-        else -> LazyColumn(Modifier.fillMaxSize().background(Color(0xFF0A0C10))) {
-            items(doc.pageCount) { index ->
-                val bmp by produceState<Bitmap?>(initialValue = null, index, doc) { value = doc.render(index) }
-                val b = bmp
-                if (b != null) {
-                    Image(b.asImageBitmap(), null, Modifier.fillMaxWidth().padding(vertical = 4.dp))
-                } else {
-                    Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.White)
+        result == null -> CenteredPage(onTap = onSingleTap) { DelayedSpinner(color = Color.White) }
+        doc == null -> CenteredPage(onTap = onSingleTap) {
+            Icon(Icons.Filled.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
+            Text("Impossibile aprire il PDF: il documento potrebbe essere danneggiato o protetto.",
+                color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+            Text("Puoi esportarlo sul dispositivo (⋮) e aprirlo con un'altra app.",
+                color = Color.White.copy(alpha = 0.75f), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        }
+        else -> {
+            val listState = rememberLazyListState()
+            // Pinch to zoom (1x..4x), double-tap to toggle 2.5x. At 1x one-finger drags are left
+            // alone, so the list scrolls vertically and the pager still swipes horizontally.
+            var zoom by remember { mutableFloatStateOf(1f) }
+            var panX by remember { mutableFloatStateOf(0f) }
+            var panY by remember { mutableFloatStateOf(0f) }
+            val latestTap by androidx.compose.runtime.rememberUpdatedState(onSingleTap)
+            Box(
+                Modifier.fillMaxSize().background(Color(0xFF0A0C10)).clipToBounds()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.count { it.pressed }
+                                val maxX = (zoom - 1f) * size.width / 2f
+                                val maxY = (zoom - 1f) * size.height / 2f
+                                if (pressed >= 2) {
+                                    zoom = (zoom * event.calculateZoom()).coerceIn(1f, 4f)
+                                    val pan = event.calculatePan()
+                                    val mx = (zoom - 1f) * size.width / 2f
+                                    val my = (zoom - 1f) * size.height / 2f
+                                    panX = (panX + pan.x).coerceIn(-mx, mx)
+                                    panY = (panY + pan.y).coerceIn(-my, my)
+                                    event.changes.forEach { it.consume() }
+                                } else if (pressed == 1 && zoom > 1f) {
+                                    // Zoomed: one finger pans sideways (the list still scrolls vertically).
+                                    val pan = event.calculatePan()
+                                    if (pan.x != 0f) {
+                                        panX = (panX + pan.x).coerceIn(-maxX, maxX)
+                                        event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                    }
+                                }
+                                if (zoom <= 1f) { panX = 0f; panY = 0f }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { latestTap() },
+                            onDoubleTap = {
+                                if (zoom > 1f) { zoom = 1f; panX = 0f; panY = 0f } else { zoom = 2.5f }
+                            },
+                        )
+                    },
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().graphicsLayer {
+                        scaleX = zoom; scaleY = zoom
+                        translationX = panX; translationY = panY
+                    },
+                ) {
+                    items(doc.pageCount) { index ->
+                        val bmp by produceState<Bitmap?>(initialValue = null, index, doc) { value = doc.render(index) }
+                        val b = bmp
+                        val desc = "Pagina ${index + 1} di ${doc.pageCount}"
+                        if (b != null) {
+                            Image(b.asImageBitmap(), desc, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                        } else {
+                            Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
+                                DelayedSpinner(color = Color.White)
+                            }
+                        }
+                    }
+                }
+                // Page indicator: the page at the top of the screen.
+                if (doc.pageCount > 1) {
+                    val page by remember { derivedStateOf { listState.firstVisibleItemIndex + 1 } }
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 24.dp),
+                    ) {
+                        Text("$page / ${doc.pageCount}", color = Color.White, style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                 }
             }
@@ -796,6 +1044,8 @@ private fun VideoPlayer(
     nextId: String?,
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
+    /** Controller auto-hide delay; 0 = never hide (TalkBack touch exploration). */
+    controlsTimeoutMs: Int,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -900,8 +1150,23 @@ private fun VideoPlayer(
     var videoAspect by remember(file.id) { mutableStateOf<android.util.Rational?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(seekLabel) { if (seekLabel != null) { delay(650); seekLabel = null } }
-    LaunchedEffect(modeLabel) { if (modeLabel != null) { delay(900); modeLabel = null } }
+    // Bumped on every double-tap / mode change so a repeated identical label restarts its timer.
+    var seekTick by remember { mutableIntStateOf(0) }
+    var modeTick by remember { mutableIntStateOf(0) }
+    // Last shown text, kept through the fade-out after the label is cleared.
+    var lastSeekLabel by remember { mutableStateOf("") }
+    var lastModeLabel by remember { mutableStateOf("") }
+    LaunchedEffect(seekLabel, seekTick) { seekLabel?.let { lastSeekLabel = it; delay(900); seekLabel = null } }
+    LaunchedEffect(modeLabel, modeTick) { modeLabel?.let { lastModeLabel = it; delay(1600); modeLabel = null } }
+    // One-time hint for the gestures that have no visible control (shown on the first video only).
+    val hintPrefs = remember(ctx) { ctx.getSharedPreferences("viewer_hints", android.content.Context.MODE_PRIVATE) }
+    var showGestureHint by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!hintPrefs.getBoolean("gesture_hint_shown", false)) {
+            hintPrefs.edit().putBoolean("gesture_hint_shown", true).apply()
+            delay(800); showGestureHint = true; delay(5000); showGestureHint = false
+        }
+    }
 
     DisposableEffect(file.id) {
         val listener = object : Player.Listener {
@@ -1058,7 +1323,7 @@ private fun VideoPlayer(
             // to the video surface (scaleX/scaleY), which the surrounding Box clips.
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
-                pv.controllerShowTimeoutMs = prefs.controlsTimeoutSec * 1000
+                pv.controllerShowTimeoutMs = controlsTimeoutMs
                 // Keep the controls (time, buttons) clear of a side camera; the video stays full-bleed.
                 pv.findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(cutPx.first, 0, cutPx.second, 0)
                 val scale = modes[modeIdx].third * userZoom
@@ -1132,7 +1397,7 @@ private fun VideoPlayer(
                 .padding(bottom = seekBarClearance)
                 .pointerInput(stepMs) {
                     detectTapGestures(
-                        onDoubleTap = { seekBy(-stepMs); seekLabel = "-${prefs.seekStepSec}s" },
+                        onDoubleTap = { seekBy(-stepMs); seekTick++; seekLabel = "-${prefs.seekStepSec}s" },
                         onTap = { toggleController() },
                         onPress = { holdForSpeed() },
                     )
@@ -1144,7 +1409,7 @@ private fun VideoPlayer(
                 .padding(bottom = seekBarClearance)
                 .pointerInput(stepMs) {
                     detectTapGestures(
-                        onDoubleTap = { seekBy(stepMs); seekLabel = "+${prefs.seekStepSec}s" },
+                        onDoubleTap = { seekBy(stepMs); seekTick++; seekLabel = "+${prefs.seekStepSec}s" },
                         onTap = { toggleController() },
                         onPress = { holdForSpeed() },
                     )
@@ -1193,25 +1458,67 @@ private fun VideoPlayer(
             }
         }
 
-        if (buffering) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
+        // Buffering spinner: appears only after 250 ms (a quick seek never flashes it).
+        AnimatedVisibility(
+            visible = buffering,
+            enter = scaleIn(Motion.enter(Motion.MEDIUM, delay = 250), initialScale = 0.8f) +
+                fadeIn(Motion.enter(Motion.MEDIUM, delay = 250)),
+            exit = fadeOut(Motion.exit(Motion.LONG)),
+            modifier = Modifier.align(Alignment.Center),
+            label = "buffering",
+        ) {
+            CircularProgressIndicator(color = Color.White)
         }
 
-        seekLabel?.let { lbl ->
-            val side = if (lbl.startsWith("+")) Alignment.CenterEnd else Alignment.CenterStart
+        // "+10s" / "-10s" hint on the tapped side; pops in, fades out a little slower.
+        val seekText = seekLabel ?: lastSeekLabel
+        AnimatedVisibility(
+            visible = seekLabel != null,
+            enter = scaleIn(Motion.enter(Motion.SHORT), initialScale = 0.8f) + fadeIn(Motion.enter(Motion.SHORT)),
+            exit = fadeOut(Motion.exit(Motion.LONG)),
+            modifier = Modifier.align(if (seekText.startsWith("+")) Alignment.CenterEnd else Alignment.CenterStart)
+                .padding(horizontal = 44.dp),
+            label = "seekHint",
+        ) {
+            Surface(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape) {
+                Text(seekText, color = Color.White, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            }
+        }
+
+        // One-time explanation of the invisible gestures.
+        AnimatedVisibility(
+            visible = showGestureHint && !inPip,
+            enter = fadeIn(Motion.enter(Motion.LONG)),
+            exit = fadeOut(Motion.exit(Motion.LONG)),
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+            label = "gestureHint",
+        ) {
             Surface(
-                color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
-                modifier = Modifier.align(side).padding(horizontal = 44.dp),
+                color = Color.Black.copy(alpha = 0.72f), shape = MaterialTheme.shapes.large,
+                modifier = Modifier.clickable { showGestureHint = false },
             ) {
-                Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Gesti del player", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                    val lines = buildList {
+                        add("Doppio tocco a sinistra/destra: −/+ ${prefs.seekStepSec} s")
+                        add("Pizzica con due dita: ingrandisci")
+                        if (prefs.holdForSpeed) add("Tieni premuto ai lati: velocità ${(if (prefs.holdSpeed % 1f == 0f) "${prefs.holdSpeed.toInt()}" else "${prefs.holdSpeed}").replace('.', ',')}×")
+                        if (prefs.gestures) add("Scorri in verticale a sinistra: luminosità")
+                        if (prefs.volumeGesture) add("Scorri in verticale a destra: volume")
+                    }
+                    lines.forEach {
+                        Text(it, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
             }
         }
 
         // Aspect toggle on the right edge (drawn above the seek zone), only while controls show.
         AnimatedVisibility(
             visible = controlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(Motion.enter(Motion.MEDIUM)),
+            exit = fadeOut(Motion.exit(Motion.MEDIUM)),
             // Landscape: a row under the top chrome (a column would overlap the quick tags above
             // and the seek bar below on a short screen). Portrait: a column on the right edge.
             modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = maxOf(112.dp, topInset + 8.dp)) else Modifier.align(Alignment.CenterEnd))
@@ -1219,11 +1526,16 @@ private fun VideoPlayer(
         ) {
           val sideButtons: @Composable () -> Unit = {
                 Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                    // Names the current mode and the one a tap switches to (TalkBack read a fixed
+                    // "Adatta/riempi" across all five modes).
                     IconButton(onClick = {
                         modeIdx = (modeIdx + 1) % modes.size
+                        modeTick++
                         modeLabel = modes[modeIdx].second
                     }) {
-                        Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White)
+                        Icon(Icons.Filled.AspectRatio,
+                            "Formato video: ${modes[modeIdx].second}. Tocca per: ${modes[(modeIdx + 1) % modes.size].second}",
+                            tint = Color.White)
                     }
                 }
                 // Rotation lock: keeps the current orientation (auto-rotate resumes when unlocked).
@@ -1233,6 +1545,7 @@ private fun VideoPlayer(
                         vm.rotationLocked.value = lock
                         activity?.requestedOrientation = if (lock) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
                             else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        modeTick++
                         modeLabel = if (lock) "Rotazione bloccata" else "Rotazione libera"
                     }) {
                         Icon(if (rotationLocked) Icons.Filled.ScreenLockRotation else Icons.Filled.ScreenRotation,
@@ -1260,13 +1573,16 @@ private fun VideoPlayer(
             else Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) { sideButtons() }
         }
 
-        // Brief overlay naming the resize mode just selected.
-        modeLabel?.let { lbl ->
-            Surface(
-                color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp)),
-            ) {
-                Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        // Brief overlay naming the resize mode just selected (1.6 s; the text stays through the fade).
+        AnimatedVisibility(
+            visible = modeLabel != null,
+            enter = scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.9f) + fadeIn(Motion.enter(Motion.MEDIUM)),
+            exit = fadeOut(Motion.exit(Motion.LONG)),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp)),
+            label = "modeLabel",
+        ) {
+            Surface(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape) {
+                Text(modeLabel ?: lastModeLabel, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
         }
     }
@@ -1464,6 +1780,7 @@ private fun DetailsSheet(
         com.cripta.app.ui.vault.LabelEditorDialog(
             title = "Modifica #$name",
             initialName = name,
+            nameEditable = false,
             initialAlias = t?.alias ?: "",
             onConfirm = { _, alias -> vm.setTagAlias(name, alias); editTag = null },
             onDismiss = { editTag = null },

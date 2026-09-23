@@ -1,11 +1,9 @@
 package com.cripta.app.ui.vault
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -167,6 +165,58 @@ import com.cripta.app.data.db.TagEntity
 import com.cripta.app.media.ThumbnailLoader
 import com.cripta.app.ui.components.fileMeta
 import com.cripta.app.ui.components.formatBytes
+import com.cripta.app.ui.components.CornerSelectionCheck
+import com.cripta.app.ui.components.SelectableThumbFrame
+import com.cripta.app.ui.components.ThumbCrossfade
+import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.animationsEnabled
+import com.cripta.app.ui.theme.pressScale
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.input.ImeAction
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -180,6 +230,15 @@ private fun typeLabel(t: TypeFilter) = when (t) {
     TypeFilter.OTHER -> "Altro"
 }
 
+/** Scroll-memory key of the vault root (folders use their id). */
+private const val ROOT_KEY = -1L
+
+/** Grid key of the folders row (file keys are ids, so they never clash). */
+private const val FOLDERS_KEY = "folders"
+
+/** One entry of the speed-dial FAB. */
+private class FabAction(val label: String, val icon: ImageVector, val onClick: () -> Unit)
+
 fun tagAlias(tag: TagEntity): String =
     tag.alias?.takeIf { it.isNotBlank() } ?: tag.name.take(2).uppercase(Locale.getDefault())
 
@@ -187,7 +246,7 @@ fun tagAlias(tag: TagEntity): String =
 @Composable
 fun VaultScreen(
     onOpenFile: (String) -> Unit,
-    onNewNote: () -> Unit = {},
+    onNewNote: (Long?) -> Unit = {},
     vm: VaultViewModel = hiltViewModel(),
 ) {
     val folders by vm.folders.collectAsState()
@@ -247,6 +306,52 @@ fun VaultScreen(
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
+    /** Grid cell under a finger held down (after a short delay, so a scroll doesn't flash it). */
+    var pressedKey by remember { mutableStateOf<String?>(null) }
+
+    // Feedback for every action, with "Annulla" where the change can be reverted.
+    val snackbar = remember { SnackbarHostState() }
+    val uiScope = rememberCoroutineScope()
+    fun notify(message: String, undo: (() -> Unit)? = null) {
+        uiScope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            val r = snackbar.showSnackbar(
+                message,
+                actionLabel = if (undo != null) "Annulla" else null,
+                withDismissAction = undo == null,
+                duration = if (undo != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (r == SnackbarResult.ActionPerformed) undo?.invoke()
+        }
+    }
+    fun countLabel(n: Int) = if (n == 1) "1 elemento" else "$n elementi"
+    fun folderLabel(id: Long?) = if (id == null) "Radice" else "\"${allFolders.firstOrNull { it.id == id }?.name ?: "cartella"}\""
+    fun moveWithUndo(ids: List<String>, target: Long?) {
+        if (ids.isEmpty()) return
+        val set = ids.toSet()
+        val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.folderId }
+        vm.moveFiles(ids, target)
+        notify("${if (ids.size == 1) "Spostato 1 elemento" else "Spostati ${ids.size} elementi"} in ${folderLabel(target)}") {
+            vm.restoreFolders(prev)
+        }
+    }
+    fun favoriteWithUndo(ids: List<String>, fav: Boolean) {
+        val set = ids.toSet()
+        val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.isFavorite }
+        vm.setFavorite(ids, fav)
+        val n = ids.size
+        notify(
+            if (fav) (if (n == 1) "Aggiunto ai preferiti" else "$n elementi aggiunti ai preferiti")
+            else (if (n == 1) "Tolto dai preferiti" else "$n elementi tolti dai preferiti"),
+        ) { vm.restoreFavorites(prev) }
+    }
+    fun tagsOf(ids: Collection<String>): Map<String, List<String>> {
+        val set = ids.toSet()
+        return files.filter { it.file.id in set }.associate { fwt -> fwt.file.id to fwt.tags.map { it.name } }
+    }
+
+    // A selection belongs to the folder it was made in.
+    LaunchedEffect(path) { selection = emptySet() }
 
     // A clean import result disappears by itself; one with failures stays until dismissed.
     LaunchedEffect(importState.finished, importState.failed, importState.duplicates.size) {
@@ -271,17 +376,25 @@ fun VaultScreen(
         }
     }
 
-    BackHandler(enabled = selection.isNotEmpty() || filters.active || path.isNotEmpty()) {
+    BackHandler(enabled = selection.isNotEmpty() || filters.active || searchExpanded || path.isNotEmpty()) {
         when {
             selection.isNotEmpty() -> selection = emptySet()
-            filters.active -> vm.clearFilters()
+            filters.active -> { vm.clearFilters(); searchExpanded = false }
+            searchExpanded -> searchExpanded = false
             path.isNotEmpty() -> vm.goUp()
         }
     }
+    // Registered last, so it wins: Back first closes the open speed-dial.
+    BackHandler(enabled = fabExpanded) { fabExpanded = false }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) vm.importThenHandleOriginals(uris) }
+    // Progress and results of an import are shown in-app (banner) and in a notification: the
+    // notification permission is asked here, the first time the user imports, not at app start.
+    // The notification permission is asked (with a rationale) by MainActivity when the first
+    // background job starts, so importing just opens the picker.
+    fun startImport() { importLauncher.launch(arrayOf("*/*")) }
 
     val inSelection = selection.isNotEmpty()
 
@@ -290,8 +403,14 @@ fun VaultScreen(
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior()
         else TopAppBarDefaults.pinnedScrollBehavior()
 
+    // Keep the last count while the title crossfades out of selection mode (selection is empty by then).
+    var lastSelCount by remember { mutableIntStateOf(1) }
+    SideEffect { if (selection.isNotEmpty()) lastSelCount = selection.size }
+    val shownSelCount = if (selection.isNotEmpty()) selection.size else lastSelCount
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 scrollBehavior = scrollBehavior,
@@ -301,15 +420,18 @@ fun VaultScreen(
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
                 ),
                 title = {
-                    if (inSelection) {
-                        Text("${selection.size} selezionati", maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                    } else {
-                        com.cripta.app.ui.components.HeaderTitle(path.lastOrNull()?.name ?: "Cripta")
+                    AnimatedContent(
+                        targetState = inSelection,
+                        transitionSpec = { fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit()) },
+                        label = "title",
+                    ) { sel ->
+                        if (sel) SelectionCountTitle(shownSelCount)
+                        else com.cripta.app.ui.components.HeaderTitle(path.lastOrNull()?.name ?: "Cripta")
                     }
                 },
                 navigationIcon = {
                     if (inSelection) {
-                        IconButton(onClick = { selection = emptySet() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Annulla") }
+                        IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
                     } else if (path.isNotEmpty()) {
                         IconButton(onClick = { vm.goUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Su") }
                     }
@@ -323,11 +445,14 @@ fun VaultScreen(
                                 tint = if (allSelected) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
                     } else {
-                        // Search is an icon that opens the field (it stays open while a query is typed).
-                        IconButton(onClick = { searchExpanded = !searchExpanded }) {
-                            Icon(Icons.Filled.Search, "Cerca",
-                                tint = if (searchExpanded || filters.query.isNotBlank())
-                                    MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        // Search is an icon that opens the field (it stays open while a query is typed);
+                        // tapping it again closes the field and clears the query.
+                        val searchShown = searchExpanded || filters.query.isNotBlank()
+                        IconButton(onClick = {
+                            if (searchShown) { searchExpanded = false; vm.setQuery("") } else searchExpanded = true
+                        }) {
+                            Icon(Icons.Filled.Search, if (searchShown) "Chiudi ricerca" else "Cerca",
+                                tint = if (searchShown) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
                         IconButton(onClick = { showFilterSheet = true }) {
                             Icon(Icons.Filled.Tune, "Filtri e ordinamento",
@@ -336,7 +461,8 @@ fun VaultScreen(
                         // One "Vista" menu: grid / list and the number of columns.
                         var viewMenu by remember { mutableStateOf(false) }
                         IconButton(onClick = { viewMenu = true }) {
-                            Icon(if (viewMode == ViewMode.GRID) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList, "Vista")
+                            Icon(if (viewMode == ViewMode.GRID) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
+                                if (viewMode == ViewMode.GRID) "Vista: griglia, $gridColumns colonne" else "Vista: lista")
                         }
                         DropdownMenu(expanded = viewMenu, onDismissRequest = { viewMenu = false }) {
                             DropdownMenuItem(
@@ -358,10 +484,19 @@ fun VaultScreen(
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     (2..5).forEach { n ->
-                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n) }, label = { Text("$n") })
+                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n) }, label = { Text("$n") },
+                                            modifier = Modifier.semantics { this.contentDescription = "$n colonne" })
                                     }
                                 }
                             }
+                            HorizontalDivider()
+                            // A way into selection mode besides long-press.
+                            DropdownMenuItem(
+                                text = { Text("Seleziona tutto") },
+                                leadingIcon = { Icon(Icons.Filled.SelectAll, null) },
+                                enabled = files.isNotEmpty(),
+                                onClick = { viewMenu = false; selection = files.map { it.file.id }.toSet() },
+                            )
                         }
                     }
                 },
@@ -374,7 +509,7 @@ fun VaultScreen(
                 var selMenu by remember { mutableStateOf(false) }
                 androidx.compose.material3.BottomAppBar {
                     SelectionAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito", Modifier.weight(1f)) {
-                        vm.setFavorite(selection.toList(), !allFav); selection = emptySet()
+                        favoriteWithUndo(selection.toList(), !allFav); selection = emptySet()
                     }
                     SelectionAction(Icons.Filled.Label, "Etichette", Modifier.weight(1f)) {
                         if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
@@ -399,7 +534,7 @@ fun VaultScreen(
                                             convertAsk = selection.toList()
                                         } else {
                                             vm.convertToMp4(selection.toList())
-                                            Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
+                                            notify("Conversione in coda: prosegue in background")
                                         }
                                         selection = emptySet()
                                     },
@@ -423,72 +558,105 @@ fun VaultScreen(
         },
         floatingActionButton = {
             if (!inSelection) {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AnimatedVisibility(
-                        visible = fabsVisible,
-                        enter = fadeIn() + slideInVertically { it / 2 },
-                        exit = fadeOut() + slideOutVertically { it / 2 },
-                    ) {
-                        // Single expanding FAB (speed-dial): collapsed it shows just "+"; tapping it
-                        // reveals the labelled actions, so the screen isn't crowded by a stack of FABs.
-                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            AnimatedVisibility(visible = fabExpanded) {
-                                Column(
-                                    // Landscape: capped + scrollable so the top action never slides under the bar.
-                                    (if (landscape) Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState()) else Modifier),
-                                    horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp),
+                AnimatedVisibility(
+                    visible = fabsVisible,
+                    enter = fadeIn(Motion.enter()) + slideInVertically(Motion.enter()) { it / 2 },
+                    exit = fadeOut(Motion.exit()) + slideOutVertically(Motion.exit()) { it / 2 },
+                ) {
+                    // Single expanding FAB (speed-dial): collapsed it shows just "+"; tapping it
+                    // reveals the labelled actions, so the screen isn't crowded by a stack of FABs.
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val actions = buildList {
+                            add(FabAction("Importa file", Icons.Filled.EnhancedEncryption) { fabExpanded = false; startImport() })
+                            add(FabAction("Nuova cartella", Icons.Filled.CreateNewFolder) { fabExpanded = false; showNewFolder = true })
+                            if (display.showNoteFab) add(FabAction("Nuova nota", Icons.Filled.Description) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
+                            if (display.showRandomFab) {
+                                val label = when {
+                                    filters.active -> "Casuale tra i risultati"
+                                    path.isNotEmpty() -> "Casuale in questa cartella"
+                                    else -> "Casuale"
+                                }
+                                add(FabAction(label, Icons.Filled.Casino) { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) })
+                            }
+                        }
+                        Column(
+                            // Landscape: capped + scrollable so the top action never slides under the bar.
+                            (if (landscape) Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState()) else Modifier),
+                            horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            actions.forEachIndexed { i, a ->
+                                // Nearest to the FAB first, 30ms apart.
+                                val delay = (actions.size - 1 - i) * 30
+                                val origin = TransformOrigin(1f, 1f)
+                                AnimatedVisibility(
+                                    visible = fabExpanded,
+                                    enter = fadeIn(Motion.enter(Motion.MEDIUM, delay)) +
+                                        slideInVertically(Motion.enter(Motion.MEDIUM, delay)) { it / 3 } +
+                                        scaleIn(Motion.enter(Motion.MEDIUM, delay), initialScale = 0.9f, transformOrigin = origin),
+                                    exit = fadeOut(Motion.exit(Motion.SHORT)) +
+                                        scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
                                 ) {
-                                    MiniFabAction("Cifra e importa", Icons.Filled.EnhancedEncryption) {
-                                        fabExpanded = false; importLauncher.launch(arrayOf("*/*"))
-                                    }
-                                    MiniFabAction("Nuova cartella", Icons.Filled.CreateNewFolder) {
-                                        fabExpanded = false; showNewFolder = true
-                                    }
-                                    if (display.showNoteFab) {
-                                        MiniFabAction("Nuova nota", Icons.Filled.Description) {
-                                            fabExpanded = false; onNewNote()
-                                        }
-                                    }
-                                    if (display.showRandomFab) {
-                                        MiniFabAction("Casuale", Icons.Filled.Casino) {
-                                            fabExpanded = false; vm.randomShuffleOpen(onOpenFile)
-                                        }
-                                    }
+                                    MiniFabAction(a.label, a.icon, a.onClick)
                                 }
                             }
-                            FloatingActionButton(onClick = { fabExpanded = !fabExpanded }) {
-                                Icon(
-                                    if (fabExpanded) Icons.Filled.Close else Icons.Filled.Add,
-                                    if (fabExpanded) "Chiudi" else "Azioni",
-                                )
-                            }
+                        }
+                        // "+" turns 45 degrees into an "x" while the actions are open.
+                        val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
+                        FloatingActionButton(
+                            onClick = { fabExpanded = !fabExpanded },
+                            modifier = Modifier.semantics { this.stateDescription = if (fabExpanded) "Aperto" else "Chiuso" },
+                        ) {
+                            Icon(
+                                Icons.Filled.Add,
+                                if (fabExpanded) "Chiudi azioni" else "Azioni",
+                                Modifier.graphicsLayer { rotationZ = fabRotation },
+                            )
                         }
                     }
                 }
             }
         },
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).nestedScroll(fabScroll)) {
-            // Landscape has little vertical room: the inline search bar is revealed on demand from
-            // the top-bar search icon. Portrait: keep it, but hide it while scrolling down (same
-            // gesture that hides the FABs) so the grid gets full height, and bring it back on scroll up.
+      Box(Modifier.fillMaxSize().padding(pad)) {
+        Column(Modifier.fillMaxSize().nestedScroll(fabScroll)) {
+            // Search field, revealed from the top-bar icon; it stays while a query is typed.
             val showSearch = searchExpanded || filters.query.isNotBlank()
-            AnimatedVisibility(visible = showSearch) {
+            val searchFocus = remember { FocusRequester() }
+            val focusManager = LocalFocusManager.current
+            LaunchedEffect(searchExpanded) {
+                if (searchExpanded && filters.query.isBlank()) {
+                    kotlinx.coroutines.delay(60)
+                    runCatching { searchFocus.requestFocus() }
+                }
+            }
+            AnimatedVisibility(
+                visible = showSearch,
+                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
+                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
+            ) {
                 OutlinedTextField(
                     value = filters.query,
                     onValueChange = vm::setQuery,
-                    label = if (landscape) null else ({ Text("Cerca nome o tag") }),
-                    placeholder = if (landscape) ({ Text("Cerca nome o tag") }) else null,
+                    label = if (landscape) null else ({ Text("Cerca nome o etichetta") }),
+                    placeholder = if (landscape) ({ Text("Cerca nome o etichetta") }) else null,
+                    leadingIcon = { Icon(Icons.Filled.Search, null) },
+                    trailingIcon = if (filters.query.isNotEmpty()) ({
+                        IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Filled.Close, "Cancella ricerca") }
+                    }) else null,
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp),
+                        .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp)
+                        .focusRequester(searchFocus),
                 )
             }
             // Landscape: the banners/strips above the grid get a capped, scrollable area so an
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
-                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
+                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
+                { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") })
             if (path.isNotEmpty() && !filters.active) {
                 Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
             }
@@ -501,80 +669,190 @@ fun VaultScreen(
             }
 
             val manual = sortKey == SortKey.MANUAL
-            val showFolders = folders.isNotEmpty() && !filters.active && !manual
-            // Landscape is wide and short: add columns so cells are smaller and more rows are
-            // visible at once (otherwise a few huge thumbnails fill the short height).
-            val effectiveColumns = if (landscape) gridColumns + 2 else gridColumns
-            val columns = if (viewMode == ViewMode.GRID) GridCells.Fixed(effectiveColumns) else GridCells.Fixed(1)
+            // Folders stay visible in every sort (above the reorderable grid in Manual); a filter
+            // searches the whole vault, so the current folder's subfolders don't apply then.
+            val showFolders = folders.isNotEmpty() && !filters.active
+            // Phones keep the user's column count; wider windows (landscape, tablets, foldables)
+            // add columns in proportion so cells keep roughly the same size instead of growing huge.
+            val screenW = LocalConfiguration.current.screenWidthDp
+            val wide = landscape || screenW >= 600
+            val gridCount = if (wide) maxOf(gridColumns, (screenW * gridColumns / 460f).roundToInt()).coerceAtMost(12)
+                else gridColumns
+            val columnCount = if (viewMode == ViewMode.GRID) gridCount else if (screenW >= 840) 2 else 1
+            val columns = GridCells.Fixed(columnCount)
             val grouped = remember(files, display.showDateHeaders) {
                 if (display.showDateHeaders) groupByDay(files) else listOf("" to files)
             }
             val orderedIds = remember(grouped) { grouped.flatMap { it.second.map { f -> f.file.id } } }
             val idSet = remember(orderedIds) { orderedIds.toSet() }
-            val inSelState = rememberUpdatedState(inSelection)
 
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
+            }
+            fun openFile(id: String) { vm.publishViewerQueue(); onOpenFile(id) }
+            /** TalkBack actions of a file cell (everything a long-press + bottom bar offers). */
+            fun fileActions(fwt: FileWithTags): List<CustomAccessibilityAction> {
+                val id = fwt.file.id
+                return listOf(
+                    CustomAccessibilityAction(if (fwt.file.isFavorite) "Togli dai preferiti" else "Aggiungi ai preferiti") {
+                        favoriteWithUndo(listOf(id), !fwt.file.isFavorite); true
+                    },
+                    CustomAccessibilityAction("Etichette") { tagTargetId = id; true },
+                    CustomAccessibilityAction("Rinomina") { renameTargetId = id; true },
+                    CustomAccessibilityAction("Sposta") { selection = setOf(id); showMove = true; true },
+                    CustomAccessibilityAction("Elimina") { selection = setOf(id); confirmMultiDelete = true; true },
+                )
             }
             // Folder cards live in a horizontal row; their on-screen bounds let a drag-selection
             // still be dropped onto a folder (the grid's own hit-testing can't see inside the row).
             val folderBounds = remember { androidx.compose.runtime.mutableStateMapOf<Long, androidx.compose.ui.geometry.Rect>() }
             var gridCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
-            when {
-                folders.isEmpty() && files.isEmpty() ->
-                    EmptyState(filters.active, Modifier.weight(1f).fillMaxWidth(),
-                        onImport = { importLauncher.launch(arrayOf("*/*")) },
-                        folderName = path.lastOrNull()?.name)
-                manual ->
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
-                        ReorderableFileGrid(
-                            items = files,
-                            columns = if (viewMode == ViewMode.GRID) (if (landscape) gridColumns + 2 else gridColumns) else 1,
-                            asList = viewMode == ViewMode.LIST,
-                            selection = selection,
-                            display = display,
-                            coverOverrides = coverOverrides,
-                            coverVersions = coverVersions,
-                            thumb = { vm.thumb(it) },
-                            onOpen = { vm.publishViewerQueue(); onOpenFile(it) },
-                            onReorder = { vm.reorder(it) },
-                        )
+            val folderRow: @Composable () -> Unit = {
+                Column {
+                    SectionLabel("Cartelle", folders.size)
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                    ) {
+                        items(folders.size, key = { folders[it].id }) { i ->
+                            val folder = folders[i]
+                            androidx.compose.runtime.DisposableEffect(folder.id) {
+                                onDispose { folderBounds.remove(folder.id) }
+                            }
+                            // While selecting, a folder tap would silently drop the selection: say why instead.
+                            val open = {
+                                if (inSelection) notify("Esci dalla selezione per aprire una cartella")
+                                else vm.enterFolder(folder)
+                            }
+                            FolderMosaic(
+                                folder = folder,
+                                stat = folderStats[folder.id],
+                                previews = folderPreviews[folder.id].orEmpty(),
+                                thumb = { vm.thumb(it) },
+                                showInfo = display.showFolderInfo,
+                                highlighted = hoverFolder == folder.id,
+                                onMore = { folderMenu = folder },
+                                modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
+                                    .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .combinedClickable(
+                                        onClickLabel = "Apri",
+                                        onLongClickLabel = "Azioni cartella",
+                                        onClick = open,
+                                        onLongClick = { folderMenu = folder },
+                                    )
+                                    .semantics {
+                                        this.customActions = listOf(
+                                            CustomAccessibilityAction("Rinomina") { folderToRename = folder; true },
+                                            CustomAccessibilityAction("Personalizza") { folderToStyle = folder; true },
+                                            CustomAccessibilityAction("Elimina") { folderToDelete = folder; true },
+                                        )
+                                    },
+                            )
+                        }
                     }
-                else -> Box(Modifier.weight(1f).fillMaxWidth()) {
+                }
+            }
+
+            // Folder depth navigation: a new level slides in from the right (going up: from the
+            // left) and fades in. The old level is hidden at once and the slide waits (briefly) for
+            // the new level's data, so it's never the old content that moves. Each level's scroll
+            // position is remembered and restored when coming back up.
+            val density = LocalDensity.current
+            val animOn = animationsEnabled()
+            val levelX = remember { Animatable(0f) }
+            val levelAlpha = remember { Animatable(1f) }
+            val scrollMemory = remember { mutableMapOf<Long, Pair<Int, Int>>() }
+            var shownLevel by remember { mutableStateOf(path.lastOrNull()?.id ?: ROOT_KEY) }
+            var shownDepth by remember { mutableIntStateOf(path.size) }
+            LaunchedEffect(path) {
+                val newKey = path.lastOrNull()?.id ?: ROOT_KEY
+                if (newKey == shownLevel) return@LaunchedEffect
+                val deeper = path.size > shownDepth
+                scrollMemory[shownLevel] = gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
+                shownLevel = newKey
+                shownDepth = path.size
+                val keep = path.map { it.id }.toSet() + ROOT_KEY
+                scrollMemory.keys.retainAll(keep)
+                if (animOn) {
+                    levelAlpha.snapTo(0f)
+                    withTimeoutOrNull(160) { snapshotFlow { files to folders }.drop(1).first() }
+                }
+                val restore = if (!deeper) scrollMemory[newKey] else null
+                gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
+                if (animOn) {
+                    levelX.snapTo(with(density) { 32.dp.toPx() } * if (deeper) 1f else -1f)
+                    launch { levelX.animateTo(0f, Motion.enter(Motion.LONG)) }
+                    levelAlpha.animateTo(1f, Motion.enter(Motion.MEDIUM))
+                } else {
+                    levelX.snapTo(0f); levelAlpha.snapTo(1f)
+                }
+            }
+
+            Box(
+                Modifier.weight(1f).fillMaxWidth()
+                    .graphicsLayer { translationX = levelX.value; alpha = levelAlpha.value },
+            ) {
+            when {
+                files.isEmpty() && !showFolders ->
+                    EmptyState(filters.active, Modifier.fillMaxSize(),
+                        onImport = { startImport() },
+                        folderName = path.lastOrNull()?.name,
+                        onClearFilters = { vm.clearFilters(); searchExpanded = false })
+                manual ->
+                    ReorderableFileGrid(
+                        items = files,
+                        columns = columnCount,
+                        asList = viewMode == ViewMode.LIST,
+                        selection = selection,
+                        display = display,
+                        coverOverrides = coverOverrides,
+                        coverVersions = coverVersions,
+                        thumb = { vm.thumb(it) },
+                        onOpen = { openFile(it) },
+                        onReorder = { vm.reorder(it) },
+                        header = if (showFolders) folderRow else null,
+                    )
+                else -> Box(Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
                     columns = columns,
                     state = gridState,
                     modifier = Modifier.fillMaxSize()
                         .onGloballyPositioned { gridCoords = it }
-                        // Tap: open a file (or toggle it in selection mode), open a folder.
+                        // Tap: open a file (or toggle it in selection mode). A held finger marks the
+                        // cell as pressed after 60ms, so starting a scroll doesn't flash it.
                         .pointerInput(orderedIds, inSelection) {
-                            detectTapGestures(onTap = { off ->
-                                val key = keyAt(off, gridState) as? String ?: return@detectTapGestures
-                                if (key.startsWith("f-")) {
-                                    folders.firstOrNull { "f-${it.id}" == key }?.let { vm.enterFolder(it) }
-                                } else if (key in idSet) {
-                                    if (inSelection) toggleSel(key) else { vm.publishViewerQueue(); onOpenFile(key) }
-                                }
-                            })
+                            detectTapGestures(
+                                onPress = { off ->
+                                    val key = keyAt(off, gridState) as? String
+                                    if (key != null && key in idSet) {
+                                        val job = uiScope.launch { kotlinx.coroutines.delay(60); pressedKey = key }
+                                        tryAwaitRelease()
+                                        job.cancel()
+                                        pressedKey = null
+                                    }
+                                },
+                                onTap = { off ->
+                                    val key = keyAt(off, gridState) as? String ?: return@detectTapGestures
+                                    if (key in idSet) {
+                                        if (inSelection) toggleSel(key) else openFile(key)
+                                    }
+                                },
+                            )
                         }
                         // Long-press a file then drag = gallery-style range select (or deselect if
-                        // the anchor was already selected). Long-press a folder = its action menu.
+                        // the anchor was already selected); release over a folder to move there.
                         .pointerInput(orderedIds) {
                             val onStart: (Offset) -> Unit = { off ->
                                 selPointer = off
                                 hoverFolder = null
                                 val key = keyAt(off, gridState) as? String
-                                when {
-                                    key == null -> {}
-                                    key.startsWith("f-") ->
-                                        folders.firstOrNull { "f-${it.id}" == key }?.let { folderMenu = it }
-                                    key in idSet -> {
-                                        dragAnchor = key
-                                        dragDeselect = key in selection
-                                        dragBase = selection
-                                        if (!dragDeselect) selection = selection + key
-                                    }
+                                if (key != null && key in idSet) {
+                                    dragAnchor = key
+                                    dragDeselect = key in selection
+                                    dragBase = selection
+                                    if (!dragDeselect) selection = selection + key
                                 }
                             }
                             val onMove: (Offset) -> Unit = { delta ->
@@ -603,8 +881,9 @@ fun VaultScreen(
                             val onEnd: () -> Unit = {
                                 val target = hoverFolder
                                 if (target != null && selection.isNotEmpty()) {
-                                    vm.moveFiles(selection.toList(), target)
+                                    val ids = selection.toList()
                                     selection = emptySet()
+                                    moveWithUndo(ids, target)
                                 }
                                 dragAnchor = null; hoverFolder = null
                             }
@@ -622,44 +901,32 @@ fun VaultScreen(
                 ) {
                     if (showFolders) {
                         // Folders in their own scrollable row, so the files below stay a uniform grid.
-                        item(key = "folders", span = { GridItemSpan(maxLineSpan) }) {
-                            Column {
-                                SectionLabel("Cartelle", folders.size)
-                                androidx.compose.foundation.lazy.LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
-                                ) {
-                                    items(folders.size, key = { folders[it].id }) { i ->
-                                        val folder = folders[i]
-                                        androidx.compose.runtime.DisposableEffect(folder.id) {
-                                            onDispose { folderBounds.remove(folder.id) }
-                                        }
-                                        FolderMosaic(
-                                            folder = folder,
-                                            stat = folderStats[folder.id],
-                                            previews = folderPreviews[folder.id].orEmpty(),
-                                            thumb = { vm.thumb(it) },
-                                            showInfo = display.showFolderInfo,
-                                            highlighted = hoverFolder == folder.id,
-                                            modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
-                                                .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
-                                                .clip(MaterialTheme.shapes.medium)
-                                                .combinedClickable(onClick = { vm.enterFolder(folder) }, onLongClick = { folderMenu = folder }),
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        item(key = FOLDERS_KEY, span = { GridItemSpan(maxLineSpan) }) { folderRow() }
                     }
                     grouped.forEach { (label, group) ->
                         if (label.isNotEmpty()) header(label, group.size)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
-                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display,
+                            val id = fwt.file.id
+                            val isSel = id in selection
+                            // Gestures are handled by the grid (drag range-select); each cell still
+                            // exposes its actions and state to accessibility services.
+                            val cellSemantics = Modifier.semantics(mergeDescendants = true) {
+                                if (inSelection) this.selected = isSel
+                                onClick(label = if (inSelection) (if (isSel) "Deseleziona" else "Seleziona") else "Apri") {
+                                    if (inSelection) toggleSel(id) else openFile(id)
+                                    true
+                                }
+                                onLongClick(label = if (isSel) "Deseleziona" else "Seleziona") { toggleSel(id); true }
+                                this.customActions = fileActions(fwt)
+                            }
+                            FileCell(fwt, viewMode, isSel, inSelection, display,
                                 // No placement animation: toggling a filter reshuffles the whole
                                 // result set and every cell used to visibly slide to its new slot.
-                                Modifier.animateItem(placementSpec = null),
-                                coverOverrides[fwt.file.id], coverVersions[fwt.file.id] ?: 0,
-                                { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
+                                Modifier.animateItem(placementSpec = null)
+                                    .pressScale(pressedKey == id, if (viewMode == ViewMode.GRID) 0.96f else 0.98f)
+                                    .then(cellSemantics),
+                                coverOverrides[id], coverVersions[id] ?: 0,
+                                { vm.thumb(fwt.file) })
                         }
                     }
                     }
@@ -690,19 +957,40 @@ fun VaultScreen(
                     FastScroller(gridState, Modifier.align(Alignment.CenterEnd), labelAt = { scrollLabels.getOrNull(it) })
                 }
             }
+            }
         }
+        // Scrim behind the open speed-dial: dims the content and closes the menu on tap.
+        AnimatedVisibility(
+            visible = fabExpanded && !inSelection,
+            enter = fadeIn(Motion.enter()),
+            exit = fadeOut(Motion.exit()),
+        ) {
+            Box(
+                Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                    .pointerInput(Unit) { detectTapGestures { fabExpanded = false } }
+                    .semantics {
+                        this.contentDescription = "Chiudi menu azioni"
+                        onClick(label = "Chiudi") { fabExpanded = false; true }
+                    },
+            )
+        }
+      }
     }
 
     if (showNewFolder) {
-        TextPromptDialog("Nuova cartella", "Nome",
-            onConfirm = { vm.createFolder(it); showNewFolder = false },
+        TextPromptDialog("Nuova cartella", "Nome", confirmLabel = "Crea",
+            onConfirm = { name -> vm.createFolder(name); showNewFolder = false; notify("Cartella \"$name\" creata") },
             onDismiss = { showNewFolder = false })
     }
 
     renameTargetId?.let { id ->
         val current = files.firstOrNull { it.file.id == id }?.file?.originalName ?: ""
-        TextPromptDialog("Rinomina file", "Nome", initial = current,
-            onConfirm = { vm.renameFile(id, it); renameTargetId = null; selection = emptySet() },
+        TextPromptDialog("Rinomina file", "Nome", initial = current, selectBaseName = true, confirmLabel = "Rinomina",
+            onConfirm = { name ->
+                vm.renameFile(id, name); renameTargetId = null; selection = emptySet()
+                if (name != current) notify("Rinominato in \"$name\"") { vm.renameFile(id, current) }
+            },
             onDismiss = { renameTargetId = null })
     }
 
@@ -711,7 +999,11 @@ fun VaultScreen(
         TagEditorDialog(
             allTags = tags,
             initialSelected = target?.tags?.map { it.name } ?: emptyList(),
-            onConfirm = { vm.setTags(id, it); tagTargetId = null; selection = emptySet() },
+            onConfirm = { names ->
+                val before = tagsOf(listOf(id))
+                vm.setTags(id, names); tagTargetId = null; selection = emptySet()
+                if (before[id].orEmpty().toSet() != names.toSet()) notify("Etichette aggiornate") { vm.restoreTags(before) }
+            },
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
             onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { tagTargetId = null },
@@ -725,7 +1017,18 @@ fun VaultScreen(
         BatchTagDialog(
             count = selection.size,
             allTags = tags,
-            onConfirm = { names -> vm.addTagsToFiles(selection.toList(), names); batchTag = false; selection = emptySet() },
+            onConfirm = { names ->
+                val ids = selection.toList()
+                val before = tagsOf(ids)
+                vm.addTagsToFiles(ids, names); batchTag = false; selection = emptySet()
+                notify("Etichette aggiunte a ${countLabel(ids.size)}") { vm.restoreTags(before) }
+            },
+            onRemove = { names ->
+                val ids = selection.toList()
+                val before = tagsOf(ids)
+                vm.removeTagsFromFiles(ids, names); batchTag = false; selection = emptySet()
+                notify("Etichette rimosse da ${countLabel(ids.size)}") { vm.restoreTags(before) }
+            },
             onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { batchTag = false },
             showRecents = display.showRecentTags,
@@ -736,8 +1039,11 @@ fun VaultScreen(
         ModalBottomSheet(onDismissRequest = { folderMenu = null }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
-                SheetAction(Icons.Filled.Folder, "Apri") { vm.enterFolder(folder); folderMenu = null }
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp).semantics { heading() })
+                SheetAction(Icons.Filled.Folder, "Apri") {
+                    folderMenu = null
+                    if (inSelection) notify("Esci dalla selezione per aprire una cartella") else vm.enterFolder(folder)
+                }
                 SheetAction(Icons.Filled.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
                 SheetAction(Icons.Filled.Palette, "Personalizza") { folderToStyle = folder; folderMenu = null }
                 SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
@@ -746,8 +1052,11 @@ fun VaultScreen(
     }
 
     folderToRename?.let { folder ->
-        TextPromptDialog("Rinomina cartella", "Nome", initial = folder.name,
-            onConfirm = { vm.renameFolder(folder, it); folderToRename = null },
+        TextPromptDialog("Rinomina cartella", "Nome", initial = folder.name, confirmLabel = "Rinomina",
+            onConfirm = { name ->
+                vm.renameFolder(folder, name); folderToRename = null
+                if (name != folder.name) notify("Cartella rinominata") { vm.renameFolder(folder, folder.name) }
+            },
             onDismiss = { folderToRename = null })
     }
 
@@ -790,7 +1099,7 @@ fun VaultScreen(
             onConfirm = { after, rememberIt ->
                 vm.convertToMp4(ids, after, rememberIt)
                 convertAsk = null
-                Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
+                notify("Conversione in coda: prosegue in background")
             },
             onDismiss = { convertAsk = null },
         )
@@ -801,15 +1110,22 @@ fun VaultScreen(
     }
 
     if (confirmMultiDelete) {
+        val n = selection.size
         AlertDialog(
             onDismissRequest = { confirmMultiDelete = false },
-            title = { Text("Eliminare ${selection.size} file?") },
+            title = { Text(if (n == 1) "Eliminare 1 file?" else "Eliminare $n file?") },
             text = {
                 Text(if (trashEnabled) "Verranno spostati nel cestino: potrai ripristinarli da Impostazioni › Archivio."
                     else "Eliminazione sicura (crypto-shredding). Irreversibile.")
             },
             confirmButton = {
-                TextButton(onClick = { vm.deleteFiles(selection.toList()); selection = emptySet(); confirmMultiDelete = false }) {
+                TextButton(onClick = {
+                    vm.deleteFiles(selection.toList()); selection = emptySet(); confirmMultiDelete = false
+                    notify(
+                        if (trashEnabled) (if (n == 1) "1 file spostato nel cestino" else "$n file spostati nel cestino")
+                        else (if (n == 1) "1 file eliminato" else "$n file eliminati"),
+                    )
+                }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -825,7 +1141,7 @@ fun VaultScreen(
                 vm.regenerateCovers(videoIds, cover)
                 showRegenCover = false
                 selection = emptySet()
-                Toast.makeText(ctx, "Rigenerazione copertine…", Toast.LENGTH_SHORT).show()
+                notify("Rigenerazione copertine…")
             },
             onDismiss = { showRegenCover = false },
         )
@@ -833,18 +1149,25 @@ fun VaultScreen(
 
     if (showMove) {
         MoveToFolderDialog(allFolders,
-            onPick = { fid -> vm.moveFiles(selection.toList(), fid); selection = emptySet(); showMove = false },
+            onPick = { fid -> val ids = selection.toList(); selection = emptySet(); showMove = false; moveWithUndo(ids, fid) },
             onDismiss = { showMove = false })
     }
 
     folderToDelete?.let { folder ->
+        val n = folderStats[folder.id]?.count ?: 0
         AlertDialog(
             onDismissRequest = { folderToDelete = null },
             title = { Text("Eliminare la cartella?") },
-            text = { Text("\"${folder.name}\" e tutto il suo contenuto verranno eliminati in modo sicuro. Irreversibile.") },
+            text = {
+                Text(
+                    if (n == 0) "\"${folder.name}\" è vuota e verrà eliminata."
+                    else "\"${folder.name}\" e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, " +
+                        "sottocartelle incluse) verranno eliminati in modo sicuro. Irreversibile.",
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { vm.deleteFolder(folder); folderToDelete = null }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { vm.deleteFolder(folder); folderToDelete = null; notify("Cartella \"${folder.name}\" eliminata") }) {
+                    Text(if (n == 0) "Elimina" else "Elimina tutto", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { folderToDelete = null }) { Text("Annulla") } },
@@ -852,13 +1175,38 @@ fun VaultScreen(
     }
 
     if (pendingOriginals.isNotEmpty()) {
+        val n = pendingOriginals.size
         AlertDialog(
             onDismissRequest = { vm.clearPendingOriginals() },
-            title = { Text("Eliminare gli originali?") },
-            text = { Text("${pendingOriginals.size} file importati nel vault. Eliminare le copie originali dal dispositivo? (Non è una cancellazione sicura dell'originale.)") },
-            confirmButton = { TextButton(onClick = { vm.deleteOriginals(pendingOriginals) }) { Text("Elimina originali") } },
+            title = { Text(if (n == 1) "Eliminare l'originale?" else "Eliminare gli originali?") },
+            text = {
+                Text(
+                    (if (n == 1) "1 file importato nel vault. Eliminare la copia originale dal dispositivo?"
+                    else "$n file importati nel vault. Eliminare le copie originali dal dispositivo?") +
+                        " (Non è una cancellazione sicura dell'originale.)",
+                )
+            },
+            confirmButton = { TextButton(onClick = { vm.deleteOriginals(pendingOriginals) }) { Text(if (n == 1) "Elimina originale" else "Elimina originali") } },
             dismissButton = { TextButton(onClick = { vm.clearPendingOriginals() }) { Text("Mantieni") } },
         )
+    }
+}
+
+/** "3 selezionati" in the top bar; the number rolls up when it grows and down when it shrinks. */
+@Composable
+private fun SelectionCountTitle(count: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AnimatedContent(
+            targetState = count,
+            transitionSpec = {
+                val up = targetState > initialState
+                (slideInVertically(Motion.enter()) { h -> if (up) h else -h } + fadeIn(Motion.enter())) togetherWith
+                    (slideOutVertically(Motion.exit()) { h -> if (up) -h else h } + fadeOut(Motion.exit())) using
+                    SizeTransform(clip = true)
+            },
+            label = "selCount",
+        ) { n -> Text("$n", maxLines = 1) }
+        Text(if (count == 1) " selezionato" else " selezionati", maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -873,7 +1221,7 @@ private fun SectionLabel(text: String, count: Int? = null) {
         text.uppercase() + (count?.let { " · $it" } ?: ""),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 2.dp),
+        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 2.dp).semantics { heading() },
     )
 }
 
@@ -907,55 +1255,6 @@ private fun folderSubtitle(stat: FolderStat?): String {
     return "$items · ${formatBytes(stat.bytes)}"
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun FolderCell(
-    folder: FolderEntity,
-    viewMode: ViewMode,
-    stat: FolderStat?,
-    showInfo: Boolean,
-    modifier: Modifier,
-    onOpen: () -> Unit,
-    onLongPress: () -> Unit,
-) {
-    val subtitle = folderSubtitle(stat)
-    if (viewMode == ViewMode.LIST) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = MaterialTheme.shapes.medium,
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 32.dp)
-                Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                    Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    if (showInfo) {
-                        Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
-        return
-    }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth().aspectRatio(1f),
-    ) {
-        Column(Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 36.dp)
-            Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(top = 6.dp), textAlign = TextAlign.Center)
-            if (showInfo) {
-                Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 2.dp))
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
@@ -972,6 +1271,10 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
         else (state.firstVisibleItemIndex.toFloat() / (total - 1)).coerceIn(0f, 1f)
     val active = state.isScrollInProgress || dragging
     val alpha by animateFloatAsState(if (active) 1f else 0f, label = "fastscroll")
+    // The strip only takes drags while the scroller is visible: when hidden, touches on the right
+    // edge go to the grid (select, open, scroll) instead of an invisible control.
+    val visible = active || alpha > 0.05f
+    val thumbW by animateDpAsState(if (dragging) 10.dp else 6.dp, Motion.enter(Motion.SHORT), label = "thumbW")
     val density = LocalDensity.current
     val thumbH = 48.dp
     val thumbPx = with(density) { thumbH.toPx() }
@@ -998,7 +1301,7 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
             .fillMaxHeight()
             .width(28.dp)
             .onGloballyPositioned { trackH = it.size.height.toFloat() }
-            .pointerInput(total, trackH) {
+            .then(if (!visible) Modifier else Modifier.pointerInput(total, trackH) {
                 detectVerticalDragGestures(
                     onDragStart = { dragging = true },
                     onDragEnd = { dragging = false },
@@ -1010,13 +1313,13 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
                         }
                     },
                 )
-            },
+            }),
     ) {
         Box(
             Modifier.align(Alignment.TopEnd)
                 .padding(end = 3.dp)
                 .offset(y = offsetY)
-                .width(6.dp)
+                .width(thumbW)
                 .height(thumbH)
                 .graphicsLayer { this.alpha = alpha }
                 .clip(CircleShape)
@@ -1038,8 +1341,6 @@ private fun FileCell(
     coverOverride: android.graphics.Bitmap?,
     coverVersion: Int,
     thumb: suspend () -> android.graphics.Bitmap?,
-    onOpen: () -> Unit,
-    onToggleSelect: () -> Unit,
 ) {
     val mime = item.file.mimeType
     val isVideo = VaultRepository.isVideo(mime)
@@ -1058,8 +1359,9 @@ private fun FileCell(
             modifier = modifier.fillMaxWidth()) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // List mode: no tag badges on the cover — every tag is shown as a chip beside it.
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
-                    emptyList(), Modifier.size(72.dp), file = item.file, display = display, compact = true)
+                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
+                    emptyList(), Modifier.size(72.dp), file = item.file, display = display, compact = true,
+                    selectionMode = selectionMode)
                 Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     if (display.showFileInfo) {
@@ -1078,9 +1380,9 @@ private fun FileCell(
     }
 
     Column(modifier.fillMaxWidth()) {
-        ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
+        ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
             if (display.showTagsOnCover) item.tags else emptyList(),
-            Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
+            Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display, selectionMode = selectionMode)
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
         if (display.showFileInfo) {
@@ -1144,7 +1446,8 @@ private fun ThumbBox(
     bmp: android.graphics.Bitmap?,
     fallbackIcon: ImageVector,
     isVideo: Boolean,
-    name: String,
+    /** Image description; null inside cells, where the file name is already shown as text. */
+    name: String?,
     selected: Boolean,
     favorite: Boolean,
     tags: List<TagEntity>,
@@ -1153,13 +1456,20 @@ private fun ThumbBox(
     display: DisplayPrefs? = null,
     /** Small list-mode thumbnail: only the duration, bottom-right. */
     compact: Boolean = false,
+    /** Selection mode: unselected covers show the empty ring where the check lands. */
+    selectionMode: Boolean = false,
 ) {
-    val borderMod = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier
     val duration = if (isVideo && display?.showDurationBadge != false)
         com.cripta.app.ui.components.formatDuration(file?.durationMs) else null
     val quality = if (isVideo && !compact && display?.showQualityBadge != false)
         qualityLabel(file?.width, file?.height) else null
-    Box(modifier.clip(MaterialTheme.shapes.medium).then(borderMod), contentAlignment = Alignment.Center) {
+    SelectableThumbFrame(
+        selected = selected,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier,
+        selectedScale = if (compact) 0.9f else 0.92f,
+        overlay = { CornerSelectionCheck(selected, selectionMode, size = if (compact) 20.dp else 24.dp) },
+    ) {
         // Without a cover, a tint per type (video blue / photo green / other amber) instead of flat grey.
         val typeTint = when {
             isVideo -> Color(0xFF3B82F6)
@@ -1167,13 +1477,9 @@ private fun ThumbBox(
             else -> Color(0xFFF59E0B)
         }
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
-        Crossfade(targetState = bmp, label = "thumb") { b ->
-            if (b != null) {
-                Image(b.asImageBitmap(), contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            } else {
-                Box(Modifier.fillMaxSize().background(typeTint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-                    Icon(fallbackIcon, null, tint = typeTint, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
-                }
+        ThumbCrossfade(bmp, contentDescription = name, modifier = Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(typeTint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                Icon(fallbackIcon, null, tint = typeTint, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
             }
         }
         // Play marker only when no duration badge already says "this is a video".
@@ -1206,17 +1512,12 @@ private fun ThumbBox(
                     modifier = Modifier.size(if (compact) 13.dp else 16.dp))
             }
         }
-        if (selected) {
-            Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            }
-        } else if (compact) {
+        if (compact) {
             if (duration != null) {
                 Box(Modifier.align(Alignment.BottomEnd).padding(3.dp)) { CornerBadge(duration) }
             }
-        } else if (duration != null || quality != null) {
-            // Top-right, so the whole bottom edge stays free for tags.
+        } else if (!selectionMode && !selected && (duration != null || quality != null)) {
+            // Top-right (the selection check's corner in selection mode), so the bottom stays free for tags.
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 quality?.let { CornerBadge(it, emphasis = it == "4K") }
                 duration?.let { CornerBadge(it) }
@@ -1343,7 +1644,10 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
     }
 }
 
-/** Compact, at-a-glance summary of active filters with one-tap removal. Hidden when none active. */
+/**
+ * Compact, at-a-glance summary of active filters (search text included) with one-tap removal, and
+ * a note that results come from the whole vault. Expands/collapses when filters turn on/off.
+ */
 @Composable
 private fun ActiveFilterBar(
     filters: Filters,
@@ -1354,38 +1658,59 @@ private fun ActiveFilterBar(
     onTag: (Long) -> Unit,
     onExcludeTag: (Long) -> Unit,
     onClearAll: () -> Unit,
+    onClearQuery: () -> Unit,
 ) {
-    if (!filters.active) return
+    // Keep drawing the last active filters while the bar collapses.
+    val last = remember { mutableStateOf(filters) }
+    SideEffect { if (filters.active) last.value = filters }
+    val f = if (filters.active) filters else last.value
     val tagById = remember(tags) { tags.associateBy { it.id } }
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    AnimatedVisibility(
+        visible = filters.active,
+        enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
+        exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
     ) {
-        if (filters.type != TypeFilter.ALL) DismissChip(typeLabel(filters.type)) { onType(TypeFilter.ALL) }
-        if (filters.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
-        if (filters.untaggedOnly) DismissChip("Senza etichette") { onClearUntagged() }
-        filters.tagIds.forEach { id ->
-            val t = tagById[id] ?: return@forEach
-            DismissChip("#${t.name}") { onTag(id) }
+        Column {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .animateContentSize(Motion.enter())
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (f.query.isNotBlank()) DismissChip("“${f.query}”", "ricerca ${f.query}") { onClearQuery() }
+                if (f.type != TypeFilter.ALL) DismissChip(typeLabel(f.type)) { onType(TypeFilter.ALL) }
+                if (f.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
+                if (f.untaggedOnly) DismissChip("Senza etichette") { onClearUntagged() }
+                f.tagIds.forEach { id ->
+                    val t = tagById[id] ?: return@forEach
+                    DismissChip("#${t.name}", "etichetta ${t.name}") { onTag(id) }
+                }
+                f.excludedTagIds.forEach { id ->
+                    val t = tagById[id] ?: return@forEach
+                    DismissChip("⊘ #${t.name}", "esclusione etichetta ${t.name}") { onExcludeTag(id) }
+                }
+                TextButton(onClick = onClearAll) { Text("Azzera") }
+            }
+            // The title still names the folder, but a filter searches everywhere: say so.
+            Text("Risultati da tutto il vault, sottocartelle incluse",
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp))
         }
-        filters.excludedTagIds.forEach { id ->
-            val t = tagById[id] ?: return@forEach
-            DismissChip("⊘ #${t.name}") { onExcludeTag(id) }
-        }
-        TextButton(onClick = onClearAll) { Text("Azzera") }
     }
 }
 
+/** Removable filter chip: 48dp touch target, announced as "Rimuovi filtro …". */
 @Composable
-private fun DismissChip(label: String, onClear: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
+private fun DismissChip(label: String, description: String = label, onClear: () -> Unit) {
+    Surface(onClick = onClear, color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
         Row(
-            Modifier.clickable(onClick = onClear).padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+            Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Icon(Icons.Filled.Close, "Rimuovi", tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1, modifier = Modifier.clearAndSetSemantics { this.contentDescription = "Rimuovi filtro $description" })
+            Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(start = 4.dp).size(16.dp))
         }
     }
@@ -1393,7 +1718,7 @@ private fun DismissChip(label: String, onClear: () -> Unit) {
 
 private enum class TagFilterState { NEUTRAL, INCLUDE, EXCLUDE }
 
-/** Tri-state tag chip: neutral, include (primary), exclude (error). Colour-coded, no icons. */
+/** Tri-state tag chip: neutral, include (primary), exclude (error + strike-through). */
 @Composable
 private fun TagFilterChip(label: String, state: TagFilterState, dot: Color?, onClick: () -> Unit) {
     val bg = when (state) {
@@ -1406,7 +1731,19 @@ private fun TagFilterChip(label: String, state: TagFilterState, dot: Color?, onC
         TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.onErrorContainer
         TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.onSurface
     }
-    Surface(color = bg, shape = MaterialTheme.shapes.small, modifier = Modifier.clickable(onClick = onClick)) {
+    // Clickable Surface = 48dp touch target; the state is spoken, not only shown by colour.
+    Surface(
+        onClick = onClick,
+        color = bg,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.semantics {
+            this.stateDescription = when (state) {
+                TagFilterState.INCLUDE -> "Inclusa"
+                TagFilterState.EXCLUDE -> "Esclusa"
+                TagFilterState.NEUTRAL -> "Non filtrata"
+            }
+        },
+    ) {
         // An excluded (hidden) tag is struck through instead of getting a "⊘" prefix: the chip keeps
         // exactly the same width in every state (a width change reflows the rows and makes the sheet
         // jump) without the invisible leading space a reserved prefix would leave.
@@ -1488,15 +1825,20 @@ private fun FilterSortSheet(
             // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
             Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.CenterStart) {
                 if (sortKey == SortKey.MANUAL) {
-                    Text("Trascina gli elementi in modalità Lista per riordinarli a piacere.",
+                    Text("Tieni premuto un elemento e trascinalo per riordinarlo (in griglia o in lista).",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    FilterChip(
-                        selected = false,
-                        onClick = { onSort(sortKey, !sortAscending) },
-                        leadingIcon = { Icon(Icons.Filled.SwapVert, null) },
-                        label = { Text(if (sortAscending) "Crescente" else "Decrescente") },
-                    )
+                    // Both directions shown, the current one selected: a choice, not a hidden state.
+                    val (descLabel, ascLabel) = when (sortKey) {
+                        SortKey.DATE -> "Più recenti prima" to "Meno recenti prima"
+                        SortKey.NAME -> "Z → A" to "A → Z"
+                        SortKey.SIZE -> "Più grandi prima" to "Più piccoli prima"
+                        else -> "Decrescente" to "Crescente"
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !sortAscending, onClick = { onSort(sortKey, false) }, label = { Text(descLabel) })
+                        FilterChip(selected = sortAscending, onClick = { onSort(sortKey, true) }, label = { Text(ascLabel) })
+                    }
                 }
             }
 
@@ -1509,19 +1851,27 @@ private fun FilterSortSheet(
                 }
             }
 
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .toggleable(value = filters.favoritesOnly, role = Role.Switch, onValueChange = { onFav() }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text("Solo preferiti", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = filters.favoritesOnly, onCheckedChange = { onFav() })
+                Switch(checked = filters.favoritesOnly, onCheckedChange = null)
             }
 
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .toggleable(value = filters.untaggedOnly, role = Role.Switch, onValueChange = { onUntagged() }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text("Senza etichette", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = filters.untaggedOnly, onCheckedChange = { onUntagged() })
+                Switch(checked = filters.untaggedOnly, onCheckedChange = null)
             }
 
             if (tags.isNotEmpty()) {
                 HorizontalDivider()
-                Text("Tag", style = MaterialTheme.typography.titleSmall)
+                Text("Etichette", style = MaterialTheme.typography.titleSmall)
                 Text("Tocca per includere, ancora per escludere (barrato, nascosto), ancora per azzerare.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // With several tags chosen: must a file have all of them, or is one enough?
@@ -1558,7 +1908,7 @@ private fun FilterSortSheet(
         }
     }
     if (naming) {
-        TextPromptDialog("Salva filtro", "Nome (es. Video da vedere)",
+        TextPromptDialog("Salva filtro", "Nome (es. Video da vedere)", confirmLabel = "Salva",
             onConfirm = { onSave(it); naming = false },
             onDismiss = { naming = false })
     }
@@ -1566,8 +1916,10 @@ private fun FilterSortSheet(
 
 /**
  * Drag-to-reorder used by the Manual sort in BOTH grid and list. Reorder starts only after a
- * long press (so a stray tap never changes the order), then the item follows the finger and the
- * target slot is found by hit-testing the grid's layout info (works for any cell size / column count).
+ * long press (so a stray tap never changes the order), then the item lifts, follows the finger and
+ * the target slot is found by hit-testing the grid's layout info (works for any cell size / column
+ * count). Holding it near the top/bottom edge scrolls the grid. [header] (the folders row) stays
+ * above the items. TalkBack users get "Sposta prima / dopo" actions instead of the drag.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1582,6 +1934,7 @@ private fun ReorderableFileGrid(
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onOpen: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
+    header: (@Composable () -> Unit)? = null,
 ) {
     val list = remember { mutableStateListOf<FileWithTags>() }
     var dragging by remember { mutableStateOf(false) }
@@ -1591,9 +1944,56 @@ private fun ReorderableFileGrid(
     var draggedId by remember { mutableStateOf<String?>(null) }
     var pointer by remember { mutableStateOf(Offset.Zero) }    // finger position in the grid viewport
     var pressLocal by remember { mutableStateOf(Offset.Zero) } // grab point inside the cell
+    val density = LocalDensity.current
+    val itemShape = MaterialTheme.shapes.medium
+
+    /** Move the dragged item to the slot under the finger (file cells only, never the header). */
+    fun retarget() {
+        val id = draggedId ?: return
+        val from = list.indexOfFirst { it.file.id == id }
+        val hitKey = gridState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+            info.key != FOLDERS_KEY &&
+                pointer.x >= info.offset.x && pointer.x <= info.offset.x + info.size.width &&
+                pointer.y >= info.offset.y && pointer.y <= info.offset.y + info.size.height
+        }?.key as? String ?: return
+        val target = list.indexOfFirst { it.file.id == hitKey }
+        if (from >= 0 && target >= 0 && target != from) list.add(target, list.removeAt(from))
+    }
+
+    /** Accessibility reorder: one step earlier (-1) or later (+1). */
+    fun moveBy(id: String, delta: Int) {
+        val from = list.indexOfFirst { it.file.id == id }
+        if (from < 0) return
+        val to = (from + delta).coerceIn(0, list.lastIndex)
+        if (to == from) return
+        list.add(to, list.removeAt(from))
+        onReorder(list.map { it.file.id })
+    }
+
+    // Auto-scroll while the item is held near the top or bottom edge (faster the closer it is).
+    LaunchedEffect(draggedId) {
+        if (draggedId == null) return@LaunchedEffect
+        val edge = with(density) { 72.dp.toPx() }
+        val maxStep = with(density) { 14.dp.toPx() }
+        while (draggedId != null) {
+            val h = gridState.layoutInfo.viewportSize.height.toFloat()
+            val y = pointer.y
+            val step = when {
+                h <= 0f -> 0f
+                y < edge -> -maxStep * ((edge - y) / edge).coerceIn(0f, 1f)
+                y > h - edge -> maxStep * ((y - (h - edge)) / edge).coerceIn(0f, 1f)
+                else -> 0f
+            }
+            if (step != 0f) {
+                gridState.scrollBy(step)
+                retarget()
+            }
+            androidx.compose.runtime.withFrameNanos { }
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
-        Text("Ordine manuale · tieni premuto e trascina per riordinare",
+        Text("Ordine manuale · tieni premuto un elemento e trascinalo per riordinarlo",
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
         LazyVerticalGrid(
@@ -1604,10 +2004,15 @@ private fun ReorderableFileGrid(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (header != null) {
+                item(key = FOLDERS_KEY, span = { GridItemSpan(maxLineSpan) }) { header() }
+            }
             itemsIndexed(list, key = { _, it -> it.file.id }) { _, fwt ->
                 val isDragged = fwt.file.id == draggedId
                 val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
                 val bmp = coverOverrides[fwt.file.id] ?: loaded
+                // The held item lifts: slightly larger, with a shadow.
+                val lift by animateFloatAsState(if (isDragged) 1.05f else 1f, Motion.enter(Motion.SHORT), label = "lift")
                 ReorderCell(
                     item = fwt,
                     bmp = bmp,
@@ -1619,13 +2024,24 @@ private fun ReorderableFileGrid(
                         .zIndex(if (isDragged) 1f else 0f)
                         .then(if (!isDragged) Modifier.animateItem() else Modifier)
                         .graphicsLayer {
+                            scaleX = lift; scaleY = lift
                             if (isDragged) {
+                                shadowElevation = 8.dp.toPx()
+                                shape = itemShape
+                                clip = false
                                 val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedId }
                                 if (info != null) {
                                     translationX = pointer.x - pressLocal.x - info.offset.x
                                     translationY = pointer.y - pressLocal.y - info.offset.y
                                 }
                             }
+                        }
+                        .semantics(mergeDescendants = true) {
+                            onClick(label = "Apri") { onOpen(fwt.file.id); true }
+                            this.customActions = listOf(
+                                CustomAccessibilityAction("Sposta prima") { moveBy(fwt.file.id, -1); true },
+                                CustomAccessibilityAction("Sposta dopo") { moveBy(fwt.file.id, 1); true },
+                            )
                         }
                         .pointerInput(fwt.file.id) { detectTapGestures(onTap = { onOpen(fwt.file.id) }) }
                         .pointerInput(fwt.file.id) {
@@ -1640,14 +2056,7 @@ private fun ReorderableFileGrid(
                                 onDrag = { change, amount ->
                                     change.consume()
                                     pointer += amount
-                                    val from = list.indexOfFirst { it.file.id == draggedId }
-                                    val target = gridState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
-                                        pointer.x >= info.offset.x && pointer.x <= info.offset.x + info.size.width &&
-                                            pointer.y >= info.offset.y && pointer.y <= info.offset.y + info.size.height
-                                    }?.index
-                                    if (from >= 0 && target != null && target != from && target < list.size) {
-                                        list.add(target, list.removeAt(from))
-                                    }
+                                    retarget()
                                 },
                                 onDragEnd = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
                                 onDragCancel = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
@@ -1682,10 +2091,11 @@ private fun ReorderCell(
             color = if (dragged) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
             shape = MaterialTheme.shapes.medium,
             tonalElevation = if (dragged) 8.dp else 0.dp,
-            modifier = modifier.fillMaxWidth().height(72.dp),
+            // Min height, not fixed: large fonts grow the row instead of clipping it.
+            modifier = modifier.fillMaxWidth().heightIn(min = 72.dp),
         ) {
-            Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp),
+            Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp),
                     file = item.file, display = display, compact = true)
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
@@ -1701,7 +2111,7 @@ private fun ReorderCell(
     } else {
         Column(modifier.fillMaxWidth()) {
             Box {
-                ThumbBox(bmp, fallbackIcon, isVideo, item.file.originalName, selected, item.file.isFavorite,
+                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
                     if (display.showTagsOnCover) item.tags else emptyList(),
                     Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
                 if (dragged) {
@@ -1815,18 +2225,20 @@ private fun FolderStyleDialog(
                 Text("Colore", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    ColorSwatch(null, color == null) { color = null }
-                    com.cripta.app.ui.components.FOLDER_COLORS.forEach { c -> ColorSwatch(c, color == c) { color = c } }
+                    ColorSwatch(null, color == null, "Nessun colore") { color = null }
+                    com.cripta.app.ui.components.FOLDER_COLORS.forEachIndexed { i, c ->
+                        ColorSwatch(c, color == c, FOLDER_COLOR_NAMES.getOrElse(i) { "Colore ${i + 1}" }) { color = c }
+                    }
                 }
                 Text("Emoji", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    EmojiPick("✕", emoji.isBlank()) { emoji = "" }
-                    emojis.forEach { e -> EmojiPick(e, emoji == e) { emoji = e } }
+                    EmojiPick("✕", emoji.isBlank(), "Nessuna emoji") { emoji = "" }
+                    emojis.forEach { e -> EmojiPick(e, emoji == e, "Emoji $e") { emoji = e } }
                 }
             }
         },
@@ -1835,27 +2247,46 @@ private fun FolderStyleDialog(
     )
 }
 
+/** Spoken names of [com.cripta.app.ui.components.FOLDER_COLORS], same order. */
+private val FOLDER_COLOR_NAMES = listOf("Blu", "Verde", "Ambra", "Rosso", "Viola", "Turchese", "Rosa", "Grigio")
+
+/** Colour choice: 48dp target, radio semantics with its name, a check (not only a ring) when chosen. */
 @Composable
-private fun ColorSwatch(color: Int?, selected: Boolean, onClick: () -> Unit) {
-    val fill = color?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceVariant
+private fun ColorSwatch(color: Int?, selected: Boolean, name: String, onClick: () -> Unit) {
+    val fill = color?.let { Color(it) } ?: MaterialTheme.colorScheme.surface
     Box(
-        Modifier.size(36.dp).clip(CircleShape).background(fill)
-            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-            .clickable(onClick = onClick),
+        Modifier.minimumInteractiveComponentSize()
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(fill)
+            .border(
+                if (selected) 3.dp else 1.dp,
+                if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                CircleShape,
+            )
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .semantics { this.contentDescription = name },
         contentAlignment = Alignment.Center,
     ) {
-        if (color == null) Icon(Icons.Filled.Close, "Nessun colore", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        when {
+            color == null -> Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            selected -> Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
 @Composable
-private fun EmojiPick(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun EmojiPick(label: String, selected: Boolean, description: String, onClick: () -> Unit) {
     Surface(
+        selected = selected,
+        onClick = onClick,
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.semantics { this.role = Role.RadioButton },
     ) {
-        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
+        Text(label, style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                .clearAndSetSemantics { this.contentDescription = description })
     }
 }
 
@@ -1872,7 +2303,13 @@ private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean =
 }
 
 @Composable
-private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> Unit = {}, folderName: String? = null) {
+private fun EmptyState(
+    filtering: Boolean,
+    modifier: Modifier,
+    onImport: () -> Unit = {},
+    folderName: String? = null,
+    onClearFilters: () -> Unit = {},
+) {
     // Landscape: smaller badge and padding + scroll, so the import button is always reachable.
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val outer = if (landscape) modifier.verticalScroll(rememberScrollState()).padding(16.dp) else modifier.padding(32.dp)
@@ -1892,8 +2329,9 @@ private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> U
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
-                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(18.dp))
-                Text("  Importa qui")
+                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Importa qui")
             }
         }
         return
@@ -1913,13 +2351,18 @@ private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> U
         }
         Text(if (filtering) "Nessun risultato" else "Vault vuoto",
             style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
-        Text(if (filtering) "Prova a cambiare i filtri." else "Importa foto e video: restano cifrati e visibili solo qui.",
+        Text(if (filtering) "Nessun file in tutto il vault corrisponde ai filtri attivi." else "Importa foto e video: restano cifrati e visibili solo qui.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-        if (!filtering) {
+            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        if (filtering) {
+            androidx.compose.material3.OutlinedButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp)) {
+                Text("Azzera filtri")
+            }
+        } else {
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
-                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(18.dp))
-                Text("  Importa file")
+                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Importa file")
             }
         }
     }
@@ -1929,8 +2372,10 @@ private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> U
 @Composable
 private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        // The name pill is tappable too (bigger target); TalkBack gets a single node, the button.
+        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.clearAndSetSemantics { }) {
             Text(label, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
         }
@@ -2050,11 +2495,11 @@ private fun StatsStrip(stats: VaultStats, filtering: Boolean, type: TypeFilter, 
             else if (shown.total == 1) "1 elemento" else "${shown.total} elementi"
         Text(lead, style = MaterialTheme.typography.labelLarge,
             color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
-        CountPill(Icons.Filled.Movie, shown.videos, type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
-        CountPill(Icons.Filled.Image, shown.images, type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
+            modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = "Riepilogo", onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
+        CountPill(Icons.Filled.Movie, shown.videos, "video", type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
+        CountPill(Icons.Filled.Image, shown.images, "foto", type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
         if (shown.others > 0 || type == TypeFilter.OTHER) {
-            CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others, type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
+            CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others, "altri file", type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
         }
         Box(Modifier.weight(1f))
         IconButton(onClick = onOpen, modifier = Modifier.size(28.dp)) {
@@ -2082,25 +2527,28 @@ private fun Breadcrumb(names: List<String>, onGo: (Int) -> Unit) {
                 color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                 maxLines = 1,
                 modifier = Modifier.clip(MaterialTheme.shapes.small)
-                    .then(if (last) Modifier else Modifier.clickable { onGo(i) })
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .then(if (last) Modifier else Modifier.clickable(onClickLabel = "Vai a $n", role = Role.Button) { onGo(i) })
+                    .heightIn(min = 40.dp)
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
             )
-            if (!last) Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!last) Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics { })
         }
     }
 }
 
 @Composable
-private fun CountPill(icon: ImageVector, count: Int, selected: Boolean, onClick: () -> Unit) {
+private fun CountPill(icon: ImageVector, count: Int, what: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.clip(MaterialTheme.shapes.small)
             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 4.dp),
+            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
+            .semantics(mergeDescendants = true) { this.contentDescription = "$count $what, mostra solo $what" }
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
-        Text(" $count", style = MaterialTheme.typography.labelMedium, color = tint)
+        Text("$count", style = MaterialTheme.typography.labelMedium, color = tint, modifier = Modifier.padding(start = 3.dp))
     }
 }
 
@@ -2302,7 +2750,8 @@ fun CoverThumb(
         isVideo -> Icons.Filled.Movie
         else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
-    ThumbBox(bmp, icon, isVideo, file.originalName, selected = false, favorite = file.isFavorite,
+    // Decorative: every caller shows the file name as text next to the cover.
+    ThumbBox(bmp, icon, isVideo, null, selected = false, favorite = file.isFavorite,
         tags = if (display.showTagsOnCover) tags else emptyList(), modifier = modifier, file = file, display = display)
 }
 
@@ -2318,14 +2767,22 @@ fun FolderMosaic(
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     modifier: Modifier = Modifier,
     showInfo: Boolean = true,
+    /** Drop target under a drag-selection: the card lifts, tints and gets a primary border. */
     highlighted: Boolean = false,
+    /** When set, a "more" button opens the folder's actions (so they aren't long-press only). */
+    onMore: (() -> Unit)? = null,
 ) {
     val accent = folder.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-    Column(modifier) {
+    val lift by animateFloatAsState(if (highlighted) 1.05f else 1f, Motion.enter(Motion.SHORT), label = "folderLift")
+    val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
+    val primary = MaterialTheme.colorScheme.primary
+    val shape = MaterialTheme.shapes.medium
+    // Scale outermost, so the caller's clip/click area scales with the card.
+    Column(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.then(modifier)) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium)
+            Modifier.fillMaxWidth().aspectRatio(1f).clip(shape)
                 .background(accent.copy(alpha = 0.16f))
-                .then(if (highlighted) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier),
+                .then(if (hl > 0f) Modifier.background(primary.copy(alpha = 0.18f * hl)).border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
         ) {
             if (previews.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -2363,11 +2820,21 @@ fun FolderMosaic(
                 Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) { CornerBadge("${stat.count}") }
             }
         }
-        Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(top = 6.dp, start = 2.dp))
-        if (showInfo) {
-            Text(folderSubtitle(stat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+                if (showInfo) {
+                    Text(folderSubtitle(stat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
+                }
+            }
+            if (onMore != null) {
+                IconButton(onClick = onMore, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Filled.MoreVert, "Azioni per ${folder.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp))
+                }
+            }
         }
     }
 }
@@ -2377,10 +2844,10 @@ fun FolderMosaic(
 private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier, destructive: Boolean = false, onClick: () -> Unit) {
     val tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     Column(
-        modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 6.dp),
+        modifier.clip(MaterialTheme.shapes.medium).clickable(role = Role.Button, onClick = onClick).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, label, tint = tint)
+        Icon(icon, null, tint = tint)
         Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
     }
 }

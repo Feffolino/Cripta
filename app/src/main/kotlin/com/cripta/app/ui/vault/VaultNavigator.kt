@@ -22,6 +22,16 @@ class VaultNavigator @Inject constructor() {
     fun consumeFilters() { _filters.value = null }
 }
 
+/**
+ * "Cartelle" tab reselected while already on it (bottom bar / rail): the vault returns to its root.
+ * A plain object so the nav host can call [notifyReselected] without injection.
+ */
+object VaultTabReselect {
+    private val _events = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val events: kotlinx.coroutines.flow.SharedFlow<Unit> = _events
+    fun notifyReselected() { _events.tryEmit(Unit) }
+}
+
 /** Filters <-> JSON, for saved filters (stored encrypted in the vault DB). */
 fun Filters.toJson(): String = org.json.JSONObject().apply {
     put("q", query)

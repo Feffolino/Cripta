@@ -71,6 +71,26 @@ import com.cripta.app.data.VaultRepository.DownloadPhase
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.ui.components.formatBytes
 import kotlinx.coroutines.delay
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.theme.Motion
 
 /**
  * In-app video downloader: paste (or share in) a link, pick a quality — with a size estimate per
@@ -117,18 +137,33 @@ fun DownloadScreen(
 
     // A link shared from another app: pre-fill the field so the user can pick a resolution.
     LaunchedEffect(pending) {
-        pending?.let { url = it; vm.consumeSharedLink() }
+        pending?.let { url = extractUrl(it); vm.consumeSharedLink() }
     }
     // Debounced size probe (and "already downloaded" check) whenever the link settles.
     LaunchedEffect(url) {
         val u = url.trim()
-        if (u.isBlank()) { vm.resetEstimate() } else { delay(700); vm.estimate(u, heights) }
+        // Not a link (yet): nothing to probe, and no misleading "estimate failed".
+        if (!looksLikeUrl(u)) { vm.resetEstimate() } else { delay(700); vm.estimate(u, heights) }
     }
 
     fun paste() {
         val clip = clipboard.getText()?.text?.trim().orEmpty()
-        if (clip.isNotBlank()) url = clip
+        if (clip.isNotBlank()) url = extractUrl(clip)
         else Toast.makeText(ctx, "Appunti vuoti", Toast.LENGTH_SHORT).show()
+    }
+
+    val urlValid = looksLikeUrl(url)
+    // Only complain once something has been typed that clearly isn't a link.
+    val urlError = url.isNotBlank() && !urlValid
+    fun submit() {
+        val u = url.trim()
+        if (!looksLikeUrl(u)) return
+        if (vm.isQueued(u)) {
+            Toast.makeText(ctx, "Questo link è già in coda", Toast.LENGTH_SHORT).show()
+        } else {
+            vm.enqueue(ctx, u, quality, effectiveFolder, effectiveTags)
+            url = ""; vm.resetEstimate()
+        }
     }
 
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
@@ -155,18 +190,28 @@ fun DownloadScreen(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text("Link video") },
+                placeholder = { Text("https://…") },
                 singleLine = true,
+                isError = urlError,
+                supportingText = if (urlError) ({ Text("Non sembra un link: deve iniziare con http:// o https://") }) else null,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Go,
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { submit() }),
                 modifier = Modifier.fillMaxWidth(),
             )
             // Paste the clipboard link in one tap, or clear the field to start over.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { paste() }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
-                    Text("  Incolla")
+                    Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Incolla")
                 }
                 OutlinedButton(onClick = { url = ""; vm.resetEstimate() }, enabled = url.isNotBlank(), modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Close, null, modifier = Modifier.size(18.dp))
-                    Text("  Cancella")
+                    Icon(Icons.Filled.Clear, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Cancella")
                 }
             }
 
@@ -187,7 +232,7 @@ fun DownloadScreen(
                 }
             }
 
-            Text("Qualità", style = MaterialTheme.typography.labelLarge)
+            Text("Qualità", style = MaterialTheme.typography.labelLarge, modifier = Modifier.semantics { heading() })
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 qualities.forEach { (h, label) ->
                     FilterChip(
@@ -202,18 +247,31 @@ fun DownloadScreen(
                     )
                 }
             }
-            when (val e = estimate) {
-                is DownloadViewModel.Estimate.Error ->
-                    Text("Stima non disponibile: ${e.message}", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                DownloadViewModel.Estimate.Loading ->
-                    Text("Calcolo dimensioni…", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else -> {}
+            // Estimate line: takes no space while idle, crossfades between "computing" / result / error.
+            val estimateText = when (val e = estimate) {
+                is DownloadViewModel.Estimate.Error -> "Dimensioni non stimabili: ${e.message}"
+                DownloadViewModel.Estimate.Loading -> "Calcolo delle dimensioni…"
+                is DownloadViewModel.Estimate.Ready ->
+                    "Auto: la migliore qualità disponibile. «—»: dimensione non stimabile per quella qualità."
+                else -> null
+            }
+            var lastEstimateText by remember { mutableStateOf("") }
+            if (estimateText != null) lastEstimateText = estimateText
+            androidx.compose.animation.AnimatedVisibility(
+                visible = estimateText != null,
+                enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+                exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+            ) {
+                androidx.compose.animation.Crossfade(
+                    lastEstimateText, animationSpec = Motion.enter(), label = "estimateLine",
+                ) { t ->
+                    Text(t, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite })
+                }
             }
 
             // Destination (remembered).
-            Text("Salva in", style = MaterialTheme.typography.labelLarge)
+            Text("Salva in", style = MaterialTheme.typography.labelLarge, modifier = Modifier.semantics { heading() })
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable { pickFolder = true },
@@ -265,38 +323,34 @@ fun DownloadScreen(
             }
 
             Button(
-                onClick = {
-                    val u = url.trim()
-                    if (u.isNotBlank()) {
-                        if (vm.isQueued(u)) {
-                            Toast.makeText(ctx, "Questo link è già in coda", Toast.LENGTH_SHORT).show()
-                        } else {
-                            vm.enqueue(ctx, u, quality, effectiveFolder, effectiveTags)
-                            url = ""; vm.resetEstimate()
-                        }
-                    }
-                },
-                enabled = url.isNotBlank(),
+                onClick = { submit() },
+                enabled = urlValid,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Filled.Download, null, modifier = Modifier.size(18.dp))
-                Text(if (downloads.any { it.active }) "  Aggiungi alla coda" else if (existing != null) "  Scarica comunque" else "  Scarica")
+                Icon(Icons.Filled.Download, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(if (downloads.any { it.active }) "Aggiungi alla coda" else if (existing != null) "Scarica comunque" else "Scarica")
             }
 
     }
     val queue: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
             if (downloads.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Coda", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text("Coda", style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f).semantics { heading() })
                     if (downloads.any { it.finished }) TextButton(onClick = { vm.clearFinished() }) { Text("Pulisci completati") }
                 }
                 downloads.forEach { job ->
-                    JobCard(
-                        job,
-                        onCancel = { vm.cancel(ctx) },
-                        onRemove = { vm.remove(job.id) },
-                        onOpen = { id -> vm.prepareOpen(id); onOpenFile(id) },
-                    )
+                    androidx.compose.runtime.key(job.id) {
+                        JobCard(
+                            job,
+                            destination = job.folderId?.let { id -> folders.firstOrNull { it.id == id } }?.let { folderLabel(it, folders) } ?: "Radice",
+                            onCancel = { vm.cancel(ctx) },
+                            onRemove = { vm.remove(job.id) },
+                            onRetry = { vm.retry(ctx, job) },
+                            onOpen = { id -> vm.prepareOpen(id); onOpenFile(id) },
+                        )
+                    }
                 }
             }
 
@@ -322,11 +376,11 @@ fun DownloadScreen(
         if (landscape) {
             // Landscape: the form on the left, the queue on the right, each scrolling on its own.
             Row(
-                Modifier.padding(pad).fillMaxSize().padding(horizontal = 16.dp),
+                Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+                    Modifier.weight(1f).fillMaxHeight().imePadding().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     content = form,
                 )
@@ -342,7 +396,9 @@ fun DownloadScreen(
             }
         } else {
             Column(
-                Modifier.padding(pad).fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
+                // imePadding keeps the field and the "Scarica" button reachable above the keyboard.
+                Modifier.padding(pad).consumeWindowInsets(pad).imePadding()
+                    .fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 form()
@@ -401,24 +457,45 @@ private fun FolderRow(name: String, color: Int?, emoji: String?, selected: Boole
 /** Small size estimate shown inside a quality chip. */
 @Composable
 private fun SizeHint(estimate: DownloadViewModel.Estimate, height: Int?) {
-    when (estimate) {
-        DownloadViewModel.Estimate.Loading ->
-            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(12.dp))
-        is DownloadViewModel.Estimate.Ready -> {
-            val bytes = estimate.bytesByHeight[height]
-            Text(
-                if (bytes != null) "~${formatBytes(bytes)}" else "—",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    // Spinner -> size crossfades in place; the chip width follows smoothly. Nothing (not even the
+    // label's spacing) while there is no link.
+    if (estimate !is DownloadViewModel.Estimate.Loading && estimate !is DownloadViewModel.Estimate.Ready) return
+    androidx.compose.animation.AnimatedContent(
+        targetState = estimate,
+        contentKey = { it::class },
+        transitionSpec = {
+            (fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit())) using
+                androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.enter() }
+        },
+        label = "sizeHint",
+    ) { e ->
+        when (e) {
+            DownloadViewModel.Estimate.Loading ->
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(12.dp))
+            is DownloadViewModel.Estimate.Ready -> {
+                val bytes = e.bytesByHeight[height]
+                Text(
+                    if (bytes != null) "~${formatBytes(bytes)}" else "—",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = if (bytes == null) Modifier.semantics { contentDescription = "dimensione non stimabile" } else Modifier,
+                )
+            }
+            else -> {}
         }
-        else -> {}
     }
 }
 
 /** One queue entry: its link/name, live progress, and the action that fits its state. */
 @Composable
-private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onRemove: () -> Unit, onOpen: (String) -> Unit) {
+private fun JobCard(
+    job: DownloadJob,
+    destination: String,
+    onCancel: () -> Unit,
+    onRemove: () -> Unit,
+    onRetry: () -> Unit,
+    onOpen: (String) -> Unit,
+) {
     val (icon, tint) = when (job.phase) {
         DownloadPhase.DONE -> Icons.Filled.CheckCircle to MaterialTheme.colorScheme.primary
         DownloadPhase.FAILED -> Icons.Filled.ErrorOutline to MaterialTheme.colorScheme.error
@@ -426,45 +503,92 @@ private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onRemove: () -> Unit
         DownloadPhase.QUEUED -> Icons.Filled.Schedule to MaterialTheme.colorScheme.onSurfaceVariant
         else -> Icons.Filled.Download to MaterialTheme.colorScheme.primary
     }
+    val group = phaseGroup(job.phase)
     Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+                // A finished job's icon settles in (scale up + fade) instead of popping.
+                androidx.compose.animation.AnimatedContent(
+                    targetState = icon to tint,
+                    transitionSpec = {
+                        val settle = targetState.first == Icons.Filled.CheckCircle || targetState.first == Icons.Filled.ErrorOutline
+                        (fadeIn(Motion.enter()) + (if (settle) scaleIn(Motion.enter(Motion.LONG), initialScale = 0.6f)
+                            else androidx.compose.animation.EnterTransition.None)) togetherWith fadeOut(Motion.exit())
+                    },
+                    label = "jobIcon",
+                ) { (i, t) -> Icon(i, null, tint = t, modifier = Modifier.size(22.dp)) }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(
                         if (job.phase == DownloadPhase.DONE && job.message != null) job.message else job.url,
                         style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     val status = when (job.phase) {
-                        DownloadPhase.QUEUED -> "In coda"
+                        DownloadPhase.QUEUED -> "In coda · in $destination"
                         DownloadPhase.PREPARING -> "Preparazione…"
                         DownloadPhase.DOWNLOADING ->
                             "${job.pct}%" + if (job.etaSec > 0) " · resta ${etaText(job.etaSec)}" else ""
-                        DownloadPhase.DONE -> "Completato"
-                        DownloadPhase.FAILED -> "Fallito" + (job.message?.let { ": $it" } ?: "")
+                        DownloadPhase.DONE -> "Completato · salvato in $destination"
+                        DownloadPhase.FAILED -> friendlyDownloadError(job.message)
                         DownloadPhase.CANCELLED -> "Annullato"
                     }
                     Text(status, style = MaterialTheme.typography.labelMedium,
                         color = if (job.phase == DownloadPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
-                when {
-                    job.active -> TextButton(onClick = onCancel) { Text("Annulla") }
-                    job.phase == DownloadPhase.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { Text("Apri") }
-                    else -> IconButton(onClick = onRemove) {
-                        Icon(Icons.Filled.Close, "Rimuovi", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                // The action that fits the phase, swapped with a crossfade.
+                androidx.compose.animation.AnimatedContent(
+                    targetState = group,
+                    transitionSpec = {
+                        (fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit())) using
+                            androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.enter() }
+                    },
+                    label = "jobAction",
+                ) { g ->
+                    when {
+                        g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { Text("Annulla") }
+                        g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { Text("Apri") }
+                        g == PhaseGroup.STOPPED -> Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = onRetry) { Text("Riprova") }
+                            IconButton(onClick = onRemove) {
+                                Icon(Icons.Filled.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        else -> IconButton(onClick = onRemove) {
+                            Icon(Icons.Filled.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
-            when (job.phase) {
-                DownloadPhase.PREPARING -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                DownloadPhase.DOWNLOADING -> LinearProgressIndicator(progress = { job.pct / 100f }, modifier = Modifier.fillMaxWidth())
-                else -> {}
+            // Progress area: only while running; indeterminate while preparing, smoothed while downloading.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = group == PhaseGroup.RUNNING,
+                enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+                exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+            ) {
+                val smooth by animateFloatAsState(
+                    targetValue = if (job.phase == DownloadPhase.DOWNLOADING) job.pct / 100f else 0f,
+                    animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "jobProgress",
+                )
+                androidx.compose.animation.Crossfade(job.phase == DownloadPhase.DOWNLOADING, animationSpec = Motion.enter(), label = "jobBar") { determinate ->
+                    if (determinate) LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                    else LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
             }
         }
     }
+}
+
+/** Coarse phases: the card only re-animates when one of these changes, not on every % tick. */
+private enum class PhaseGroup { WAITING, RUNNING, DONE, STOPPED }
+
+private fun phaseGroup(p: DownloadPhase): PhaseGroup = when (p) {
+    DownloadPhase.QUEUED -> PhaseGroup.WAITING
+    DownloadPhase.PREPARING, DownloadPhase.DOWNLOADING -> PhaseGroup.RUNNING
+    DownloadPhase.DONE -> PhaseGroup.DONE
+    DownloadPhase.FAILED, DownloadPhase.CANCELLED -> PhaseGroup.STOPPED
 }
 
 private fun etaText(sec: Long): String =

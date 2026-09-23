@@ -1,10 +1,8 @@
 package com.cripta.app.ui.components
 
 import android.graphics.Bitmap
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
@@ -36,14 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 
@@ -87,7 +82,10 @@ fun typeIconFor(mime: String): ImageVector = when {
     else -> Icons.AutoMirrored.Filled.InsertDriveFile
 }
 
-/** Rounded thumbnail with type/favorite/selection overlays. Reusable across screens. */
+/**
+ * Rounded thumbnail with type/favorite/selection overlays. Reusable across screens. The cover is
+ * decorative (no content description): the cell around it carries the file name as text.
+ */
 @Composable
 fun MediaThumb(
     file: FileEntity,
@@ -95,16 +93,20 @@ fun MediaThumb(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     coverVersion: Int = 0,
+    selectionMode: Boolean = false,
 ) {
     val bmp by produceState<Bitmap?>(initialValue = null, file.id, coverVersion) { value = thumb(file) }
     val icon = typeIconFor(file.mimeType)
     val isVideo = VaultRepository.isVideo(file.mimeType)
-    val borderMod = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier
-    Box(modifier.clip(MaterialTheme.shapes.medium).then(borderMod), contentAlignment = Alignment.Center) {
+    SelectableThumbFrame(
+        selected = selected,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier,
+        overlay = { CornerSelectionCheck(selected, selectionMode, size = 22.dp) },
+    ) {
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
-        Crossfade(targetState = bmp, label = "thumb") { b ->
-            if (b != null) Image(b.asImageBitmap(), file.originalName, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        ThumbCrossfade(bmp, contentDescription = null, modifier = Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(30.dp))
             }
         }
@@ -117,12 +119,6 @@ fun MediaThumb(
             Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp).clip(CircleShape)
                 .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(16.dp))
-            }
-        }
-        if (selected) {
-            Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp).clip(CircleShape)
-                .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.CheckCircle, "Selezionato", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -143,7 +139,9 @@ fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
             Box(Modifier.matchParentSize().clip(CircleShape).background(c.copy(alpha = 0.22f)))
         }
         if (!emoji.isNullOrBlank()) {
-            Text(emoji, fontSize = (size.value * 0.6f).sp)
+            // Sized in dp (not scaled by the user's font size) so the emoji always fits its box.
+            val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
+            Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
             Icon(Icons.Filled.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
         }
@@ -173,7 +171,7 @@ fun MediaThumbCell(
     modifier: Modifier = Modifier,
     coverVersion: Int = 0,
 ) {
-    Column(modifier.clickable(onClick = onClick)) {
+    Column(modifier.clickable(onClickLabel = "Apri", onClick = onClick)) {
         MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))

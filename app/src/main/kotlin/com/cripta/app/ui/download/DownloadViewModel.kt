@@ -85,7 +85,11 @@ class DownloadViewModel @Inject constructor(
                 }
             }
             result.onSuccess { _estimate.value = Estimate.Ready(it) }
-                .onFailure { _estimate.value = Estimate.Error(it.message ?: "Impossibile stimare") }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    android.util.Log.w("DownloadViewModel", "estimate failed: $u", it)
+                    _estimate.value = Estimate.Error(friendlyDownloadError(it.message))
+                }
         }
     }
 
@@ -106,8 +110,56 @@ class DownloadViewModel @Inject constructor(
     /** Cancel the link being downloaded now (the rest of the queue continues). */
     fun cancel(ctx: Context) = ConversionService.cancelDownload(ctx)
     fun remove(id: String) = repo.removeDownload(id)
+
+    /** Queue a failed/cancelled link again with the same quality and destination. */
+    fun retry(ctx: Context, job: VaultRepository.DownloadJob) {
+        repo.removeDownload(job.id)
+        ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds)
+    }
     fun clearFinished() = repo.clearFinishedDownloads()
 
     /** Prepare the viewer to open a single file (e.g. a finished or already-present download). */
     fun prepareOpen(fileId: String) = viewerQueue.set(listOf(fileId))
+}
+
+/** The first http(s) link inside shared/pasted text (apps often share "Title https://..."), else the text. */
+fun extractUrl(text: String): String =
+    Regex("https?://\\S+", RegexOption.IGNORE_CASE).find(text)?.value?.trimEnd('.', ',', ')', ']', '"', '\'') ?: text.trim()
+
+/** True for something that looks like a web link (what yt-dlp can fetch). */
+fun looksLikeUrl(text: String): Boolean {
+    val t = text.trim()
+    if (t.isEmpty() || t.any { it.isWhitespace() }) return false
+    val uri = runCatching { java.net.URI(t) }.getOrNull() ?: return false
+    return (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) && !uri.host.isNullOrBlank()
+}
+
+/**
+ * Plain Italian message for a download/estimate failure. yt-dlp and the network stack report in
+ * English (often with stack-like detail), which must not reach the user as is.
+ */
+fun friendlyDownloadError(raw: String?): String {
+    val m = raw.orEmpty()
+    val l = m.lowercase()
+    return when {
+        m.isBlank() -> "Download non riuscito. Controlla il link e riprova."
+        // Messages already written for the user (in Italian) by the app itself.
+        m.startsWith("Nessun") || m.startsWith("Impossibile") || m.startsWith("Link") -> m
+        "unsupported url" in l || "no video formats" in l || "not a valid url" in l ->
+            "Questo link non contiene un video scaricabile."
+        "drm" in l -> "Il video è protetto da DRM e non si può scaricare."
+        "private video" in l || "sign in" in l || "login" in l || "members-only" in l || "age" in l && "confirm" in l ->
+            "Il video è privato o richiede l'accesso a un account."
+        "not available in your country" in l || "geo" in l && "restrict" in l ->
+            "Il video non è disponibile nel tuo Paese."
+        "video unavailable" in l || "has been removed" in l || "404" in l || "not found" in l ->
+            "Il video non è disponibile o è stato rimosso."
+        "403" in l || "forbidden" in l -> "Il sito ha rifiutato il download. Riprova più tardi."
+        "429" in l || "too many requests" in l -> "Troppe richieste al sito. Riprova tra qualche minuto."
+        "unable to resolve host" in l || "unknownhost" in l || "failed to connect" in l || "network is unreachable" in l ||
+            "connection" in l && ("refused" in l || "reset" in l) -> "Nessuna connessione a Internet. Controlla la rete e riprova."
+        "timed out" in l || "timeout" in l -> "Il sito non risponde. Riprova più tardi."
+        "no space" in l || "enospc" in l -> "Spazio di archiviazione esaurito."
+        else -> "Download non riuscito. Controlla il link e riprova."
+    }
 }

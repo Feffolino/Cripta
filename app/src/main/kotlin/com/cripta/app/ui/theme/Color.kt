@@ -11,10 +11,19 @@ val Primary = Color(0xFF5AA9FF)
 val OnPrimary = Color(0xFF04121F)
 val Accent = Color(0xFFF5B041)
 val Danger = Color(0xFFEF4444)
+// Error colour used AS TEXT: per theme so it keeps >= 4.5:1 on dialogs and cards.
+// Dark #FF7A7A on #1E232E ≈ 6.3:1; light #C62828 on #FFFFFF ≈ 5.6:1 (≈ 4.7:1 on #E7ECF4).
+val DangerDark = Color(0xFFFF7A7A)
+val OnDangerDark = Color(0xFF2B0A0A)
+val DangerLight = Color(0xFFC62828)
 val Success = Color(0xFF3FB950)
 val OnBg = Color(0xFFF2F5F9)
 val OnSurfaceMuted = Color(0xFF98A2B3)
-val Outline = Color(0xFF2A303C)
+// Outline = borders that must be seen (text fields, outlined buttons/chips): >= 3:1 against the
+// surfaces (#646E80 ≈ 3.5:1 on Surface, ≈ 3.1:1 on SurfaceElevated). Dividers and decorative
+// hairlines keep the faint OutlineVariant.
+val Outline = Color(0xFF646E80)
+val OutlineVariant = Color(0xFF2A303C)
 
 // Semantic accents shared by both themes. Favorite = warm gold (the brand's second colour, until
 // now hardcoded per-screen); scrim = translucent black behind on-thumbnail badges so they stay
@@ -29,7 +38,9 @@ val LightSurfaceVariant = Color(0xFFEEF1F6)
 val LightPrimary = Color(0xFF2563EB)
 val LightOnBg = Color(0xFF0F172A)
 val LightMuted = Color(0xFF475467) // darkened for >=4.5:1 on light card captions
-val LightOutline = Color(0xFFD9DFEA)
+// #7E889A ≈ 3.6:1 on white, ≈ 3.3:1 on LightBg; the faint one stays for dividers.
+val LightOutline = Color(0xFF7E889A)
+val LightOutlineVariant = Color(0xFFD9DFEA)
 
 /**
  * Tag palette: saturated mid-tones that keep white text readable (>= 4.5:1) in both themes.

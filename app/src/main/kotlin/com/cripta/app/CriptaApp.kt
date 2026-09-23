@@ -21,6 +21,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
         fun vaultRepository(): VaultRepository
         fun sharedLinkStore(): com.cripta.app.data.SharedLinkStore
         fun dupScanStore(): com.cripta.app.data.dedup.DupScanStore
+        fun sharedFilesStore(): com.cripta.app.data.SharedFilesStore
     }
 
     override fun onCreate() {

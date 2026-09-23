@@ -21,6 +21,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,10 +69,24 @@ private fun TagChip(
     onLongClick: (() -> Unit)? = null,
     dot: androidx.compose.ui.graphics.Color? = null,
 ) {
+    val shape = MaterialTheme.shapes.small
     Surface(
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        shape = shape,
+        // 48dp touch target around the compact chip; exposed as a checkbox with its state, and the
+        // long-press (alias / colour / pin) is announced and reachable as a TalkBack action.
+        modifier = Modifier.minimumInteractiveComponentSize().clip(shape)
+            .combinedClickable(
+                role = Role.Checkbox,
+                onClickLabel = if (selected) "Rimuovi" else "Assegna",
+                onLongClickLabel = if (onLongClick != null) "Modifica alias, colore e fissa" else null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .semantics {
+                this.selected = selected
+                stateDescription = if (selected) "Assegnata" else "Non assegnata"
+            },
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             if (dot != null) {
@@ -92,6 +117,8 @@ internal fun TagSections(
     isSelected: (String) -> Boolean,
     onToggle: (String) -> Unit,
     onLongPress: ((String) -> Unit)?,
+    /** Optional search text: when set, only matching tags are listed (in a single section). */
+    query: String = "",
 ) {
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val pinned = remember(allTags) { allTags.filter { it.pinned } }
@@ -119,6 +146,17 @@ internal fun TagSections(
             }
         }
     }
+    val q = query.trim()
+    if (q.isNotEmpty()) {
+        val matches = library.filter { n ->
+            n.contains(q, ignoreCase = true) || byName[n]?.alias?.contains(q, ignoreCase = true) == true
+        }
+        if (matches.isEmpty()) {
+            Text("Nessuna etichetta corrisponde a \"$q\".", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else row("Risultati", matches)
+        return
+    }
     if (pinned.isNotEmpty()) row("📌 Fissate", pinned.map { it.name })
     if (showRecents && recents.isNotEmpty()) row("Recenti", recents.map { it.name })
     if (library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
@@ -145,6 +183,8 @@ fun LabelEditorDialog(
     /** When set, a "Fissa in alto" switch is shown. */
     onPinned: ((Boolean) -> Unit)? = null,
     initialPinned: Boolean = false,
+    /** False when the name can't be changed from here: it is shown as text instead of a field. */
+    nameEditable: Boolean = true,
 ) {
     var pinnedState by remember { mutableStateOf(initialPinned) }
     var name by remember { mutableStateOf(initialName) }
@@ -159,12 +199,19 @@ fun LabelEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
+                if (nameEditable) {
+                    OutlinedTextField(
+                        value = name, onValueChange = { name = it },
+                        label = { Text("Nome") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    Text("#$name", style = MaterialTheme.typography.titleMedium)
+                    Text("Il nome si cambia da Impostazioni › Etichette.", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 OutlinedTextField(
-                    value = name, onValueChange = { name = it },
-                    label = { Text("Nome") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = alias, onValueChange = { alias = it.take(6) },
+                    // At most 6 visible characters, counted as graphemes so an emoji is never split.
+                    value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
                     label = { Text("Emoji o acronimo (opzionale)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 )
                 Text("Suggerimenti", style = MaterialTheme.typography.labelMedium,
@@ -174,10 +221,13 @@ fun LabelEditorDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     QUICK_EMOJIS.forEach { e ->
+                        val shape = MaterialTheme.shapes.small
                         Surface(
                             color = if (alias == e) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.combinedClickable(onClick = { alias = e }),
+                            shape = shape,
+                            modifier = Modifier.minimumInteractiveComponentSize().clip(shape)
+                                .selectable(selected = alias == e, role = Role.RadioButton, onClick = { alias = e })
+                                .semantics { contentDescription = "Alias $e" },
                         ) {
                             Text(e, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
@@ -185,13 +235,16 @@ fun LabelEditorDialog(
                     }
                 }
                 if (onPinned != null) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it }),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
                         Column(Modifier.weight(1f)) {
                             Text("📌 Fissa in alto")
                             Text("Sempre tra le prime, in posizione fissa.", style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = { pinnedState = it })
+                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null)
                     }
                 }
                 if (onColor != null) {
@@ -203,10 +256,10 @@ fun LabelEditorDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        ColorDot(auto, selected = color == null, label = "A") { color = null }
-                        com.cripta.app.ui.theme.TagPalette.forEach { c ->
+                        ColorDot(auto, selected = color == null, label = "A", description = "Colore automatico") { color = null }
+                        com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
                             val argb = c.toArgb()
-                            ColorDot(c, selected = color == argb) { color = argb }
+                            ColorDot(c, selected = color == argb, description = "Colore ${i + 1}") { color = argb }
                         }
                     }
                     // Live preview of the badge as it will look on covers.
@@ -255,6 +308,7 @@ fun TagEditorDialog(
     }
     var editTarget by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
     val byName = remember(allTags) { allTags.associateBy { it.name } }
 
     AlertDialog(
@@ -267,7 +321,9 @@ fun TagEditorDialog(
             ) {
                 Text("Tocca per assegnare. Tieni premuto per alias, colore e 📌.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (allTags.size > SEARCH_THRESHOLD) TagSearchField(query) { query = it }
                 TagSections(
+                    query = query,
                     allTags = allTags,
                     extraNames = selected.toList(),
                     showRecents = showRecents,
@@ -304,6 +360,7 @@ fun TagEditorDialog(
             initialColor = t?.color,
             onPinned = if (t != null && onSetPinned != null) ({ p -> onSetPinned(name, p) }) else null,
             initialPinned = t?.pinned == true,
+            nameEditable = false,
         )
     }
 
@@ -321,9 +378,10 @@ fun TagEditorDialog(
 }
 
 /**
- * Batch tag editor: pick labels to ADD to every selected file (existing tags are kept).
+ * Batch tag editor: pick labels to ADD to every selected file (existing tags are kept), or switch
+ * to "Rimuovi" to take the chosen labels off every selected file.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun BatchTagDialog(
     count: Int,
@@ -332,43 +390,68 @@ fun BatchTagDialog(
     onCreateTag: (name: String, alias: String?) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
+    /** When set, a "Rimuovi" mode is offered and its choice is reported here. */
+    onRemove: ((List<String>) -> Unit)? = null,
 ) {
-    val toAdd: SnapshotStateList<String> = remember { mutableStateListOf() }
+    val chosen: SnapshotStateList<String> = remember { mutableStateListOf() }
     var creating by remember { mutableStateOf(false) }
+    var removing by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val items = if (count == 1) "1 elemento" else "$count elementi"
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Etichette per $count elementi") },
+        title = { Text("Etichette per $items") },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                Text("Le etichette scelte vengono aggiunte a tutti gli elementi selezionati.",
+                if (onRemove != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.FilterChip(
+                            selected = !removing, onClick = { removing = false; chosen.clear() },
+                            label = { Text("Aggiungi") },
+                        )
+                        androidx.compose.material3.FilterChip(
+                            selected = removing, onClick = { removing = true; chosen.clear() },
+                            label = { Text("Rimuovi") },
+                        )
+                    }
+                }
+                Text(
+                    if (removing) "Le etichette scelte vengono tolte da tutti gli elementi selezionati."
+                    else "Le etichette scelte vengono aggiunte a tutti gli elementi selezionati.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (allTags.isEmpty() && toAdd.isEmpty()) {
+                if (allTags.isEmpty() && chosen.isEmpty()) {
                     Text("Nessuna etichetta. Creane una qui sotto.",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (allTags.size > SEARCH_THRESHOLD) TagSearchField(query) { query = it }
                 TagSections(
+                    query = query,
                     allTags = allTags,
-                    extraNames = toAdd.toList(),
+                    extraNames = if (removing) emptyList() else chosen.toList(),
                     showRecents = showRecents,
-                    isSelected = { n -> toAdd.any { it.equals(n, ignoreCase = true) } },
+                    isSelected = { n -> chosen.any { it.equals(n, ignoreCase = true) } },
                     onToggle = { n ->
-                        if (toAdd.any { it.equals(n, ignoreCase = true) }) toAdd.removeAll { it.equals(n, ignoreCase = true) }
-                        else toAdd.add(n)
+                        if (chosen.any { it.equals(n, ignoreCase = true) }) chosen.removeAll { it.equals(n, ignoreCase = true) }
+                        else chosen.add(n)
                     },
                     onLongPress = null,
                 )
-                TextButton(onClick = { creating = true }) {
-                    Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
-                    Text("Nuova etichetta")
+                if (!removing) {
+                    TextButton(onClick = { creating = true }) {
+                        Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
+                        Text("Nuova etichetta")
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = toAdd.isNotEmpty(), onClick = { onConfirm(toAdd.toList()) }) { Text("Applica") }
+            TextButton(enabled = chosen.isNotEmpty(), onClick = {
+                if (removing) onRemove?.invoke(chosen.toList()) else onConfirm(chosen.toList())
+            }) { Text(if (removing) "Rimuovi" else "Aggiungi") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
@@ -378,7 +461,7 @@ fun BatchTagDialog(
             title = "Nuova etichetta",
             onConfirm = { name, alias ->
                 onCreateTag(name, alias)
-                if (toAdd.none { it.equals(name, ignoreCase = true) }) toAdd.add(name)
+                if (chosen.none { it.equals(name, ignoreCase = true) }) chosen.add(name)
                 creating = false
             },
             onDismiss = { creating = false },
@@ -386,17 +469,60 @@ fun BatchTagDialog(
     }
 }
 
+/** Above this many tags the pickers show a search field. */
+private const val SEARCH_THRESHOLD = 12
+
+@Composable
+private fun TagSearchField(query: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        placeholder = { Text("Cerca etichetta") },
+        leadingIcon = { Icon(Icons.Filled.Search, null) },
+        trailingIcon = if (query.isNotEmpty()) ({
+            androidx.compose.material3.IconButton(onClick = { onChange("") }) { Icon(Icons.Filled.Close, "Cancella ricerca") }
+        }) else null,
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** First [max] user-perceived characters of [s] (an emoji sequence counts as one). */
+internal fun takeGraphemes(s: String, max: Int): String {
+    val it = android.icu.text.BreakIterator.getCharacterInstance()
+    it.setText(s)
+    var count = 0
+    var end = 0
+    while (count < max) {
+        val next = it.next()
+        if (next == android.icu.text.BreakIterator.DONE) return s
+        end = next
+        count++
+    }
+    return s.substring(0, end)
+}
+
 /** Round colour swatch; [label] marks the special "automatic" choice. */
 @Composable
-private fun ColorDot(c: androidx.compose.ui.graphics.Color, selected: Boolean, label: String? = null, onClick: () -> Unit) {
+private fun ColorDot(
+    c: androidx.compose.ui.graphics.Color,
+    selected: Boolean,
+    label: String? = null,
+    description: String? = null,
+    onClick: () -> Unit,
+) {
     androidx.compose.foundation.layout.Box(
-        Modifier.size(32.dp)
+        Modifier.minimumInteractiveComponentSize()
+            .size(36.dp)
             .clip(androidx.compose.foundation.shape.CircleShape)
             .background(c)
             .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, androidx.compose.foundation.shape.CircleShape) else Modifier)
-            .clickable(onClick = onClick),
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .semantics { if (description != null) contentDescription = description },
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
         if (label != null) Text(label, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelLarge)
+        else if (selected) Icon(Icons.Filled.Check, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
     }
 }

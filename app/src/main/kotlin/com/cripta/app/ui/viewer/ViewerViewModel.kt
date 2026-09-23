@@ -24,7 +24,18 @@ sealed interface ViewerState {
     data class Note(val file: FileEntity, val text: String) : ViewerState
     data class Pdf(val file: FileEntity, val bytes: ByteArray) : ViewerState
     data class Other(val file: FileEntity) : ViewerState
-    data class Error(val message: String) : ViewerState
+    /** [missing]: the file no longer exists (deleted meanwhile) — the viewer drops the page. */
+    data class Error(val message: String, val missing: Boolean = false) : ViewerState
+}
+
+/** Italian, user-facing text for a failure to open a file (never the raw exception message). */
+internal fun friendlyOpenError(t: Throwable): String = when (t) {
+    is OutOfMemoryError -> "Il file è troppo grande per l'anteprima. Esportalo sul dispositivo per aprirlo con un'altra app."
+    is java.security.GeneralSecurityException ->
+        "Impossibile decifrare il file: i dati potrebbero essere danneggiati."
+    is java.io.FileNotFoundException -> "Il contenuto cifrato del file non è stato trovato."
+    is java.io.IOException -> "Errore di lettura del file. Riprova."
+    else -> "Impossibile aprire il file. Riprova."
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -35,10 +46,21 @@ class ViewerViewModel @Inject constructor(
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val settingsStore: com.cripta.app.data.SettingsStore,
     queue: ViewerQueue,
+    savedState: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     /** Snapshot of the browse order taken when the viewer opened. */
     val ids: List<String> = queue.ids
+
+    /**
+     * The pages the viewer shows: the browse order, minus files deleted from the viewer (so a delete
+     * moves on to the next file instead of closing). Lives here so it survives leaving the viewer
+     * for the note editor and coming back. Falls back to the opened file alone.
+     */
+    val liveIds: androidx.compose.runtime.snapshots.SnapshotStateList<String> =
+        androidx.compose.runtime.mutableStateListOf<String>().apply {
+            addAll(ids.ifEmpty { listOfNotNull(savedState.get<String>("fileId")) })
+        }
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
@@ -51,16 +73,21 @@ class ViewerViewModel @Inject constructor(
     val allTags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    suspend fun stateFor(id: String): ViewerState = runCatching {
-        val file = repo.fileById(id) ?: error("File non trovato")
+    suspend fun stateFor(id: String): ViewerState = try {
+        val file = repo.fileById(id)
         when {
+            file == null -> ViewerState.Error("Questo file non è più nel vault.", missing = true)
             VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, repo.decryptBytes(file))
             VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
             VaultRepository.isNote(file.mimeType) -> ViewerState.Note(file, repo.noteText(file))
             VaultRepository.isPdf(file.mimeType) -> ViewerState.Pdf(file, repo.decryptBytes(file))
             else -> ViewerState.Other(file)
         }
-    }.getOrElse { ViewerState.Error(it.message ?: "Errore") }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        ViewerState.Error(friendlyOpenError(t))
+    }
 
     suspend fun fileById(id: String): FileEntity? = repo.fileById(id)
 
@@ -154,13 +181,30 @@ class ViewerViewModel @Inject constructor(
     fun download(file: FileEntity) {
         // Run decryption in the foreground service so it survives backgrounding and shows progress.
         com.cripta.app.work.ConversionService.startDownload(appContext, listOf(file.id))
-        _message.value = "Download avviato"
+        _message.value = "Esportazione avviata in ${exportFolder(file.mimeType)}"
     }
 
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
         // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
-        if (!repo.deleteOrTrash(fileId)) thumbs.evict(fileId)
-        onDone()
+        try {
+            val trashed = repo.deleteOrTrash(fileId)
+            if (!trashed) thumbs.evict(fileId)
+            _message.value = if (trashed) "Spostato nel cestino" else "File eliminato"
+            onDone()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _message.value = "Impossibile eliminare il file. Riprova."
+        }
+    }
+
+    companion object {
+        /** Where an export lands on the device (mirrors VaultRepository.restoreToGallery). */
+        fun exportFolder(mimeType: String): String = when {
+            VaultRepository.isImage(mimeType) -> "Immagini › Cripta (Pictures/Cripta)"
+            VaultRepository.isVideo(mimeType) -> "Video › Cripta (Movies/Cripta)"
+            else -> "Download › Cripta (Download/Cripta)"
+        }
     }
 
     val trashEnabled: StateFlow<Boolean> =

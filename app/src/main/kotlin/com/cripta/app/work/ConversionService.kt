@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -44,6 +45,7 @@ class ConversionService : Service() {
     @Inject lateinit var thumbs: com.cripta.app.media.ThumbnailLoader
     @Inject lateinit var dupScanner: com.cripta.app.data.dedup.DuplicateScanner
     @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
+    @Inject lateinit var session: com.cripta.app.security.SessionManager
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -51,6 +53,12 @@ class ConversionService : Service() {
     private val active = java.util.concurrent.atomic.AtomicInteger(0)
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        // Nothing may outlive the service: cancel whatever is still attached to its scope.
+        scope.cancel()
+        super.onDestroy()
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val mode = intent?.getStringExtra(EX_MODE)
@@ -78,8 +86,22 @@ class ConversionService : Service() {
         if (mode == MODE_DELETE_ORIG) {
             val oid = intent.getStringExtra(EX_ID)
             getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
-            scope.launch { oid?.let { runCatching { repo.deleteOrTrash(it) } } }
-            stopIfIdle(startId)
+            if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
+            active.incrementAndGet()
+            lastStartId = startId
+            val held = session.beginWork()
+            scope.launch {
+                try {
+                    repo.deleteOrTrash(oid)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.e("ConversionService", "delete original failed: $oid", e)
+                } finally {
+                    if (held) session.endWork()
+                    if (active.decrementAndGet() == 0) stopSelf(lastStartId)
+                }
+            }
             return START_NOT_STICKY
         }
         if (mode == MODE_DISMISS) {
@@ -113,6 +135,10 @@ class ConversionService : Service() {
             if (!start) return START_NOT_STICKY
         }
         active.incrementAndGet()
+        // Keep the keys alive while this job runs, even if the vault gets locked meanwhile
+        // (auto-lock on leaving the app, "Blocca ora"): the UI locks at once, the keys are wiped
+        // as soon as the last job ends. Otherwise every remaining item failed silently.
+        val holdsSession = session.beginWork()
 
         val job = scope.launch {
             try {
@@ -121,7 +147,9 @@ class ConversionService : Service() {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
                         val imported = importBatch(uris, folderId)
-                        applyDeletePolicy(imported)
+                        // Files shared from another app are that app's content, not documents we
+                        // may delete: the "delete originals" policy only applies to picked files.
+                        if (!intent.getBooleanExtra(EX_FROM_SHARE, false)) applyDeletePolicy(imported)
                     }
                     MODE_DOWNLOAD -> {
                         val ids = intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
@@ -143,9 +171,13 @@ class ConversionService : Service() {
                         scanDuplicates(similar)
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 // best-effort; individual items already guarded below
+                android.util.Log.e("ConversionService", "job failed: $mode", e)
             } finally {
+                if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     // The latest start id: stops only if no newer command arrived meanwhile.
@@ -181,7 +213,14 @@ class ConversionService : Service() {
         if (total == 0) return
         val start = SystemClock.elapsedRealtime()
         for (i in 0 until total) {
-            runCatching { op(i) }
+            // One failed item doesn't stop the batch, but a cancellation does.
+            try {
+                op(i)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("ConversionService", "$label item $i failed", e)
+            }
             val done = i + 1
             val pct = done * 100 / total
             val elapsed = SystemClock.elapsedRealtime() - start
@@ -208,7 +247,7 @@ class ConversionService : Service() {
                 notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = name))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
-                val ok = runCatching {
+                val ok = try {
                     imported = repo.import(uri, folderId) { bytes ->
                         repo.importBytes(bytes)
                         val now = SystemClock.elapsedRealtime()
@@ -219,14 +258,23 @@ class ConversionService : Service() {
                             notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = "$name$filePct"))
                         }
                     }
-                }.onFailure { android.util.Log.e("ConversionService", "import failed: $name", it) }.isSuccess
+                    true
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    // Throwable: an OutOfMemoryError on one odd file must not kill the whole batch.
+                    android.util.Log.e("ConversionService", "import failed: $name", e)
+                    repo.importFailed(name, UserErrors.of(e))
+                    false
+                }
                 // Already in the vault? (byte-identical; only same-size files are even checked)
                 imported?.let { f ->
-                    runCatching { dupScanner.copiesOf(f) }.getOrNull()?.firstOrNull()?.let { existing ->
+                    val copies = try { dupScanner.copiesOf(f) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+                    copies?.firstOrNull()?.let { existing ->
                         repo.importDuplicate(f.id, existing.originalName)
                     }
                 }
-                repo.importItemDone(ok)
+                repo.importItemDone(ok, if (ok) uri else null)
                 if (ok) done += uri
                 val cur = repo.importState.value
                 val elapsed = SystemClock.elapsedRealtime() - start
@@ -325,7 +373,7 @@ class ConversionService : Service() {
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "convert failed: $id", e)
-            val msg = e.message ?: e.javaClass.simpleName
+            val msg = convertErrorText(e)
             result = false to "Conversione fallita: $msg. Originale intatto."
             notifyResult("Conversione fallita", msg)
         } finally {
@@ -449,8 +497,9 @@ class ConversionService : Service() {
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "duplicate scan failed", e)
-            dupStore.fail(e.message)
-            notifyResult("$label non riuscita", e.message, ResultKind.SCAN)
+            val msg = UserErrors.of(e)
+            dupStore.fail(msg)
+            notifyResult("$label non riuscita", msg, ResultKind.SCAN)
         } finally {
             scanJob = null
         }
@@ -525,7 +574,7 @@ class ConversionService : Service() {
                 notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
             } else {
                 android.util.Log.e("ConversionService", "download failed: $url", e)
-                val msg = (e.message ?: e.javaClass.simpleName).take(200)
+                val msg = UserErrors.ofDownload(e)
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download fallito", msg, ResultKind.DOWNLOAD)
             }
@@ -539,16 +588,38 @@ class ConversionService : Service() {
         }
     }
 
-    private fun applyDeletePolicy(uris: List<Uri>) {
-        val policy = runCatching { kotlinx.coroutines.runBlocking { settings.settingsOnce().deleteOriginalPolicy } }
-            .getOrDefault(DeleteOriginalPolicy.NEVER)
+    private suspend fun applyDeletePolicy(uris: List<Uri>) {
         if (uris.isEmpty()) return
+        val policy = try {
+            settings.settingsOnce().deleteOriginalPolicy
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            DeleteOriginalPolicy.NEVER
+        }
         // Only originals that were actually imported are ever touched (a failed import keeps its file).
         when (policy) {
-            DeleteOriginalPolicy.ALWAYS -> runCatching { kotlinx.coroutines.runBlocking { repo.deleteOriginals(uris) } }
+            DeleteOriginalPolicy.ALWAYS -> try {
+                repo.deleteOriginals(uris)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("ConversionService", "delete originals failed", e)
+            }
             // "Chiedi": hand them to the app, which shows the keep/delete prompt in the vault.
             DeleteOriginalPolicy.ASK -> repo.addPendingOriginals(uris)
             DeleteOriginalPolicy.NEVER -> Unit
+        }
+    }
+
+    /** Short Italian reason for a failed transcode (never the raw Media3 / codec text). */
+    private fun convertErrorText(e: Throwable): String {
+        val export = generateSequence(e) { it.cause }.filterIsInstance<androidx.media3.transformer.ExportException>().firstOrNull()
+        return when {
+            export == null -> UserErrors.of(e).replaceFirstChar { it.lowercase() }
+            export.errorCode in 3000..3999 -> "formato del video non supportato dal dispositivo"
+            export.errorCode in 4000..4999 -> "codec del dispositivo non disponibile"
+            else -> "errore durante la codifica"
         }
     }
 
@@ -686,6 +757,7 @@ class ConversionService : Service() {
         private const val EX_IDS = "ids"
         private const val EX_ID = "id"
         private const val EX_FOLDER = "folder"
+        private const val EX_FROM_SHARE = "from_share"
         private const val MODE_IMPORT = "import"
         private const val MODE_DOWNLOAD = "download"
         private const val MODE_CONVERT = "convert"
@@ -705,11 +777,25 @@ class ConversionService : Service() {
         private const val RESULT_CHANNEL = "results"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
-        fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
+        /**
+         * Encrypt [uris] into [folderId] (null = root). Progress and the outcome are published to
+         * [VaultRepository.importState]; with the "Chiedi" policy the imported originals land in
+         * [VaultRepository.pendingOriginals]. [fromShare] = files received from another app's share
+         * sheet: they are never deleted afterwards, whatever the policy.
+         */
+        fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?, fromShare: Boolean = false) {
+            if (uris.isEmpty()) return
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_IMPORT)
                 putParcelableArrayListExtra(EX_URIS, ArrayList(uris))
                 folderId?.let { putExtra(EX_FOLDER, it) }
+                if (fromShare) putExtra(EX_FROM_SHARE, true)
+                // Carry the read grant along (shared content uris are granted to the receiving
+                // activity; this keeps them readable by the service too).
+                clipData = android.content.ClipData.newRawUri(null, uris.first()).also { clip ->
+                    uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             ContextCompat.startForegroundService(ctx, i)
         }

@@ -121,10 +121,12 @@ class KeyVault @Inject constructor(
      * Wipe the vault so the app can start over after the KEK became unusable. Everything protected
      * by the lost key is already cryptographically unrecoverable; this just clears the useless
      * ciphertext (Keystore key, wrapped blobs, encrypted DB, file blobs) and returns the app to a
-     * clean first-run state. Destructive and irreversible.
+     * clean first-run state. Destructive and irreversible. Blocking (closes and deletes the
+     * database): call it off the main thread.
      */
     fun resetVault() {
-        session.lock()
+        // Close synchronously: the database file is deleted right below.
+        session.lockAndCloseNow()
         // Drop both possible keys (legacy + safe) so no orphan alias survives the reset.
         runCatching { kek.deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }

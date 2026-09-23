@@ -145,6 +145,10 @@ class HomeViewModel @Inject constructor(
 
     fun publishQueue(ids: List<String>) = viewerQueue.set(ids)
 
+    /** Encrypt picked files into the vault root (same foreground service as the Cartelle import). */
+    fun importFiles(uris: List<android.net.Uri>) =
+        com.cripta.app.work.ConversionService.startImport(appContext, uris, null)
+
     /** Ask the Cartelle screen to open this folder (the caller then switches tab). */
     fun openFolder(id: Long) = navigator.openFolder(id)
 

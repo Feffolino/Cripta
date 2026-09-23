@@ -187,9 +187,14 @@ class DuplicateScanner @Inject constructor(
         media.forEachIndexed { i, f ->
             coroutineContext.ensureActive()
             val video = VaultRepository.isVideo(f.mimeType)
-            val hashes = runCatching {
+            // Unreadable items are skipped, but a cancellation must still stop the scan.
+            val hashes = try {
                 if (video) videoFingerprint(f) else imageDHash(f)?.let { longArrayOf(it) }
-            }.getOrNull()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                null
+            }
             onProgress(i + 1, total)
             if (hashes != null && hashes.isNotEmpty()) fps += Fingerprint(f, hashes, video)
         }
@@ -238,9 +243,11 @@ class DuplicateScanner @Inject constructor(
 
     /** Decode an image (downscaled, in memory) and return its 64-bit dHash, or null if undecodable. */
     private fun imageDHash(f: FileEntity): Long? {
-        val bytes = repo.decryptingStream(f).use { it.readBytes() }
+        // Decode straight from the decrypting stream (twice: bounds, then a subsampled bitmap)
+        // instead of reading the whole image into RAM first — a big photo no longer costs its full
+        // size in heap for a 9x8 fingerprint.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        repo.decryptingStream(f).use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         // Decode small: no need for full resolution just to fingerprint.
         val minSide = minOf(bounds.outWidth, bounds.outHeight)
@@ -249,7 +256,7 @@ class DuplicateScanner @Inject constructor(
             inSampleSize = maxOf(1, sample)
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+        val bmp = repo.decryptingStream(f).use { BitmapFactory.decodeStream(it, null, opts) } ?: return null
         return bitmapDHash(bmp).also { bmp.recycle() }
     }
 

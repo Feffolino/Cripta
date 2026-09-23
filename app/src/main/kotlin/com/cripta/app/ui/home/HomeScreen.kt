@@ -74,6 +74,20 @@ import com.cripta.app.ui.components.formatDuration
 import com.cripta.app.ui.vault.CoverThumb
 import com.cripta.app.ui.vault.FolderMosaic
 import com.cripta.app.ui.vault.TypeFilter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.pressScale
 
 /**
  * Home: a summary of the vault, "Continua a guardare", a carousel of the latest additions, then
@@ -111,6 +125,12 @@ fun HomeScreen(
         onOpenFile(id)
     }
 
+    // Empty vault: "Importa file" opens the system picker right here, then shows Cartelle where
+    // the import progress and the new files appear.
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) { vm.importFiles(uris); onOpenFolders() }
+    }
+
     // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
@@ -128,17 +148,27 @@ fun HomeScreen(
             )
         },
     ) { pad ->
-        if (!loaded) {
-            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.CircularProgressIndicator()
-            }
-            return@Scaffold
+        // Loading -> empty / content: one calm crossfade instead of a hard cut after unlock.
+        val phase = when {
+            !loaded -> HomePhase.LOADING
+            recents.isEmpty() && folders.isEmpty() -> HomePhase.EMPTY
+            else -> HomePhase.CONTENT
         }
-        if (recents.isEmpty() && folders.isEmpty()) {
-            EmptyHome(Modifier.fillMaxSize().padding(pad), onOpenFolders, onOpenDownload)
-            return@Scaffold
+        androidx.compose.animation.Crossfade(
+            targetState = phase,
+            animationSpec = tween(Motion.MEDIUM, 0, Motion.EaseOutQuart),
+            label = "homePhase",
+        ) { p ->
+        when (p) {
+        HomePhase.LOADING -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator()
         }
-        LazyColumn(
+        HomePhase.EMPTY -> EmptyHome(
+            Modifier.fillMaxSize().padding(pad),
+            onImport = { importLauncher.launch(arrayOf("*/*")) },
+            onDownload = onOpenDownload,
+        )
+        HomePhase.CONTENT -> LazyColumn(
             Modifier.fillMaxSize().padding(pad),
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -159,11 +189,11 @@ fun HomeScreen(
                             val (sf, count) = savedFilters[i]
                             val c = com.cripta.app.ui.theme.TagPalette[i % com.cripta.app.ui.theme.TagPalette.size]
                             Surface(color = c.copy(alpha = 0.18f), shape = MaterialTheme.shapes.extraLarge,
-                                modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
-                                    .clickable { vm.applySavedFilter(sf.json); onOpenFolders() }) {
+                                modifier = Modifier.heightIn(min = 48.dp).clip(MaterialTheme.shapes.extraLarge)
+                                    .clickable(role = Role.Button, onClickLabel = "Applica filtro") { vm.applySavedFilter(sf.json); onOpenFolders() }) {
                                 Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.FilterList, null, tint = c, modifier = Modifier.size(18.dp))
-                                    Text("  ${sf.name}", style = MaterialTheme.typography.labelLarge)
+                                    Text(sf.name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
                                     Surface(color = c, shape = CircleShape, modifier = Modifier.padding(start = 8.dp)) {
                                         Text("$count", color = Color.White, style = MaterialTheme.typography.labelSmall,
                                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp))
@@ -204,21 +234,27 @@ fun HomeScreen(
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(folders, key = { it.id }) { folder ->
+                            val source = remember { MutableInteractionSource() }
                             FolderMosaic(
                                 folder = folder,
                                 stat = folderStats[folder.id],
                                 previews = folderPreviews[folder.id].orEmpty(),
                                 thumb = vm::thumb,
-                                modifier = Modifier.width(128.dp).clip(MaterialTheme.shapes.medium)
-                                    .clickable { vm.openFolder(folder.id); onOpenFolders() },
+                                modifier = Modifier.width(128.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
+                                    .clickable(source, LocalIndication.current, role = Role.Button,
+                                        onClickLabel = "Apri cartella") { vm.openFolder(folder.id); onOpenFolders() },
                             )
                         }
                     }
                 }
             }
         }
+        }
+        }
     }
 }
+
+private enum class HomePhase { LOADING, EMPTY, CONTENT }
 
 /** Stats-style header: videos, photos and space, each tappable. */
 @Composable
@@ -232,8 +268,10 @@ private fun SummaryCard(videos: Int, photos: Int, bytes: Long, onVideos: () -> U
 
 @Composable
 private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false) {
+    val source = remember { MutableInteractionSource() }
     Surface(color = tint.copy(alpha = 0.12f), shape = MaterialTheme.shapes.large,
-        modifier = modifier.clip(MaterialTheme.shapes.large).clickable(onClick = onClick)) {
+        modifier = modifier.pressScale(source).clip(MaterialTheme.shapes.large)
+            .clickable(source, LocalIndication.current, role = Role.Button, onClick = onClick)) {
         if (compact) {
             // Landscape: icon beside the numbers, half the height of the stacked tile.
             Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -241,7 +279,8 @@ private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: St
                     Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(17.dp)) }
                 }
                 Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
-                Text(" $label", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                    modifier = Modifier.padding(start = 4.dp))
             }
             return@Surface
         }
@@ -258,17 +297,20 @@ private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: St
 /** Section title with a coloured icon, a count and "Vedi tutti". */
 @Composable
 private fun ShelfHeader(title: String, icon: ImageVector, tint: Color, count: Int, onSeeAll: (() -> Unit)? = null) {
+    // Whole row is the "Vedi tutti" button (48dp tall); the title is a heading for TalkBack.
     Row(
-        Modifier.fillMaxWidth().then(if (onSeeAll != null) Modifier.clickable(onClick = onSeeAll) else Modifier)
+        Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            .then(if (onSeeAll != null) Modifier.clickable(role = Role.Button, onClickLabel = "Vedi tutti", onClick = onSeeAll) else Modifier)
             .padding(horizontal = 16.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(color = tint.copy(alpha = 0.16f), shape = CircleShape, modifier = Modifier.size(30.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp)) }
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 10.dp))
-        Text("  $count", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(start = 10.dp).semantics { heading() })
+        Text("$count", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).padding(start = 8.dp))
         if (onSeeAll != null) {
             Text("Vedi tutti", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
@@ -288,7 +330,9 @@ private fun CoverShelf(
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(items, key = { it.file.id }) { fwt ->
             val bmp by produceState<android.graphics.Bitmap?>(null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
-            Column(Modifier.width(124.dp).clip(MaterialTheme.shapes.medium).clickable { onOpen(fwt.file.id) }) {
+            val source = remember { MutableInteractionSource() }
+            Column(Modifier.width(124.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
+                .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(fwt.file.id) }) {
                 CoverThumb(fwt.file, fwt.tags, display, bmp, Modifier.fillMaxWidth().aspectRatio(1f))
                 Text(fwt.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
@@ -308,7 +352,9 @@ private fun ContinueCard(
 ) {
     val f = fwt.file
     val bmp by produceState<android.graphics.Bitmap?>(null, f.id, coverVersion) { value = thumb(f) }
-    Column(Modifier.width(210.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)) {
+    val source = remember { MutableInteractionSource() }
+    Column(Modifier.width(210.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
+        .clickable(source, LocalIndication.current, onClickLabel = "Riprendi", onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.medium)) {
             CoverThumb(f, emptyList(), display.copy(resumePlayback = true), bmp, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.Center).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
@@ -340,9 +386,12 @@ private fun HeroCarousel(
             val fwt = items[page]
             val f = fwt.file
             val bmp by produceState<android.graphics.Bitmap?>(null, f.id, coverVersions[f.id] ?: 0) { value = thumb(f) }
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant).clickable { onOpen(f.id) }) {
-                bmp?.let { Image(it.asImageBitmap(), f.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            val source = remember { MutableInteractionSource() }
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).pressScale(source, pressed = 0.98f).clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(f.id) }) {
+                // The title is already read from the overlay text below.
+                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(96.dp)
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))))
                 Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
@@ -393,15 +442,20 @@ private fun EmptyHome(modifier: Modifier, onImport: () -> Unit, onDownload: () -
                 Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(if (landscape) 28.dp else 44.dp))
             }
         }
-        Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
+        Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(top = 20.dp).semantics { heading() })
         Text("Importa foto e video o scaricali da un link: restano cifrati e visibili solo qui.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
-            Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(18.dp)); Text("  Importa file")
+            Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text("Importa file")
         }
         OutlinedButton(onClick = onDownload, modifier = Modifier.padding(top = 8.dp)) {
-            Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(18.dp)); Text("  Scarica da un link")
+            Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text("Scarica da un link")
         }
     }
 }
