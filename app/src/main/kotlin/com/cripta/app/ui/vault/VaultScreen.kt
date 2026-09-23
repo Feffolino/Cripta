@@ -295,6 +295,11 @@ fun VaultScreen(
         topBar = {
             TopAppBar(
                 scrollBehavior = scrollBehavior,
+                // Same colour when the content scrolls under it (M3 otherwise switches to a tinted
+                // surface-container colour, which looked light blue on this theme).
+                colors = TopAppBarDefaults.topAppBarColors(
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                ),
                 title = {
                     if (inSelection) {
                         Text("${selection.size} selezionati", maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
