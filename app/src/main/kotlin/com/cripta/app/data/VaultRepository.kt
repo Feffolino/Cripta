@@ -1092,7 +1092,7 @@ class VaultRepository @Inject constructor(
                     for (i in 0 until arr.length()) {
                         val o = arr.getJSONObject(i)
                         val f = o.optJSONObject("filter") ?: continue
-                        fun ids(key: String) = org.json.JSONArray().apply {
+                        suspend fun ids(key: String) = org.json.JSONArray().apply {
                             f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
                         }
                         f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
