@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -73,6 +74,66 @@ class VaultRepository @Inject constructor(
         val message: String? = null,
     ) {
         val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
+    }
+
+    /**
+     * Live state of file imports (encryption into the vault), shared by every batch the service is
+     * running. Drives the in-app banner so the user can see whether an import is still going, how
+     * far along it is, and when it has finished.
+     */
+    data class ImportState(
+        val active: Boolean = false,
+        val total: Int = 0,
+        val done: Int = 0,
+        val failed: Int = 0,
+        val currentName: String? = null,
+        val currentBytes: Long = 0,
+        val currentTotalBytes: Long = 0,
+        /** True once every batch finished; stays until the user dismisses the result. */
+        val finished: Boolean = false,
+    ) {
+        val succeeded: Int get() = done - failed
+        /** Overall progress 0..1, counting the partial progress of the file being encrypted. */
+        val fraction: Float get() {
+            if (total <= 0) return 0f
+            val partial = if (active && currentTotalBytes > 0)
+                (currentBytes.toFloat() / currentTotalBytes).coerceIn(0f, 1f) else 0f
+            return ((done + partial) / total).coerceIn(0f, 1f)
+        }
+    }
+
+    private val _importState = MutableStateFlow(ImportState())
+    val importState: StateFlow<ImportState> = _importState
+    private val importBatches = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** A batch of [count] files is starting (batches started while another runs are merged). */
+    fun importBegin(count: Int) {
+        val first = importBatches.getAndIncrement() == 0
+        _importState.update { s ->
+            if (first || !s.active) ImportState(active = true, total = count)
+            else s.copy(total = s.total + count)
+        }
+    }
+
+    fun importCurrent(name: String, totalBytes: Long) =
+        _importState.update { it.copy(currentName = name, currentBytes = 0, currentTotalBytes = totalBytes) }
+
+    fun importBytes(bytes: Long) = _importState.update { it.copy(currentBytes = bytes) }
+
+    fun importItemDone(ok: Boolean) = _importState.update {
+        it.copy(done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0)
+    }
+
+    /** A batch ended; returns the final state when it was the last one running, else null. */
+    fun importEnd(): ImportState? {
+        if (importBatches.decrementAndGet() > 0) return null
+        _importState.update { it.copy(active = false, finished = true, currentName = null) }
+        return _importState.value
+    }
+
+    /** Hide the "import finished" result. */
+    fun dismissImportResult() {
+        if (!_importState.value.active) _importState.value = ImportState()
     }
 
     private val _downloadState = MutableStateFlow(DownloadState())
@@ -179,7 +240,12 @@ class VaultRepository @Inject constructor(
     }
 
     // --- Import ---
-    suspend fun import(uri: Uri, folderId: Long?): FileEntity = withContext(Dispatchers.IO) {
+    /** Display name and reported size (0 if unknown) of a picked document. */
+    suspend fun nameAndSize(uri: Uri): Pair<String, Long> = withContext(Dispatchers.IO) {
+        runCatching { queryNameSize(uri) }.getOrDefault("file" to 0L)
+    }
+
+    suspend fun import(uri: Uri, folderId: Long?, onBytes: ((Long) -> Unit)? = null): FileEntity = withContext(Dispatchers.IO) {
         val (name, _) = queryNameSize(uri)
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
         // Read media duration from the still-plaintext source before it is encrypted.
@@ -192,7 +258,22 @@ class VaultRepository @Inject constructor(
         val written = context.contentResolver.openInputStream(uri)!!.use { input ->
             blob.outputStream().use { out ->
                 FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
-                    input.copyTo(enc)
+                    if (onBytes == null) input.copyTo(enc)
+                    else {
+                        // Same as copyTo, but reports progress (throttled to ~every 1 MB).
+                        val buf = ByteArray(DEFAULT_BUFFER_SIZE * 8)
+                        var total = 0L
+                        var lastReport = 0L
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            enc.write(buf, 0, n)
+                            total += n
+                            if (total - lastReport >= 1_048_576) { onBytes(total); lastReport = total }
+                        }
+                        onBytes(total)
+                        total
+                    }
                 }
             }
         }
@@ -371,6 +452,11 @@ class VaultRepository @Inject constructor(
     fun openThumb(sealed: ByteArray): ByteArray? = runCatching { dek.decrypt(sealed, THUMB_AAD) }.getOrNull()
     val hasKey: Boolean get() = session.isUnlocked
 
+    /** Set (or clear, with a blank value) the source link stored on a file. */
+    suspend fun setSourceUrl(fileId: String, url: String?) = withContext(Dispatchers.IO) {
+        db.fileDao().setSourceUrl(fileId, url?.trim()?.ifEmpty { null }); notifyChanged()
+    }
+
     suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
         db.fileDao().rename(fileId, newName.trim()); notifyChanged()
     }
@@ -488,6 +574,37 @@ class VaultRepository @Inject constructor(
         // Deleting a file must not remove its tags from the library: they stay available for
         // other files. Tags are only removed via an explicit deleteTag.
         notifyChanged()
+    }
+
+    /**
+     * Resolve a duplicate set by keeping [keepId] and crypto-shredding [removeIds], without losing
+     * the organisation carried by the removed copies: their tags are added to the kept file, a
+     * favorite mark carries over, and their source link is copied when the kept file has none.
+     * Returns the names of the tags that were newly added to the kept file.
+     */
+    suspend fun mergeDuplicates(keepId: String, removeIds: List<String>): List<String> = withContext(Dispatchers.IO) {
+        val keep = db.fileDao().withTagsById(keepId) ?: return@withContext emptyList()
+        val keepTags = keep.tags.map { it.name }.toSet()
+        val moved = LinkedHashSet<String>()
+        var favorite = keep.file.isFavorite
+        var link = keep.file.sourceUrl?.takeIf { it.isNotBlank() }
+        for (id in removeIds.filter { it != keepId }.distinct()) {
+            val other = db.fileDao().withTagsById(id) ?: continue
+            other.tags.map { it.name }.filterNot { it in keepTags }.forEach { moved += it }
+            favorite = favorite || other.file.isFavorite
+            if (link == null) link = other.file.sourceUrl?.takeIf { it.isNotBlank() }
+        }
+        if (moved.isNotEmpty()) addTags(keepId, moved.toList())
+        if (favorite != keep.file.isFavorite) db.fileDao().setFavorite(keepId, favorite)
+        if (link != keep.file.sourceUrl) db.fileDao().setSourceUrl(keepId, link)
+        for (id in removeIds.filter { it != keepId }.distinct()) secureDelete(id)
+        notifyChanged()
+        moved.toList()
+    }
+
+    /** Tag names per file id (one query per file; meant for small sets like duplicate groups). */
+    suspend fun tagNamesOf(fileIds: Collection<String>): Map<String, List<String>> = withContext(Dispatchers.IO) {
+        fileIds.associateWith { id -> db.fileDao().withTagsById(id)?.tags?.map { it.name } ?: emptyList() }
     }
 
     /** Best-effort deletion of the original picked files (SAF documents). */

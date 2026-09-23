@@ -92,7 +92,8 @@ fun SettingsScreen(
     val dupProgress by vm.dupProgress.collectAsState()
     val dupScannedCount by vm.dupScannedCount.collectAsState()
     val exactGroups by vm.exactGroups.collectAsState()
-    val similarGroups by vm.similarGroups.collectAsState()
+    val dupGroups by vm.dupGroups.collectAsState()
+    val dupNotice by vm.dupNotice.collectAsState()
 
     Scaffold(
         topBar = {
@@ -362,34 +363,34 @@ fun SettingsScreen(
         )
     }
     when (dupMode) {
-        SettingsViewModel.DupMode.EXACT -> DuplicatesDialog(
+        SettingsViewModel.DupMode.EXACT -> DuplicatesCompare(
             title = "Duplicati esatti",
-            groups = exactGroups.map { g ->
-                DupUiGroup(
-                    header = "${g.files.size} copie · ${com.cripta.app.ui.components.formatBytes(g.sizeBytes)} ciascuna",
-                    files = g.files,
-                )
-            },
-            footer = buildString {
+            groups = dupGroups,
+            summary = buildString {
                 append("Scansionati $dupScannedCount file.")
                 val waste = exactGroups.sumOf { it.sizeBytes * (it.files.size - 1) }
                 if (waste > 0) append(" Recuperabili ${com.cripta.app.ui.components.formatBytes(waste)} eliminando le copie in eccesso.")
+                append(" Le etichette delle copie eliminate passano a quella tenuta.")
             },
             emptyText = "Scansionati $dupScannedCount file. Nessun duplicato esatto trovato.",
+            notice = dupNotice,
+            thumb = { vm.thumb(it) },
+            onKeepOnly = { vm.keepOnly(it) },
             onDelete = { vm.deleteDuplicate(it) },
+            onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
         )
-        SettingsViewModel.DupMode.SIMILAR -> DuplicatesDialog(
+        SettingsViewModel.DupMode.SIMILAR -> DuplicatesCompare(
             title = "Media simili",
-            groups = similarGroups.map { g ->
-                DupUiGroup(
-                    header = "${g.files.size} elementi simili · ${com.cripta.app.ui.components.formatBytes(g.files.sumOf { it.sizeBytes })} in totale",
-                    files = g.files,
-                )
-            },
-            footer = "Analizzati $dupScannedCount elementi (foto e video).",
+            groups = dupGroups,
+            summary = "Analizzati $dupScannedCount elementi (foto e video). Confronta le copie: il consigliato è " +
+                "quello di qualità migliore. Le etichette delle copie eliminate passano a quella tenuta.",
             emptyText = "Analizzati $dupScannedCount elementi. Nessun media simile trovato.",
+            notice = dupNotice,
+            thumb = { vm.thumb(it) },
+            onKeepOnly = { vm.keepOnly(it) },
             onDelete = { vm.deleteDuplicate(it) },
+            onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
         )
         SettingsViewModel.DupMode.NONE -> Unit
@@ -407,66 +408,6 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { deleteTag = null }) { Text("Annulla") } },
         )
     }
-}
-
-private data class DupUiGroup(
-    val header: String,
-    val files: List<com.cripta.app.data.db.FileEntity>,
-)
-
-@Composable
-private fun DuplicatesDialog(
-    title: String,
-    groups: List<DupUiGroup>,
-    footer: String?,
-    emptyText: String,
-    onDelete: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            if (groups.isEmpty()) {
-                Text(emptyText, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                Column(
-                    Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    if (footer != null) {
-                        Text(footer, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    groups.forEach { g ->
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(g.header, style = MaterialTheme.typography.labelLarge)
-                            g.files.forEachIndexed { i, f ->
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodyMedium)
-                                        Text(
-                                            (if (i == 0) "Più vecchio · " else "") +
-                                                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
-                                                    .format(java.util.Date(f.createdAt)),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    IconButton(onClick = { onDelete(f.id) }) {
-                                        Icon(Icons.Filled.Delete, "Elimina", tint = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
-    )
 }
 
 @Composable

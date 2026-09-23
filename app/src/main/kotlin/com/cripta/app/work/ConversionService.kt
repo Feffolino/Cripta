@@ -41,6 +41,7 @@ class ConversionService : Service() {
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var converter: VideoConverter
     @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
+    @Inject lateinit var thumbs: com.cripta.app.media.ThumbnailLoader
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -83,7 +84,7 @@ class ConversionService : Service() {
                     MODE_IMPORT -> {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
-                        run("Cifratura", uris.size) { i -> repo.import(uris[i], folderId) }
+                        importBatch(uris, folderId)
                         applyDeletePolicy(uris)
                     }
                     MODE_DOWNLOAD -> {
@@ -131,6 +132,55 @@ class ConversionService : Service() {
     }
 
     /**
+     * Encrypt [uris] into the vault one by one, publishing live progress (file n of N, name, bytes
+     * of the current file) to [VaultRepository.importState] for the in-app banner and to the
+     * notification, then a final "completed" notification with the outcome.
+     */
+    private suspend fun importBatch(uris: List<Uri>, folderId: Long?) {
+        if (uris.isEmpty()) return
+        repo.importBegin(uris.size)
+        val start = SystemClock.elapsedRealtime()
+        try {
+            for (uri in uris) {
+                val (name, size) = repo.nameAndSize(uri)
+                repo.importCurrent(name, size)
+                val st = repo.importState.value
+                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = name))
+                var lastNotify = 0L
+                val ok = runCatching {
+                    repo.import(uri, folderId) { bytes ->
+                        repo.importBytes(bytes)
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastNotify > 500) {
+                            lastNotify = now
+                            val cur = repo.importState.value
+                            val filePct = if (size > 0) " · ${(bytes * 100 / size).coerceAtMost(100)}%" else ""
+                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = "$name$filePct"))
+                        }
+                    }
+                }.onFailure { android.util.Log.e("ConversionService", "import failed: $name", it) }.isSuccess
+                repo.importItemDone(ok)
+                val cur = repo.importState.value
+                val elapsed = SystemClock.elapsedRealtime() - start
+                val left = cur.total - cur.done
+                val eta = if (cur.done > 0 && left > 0) " · ${etaText(elapsed / cur.done * left)}" else ""
+                notify(build("Importazione ${cur.done}/${cur.total}", (cur.fraction * 100).toInt(), sub = "${(cur.fraction * 100).toInt()}%$eta"))
+            }
+        } finally {
+            withContext(NonCancellable) {
+                repo.importEnd()?.let { fin ->
+                    val title = if (fin.failed == 0) "Importazione completata" else "Importazione completata con errori"
+                    val text = buildString {
+                        append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
+                        if (fin.failed > 0) append(" · ${fin.failed} non importati")
+                    }
+                    notifyResult(title, text)
+                }
+            }
+        }
+    }
+
+    /**
      * Transcode one video to MP4 and encrypt it into the vault. Decrypted plaintext lives only in
      * app-private cache and is shredded in a NonCancellable finally block, so it is never left on
      * disk even if the service is torn down mid-operation.
@@ -163,6 +213,7 @@ class ConversionService : Service() {
                 return
             }
             val newFile = repo.importConvertedMp4(file, out!!)
+            thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
             repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
             postConvertDone(id)
         } catch (e: kotlinx.coroutines.CancellationException) {

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.download
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Button
@@ -39,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,6 +61,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun DownloadScreen(initialUrl: String? = null, vm: DownloadViewModel = hiltViewModel()) {
     val ctx = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     var url by remember { mutableStateOf(initialUrl.orEmpty()) }
     var quality by remember { mutableStateOf<Int?>(null) }
     val qualities = listOf<Pair<Int?, String>>(null to "Auto", 1080 to "1080p", 720 to "720p", 480 to "480p", 360 to "360p")
@@ -100,11 +105,32 @@ fun DownloadScreen(initialUrl: String? = null, vm: DownloadViewModel = hiltViewM
                 label = { Text("Link video") },
                 singleLine = true,
                 enabled = !state.active,
-                trailingIcon = if (url.isNotBlank() && !state.active) {
-                    { androidx.compose.material3.IconButton(onClick = { url = "" }) { Icon(Icons.Filled.ErrorOutline, "Pulisci") } }
-                } else null,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Paste the clipboard link in one tap, or clear the field to start over.
+            if (!state.active) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = {
+                            val clip = clipboard.getText()?.text?.trim().orEmpty()
+                            if (clip.isNotBlank()) url = clip
+                            else Toast.makeText(ctx, "Appunti vuoti", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
+                        Text("  Incolla")
+                    }
+                    OutlinedButton(
+                        onClick = { url = ""; vm.resetEstimate() },
+                        enabled = url.isNotBlank(),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.Close, null, modifier = Modifier.size(18.dp))
+                        Text("  Cancella")
+                    }
+                }
+            }
 
             Text("Qualità", style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

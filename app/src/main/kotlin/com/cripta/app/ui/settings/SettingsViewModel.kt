@@ -23,6 +23,7 @@ class SettingsViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val scanner: DuplicateScanner,
     private val updater: com.cripta.app.update.AppUpdater,
+    private val thumbs: com.cripta.app.media.ThumbnailLoader,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -139,18 +140,102 @@ class SettingsViewModel @Inject constructor(
     val dupScannedCount: StateFlow<Int> = _dupScannedCount
     private var scanJob: kotlinx.coroutines.Job? = null
 
+    /** One file of a duplicate group, with what's needed to compare it against the others. */
+    data class DupCandidate(
+        val file: com.cripta.app.data.db.FileEntity,
+        val tags: List<String>,
+        /** Display width x height, when readable. */
+        val resolution: Pair<Int, Int>?,
+    ) {
+        val pixels: Long get() = resolution?.let { it.first.toLong() * it.second } ?: 0L
+    }
+
+    /** A duplicate group ready for side-by-side comparison, with the suggested copy to keep. */
+    data class DupGroup(
+        val candidates: List<DupCandidate>,
+        val bestId: String,
+        /** Short human reasons why [bestId] is suggested. */
+        val reasons: List<String>,
+        /** True for byte-identical copies (quality is equal, only metadata differs). */
+        val exact: Boolean,
+    ) {
+        val best: DupCandidate get() = candidates.first { it.file.id == bestId }
+        /** Tags present on other copies but missing on the suggested one (moved when resolving). */
+        val tagsToMove: List<String> get() =
+            candidates.filter { it.file.id != bestId }.flatMap { it.tags }.distinct().filterNot { it in best.tags }
+    }
+
+    private val _dupGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DupGroup>>(emptyList())
+    val dupGroups: StateFlow<List<DupGroup>> = _dupGroups
+    /** Label of the last resolution, e.g. "Tenuto X · spostate 2 etichette". */
+    private val _dupNotice = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val dupNotice: StateFlow<String?> = _dupNotice
+    fun clearDupNotice() { _dupNotice.value = null }
+
+    suspend fun thumb(file: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(file)
+
+    /**
+     * Order candidates best-first: highest resolution, then (for videos) seekable MP4, then larger
+     * file (higher bitrate), then the one already carrying the organisation (favorite, tags, link),
+     * then the oldest import.
+     */
+    private fun rank(c: List<DupCandidate>): List<DupCandidate> = c.sortedWith(
+        compareByDescending<DupCandidate> { it.pixels }
+            .thenByDescending { if (com.cripta.app.data.VaultRepository.isVideo(it.file.mimeType)) it.file.mimeType == "video/mp4" else false }
+            .thenByDescending { it.file.sizeBytes }
+            .thenByDescending { it.file.isFavorite }
+            .thenByDescending { it.tags.size }
+            .thenByDescending { !it.file.sourceUrl.isNullOrBlank() }
+            .thenBy { it.file.importedAt }
+    )
+
+    private fun reasonsFor(best: DupCandidate, others: List<DupCandidate>, exact: Boolean): List<String> {
+        val r = mutableListOf<String>()
+        if (!exact) {
+            if (best.pixels > 0 && others.all { it.pixels < best.pixels }) {
+                r += "risoluzione più alta (${best.resolution!!.first}×${best.resolution.second})"
+            }
+            if (best.file.mimeType == "video/mp4" && others.any { com.cripta.app.data.VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4" }) {
+                r += "MP4 scorribile"
+            }
+            if (r.isEmpty() && others.all { it.file.sizeBytes < best.file.sizeBytes }) r += "qualità/bitrate maggiore"
+        } else {
+            r += "copie identiche"
+        }
+        if (best.file.isFavorite && others.none { it.file.isFavorite }) r += "è tra i preferiti"
+        if (best.tags.isNotEmpty() && others.all { it.tags.size < best.tags.size }) r += "ha più etichette"
+        if (!best.file.sourceUrl.isNullOrBlank() && others.all { it.file.sourceUrl.isNullOrBlank() }) r += "ha il link di origine"
+        if (others.all { it.file.importedAt > best.file.importedAt }) r += "importato per primo"
+        return r
+    }
+
+    private suspend fun buildGroups(sets: List<List<com.cripta.app.data.db.FileEntity>>, exact: Boolean): List<DupGroup> {
+        val ids = sets.flatten().map { it.id }
+        val tags = repo.tagNamesOf(ids)
+        return sets.mapNotNull { files ->
+            if (files.size < 2) return@mapNotNull null
+            // Identical bytes have identical resolution: skip the probe for exact groups.
+            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), if (exact) null else thumbs.mediaResolution(f)) }
+            val ranked = rank(cands)
+            val best = ranked.first()
+            DupGroup(ranked, best.file.id, reasonsFor(best, ranked.drop(1), exact), exact)
+        }
+    }
+
     fun scanExact() {
         if (_dupScanning.value) return
         _dupScanning.value = true
         _dupProgress.value = 0 to 0
         scanJob = viewModelScope.launch {
             val result = runCatching {
-                scanner.scanExact { done, total -> _dupProgress.value = done to total }
+                val r = scanner.scanExact { done, total -> _dupProgress.value = done to total }
+                r to buildGroups(r.groups.map { it.files }, exact = true)
             }
             _dupScanning.value = false
-            result.onSuccess {
-                _exactGroups.value = it.groups
-                _dupScannedCount.value = it.filesScanned
+            result.onSuccess { (r, groups) ->
+                _exactGroups.value = r.groups
+                _dupGroups.value = groups
+                _dupScannedCount.value = r.filesScanned
                 _dupMode.value = DupMode.EXACT
             }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
         }
@@ -162,12 +247,14 @@ class SettingsViewModel @Inject constructor(
         _dupProgress.value = 0 to 0
         scanJob = viewModelScope.launch {
             val result = runCatching {
-                scanner.scanSimilar { done, total -> _dupProgress.value = done to total }
+                val r = scanner.scanSimilar { done, total -> _dupProgress.value = done to total }
+                r to buildGroups(r.groups.map { it.files }, exact = false)
             }
             _dupScanning.value = false
-            result.onSuccess {
-                _similarGroups.value = it.groups
-                _dupScannedCount.value = it.mediaScanned
+            result.onSuccess { (r, groups) ->
+                _similarGroups.value = r.groups
+                _dupGroups.value = groups
+                _dupScannedCount.value = r.mediaScanned
                 _dupMode.value = DupMode.SIMILAR
             }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
         }
@@ -178,19 +265,65 @@ class SettingsViewModel @Inject constructor(
         _dupScanning.value = false
     }
 
-    /** Crypto-shred one file and drop it from whichever result set is shown (removing singletons). */
+    /**
+     * Keep [keepId] and delete every other copy of its group, moving their tags (plus favorite and
+     * source link) onto the kept file so no organisation is lost.
+     */
+    fun keepOnly(keepId: String) = viewModelScope.launch {
+        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launch
+        val remove = group.candidates.map { it.file.id }.filter { it != keepId }
+        val moved = repo.mergeDuplicates(keepId, remove)
+        remove.forEach { thumbs.evict(it) }
+        dropFromResults(remove.toSet())
+        val name = group.candidates.first { it.file.id == keepId }.file.originalName
+        _dupNotice.value = buildString {
+            append("Tenuto \"$name\", eliminate ${remove.size} copie")
+            if (moved.isNotEmpty()) append(" · spostate ${moved.size} etichette")
+        }
+    }
+
+    /**
+     * Delete one copy. Its tags are not lost: they move to the copy that remains suggested in the
+     * group (so deleting a tagged copy and keeping an untagged one keeps the tags).
+     */
     fun deleteDuplicate(fileId: String) = viewModelScope.launch {
-        repo.secureDelete(fileId)
+        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == fileId } }
+        val heir = group?.let { g ->
+            if (g.bestId != fileId) g.bestId
+            else rank(g.candidates.filter { it.file.id != fileId }).firstOrNull()?.file?.id
+        }
+        val moved = if (heir != null) repo.mergeDuplicates(heir, listOf(fileId)) else { repo.secureDelete(fileId); emptyList() }
+        thumbs.evict(fileId)
+        dropFromResults(setOf(fileId))
+        if (moved.isNotEmpty()) _dupNotice.value = "Etichette spostate: ${moved.joinToString(", ") { "#$it" }}"
+    }
+
+    /** Remove deleted files from every result set, dropping groups left with a single file. */
+    private suspend fun dropFromResults(ids: Set<String>) {
         _exactGroups.value = _exactGroups.value
-            .map { g -> g.copy(files = g.files.filterNot { it.id == fileId }) }
+            .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
             .filter { it.files.size > 1 }
         _similarGroups.value = _similarGroups.value
-            .map { g -> g.copy(files = g.files.filterNot { it.id == fileId }) }
+            .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
             .filter { it.files.size > 1 }
+        // Re-read the survivors (tags/favorite may have changed by the merge) and re-rank.
+        val remaining = _dupGroups.value.map { g -> g.candidates.map { it.file }.filterNot { it.id in ids } }
+            .filter { it.size > 1 }
+            .map { files -> files.mapNotNull { repo.fileById(it.id) } }
+        val old = _dupGroups.value.flatMap { it.candidates }.associateBy { it.file.id }
+        val tags = repo.tagNamesOf(remaining.flatten().map { it.id })
+        _dupGroups.value = remaining.filter { it.size > 1 }.map { files ->
+            val exact = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == files.first().id } }?.exact ?: false
+            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), old[f.id]?.resolution) }
+            val ranked = rank(cands)
+            DupGroup(ranked, ranked.first().file.id, reasonsFor(ranked.first(), ranked.drop(1), exact), exact)
+        }
     }
 
     fun closeDuplicates() {
         _dupMode.value = DupMode.NONE
+        _dupGroups.value = emptyList()
+        _dupNotice.value = null
         _exactGroups.value = emptyList()
         _similarGroups.value = emptyList()
     }
