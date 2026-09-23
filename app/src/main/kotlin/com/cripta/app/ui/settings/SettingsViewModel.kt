@@ -173,6 +173,10 @@ class SettingsViewModel @Inject constructor(
     fun clearDupNotice() { _dupNotice.value = null }
 
     suspend fun thumb(file: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(file)
+    /** Seekable decrypting channel for in-place video preview (nothing written to disk). */
+    fun channelFor(file: com.cripta.app.data.db.FileEntity): java.nio.channels.SeekableByteChannel = repo.seekableChannel(file)
+    /** Decrypted image bytes for the full-size preview, held in memory only. */
+    suspend fun imageBytes(file: com.cripta.app.data.db.FileEntity): ByteArray = repo.decryptBytes(file)
 
     /**
      * Order candidates best-first: highest resolution, then (for videos) seekable MP4, then larger
