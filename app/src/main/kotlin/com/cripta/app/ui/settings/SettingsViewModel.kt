@@ -113,6 +113,10 @@ class SettingsViewModel @Inject constructor(
         trashed.value.map { it.file.id }.forEach { repo.secureDelete(it); thumbs.evict(it) }
     }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
+    fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }
+    fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }
+    fun setAutoRotate(v: Boolean) = viewModelScope.launch { store.setAutoRotate(v) }
+    fun setPictureInPicture(v: Boolean) = viewModelScope.launch { store.setPictureInPicture(v) }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message

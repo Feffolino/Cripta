@@ -193,6 +193,22 @@ class MainActivity : FragmentActivity() {
         )
     }
 
+    /** Leaving the app while a video plays: continue it in Picture-in-Picture if the user enabled it. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val aspect = com.cripta.app.viewer.PipController.armedAspect ?: return
+        runCatching {
+            enterPictureInPictureMode(
+                android.app.PictureInPictureParams.Builder().setAspectRatio(aspect).build()
+            )
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        com.cripta.app.viewer.PipController.setInPip(isInPictureInPictureMode)
+    }
+
     override fun onStop() {
         super.onStop()
         if (session.isUnlocked) backgroundedAt = System.currentTimeMillis()

@@ -81,6 +81,14 @@ data class Settings(
     val videoLoop: Boolean = true,
     /** Viewer: start videos muted. */
     val videoStartMuted: Boolean = false,
+    /** Viewer: seconds jumped by a double tap on the sides (5 / 10 / 30). */
+    val seekStepSec: Int = 10,
+    /** Viewer: vertical drag on the left/right side sets brightness/volume. */
+    val gestureControls: Boolean = true,
+    /** Viewer: rotate to landscape for landscape videos, portrait for portrait ones. */
+    val autoRotate: Boolean = true,
+    /** Viewer: continue a video in a small window when leaving the app (off: privacy). */
+    val pictureInPicture: Boolean = false,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
@@ -127,6 +135,10 @@ class SettingsStore @Inject constructor(
     private val dlHeightKey = intPreferencesKey("dl_height")
     private val convertAfterKey = intPreferencesKey("convert_after")
     private val convertAfterChosenKey = booleanPreferencesKey("convert_after_chosen")
+    private val seekStepKey = intPreferencesKey("seek_step_sec")
+    private val gestureKey = booleanPreferencesKey("gesture_controls")
+    private val autoRotateKey = booleanPreferencesKey("auto_rotate")
+    private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
@@ -171,6 +183,10 @@ class SettingsStore @Inject constructor(
             ),
             videoLoop = p[videoLoopKey] ?: true,
             videoStartMuted = p[videoMutedKey] ?: false,
+            seekStepSec = (p[seekStepKey] ?: 10).let { if (it in listOf(5, 10, 30)) it else 10 },
+            gestureControls = p[gestureKey] ?: true,
+            autoRotate = p[autoRotateKey] ?: true,
+            pictureInPicture = p[pipKey] ?: false,
         )
     }
 
@@ -190,6 +206,10 @@ class SettingsStore @Inject constructor(
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
     suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
+    suspend fun setSeekStep(v: Int) { context.dataStore.edit { it[seekStepKey] = v } }
+    suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
+    suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
+    suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }
@@ -241,7 +261,8 @@ class SettingsStore @Inject constructor(
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
-            "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey)
+            "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
+                seekStepKey, gestureKey, autoRotateKey, pipKey)
             "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

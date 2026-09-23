@@ -85,7 +85,7 @@ private fun TagChip(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TagSections(
+internal fun TagSections(
     allTags: List<TagEntity>,
     extraNames: List<String>,
     showRecents: Boolean,
