@@ -170,6 +170,12 @@ class VaultRepository @Inject constructor(
         it.copy(done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0)
     }
 
+    private val _pendingOriginals = MutableStateFlow<List<Uri>>(emptyList())
+    /** Imported originals awaiting the user's keep/delete choice ("Chiedi" policy). */
+    val pendingOriginals: StateFlow<List<Uri>> = _pendingOriginals
+    fun addPendingOriginals(uris: List<Uri>) = _pendingOriginals.update { (it + uris).distinct() }
+    fun clearPendingOriginals() { _pendingOriginals.value = emptyList() }
+
     fun importDuplicate(newId: String, existingName: String) =
         _importState.update { it.copy(duplicates = it.duplicates + (newId to existingName)) }
 
@@ -541,6 +547,7 @@ class VaultRepository @Inject constructor(
     // --- Tags ---
     suspend fun setTags(fileId: String, tagNames: List<String>) = withContext(Dispatchers.IO) {
         val dao = db.tagDao()
+        val before = db.fileDao().withTagsById(fileId)?.tags?.map { it.id }?.toSet().orEmpty()
         dao.clearTagsOf(fileId)
         for (raw in tagNames.map { it.trim() }.filter { it.isNotEmpty() }.distinct()) {
             val existing = dao.byName(raw)
@@ -548,6 +555,7 @@ class VaultRepository @Inject constructor(
                 if (it == -1L) dao.byName(raw)!!.id else it
             }
             dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
+            if (tagId !in before) dao.touch(tagId, now())   // newly assigned -> "Recenti"
         }
         // Tags are a reusable library: keep unlinked ones available for other files. They are
         // removed only when the user explicitly deletes them (see deleteTag).
@@ -595,8 +603,23 @@ class VaultRepository @Inject constructor(
                 if (it == -1L) dao.byName(raw)!!.id else it
             }
             dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
+            dao.touch(tagId, now())
         }
         notifyChanged()
+    }
+
+    /** Pin/unpin a tag (pinned tags come first in every picker). */
+    suspend fun setTagPinned(name: String, pinned: Boolean) = withContext(Dispatchers.IO) {
+        db.tagDao().setPinned(name, pinned); notifyChanged()
+    }
+
+    /** Toggle one tag on one file (viewer quick-tag bar). Returns true when it is now assigned. */
+    suspend fun toggleFileTag(fileId: String, tagId: Long): Boolean = withContext(Dispatchers.IO) {
+        val has = db.fileDao().withTagsById(fileId)?.tags?.any { it.id == tagId } == true
+        if (has) db.tagDao().unlink(fileId, tagId)
+        else { db.tagDao().link(FileTagCrossRef(fileId = fileId, tagId = tagId)); db.tagDao().touch(tagId, now()) }
+        notifyChanged()
+        !has
     }
 
     suspend fun createTag(name: String, alias: String? = null) = withContext(Dispatchers.IO) {

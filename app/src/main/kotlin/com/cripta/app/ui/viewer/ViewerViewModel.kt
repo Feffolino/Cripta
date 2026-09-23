@@ -103,6 +103,18 @@ class ViewerViewModel @Inject constructor(
         repo.setSourceUrl(fileId, url); _refresh.value++
     }
 
+    fun setTagColor(name: String, color: Int?) = viewModelScope.launch { repo.setTagColorByName(name, color) }
+    fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
+
+    /** Quick-tag bar: toggle one tag on the current file. */
+    fun toggleTag(fileId: String, tagId: Long) = viewModelScope.launch {
+        repo.toggleFileTag(fileId, tagId); _refresh.value++
+    }
+
+    val display: StateFlow<com.cripta.app.data.DisplayPrefs> =
+        settingsStore.settings.map { it.display }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.cripta.app.data.DisplayPrefs())
+
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
     fun createTag(name: String, alias: String?) = viewModelScope.launch { repo.createTag(name, alias); _refresh.value++ }

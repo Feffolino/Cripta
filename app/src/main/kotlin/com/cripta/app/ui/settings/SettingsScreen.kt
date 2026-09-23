@@ -281,7 +281,13 @@ fun SettingsScreen(
 
             item(key = SettingsCategory.ETICHETTE.name) {
                 CategoryBlock(SettingsCategory.ETICHETTE) {
-                    Section("Libreria etichette", "${tags.size} etichette · crea, riordina e rinomina.") {
+                    Section("Assegnazione rapida", "Le etichette della libreria restano sempre nella stessa posizione; cambiano solo le righe in alto.") {
+                        ToggleRow("Riga \"Recenti\" (ultime 6 usate)", s.display.showRecentTags) { vm.setShowRecentTags(it) }
+                        ToggleRow("Etichette rapide nel visualizzatore", s.display.viewerQuickTags) { vm.setViewerQuickTags(it) }
+                        Text("📌 Fissa un'etichetta (tieni premuto nell'editor, o tocca il pallino qui sotto) per averla sempre tra le prime.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Section("Libreria etichette", "${tags.size} etichette · crea, riordina, rinomina, colora e fissa.") {
                         val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = !custom,
@@ -309,7 +315,7 @@ fun SettingsScreen(
                                             Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
                                                 .background(com.cripta.app.ui.theme.tagColor(tag)))
                                     }
-                                    Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 10.dp),
+                                    Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 10.dp),
                                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     if (custom) {
                                         IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
@@ -533,6 +539,8 @@ fun SettingsScreen(
             initialAlias = tag.alias ?: "",
             initialColor = tag.color,
             onColor = { vm.setTagColor(tag.id, it) },
+            initialPinned = tag.pinned,
+            onPinned = { vm.setTagPinned(tag.name, it) },
             onConfirm = { name, alias -> vm.editTag(tag.id, name, alias); editTag = null },
             onDismiss = { editTag = null },
         )

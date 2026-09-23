@@ -610,6 +610,9 @@ fun VaultScreen(
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
             onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { tagTargetId = null },
+            showRecents = display.showRecentTags,
+            onSetColor = { name, c -> vm.setTagColor(name, c) },
+            onSetPinned = { name, p -> vm.setTagPinned(name, p) },
         )
     }
 
@@ -620,6 +623,7 @@ fun VaultScreen(
             onConfirm = { names -> vm.addTagsToFiles(selection.toList(), names); batchTag = false; selection = emptySet() },
             onCreateTag = { name, alias -> vm.createTag(name, alias) },
             onDismiss = { batchTag = false },
+            showRecents = display.showRecentTags,
         )
     }
 

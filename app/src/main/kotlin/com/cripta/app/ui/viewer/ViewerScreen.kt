@@ -138,6 +138,7 @@ fun ViewerScreen(
     val message by vm.message.collectAsState()
     val refresh by vm.refresh.collectAsState()
     val allTags by vm.allTags.collectAsState()
+    val displayPrefs by vm.display.collectAsState()
 
     // Immersive: let media use the status- and navigation-bar areas; restore bars on exit.
     val view = LocalView.current
@@ -163,7 +164,9 @@ fun ViewerScreen(
     var menuOpen by remember { mutableStateOf(false) }
     // Auto-hide the chrome a few seconds after it appears or the page changes — but not while the
     // actions overflow menu is open, otherwise the menu closes itself under the user.
-    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen) {
+    // Bumped on quick-tag taps so the chrome stays up while tagging.
+    var chromeTouch by remember { mutableIntStateOf(0) }
+    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch) {
         if (chromeVisible && !menuOpen) { delay(3500); chromeVisible = false }
     }
 
@@ -206,6 +209,7 @@ fun ViewerScreen(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
+          Column {
             TopAppBar(
                 title = {
                     Column {
@@ -270,6 +274,41 @@ fun ViewerScreen(
                     }
                 },
             )
+            // Quick tags: pinned + recent tags, one tap toggles them on the file on screen.
+            val qf = currentFile
+            if (displayPrefs.viewerQuickTags && qf != null) {
+                val quick = remember(allTags) {
+                    (allTags.filter { it.pinned } +
+                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt })
+                        .distinctBy { it.id }.take(12)
+                }
+                val onFile by produceState(initialValue = emptyList<String>(), qf.id, refresh) { value = vm.tagNamesOf(qf.id) }
+                if (quick.isNotEmpty()) {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(quick.size) { i ->
+                            val t = quick[i]
+                            val on = t.name in onFile
+                            val c = com.cripta.app.ui.theme.tagColor(t)
+                            Surface(
+                                color = if (on) c else Color.White.copy(alpha = 0.12f),
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.clickable { chromeTouch++; vm.toggleTag(qf.id, t.id) },
+                            ) {
+                                Text(
+                                    (if (t.pinned) "📌 " else "") + (t.alias?.takeIf { it.isNotBlank() }?.let { "$it " } ?: "") + t.name,
+                                    color = Color.White, style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+          }
         }
     }
 
@@ -286,6 +325,9 @@ fun ViewerScreen(
                 onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
                 onCreateTag = { name, alias -> vm.createTag(name, alias) },
                 onDismiss = { showTags = false },
+                showRecents = displayPrefs.showRecentTags,
+                onSetColor = { name, c -> vm.setTagColor(name, c) },
+                onSetPinned = { name, p -> vm.setTagPinned(name, p) },
             )
         }
     }

@@ -398,14 +398,14 @@ class VaultViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
 
-    private val _pendingOriginals = MutableStateFlow<List<android.net.Uri>>(emptyList())
-    val pendingOriginals: StateFlow<List<android.net.Uri>> = _pendingOriginals
+    /** Originals of a finished import waiting for "Elimina originali / Mantieni" (policy "Chiedi"). */
+    val pendingOriginals: StateFlow<List<android.net.Uri>> = repo.pendingOriginals
 
-    fun clearPendingOriginals() { _pendingOriginals.value = emptyList() }
+    fun clearPendingOriginals() = repo.clearPendingOriginals()
 
     fun deleteOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
         repo.deleteOriginals(uris)
-        _pendingOriginals.value = emptyList()
+        repo.clearPendingOriginals()
     }
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
@@ -421,6 +421,9 @@ class VaultViewModel @Inject constructor(
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
         repo.renameFile(fileId, newName)    }
+
+    fun setTagColor(tagName: String, color: Int?) = viewModelScope.launch { repo.setTagColorByName(tagName, color) }
+    fun setTagPinned(tagName: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(tagName, pinned) }
 
     fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
         repo.setTagAlias(tagName, alias)    }

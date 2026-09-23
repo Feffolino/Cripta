@@ -101,6 +101,10 @@ data class TagEntity(
     val orderIndex: Int = 0,
     /** User-chosen colour (ARGB); null = automatic colour from the name. */
     val color: Int? = null,
+    /** Pinned tags are always offered first in the tag pickers, in a fixed order. */
+    val pinned: Boolean = false,
+    /** When the tag was last assigned to a file (epoch ms), for the "Recenti" row; null = never. */
+    val lastUsedAt: Long? = null,
 )
 
 @Entity(

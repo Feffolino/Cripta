@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
@@ -50,19 +51,77 @@ private val QUICK_EMOJIS = listOf(
 /** One reusable chip used by the tag dialogs. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TagChip(label: String, selected: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
+private fun TagChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    dot: androidx.compose.ui.graphics.Color? = null,
+) {
     Surface(
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            if (dot != null) {
+                androidx.compose.foundation.layout.Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(dot))
+                androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
+}
+
+/**
+ * Tag picker body shared by the tag dialogs. The full library ("Tutte") keeps a FIXED order (the
+ * user's custom or alphabetical order) so each tag is always in the same spot and muscle memory
+ * works. Above it, two short rows: "Fissate" (pinned, fixed order) and "Recenti" (last used) — the
+ * only part that moves.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagSections(
+    allTags: List<TagEntity>,
+    extraNames: List<String>,
+    showRecents: Boolean,
+    isSelected: (String) -> Boolean,
+    onToggle: (String) -> Unit,
+    onLongPress: ((String) -> Unit)?,
+) {
+    val byName = remember(allTags) { allTags.associateBy { it.name } }
+    val pinned = remember(allTags) { allTags.filter { it.pinned } }
+    val recents = remember(allTags) {
+        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(6)
+    }
+    // Library order as given (respects the user's tag order); names typed but not yet saved go last.
+    val library = remember(allTags, extraNames) {
+        allTags.map { it.name } + extraNames.filter { n -> allTags.none { it.name.equals(n, ignoreCase = true) } }
+    }
+    @Composable
+    fun row(title: String, names: List<String>) {
+        Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Vertical gap congruent with the filter-sheet tag chips.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            names.forEach { name ->
+                val t = byName[name]
+                TagChip(
+                    label = chipLabel(name, t?.alias),
+                    selected = isSelected(name),
+                    onClick = { onToggle(name) },
+                    onLongClick = onLongPress?.let { f -> { f(name) } },
+                    dot = t?.let { com.cripta.app.ui.theme.tagColor(it) },
+                )
+            }
+        }
+    }
+    if (pinned.isNotEmpty()) row("📌 Fissate", pinned.map { it.name })
+    if (showRecents && recents.isNotEmpty()) row("Recenti", recents.map { it.name })
+    if (library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
 }
 
 private fun chipLabel(name: String, alias: String?): String =
@@ -83,7 +142,11 @@ fun LabelEditorDialog(
     /** When set, a colour picker is shown and the choice (null = automatic) is reported here. */
     onColor: ((Int?) -> Unit)? = null,
     initialColor: Int? = null,
+    /** When set, a "Fissa in alto" switch is shown. */
+    onPinned: ((Boolean) -> Unit)? = null,
+    initialPinned: Boolean = false,
 ) {
+    var pinnedState by remember { mutableStateOf(initialPinned) }
     var name by remember { mutableStateOf(initialName) }
     var alias by remember { mutableStateOf(initialAlias) }
     var color by remember { mutableStateOf(initialColor) }
@@ -121,6 +184,16 @@ fun LabelEditorDialog(
                         }
                     }
                 }
+                if (onPinned != null) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("📌 Fissa in alto")
+                            Text("Sempre tra le prime, in posizione fissa.", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = { pinnedState = it })
+                    }
+                }
                 if (onColor != null) {
                     Text("Colore", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -151,6 +224,7 @@ fun LabelEditorDialog(
                 enabled = name.isNotBlank(),
                 onClick = {
                     onColor?.invoke(color)
+                    onPinned?.invoke(pinnedState)
                     onConfirm(name.trim(), alias.trim().ifEmpty { null })
                 },
             ) { Text("Salva") }
@@ -160,8 +234,8 @@ fun LabelEditorDialog(
 }
 
 /**
- * Tag editor for a single file: tap to toggle, long-press a chip to edit its alias,
- * "Nuova etichetta" to create one with an emoji/acronym in one step.
+ * Tag editor for a single file: tap to toggle; long-press a chip to edit its alias, colour and pin;
+ * "Nuova etichetta" to create one in one step.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -172,44 +246,38 @@ fun TagEditorDialog(
     onSetAlias: (String, String?) -> Unit,
     onCreateTag: (name: String, alias: String?) -> Unit,
     onDismiss: () -> Unit,
+    showRecents: Boolean = true,
+    onSetColor: ((name: String, color: Int?) -> Unit)? = null,
+    onSetPinned: ((name: String, pinned: Boolean) -> Unit)? = null,
 ) {
     val selected: SnapshotStateList<String> = remember {
         initialSelected.map { it.trim() }.filter { it.isNotEmpty() }.toMutableStateList()
     }
-    var aliasTarget by remember { mutableStateOf<String?>(null) }
+    var editTarget by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
-
-    val aliasByName = remember(allTags) { allTags.associate { it.name to it.alias } }
-    val known = remember(allTags, selected.size) {
-        (allTags.map { it.name } + selected).distinct().sortedBy { it.lowercase() }
-    }
+    val byName = remember(allTags) { allTags.associateBy { it.name } }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Etichette") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                Text("Tocca per assegnare. Tieni premuto per modificare l'alias (emoji/acronimo).",
+                Text("Tocca per assegnare. Tieni premuto per alias, colore e 📌.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // Vertical row gap kept congruent with the tag chips in the filter sheet so the
-                // pills sit equally close in both places (both use spacedBy(4.dp)).
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    known.forEach { name ->
-                        val isSel = selected.any { it.equals(name, ignoreCase = true) }
-                        TagChip(
-                            label = chipLabel(name, aliasByName[name]),
-                            selected = isSel,
-                            onClick = {
-                                if (isSel) selected.removeAll { it.equals(name, ignoreCase = true) }
-                                else selected.add(name)
-                            },
-                            onLongClick = { aliasTarget = name },
-                        )
-                    }
-                }
+                TagSections(
+                    allTags = allTags,
+                    extraNames = selected.toList(),
+                    showRecents = showRecents,
+                    isSelected = { n -> selected.any { it.equals(n, ignoreCase = true) } },
+                    onToggle = { n ->
+                        if (selected.any { it.equals(n, ignoreCase = true) }) selected.removeAll { it.equals(n, ignoreCase = true) }
+                        else selected.add(n)
+                    },
+                    onLongPress = { editTarget = it },
+                )
                 TextButton(onClick = { creating = true }) {
                     Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
                     Text("Nuova etichetta")
@@ -220,17 +288,22 @@ fun TagEditorDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
 
-    aliasTarget?.let { name ->
+    editTarget?.let { name ->
+        val t = byName[name]
         LabelEditorDialog(
             title = "Modifica #$name",
             initialName = name,
-            initialAlias = aliasByName[name] ?: "",
-            onConfirm = { newName, alias ->
+            initialAlias = t?.alias ?: "",
+            onConfirm = { _, alias ->
                 // Name edits on an existing tag are out of scope here; keep the name, set the alias.
                 onSetAlias(name, alias)
-                aliasTarget = null
+                editTarget = null
             },
-            onDismiss = { aliasTarget = null },
+            onDismiss = { editTarget = null },
+            onColor = if (t != null && onSetColor != null) ({ c -> onSetColor(name, c) }) else null,
+            initialColor = t?.color,
+            onPinned = if (t != null && onSetPinned != null) ({ p -> onSetPinned(name, p) }) else null,
+            initialPinned = t?.pinned == true,
         )
     }
 
@@ -258,13 +331,10 @@ fun BatchTagDialog(
     onConfirm: (List<String>) -> Unit,
     onCreateTag: (name: String, alias: String?) -> Unit,
     onDismiss: () -> Unit,
+    showRecents: Boolean = true,
 ) {
     val toAdd: SnapshotStateList<String> = remember { mutableStateListOf() }
     var creating by remember { mutableStateOf(false) }
-    val aliasByName = remember(allTags) { allTags.associate { it.name to it.alias } }
-    val known = remember(allTags, toAdd.size) {
-        (allTags.map { it.name } + toAdd).distinct().sortedBy { it.lowercase() }
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -276,24 +346,21 @@ fun BatchTagDialog(
             ) {
                 Text("Le etichette scelte vengono aggiunte a tutti gli elementi selezionati.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (known.isEmpty()) {
+                if (allTags.isEmpty() && toAdd.isEmpty()) {
                     Text("Nessuna etichetta. Creane una qui sotto.",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                // Same congruent vertical gap as the assignment / filter tag chips.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    known.forEach { name ->
-                        val isSel = toAdd.any { it.equals(name, ignoreCase = true) }
-                        TagChip(
-                            label = chipLabel(name, aliasByName[name]),
-                            selected = isSel,
-                            onClick = {
-                                if (isSel) toAdd.removeAll { it.equals(name, ignoreCase = true) }
-                                else toAdd.add(name)
-                            },
-                        )
-                    }
-                }
+                TagSections(
+                    allTags = allTags,
+                    extraNames = toAdd.toList(),
+                    showRecents = showRecents,
+                    isSelected = { n -> toAdd.any { it.equals(n, ignoreCase = true) } },
+                    onToggle = { n ->
+                        if (toAdd.any { it.equals(n, ignoreCase = true) }) toAdd.removeAll { it.equals(n, ignoreCase = true) }
+                        else toAdd.add(n)
+                    },
+                    onLongPress = null,
+                )
                 TextButton(onClick = { creating = true }) {
                     Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
                     Text("Nuova etichetta")
