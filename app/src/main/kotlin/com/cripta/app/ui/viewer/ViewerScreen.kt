@@ -206,7 +206,8 @@ fun ViewerScreen(
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
-            // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel.
+            // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel,
+            // swipe down closes the viewer.
             // Videos consume their touches in the player, so they use the handle below instead.
             .pointerInput(Unit) {
                 awaitEachGesture {
@@ -223,6 +224,8 @@ fun ViewerScreen(
                         if (!ch.pressed) break
                     }
                     if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
+                    // Swipe down closes the viewer.
+                    if (valid && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) onBack()
                 }
             },
     ) {
@@ -236,6 +239,7 @@ fun ViewerScreen(
                 setChrome = { chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
                 onOpenDetails = { showTags = true },
+                onClose = onBack,
             )
         }
 
@@ -574,6 +578,7 @@ private fun MediaPage(
     setChrome: (Boolean) -> Unit,
     onToggleChrome: () -> Unit,
     onOpenDetails: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
         value = vm.stateFor(id)
@@ -583,7 +588,7 @@ private fun MediaPage(
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose) else CircularProgressIndicator(color = Color.White)
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -722,6 +727,7 @@ private fun VideoPlayer(
     controlsVisible: Boolean,
     onControlsVisibilityChanged: (Boolean) -> Unit,
     onOpenDetails: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -948,7 +954,7 @@ private fun VideoPlayer(
             job.cancel()
         }
         // Vertical drag on a side: left = screen brightness, right = media volume.
-        fun Modifier.sideDrag(brightness: Boolean): Modifier = if (!prefs.gestures || inPip) this else pointerInput(brightness) {
+        fun Modifier.sideDrag(brightness: Boolean): Modifier = if (inPip || !(if (brightness) prefs.gestures else prefs.volumeGesture)) this else pointerInput(brightness) {
             val audio = activity?.getSystemService(android.media.AudioManager::class.java)
             var level = 0f
             detectVerticalDragGestures(
@@ -999,6 +1005,24 @@ private fun VideoPlayer(
                     )
                 }
                 .sideDrag(brightness = false)
+        )
+        // Top-centre area (below the top bar): swipe down closes the video, like on photos.
+        if (!inPip) Box(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth(0.4f).fillMaxHeight(0.35f)
+                .padding(top = 72.dp)
+                .pointerInput(Unit) { detectTapGestures(onTap = { toggleController() }) }
+                .pointerInput(Unit) {
+                    var total = 0f
+                    var fired = false
+                    detectVerticalDragGestures(
+                        onDragStart = { total = 0f; fired = false },
+                        onVerticalDrag = { change, dy ->
+                            change.consume()
+                            total += dy
+                            if (!fired && total > 60.dp.toPx()) { fired = true; onClose() }
+                        },
+                    )
+                }
         )
         // Bottom-centre strip just above the seek bar: swipe up opens tags & details, like on
         // photos. It stays clear of the time bar and of the centre play/pause button.
