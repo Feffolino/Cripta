@@ -85,6 +85,8 @@ data class Settings(
     val seekStepSec: Int = 10,
     /** Viewer: vertical drag on the left/right side sets brightness/volume. */
     val gestureControls: Boolean = true,
+    /** Viewer: vertical drag on the right side changes the media volume (left side = brightness). */
+    val gestureVolume: Boolean = true,
     /** Viewer: rotate to landscape for landscape videos, portrait for portrait ones. */
     val autoRotate: Boolean = true,
     /** Viewer: continue a video in a small window when leaving the app (off: privacy). */
@@ -141,6 +143,7 @@ class SettingsStore @Inject constructor(
     private val convertAfterChosenKey = booleanPreferencesKey("convert_after_chosen")
     private val seekStepKey = intPreferencesKey("seek_step_sec")
     private val gestureKey = booleanPreferencesKey("gesture_controls")
+    private val gestureVolumeKey = booleanPreferencesKey("gesture_volume")
     private val autoRotateKey = booleanPreferencesKey("auto_rotate")
     private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
@@ -191,6 +194,8 @@ class SettingsStore @Inject constructor(
             videoStartMuted = p[videoMutedKey] ?: false,
             seekStepSec = (p[seekStepKey] ?: 10).let { if (it in listOf(5, 10, 30)) it else 10 },
             gestureControls = p[gestureKey] ?: true,
+            // Until set on its own, volume follows the old combined brightness+volume switch.
+            gestureVolume = p[gestureVolumeKey] ?: p[gestureKey] ?: true,
             autoRotate = p[autoRotateKey] ?: true,
             pictureInPicture = p[pipKey] ?: false,
             updatePrerelease = p[updatePreKey] ?: true,
@@ -216,6 +221,7 @@ class SettingsStore @Inject constructor(
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
     suspend fun setSeekStep(v: Int) { context.dataStore.edit { it[seekStepKey] = v } }
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
+    suspend fun setGestureVolume(v: Boolean) { context.dataStore.edit { it[gestureVolumeKey] = v } }
     suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
     suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
@@ -272,7 +278,7 @@ class SettingsStore @Inject constructor(
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
-                seekStepKey, gestureKey, autoRotateKey, pipKey, filmstripKey)
+                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey)
             "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

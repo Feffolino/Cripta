@@ -121,7 +121,6 @@ fun SettingsScreen(
     var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     /** "Mostra altre opzioni" state of the page being shown (opened by a search hit). */
-    var showAdvanced by remember(page) { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf<SettingsPage?>(null) }
     val current = page?.let { p -> SettingsPage.entries.firstOrNull { it.name == p } }
     androidx.activity.compose.BackHandler(enabled = current != null) { page = null }
@@ -157,7 +156,7 @@ fun SettingsScreen(
                 query = query,
                 onQuery = { query = it },
                 summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size, dupWaiting?.groups?.size) },
-                onOpen = { p, advanced -> page = p.name; showAdvanced = advanced; query = "" },
+                onOpen = { p, _ -> page = p.name; query = "" },
                 onLock = { vm.lockNow(); onBack() },
             )
         } else {
@@ -196,8 +195,7 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        item { MoreOptions(showAdvanced) { showAdvanced = it } }
-                        if (showAdvanced) item {
+                        item {
                             Section("Altre opzioni") {
                                 ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
                                 ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
@@ -237,8 +235,7 @@ fun SettingsScreen(
                                 ToggleRow("Durata sui video (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
                             }
                         }
-                        item { MoreOptions(showAdvanced) { showAdvanced = it } }
-                        if (showAdvanced) item {
+                        item {
                             Section("Altre opzioni") {
                                 Text("Testo delle etichette", style = MaterialTheme.typography.labelLarge)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -275,12 +272,12 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                        item { MoreOptions(showAdvanced) { showAdvanced = it } }
-                        if (showAdvanced) {
+                        run {
                             item {
                                 Section("Altre opzioni") {
                                     ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
-                                    ToggleRow("Luminosità e volume trascinando sui lati", s.gestureControls) { vm.setGestureControls(it) }
+                                    ToggleRow("Luminosità trascinando sul lato sinistro", s.gestureControls) { vm.setGestureControls(it) }
+                                    ToggleRow("Volume trascinando sul lato destro", s.gestureVolume) { vm.setGestureVolume(it) }
                                     ToggleRow("Anteprime dei file vicini nel visualizzatore", s.viewerFilmstrip) { vm.setViewerFilmstrip(it) }
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
@@ -370,8 +367,7 @@ fun SettingsScreen(
                                 ToggleRow("Etichette rapide nel visualizzatore", s.display.viewerQuickTags) { vm.setViewerQuickTags(it) }
                             }
                         }
-                        item { MoreOptions(showAdvanced) { showAdvanced = it } }
-                        if (showAdvanced) item {
+                        item {
                             Section("Ordine della libreria") {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -414,8 +410,7 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                        item { MoreOptions(showAdvanced) { showAdvanced = it } }
-                        if (showAdvanced) item {
+                        item {
                             Section("Limiti di sicurezza") {
                                 Text(
                                     "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
@@ -748,7 +743,7 @@ private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCou
     SettingsPage.INFO -> "Versione e aggiornamenti"
 }
 
-/** Searchable options: label + extra keywords -> page (opened with "altre opzioni" expanded). */
+/** Searchable options: label + extra keywords -> page. */
 private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Tema chiaro / scuro", "tema scuro chiaro dark light sistema", SettingsPage.ASPETTO),
     Triple("Colori dinamici", "material you colori dinamici", SettingsPage.ASPETTO),
@@ -767,7 +762,8 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Ripeti in loop", "loop ripeti", SettingsPage.VIDEO),
     Triple("Avvia senza audio", "muto audio", SettingsPage.VIDEO),
     Triple("Salto con doppio tocco", "doppio tocco salta secondi avanti indietro", SettingsPage.VIDEO),
-    Triple("Luminosità e volume con i gesti", "gesti luminosità volume", SettingsPage.VIDEO),
+    Triple("Luminosità con il gesto", "gesti luminosità trascina sinistra", SettingsPage.VIDEO),
+    Triple("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VIDEO),
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
     Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
@@ -874,14 +870,6 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
 }
 
 /** "Mostra altre opzioni" toggle that reveals a page's less-used settings. */
-@Composable
-private fun MoreOptions(expanded: Boolean, onChange: (Boolean) -> Unit) {
-    TextButton(onClick = { onChange(!expanded) }) {
-        Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null)
-        Text(if (expanded) "  Nascondi altre opzioni" else "  Mostra altre opzioni")
-    }
-}
-
 @Composable
 private fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
     // Grouped, elevated card: binds each group's controls together.

@@ -1395,7 +1395,8 @@ private fun FilterSortSheet(
     onDeleteSaved: (Long) -> Unit = {},
     onSave: (String) -> Unit = {},
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Opens at half height (drag up for the rest) instead of jumping to the top of the screen.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var naming by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(

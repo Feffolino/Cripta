@@ -118,6 +118,7 @@ class SettingsViewModel @Inject constructor(
     fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }
     fun setAutoRotate(v: Boolean) = viewModelScope.launch { store.setAutoRotate(v) }
     fun setPictureInPicture(v: Boolean) = viewModelScope.launch { store.setPictureInPicture(v) }
+    fun setGestureVolume(v: Boolean) = viewModelScope.launch { store.setGestureVolume(v) }
     fun setViewerFilmstrip(v: Boolean) = viewModelScope.launch { store.setViewerFilmstrip(v) }
     fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch { store.setUpdatePrerelease(v); _update.value = UpdateState.Idle }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
