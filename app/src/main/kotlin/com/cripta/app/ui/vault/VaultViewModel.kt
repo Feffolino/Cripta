@@ -206,6 +206,19 @@ class VaultViewModel @Inject constructor(
     val importState: StateFlow<VaultRepository.ImportState> = repo.importState
     fun dismissImportResult() = repo.dismissImportResult()
 
+    /** Conversion queue status (banner). */
+    val convertStatus: StateFlow<VaultRepository.ConvertStatus> = repo.convertStatus
+    fun dismissConvertResult() = repo.dismissConvertResult()
+    fun cancelConversion() = com.cripta.app.work.ConversionService.cancelConvert(appContext)
+
+    /** Queue the selected non-MP4 videos for conversion (they run one at a time). */
+    fun convertToMp4(fileIds: List<String>) {
+        val ids = fileIds.toSet()
+        files.value.map { it.file }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) && it.mimeType != "video/mp4" }
+            .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id) }
+    }
+
     /** Drop the just-imported copies of files that were already in the vault (identical bytes). */
     fun removeImportDuplicates() = viewModelScope.launch {
         val dups = importState.value.duplicates.map { it.first }

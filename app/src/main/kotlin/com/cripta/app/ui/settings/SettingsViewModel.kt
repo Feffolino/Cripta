@@ -87,6 +87,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
     fun setShowQualityBadge(v: Boolean) = viewModelScope.launch { store.setShowQualityBadge(v) }
     fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
+    fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = viewModelScope.launch { store.setConvertAfter(v) }
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
     fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
     fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
@@ -116,7 +117,11 @@ class SettingsViewModel @Inject constructor(
             .fold({ "Ripristinati $it file" }, { "Import fallito (passphrase errata?)" })
     }
 
-    fun createTag(name: String, alias: String? = null) = viewModelScope.launch { repo.createTag(name, alias) }
+    fun createTag(name: String, alias: String? = null, color: Int? = null) = viewModelScope.launch {
+        repo.createTag(name, alias)
+        if (color != null) repo.setTagColorByName(name, color)
+    }
+    fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
     fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }

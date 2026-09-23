@@ -48,6 +48,12 @@ interface TagDao {
     @Query("UPDATE tags SET alias = :alias WHERE name = :name")
     suspend fun setAlias(name: String, alias: String?)
 
+    @Query("UPDATE tags SET color = :color WHERE id = :id")
+    suspend fun setColor(id: Long, color: Int?)
+
+    @Query("UPDATE tags SET color = :color WHERE name = :name")
+    suspend fun setColorByName(name: String, color: Int?)
+
     @Query("UPDATE tags SET name = :newName WHERE id = :id")
     suspend fun rename(id: Long, newName: String)
 

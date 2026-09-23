@@ -1,5 +1,11 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -74,9 +80,13 @@ fun LabelEditorDialog(
     initialAlias: String = "",
     onConfirm: (name: String, alias: String?) -> Unit,
     onDismiss: () -> Unit,
+    /** When set, a colour picker is shown and the choice (null = automatic) is reported here. */
+    onColor: ((Int?) -> Unit)? = null,
+    initialColor: Int? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var alias by remember { mutableStateOf(initialAlias) }
+    var color by remember { mutableStateOf(initialColor) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -111,12 +121,38 @@ fun LabelEditorDialog(
                         }
                     }
                 }
+                if (onColor != null) {
+                    Text("Colore", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // "Auto" = colour derived from the name (the default), then the palette.
+                    val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ColorDot(auto, selected = color == null, label = "A") { color = null }
+                        com.cripta.app.ui.theme.TagPalette.forEach { c ->
+                            val argb = c.toArgb()
+                            ColorDot(c, selected = color == argb) { color = argb }
+                        }
+                    }
+                    // Live preview of the badge as it will look on covers.
+                    val preview = color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto
+                    Surface(color = preview, shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)) {
+                        Text(alias.ifBlank { name.take(2).uppercase() }.ifBlank { "AB" },
+                            style = MaterialTheme.typography.labelMedium, color = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
-                onClick = { onConfirm(name.trim(), alias.trim().ifEmpty { null }) },
+                onClick = {
+                    onColor?.invoke(color)
+                    onConfirm(name.trim(), alias.trim().ifEmpty { null })
+                },
             ) { Text("Salva") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
@@ -280,5 +316,20 @@ fun BatchTagDialog(
             },
             onDismiss = { creating = false },
         )
+    }
+}
+
+/** Round colour swatch; [label] marks the special "automatic" choice. */
+@Composable
+private fun ColorDot(c: androidx.compose.ui.graphics.Color, selected: Boolean, label: String? = null, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(32.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(c)
+            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, androidx.compose.foundation.shape.CircleShape) else Modifier)
+            .clickable(onClick = onClick),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        if (label != null) Text(label, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelLarge)
     }
 }

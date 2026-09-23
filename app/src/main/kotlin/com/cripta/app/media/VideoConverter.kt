@@ -40,8 +40,8 @@ class VideoConverter @Inject constructor(
      * Transcode [src] into [out] as MP4 (H.264/AAC). Suspends until done; throws on failure.
      * Call on the main thread.
      */
-    suspend fun toMp4(src: File, out: File, onProgress: (Int) -> Unit = {}): Unit =
-        export(MediaItem.fromUri(Uri.fromFile(src)), out, maxHeight = null, onProgress = onProgress)
+    suspend fun toMp4(src: File, out: File, videoBitrate: Int? = null, onProgress: (Int) -> Unit = {}): Unit =
+        export(MediaItem.fromUri(Uri.fromFile(src)), out, maxHeight = null, videoBitrate = videoBitrate, onProgress = onProgress)
 
     /**
      * Download and remux/transcode a remote video (direct link or HLS .m3u8) into [out] as MP4.
@@ -49,12 +49,13 @@ class VideoConverter @Inject constructor(
      * Call on the main thread.
      */
     suspend fun downloadToMp4(url: String, out: File, maxHeight: Int?, onProgress: (Int) -> Unit = {}): Unit =
-        export(MediaItem.fromUri(url), out, maxHeight, onProgress)
+        export(MediaItem.fromUri(url), out, maxHeight, null, onProgress)
 
     private suspend fun export(
         source: MediaItem,
         out: File,
         maxHeight: Int?,
+        videoBitrate: Int?,
         onProgress: (Int) -> Unit,
     ): Unit = suspendCancellableCoroutine { cont ->
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -68,9 +69,25 @@ class VideoConverter @Inject constructor(
                 handler.postDelayed(this, 500)
             }
         }
+        // Encoder: fall back to a supported configuration instead of failing (or producing garbage)
+        // when the device encoder rejects the source resolution/profile; request a bitrate that fits
+        // the resolution so the output isn't blocky.
+        val encoderSettings = androidx.media3.transformer.VideoEncoderSettings.Builder()
+            .apply { if (videoBitrate != null) setBitrate(videoBitrate) }
+            .build()
+        val encoderFactory = androidx.media3.transformer.DefaultEncoderFactory.Builder(context)
+            .setEnableFallback(true)
+            .setRequestedVideoEncoderSettings(encoderSettings)
+            .build()
+        // Tolerant extractors for MPEG-PS/TS sources (no seek index, timestamp discontinuities).
+        val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES)
         transformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
+            .setEncoderFactory(encoderFactory)
+            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context, extractors))
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     handler.removeCallbacks(poll)
@@ -94,9 +111,14 @@ class VideoConverter @Inject constructor(
             Effects.EMPTY
         }
         val edited = EditedMediaItem.Builder(source).setEffects(effects).build()
+        // HDR (10-bit HLG/PQ) sources: tone-map to SDR. Without this, H.264 SDR output from an HDR
+        // phone clip comes out with washed/green/garbled frames.
+        val composition = Composition.Builder(androidx.media3.transformer.EditedMediaItemSequence(edited))
+            .setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
+            .build()
 
         cont.invokeOnCancellation { handler.removeCallbacks(poll); runCatching { transformer.cancel() } }
-        transformer.start(edited, out.absolutePath)
+        transformer.start(composition, out.absolutePath)
         handler.post(poll)
     }
 }

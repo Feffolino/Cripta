@@ -372,38 +372,37 @@ fun ViewerScreen(
             title = { Text("Convertire in MP4?") },
             text = {
                 Text(
-                    "Questo formato non permette di scorrere il video. La conversione crea una " +
-                        "copia MP4 (ri-codifica H.264) scorribile, con le stesse etichette e cartella. " +
-                        "Può richiedere qualche minuto; l'originale viene conservato."
+                    "Crea una copia MP4 (H.264) scorribile, con le stesse etichette e cartella. Prosegue in " +
+                        "background; la copia viene verificata prima di essere salvata e l'originale non viene " +
+                        "mai distrutto (al massimo va nel cestino). Cosa fare dell'originale si sceglie in " +
+                        "Impostazioni › Video."
                 )
             },
             confirmButton = { TextButton(onClick = { confirmConvert = false; vm.convertToMp4(file) }) { Text("Converti") } },
             dismissButton = { TextButton(onClick = { confirmConvert = false }) { Text("Annulla") } },
         )
     }
-    // In-app progress popup. The user can send it to the background (notification takes over) or
-    // cancel it. The transcode itself always runs in the foreground service.
+    // Non-blocking progress pill: the conversion runs in the service (queued, one at a time);
+    // the viewer stays fully usable and the pill can be hidden.
     if (converting && !convertInBackground) {
-        AlertDialog(
-            onDismissRequest = { convertInBackground = true },
-            title = { Text("Conversione in MP4") },
-            text = {
-                Column {
-                    Text("$convertProgress%")
-                    LinearProgressIndicator(
-                        progress = { convertProgress / 100f },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    )
-                    Text(
-                        "Puoi lasciarla in background: continua e mostra l'avanzamento nelle notifiche.",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
+        androidx.compose.ui.window.Popup(
+            alignment = Alignment.BottomCenter,
+            offset = androidx.compose.ui.unit.IntOffset(0, -180),
+        ) {
+            Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large) {
+                Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(progress = { convertProgress / 100f }, color = Color.White,
+                        strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    Text("  Conversione MP4 · $convertProgress%", color = Color.White,
+                        style = MaterialTheme.typography.labelLarge)
+                    TextButton(onClick = { vm.cancelConversion() }) { Text("Annulla", color = Color(0xFFFF8A80)) }
+                    IconButton(onClick = { convertInBackground = true }) {
+                        Icon(Icons.Filled.Close, "Nascondi", tint = Color.White)
+                    }
                 }
-            },
-            confirmButton = { TextButton(onClick = { convertInBackground = true }) { Text("Continua in background") } },
-            dismissButton = { TextButton(onClick = { vm.cancelConversion() }) { Text("Annulla", color = MaterialTheme.colorScheme.error) } },
-        )
+            }
+        }
     }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsState()
