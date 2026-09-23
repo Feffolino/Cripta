@@ -20,6 +20,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
@@ -124,12 +125,22 @@ class ThumbnailLoader @Inject constructor(
                 (VaultRepository.isVideo(it.mimeType) || VaultRepository.isImage(it.mimeType))
         }
         val found = HashMap<String, Pair<Int, Int>>()
-        for (f in todo) {
-            resolutionTried += f.id
-            mediaResolution(f)?.let { found[f.id] = it }
-            if (found.size >= 24) { runCatching { repo.setResolutions(HashMap(found)) }; found.clear() }
+        try {
+            for (f in todo) {
+                val res = mediaResolution(f)
+                // Marked only once the probe actually finished: a pass cancelled mid-file (the grid
+                // restarts prewarm after each saved batch) retries that file on the next pass.
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                resolutionTried += f.id
+                res?.let { found[f.id] = it }
+                if (found.size >= 24) { runCatching { repo.setResolutions(HashMap(found)) }; found.clear() }
+            }
+        } finally {
+            // Never drop results already read, even when this pass is cancelled.
+            if (found.isNotEmpty()) {
+                withContext(kotlinx.coroutines.NonCancellable) { runCatching { repo.setResolutions(found) } }
+            }
         }
-        runCatching { repo.setResolutions(found) }
     }
 
     private fun readDisk(id: String): Bitmap? = readSealed(File(diskDir, id))
