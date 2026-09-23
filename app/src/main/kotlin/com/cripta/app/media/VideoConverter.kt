@@ -79,15 +79,10 @@ class VideoConverter @Inject constructor(
             .setEnableFallback(true)
             .setRequestedVideoEncoderSettings(encoderSettings)
             .build()
-        // Tolerant extractors for MPEG-PS/TS sources (no seek index, timestamp discontinuities).
-        val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
-            .setConstantBitrateSeekingEnabled(true)
-            .setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES)
         transformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .setEncoderFactory(encoderFactory)
-            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context, extractors))
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     handler.removeCallbacks(poll)
