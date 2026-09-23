@@ -980,7 +980,9 @@ class VaultRepository @Inject constructor(
      */
     fun backupEstimate(compressDocs: kotlinx.coroutines.flow.Flow<Boolean>): kotlinx.coroutines.flow.Flow<Pair<Int, Long>> =
         kotlinx.coroutines.flow.combine(
-            db.fileDao().allWithTags(), db.tagDao().all(), db.folderDao().all(), compressDocs,
+            // live(): follows the session. Bound to `db` directly this kept querying the closed
+            // database after a lock, Room reopened it with the wiped key and the app crashed.
+            live { it.fileDao().allWithTags() }, live { it.tagDao().all() }, live { it.folderDao().all() }, compressDocs,
         ) { files, tags, folders, compress ->
             // Compressed documents: ~60% of their size is a typical guess for text / PDF.
             val data = files.sumOf {
