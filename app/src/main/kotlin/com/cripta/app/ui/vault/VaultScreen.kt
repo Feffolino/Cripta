@@ -428,7 +428,11 @@ fun VaultScreen(
                         // reveals the labelled actions, so the screen isn't crowded by a stack of FABs.
                         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             AnimatedVisibility(visible = fabExpanded) {
-                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(
+                                    // Landscape: capped + scrollable so the top action never slides under the bar.
+                                    (if (landscape) Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState()) else Modifier),
+                                    horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
                                     MiniFabAction("Cifra e importa", Icons.Filled.EnhancedEncryption) {
                                         fabExpanded = false; importLauncher.launch(arrayOf("*/*"))
                                     }
@@ -475,6 +479,9 @@ fun VaultScreen(
                         .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp),
                 )
             }
+            // Landscape: the banners/strips above the grid get a capped, scrollable area so an
+            // import in progress plus active filters can't squeeze the grid down to nothing.
+            Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
             if (path.isNotEmpty() && !filters.active) {
@@ -485,6 +492,7 @@ fun VaultScreen(
             ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult)
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
+            }
             }
 
             val manual = sortKey == SortKey.MANUAL
@@ -517,7 +525,7 @@ fun VaultScreen(
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         ReorderableFileGrid(
                             items = files,
-                            columns = if (viewMode == ViewMode.GRID) gridColumns else 1,
+                            columns = if (viewMode == ViewMode.GRID) (if (landscape) gridColumns + 2 else gridColumns) else 1,
                             asList = viewMode == ViewMode.LIST,
                             selection = selection,
                             display = display,
@@ -697,7 +705,7 @@ fun VaultScreen(
 
     folderMenu?.let { folder ->
         ModalBottomSheet(onDismissRequest = { folderMenu = null }) {
-            Column(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
                 SheetAction(Icons.Filled.Folder, "Apri") { vm.enterFolder(folder); folderMenu = null }
@@ -1719,7 +1727,7 @@ private fun CoverOptionDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (count == 1) "Rigenera copertina" else "Rigenera copertina ($count)") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     "Scegli da quale punto del video generare la copertina.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -1818,12 +1826,17 @@ private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean =
 
 @Composable
 private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> Unit = {}, folderName: String? = null) {
+    // Landscape: smaller badge and padding + scroll, so the import button is always reachable.
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val outer = if (landscape) modifier.verticalScroll(rememberScrollState()).padding(16.dp) else modifier.padding(32.dp)
+    val badge = if (landscape) 56.dp else 96.dp
+    val glyph = if (landscape) 28.dp else 44.dp
     if (!filtering && folderName != null) {
         // Empty folder: say where we are and how to fill it.
-        Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), shape = CircleShape, modifier = Modifier.size(96.dp)) {
+        Column(outer, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), shape = CircleShape, modifier = Modifier.size(badge)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
+                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(glyph))
                 }
             }
             Text("\"$folderName\" è vuota", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp),
@@ -1838,16 +1851,16 @@ private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> U
         }
         return
     }
-    Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(outer, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = CircleShape,
-            modifier = Modifier.size(96.dp),
+            modifier = Modifier.size(badge),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     if (filtering) Icons.Filled.Search else Icons.Filled.EnhancedEncryption,
-                    null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp),
+                    null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(glyph),
                 )
             }
         }

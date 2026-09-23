@@ -1,5 +1,6 @@
 package com.cripta.app.ui.note
 
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +57,9 @@ fun NoteEditorScreen(
         },
     ) { pad ->
         if (!loaded) return@Scaffold
-        Column(Modifier.fillMaxSize().padding(pad).padding(16.dp)) {
+        // imePadding: the window is edge-to-edge, so without it the keyboard (tall in landscape)
+        // would cover the text being typed.
+        Column(Modifier.fillMaxSize().padding(pad).imePadding().padding(16.dp)) {
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
                 label = { Text("Titolo") }, singleLine = true,
@@ -65,7 +68,7 @@ fun NoteEditorScreen(
             OutlinedTextField(
                 value = text, onValueChange = { text = it },
                 label = { Text("Contenuto") },
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp),
             )
         }
     }

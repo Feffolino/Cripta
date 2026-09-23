@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,7 +48,7 @@ fun ConvertChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (count == 1) "Convertire in MP4?" else "Convertire $count video in MP4?") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Crea una copia MP4 scorribile, verificata prima di essere salvata. Prosegue in background. Dopo la conversione:",
                     style = MaterialTheme.typography.bodyMedium)
                 options.forEach { (v, t) ->

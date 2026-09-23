@@ -1,5 +1,6 @@
 package com.cripta.app.ui.home
 
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -361,10 +362,16 @@ private fun HeroCarousel(
 /** Empty vault: an accent circle and quick actions instead of a bare message. */
 @Composable
 private fun EmptyHome(modifier: Modifier, onImport: () -> Unit, onDownload: () -> Unit) {
-    Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(96.dp)) {
+    // Landscape: smaller badge and padding + scroll, so both buttons stay reachable.
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    Column(
+        if (landscape) modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp) else modifier.padding(32.dp),
+        verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(if (landscape) 56.dp else 96.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(44.dp))
+                Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(if (landscape) 28.dp else 44.dp))
             }
         }
         Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
