@@ -284,6 +284,14 @@ fun SettingsScreen(
                                     ToggleRow("Anteprime dei file vicini nel visualizzatore", s.viewerFilmstrip) { vm.setViewerFilmstrip(it) }
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
+                                            Text("Passa al file successivo a fine video")
+                                            Text("Negli ultimi secondi compare \"Prossimo\" con il conto alla rovescia. Non si attiva con la ripetizione (loop) accesa.",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Switch(checked = s.autoNext, onCheckedChange = { vm.setAutoNext(it) })
+                                    }
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
                                             Text("Picture-in-Picture automatico")
                                             Text("Uscendo dall'app il video continua da solo in una finestrella sopra le altre app (il contenuto resta visibile a chi guarda lo schermo). Anche se spento, puoi aprirla dal pulsante nel player.",
                                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -769,6 +777,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VIDEO),
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
+    Triple("Prossimo video a fine riproduzione", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VIDEO),
     Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
     Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
