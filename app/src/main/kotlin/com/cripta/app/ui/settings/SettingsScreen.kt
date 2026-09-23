@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -152,7 +154,7 @@ fun SettingsScreen(
     ) { pad ->
         if (current == null) {
             MainSettingsList(
-                modifier = Modifier.fillMaxSize().padding(pad),
+                modifier = Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth(),
                 query = query,
                 onQuery = { query = it },
                 summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size, dupWaiting?.groups?.size) },
@@ -160,8 +162,9 @@ fun SettingsScreen(
                 onLock = { vm.lockNow(); onBack() },
             )
         } else {
+            // Capped width, centred: in landscape rows no longer stretch across the whole screen.
             LazyColumn(
-                Modifier.fillMaxSize().padding(pad),
+                Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

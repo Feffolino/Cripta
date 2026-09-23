@@ -247,30 +247,47 @@ fun ViewerScreen(
         // Bottom chrome: filmstrip of nearby files + the handle that opens the details panel.
         val scope = rememberCoroutineScope()
         val onVideo = currentFile?.let { com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } == true
-        AnimatedVisibility(
-            visible = chromeVisible && !inPip,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                // Above the player's seek bar for videos.
-                .padding(bottom = if (onVideo) 112.dp else 20.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val playback by vm.playback.collectAsState()
-                if (ids.size > 1 && playback.filmstrip) {
-                    Filmstrip(ids, pagerState.currentPage, vm) { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
-                }
-                Surface(
-                    color = Color.Black.copy(alpha = 0.55f), shape = CircleShape,
-                    modifier = Modifier.padding(top = 8.dp)
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures { change, dy -> if (dy < -8f) { change.consume(); showTags = true } }
+        val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val playback by vm.playback.collectAsState()
+        val showStrip = ids.size > 1 && playback.filmstrip
+        val pick: (Int) -> Unit = { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
+        if (landscape) {
+            // Landscape: the strip runs down the left edge, where a 16:9 video leaves a black band,
+            // so it never sits over the picture. The details handle is not shown: swipe up does it.
+            AnimatedVisibility(
+                visible = chromeVisible && !inPip && showStrip,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterStart)
+                    .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Left))
+                    .padding(start = 8.dp),
+            ) {
+                Filmstrip(ids, pagerState.currentPage, vm, vertical = true, onPick = pick)
+            }
+        } else {
+            AnimatedVisibility(
+                visible = chromeVisible && !inPip,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    // Above the player's seek bar for videos.
+                    .padding(bottom = if (onVideo) 112.dp else 20.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, onPick = pick)
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.55f), shape = CircleShape,
+                        modifier = Modifier.padding(top = 8.dp)
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { change, dy -> if (dy < -8f) { change.consume(); showTags = true } }
+                            }
+                            .clickable { showTags = true },
+                    ) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Text(" Dettagli", color = Color.White, style = MaterialTheme.typography.labelMedium)
                         }
-                        .clickable { showTags = true },
-                ) {
-                    Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Text(" Dettagli", color = Color.White, style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -1133,13 +1150,10 @@ private fun VideoPlayer(
  * one to jump to it. Small 16:9 thumbs, the others dimmed, so it hides little of the video.
  */
 @Composable
-private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, onPick: (Int) -> Unit) {
+private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vertical: Boolean = false, onPick: (Int) -> Unit) {
     val from = (current - 3).coerceAtLeast(0)
     val to = (current + 3).coerceAtMost(ids.lastIndex)
-    Row(
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val thumbs: @Composable () -> Unit = {
         for (i in from..to) {
             androidx.compose.runtime.key(ids[i]) {
                 val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
@@ -1158,6 +1172,17 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, onPi
                 }
             }
         }
+    }
+    if (vertical) {
+        Column(
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { thumbs() }
+    } else {
+        Row(
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { thumbs() }
     }
 }
 
