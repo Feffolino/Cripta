@@ -200,7 +200,10 @@ class MainActivity : FragmentActivity() {
                 else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
             // Global colour of the tags without one of their own (read by tagColor()).
-            androidx.compose.runtime.SideEffect { com.cripta.app.ui.theme.DefaultTagColor.argb = set.display.defaultTagColor }
+            androidx.compose.runtime.SideEffect {
+                com.cripta.app.ui.theme.DefaultTagColor.argb = set.display.defaultTagColor
+                com.cripta.app.ui.theme.RecentTagsCount.value = set.display.recentTagsCount
+            }
             val invalidated by keyInvalidated.collectAsState()
             val auth by authUi.collectAsState()
             val askNotif by askNotifications.collectAsState()

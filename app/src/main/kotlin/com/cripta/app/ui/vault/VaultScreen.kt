@@ -257,7 +257,8 @@ fun VaultScreen(
     val path by vm.path.collectAsState()
     val pendingOriginals by vm.pendingOriginals.collectAsState()
     val viewMode by vm.viewMode.collectAsState()
-    val gridColumns by vm.gridColumns.collectAsState()
+    val portraitColumns by vm.gridColumns.collectAsState()
+    val landscapeColumns by vm.gridColumnsLandscape.collectAsState()
     val allFolders by vm.allFolders.collectAsState()
     val sortKey by vm.sortKey.collectAsState()
     val sortAscending by vm.sortAscending.collectAsState()
@@ -276,6 +277,9 @@ fun VaultScreen(
     var convertAsk by remember { mutableStateOf<List<String>?>(null) }
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // Portrait and landscape each keep their own column count; the "Vista" menu edits the one in use.
+    val gridColumns = if (landscape) landscapeColumns else portraitColumns
+    val columnChoices = if (landscape) 3..8 else 2..5
     var searchExpanded by remember { mutableStateOf(false) }
 
     // Warm covers only while the grid is on screen; leaving for the viewer cancels this so the
@@ -480,12 +484,12 @@ fun VaultScreen(
                             )
                             if (viewMode == ViewMode.GRID) {
                                 HorizontalDivider()
-                                Text("Colonne", style = MaterialTheme.typography.labelMedium,
+                                Text(if (landscape) "Colonne in orizzontale" else "Colonne in verticale", style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    (2..5).forEach { n ->
-                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n) }, label = { Text("$n") },
+                                    columnChoices.forEach { n ->
+                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n, landscape) }, label = { Text("$n") },
                                             modifier = Modifier.semantics { this.contentDescription = "$n colonne" })
                                     }
                                 }
@@ -673,11 +677,10 @@ fun VaultScreen(
             // Folders stay visible in every sort (above the reorderable grid in Manual); a filter
             // searches the whole vault, so the current folder's subfolders don't apply then.
             val showFolders = folders.isNotEmpty() && !filters.active
-            // Phones keep the user's column count; wider windows (landscape, tablets, foldables)
-            // add columns in proportion so cells keep roughly the same size instead of growing huge.
+            // Exactly the count chosen for the current orientation. Only a wide portrait window
+            // (tablet, unfolded foldable) adds columns in proportion so cells don't grow huge.
             val screenW = LocalConfiguration.current.screenWidthDp
-            val wide = landscape || screenW >= 600
-            val gridCount = if (wide) maxOf(gridColumns, (screenW * gridColumns / 460f).roundToInt()).coerceAtMost(12)
+            val gridCount = if (!landscape && screenW >= 600) maxOf(gridColumns, (screenW * gridColumns / 460f).roundToInt()).coerceAtMost(12)
                 else gridColumns
             val columnCount = if (viewMode == ViewMode.GRID) gridCount else if (screenW >= 840) 2 else 1
             val columns = GridCells.Fixed(columnCount)
@@ -2496,7 +2499,9 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                         trackColor = onContainer.copy(alpha = 0.18f),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("Puoi uscire dall'app: l'importazione continua in background.",
+                    val eta = com.cripta.app.ui.components.rememberEta(state.fraction, state.active)
+                    Text((eta?.replaceFirstChar { it.uppercase() }?.let { "$it. " } ?: "") +
+                        "Puoi uscire dall'app: l'importazione continua in background.",
                         style = MaterialTheme.typography.labelSmall, color = onContainer.copy(alpha = 0.8f))
                 }
                 // Byte-identical copies of files already in the vault: offer to drop the new copies.
@@ -2768,6 +2773,11 @@ private fun ConvertBanner(state: VaultRepository.ConvertStatus, onCancel: () -> 
                         progress = { state.pct / 100f }, color = on, trackColor = on.copy(alpha = 0.18f),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    // Per video: a new file of the queue restarts the estimate.
+                    com.cripta.app.ui.components.rememberEta(state.pct / 100f, state.active, key = state.currentName)?.let {
+                        Text(it.replaceFirstChar { c -> c.uppercase() }, style = MaterialTheme.typography.labelSmall,
+                            color = on.copy(alpha = 0.8f))
+                    }
                 }
             }
         }

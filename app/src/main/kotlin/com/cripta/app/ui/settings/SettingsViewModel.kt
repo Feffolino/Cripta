@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cripta.app.data.DeleteOriginalPolicy
@@ -165,6 +166,10 @@ class SettingsViewModel @Inject constructor(
     fun setHoldSpeed(x10: Int) = viewModelScope.launch { store.setHoldSpeed(x10) }
     fun setControlsTimeout(sec: Int) = viewModelScope.launch { store.setControlsTimeout(sec) }
     fun setViewerFilmstrip(v: Boolean) = viewModelScope.launch { store.setViewerFilmstrip(v) }
+    fun setFilmstripShape(v: com.cripta.app.data.StripShape) = viewModelScope.launch { store.setFilmstripShape(v) }
+    fun setFilmstripSpan(v: Int) = viewModelScope.launch { store.setFilmstripSpan(v) }
+    fun setFilmstripSize(v: Int) = viewModelScope.launch { store.setFilmstripSize(v) }
+    fun setFilmstripTrueAspect(v: Boolean) = viewModelScope.launch { store.setFilmstripTrueAspect(v) }
     fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch { store.setUpdatePrerelease(v); _update.value = UpdateState.Idle }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -174,13 +179,20 @@ class SettingsViewModel @Inject constructor(
     /** Backup/restore running now (label shown with a progress bar), or null. */
     private val _backupBusy = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val backupBusy: StateFlow<String?> = _backupBusy
+    /** 0..1 while a backup / restore streams, null when idle or the size is unknown. */
+    private val _backupProgress = kotlinx.coroutines.flow.MutableStateFlow<Float?>(null)
+    val backupProgress: StateFlow<Float?> = _backupProgress
+    /** What a backup made now would contain: (files, bytes). Live, always shown in its section. */
+    val backupEstimate: StateFlow<Pair<Int, Long>?> = repo.backupEstimate(store.settings.map { it.backupCompressDocs }.distinctUntilChanged())
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), null)
 
     fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
         if (_backupBusy.value != null) return@launch
         _backupBusy.value = "Creazione del backup…"
         val pass = passphrase.toCharArray()
         try {
-            _message.value = runCatching { repo.exportBackup(uri, pass) }
+            val compress = runCatching { store.settingsOnce().backupCompressDocs }.getOrDefault(false)
+            _message.value = runCatching { repo.exportBackup(uri, pass, compress) { _backupProgress.value = it } }
                 .fold(
                     { n -> if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" },
                     { if (it is kotlinx.coroutines.CancellationException) throw it
@@ -189,6 +201,7 @@ class SettingsViewModel @Inject constructor(
         } finally {
             java.util.Arrays.fill(pass, '\u0000')
             _backupBusy.value = null
+            _backupProgress.value = null
         }
     }
 
@@ -197,7 +210,7 @@ class SettingsViewModel @Inject constructor(
         _backupBusy.value = "Ripristino del backup…"
         val pass = passphrase.toCharArray()
         try {
-            _message.value = runCatching { repo.importBackup(uri, pass) }
+            _message.value = runCatching { repo.importBackup(uri, pass) { _backupProgress.value = it } }
                 .fold(
                     { n -> if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" },
                     { if (it is kotlinx.coroutines.CancellationException) throw it
@@ -206,6 +219,7 @@ class SettingsViewModel @Inject constructor(
         } finally {
             java.util.Arrays.fill(pass, '\u0000')
             _backupBusy.value = null
+            _backupProgress.value = null
         }
     }
 
@@ -216,6 +230,8 @@ class SettingsViewModel @Inject constructor(
     fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
     fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
     fun setShowRecentTags(v: Boolean) = viewModelScope.launch { store.setShowRecentTags(v) }
+    fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }
+    fun setRecentTagsCount(v: Int) = viewModelScope.launch { store.setRecentTagsCount(v) }
     fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
     fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }

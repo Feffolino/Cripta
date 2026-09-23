@@ -964,11 +964,35 @@ class VaultRepository @Inject constructor(
      * streamed one by one (never materialised in RAM, so large videos don't run out of memory).
      * [passphrase] is wiped when this returns.
      */
-    suspend fun exportBackup(dest: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
-        try { exportBackupInner(dest, passphrase) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+    suspend fun exportBackup(
+        dest: Uri,
+        passphrase: CharArray,
+        compressDocs: Boolean = false,
+        onProgress: (Float) -> Unit = {},
+    ): Int = withContext(Dispatchers.IO) {
+        try { exportBackupInner(dest, passphrase, compressDocs, onProgress) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
     }
 
-    private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray): Int {
+    /**
+     * Size a backup of the vault would take right now: (file count, bytes). The archive is every
+     * file's plaintext (re-encrypted, no compression: media doesn't shrink) plus an 8-byte length
+     * each, the manifest (names, tags, folders: estimated per entry) and header + GCM tag.
+     */
+    fun backupEstimate(compressDocs: kotlinx.coroutines.flow.Flow<Boolean>): kotlinx.coroutines.flow.Flow<Pair<Int, Long>> =
+        kotlinx.coroutines.flow.combine(
+            db.fileDao().allWithTags(), db.tagDao().all(), db.folderDao().all(), compressDocs,
+        ) { files, tags, folders, compress ->
+            // Compressed documents: ~60% of their size is a typical guess for text / PDF.
+            val data = files.sumOf {
+                val sz = it.file.sizeBytes
+                8L + if (compress && compressibleInBackup(it.file.mimeType, sz)) sz * 6 / 10 else sz
+            }
+            val manifest = 4L + files.sumOf { 300L + it.file.originalName.length * 2L + (it.file.sourceUrl?.length ?: 0) + it.tags.size * 16L } +
+                tags.size * 90L + folders.size * 120L
+            files.size to (BACKUP_MAGIC.size + 16L + 12L + manifest + data + 16L)
+        }
+
+    private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray, compressDocs: Boolean, onProgress: (Float) -> Unit): Int {
         val folders = db.folderDao().all().first()
         val tags = db.tagDao().all().first()
         val files = db.fileDao().allWithTags().first()
@@ -981,7 +1005,7 @@ class VaultRepository @Inject constructor(
 
         val manifest = org.json.JSONObject().apply {
             // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
-            put("v", 2)
+            put("v", if (compressDocs) 3 else 2)
             put("folders", org.json.JSONArray().apply {
                 folders.forEach {
                     put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL)
@@ -1034,14 +1058,37 @@ class VaultRepository @Inject constructor(
             javax.crypto.CipherOutputStream(raw, cipher).use { cos ->
                 val out = java.io.DataOutputStream(java.io.BufferedOutputStream(cos, 256 * 1024))
                 out.writeInt(manifest.size); out.write(manifest)
-                for (fwt in files) {
+                // The length prefix must be exact: take the plaintext size from the ciphertext
+                // layout (cheap, no decryption), and verify it while streaming.
+                val lens = files.map { fwt ->
+                    runCatching { seekableChannel(fwt.file).use { it.size() } }.getOrNull() ?: fwt.file.sizeBytes
+                }
+                val total = lens.sum().coerceAtLeast(1L)
+                var written = 0L
+                onProgress(0f)
+                for ((idx, fwt) in files.withIndex()) {
                     currentCoroutineContext().ensureActive()
-                    // The length prefix must be exact: take the plaintext size from the ciphertext
-                    // layout (cheap, no decryption), and verify it while streaming.
-                    val len = runCatching { seekableChannel(fwt.file).use { it.size() } }.getOrNull()
-                        ?: fwt.file.sizeBytes
+                    val len = lens[idx]
+                    // v3: a document may be stored deflated (lossless). Marked by a NEGATIVE length
+                    // (-(compressed size) - 1), so an older app stops with "File corrotto" instead of
+                    // importing compressed bytes as the file. Kept raw when it saves under 5%.
+                    if (compressDocs && compressibleInBackup(fwt.file.mimeType, len)) {
+                        val plain = java.io.ByteArrayOutputStream(len.toInt())
+                        val got = decryptingStream(fwt.file).use { copyAtMost(it, plain, len) }
+                        if (got != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
+                        val raw = plain.toByteArray()
+                        val zipped = java.io.ByteArrayOutputStream().also { bos ->
+                            java.util.zip.DeflaterOutputStream(bos, java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION)).use { it.write(raw) }
+                        }.toByteArray()
+                        if (zipped.size < raw.size * 0.95) { out.writeLong(-zipped.size.toLong() - 1); out.write(zipped) }
+                        else { out.writeLong(len); out.write(raw) }
+                        written += len; onProgress(written.toFloat() / total)
+                        continue
+                    }
                     out.writeLong(len)
-                    val copied = decryptingStream(fwt.file).use { copyAtMost(it, out, len) }
+                    val copied = decryptingStream(fwt.file).use {
+                        copyAtMost(it, out, len) { n -> written += n; onProgress(written.toFloat() / total) }
+                    }
                     if (copied != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
                 }
                 out.flush()
@@ -1055,13 +1102,27 @@ class VaultRepository @Inject constructor(
      * is removed). Files are streamed straight into the vault, never held whole in RAM.
      * [passphrase] is wiped when this returns.
      */
-    suspend fun importBackup(src: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
-        try { importBackupInner(src, passphrase) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+    suspend fun importBackup(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit = {}): Int = withContext(Dispatchers.IO) {
+        try { importBackupInner(src, passphrase, onProgress) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
     }
 
-    private suspend fun importBackupInner(src: Uri, passphrase: CharArray): Int {
-        val source = context.contentResolver.openInputStream(src)
+    private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): Int {
+        val opened = context.contentResolver.openInputStream(src)
             ?: throw java.io.IOException("Impossibile aprire il file di backup")
+        // Progress = bytes of the archive read so far (its size from the provider, when known).
+        val archiveSize = runCatching {
+            context.contentResolver.openAssetFileDescriptor(src, "r")?.use { it.length }
+        }.getOrNull()?.takeIf { it > 0 }
+        val source = object : java.io.FilterInputStream(opened) {
+            private var read = 0L
+            private fun count(n: Long) {
+                if (n <= 0 || archiveSize == null) return
+                read += n; onProgress((read.toFloat() / archiveSize).coerceAtMost(1f))
+            }
+            override fun read(): Int = super.read().also { if (it >= 0) count(1) }
+            override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { count(it.toLong()) }
+            override fun skip(n: Long): Long = super.skip(n).also { count(it) }
+        }
         return source.use { raw ->
             val header = java.io.DataInputStream(raw)
             val magic = ByteArray(BACKUP_MAGIC.size)
@@ -1129,18 +1190,29 @@ class VaultRepository @Inject constructor(
                 for (i in 0 until fileArr.length()) {
                     val o = fileArr.getJSONObject(i)
                     currentCoroutineContext().ensureActive()
-                    val len = inp.readLong()
-                    require(len >= 0) { "File corrotto" }
+                    val stored = inp.readLong()
+                    // Negative = deflated document (v3): -(compressed size) - 1.
+                    val zipped = stored < 0
+                    val storedLen = if (zipped) -(stored + 1) else stored
+                    require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { "File corrotto" }
                     val uuid = UUID.randomUUID().toString()
                     val wrapped = FileCrypto.createWrappedFileKeyset(dek)
-                    val copied = try {
+                    val len = try {
                         blobs.blob(uuid).outputStream().use { out ->
-                            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { copyAtMost(inp, it, len) }
+                            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
+                                if (zipped) {
+                                    val z = ByteArray(storedLen.toInt()); inp.readFully(z)
+                                    java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { it.copyTo(enc) }
+                                } else {
+                                    val copied = copyAtMost(inp, enc, storedLen)
+                                    if (copied != storedLen) throw java.io.IOException("Backup troncato o corrotto")
+                                    copied
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         blobs.shred(uuid); throw e
                     }
-                    if (copied != len) { blobs.shred(uuid); throw java.io.IOException("Backup troncato o corrotto") }
                     val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
                     val entity = FileEntity(
                         id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
@@ -1185,7 +1257,12 @@ class VaultRepository @Inject constructor(
     }
 
     /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
-    private fun copyAtMost(input: java.io.InputStream, output: java.io.OutputStream, limit: Long): Long {
+    private fun copyAtMost(
+        input: java.io.InputStream,
+        output: java.io.OutputStream,
+        limit: Long,
+        onBytes: (Int) -> Unit = {},
+    ): Long {
         val buf = ByteArray(DEFAULT_BUFFER_SIZE * 8)
         var left = limit
         while (left > 0) {
@@ -1193,6 +1270,7 @@ class VaultRepository @Inject constructor(
             if (n < 0) break
             output.write(buf, 0, n)
             left -= n
+            onBytes(n)
         }
         return limit - left
     }
@@ -1241,6 +1319,17 @@ class VaultRepository @Inject constructor(
 
     companion object {
         private val BACKUP_MAGIC = "CRIPTABK".toByteArray()
+        /** Largest document compressed in a backup (it is deflated in memory). */
+        private const val MAX_COMPRESSED_DOC = 32L * 1024 * 1024
+
+        /** Worth deflating in a backup: not media, not an archive / already-compressed format. */
+        fun compressibleInBackup(mime: String, size: Long): Boolean {
+            if (size <= 0 || size > MAX_COMPRESSED_DOC) return false
+            if (mime.startsWith("image/") || mime.startsWith("video/") || mime.startsWith("audio/")) return false
+            val packed = listOf("zip", "compressed", "rar", "7z", "gzip", "x-tar", "bzip", "xz", "zstd",
+                "android.package-archive", "epub", "openxmlformats", "opendocument")
+            return packed.none { mime.contains(it, ignoreCase = true) }
+        }
         const val MIME_NOTE = "text/cripta-note"
         fun isImage(mime: String) = mime.startsWith("image/")
         fun isVideo(mime: String) = mime.startsWith("video/")
