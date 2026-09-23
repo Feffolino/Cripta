@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,6 +43,41 @@ data class Filters(
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
             type != TypeFilter.ALL || favoritesOnly || untaggedOnly
+}
+
+/** Per-type counts of a file list. */
+data class TypeCounts(
+    val total: Int = 0,
+    val videos: Int = 0,
+    val images: Int = 0,
+    val others: Int = 0,
+    val bytes: Long = 0,
+    val videoDurationMs: Long = 0,
+) {
+    companion object {
+        fun of(list: List<FileWithTags>): TypeCounts {
+            var v = 0; var i = 0; var o = 0; var b = 0L; var d = 0L
+            for (fwt in list) {
+                val m = fwt.file.mimeType
+                b += fwt.file.sizeBytes
+                when {
+                    VaultRepository.isVideo(m) -> { v++; d += fwt.file.durationMs ?: 0L }
+                    VaultRepository.isImage(m) -> i++
+                    else -> o++
+                }
+            }
+            return TypeCounts(list.size, v, i, o, b, d)
+        }
+    }
+}
+
+/** What the grid shows ([shown]) against everything in the current scope ([scope]). */
+data class VaultStats(val shown: TypeCounts = TypeCounts(), val scope: TypeCounts = TypeCounts()) {
+    val filtered: Boolean get() = shown.total != scope.total
+    companion object {
+        fun of(shown: List<FileWithTags>, scope: List<FileWithTags>) =
+            VaultStats(TypeCounts.of(shown), TypeCounts.of(scope))
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -141,14 +177,31 @@ class VaultViewModel @Inject constructor(
     fun setSort(key: com.cripta.app.data.SortKey, ascending: Boolean) =
         viewModelScope.launch { settings.setSort(key, ascending) }
 
-    val files: StateFlow<List<FileWithTags>> =
+    /** Unfiltered scope (current folder, or the whole vault while filtering) + the shown result. */
+    private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>)
+
+    private val scoped =
         combine(currentFolderId, filters, sortFlow, refresh) { folder, f, sort, _ -> Triple(folder, f, sort) }
             .flatMapLatest { (folder, f, sort) ->
                 val source = if (f.active) repo.allFiles() else repo.files(folder)
-                source.map { list -> applySort(applyFilters(list, f), sort.first, sort.second) }
+                source.map { list -> Scoped(list, applySort(applyFilters(list, f), sort.first, sort.second)) }
                     .flowOn(Dispatchers.Default)
             }
+            .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+
+    val files: StateFlow<List<FileWithTags>> =
+        scoped.map { it.shown }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Counts for the summary strip / sheet: what is shown vs. what the current scope holds. */
+    val stats: StateFlow<VaultStats> =
+        scoped.map { VaultStats.of(it.shown, it.scope) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), VaultStats())
+
+    /** Live state of file imports running in the foreground service. */
+    val importState: StateFlow<VaultRepository.ImportState> = repo.importState
+    fun dismissImportResult() = repo.dismissImportResult()
 
     /**
      * Proactively generate covers for [items] so thumbnails are ready as cells scroll in instead

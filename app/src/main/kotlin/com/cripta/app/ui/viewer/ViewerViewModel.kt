@@ -78,6 +78,11 @@ class ViewerViewModel @Inject constructor(
         repo.setTags(fileId, names); _refresh.value++
     }
 
+    /** Store [url] as the file's source link (blank clears it). */
+    fun setSourceUrl(fileId: String, url: String?) = viewModelScope.launch {
+        repo.setSourceUrl(fileId, url); _refresh.value++
+    }
+
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
     fun createTag(name: String, alias: String?) = viewModelScope.launch { repo.createTag(name, alias); _refresh.value++ }

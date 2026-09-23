@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EnhancedEncryption
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
@@ -108,6 +109,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -201,6 +203,8 @@ fun VaultScreen(
     val display by vm.display.collectAsState()
     val coverOverrides by vm.coverOverrides.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
+    val stats by vm.stats.collectAsState()
+    val importState by vm.importState.collectAsState()
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var searchExpanded by remember { mutableStateOf(false) }
@@ -233,6 +237,15 @@ fun VaultScreen(
     var showRegenCover by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showStats by remember { mutableStateOf(false) }
+
+    // A clean import result disappears by itself; one with failures stays until dismissed.
+    LaunchedEffect(importState.finished, importState.failed) {
+        if (importState.finished && importState.failed == 0) {
+            kotlinx.coroutines.delay(6000)
+            vm.dismissImportResult()
+        }
+    }
 
     // Collapse the secondary FABs while scrolling down so they don't cover the content
     // (they otherwise block dragging items in Manual reorder); bring them back on scroll up.
@@ -403,6 +416,10 @@ fun VaultScreen(
             }
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
+            ImportBanner(importState, onDismiss = vm::dismissImportResult)
+            if (stats.scope.total > 0) {
+                StatsStrip(stats, filters.active, onClick = { showStats = true })
+            }
 
             val manual = sortKey == SortKey.MANUAL
             val showFolders = folders.isNotEmpty() && !filters.active && !manual
@@ -520,14 +537,17 @@ fun VaultScreen(
                         header("Cartelle")
                         items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
                             FolderCell(folder, viewMode, folderStats[folder.id], display.showFolderInfo,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier.animateItem(placementSpec = null),
                                 onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
                         }
                     }
                     grouped.forEach { (label, group) ->
                         if (label.isNotEmpty()) header(label)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
-                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display, Modifier.animateItem(),
+                            FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display,
+                                // No placement animation: toggling a filter reshuffles the whole
+                                // result set and every cell used to visibly slide to its new slot.
+                                Modifier.animateItem(placementSpec = null),
                                 coverOverrides[fwt.file.id], coverVersions[fwt.file.id] ?: 0,
                                 { vm.thumb(fwt.file) }, { vm.publishViewerQueue(); onOpenFile(fwt.file.id) }, { toggleSel(fwt.file.id) })
                         }
@@ -617,6 +637,10 @@ fun VaultScreen(
             onClear = { vm.clearFilters() },
             onDismiss = { showFilterSheet = false },
         )
+    }
+
+    if (showStats) {
+        StatsSheet(stats, filters.active, path.lastOrNull()?.name, onDismiss = { showStats = false })
     }
 
     if (confirmMultiDelete) {
@@ -1049,9 +1073,17 @@ private fun TagFilterChip(label: String, state: TagFilterState, onClick: () -> U
         TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.onSurface
     }
     Surface(color = bg, shape = MaterialTheme.shapes.small, modifier = Modifier.clickable(onClick = onClick)) {
+        // A leading "⊘" marks an excluded (hidden) tag at a glance. It is always laid out (transparent
+        // unless excluded) so the chip keeps the same width in every state: a width change would
+        // reflow the tag rows and make the sheet jump.
+        val text = androidx.compose.ui.text.buildAnnotatedString {
+            withStyle(androidx.compose.ui.text.SpanStyle(
+                color = if (state == TagFilterState.EXCLUDE) fg else Color.Transparent,
+            )) { append("⊘ ") }
+            append(label)
+        }
         Text(
-            // A leading "⊘" marks an excluded (hidden) tag at a glance.
-            if (state == TagFilterState.EXCLUDE) "⊘ $label" else label,
+            text,
             style = MaterialTheme.typography.labelLarge,
             color = fg,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -1092,16 +1124,19 @@ private fun FilterSortSheet(
                     FilterChip(selected = sortKey == k, onClick = { onSort(k, sortAscending) }, label = { Text(lbl) })
                 }
             }
-            if (sortKey == SortKey.MANUAL) {
-                Text("Trascina gli elementi in modalità Lista per riordinarli a piacere.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                FilterChip(
-                    selected = false,
-                    onClick = { onSort(sortKey, !sortAscending) },
-                    leadingIcon = { Icon(Icons.Filled.SwapVert, null) },
-                    label = { Text(if (sortAscending) "Crescente" else "Decrescente") },
-                )
+            // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
+            Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.CenterStart) {
+                if (sortKey == SortKey.MANUAL) {
+                    Text("Trascina gli elementi in modalità Lista per riordinarli a piacere.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    FilterChip(
+                        selected = false,
+                        onClick = { onSort(sortKey, !sortAscending) },
+                        leadingIcon = { Icon(Icons.Filled.SwapVert, null) },
+                        label = { Text(if (sortAscending) "Crescente" else "Decrescente") },
+                    )
+                }
             }
 
             HorizontalDivider()
@@ -1146,8 +1181,10 @@ private fun FilterSortSheet(
                 }
             }
 
-            if (filters.active) {
-                TextButton(onClick = onClear, modifier = Modifier.align(Alignment.End)) { Text("Azzera filtri") }
+            // Always laid out (just disabled when nothing is filtered): if it appeared/disappeared,
+            // flipping a toggle would change the sheet's height and make it slide up/down.
+            TextButton(onClick = onClear, enabled = filters.active, modifier = Modifier.align(Alignment.End)) {
+                Text("Azzera filtri")
             }
         }
     }
@@ -1498,5 +1535,217 @@ private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vect
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
         }
         SmallFloatingActionButton(onClick = onClick) { Icon(icon, label) }
+    }
+}
+
+/**
+ * Live import status under the search bar: while encrypting it shows "n of N", the file being
+ * processed and its progress; when done it confirms how many files made it (and how many failed).
+ */
+@Composable
+private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Unit) {
+    AnimatedVisibility(
+        visible = state.active || state.finished,
+        enter = androidx.compose.animation.expandVertically() + fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
+    ) {
+        val ok = state.failed == 0
+        val container = when {
+            state.active -> MaterialTheme.colorScheme.secondaryContainer
+            ok -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.errorContainer
+        }
+        val onContainer = when {
+            state.active -> MaterialTheme.colorScheme.onSecondaryContainer
+            ok -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onErrorContainer
+        }
+        Surface(
+            color = container,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        ) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.active) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            strokeWidth = 2.dp, color = onContainer, modifier = Modifier.size(18.dp))
+                    } else {
+                        Icon(if (ok) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline, null,
+                            tint = onContainer, modifier = Modifier.size(20.dp))
+                    }
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        val title = when {
+                            state.active -> "Importazione in corso · ${minOf(state.done + 1, state.total)} di ${state.total}"
+                            ok -> "Importazione completata"
+                            else -> "Importazione completata con errori"
+                        }
+                        Text(title, style = MaterialTheme.typography.titleSmall, color = onContainer)
+                        val sub = if (state.active) {
+                            val name = state.currentName ?: "Preparazione…"
+                            val pct = if (state.currentTotalBytes > 0)
+                                " · ${(state.currentBytes * 100 / state.currentTotalBytes).coerceIn(0, 100)}%" else ""
+                            name + pct
+                        } else buildString {
+                            append(if (state.succeeded == 1) "1 file cifrato nel vault" else "${state.succeeded} file cifrati nel vault")
+                            if (state.failed > 0) append(" · ${state.failed} non importati")
+                        }
+                        Text(sub, style = MaterialTheme.typography.bodySmall, color = onContainer,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (!state.active) {
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Filled.Close, "Chiudi", tint = onContainer, modifier = Modifier.size(18.dp))
+                        }
+                    } else {
+                        Text("${(state.fraction * 100).roundToInt()}%", style = MaterialTheme.typography.labelLarge,
+                            color = onContainer, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (state.active) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { state.fraction },
+                        color = onContainer,
+                        trackColor = onContainer.copy(alpha = 0.18f),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("Puoi uscire dall'app: l'importazione continua in background.",
+                        style = MaterialTheme.typography.labelSmall, color = onContainer.copy(alpha = 0.8f))
+                }
+            }
+        }
+    }
+}
+
+/** One-line summary of what is on screen; tap for the full breakdown. */
+@Composable
+private fun StatsStrip(stats: VaultStats, filtering: Boolean, onClick: () -> Unit) {
+    val shown = stats.shown
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        val lead = if (filtering || stats.filtered) "${shown.total} di ${stats.scope.total}"
+            else if (shown.total == 1) "1 elemento" else "${shown.total} elementi"
+        Text(lead, style = MaterialTheme.typography.labelLarge,
+            color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        CountPill(Icons.Filled.Movie, shown.videos)
+        CountPill(Icons.Filled.Image, shown.images)
+        if (shown.others > 0) CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others)
+        Box(Modifier.weight(1f))
+        Icon(Icons.Filled.ExpandMore, "Riepilogo", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun CountPill(icon: ImageVector, count: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+        Text(" $count", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Full-screen-ish breakdown: how many videos (and other media) are loaded, filtered or not. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String?, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            val scopeLabel = when {
+                filtering -> "Tutto il vault"
+                folderName != null -> "Cartella \"$folderName\""
+                else -> "Radice del vault"
+            }
+            Column {
+                Text("Riepilogo", style = MaterialTheme.typography.headlineSmall)
+                Text(if (filtering) "Risultati filtrati · $scopeLabel" else scopeLabel,
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            // Hero: the video count, the number people care about most.
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(56.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Movie, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(30.dp))
+                        }
+                    }
+                    Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("${stats.shown.videos}", style = MaterialTheme.typography.displaySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            if (stats.filtered) {
+                                Text(" / ${stats.scope.videos}", style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(bottom = 4.dp))
+                            }
+                        }
+                        Text(
+                            when {
+                                stats.filtered -> "video mostrati su ${stats.scope.videos} caricati"
+                                stats.shown.videos == 1 -> "video caricato"
+                                else -> "video caricati"
+                            },
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        com.cripta.app.ui.components.formatDuration(stats.shown.videoDurationMs.takeIf { it > 0 })?.let {
+                            Text("Durata totale $it", style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                        }
+                    }
+                }
+            }
+            if (stats.filtered && stats.scope.videos > 0) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { stats.shown.videos.toFloat() / stats.scope.videos },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                StatTile(Icons.Filled.Image, "Foto", stats.shown.images, stats.scope.images, stats.filtered, Modifier.weight(1f))
+                StatTile(Icons.AutoMirrored.Filled.InsertDriveFile, "Altri", stats.shown.others, stats.scope.others, stats.filtered, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                StatTile(Icons.Filled.GridView, "Totale", stats.shown.total, stats.scope.total, stats.filtered, Modifier.weight(1f))
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f)) {
+                    Column(Modifier.padding(14.dp)) {
+                        Icon(Icons.Filled.EnhancedEncryption, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(formatBytes(stats.shown.bytes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 6.dp))
+                        Text(if (stats.filtered) "su ${formatBytes(stats.scope.bytes)}" else "Spazio occupato",
+                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (!filtering) {
+                Text("Conteggi degli elementi in questa cartella (le sottocartelle non sono incluse). Con un filtro attivo la ricerca copre tutto il vault.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatTile(icon: ImageVector, label: String, shown: Int, scope: Int, filtered: Boolean, modifier: Modifier) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = modifier) {
+        Column(Modifier.padding(14.dp)) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
+                Text("$shown", style = MaterialTheme.typography.titleLarge)
+                if (filtered) {
+                    Text(" / $scope", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 2.dp))
+                }
+            }
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

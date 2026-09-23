@@ -46,6 +46,12 @@ class ThumbnailLoader @Inject constructor(
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount / 1024
     }
     private val diskDir = File(context.cacheDir, "thumbs").apply { mkdirs() }
+    /**
+     * Covers the user picked explicitly (Rigenera copertina). Kept under filesDir, NOT cacheDir:
+     * the system may purge the cache at any time, which silently brought back the automatic cover.
+     * Sealed with the DEK exactly like the cache entries.
+     */
+    private val customDir = File(context.filesDir, "covers").apply { mkdirs() }
     private val target = 320
 
     /**
@@ -70,6 +76,8 @@ class ThumbnailLoader @Inject constructor(
 
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(file.id)?.let { return@withContext it }
+        // A user-chosen cover always wins over the automatic one.
+        readSealed(File(customDir, file.id))?.let { cache.put(file.id, it); return@withContext it }
         // Persistent sealed cache.
         readDisk(file.id)?.let { cache.put(file.id, it); return@withContext it }
         // Skip files already known to yield nothing this session.
@@ -102,19 +110,33 @@ class ThumbnailLoader @Inject constructor(
         }
     }
 
-    private fun readDisk(id: String): Bitmap? {
+    private fun readDisk(id: String): Bitmap? = readSealed(File(diskDir, id))
+
+    private fun readSealed(f: File): Bitmap? {
         if (!repo.hasKey) return null
-        val f = File(diskDir, id)
         if (!f.exists()) return null
         val plain = repo.openThumb(f.readBytes()) ?: return null
         return BitmapFactory.decodeByteArray(plain, 0, plain.size)
     }
 
-    private fun writeDisk(id: String, bmp: Bitmap) {
-        if (!repo.hasKey) return
+    private fun writeDisk(id: String, bmp: Bitmap) = writeSealed(File(diskDir, id), bmp)
+
+    /**
+     * Seal [bmp] into [dest] atomically (temp file + rename), so a crash or a concurrent reader
+     * never sees a half-written cover. Returns true once the file is on disk.
+     */
+    private fun writeSealed(dest: File, bmp: Bitmap): Boolean {
+        if (!repo.hasKey) return false
         val bos = ByteArrayOutputStream()
-        bmp.compress(Bitmap.CompressFormat.JPEG, 80, bos)
-        File(diskDir, id).writeBytes(repo.sealThumb(bos.toByteArray()))
+        if (!bmp.compress(Bitmap.CompressFormat.JPEG, 85, bos)) return false
+        dest.parentFile?.mkdirs()
+        val tmp = File(dest.parentFile, "${dest.name}.tmp")
+        tmp.writeBytes(repo.sealThumb(bos.toByteArray()))
+        if (!tmp.renameTo(dest)) {
+            dest.delete()
+            if (!tmp.renameTo(dest)) { tmp.delete(); return false }
+        }
+        return true
     }
 
     /** Remove a cached thumbnail (call after a file is deleted). */
@@ -122,6 +144,47 @@ class ThumbnailLoader @Inject constructor(
         cache.remove(id)
         failed.remove(id)
         runCatching { File(diskDir, id).delete() }
+        runCatching { File(customDir, id).delete() }
+    }
+
+    /** Give [toId] the same user-chosen cover as [fromId], if it has one (e.g. after an MP4 conversion). */
+    fun copyCustomCover(fromId: String, toId: String) {
+        runCatching {
+            val src = File(customDir, fromId)
+            if (src.exists()) {
+                src.copyTo(File(customDir, toId), overwrite = true)
+                cache.remove(toId)
+                runCatching { File(diskDir, toId).delete() }
+                bumpVersion(toId)
+            }
+        }
+    }
+
+    /**
+     * Display resolution (width x height, rotation applied) of an image or video, or null when it
+     * can't be read. Used to suggest which duplicate is the best quality copy to keep.
+     */
+    suspend fun mediaResolution(file: FileEntity): Pair<Int, Int>? = withContext(Dispatchers.IO) {
+        runCatching {
+            when {
+                VaultRepository.isImage(file.mimeType) -> {
+                    val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, o) }
+                    if (o.outWidth > 0 && o.outHeight > 0) o.outWidth to o.outHeight else null
+                }
+                VaultRepository.isVideo(file.mimeType) -> withRetriever(file) { r ->
+                    val w = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+                    val h = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+                    val rot = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                    when {
+                        w <= 0 || h <= 0 -> null
+                        rot == 90 || rot == 270 -> h to w
+                        else -> w to h
+                    }
+                }
+                else -> null
+            }
+        }.getOrNull()
     }
 
     /** Forget this session's failed-extraction ids so those covers are retried (pull-to-refresh). */
@@ -231,7 +294,16 @@ class ThumbnailLoader @Inject constructor(
                 ?: return@withContext null
             cache.put(file.id, bmp)
             failed.remove(file.id)                 // a good cover now exists: allow reload paths
-            runCatching { writeDisk(file.id, bmp) }
+            // Persist as a user-chosen cover (survives cache purges / restarts) and verify it reads
+            // back; the automatic cache entry is dropped so it can never shadow the chosen one.
+            val saved = runCatching { writeSealed(File(customDir, file.id), bmp) }.getOrDefault(false) &&
+                readSealed(File(customDir, file.id)) != null
+            if (saved) {
+                runCatching { File(diskDir, file.id).delete() }
+            } else {
+                android.util.Log.w("ThumbnailLoader", "custom cover not persisted for ${file.id}")
+                runCatching { writeDisk(file.id, bmp) }
+            }
             bumpVersion(file.id)                    // refresh shelves/viewer keyed on versions
             bmp
         }

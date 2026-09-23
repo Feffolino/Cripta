@@ -45,7 +45,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
@@ -322,7 +324,10 @@ fun ViewerScreen(
                             java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                                 .format(java.util.Date(file.createdAt)),
                         )
-                        file.sourceUrl?.takeIf { it.isNotBlank() }?.let { CopyableInfoLine("Link", it) }
+                        LinkInfoLine(
+                            value = file.sourceUrl?.takeIf { it.isNotBlank() },
+                            onSet = { vm.setSourceUrl(file.id, it) },
+                        )
                         if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
                         if (isVid && videoDiag.isNotBlank()) {
                             Row(
@@ -421,6 +426,48 @@ private fun InfoLine(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurface)
         Text(value, style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/**
+ * Source-link row of the Info dialog. With a link: tap copies it, the paste button replaces it with
+ * the clipboard and the clear button removes it. Without one: a paste button adds it from the clipboard.
+ */
+@Composable
+private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val ctx = LocalContext.current
+    val paste: () -> Unit = {
+        val clip = clipboard.getText()?.text?.trim().orEmpty()
+        if (clip.isBlank()) {
+            android.widget.Toast.makeText(ctx, "Appunti vuoti", android.widget.Toast.LENGTH_SHORT).show()
+        } else {
+            onSet(clip)
+            android.widget.Toast.makeText(ctx, "Link salvato", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+    if (value == null) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("LINK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Nessun link", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            }
+            TextButton(onClick = paste) {
+                Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
+                Text("  Incolla")
+            }
+        }
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { CopyableInfoLine("Link", value) }
+        IconButton(onClick = paste) {
+            Icon(Icons.Filled.ContentPaste, "Sostituisci con il link copiato", tint = MaterialTheme.colorScheme.primary)
+        }
+        IconButton(onClick = { onSet(null) }) {
+            Icon(Icons.Filled.Close, "Rimuovi link", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
