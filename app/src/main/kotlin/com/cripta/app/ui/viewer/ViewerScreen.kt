@@ -947,6 +947,16 @@ private fun VideoPlayer(
     }
     // In PiP only the video shows: no controller.
     LaunchedEffect(inPip) { playerViewRef?.useController = !inPip }
+    // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
+    // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
+    // the chrome through the visibility listener; this is the other direction, so they always
+    // show and hide together — including right after opening, when they used to drift apart.
+    LaunchedEffect(controlsVisible, playerViewRef, inPip) {
+        val pv = playerViewRef ?: return@LaunchedEffect
+        if (inPip) return@LaunchedEffect
+        if (controlsVisible && !pv.isControllerFullyVisible) pv.showController()
+        else if (!controlsVisible && pv.isControllerFullyVisible) pv.hideController()
+    }
 
     fun seekBy(deltaMs: Long) {
         val dur = player.duration
