@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -29,10 +30,17 @@ class FavoritesViewModel @Inject constructor(
     /** Per-file cover version; the grid re-keys on it so covers refresh after a regeneration. */
     val coverVersions: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = thumbs.versions
 
-    val favorites: StateFlow<List<FileEntity>> =
+    /** Null until the first read completes, so the screen can tell "loading" from "no favorites"
+     *  (an initial empty list used to flash "Nessun preferito" on every open). */
+    val favorites: StateFlow<List<FileEntity>?> =
         repo.changes.flatMapLatest { repo.allFiles() }
-            .map { list -> list.map { it.file }.filter { it.isFavorite } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            .map<_, List<FileEntity>?> { list -> list.map { it.file }.filter { it.isFavorite } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Remove from / put back into the favorites (the grid's star button and its "Annulla"). */
+    fun setFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
+        runCatching { repo.toggleFavorite(fileId, fav) }
+    }
 
     fun publishQueue(ids: List<String>) = viewerQueue.set(ids)
 }

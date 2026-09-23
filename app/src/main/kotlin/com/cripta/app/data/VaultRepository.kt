@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -142,6 +145,10 @@ class VaultRepository @Inject constructor(
         val finished: Boolean = false,
         /** Just-imported files that were already in the vault: (new file id, name of the existing copy). */
         val duplicates: List<Pair<String, String>> = emptyList(),
+        /** Items that could not be imported: (file name, short Italian reason). */
+        val failures: List<Pair<String, String>> = emptyList(),
+        /** Source uris imported successfully in the current run (all batches since the banner reset). */
+        val importedUris: List<Uri> = emptyList(),
     ) {
         val succeeded: Int get() = done - failed
         /** Overall progress 0..1, counting the partial progress of the file being encrypted. */
@@ -171,9 +178,17 @@ class VaultRepository @Inject constructor(
 
     fun importBytes(bytes: Long) = _importState.update { it.copy(currentBytes = bytes) }
 
-    fun importItemDone(ok: Boolean) = _importState.update {
-        it.copy(done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0)
+    /** One item finished; [uri] is its source when it was imported successfully. */
+    fun importItemDone(ok: Boolean, uri: Uri? = null) = _importState.update {
+        it.copy(
+            done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0,
+            importedUris = if (ok && uri != null) it.importedUris + uri else it.importedUris,
+        )
     }
+
+    /** Record why [name] could not be imported (shown in the in-app result). */
+    fun importFailed(name: String, reason: String) =
+        _importState.update { it.copy(failures = it.failures + (name to reason)) }
 
     private val _pendingOriginals = MutableStateFlow<List<Uri>>(emptyList())
     /** Imported originals awaiting the user's keep/delete choice ("Chiedi" policy). */
@@ -213,15 +228,25 @@ class VaultRepository @Inject constructor(
     }
 
     // --- Flows ---
-    fun folders(parentId: Long?): Flow<List<FolderEntity>> = db.folderDao().childrenOf(parentId)
-    fun allFolders(): Flow<List<FolderEntity>> = db.folderDao().all()
-    fun files(folderId: Long?): Flow<List<FileWithTags>> = db.fileDao().inFolderWithTags(folderId)
-    fun allFiles(): Flow<List<FileWithTags>> = db.fileDao().allWithTags()
+    /**
+     * A database flow that follows the session: nothing is queried while the vault is locked (the
+     * screens stay composed under the lock screen, their database is closed), and every unlock
+     * re-subscribes against the freshly opened database. Without this a screen kept across a lock
+     * would stay bound to the closed instance and never update again.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun <T> live(query: (com.cripta.app.data.db.CriptaDatabase) -> Flow<T>): Flow<T> =
+        session.database.flatMapLatest { d -> if (d == null) emptyFlow() else query(d) }
+
+    fun folders(parentId: Long?): Flow<List<FolderEntity>> = live { it.folderDao().childrenOf(parentId) }
+    fun allFolders(): Flow<List<FolderEntity>> = live { it.folderDao().all() }
+    fun files(folderId: Long?): Flow<List<FileWithTags>> = live { it.fileDao().inFolderWithTags(folderId) }
+    fun allFiles(): Flow<List<FileWithTags>> = live { it.fileDao().allWithTags() }
     @OptIn(ExperimentalCoroutinesApi::class)
     fun tags(): Flow<List<TagEntity>> =
         settings.settings.map { it.tagSortMode }.distinctUntilChanged()
             .flatMapLatest { mode ->
-                if (mode == TagSortMode.CUSTOM) db.tagDao().allByOrder() else db.tagDao().all()
+                live { d -> if (mode == TagSortMode.CUSTOM) d.tagDao().allByOrder() else d.tagDao().all() }
             }
 
     /** Persist a custom tag order (position = index in [orderedIds]). */
@@ -229,7 +254,7 @@ class VaultRepository @Inject constructor(
         orderedIds.forEachIndexed { i, id -> db.tagDao().setOrder(id, i) }
         notifyChanged()
     }
-    fun folderAggregates(): Flow<List<com.cripta.app.data.db.FolderAgg>> = db.fileDao().folderAggregates()
+    fun folderAggregates(): Flow<List<com.cripta.app.data.db.FolderAgg>> = live { it.fileDao().folderAggregates() }
 
     // --- Folders ---
     suspend fun createFolder(name: String, parentId: Long?): Long = withContext(Dispatchers.IO) {
@@ -318,7 +343,9 @@ class VaultRepository @Inject constructor(
         // Count the actual plaintext bytes streamed in, rather than trusting OpenableColumns.SIZE
         // (some providers report it wrong). The exact length is what the seekable player needs.
         val md = java.security.MessageDigest.getInstance("SHA-256")
-        val written = context.contentResolver.openInputStream(uri)!!.let { java.security.DigestInputStream(it, md) }.use { input ->
+        val source = context.contentResolver.openInputStream(uri)
+            ?: throw java.io.IOException("Impossibile aprire il file da importare")
+        val written = java.security.DigestInputStream(source, md).use { input ->
             blob.outputStream().use { out ->
                 FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
                     if (onBytes == null) input.copyTo(enc)
@@ -683,7 +710,9 @@ class VaultRepository @Inject constructor(
         FileCrypto.seekableDecryptingChannel(file.wrappedKeyset, dek, file.id, blobs.blob(file.id))
 
     suspend fun export(file: FileEntity, dest: Uri) = withContext(Dispatchers.IO) {
-        context.contentResolver.openOutputStream(dest)!!.use { out ->
+        val sink = context.contentResolver.openOutputStream(dest)
+            ?: throw java.io.IOException("Impossibile scrivere nella destinazione scelta")
+        sink.use { out ->
             FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
                 it.copyTo(out)
             }
@@ -719,10 +748,18 @@ class VaultRepository @Inject constructor(
             put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = resolver.insert(collection, values) ?: return@withContext null
-        resolver.openOutputStream(uri)!!.use { out ->
-            FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
-                it.copyTo(out)
+        try {
+            val sink = resolver.openOutputStream(uri)
+                ?: throw java.io.IOException("Impossibile scrivere nella galleria")
+            sink.use { out ->
+                FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
+                    it.copyTo(out)
+                }
             }
+        } catch (e: Exception) {
+            // Don't leave a half-written pending entry behind in the gallery.
+            runCatching { resolver.delete(uri, null, null) }
+            throw e
         }
         values.clear()
         values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
@@ -773,7 +810,7 @@ class VaultRepository @Inject constructor(
 
     // --- Trash (optional; see Settings.trashEnabled) ---
 
-    fun trashed(): Flow<List<FileWithTags>> = db.fileDao().trashedWithTags()
+    fun trashed(): Flow<List<FileWithTags>> = live { it.fileDao().trashedWithTags() }
 
     /** Move a file to the trash (restorable). Its key is kept until the trash is emptied. */
     suspend fun trash(fileId: String) = withContext(Dispatchers.IO) {
@@ -828,7 +865,7 @@ class VaultRepository @Inject constructor(
 
     // --- Saved filters (encrypted in the DB with the rest of the vault) ---
 
-    fun savedFilters(): Flow<List<com.cripta.app.data.db.SavedFilterEntity>> = db.savedFilterDao().all()
+    fun savedFilters(): Flow<List<com.cripta.app.data.db.SavedFilterEntity>> = live { it.savedFilterDao().all() }
 
     suspend fun saveFilter(name: String, json: String) = withContext(Dispatchers.IO) {
         db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = name.trim(), json = json)); notifyChanged()
@@ -922,7 +959,16 @@ class VaultRepository @Inject constructor(
 
     // --- Encrypted backup (cross-device, passphrase-derived key) ---
 
+    /**
+     * Write an encrypted, passphrase-protected backup of the whole vault to [dest]. Files are
+     * streamed one by one (never materialised in RAM, so large videos don't run out of memory).
+     * [passphrase] is wiped when this returns.
+     */
     suspend fun exportBackup(dest: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
+        try { exportBackupInner(dest, passphrase) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+    }
+
+    private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray): Int {
         val folders = db.folderDao().all().first()
         val tags = db.tagDao().all().first()
         val files = db.fileDao().allWithTags().first()
@@ -981,32 +1027,59 @@ class VaultRepository @Inject constructor(
             })
         }.toString().toByteArray()
 
-        context.contentResolver.openOutputStream(dest)!!.use { raw ->
+        val sink = context.contentResolver.openOutputStream(dest)
+            ?: throw java.io.IOException("Impossibile scrivere il file di backup")
+        sink.use { raw ->
             raw.write(BACKUP_MAGIC); raw.write(salt); raw.write(iv)
             javax.crypto.CipherOutputStream(raw, cipher).use { cos ->
-                val out = java.io.DataOutputStream(cos)
+                val out = java.io.DataOutputStream(java.io.BufferedOutputStream(cos, 256 * 1024))
                 out.writeInt(manifest.size); out.write(manifest)
-                files.forEach { fwt ->
-                    val bytes = decryptBytes(fwt.file)
-                    out.writeLong(bytes.size.toLong()); out.write(bytes)
+                for (fwt in files) {
+                    currentCoroutineContext().ensureActive()
+                    // The length prefix must be exact: take the plaintext size from the ciphertext
+                    // layout (cheap, no decryption), and verify it while streaming.
+                    val len = runCatching { seekableChannel(fwt.file).use { it.size() } }.getOrNull()
+                        ?: fwt.file.sizeBytes
+                    out.writeLong(len)
+                    val copied = decryptingStream(fwt.file).use { copyAtMost(it, out, len) }
+                    if (copied != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
                 }
                 out.flush()
             }
         }
-        files.size
+        return files.size
     }
 
+    /**
+     * Restore a backup written by [exportBackup] (merged into the current vault: nothing existing
+     * is removed). Files are streamed straight into the vault, never held whole in RAM.
+     * [passphrase] is wiped when this returns.
+     */
     suspend fun importBackup(src: Uri, passphrase: CharArray): Int = withContext(Dispatchers.IO) {
-        context.contentResolver.openInputStream(src)!!.use { raw ->
-            val magic = ByteArray(BACKUP_MAGIC.size); raw.read(magic)
-            require(magic.contentEquals(BACKUP_MAGIC)) { "Formato non valido" }
-            val salt = ByteArray(16); raw.read(salt)
-            val iv = ByteArray(12); raw.read(iv)
+        try { importBackupInner(src, passphrase) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+    }
+
+    private suspend fun importBackupInner(src: Uri, passphrase: CharArray): Int {
+        val source = context.contentResolver.openInputStream(src)
+            ?: throw java.io.IOException("Impossibile aprire il file di backup")
+        return source.use { raw ->
+            val header = java.io.DataInputStream(raw)
+            val magic = ByteArray(BACKUP_MAGIC.size)
+            val salt = ByteArray(16)
+            val iv = ByteArray(12)
+            try {
+                header.readFully(magic)
+                require(magic.contentEquals(BACKUP_MAGIC)) { "Formato non valido" }
+                header.readFully(salt)
+                header.readFully(iv)
+            } catch (e: java.io.EOFException) {
+                throw IllegalArgumentException("Formato non valido")
+            }
             val key = deriveBackupKey(passphrase, salt)
             val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, iv))
             javax.crypto.CipherInputStream(raw, cipher).use { cis ->
-                val inp = java.io.DataInputStream(cis)
+                val inp = java.io.DataInputStream(java.io.BufferedInputStream(cis, 256 * 1024))
                 val mLen = inp.readInt()
                 require(mLen in 1..50_000_000) { "Passphrase errata o file corrotto" }
                 val mBytes = ByteArray(mLen); inp.readFully(mBytes)
@@ -1055,18 +1128,23 @@ class VaultRepository @Inject constructor(
                 val fileArr = manifest.getJSONArray("files")
                 for (i in 0 until fileArr.length()) {
                     val o = fileArr.getJSONObject(i)
+                    currentCoroutineContext().ensureActive()
                     val len = inp.readLong()
-                    require(len in 0..2_000_000_000L) { "File corrotto" }
-                    val bytes = ByteArray(len.toInt()); inp.readFully(bytes)
+                    require(len >= 0) { "File corrotto" }
                     val uuid = UUID.randomUUID().toString()
                     val wrapped = FileCrypto.createWrappedFileKeyset(dek)
-                    blobs.blob(uuid).outputStream().use { out ->
-                        FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
+                    val copied = try {
+                        blobs.blob(uuid).outputStream().use { out ->
+                            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { copyAtMost(inp, it, len) }
+                        }
+                    } catch (e: Exception) {
+                        blobs.shred(uuid); throw e
                     }
+                    if (copied != len) { blobs.shred(uuid); throw java.io.IOException("Backup troncato o corrotto") }
                     val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
                     val entity = FileEntity(
                         id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
-                        sizeBytes = bytes.size.toLong(), folderId = folderOld?.let { idMap[it] },
+                        sizeBytes = len, folderId = folderOld?.let { idMap[it] },
                         isFavorite = o.optBoolean("favorite", false),
                         createdAt = o.optLong("createdAt", now()), importedAt = now(), wrappedKeyset = wrapped,
                         durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
@@ -1101,15 +1179,32 @@ class VaultRepository @Inject constructor(
                     }
                 }
                 notifyChanged()
-                return@withContext fileArr.length()
+                return fileArr.length()
             }
         }
     }
 
+    /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
+    private fun copyAtMost(input: java.io.InputStream, output: java.io.OutputStream, limit: Long): Long {
+        val buf = ByteArray(DEFAULT_BUFFER_SIZE * 8)
+        var left = limit
+        while (left > 0) {
+            val n = input.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+            if (n < 0) break
+            output.write(buf, 0, n)
+            left -= n
+        }
+        return limit - left
+    }
+
     private fun deriveBackupKey(passphrase: CharArray, salt: ByteArray): javax.crypto.SecretKey {
         val spec = javax.crypto.spec.PBEKeySpec(passphrase, salt, 210_000, 256)
-        val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        return javax.crypto.spec.SecretKeySpec(factory.generateSecret(spec).encoded, "AES")
+        val raw = try {
+            javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        } finally {
+            spec.clearPassword()   // the spec keeps its own copy of the passphrase
+        }
+        return try { javax.crypto.spec.SecretKeySpec(raw, "AES") } finally { java.util.Arrays.fill(raw, 0) }
     }
 
     private fun now() = System.currentTimeMillis()

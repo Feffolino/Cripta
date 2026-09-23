@@ -55,7 +55,12 @@ android {
             isDebuggable = false
         }
         release {
-            isMinifyEnabled = false
+            // R8 on for release, with conservative keep rules for every reflective / JNI library
+            // (see proguard-rules.pro). Resource shrinking stays off: some bundled libraries
+            // (yt-dlp payload, PdfBox, Media3 UI) look resources up at runtime, and the few KB it
+            // would save aren't worth a resource vanishing only in release builds.
+            isMinifyEnabled = true
+            isShrinkResources = false
             if (hasSigning) signingConfig = signingConfigs.getByName("shared")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

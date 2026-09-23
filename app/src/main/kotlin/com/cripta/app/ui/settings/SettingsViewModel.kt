@@ -38,6 +38,8 @@ class SettingsViewModel @Inject constructor(
         data object UpToDate : UpdateState
         data class Available(val release: com.cripta.app.update.AppUpdater.Release) : UpdateState
         data class Downloading(val pct: Int) : UpdateState
+        /** APK downloaded: the installer was opened; if the user backed out it can be reopened. */
+        data class ReadyToInstall(val release: com.cripta.app.update.AppUpdater.Release, val apk: java.io.File) : UpdateState
         data class Error(val message: String) : UpdateState
     }
 
@@ -47,9 +49,17 @@ class SettingsViewModel @Inject constructor(
     fun checkUpdate(ctx: android.content.Context) = viewModelScope.launch {
         _update.value = UpdateState.Checking
         val pre = store.settingsOnce().updatePrerelease
-        val rel = updater.latest(includePrerelease = pre)
+        val rel = try {
+            updater.latest(includePrerelease = pre)
+        } catch (e: java.io.IOException) {
+            _update.value = UpdateState.Error("Nessuna connessione: impossibile raggiungere il server degli aggiornamenti. Riprova più tardi.")
+            return@launch
+        }
         _update.value = when {
-            rel == null -> UpdateState.Error(if (pre) "Nessuna release trovata" else "Nessuna release stabile trovata (attiva le pre-release)")
+            rel == null -> UpdateState.Error(
+                if (pre) "Nessuna versione disponibile."
+                else "Nessuna versione stabile disponibile (prova ad attivare le pre-release)."
+            )
             rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
             else -> UpdateState.Available(rel)
         }
@@ -60,10 +70,37 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _update.value = UpdateState.Downloading(0)
             runCatching {
-                val apk = updater.download(ctx, rel.apkUrl) { pct -> _update.value = UpdateState.Downloading(pct) }
-                updater.install(ctx, apk)
-            }.onFailure { _update.value = UpdateState.Error(it.message ?: "Download fallito") }
+                updater.download(ctx, rel.apkUrl, rel.sha256Url) { pct -> _update.value = UpdateState.Downloading(pct) }
+            }.onSuccess { apk ->
+                // Stay on "ready" rather than "100%": the system installer may be cancelled.
+                _update.value = UpdateState.ReadyToInstall(rel, apk)
+                openInstaller(ctx, apk)
+            }.onFailure {
+                if (it is kotlinx.coroutines.CancellationException) throw it
+                _update.value = UpdateState.Error(networkError(it, "Download dell'aggiornamento non riuscito."))
+            }
         }
+    }
+
+    /** Reopen the system installer for an APK already downloaded. */
+    fun installUpdate(ctx: android.content.Context) {
+        val ready = _update.value as? UpdateState.ReadyToInstall ?: return
+        if (!ready.apk.exists()) { _update.value = UpdateState.Available(ready.release); return }
+        openInstaller(ctx, ready.apk)
+    }
+
+    private fun openInstaller(ctx: android.content.Context, apk: java.io.File) {
+        runCatching { updater.install(ctx, apk) }
+            .onFailure { _message.value = "Impossibile aprire il programma di installazione." }
+    }
+
+    /** Italian, user-facing text for a network/IO failure (never the raw exception message). */
+    private fun networkError(t: Throwable, fallback: String): String = when (t) {
+        is java.net.UnknownHostException, is java.net.ConnectException ->
+            "Nessuna connessione a Internet. Controlla la rete e riprova."
+        is java.net.SocketTimeoutException -> "Il server non risponde. Riprova più tardi."
+        is java.io.IOException -> "$fallback Controlla la connessione e lo spazio libero, poi riprova."
+        else -> "$fallback Riprova."
     }
 
     val settings: StateFlow<Settings> =
@@ -133,14 +170,42 @@ class SettingsViewModel @Inject constructor(
     val message: StateFlow<String?> = _message
     fun clearMessage() { _message.value = null }
 
+    /** Backup/restore running now (label shown with a progress bar), or null. */
+    private val _backupBusy = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val backupBusy: StateFlow<String?> = _backupBusy
+
     fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
-        _message.value = runCatching { repo.exportBackup(uri, passphrase.toCharArray()) }
-            .fold({ "Backup creato ($it file)" }, { "Export fallito: ${it.message}" })
+        if (_backupBusy.value != null) return@launch
+        _backupBusy.value = "Creazione del backup…"
+        val pass = passphrase.toCharArray()
+        try {
+            _message.value = runCatching { repo.exportBackup(uri, pass) }
+                .fold(
+                    { n -> if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" },
+                    { if (it is kotlinx.coroutines.CancellationException) throw it
+                        "Backup non riuscito. Controlla lo spazio libero nella destinazione e riprova." },
+                )
+        } finally {
+            java.util.Arrays.fill(pass, '\u0000')
+            _backupBusy.value = null
+        }
     }
 
     fun importBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
-        _message.value = runCatching { repo.importBackup(uri, passphrase.toCharArray()) }
-            .fold({ "Ripristinati $it file" }, { "Import fallito (passphrase errata?)" })
+        if (_backupBusy.value != null) return@launch
+        _backupBusy.value = "Ripristino del backup…"
+        val pass = passphrase.toCharArray()
+        try {
+            _message.value = runCatching { repo.importBackup(uri, pass) }
+                .fold(
+                    { n -> if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" },
+                    { if (it is kotlinx.coroutines.CancellationException) throw it
+                        "Ripristino non riuscito: passphrase errata o file di backup non valido." },
+                )
+        } finally {
+            java.util.Arrays.fill(pass, '\u0000')
+            _backupBusy.value = null
+        }
     }
 
     fun createTag(name: String, alias: String? = null, color: Int? = null) = viewModelScope.launch {
@@ -232,7 +297,7 @@ class SettingsViewModel @Inject constructor(
     /** Label of the last resolution, e.g. "Tenuto X · spostate 2 etichette". */
     private val _dupNotice = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val dupNotice: StateFlow<String?> = _dupNotice
-    fun clearDupNotice() { _dupNotice.value = null }
+    fun clearDupNotice() { _dupNotice.value = null; _dupUndo.value = emptyList() }
 
     suspend fun thumb(file: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(file)
     /** Seekable decrypting channel for in-place video preview (nothing written to disk). */
@@ -324,7 +389,11 @@ class SettingsViewModel @Inject constructor(
             dupStore.state.collect { st ->
                 val r = st.result
                 if (r != null && !r.seen && openWhenDone && st.running == null) { openWhenDone = false; openScanResult() }
-                if (st.error != null && openWhenDone) { openWhenDone = false; _message.value = "Scansione fallita: ${st.error}" }
+                if (st.error != null && openWhenDone) {
+                    openWhenDone = false
+                    android.util.Log.w("SettingsViewModel", "duplicate scan failed: ${st.error}")
+                    _message.value = "Scansione non riuscita. Riprova; se il problema continua, riavvia l'app."
+                }
             }
         }
         viewModelScope.launch {
@@ -347,13 +416,30 @@ class SettingsViewModel @Inject constructor(
         val remove = group.candidates.map { it.file.id }.filter { it != keepId }
         val moved = repo.mergeDuplicates(keepId, remove)
         // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
-        if (!trashOn()) remove.forEach { thumbs.evict(it) }
+        val trash = trashOn()
+        if (!trash) remove.forEach { thumbs.evict(it) }
+        _dupUndo.value = if (trash) remove else emptyList()
         dropFromResults(remove.toSet())
         val name = group.candidates.first { it.file.id == keepId }.file.originalName
         _dupNotice.value = buildString {
-            append("Tenuto \"$name\", eliminate ${remove.size} copie")
+            append("Tenuto \"$name\", ")
+            append(if (remove.size == 1) "eliminata 1 copia" else "eliminate ${remove.size} copie")
+            if (trash) append(" (nel cestino)")
             if (moved.isNotEmpty()) append(" · spostate ${moved.size} etichette")
         }
+    }
+
+    /** Copies just sent to the trash by a resolution, restorable with [undoDuplicates]. */
+    private val _dupUndo = kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
+    val dupUndo: StateFlow<List<String>> = _dupUndo
+
+    /** Bring back the copies removed by the last resolution (only possible with the trash on). */
+    fun undoDuplicates() = viewModelScope.launch {
+        val ids = _dupUndo.value
+        if (ids.isEmpty()) return@launch
+        _dupUndo.value = emptyList()
+        ids.forEach { repo.restore(it) }
+        _dupNotice.value = if (ids.size == 1) "Copia ripristinata" else "Ripristinate ${ids.size} copie"
     }
 
     /**
@@ -367,9 +453,14 @@ class SettingsViewModel @Inject constructor(
             else rank(g.candidates.filter { it.file.id != fileId }).firstOrNull()?.file?.id
         }
         val moved = if (heir != null) repo.mergeDuplicates(heir, listOf(fileId)) else { repo.deleteOrTrash(fileId); emptyList() }
-        if (!trashOn()) thumbs.evict(fileId)
+        val trash = trashOn()
+        if (!trash) thumbs.evict(fileId)
+        _dupUndo.value = if (trash) listOf(fileId) else emptyList()
         dropFromResults(setOf(fileId))
-        if (moved.isNotEmpty()) _dupNotice.value = "Etichette spostate: ${moved.joinToString(", ") { "#$it" }}"
+        _dupNotice.value = buildString {
+            append(if (trash) "Copia spostata nel cestino" else "Copia eliminata")
+            if (moved.isNotEmpty()) append(" · etichette spostate: ${moved.joinToString(", ") { "#$it" }}")
+        }
     }
 
     private suspend fun trashOn(): Boolean = runCatching { store.settingsOnce().trashEnabled }.getOrDefault(false)
@@ -402,6 +493,7 @@ class SettingsViewModel @Inject constructor(
         _dupMode.value = DupMode.NONE
         _dupGroups.value = emptyList()
         _dupNotice.value = null
+        _dupUndo.value = emptyList()
         _exactGroups.value = emptyList()
         _similarGroups.value = emptyList()
     }

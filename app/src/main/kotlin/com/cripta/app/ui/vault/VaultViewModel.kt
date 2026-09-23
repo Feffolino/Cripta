@@ -335,6 +335,10 @@ class VaultViewModel @Inject constructor(
         viewModelScope.launch {
             navigator.pendingFilters.collect { f -> if (f != null) { filters.value = f; navigator.consumeFilters() } }
         }
+        // Cartelle tab tapped again while already on it: back to the root.
+        viewModelScope.launch {
+            VaultTabReselect.events.collect { goToDepth(0) }
+        }
     }
 
     // --- Saved filters ---
@@ -409,12 +413,12 @@ class VaultViewModel @Inject constructor(
     fun setFavorite(fileIds: List<String>, fav: Boolean) = viewModelScope.launch {
         fileIds.forEach { repo.toggleFavorite(it, fav) }    }
 
-    /** Import picked files, then apply the delete-original policy. Returns nothing;
-     *  when policy is ASK the screen collects the uris via [pendingOriginals]. */
+    /**
+     * Import picked files in the foreground service (background-safe, progress notification and
+     * in-app banner). The service applies the delete-original policy; with "Chiedi" it publishes
+     * the imported originals to [pendingOriginals] and the screen asks the user.
+     */
     fun importThenHandleOriginals(uris: List<android.net.Uri>) {
-        // Encryption now runs in a foreground service (background-safe, progress notification).
-        // The delete-original policy (Elimina/Mantieni) is applied by the service; "Chiedi"
-        // behaves as keep in the background since no dialog is available there.
         com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
 
@@ -451,6 +455,31 @@ class VaultViewModel @Inject constructor(
     fun moveFiles(fileIds: List<String>, folderId: Long?) = viewModelScope.launch {
         fileIds.forEach { repo.moveFile(it, folderId) }    }
 
+    // --- Undo support (snackbar "Annulla") ---
+    /** Put files back into the folders they were in before a move. */
+    fun restoreFolders(previous: Map<String, Long?>) = viewModelScope.launch {
+        previous.forEach { (id, folder) -> repo.moveFile(id, folder) }
+    }
+
+    /** Restore each file's previous favorite flag. */
+    fun restoreFavorites(previous: Map<String, Boolean>) = viewModelScope.launch {
+        previous.forEach { (id, fav) -> repo.toggleFavorite(id, fav) }
+    }
+
+    /** Restore each file's previous tag names. */
+    fun restoreTags(previous: Map<String, List<String>>) = viewModelScope.launch {
+        previous.forEach { (id, names) -> repo.setTags(id, names) }
+    }
+
+    /** Take [tagNames] off every file in [fileIds] (other tags kept). Files must be in the current view. */
+    fun removeTagsFromFiles(fileIds: List<String>, tagNames: List<String>) = viewModelScope.launch {
+        val ids = fileIds.toSet()
+        files.value.filter { it.file.id in ids }.forEach { fwt ->
+            val kept = fwt.tags.map { it.name }.filterNot { n -> tagNames.any { it.equals(n, ignoreCase = true) } }
+            if (kept.size != fwt.tags.size) repo.setTags(fwt.file.id, kept)
+        }
+    }
+
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
         // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
         fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }    }
@@ -458,14 +487,16 @@ class VaultViewModel @Inject constructor(
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
 
+    /** True when "Casuale" shuffles only what is on screen (a folder or filtered results). */
+    val randomScopedToView: Boolean get() = filters.value.active || currentFolderId.value != null
+
     /**
-     * Build a shuffled queue over the whole library (ids only, cheap for big libraries),
-     * publish it to the viewer, and open the first item. Falls back to the current view
-     * if the id query yields nothing.
+     * Build a shuffled queue and open its first item. Scope follows what the user is looking at:
+     * the filtered results, or the open folder; at the root, the whole library (ids only, cheap
+     * for big libraries). Falls back to the current view if the id query yields nothing.
      */
     fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
-        // With a filter active, shuffle only the results; otherwise the whole library.
-        val ids = if (filters.value.active) files.value.map { it.file.id } else repo.allFileIds()
+        val ids = if (randomScopedToView) files.value.map { it.file.id } else repo.allFileIds()
         val order = if (ids.isNotEmpty()) ids.shuffled() else files.value.map { it.file.id }.shuffled()
         if (order.isEmpty()) return@launch
         viewerQueue.set(order)

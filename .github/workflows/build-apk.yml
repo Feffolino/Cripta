@@ -82,13 +82,18 @@ jobs:
           SRC=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
           DST="cripta-${{ steps.ver.outputs.version }}-${{ steps.ver.outputs.sha }}.apk"
           cp "$SRC" "$DST"
+          # Checksum published next to the APK; the in-app updater verifies it before installing.
+          sha256sum "$DST" > "$DST.sha256"
           echo "path=$DST" >> "$GITHUB_OUTPUT"
+          echo "sha=$DST.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: cripta-${{ steps.ver.outputs.version }}
-          path: ${{ steps.apk.outputs.path }}
+          path: |
+            ${{ steps.apk.outputs.path }}
+            ${{ steps.apk.outputs.sha }}
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -103,7 +108,10 @@ jobs:
             - Build #${{ github.run_number }}
 
             APK debug allegato qui sotto. Debug build, non firmata per il Play Store.
-          files: ${{ steps.apk.outputs.path }}
+            Il file .sha256 contiene l'impronta SHA-256 dell'APK (verificata dall'app prima dell'installazione).
+          files: |
+            ${{ steps.apk.outputs.path }}
+            ${{ steps.apk.outputs.sha }}
           fail_on_unmatched_files: true
           draft: false
           prerelease: true

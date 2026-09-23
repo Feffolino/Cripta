@@ -1,6 +1,16 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -97,12 +107,18 @@ fun DuplicatesCompare(
     onDelete: (String) -> Unit,
     onClearNotice: () -> Unit,
     onDismiss: () -> Unit,
+    /** Days a removed copy stays in the trash, or null when the trash is off (removal is final). */
+    trashDays: Int? = null,
+    /** True while the last resolution can be undone (its copies are in the trash). */
+    canUndo: Boolean = false,
+    onUndo: () -> Unit = {},
 ) {
     var pending by remember { mutableStateOf<DupAction?>(null) }
     /** Group + index of the copy being previewed full screen. */
     var preview by remember { mutableStateOf<Pair<SettingsViewModel.DupGroup, Int>?>(null) }
-    LaunchedEffect(notice) {
-        if (notice != null) { kotlinx.coroutines.delay(4000); onClearNotice() }
+    // The notice stays longer while it offers "Annulla", so there is time to reach it.
+    LaunchedEffect(notice, canUndo) {
+        if (notice != null) { kotlinx.coroutines.delay(if (canUndo) 8000L else 4000L); onClearNotice() }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Scaffold(
@@ -122,22 +138,38 @@ fun DuplicatesCompare(
                     Text(summary, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (notice != null) {
-                    item {
+                item(key = "notice") {
+                    // Outcome of the last resolution, with "Annulla" while the copies sit in the trash.
+                    var shown by remember { mutableStateOf("") }
+                    if (notice != null) shown = notice   // keep the text while the panel collapses
+                    AnimatedVisibility(
+                        visible = notice != null,
+                        enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+                        exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+                    ) {
                         Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth()) {
-                            Text(notice, style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(12.dp))
+                            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
+                            Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(shown, style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+                                if (canUndo) TextButton(onClick = onUndo) { Text("Annulla") }
+                            }
                         }
                     }
                 }
                 if (groups.isEmpty()) {
-                    item {
+                    item(key = "empty") {
                         Text(emptyText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 24.dp))
                     }
                 }
                 items(groups, key = { g -> g.candidates.joinToString("|") { it.file.id } }) { g ->
                     GroupCard(
+                        // Resolved groups fade out and the rest slide up instead of jumping.
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = Motion.enter(), placementSpec = Motion.enter(Motion.LONG), fadeOutSpec = Motion.exit(),
+                        ),
                         group = g,
                         thumb = thumb,
                         onKeep = { c -> pending = DupAction.KeepOnly(g, c) },
@@ -159,7 +191,7 @@ fun DuplicatesCompare(
             )
         }
 
-        pending?.let { action -> ConfirmDialog(action, onConfirm = {
+        pending?.let { action -> ConfirmDialog(action, trashDays, onConfirm = {
             when (action) {
                 is DupAction.KeepOnly -> onKeepOnly(action.keep.file.id)
                 is DupAction.DeleteOne -> onDelete(action.target.file.id)
@@ -170,7 +202,9 @@ fun DuplicatesCompare(
 }
 
 @Composable
-private fun ConfirmDialog(action: DupAction, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val fate = if (trashDays != null) " Andranno nel cestino per $trashDays giorni: puoi ancora recuperarle."
+        else " Eliminazione sicura e irreversibile (il cestino è disattivato)."
     val (title, body) = when (action) {
         is DupAction.KeepOnly -> {
             val others = action.group.candidates.filter { it.file.id != action.keep.file.id }
@@ -180,7 +214,7 @@ private fun ConfirmDialog(action: DupAction, onConfirm: () -> Unit, onDismiss: (
                 append("Resta \"${action.keep.file.originalName}\". ")
                 append(if (moving.isEmpty()) "Nessuna etichetta da spostare."
                     else "Le etichette ${moving.joinToString(", ") { "#$it" }} verranno spostate sulla copia tenuta.")
-                append(" Eliminazione sicura, irreversibile.")
+                append(fate)
             }
             t to b
         }
@@ -190,9 +224,10 @@ private fun ConfirmDialog(action: DupAction, onConfirm: () -> Unit, onDismiss: (
                 else g.candidates.firstOrNull { it.file.id != action.target.file.id }
             val moving = heir?.let { h -> action.target.tags.filterNot { it in h.tags } }.orEmpty()
             "Eliminare questa copia?" to buildString {
-                append("\"${action.target.file.originalName}\" verrà eliminato in modo sicuro. ")
+                append("\"${action.target.file.originalName}\" verrà ")
+                append(if (trashDays != null) "spostato nel cestino per $trashDays giorni." else "eliminato in modo sicuro e irreversibile.")
                 if (moving.isNotEmpty() && heir != null) {
-                    append("Le sue etichette ${moving.joinToString(", ") { "#$it" }} verranno spostate su \"${heir.file.originalName}\".")
+                    append(" Le sue etichette ${moving.joinToString(", ") { "#$it" }} verranno spostate su \"${heir.file.originalName}\".")
                 }
             }
         }
@@ -201,13 +236,18 @@ private fun ConfirmDialog(action: DupAction, onConfirm: () -> Unit, onDismiss: (
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Elimina", color = MaterialTheme.colorScheme.error) } },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(if (trashDays != null) "Sposta nel cestino" else "Elimina", color = MaterialTheme.colorScheme.error)
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
 }
 
 @Composable
 private fun GroupCard(
+    modifier: Modifier = Modifier,
     group: SettingsViewModel.DupGroup,
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
     onKeep: (SettingsViewModel.DupCandidate) -> Unit,
@@ -218,7 +258,7 @@ private fun GroupCard(
         color = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val total = group.candidates.sumOf { it.file.sizeBytes }
@@ -226,6 +266,7 @@ private fun GroupCard(
             Text(
                 "${group.candidates.size} copie · ${formatBytes(total)} · recuperabili ${formatBytes(reclaim)}",
                 style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.semantics { heading() },
             )
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Filled.ThumbUp, null, tint = MaterialTheme.colorScheme.primary,
@@ -357,7 +398,7 @@ private fun CandidateCard(
             if (!f.sourceUrl.isNullOrBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Link, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                    Text(" link di origine", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("link di origine", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
             if (c.tags.isEmpty()) {

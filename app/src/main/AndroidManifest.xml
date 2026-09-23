@@ -18,6 +18,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="Cripta"
         android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.Cripta">
 
         <activity
@@ -33,7 +34,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Register as a share target so files can be sent into the vault -->
+            <!-- Share target: files (EXTRA_STREAM, one or many) are encrypted into the vault once
+                 unlocked; a shared link (text) opens the downloader pre-filled. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

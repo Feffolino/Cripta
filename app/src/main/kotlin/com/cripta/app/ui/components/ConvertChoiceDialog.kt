@@ -1,7 +1,9 @@
 package com.cripta.app.ui.components
 
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,16 +54,24 @@ fun ConvertChoiceDialog(
                 Text("Crea una copia MP4 scorribile, verificata prima di essere salvata. Prosegue in background. Dopo la conversione:",
                     style = MaterialTheme.typography.bodyMedium)
                 options.forEach { (v, t) ->
-                    Row(Modifier.fillMaxWidth().clickable { choice = v }.padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
-                        RadioButton(selected = choice == v, onClick = { choice = v })
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .selectable(selected = choice == v, role = Role.RadioButton, onClick = { choice = v })
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        RadioButton(selected = choice == v, onClick = null, modifier = Modifier.padding(12.dp))
                         Column(Modifier.padding(top = 10.dp)) {
                             Text(t.first, style = MaterialTheme.typography.bodyLarge)
                             Text(t.second, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().clickable { rememberIt = !rememberIt }, verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = rememberIt, onCheckedChange = { rememberIt = it })
+                Row(
+                    Modifier.fillMaxWidth().toggleable(value = rememberIt, role = Role.Checkbox, onValueChange = { rememberIt = it }),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = rememberIt, onCheckedChange = null, modifier = Modifier.padding(12.dp))
                     Text("Ricorda la scelta (modificabile in Impostazioni › Video)", style = MaterialTheme.typography.bodyMedium)
                 }
             }

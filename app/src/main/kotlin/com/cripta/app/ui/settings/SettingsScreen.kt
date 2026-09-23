@@ -1,6 +1,24 @@
 package com.cripta.app.ui.settings
 
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.theme.Motion
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.PictureInPictureAlt
@@ -128,6 +146,8 @@ fun SettingsScreen(
     val dupGroups by vm.dupGroups.collectAsState()
     val dupNotice by vm.dupNotice.collectAsState()
     val dupWaiting by vm.dupResultWaiting.collectAsState()
+    val dupUndo by vm.dupUndo.collectAsState()
+    val backupBusy by vm.backupBusy.collectAsState()
 
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
@@ -161,9 +181,12 @@ fun SettingsScreen(
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
                 ),
                 title = { Text(current?.label ?: "Impostazioni") },
+                // Impostazioni is a tab root: the back arrow only appears inside a category page.
                 navigationIcon = {
-                    IconButton(onClick = { if (current != null) page = null else onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                    if (current != null) {
+                        IconButton(onClick = { page = null }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Torna alle impostazioni")
+                        }
                     }
                 },
                 actions = {
@@ -177,9 +200,18 @@ fun SettingsScreen(
         },
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
     ) { pad ->
+      // List <-> category page: a short crossfade, so the swap reads as one step deeper/back.
+      androidx.compose.animation.AnimatedContent(
+          targetState = current,
+          transitionSpec = {
+              androidx.compose.animation.fadeIn(Motion.enter()) togetherWith androidx.compose.animation.fadeOut(Motion.exit())
+          },
+          label = "settingsPage",
+      ) { current ->
         if (current == null) {
             MainSettingsList(
-                modifier = Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = maxW).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()
+                    .wrapContentWidth().widthIn(max = maxW).fillMaxWidth(),
                 columns = if (landscape) 2 else 1,
                 query = query,
                 onQuery = { query = it },
@@ -388,15 +420,17 @@ fun SettingsScreen(
                                     visible.forEachIndexed { index, tag ->
                                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                             androidx.compose.foundation.layout.Box(
-                                                Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                                    .clickable { editTag = tag },
+                                                // 48dp touch target around the small colour dot.
+                                                Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                                    .clickable(onClickLabel = "Cambia colore", role = Role.Button) { editTag = tag }
+                                                    .semantics { contentDescription = "Colore di #${tag.name}" },
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 androidx.compose.foundation.layout.Box(
                                                     Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
                                                         .background(com.cripta.app.ui.theme.tagColor(tag)))
                                             }
-                                            Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 10.dp),
+                                            Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 2.dp),
                                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             if (custom) {
                                                 IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
@@ -419,7 +453,11 @@ fun SettingsScreen(
                                 androidx.compose.material3.FilledTonalButton(
                                     onClick = { addTag = true },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) { Icon(Icons.Filled.Add, null); Text("  Aggiungi etichetta") }
+                                ) {
+                                    Icon(Icons.Filled.Add, null, Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Aggiungi etichetta")
+                                }
                             }
                         }
                         item {
@@ -461,13 +499,9 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Privacy") {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Consenti screenshot")
-                                        Text("Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.",
-                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Switch(checked = s.allowScreenshots, onCheckedChange = { vm.setAllowScreenshots(it) })
+                                ToggleRow("Consenti screenshot", s.allowScreenshots,
+                                    desc = "Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.") {
+                                    vm.setAllowScreenshots(it)
                                 }
                             }
                         }
@@ -503,6 +537,27 @@ fun SettingsScreen(
                                         )
                                     }
                                 }
+                                // What the chosen option actually does; "Elimina" warns that it is not reversible.
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = s.deleteOriginalPolicy,
+                                    transitionSpec = {
+                                        androidx.compose.animation.fadeIn(Motion.enter()) togetherWith
+                                            androidx.compose.animation.fadeOut(Motion.exit()) using
+                                            androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.enter(Motion.MEDIUM) }
+                                    },
+                                    label = "deletePolicyDesc",
+                                ) { p ->
+                                    Text(
+                                        when (p) {
+                                            DeleteOriginalPolicy.ASK -> "A fine import ti viene chiesto se eliminare gli originali dal dispositivo."
+                                            DeleteOriginalPolicy.ALWAYS -> "Attenzione: gli originali vengono eliminati dal dispositivo dopo l'import e non si " +
+                                                "possono recuperare. Resta solo la copia cifrata nel vault."
+                                            DeleteOriginalPolicy.NEVER -> "Gli originali restano sul dispositivo: eliminali tu se non vuoi che siano visibili fuori dal vault."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (p == DeleteOriginalPolicy.ALWAYS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                                 Text("Vengono toccati solo gli originali dei file importati con successo.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -512,20 +567,30 @@ fun SettingsScreen(
                     SettingsPage.STRUMENTI -> {
                         item {
                             Section("File duplicati", "Trova file identici o media simili, confrontali e libera spazio. Tutto sul dispositivo.") {
-                                if (dupScanning) {
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = dupScanning,
+                                    transitionSpec = { calmSwap() },
+                                    label = "dupScan",
+                                ) { scanning ->
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (scanning) {
                                     val (done, total) = dupProgress
                                     Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
                                         style = MaterialTheme.typography.bodyMedium)
                                     if (total > 0) {
+                                        val smooth by animateFloatAsState(
+                                            (done.toFloat() / total).coerceIn(0f, 1f),
+                                            tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "dupProgress",
+                                        )
                                         androidx.compose.material3.LinearProgressIndicator(
-                                            progress = { done.toFloat() / total }, modifier = Modifier.fillMaxWidth())
+                                            progress = { smooth }, modifier = Modifier.fillMaxWidth())
                                     } else {
                                         androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                                     }
                                     Text("Puoi uscire dall'app: la scansione continua in background e ti avvisa con una notifica.",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Annulla")
+                                        Text("Interrompi scansione")
                                     }
                                 } else {
                                     dupWaiting?.let { r ->
@@ -547,6 +612,8 @@ fun SettingsScreen(
                                     Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                }
+                                }
                             }
                         }
                         item {
@@ -567,14 +634,34 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    androidx.compose.material3.FilledTonalButton(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
-                                        Text("Esporta")
-                                    }
-                                    androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
-                                        Text("Ripristina")
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = backupBusy,
+                                    transitionSpec = { calmSwap() },
+                                    label = "backupBusy",
+                                ) { busy ->
+                                    if (busy != null) {
+                                        // Runs on its own; the vault stays usable, the result arrives as a message.
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                                            Text(busy, style = MaterialTheme.typography.bodyMedium)
+                                            androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                                            Text("Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    } else {
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            androidx.compose.material3.FilledTonalButton(
+                                                onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
+                                                modifier = Modifier.weight(1f),
+                                            ) { Text("Esporta") }
+                                            androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                                                Text("Ripristina")
+                                            }
+                                        }
                                     }
                                 }
+                                Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -582,27 +669,51 @@ fun SettingsScreen(
                     SettingsPage.INFO -> {
                         item {
                             Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
-                                when (val u = updateState) {
-                                    SettingsViewModel.UpdateState.Checking ->
-                                        Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium)
+                                // Phases swap in place (keyed by phase, so progress ticks don't re-animate).
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = updateState,
+                                    contentKey = { it::class },
+                                    transitionSpec = { calmSwap() },
+                                    label = "updateState",
+                                ) { u ->
+                                Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                when (u) {
+                                    SettingsViewModel.UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                        Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(start = 12.dp))
+                                    }
                                     SettingsViewModel.UpdateState.UpToDate ->
                                         Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
                                     is SettingsViewModel.UpdateState.Available -> {
                                         Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
                                             style = MaterialTheme.typography.bodyMedium)
                                         Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                                            Text("Scarica e installa")
+                                            Text("Installa aggiornamento")
                                         }
                                     }
                                     is SettingsViewModel.UpdateState.Downloading -> {
-                                        Text("Download: ${u.pct}%", style = MaterialTheme.typography.bodyMedium)
+                                        // Read the live state (not the frozen target) so the bar keeps moving.
+                                        val pct = (updateState as? SettingsViewModel.UpdateState.Downloading)?.pct ?: u.pct
+                                        val smooth by animateFloatAsState(pct / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "updatePct")
+                                        Text("Download dell'aggiornamento: $pct%", style = MaterialTheme.typography.bodyMedium)
                                         androidx.compose.material3.LinearProgressIndicator(
-                                            progress = { u.pct / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                                            progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                    }
+                                    is SettingsViewModel.UpdateState.ReadyToInstall -> {
+                                        Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                            Text("Installa aggiornamento")
+                                        }
                                     }
                                     is SettingsViewModel.UpdateState.Error ->
-                                        Text("Errore: ${u.message}", style = MaterialTheme.typography.bodyMedium,
+                                        Text(u.message, style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.error)
                                     SettingsViewModel.UpdateState.Idle -> {}
+                                }
+                                }
                                 }
                                 ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                                 if (updateState !is SettingsViewModel.UpdateState.Downloading) {
@@ -626,6 +737,7 @@ fun SettingsScreen(
             }
           }
         }
+      }
     }
 
     confirmReset?.let { p ->
@@ -660,6 +772,7 @@ fun SettingsScreen(
     if (pendingExport != null || pendingImport != null) {
         PassphraseDialog(
             title = if (pendingExport != null) "Passphrase del backup" else "Passphrase del ripristino",
+            creating = pendingExport != null,
             onConfirm = { pass ->
                 pendingExport?.let { vm.exportBackup(it, pass) }
                 pendingImport?.let { vm.importBackup(it, pass) }
@@ -700,6 +813,9 @@ fun SettingsScreen(
             onDelete = { vm.deleteDuplicate(it) },
             onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
+            trashDays = if (s.trashEnabled) s.trashDays else null,
+            canUndo = dupUndo.isNotEmpty(),
+            onUndo = { vm.undoDuplicates() },
         )
         SettingsViewModel.DupMode.SIMILAR -> DuplicatesCompare(
             title = "Media simili",
@@ -715,6 +831,9 @@ fun SettingsScreen(
             onDelete = { vm.deleteDuplicate(it) },
             onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
+            trashDays = if (s.trashEnabled) s.trashDays else null,
+            canUndo = dupUndo.isNotEmpty(),
+            onUndo = { vm.undoDuplicates() },
         )
         SettingsViewModel.DupMode.NONE -> Unit
     }
@@ -733,21 +852,76 @@ fun SettingsScreen(
     }
 }
 
+private const val MIN_PASSPHRASE = 6
+
+/**
+ * Passphrase entry. Creating a backup asks for it twice (a typo would make the archive
+ * unrecoverable); restoring asks once and explains that files are added, not replaced.
+ */
 @Composable
-private fun PassphraseDialog(title: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var pass by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+    val tooShort = pass.length < MIN_PASSPHRASE
+    val mismatch = creating && confirm.isNotEmpty() && confirm != pass
+    val valid = !tooShort && (!creating || confirm == pass)
+    val transformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation()
+    val toggle: @Composable () -> Unit = {
+        IconButton(onClick = { visible = !visible }) {
+            Icon(
+                if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                if (visible) "Nascondi passphrase" else "Mostra passphrase",
+            )
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = pass, onValueChange = { pass = it },
-                label = { Text("Passphrase (min 6)") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    if (creating) "Servirà per ripristinare il backup: senza di essa l'archivio non si può aprire in alcun modo."
+                    else "I file del backup vengono aggiunti a quelli già nel vault; nulla viene cancellato.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = pass, onValueChange = { pass = it },
+                    label = { Text("Passphrase") },
+                    singleLine = true,
+                    visualTransformation = transformation,
+                    trailingIcon = toggle,
+                    supportingText = {
+                        Text(if (tooShort) "Almeno $MIN_PASSPHRASE caratteri (${pass.length}/$MIN_PASSPHRASE)" else "Lunghezza ok")
+                    },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                        imeAction = if (creating) androidx.compose.ui.text.input.ImeAction.Next else androidx.compose.ui.text.input.ImeAction.Done,
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (valid) onConfirm(pass) }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (creating) {
+                    OutlinedTextField(
+                        value = confirm, onValueChange = { confirm = it },
+                        label = { Text("Ripeti la passphrase") },
+                        singleLine = true,
+                        visualTransformation = transformation,
+                        isError = mismatch,
+                        supportingText = if (mismatch) ({ Text("Le passphrase non coincidono") }) else null,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                        ),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (valid) onConfirm(pass) }),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
         },
-        confirmButton = { TextButton(onClick = { if (pass.length >= 6) onConfirm(pass) }) { Text("OK") } },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pass) }, enabled = valid) { Text(if (creating) "Crea backup" else "Ripristina") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
 }
@@ -901,7 +1075,9 @@ private fun MainSettingsList(
             item { PageRow(SettingsPage.INFO, SettingsPage.INFO.label, summaries[SettingsPage.INFO].orEmpty()) { onOpen(SettingsPage.INFO, false) } }
             item(span = full) {
                 Button(onClick = onLock, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    Icon(Icons.Filled.Lock, null); Text("  Blocca ora")
+                    Icon(Icons.Filled.Lock, null, Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Blocca ora")
                 }
             }
         }
@@ -911,8 +1087,17 @@ private fun MainSettingsList(
 @Composable
 private fun GroupLabel(text: String) {
     Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 2.dp))
+        modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 2.dp).semantics { heading() })
 }
+
+/** Calm swap between two states of a panel: crossfade while the height follows. */
+private fun androidx.compose.animation.AnimatedContentTransitionScope<*>.calmSwap(): androidx.compose.animation.ContentTransform =
+    (androidx.compose.animation.fadeIn(Motion.enter()) togetherWith androidx.compose.animation.fadeOut(Motion.exit())).using(
+        androidx.compose.animation.SizeTransform { _, _ -> Motion.enter(Motion.MEDIUM) })
+
+/** Date/time stamp for the backup file name, so successive backups don't overwrite each other. */
+private fun backupStamp(): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.ROOT).format(java.util.Date())
 
 /** A page entry: coloured icon badge, name, current-state summary, chevron. */
 @Composable
@@ -953,7 +1138,7 @@ private fun Section(title: String, description: String? = null, content: @Compos
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             if (description != null) {
                 Text(description, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -971,9 +1156,11 @@ private fun ToggleRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     onChange: (Boolean) -> Unit,
 ) {
-    // The whole row toggles; an optional icon and one-line explanation make it readable at a glance.
+    // The whole row is one switch (label included) for touch and TalkBack; the Switch only draws.
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { onChange(!checked) }.padding(vertical = 4.dp),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -985,7 +1172,7 @@ private fun ToggleRow(
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

@@ -6,7 +6,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Refined scale on the system sans (Inter not bundled — app has no network permission).
+// Refined scale on the system sans. No custom font is bundled (APK size) and none is fetched at
+// runtime: the vault never downloads assets (the network is used only by the downloader/updater).
 private val Sans = FontFamily.SansSerif
 
 val CriptaTypography = Typography(
