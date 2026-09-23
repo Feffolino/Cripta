@@ -43,6 +43,7 @@ class ConversionService : Service() {
     @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
     @Inject lateinit var thumbs: com.cripta.app.media.ThumbnailLoader
     @Inject lateinit var dupScanner: com.cripta.app.data.dedup.DuplicateScanner
+    @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -55,6 +56,11 @@ class ConversionService : Service() {
         val mode = intent?.getStringExtra(EX_MODE)
         if (mode == null) { stopIfIdle(startId); return START_NOT_STICKY }
         // Cancel request from the notification action: abort the running transcode/download and leave.
+        if (mode == MODE_CANCEL_SCAN) {
+            scanJob?.cancel()
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
         if (mode == MODE_CANCEL_CONVERT) {
             currentConvertJob?.cancel()
             stopIfIdle(startId)
@@ -120,6 +126,10 @@ class ConversionService : Service() {
                         intent.getStringExtra(EX_ID)?.let { convertOne(it) }
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
+                    MODE_DUP_SCAN -> {
+                        val similar = intent.getBooleanExtra(EX_SIMILAR, false)
+                        scanDuplicates(similar)
+                    }
                 }
             } catch (_: Exception) {
                 // best-effort; individual items already guarded below
@@ -132,11 +142,13 @@ class ConversionService : Service() {
             }
         }
         if (mode == MODE_CONVERT) convertJob = job
+        if (mode == MODE_DUP_SCAN) scanJob = job
         return START_NOT_STICKY
     }
 
     @Volatile private var convertJob: kotlinx.coroutines.Job? = null
     @Volatile private var lastStartId = 0
+    @Volatile private var scanJob: kotlinx.coroutines.Job? = null
     /** Guards [downloadWorkerRunning] so a link enqueued while the worker drains is never missed. */
     private val workerLock = Any()
     private var downloadWorkerRunning = false
@@ -385,6 +397,52 @@ class ConversionService : Service() {
         }
     }
 
+    /**
+     * Duplicate scan (exact or similar) in the service, so it continues in the background with a
+     * progress notification; results go to [DupScanStore] and a "finished" notification that
+     * opens them on tap.
+     */
+    private suspend fun scanDuplicates(similar: Boolean) {
+        val mode = if (similar) com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR else com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
+        val label = if (similar) "Ricerca media simili" else "Ricerca duplicati"
+        dupStore.start(mode)
+        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN))
+        var last = 0L
+        val onProgress: (Int, Int) -> Unit = { done, total ->
+            dupStore.progress(done, total)
+            val now = SystemClock.elapsedRealtime()
+            if (now - last > 400 || done == total) {
+                last = now
+                val pct = if (total > 0) done * 100 / total else 0
+                notify(build(label, pct, sub = "$done di $total", indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN))
+            }
+        }
+        try {
+            val (groups, scanned) = if (similar) {
+                val r = dupScanner.scanSimilar(onProgress = onProgress)
+                r.groups.map { it.files } to r.mediaScanned
+            } else {
+                val r = dupScanner.scanExact(onProgress)
+                r.groups.map { it.files } to r.filesScanned
+            }
+            dupStore.finish(com.cripta.app.data.dedup.DupScanStore.Result(mode, groups, scanned))
+            val title = if (groups.isEmpty()) "$label completata" else if (similar) "Media simili trovati" else "Duplicati trovati"
+            val text = if (groups.isEmpty()) "Nessun risultato su $scanned elementi"
+                else "${groups.size} gruppi su $scanned elementi · tocca per confrontarli"
+            notifyResult(title, text, ResultKind.SCAN, openDuplicates = true)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            dupStore.cancelled()
+            notifyResult("$label annullata", null, ResultKind.SCAN)
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("ConversionService", "duplicate scan failed", e)
+            dupStore.fail(e.message)
+            notifyResult("$label non riuscita", e.message, ResultKind.SCAN)
+        } finally {
+            scanJob = null
+        }
+    }
+
     /** Process the downloader queue one link at a time until it is empty. */
     private suspend fun downloadWorker() {
         var drained = false
@@ -543,12 +601,13 @@ class ConversionService : Service() {
      * a result posted there just flashes and disappears.
      */
     /** Which kind of operation a result belongs to; each keeps its own notification. */
-    private enum class ResultKind(val id: Int) { IMPORT(4220), DOWNLOAD(4221), CONVERT(4222) }
+    private enum class ResultKind(val id: Int) { IMPORT(4220), DOWNLOAD(4221), CONVERT(4222), SCAN(4223) }
 
-    /** Tap on a notification: bring the app to the front. */
-    private fun openAppIntent(): android.app.PendingIntent = android.app.PendingIntent.getActivity(
-        this, 10,
-        Intent(this, com.cripta.app.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+    /** Tap on a notification: bring the app to the front (optionally straight to the duplicate results). */
+    private fun openAppIntent(openDuplicates: Boolean = false): android.app.PendingIntent = android.app.PendingIntent.getActivity(
+        this, if (openDuplicates) 11 else 10,
+        Intent(this, com.cripta.app.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .apply { if (openDuplicates) putExtra(com.cripta.app.MainActivity.EXTRA_OPEN_DUPLICATES, true) },
         android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
@@ -558,7 +617,7 @@ class ConversionService : Service() {
      * [NOTIF_ID], the ongoing foreground notification that is removed when the job ends. File names
      * are hidden on the lock screen (public version without details).
      */
-    private fun notifyResult(title: String, text: String?, kind: ResultKind = ResultKind.CONVERT) {
+    private fun notifyResult(title: String, text: String?, kind: ResultKind = ResultKind.CONVERT, openDuplicates: Boolean = false) {
         val public = NotificationCompat.Builder(this, RESULT_CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(BRAND_COLOR)
@@ -571,7 +630,7 @@ class ConversionService : Service() {
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setContentIntent(openAppIntent())
+            .setContentIntent(openAppIntent(openDuplicates))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setAutoCancel(true)
@@ -618,6 +677,9 @@ class ConversionService : Service() {
         private const val MODE_CONVERT = "convert"
         private const val MODE_CANCEL = "cancel"
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
+        private const val MODE_DUP_SCAN = "dup_scan"
+        private const val MODE_CANCEL_SCAN = "cancel_scan"
+        private const val EX_SIMILAR = "similar"
         private const val MODE_DELETE_ORIG = "delete_orig"
         private const val MODE_DISMISS = "dismiss"
         private const val MODE_DOWNLOAD_URL = "download_url"
@@ -650,6 +712,19 @@ class ConversionService : Service() {
             runCatching {
                 ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_CONVERT))
             }
+        }
+
+        /** Run a duplicate scan (exact or [similar]) in the background, with a progress notification. */
+        fun startDupScan(ctx: Context, similar: Boolean) {
+            val i = Intent(ctx, ConversionService::class.java).apply {
+                putExtra(EX_MODE, MODE_DUP_SCAN)
+                putExtra(EX_SIMILAR, similar)
+            }
+            ContextCompat.startForegroundService(ctx, i)
+        }
+
+        fun cancelDupScan(ctx: Context) {
+            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_SCAN)) }
         }
 
         /** Cancel the link being downloaded now (the rest of the queue continues). */

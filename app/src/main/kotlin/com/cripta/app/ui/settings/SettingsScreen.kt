@@ -106,6 +106,7 @@ fun SettingsScreen(
     val exactGroups by vm.exactGroups.collectAsState()
     val dupGroups by vm.dupGroups.collectAsState()
     val dupNotice by vm.dupNotice.collectAsState()
+    val dupWaiting by vm.dupResultWaiting.collectAsState()
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -440,10 +441,20 @@ fun SettingsScreen(
                             } else {
                                 androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                             }
+                            Text("Puoi uscire dall'app: la scansione continua in background e ti avvisa con una notifica.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Annulla")
                             }
                         } else {
+                            dupWaiting?.let { r ->
+                                Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        if (r.groups.isEmpty()) "Scansione completata: nessun risultato"
+                                        else "Risultati pronti: ${r.groups.size} gruppi · Apri"
+                                    )
+                                }
+                            }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
                                     Text("Esatti")

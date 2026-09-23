@@ -34,6 +34,19 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var session: SessionManager
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var sharedLinks: com.cripta.app.data.SharedLinkStore
+    @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
+
+    companion object {
+        /** Intent extra from the "scan finished" notification: open the duplicate results. */
+        const val EXTRA_OPEN_DUPLICATES = "open_duplicates"
+    }
+
+    private fun handleOpenDuplicates(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_OPEN_DUPLICATES, false) == true) {
+            intent.removeExtra(EXTRA_OPEN_DUPLICATES)
+            dupStore.requestOpen()
+        }
+    }
 
     private var backgroundedAt = 0L
 
@@ -44,6 +57,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleSharedLink(intent)
+        handleOpenDuplicates(intent)
     }
 
     /**
@@ -99,6 +113,7 @@ class MainActivity : FragmentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         handleSharedLink(intent)
+        handleOpenDuplicates(intent)
         setContent {
             val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
             // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.

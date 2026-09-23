@@ -124,6 +124,16 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
         ).sharedLinkStore()
     }
     val pendingLink by sharedLinks.pending.collectAsState()
+    // Tap on the "duplicate scan finished" notification: go to Settings, which opens the results.
+    val dupStore = androidx.compose.runtime.remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            ctx.applicationContext, com.cripta.app.CriptaApp.AppEntryPoint::class.java,
+        ).dupScanStore()
+    }
+    val openDup by dupStore.openRequested.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(openDup) {
+        if (openDup && currentRoute != "settings") onTab("settings")
+    }
     androidx.compose.runtime.LaunchedEffect(pendingLink) {
         if (pendingLink != null && currentRoute != "download") onTab("download")
     }
