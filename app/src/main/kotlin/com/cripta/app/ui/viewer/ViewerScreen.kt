@@ -208,6 +208,9 @@ fun ViewerScreen(
     var convertInBackground by remember { mutableStateOf(false) }
     LaunchedEffect(converting) { if (converting) convertInBackground = false }
     val pagerScope = rememberCoroutineScope()
+    // Swipe-to-close can be seen by more than one gesture layer: pop the viewer only once.
+    var closing by remember { mutableStateOf(false) }
+    val closeOnce: () -> Unit = { if (!closing) { closing = true; onBack() } }
     // Measured height of the top chrome (bar + quick tags): overlays below it start there instead
     // of at a guessed offset, which overlapped the title and tags in landscape.
     var topChromeH by remember { mutableStateOf(0.dp) }
@@ -235,7 +238,7 @@ fun ViewerScreen(
                     }
                     if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
-                    if (valid && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) onBack()
+                    if (valid && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOnce()
                 }
             },
     ) {
@@ -249,7 +252,7 @@ fun ViewerScreen(
                 setChrome = { chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
                 onOpenDetails = { showTags = true },
-                onClose = onBack,
+                onClose = closeOnce,
                 nextId = ids.getOrNull(page + 1),
                 topInset = topChromeH,
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
@@ -953,6 +956,32 @@ private fun VideoPlayer(
 
     Box(
         Modifier.fillMaxSize().clipToBounds()
+            // Vertical swipe anywhere on the video: up = tags & details, down = close the player.
+            // Observed in the Initial pass (nothing consumed) because the PlayerView under it takes
+            // every touch, which used to leave these gestures working only outside the picture.
+            // Not on the brightness/volume side strips, not while zoomed, not with two fingers.
+            .pointerInput(prefs.gestures, prefs.volumeGesture, inPip) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val w = size.width.toFloat(); val h = size.height.toFloat()
+                    val onSide = (prefs.gestures && down.position.x < w * 0.3f) ||
+                        (prefs.volumeGesture && down.position.x > w * 0.7f)
+                    var dx = 0f; var dy = 0f; var multi = false
+                    while (true) {
+                        val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (ev.changes.count { it.pressed } > 1) multi = true
+                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        dx += ch.position.x - ch.previousPosition.x
+                        dy += ch.position.y - ch.previousPosition.y
+                        if (!ch.pressed) break
+                    }
+                    if (inPip || multi || onSide || userZoom > 1f) return@awaitEachGesture
+                    if (kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) {
+                        if (dy < -h * 0.12f) onOpenDetails()
+                        else if (dy > h * 0.15f) onClose()
+                    }
+                }
+            }
             // Pinch-to-zoom, but ONLY react to two or more fingers so a single-finger horizontal
             // swipe still reaches the pager (change video) instead of being consumed here.
             .pointerInput(Unit) {
@@ -1105,24 +1134,6 @@ private fun VideoPlayer(
                 }
                 .sideDrag(brightness = false)
         )
-        // Top-centre area (below the top bar): swipe down closes the video, like on photos.
-        if (!inPip) Box(
-            Modifier.align(Alignment.TopCenter).fillMaxWidth(0.4f).fillMaxHeight(0.35f)
-                .padding(top = 72.dp)
-                .pointerInput(Unit) { detectTapGestures(onTap = { toggleController() }) }
-                .pointerInput(Unit) {
-                    var total = 0f
-                    var fired = false
-                    detectVerticalDragGestures(
-                        onDragStart = { total = 0f; fired = false },
-                        onVerticalDrag = { change, dy ->
-                            change.consume()
-                            total += dy
-                            if (!fired && total > 60.dp.toPx()) { fired = true; onClose() }
-                        },
-                    )
-                }
-        )
         // "Prossimo" card, bottom-right above the seek bar.
         val rem = remainingMs
         val window = minOf(8_000L, totalMs / 3)
@@ -1157,27 +1168,6 @@ private fun VideoPlayer(
                 }
             }
         }
-        // Bottom-centre strip just above the seek bar: swipe up opens tags & details, like on
-        // photos. It stays clear of the time bar and of the centre play/pause button. Not in
-        // landscape: the short screen would put it over play/pause (swipe up works elsewhere).
-        if (!inPip && !vLandscape) Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.4f).height(56.dp)
-                .offset(y = -seekBarClearance)
-                .pointerInput(Unit) { detectTapGestures(onTap = { toggleController() }) }
-                .pointerInput(Unit) {
-                    var total = 0f
-                    var fired = false
-                    detectVerticalDragGestures(
-                        onDragStart = { total = 0f; fired = false },
-                        onVerticalDrag = { change, dy ->
-                            change.consume()
-                            total += dy
-                            if (!fired && total < -40f) { fired = true; onOpenDetails() }
-                        },
-                    )
-                }
-        )
-
         gestureLabel?.let { lbl ->
             Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp))) {
