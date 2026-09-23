@@ -72,12 +72,13 @@ class ViewerViewModel @Inject constructor(
         val gestures: Boolean = true,
         val autoRotate: Boolean = true,
         val pip: Boolean = false,
+        val filmstrip: Boolean = true,
     )
 
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
     val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map {
         PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
-            it.gestureControls, it.autoRotate, it.pictureInPicture)
+            it.gestureControls, it.autoRotate, it.pictureInPicture, it.viewerFilmstrip)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
 
     /** Orientation lock chosen in the player; kept while swiping between videos. */
@@ -91,7 +92,7 @@ class ViewerViewModel @Inject constructor(
         runCatching { settingsStore.settingsOnce() }.getOrNull()
             ?.let {
                 PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
-                    it.gestureControls, it.autoRotate, it.pictureInPicture)
+                    it.gestureControls, it.autoRotate, it.pictureInPicture, it.viewerFilmstrip)
             } ?: PlaybackPrefs()
 
     /**

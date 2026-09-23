@@ -45,6 +45,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ScreenLockRotation
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -251,7 +252,8 @@ fun ViewerScreen(
                 .padding(bottom = if (onVideo) 112.dp else 20.dp),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (ids.size > 1) {
+                val playback by vm.playback.collectAsState()
+                if (ids.size > 1 && playback.filmstrip) {
                     Filmstrip(ids, pagerState.currentPage, vm) { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
                 }
                 Surface(
@@ -262,9 +264,9 @@ fun ViewerScreen(
                         }
                         .clickable { showTags = true },
                 ) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        Text(" Etichette e dettagli", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Text(" Dettagli", color = Color.White, style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -1071,6 +1073,22 @@ private fun VideoPlayer(
                             if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione", tint = Color.White)
                     }
                 }
+                // Picture-in-Picture on demand (the automatic one on leaving the app is a setting).
+                if (activity != null &&
+                    activity.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+                    Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                        IconButton(onClick = {
+                            runCatching {
+                                activity.enterPictureInPictureMode(
+                                    android.app.PictureInPictureParams.Builder()
+                                        .setAspectRatio(videoAspect ?: android.util.Rational(16, 9)).build()
+                                )
+                            }.onFailure { modeLabel = "Picture-in-Picture non disponibile" }
+                        }) {
+                            Icon(Icons.Filled.PictureInPictureAlt, "Picture-in-Picture", tint = Color.White)
+                        }
+                    }
+                }
             }
         }
 
@@ -1086,27 +1104,34 @@ private fun VideoPlayer(
     }
 }
 
-/** Horizontal strip of the neighbouring files' covers; tap one to jump to it. */
+/**
+ * Compact strip of the neighbouring covers (3 before, 3 after), centred on the current file; tap
+ * one to jump to it. Small 16:9 thumbs, the others dimmed, so it hides little of the video.
+ */
 @Composable
 private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, onPick: (Int) -> Unit) {
-    val state = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (current - 3).coerceAtLeast(0))
-    LaunchedEffect(current) { state.animateScrollToItem((current - 3).coerceAtLeast(0)) }
-    androidx.compose.foundation.lazy.LazyRow(
-        state = state,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth(),
+    val from = (current - 3).coerceAtLeast(0)
+    val to = (current + 3).coerceAtMost(ids.lastIndex)
+    Row(
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        items(ids.size) { i ->
-            val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
-            val sel = i == current
-            Box(
-                Modifier.size(if (sel) 56.dp else 46.dp).clip(MaterialTheme.shapes.small)
-                    .background(Color.White.copy(alpha = 0.12f))
-                    .then(if (sel) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small) else Modifier)
-                    .clickable { onPick(i) },
-            ) {
-                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        for (i in from..to) {
+            androidx.compose.runtime.key(ids[i]) {
+                val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
+                val sel = i == current
+                Box(
+                    Modifier.height(if (sel) 34.dp else 26.dp).aspectRatio(16f / 9f)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .then(if (sel) Modifier.border(1.5.dp, Color.White, MaterialTheme.shapes.extraSmall) else Modifier)
+                        .clickable { onPick(i) },
+                ) {
+                    bmp?.let {
+                        Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop,
+                            alpha = if (sel) 1f else 0.6f, modifier = Modifier.fillMaxSize())
+                    }
+                }
             }
         }
     }
