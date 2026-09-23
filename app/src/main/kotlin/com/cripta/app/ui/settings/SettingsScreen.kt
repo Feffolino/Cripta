@@ -155,6 +155,7 @@ fun SettingsScreen(
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     val trashed by vm.trashed.collectAsState()
+    val trashedFolders by vm.trashedFolders.collectAsState()
 
     // Two-level navigation: the category list, or one category page. Back returns to the list.
     var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
@@ -856,9 +857,12 @@ fun SettingsScreen(
     if (showTrash) {
         TrashDialog(
             items = trashed.map { it.file },
+            folders = trashedFolders,
             days = s.trashDays,
             onRestore = { vm.restore(it) },
             onDelete = { vm.deleteForever(it) },
+            onRestoreFolder = { vm.restoreFolder(it) },
+            onDeleteFolder = { vm.deleteFolderForever(it) },
             onEmpty = { vm.emptyTrash() },
             onDismiss = { showTrash = false },
         )
@@ -1313,37 +1317,95 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-/** Trash contents: restore or destroy each file, or empty everything at once. */
+/**
+ * Trash contents, browsable like the vault: deleted folders open to show what they held (their
+ * subfolders and files), so a single file can be restored, and it reappears at its original path.
+ * Each folder or file can also be restored as a whole or destroyed; "Svuota" empties everything.
+ */
 @Composable
 private fun TrashDialog(
     items: List<com.cripta.app.data.db.FileEntity>,
+    folders: List<com.cripta.app.data.db.FolderEntity>,
     days: Int,
     onRestore: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onRestoreFolder: (Long) -> Unit,
+    onDeleteFolder: (Long) -> Unit,
     onEmpty: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var confirmEmpty by remember { mutableStateOf(false) }
+    var confirmFolder by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
+    // Path of opened trashed folders (empty = top level of the trash).
+    val path = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
     val fmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM) }
+    val trashedIds = remember(folders) { folders.map { it.id }.toSet() }
+    val byId = remember(folders) { folders.associateBy { it.id } }
+    // A restored/destroyed folder disappears: drop it (and what's below) from the path.
+    val openId = path.lastOrNull()?.takeIf { it in trashedIds }
+    if (path.isNotEmpty() && openId == null) { androidx.compose.runtime.SideEffect { path.clear() } }
+    // Top level: trashed folders/files whose parent is not itself in the trash. Inside: direct content.
+    val shownFolders = folders.filter { if (openId == null) it.parentId == null || it.parentId !in trashedIds else it.parentId == openId }
+    val shownFiles = items.filter { if (openId == null) it.folderId == null || it.folderId !in trashedIds else it.folderId == openId }
+    fun left(at: Long?) = at?.let { days - ((System.currentTimeMillis() - it) / 86_400_000L).toInt() } ?: days
+    fun when_(at: Long?): String {
+        val l = left(at)
+        return "Eliminato il ${at?.let { fmt.format(java.util.Date(it)) } ?: "—"} · " +
+            if (l <= 1) "distrutto entro oggi" else "ancora $l giorni"
+    }
+    fun filesUnder(id: Long): Int {
+        val ids = HashSet<Long>(); val todo = ArrayDeque(listOf(id))
+        while (todo.isNotEmpty()) { val x = todo.removeFirst(); if (ids.add(x)) folders.filter { it.parentId == x }.forEach { todo.add(it.id) } }
+        return items.count { it.folderId in ids }
+    }
+    androidx.activity.compose.BackHandler(enabled = path.isNotEmpty()) { path.removeAt(path.lastIndex) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Cestino") },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (openId != null) {
+                    IconButton(onClick = { path.removeAt(path.lastIndex) }, modifier = Modifier.padding(end = 4.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                    }
+                }
+                Text(
+                    if (openId == null) "Cestino" else path.mapNotNull { byId[it]?.name }.joinToString(" › "),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
         text = {
-            if (items.isEmpty()) {
-                Text("Il cestino è vuoto.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (shownFolders.isEmpty() && shownFiles.isEmpty()) {
+                Text(if (openId == null) "Il cestino è vuoto." else "Questa cartella non contiene altro nel cestino.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items.forEach { f ->
-                        val left = f.deletedAt?.let { days - ((System.currentTimeMillis() - it) / 86_400_000L).toInt() } ?: days
+                    shownFolders.forEach { fo ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
+                                .clickable(onClickLabel = "Apri") { path.add(fo.id) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            com.cripta.app.ui.components.FolderGlyph(fo.color, fo.emoji, 28.dp)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(fo.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                                val n = filesUnder(fo.id)
+                                Text((if (n == 1) "1 file · " else "$n file · ") + when_(fo.deletedAt).replaceFirst("Eliminato", "Eliminata"),
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick = { onRestoreFolder(fo.id) }) { Text("Ripristina") }
+                            IconButton(onClick = { confirmFolder = fo }) {
+                                Icon(Icons.Filled.Delete, "Elimina definitivamente ${fo.name}", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                    shownFiles.forEach { f ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    "Eliminato il ${f.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—"} · " +
-                                        if (left <= 1) "distrutto entro oggi" else "ancora $left giorni",
-                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                Text(when_(f.deletedAt), style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             TextButton(onClick = { onRestore(f.id) }) { Text("Ripristina") }
                             IconButton(onClick = { onDelete(f.id) }) {
@@ -1351,21 +1413,42 @@ private fun TrashDialog(
                             }
                         }
                     }
+                    if (openId != null && shownFiles.isNotEmpty()) {
+                        Text("Un file ripristinato torna nella sua cartella, che viene ricreata se serve.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp))
+                    }
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
         dismissButton = {
-            if (items.isNotEmpty()) {
+            if (openId == null && (items.isNotEmpty() || folders.isNotEmpty())) {
                 TextButton(onClick = { confirmEmpty = true }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
             }
         },
     )
+    confirmFolder?.let { fo ->
+        val n = filesUnder(fo.id)
+        AlertDialog(
+            onDismissRequest = { confirmFolder = null },
+            title = { Text("Eliminare definitivamente?") },
+            text = { Text("\"${fo.name}\" e ${if (n == 1) "1 file" else "$n file"} al suo interno verranno distrutti in modo sicuro. Irreversibile.") },
+            confirmButton = {
+                TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmFolder = null }) { Text("Annulla") } },
+        )
+    }
     if (confirmEmpty) {
         AlertDialog(
             onDismissRequest = { confirmEmpty = false },
             title = { Text("Svuotare il cestino?") },
-            text = { Text("${items.size} file verranno distrutti in modo sicuro. Irreversibile.") },
+            text = {
+                Text("${if (items.size == 1) "1 file" else "${items.size} file"}" +
+                    (if (folders.isNotEmpty()) " e ${if (folders.size == 1) "1 cartella" else "${folders.size} cartelle"}" else "") +
+                    " verranno distrutti in modo sicuro. Irreversibile.")
+            },
             confirmButton = {
                 TextButton(onClick = { onEmpty(); confirmEmpty = false }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
             },

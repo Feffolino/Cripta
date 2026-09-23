@@ -15,6 +15,8 @@ data class FolderEntity(
     val color: Int? = null,
     /** Optional emoji shown in place of the folder icon. */
     val emoji: String? = null,
+    /** Set when the folder is in the trash (with its content); null = live. */
+    val deletedAt: Long? = null,
 )
 
 /**
