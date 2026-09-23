@@ -847,6 +847,7 @@ private fun VideoPlayer(
     var panY by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(modeIdx, file.id) { userZoom = 1f; panX = 0f; panY = 0f }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
     val prefs by vm.playback.collectAsState()
 
     // "Prossimo": in the last seconds of a video (loop off, option on, a next file exists) a card
@@ -877,7 +878,6 @@ private fun VideoPlayer(
     val nextFile by produceState<FileEntity?>(null, nextId) { value = nextId?.let { vm.fileById(it) } }
     val nextThumb by produceState<Bitmap?>(null, nextId) { value = nextId?.let { vm.thumbOf(it) } }
     val rotationLocked by vm.rotationLocked.collectAsState()
-    val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
     val activity = LocalContext.current as? android.app.Activity
     val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
