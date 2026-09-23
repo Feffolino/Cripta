@@ -1,5 +1,8 @@
 package com.cripta.app.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 // Premium secure dark palette (v2). Deep near-black with layered surfaces + calm blue accent.
@@ -61,8 +64,20 @@ val TagPalette = listOf(
     Color(0xFFBE123C), // rose
 )
 
-fun tagColor(name: String): Color =
+/**
+ * Colour of every tag the user did not colour on its own (Settings › Copertine); null = automatic,
+ * one palette colour per name. Snapshot state, so every tag on screen recolours as soon as it changes.
+ */
+object DefaultTagColor {
+    var argb by mutableStateOf<Int?>(null)
+}
+
+/** The automatic colour of a name (stable hash into [TagPalette]), ignoring the global default. */
+fun autoTagColor(name: String): Color =
     TagPalette[Math.floorMod(name.lowercase().hashCode(), TagPalette.size)]
 
-/** A tag's colour: the one the user picked, else the automatic one from its name. */
+/** Colour of a tag with no colour of its own: the global default if set, else the automatic one. */
+fun tagColor(name: String): Color = DefaultTagColor.argb?.let { Color(it) } ?: autoTagColor(name)
+
+/** A tag's colour: the one the user picked, else the global default, else the automatic one. */
 fun tagColor(tag: com.cripta.app.data.db.TagEntity): Color = tag.color?.let { Color(it) } ?: tagColor(tag.name)

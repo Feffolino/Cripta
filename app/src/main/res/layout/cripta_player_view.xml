@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The viewer's PlayerView. A TextureView surface instead of the default SurfaceView: a SurfaceView
+     is composited by the system outside the view tree, so it ignored the screen's fade-out on close
+     (the video stayed fully visible, then vanished at once while the rest of the UI faded). A
+     TextureView is drawn like any other view and fades, scales and clips with the screen. -->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:surface_type="texture_view" />

@@ -22,6 +22,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.text.style.TextAlign
 import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.lazy.LazyColumn
@@ -78,7 +81,16 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Star
@@ -231,11 +243,14 @@ fun ViewerScreen(
     // not while the actions overflow menu is open, otherwise the menu closes itself under the user.
     // Bumped on quick-tag taps so the chrome stays up while tagging.
     var chromeTouch by remember { mutableIntStateOf(0) }
+    // A paused (or finished) video keeps its controls up, as ExoPlayer itself does. Auto-hiding the
+    // chrome anyway made the player re-show its controller right after: an endless hide/show blink.
+    var videoPaused by remember { mutableStateOf(false) }
     val onMediaPage = currentFile?.let {
         com.cripta.app.data.VaultRepository.isImage(it.mimeType) || com.cripta.app.data.VaultRepository.isPlayable(it.mimeType)
     } == true
-    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch, onMediaPage, chromeTimeoutMs) {
-        if (chromeVisible && !menuOpen && onMediaPage && chromeTimeoutMs > 0) {
+    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch, onMediaPage, chromeTimeoutMs, videoPaused) {
+        if (chromeVisible && !menuOpen && onMediaPage && chromeTimeoutMs > 0 && !videoPaused) {
             delay((chromeTimeoutMs - 500L).coerceAtLeast(500L)); chromeVisible = false
         }
     }
@@ -244,7 +259,6 @@ fun ViewerScreen(
     val chromeExit = fadeOut(Motion.exit(Motion.MEDIUM))
 
     var showTags by remember { mutableStateOf(false) }
-    var showInfo by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
@@ -321,6 +335,7 @@ fun ViewerScreen(
                 topInset = topChromeH,
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
+                onPausedChanged = { videoPaused = it },
             )
         }
 
@@ -436,7 +451,7 @@ fun ViewerScreen(
                                 )
                             }
                         }
-                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette") }
+                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
                         if (ids.size > 1) {
                             IconButton(onClick = { showQueue = true }) {
                                 Icon(Icons.AutoMirrored.Filled.PlaylistPlay, "Coda")
@@ -453,11 +468,6 @@ fun ViewerScreen(
                                     onClick = { menuOpen = false; confirmConvert = true },
                                 )
                             }
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Etichette e dettagli") },
-                                leadingIcon = { Icon(Icons.Filled.Info, null) },
-                                onClick = { menuOpen = false; showInfo = true },
-                            )
                             androidx.compose.material3.DropdownMenuItem(
                                 text = { Text("Esporta sul dispositivo") },
                                 leadingIcon = { Icon(Icons.Filled.Download, null) },
@@ -497,11 +507,16 @@ fun ViewerScreen(
                                 shape = MaterialTheme.shapes.small,
                                 modifier = Modifier.clickable { chromeTouch++; vm.toggleTag(qf.id, t.id) },
                             ) {
-                                Text(
-                                    (if (t.pinned) "📌 " else "") + (t.alias?.takeIf { it.isNotBlank() }?.let { "$it " } ?: "") + t.name,
-                                    color = Color.White, style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                )
+                                Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (t.pinned) {
+                                        Icon(Icons.Filled.PushPin, "Fissata", tint = Color.White,
+                                            modifier = Modifier.padding(end = 4.dp).size(14.dp))
+                                    }
+                                    Text(
+                                        (t.alias?.takeIf { it.isNotBlank() }?.let { "$it " } ?: "") + t.name,
+                                        color = Color.White, style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
                             }
                         }
                     }
@@ -528,15 +543,15 @@ fun ViewerScreen(
     }
 
     val file = currentFile
-    // Tags + details together in one panel (swipe up, the tags icon, or "Informazioni").
-    if ((showTags || showInfo) && file != null) {
+    // Tags + details together in one panel (swipe up, the tags icon or the "Dettagli" handle).
+    if (showTags && file != null) {
         DetailsSheet(
             file = file,
             allTags = allTags,
             refresh = refresh,
             showRecents = displayPrefs.showRecentTags,
             vm = vm,
-            onDismiss = { showTags = false; showInfo = false },
+            onDismiss = { showTags = false },
         )
     }
     val trashOn by vm.trashEnabled.collectAsState()
@@ -742,6 +757,7 @@ private fun MediaPage(
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
     controlsTimeoutMs: Int,
+    onPausedChanged: (Boolean) -> Unit,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -784,7 +800,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, controlsTimeoutMs = controlsTimeoutMs)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1046,6 +1062,8 @@ private fun VideoPlayer(
     topInset: androidx.compose.ui.unit.Dp,
     /** Controller auto-hide delay; 0 = never hide (TalkBack touch exploration). */
     controlsTimeoutMs: Int,
+    /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
+    onPausedChanged: (Boolean) -> Unit,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1145,8 +1163,8 @@ private fun VideoPlayer(
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val sideCut = com.cripta.app.ui.LocalSideCutout.current
     val cutPx = with(androidx.compose.ui.platform.LocalDensity.current) { sideCut.start.roundToPx() to sideCut.end.roundToPx() }
-    /** Overlay for the gesture in progress: "2×", "☀ 60%", "🔊 40%". */
-    var gestureLabel by remember { mutableStateOf<String?>(null) }
+    /** Overlay for the gesture in progress: speed "2×", brightness / volume "60%", with its icon. */
+    var gestureLabel by remember { mutableStateOf<GestureHud?>(null) }
     var videoAspect by remember(file.id) { mutableStateOf<android.util.Rational?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
@@ -1168,11 +1186,15 @@ private fun VideoPlayer(
         }
     }
 
+    val latestPaused by androidx.compose.runtime.rememberUpdatedState(onPausedChanged)
     DisposableEffect(file.id) {
+        fun reportPaused() = latestPaused(!player.playWhenReady || player.playbackState == Player.STATE_ENDED)
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 buffering = state == Player.STATE_BUFFERING
+                reportPaused()
             }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reportPaused()
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width <= 0 || videoSize.height <= 0) return
                 val w = videoSize.width * videoSize.pixelWidthHeightRatio
@@ -1183,8 +1205,10 @@ private fun VideoPlayer(
             }
         }
         player.addListener(listener)
+        reportPaused()
         onDispose {
             player.removeListener(listener)
+            latestPaused(false)
             if (resumeEnabled) vm.savePosition(file.id, player.currentPosition, player.duration)
             com.cripta.app.viewer.PipController.armedAspect = null
             // Leaving this video (e.g. swiping to a photo): drop its auto-rotation unless locked.
@@ -1301,7 +1325,9 @@ private fun VideoPlayer(
     ) {
         AndroidView(
             factory = {
-                PlayerView(it).apply {
+                // Inflated for its TextureView surface (see the layout): a SurfaceView ignored the
+                // close fade and vanished all at once at the end of it.
+                (android.view.LayoutInflater.from(it).inflate(com.cripta.app.R.layout.cripta_player_view, null) as PlayerView).apply {
                     this.player = player
                     resizeMode = modes[modeIdx].first
                     // Let the (zoomed) video surface overflow its content frame; the outer Box clips
@@ -1354,7 +1380,7 @@ private fun VideoPlayer(
                 val before = player.playbackParameters.speed
                 val sp = prefs.holdSpeed
                 player.setPlaybackSpeed(sp)
-                gestureLabel = (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "×"
+                gestureLabel = GestureHud(Icons.Filled.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "×", null)
                 try { kotlinx.coroutines.awaitCancellation() } finally {
                     player.setPlaybackSpeed(before)
                     gestureLabel = null
@@ -1383,11 +1409,17 @@ private fun VideoPlayer(
                     level = (level - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
                     if (brightness) {
                         activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = level.coerceAtLeast(0.01f) } }
-                        gestureLabel = "☀ ${(level * 100).toInt()}%"
+                        gestureLabel = GestureHud(
+                            when { level < 0.34f -> Icons.Filled.BrightnessLow; level < 0.67f -> Icons.Filled.BrightnessMedium; else -> Icons.Filled.BrightnessHigh },
+                            "${(level * 100).toInt()}%", level,
+                        )
                     } else {
                         val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
                         audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (level * max).toInt(), 0)
-                        gestureLabel = "🔊 ${(level * 100).toInt()}%"
+                        gestureLabel = GestureHud(
+                            when { level <= 0f -> Icons.AutoMirrored.Filled.VolumeOff; level < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown; else -> Icons.AutoMirrored.Filled.VolumeUp },
+                            "${(level * 100).toInt()}%", level,
+                        )
                     }
                 },
             )
@@ -1450,11 +1482,24 @@ private fun VideoPlayer(
                 }
             }
         }
-        gestureLabel?.let { lbl ->
+        gestureLabel?.let { hud ->
             Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp))) {
-                Text(lbl, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+                Row(Modifier.padding(start = 14.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    // Level gauge for brightness / volume: reads at a glance while the finger moves.
+                    hud.level?.let { lv ->
+                        Box(Modifier.padding(start = 10.dp).width(72.dp).height(4.dp).clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.25f))) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(lv.coerceIn(0f, 1f)).background(Color.White))
+                        }
+                    }
+                    // Fixed width for the digits so the pill doesn't wobble as the value changes.
+                    Text(hud.text, color = Color.White, style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.padding(start = 10.dp).widthIn(min = 44.dp))
+                }
             }
         }
 
@@ -1645,47 +1690,77 @@ private fun QueuePanel(
     }
 }
 
+/** What the gesture overlay shows: an icon, the value, and a 0..1 gauge (brightness / volume only). */
+private data class GestureHud(val icon: ImageVector, val text: String, val level: Float?)
+
 /**
- * Compact strip of the neighbouring covers (3 before, 3 after), centred on the current file; tap
- * one to jump to it. Small 16:9 thumbs, the others dimmed, so it hides little of the video.
+ * Strip of the covers around the current file (3 each side, 2 in landscape), centred on it; tap one
+ * to jump. When the file changes the strip glides to centre the new one while it grows to full size
+ * and brightens and the previous one shrinks and dims, so the jump reads as movement along the list.
+ * It can also be dragged to look further ahead.
  */
 @Composable
 private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vertical: Boolean = false, onPick: (Int) -> Unit) {
     val span = if (vertical) 2 else 3
-    val from = (current - span).coerceAtLeast(0)
-    val to = (current + span).coerceAtMost(ids.lastIndex)
-    val thumbs: @Composable () -> Unit = {
-        for (i in from..to) {
-            androidx.compose.runtime.key(ids[i]) {
-                val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
-                val sel = i == current
-                Box(
-                    Modifier.height(if (vertical) (if (sel) 28.dp else 22.dp) else (if (sel) 34.dp else 26.dp)).aspectRatio(16f / 9f)
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .then(if (sel) Modifier.border(1.5.dp, Color.White, MaterialTheme.shapes.extraSmall) else Modifier)
-                        .clickable { onPick(i) },
-                ) {
-                    bmp?.let {
-                        Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop,
-                            alpha = if (sel) 1f else 0.6f, modifier = Modifier.fillMaxSize())
-                    }
+    val thumbH = if (vertical) 22.dp else 26.dp
+    val selH = if (vertical) 28.dp else 34.dp
+    val gap = 4.dp
+    // Size of one cover along the strip, and the whole strip (current + span covers each side).
+    val along = { h: androidx.compose.ui.unit.Dp -> if (vertical) h else h * (16f / 9f) }
+    val full = along(selH) + (along(thumbH) + gap) * (2 * span)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = current)
+    val animate = com.cripta.app.ui.theme.animationsEnabled()
+    LaunchedEffect(current) {
+        if (listState.firstVisibleItemIndex == current && listState.firstVisibleItemScrollOffset == 0) return@LaunchedEffect
+        if (animate) listState.animateScrollToItem(current) else listState.scrollToItem(current)
+    }
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        if (vertical) Modifier.heightIn(max = full) else Modifier.widthIn(max = full),
+    ) {
+        // Padding on both ends = half the free space, so "scroll to item i" puts item i in the middle.
+        val extent = if (vertical) maxHeight else maxWidth
+        val edge = ((extent.coerceAtMost(full) - along(selH)) / 2).coerceAtLeast(0.dp)
+        val cell: @Composable (Int) -> Unit = { i ->
+            val sel = i == current
+            val h by animateDpAsState(if (sel) selH else thumbH, Motion.enter(Motion.MEDIUM), label = "stripThumb")
+            val dim by animateFloatAsState(if (sel) 1f else 0.6f, Motion.enter(Motion.MEDIUM), label = "stripDim")
+            val ring by animateFloatAsState(if (sel) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripRing")
+            val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
+            val shown by animateFloatAsState(if (bmp != null) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripLoad")
+            Box(
+                Modifier.height(h).aspectRatio(16f / 9f)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .border(1.5.dp, Color.White.copy(alpha = ring), MaterialTheme.shapes.extraSmall)
+                    .clickable(onClickLabel = "Apri") { onPick(i) }
+                    .semantics {
+                        this.contentDescription = "File ${i + 1} di ${ids.size}"
+                        this.selected = sel
+                    },
+            ) {
+                bmp?.let {
+                    Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop,
+                        alpha = dim * shown, modifier = Modifier.fillMaxSize())
                 }
             }
         }
-    }
-    if (vertical) {
-        Column(
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            // Scrolls if even 5 thumbs don't fit between the top chrome and the seek bar.
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-        ) { thumbs() }
-    } else {
-        Row(
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) { thumbs() }
+        if (vertical) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.height(extent.coerceAtMost(full)).width(along(selH) * (16f / 9f)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = edge),
+                verticalArrangement = Arrangement.spacedBy(gap),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) { items(ids.size, key = { ids[it] }) { cell(it) } }
+        } else {
+            androidx.compose.foundation.lazy.LazyRow(
+                state = listState,
+                modifier = Modifier.width(extent.coerceAtMost(full)).height(selH),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = edge),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) { items(ids.size, key = { ids[it] }) { cell(it) } }
+        }
     }
 }
 
@@ -1739,7 +1814,7 @@ private fun DetailsSheet(
                 Text("Etichette", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 TextButton(onClick = { creating = true }) { Text("+ Nuova") }
             }
-            Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e 📌.",
+            Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e per fissarla.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             com.cripta.app.ui.vault.TagSections(
                 allTags = allTags,
