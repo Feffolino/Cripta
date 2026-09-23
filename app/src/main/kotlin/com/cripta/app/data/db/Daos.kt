@@ -109,6 +109,13 @@ interface FileDao {
     @Query("UPDATE files SET playbackPosMs = :pos, lastPlayedAt = :at WHERE id = :id")
     suspend fun setPlaybackPos(id: String, pos: Long?, at: Long?)
 
+    /** Newest covers across a set of folders (a folder and its subfolders, for the mosaic). */
+    @Query("SELECT * FROM files WHERE folderId IN (:folderIds) AND deletedAt IS NULL ORDER BY importedAt DESC LIMIT :limit")
+    suspend fun latestInFolders(folderIds: List<Long>, limit: Int): List<FileEntity>
+
+    @Query("UPDATE files SET contentHash = :hash WHERE id = :id")
+    suspend fun setContentHash(id: String, hash: String)
+
     /** Newest covers of a folder (for its 2x2 mosaic). */
     @Query("SELECT * FROM files WHERE folderId = :folderId AND deletedAt IS NULL ORDER BY importedAt DESC LIMIT :limit")
     suspend fun latestInFolder(folderId: Long, limit: Int): List<FileEntity>
@@ -161,4 +168,16 @@ interface SavedFilterDao {
 
     @Query("DELETE FROM saved_filters WHERE id = :id")
     suspend fun delete(id: Long)
+}
+
+@Dao
+interface PendingJobDao {
+    @Query("SELECT * FROM pending_jobs ORDER BY createdAt")
+    suspend fun all(): List<PendingJobEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun put(job: PendingJobEntity)
+
+    @Query("DELETE FROM pending_jobs WHERE id = :id")
+    suspend fun delete(id: String)
 }

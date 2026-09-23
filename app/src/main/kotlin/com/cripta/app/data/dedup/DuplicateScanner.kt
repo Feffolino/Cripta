@@ -98,11 +98,24 @@ class DuplicateScanner @Inject constructor(
     suspend fun copiesOf(file: FileEntity): List<FileEntity> = withContext(Dispatchers.IO) {
         val candidates = repo.sameSizeAs(file)
         if (candidates.isEmpty()) return@withContext emptyList()
-        val p = runCatching { partialHash(file) }.getOrNull() ?: return@withContext emptyList()
-        val sameHead = candidates.filter { runCatching { partialHash(it) }.getOrNull() == p }
-        if (sameHead.isEmpty()) return@withContext emptyList()
-        val full = runCatching { fullHash(file) }.getOrNull() ?: return@withContext emptyList()
-        sameHead.filter { runCatching { fullHash(it) }.getOrNull() == full }
+        // Fast path: hashes recorded at import time are compared directly, no decryption at all.
+        val own = file.contentHash ?: runCatching { fullHash(file) }.getOrNull()?.also { repo.setContentHash(file.id, it) }
+            ?: return@withContext emptyList()
+        val (hashed, unhashed) = candidates.partition { it.contentHash != null }
+        val matches = hashed.filter { it.contentHash == own }.toMutableList()
+        // Older files without a stored hash: cheap head/tail check first, full hash only if needed
+        // (and remembered, so this file is instant next time).
+        if (unhashed.isNotEmpty()) {
+            val p = runCatching { partialHash(file) }.getOrNull()
+            if (p != null) {
+                unhashed.filter { runCatching { partialHash(it) }.getOrNull() == p }.forEach { c ->
+                    val h = runCatching { fullHash(c) }.getOrNull() ?: return@forEach
+                    repo.setContentHash(c.id, h)
+                    if (h == own) matches += c
+                }
+            }
+        }
+        matches
     }
 
     /** SHA-256 over size + the first and last [WINDOW] bytes, read via the seekable channel. */

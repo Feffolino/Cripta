@@ -34,6 +34,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
     private val thumbs: ThumbnailLoader,
     private val viewerQueue: ViewerQueue,
@@ -51,6 +52,35 @@ class HomeViewModel @Inject constructor(
             runCatching {
                 val s = settings.settingsOnce()
                 repo.purgeExpiredTrash(s.trashDays).forEach { thumbs.evict(it) }
+            }
+            // Resume downloads/conversions that were waiting when Android killed the app.
+            if (repo.claimJobRestore()) runCatching { restorePendingJobs() }
+        }
+    }
+
+    private suspend fun restorePendingJobs() {
+        val queuedUrls = repo.downloads.value.filter { !it.finished }.map { it.url }.toSet()
+        val converting = repo.convertingIds.value
+        for (job in repo.pendingJobs()) {
+            val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
+            when (job.kind) {
+                "download" -> {
+                    val url = o.optString("url")
+                    repo.deletePendingJob(job.id)   // the service stores it again under a new id
+                    if (url.isBlank() || url in queuedUrls) continue
+                    val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
+                    com.cripta.app.work.ConversionService.startDownloadUrl(
+                        appContext, url, o.optInt("height", 0).takeIf { it > 0 },
+                        o.optLong("folder", -1L).takeIf { it >= 0 }, tags,
+                    )
+                }
+                "convert" -> {
+                    val id = o.optString("id")
+                    if (id.isBlank() || id in converting) continue
+                    if (repo.fileById(id) == null) { repo.deletePendingJob(job.id); continue }
+                    val after = com.cripta.app.data.ConvertAfter.entries.getOrNull(o.optInt("after", -1))
+                    com.cripta.app.work.ConversionService.startConvert(appContext, id, after)
+                }
             }
         }
     }

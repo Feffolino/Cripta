@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -117,7 +118,11 @@ class VaultRepository @Inject constructor(
         return next
     }
     /** Remove a waiting or finished link from the list (a running one must be cancelled first). */
-    fun removeDownload(id: String) = _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
+    fun removeDownload(id: String) {
+        val removable = _downloads.value.any { it.id == id && !it.active }
+        _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
+        if (removable) deletePendingJob(id)
+    }
     fun clearFinishedDownloads() = _downloads.update { list -> list.filterNot { it.finished } }
 
     /**
@@ -312,7 +317,8 @@ class VaultRepository @Inject constructor(
         val blob = blobs.blob(uuid)
         // Count the actual plaintext bytes streamed in, rather than trusting OpenableColumns.SIZE
         // (some providers report it wrong). The exact length is what the seekable player needs.
-        val written = context.contentResolver.openInputStream(uri)!!.use { input ->
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val written = context.contentResolver.openInputStream(uri)!!.let { java.security.DigestInputStream(it, md) }.use { input ->
             blob.outputStream().use { out ->
                 FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
                     if (onBytes == null) input.copyTo(enc)
@@ -347,6 +353,7 @@ class VaultRepository @Inject constructor(
             sortWeight = now(),   // new files append to the bottom of the manual order
             width = res?.first,
             height = res?.second,
+            contentHash = md.digest().toHex(),
         )
         db.fileDao().insert(entity)
         notifyChanged()
@@ -397,7 +404,8 @@ class VaultRepository @Inject constructor(
     suspend fun importConvertedMp4(original: FileEntity, mp4: File, replace: Boolean = false): FileEntity = withContext(Dispatchers.IO) {
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
-        val written = mp4.inputStream().use { input ->
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val written = java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
             blobs.blob(uuid).outputStream().use { out ->
                 FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
             }
@@ -426,6 +434,7 @@ class VaultRepository @Inject constructor(
             width = convertedRes?.first ?: original.width,
             height = convertedRes?.second ?: original.height,
             playbackPosMs = if (replace) original.playbackPosMs else null,
+            contentHash = md.digest().toHex(),
         )
         db.fileDao().insert(entity)
         // Carry over the original's tags.
@@ -445,7 +454,8 @@ class VaultRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
-            val written = mp4.inputStream().use { input ->
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val written = java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
                 blobs.blob(uuid).outputStream().use { out ->
                     FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
                 }
@@ -474,6 +484,7 @@ class VaultRepository @Inject constructor(
                 sourceUrl = sourceUrl,
                 width = downloadedRes?.first,
                 height = downloadedRes?.second,
+                contentHash = md.digest().toHex(),
             )
             // The chosen folder may have been deleted while downloading: fall back to the root.
             val safeEntity = if (folderId != null && db.folderDao().byId(folderId) == null) entity.copy(folderId = null) else entity
@@ -829,10 +840,40 @@ class VaultRepository @Inject constructor(
 
     // --- Folders / tags helpers ---
 
-    /** Up to [limit] newest files of each folder, for the folder mosaics. */
+    /**
+     * Up to [limit] newest files of each folder INCLUDING its subfolders, for the folder mosaics
+     * (a folder holding only subfolders still shows covers).
+     */
     suspend fun folderPreviews(folderIds: List<Long>, limit: Int = 4): Map<Long, List<FileEntity>> = withContext(Dispatchers.IO) {
-        folderIds.associateWith { db.fileDao().latestInFolder(it, limit) }
+        val children = snapshotChildren()
+        folderIds.associateWith { root ->
+            val subtree = ArrayList<Long>()
+            val todo = ArrayDeque<Long>().apply { add(root) }
+            while (todo.isNotEmpty() && subtree.size < 500) {
+                val id = todo.removeFirst(); subtree += id
+                children[id]?.let { todo.addAll(it) }
+            }
+            db.fileDao().latestInFolders(subtree, limit)
+        }
     }
+
+    /** Store a hash computed elsewhere (duplicate scan) so the next check is instant. */
+    suspend fun setContentHash(id: String, hash: String) = withContext(Dispatchers.IO) { db.fileDao().setContentHash(id, hash) }
+
+    // --- Persistent job queue (survives the app being killed) ---
+
+    /** Background scope for fire-and-forget DB writes from non-suspending callers. */
+    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    suspend fun putPendingJob(id: String, kind: String, payload: String) = withContext(Dispatchers.IO) {
+        runCatching { db.pendingJobDao().put(com.cripta.app.data.db.PendingJobEntity(id, kind, payload, now())) }
+    }
+    private val jobsRestored = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** True only the first time it is called in this process: restore pending jobs once. */
+    fun claimJobRestore(): Boolean = jobsRestored.compareAndSet(false, true)
+    fun deletePendingJob(id: String) { ioScope.launch { runCatching { db.pendingJobDao().delete(id) } } }
+    suspend fun pendingJobs(): List<com.cripta.app.data.db.PendingJobEntity> =
+        withContext(Dispatchers.IO) { runCatching { db.pendingJobDao().all() }.getOrDefault(emptyList()) }
 
     /** Root-to-folder chain for [folderId] (empty when it doesn't exist). */
     suspend fun folderPath(folderId: Long): List<FolderEntity> = withContext(Dispatchers.IO) {
@@ -893,14 +934,20 @@ class VaultRepository @Inject constructor(
         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, iv))
 
         val manifest = org.json.JSONObject().apply {
-            put("v", 1)
+            // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
+            put("v", 2)
             put("folders", org.json.JSONArray().apply {
-                folders.forEach { put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL).put("createdAt", it.createdAt)) }
+                folders.forEach {
+                    put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL)
+                        .put("createdAt", it.createdAt).put("color", it.color ?: org.json.JSONObject.NULL)
+                        .put("emoji", it.emoji ?: org.json.JSONObject.NULL))
+                }
             })
             put("tags", org.json.JSONArray().apply {
                 tags.forEach {
                     put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)
-                        .put("color", it.color ?: org.json.JSONObject.NULL))
+                        .put("color", it.color ?: org.json.JSONObject.NULL)
+                        .put("pinned", it.pinned).put("order", it.orderIndex))
                 }
             })
             put("files", org.json.JSONArray().apply {
@@ -910,7 +957,26 @@ class VaultRepository @Inject constructor(
                         .put("favorite", fwt.file.isFavorite).put("createdAt", fwt.file.createdAt)
                         .put("folderId", fwt.file.folderId ?: org.json.JSONObject.NULL)
                         .put("durationMs", fwt.file.durationMs ?: org.json.JSONObject.NULL)
+                        .put("sourceUrl", fwt.file.sourceUrl ?: org.json.JSONObject.NULL)
+                        .put("playbackPosMs", fwt.file.playbackPosMs ?: org.json.JSONObject.NULL)
+                        .put("lastPlayedAt", fwt.file.lastPlayedAt ?: org.json.JSONObject.NULL)
+                        .put("width", fwt.file.width ?: org.json.JSONObject.NULL)
+                        .put("height", fwt.file.height ?: org.json.JSONObject.NULL)
+                        .put("contentHash", fwt.file.contentHash ?: org.json.JSONObject.NULL)
                         .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } }))
+                }
+            })
+            // Saved filters reference tags by id, which change on restore: store names instead.
+            val tagNameById = tags.associate { it.id to it.name }
+            put("savedFilters", org.json.JSONArray().apply {
+                db.savedFilterDao().all().first().forEach { sf ->
+                    val f = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: return@forEach
+                    fun names(key: String) = org.json.JSONArray().apply {
+                        f.optJSONArray(key)?.let { a -> for (i in 0 until a.length()) tagNameById[a.getLong(i)]?.let { put(it) } }
+                    }
+                    f.put("tagNames", names("tags")).put("exNames", names("ex")).remove("tags")
+                    f.remove("ex")
+                    put(org.json.JSONObject().put("name", sf.name).put("filter", f))
                 }
             })
         }.toString().toByteArray()
@@ -962,6 +1028,10 @@ class VaultRepository @Inject constructor(
                         val newParent = if (parentOld == null) null else idMap[parentOld]
                         if (parentOld != null && newParent == null) continue // parent not yet inserted
                         val newId = db.folderDao().insert(FolderEntity(name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now())))
+                        // v2: folder colour / emoji.
+                        val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
+                        val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
+                        if (color != null || emoji != null) db.folderDao().setStyle(newId, color, emoji)
                         idMap[oldId] = newId; it.remove(); progressed = true
                     }
                     if (!progressed) break
@@ -973,6 +1043,9 @@ class VaultRepository @Inject constructor(
                     val o = tArr.getJSONObject(i)
                     val name = o.getString("name")
                     db.tagDao().insert(TagEntity(name = name))
+                    // v2: pin and custom order.
+                    if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
+                    if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
                     if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
                     // Optional (older backups have no colour).
                     if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
@@ -997,11 +1070,35 @@ class VaultRepository @Inject constructor(
                         isFavorite = o.optBoolean("favorite", false),
                         createdAt = o.optLong("createdAt", now()), importedAt = now(), wrappedKeyset = wrapped,
                         durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
+                        // v2 extras (absent in older backups).
+                        sourceUrl = o.optStr("sourceUrl"),
+                        playbackPosMs = o.optLongOrNull("playbackPosMs"),
+                        lastPlayedAt = o.optLongOrNull("lastPlayedAt"),
+                        width = o.optLongOrNull("width")?.toInt(),
+                        height = o.optLongOrNull("height")?.toInt(),
+                        contentHash = o.optStr("contentHash"),
                     )
                     db.fileDao().insert(entity)
                     val tagNames = o.getJSONArray("tags")
                     val names = (0 until tagNames.length()).map { tagNames.getString(it) }
-                    if (names.isNotEmpty()) setTags(uuid, names)
+                    // Link directly (setTags would mark every tag as "recently used").
+                    for (n in names.distinct()) {
+                        val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
+                        db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
+                    }
+                }
+                // v2: saved filters, tag names mapped back to the restored tag ids.
+                manifest.optJSONArray("savedFilters")?.let { arr ->
+                    for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        val f = o.optJSONObject("filter") ?: continue
+                        fun ids(key: String) = org.json.JSONArray().apply {
+                            f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
+                        }
+                        f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
+                        f.remove("tagNames"); f.remove("exNames")
+                        db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", "Filtro"), json = f.toString()))
+                    }
                 }
                 notifyChanged()
                 return@withContext fileArr.length()
@@ -1057,6 +1154,13 @@ class VaultRepository @Inject constructor(
         fun isPdf(mime: String) = mime == "application/pdf"
     }
 }
+
+private fun org.json.JSONObject.optStr(key: String): String? =
+    if (has(key) && !isNull(key)) optString(key).takeIf { it.isNotBlank() } else null
+private fun org.json.JSONObject.optLongOrNull(key: String): Long? =
+    if (has(key) && !isNull(key)) optLong(key) else null
+
+private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
 /** Convenience for reading a file entity's blob file directly (used by the media source). */
 fun BlobStore.fileFor(entity: FileEntity): File = blob(entity.id)
