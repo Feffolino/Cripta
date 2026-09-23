@@ -38,27 +38,29 @@ class AppUpdater @Inject constructor() {
         runCatching {
             val json = httpGet("https://api.github.com/repos/$REPO/releases?per_page=20")
             val arr = JSONArray(json)
-            var best: Release? = null
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                if (obj.optBoolean("draft")) continue
-                if (!includePrerelease && obj.optBoolean("prerelease")) continue
-                val tag = obj.optString("tag_name")            // e.g. v0.1.0-b123
-                val build = tag.substringAfterLast("-b", "").toIntOrNull() ?: continue
-                val assets = obj.optJSONArray("assets") ?: continue
-                var apkUrl: String? = null; var size = 0L
+            // Candidates newest build first; the APK is looked up only until one is found.
+            val candidates = (0 until arr.length()).map { arr.getJSONObject(it) }
+                .filter { !it.optBoolean("draft") && (includePrerelease || !it.optBoolean("prerelease")) }
+                .mapNotNull { o ->
+                    val tag = o.optString("tag_name")            // e.g. v0.1.0-b123
+                    tag.substringAfterLast("-b", "").toIntOrNull()?.let { build -> Triple(o, tag, build) }
+                }
+                .sortedByDescending { it.third }
+            for ((obj, tag, build) in candidates) {
+                // The list sometimes comes back with an empty "assets" array even when the APK is
+                // attached, so fall back to the release's own assets endpoint.
+                val embedded = obj.optJSONArray("assets")
+                val assets = if (embedded != null && embedded.length() > 0) embedded
+                    else obj.optString("assets_url").takeIf { it.isNotBlank() }
+                        ?.let { runCatching { JSONArray(httpGet(it)) }.getOrNull() } ?: continue
                 for (j in 0 until assets.length()) {
                     val a = assets.getJSONObject(j)
                     if (a.optString("name").endsWith(".apk")) {
-                        apkUrl = a.optString("browser_download_url"); size = a.optLong("size"); break
+                        return@runCatching Release(tag.removePrefix("v"), build, a.optString("browser_download_url"), a.optLong("size"))
                     }
                 }
-                val url = apkUrl ?: continue
-                if (best == null || build > best!!.buildNumber) {
-                    best = Release(tag.removePrefix("v"), build, url, size)
-                }
             }
-            best
+            null
         }.getOrNull()
     }
 
