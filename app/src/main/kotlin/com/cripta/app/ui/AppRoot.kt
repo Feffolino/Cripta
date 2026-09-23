@@ -8,6 +8,7 @@ import androidx.compose.animation.scaleOut
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
@@ -53,6 +54,11 @@ import com.cripta.app.ui.vault.VaultScreen
 import com.cripta.app.ui.viewer.ViewerScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
+
+/** Real left/right camera-cutout widths (Compose's displayCutout insets can report 0 here), for
+ *  fullscreen screens such as the player that lay out their own chrome. */
+data class SideCutout(val start: androidx.compose.ui.unit.Dp = 0.dp, val end: androidx.compose.ui.unit.Dp = 0.dp)
+val LocalSideCutout = androidx.compose.runtime.compositionLocalOf { SideCutout() }
 
 private val tabs = listOf(
     Tab("home", "Home", Icons.Filled.Home),
@@ -169,14 +175,17 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             Modifier.padding(pad).fillMaxSize().then(
                 // Keep the tab screens (rail + content) clear of the side camera cutout; the
                 // fullscreen player handles its own insets.
-                if (showBar) Modifier.padding(start = cutoutStart, end = cutoutEnd) else Modifier,
+                // (Every non-player route: favourites and notes have top bars under the camera too.)
+                if (currentRoute?.startsWith("viewer") != true) Modifier.padding(start = cutoutStart, end = cutoutEnd) else Modifier,
             ),
         ) {
+          androidx.compose.runtime.CompositionLocalProvider(LocalSideCutout provides SideCutout(cutoutStart, cutoutEnd)) {
             if (showBar && landscape) {
                 // Inset the rail from the left edge / status bar so its labels don't touch it.
                 NavigationRail(
+                    // Top only (not the bottom gesture inset): 4 labelled items must fit a short screen.
                     windowInsets = WindowInsets.systemBars.only(
-                        WindowInsetsSides.Start + WindowInsetsSides.Vertical,
+                        WindowInsetsSides.Start + WindowInsetsSides.Top,
                     ),
                 ) {
                     tabs.forEach { tab ->
@@ -193,7 +202,12 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
             NavHost(
                 navController = nav,
                 startDestination = "home",
-                modifier = Modifier.weight(1f),
+                // With the rail shown it already took the start system-bar inset: consume it so the
+                // screens' own Scaffolds don't add the same gap again.
+                modifier = Modifier.weight(1f).then(
+                    if (showBar && landscape) Modifier.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Start))
+                    else Modifier,
+                ),
                 // Subtle scale + fade so entering a screen feels like it comes forward, not a flat
                 // cut. Exit is quicker than enter so navigation feels responsive.
                 enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.97f, animationSpec = tween(220)) },
@@ -251,6 +265,7 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 com.cripta.app.ui.note.NoteEditorScreen(fileId = entry.arguments?.getString("id"), onBack = { nav.popBackStack() })
             }
             }
+          }
         }
     }
 }

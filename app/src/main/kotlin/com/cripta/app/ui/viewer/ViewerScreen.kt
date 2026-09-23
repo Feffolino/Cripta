@@ -259,9 +259,9 @@ fun ViewerScreen(
                 visible = chromeVisible && !inPip && showStrip,
                 enter = fadeIn(),
                 exit = fadeOut(),
+                // Between the top chrome and the seek bar, clear of the side camera.
                 modifier = Modifier.align(Alignment.CenterStart)
-                    .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Left))
-                    .padding(start = 8.dp),
+                    .padding(start = 8.dp + com.cripta.app.ui.LocalSideCutout.current.start, top = 104.dp, bottom = 96.dp),
             ) {
                 Filmstrip(ids, pagerState.currentPage, vm, vertical = true, onPick = pick)
             }
@@ -317,7 +317,9 @@ fun ViewerScreen(
                 },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 // Bar background reaches the top edge; only its content is inset below the camera.
-                windowInsets = chromeInsets,
+                windowInsets = chromeInsets.union(com.cripta.app.ui.LocalSideCutout.current.let {
+                    WindowInsets(left = it.start, right = it.end)
+                }),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Black.copy(alpha = 0.55f),
                     titleContentColor = Color.White,
@@ -472,7 +474,12 @@ fun ViewerScreen(
     if (converting && !convertInBackground) {
         androidx.compose.ui.window.Popup(
             alignment = Alignment.BottomCenter,
-            offset = androidx.compose.ui.unit.IntOffset(0, -180),
+            // Above the seek bar (dp, not raw pixels, so it lands in the same place on every screen).
+            offset = with(androidx.compose.ui.platform.LocalDensity.current) {
+                val landscapeNow = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                androidx.compose.ui.unit.IntOffset(0, -(if (landscapeNow) 112.dp else 180.dp).roundToPx())
+            },
         ) {
             Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large) {
                 Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -727,7 +734,7 @@ private fun PdfView(bytes: ByteArray) {
                 if (b != null) {
                     Image(b.asImageBitmap(), null, Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 } else {
-                    Box(Modifier.fillMaxWidth().height(480.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.White)
                     }
                 }
@@ -812,6 +819,10 @@ private fun VideoPlayer(
     val rotationLocked by vm.rotationLocked.collectAsState()
     val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
     val activity = LocalContext.current as? android.app.Activity
+    val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val sideCut = com.cripta.app.ui.LocalSideCutout.current
+    val cutPx = with(androidx.compose.ui.platform.LocalDensity.current) { sideCut.start.roundToPx() to sideCut.end.roundToPx() }
     /** Overlay for the gesture in progress: "2×", "☀ 60%", "🔊 40%". */
     var gestureLabel by remember { mutableStateOf<String?>(null) }
     var videoAspect by remember(file.id) { mutableStateOf<android.util.Rational?>(null) }
@@ -935,6 +946,8 @@ private fun VideoPlayer(
             // to the video surface (scaleX/scaleY), which the surrounding Box clips.
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
+                // Keep the controls (time, buttons) clear of a side camera; the video stays full-bleed.
+                pv.findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(cutPx.first, 0, cutPx.second, 0)
                 val scale = modes[modeIdx].third * userZoom
                 pv.videoSurfaceView?.let { surface ->
                     // Stop the content frame from clipping the scaled surface to the video rect.
@@ -1042,8 +1055,9 @@ private fun VideoPlayer(
                 }
         )
         // Bottom-centre strip just above the seek bar: swipe up opens tags & details, like on
-        // photos. It stays clear of the time bar and of the centre play/pause button.
-        if (!inPip) Box(
+        // photos. It stays clear of the time bar and of the centre play/pause button. Not in
+        // landscape: the short screen would put it over play/pause (swipe up works elsewhere).
+        if (!inPip && !vLandscape) Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.4f).height(56.dp)
                 .offset(y = -seekBarClearance)
                 .pointerInput(Unit) { detectTapGestures(onTap = { toggleController() }) }
@@ -1063,7 +1077,7 @@ private fun VideoPlayer(
 
         gestureLabel?.let { lbl ->
             Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 90.dp)) {
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) 168.dp else 120.dp)) {
                 Text(lbl, color = Color.White, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
             }
@@ -1088,11 +1102,12 @@ private fun VideoPlayer(
             visible = controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterEnd)
-                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Right))
-                .padding(end = 12.dp),
+            // Landscape: a row under the top chrome (a column would overlap the quick tags above
+            // and the seek bar below on a short screen). Portrait: a column on the right edge.
+            modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = 112.dp) else Modifier.align(Alignment.CenterEnd))
+                .padding(end = 12.dp + sideCut.end),
         ) {
-            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+          val sideButtons: @Composable () -> Unit = {
                 Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
                     IconButton(onClick = {
                         modeIdx = (modeIdx + 1) % modes.size
@@ -1130,14 +1145,16 @@ private fun VideoPlayer(
                         }
                     }
                 }
-            }
+          }
+            if (vLandscape) Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) { sideButtons() }
+            else Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) { sideButtons() }
         }
 
         // Brief overlay naming the resize mode just selected.
         modeLabel?.let { lbl ->
             Surface(
                 color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 90.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) 168.dp else 120.dp),
             ) {
                 Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
@@ -1151,8 +1168,9 @@ private fun VideoPlayer(
  */
 @Composable
 private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vertical: Boolean = false, onPick: (Int) -> Unit) {
-    val from = (current - 3).coerceAtLeast(0)
-    val to = (current + 3).coerceAtMost(ids.lastIndex)
+    val span = if (vertical) 2 else 3
+    val from = (current - span).coerceAtLeast(0)
+    val to = (current + span).coerceAtMost(ids.lastIndex)
     val thumbs: @Composable () -> Unit = {
         for (i in from..to) {
             androidx.compose.runtime.key(ids[i]) {
@@ -1177,6 +1195,8 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vert
         Column(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            // Scrolls if even 5 thumbs don't fit between the top chrome and the seek bar.
+            modifier = Modifier.verticalScroll(rememberScrollState()),
         ) { thumbs() }
     } else {
         Row(
