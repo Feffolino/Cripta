@@ -122,6 +122,9 @@ class SettingsViewModel @Inject constructor(
         if (color != null) repo.setTagColorByName(name, color)
     }
     fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
+    fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
+    fun setShowRecentTags(v: Boolean) = viewModelScope.launch { store.setShowRecentTags(v) }
+    fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
     fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }

@@ -48,6 +48,10 @@ data class DisplayPrefs(
     val showStatsStrip: Boolean = true,    // the counts strip above the grid
     /** Resume videos where they were left, with a progress bar on their cover. */
     val resumePlayback: Boolean = true,
+    /** Tag pickers: show a "Recenti" row with the last used tags. */
+    val showRecentTags: Boolean = true,
+    /** Viewer: quick-tag bar (pinned + recent tags, one tap to toggle). */
+    val viewerQuickTags: Boolean = true,
 )
 
 /**
@@ -120,6 +124,8 @@ class SettingsStore @Inject constructor(
     private val dlTagsKey = androidx.datastore.preferences.core.stringPreferencesKey("dl_tag_ids")
     private val dlHeightKey = intPreferencesKey("dl_height")
     private val convertAfterKey = intPreferencesKey("convert_after")
+    private val recentTagsKey = booleanPreferencesKey("recent_tags")
+    private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -148,6 +154,8 @@ class SettingsStore @Inject constructor(
                 showQualityBadge = p[qualityBadgeKey] ?: true,
                 showStatsStrip = p[statsStripKey] ?: true,
                 resumePlayback = p[resumeKey] ?: true,
+                showRecentTags = p[recentTagsKey] ?: true,
+                viewerQuickTags = p[quickTagsKey] ?: true,
             ),
             trashEnabled = p[trashKey] ?: false,
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
@@ -178,6 +186,8 @@ class SettingsStore @Inject constructor(
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
     suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
+    suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
+    suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal } }
     suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
     suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }

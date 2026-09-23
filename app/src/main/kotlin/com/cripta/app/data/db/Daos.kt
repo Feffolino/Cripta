@@ -48,6 +48,15 @@ interface TagDao {
     @Query("UPDATE tags SET alias = :alias WHERE name = :name")
     suspend fun setAlias(name: String, alias: String?)
 
+    @Query("UPDATE tags SET pinned = :pinned WHERE name = :name")
+    suspend fun setPinned(name: String, pinned: Boolean)
+
+    @Query("UPDATE tags SET lastUsedAt = :at WHERE id = :id")
+    suspend fun touch(id: Long, at: Long)
+
+    @Query("DELETE FROM file_tags WHERE fileId = :fileId AND tagId = :tagId")
+    suspend fun unlink(fileId: String, tagId: Long)
+
     @Query("UPDATE tags SET color = :color WHERE id = :id")
     suspend fun setColor(id: Long, color: Int?)
 

@@ -109,8 +109,8 @@ class ConversionService : Service() {
                     MODE_IMPORT -> {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
-                        importBatch(uris, folderId)
-                        applyDeletePolicy(uris)
+                        val imported = importBatch(uris, folderId)
+                        applyDeletePolicy(imported)
                     }
                     MODE_DOWNLOAD -> {
                         val ids = intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
@@ -171,8 +171,9 @@ class ConversionService : Service() {
      * of the current file) to [VaultRepository.importState] for the in-app banner and to the
      * notification, then a final "completed" notification with the outcome.
      */
-    private suspend fun importBatch(uris: List<Uri>, folderId: Long?) {
-        if (uris.isEmpty()) return
+    private suspend fun importBatch(uris: List<Uri>, folderId: Long?): List<Uri> {
+        if (uris.isEmpty()) return emptyList()
+        val done = mutableListOf<Uri>()
         repo.importBegin(uris.size)
         val start = SystemClock.elapsedRealtime()
         try {
@@ -202,6 +203,7 @@ class ConversionService : Service() {
                     }
                 }
                 repo.importItemDone(ok)
+                if (ok) done += uri
                 val cur = repo.importState.value
                 val elapsed = SystemClock.elapsedRealtime() - start
                 val left = cur.total - cur.done
@@ -217,10 +219,11 @@ class ConversionService : Service() {
                         if (fin.failed > 0) append(" · ${fin.failed} non importati")
                         if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
                     }
-                    notifyResult(title, text)
+                    notifyResult(title, text, ResultKind.IMPORT)
                 }
             }
         }
+        return done
     }
 
     /** Conversions run strictly one at a time: parallel transcodes fight over the hardware
@@ -432,28 +435,28 @@ class ConversionService : Service() {
             if (!isPlayableVideo(produced, null)) {
                 val msg = "Nessun video valido (link errato o DRM)"
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download fallito", msg)
+                notifyResult("Download fallito", msg, ResultKind.DOWNLOAD)
                 return
             }
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
             val file = repo.importDownloadedMp4(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
             set { it.copy(phase = VaultRepository.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
-            notifyResult("Download completato", name)
+            notifyResult("Download completato", name, ResultKind.DOWNLOAD)
         } catch (e: kotlinx.coroutines.CancellationException) {
             set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
-            notifyResult("Download annullato", null)
+            notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
             throw e
         } catch (e: Exception) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
             // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
                 set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
-                notifyResult("Download annullato", null)
+                notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
             } else {
                 android.util.Log.e("ConversionService", "download failed: $url", e)
                 val msg = (e.message ?: e.javaClass.simpleName).take(200)
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download fallito", msg)
+                notifyResult("Download fallito", msg, ResultKind.DOWNLOAD)
             }
         } finally {
             ytdlpProcessId = null
@@ -467,10 +470,14 @@ class ConversionService : Service() {
     private fun applyDeletePolicy(uris: List<Uri>) {
         val policy = runCatching { kotlinx.coroutines.runBlocking { settings.settingsOnce().deleteOriginalPolicy } }
             .getOrDefault(DeleteOriginalPolicy.NEVER)
-        if (policy == DeleteOriginalPolicy.ALWAYS) runCatching {
-            kotlinx.coroutines.runBlocking { repo.deleteOriginals(uris) }
+        if (uris.isEmpty()) return
+        // Only originals that were actually imported are ever touched (a failed import keeps its file).
+        when (policy) {
+            DeleteOriginalPolicy.ALWAYS -> runCatching { kotlinx.coroutines.runBlocking { repo.deleteOriginals(uris) } }
+            // "Chiedi": hand them to the app, which shows the keep/delete prompt in the vault.
+            DeleteOriginalPolicy.ASK -> repo.addPendingOriginals(uris)
+            DeleteOriginalPolicy.NEVER -> Unit
         }
-        // ASK is treated as keep in background (no UI available here).
     }
 
     private fun etaText(ms: Long): String {
@@ -483,7 +490,14 @@ class ConversionService : Service() {
             val mgr = getSystemService(NotificationManager::class.java)
             if (mgr.getNotificationChannel(CHANNEL) == null) {
                 mgr.createNotificationChannel(
-                    NotificationChannel(CHANNEL, "Operazioni Cripta", NotificationManager.IMPORTANCE_LOW)
+                    NotificationChannel(CHANNEL, "Operazioni in corso", NotificationManager.IMPORTANCE_LOW)
+                )
+            }
+            // Outcomes get their own channel (normal importance) so they are noticed, while the
+            // ongoing progress stays silent.
+            if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
+                mgr.createNotificationChannel(
+                    NotificationChannel(RESULT_CHANNEL, "Operazioni completate", NotificationManager.IMPORTANCE_DEFAULT)
                 )
             }
         }
@@ -498,12 +512,15 @@ class ConversionService : Service() {
         cancelMode: String = MODE_CANCEL,
     ): Notification {
         val b = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(sub)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(100, pct, indeterminate)
+            .setContentIntent(openAppIntent())
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             val pi = android.app.PendingIntent.getService(
@@ -525,15 +542,41 @@ class ConversionService : Service() {
      * onStartCommand's finally tears down with stopForeground(REMOVE) the instant the job ends —
      * a result posted there just flashes and disappears.
      */
-    private fun notifyResult(title: String, text: String?) {
-        val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+    /** Which kind of operation a result belongs to; each keeps its own notification. */
+    private enum class ResultKind(val id: Int) { IMPORT(4220), DOWNLOAD(4221), CONVERT(4222) }
+
+    /** Tap on a notification: bring the app to the front. */
+    private fun openAppIntent(): android.app.PendingIntent = android.app.PendingIntent.getActivity(
+        this, 10,
+        Intent(this, com.cripta.app.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    /**
+     * Post a terminal result (completed / failed / cancelled) as a dismissible notification. Each
+     * [kind] has its own id (an import result no longer overwrites a download one), and never
+     * [NOTIF_ID], the ongoing foreground notification that is removed when the job ends. File names
+     * are hidden on the lock screen (public version without details).
+     */
+    private fun notifyResult(title: String, text: String?, kind: ResultKind = ResultKind.CONVERT) {
+        val public = NotificationCompat.Builder(this, RESULT_CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(BRAND_COLOR)
+            .setContentTitle("Cripta")
+            .setContentText(title)
+            .build()
+        val n = NotificationCompat.Builder(this, RESULT_CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(openAppIntent())
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public)
             .setAutoCancel(true)
-            .setOnlyAlertOnce(true)
             .build()
-        getSystemService(NotificationManager::class.java).notify(RESULT_NOTIF_ID, n)
+        getSystemService(NotificationManager::class.java).notify(kind.id, n)
     }
 
     /** Dismissible completion notification offering to delete or keep the original video. */
@@ -544,9 +587,11 @@ class ConversionService : Service() {
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(BRAND_COLOR)
             .setContentTitle("Video convertito")
             .setContentText("Copia MP4 creata. Eliminare l'originale?")
+            .setContentIntent(openAppIntent())
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .addAction(0, "Elimina originale", pi(MODE_DELETE_ORIG, 2))
@@ -580,7 +625,8 @@ class ConversionService : Service() {
         private const val EX_HEIGHT = "height"
         private const val EX_TAGS = "tags"
         private const val DONE_NOTIF_ID = 4212
-        private const val RESULT_NOTIF_ID = 4213
+        private const val RESULT_CHANNEL = "results"
+        private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?) {
             val i = Intent(ctx, ConversionService::class.java).apply {
