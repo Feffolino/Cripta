@@ -266,6 +266,13 @@ fun SettingsScreen(
                                     Switch(checked = s.display.resumePlayback, onCheckedChange = { vm.setResumePlayback(it) })
                                 }
                                 ToggleRow("Ripeti il video in loop", s.videoLoop) { vm.setVideoLoop(it) }
+                                ToggleRow("Rotazione automatica (orizzontale per i video orizzontali)", s.autoRotate) { vm.setAutoRotate(it) }
+                                Text("Doppio tocco sui lati: salta di", style = MaterialTheme.typography.labelLarge)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    listOf(5, 10, 30).forEach { v ->
+                                        FilterChip(selected = s.seekStepSec == v, onClick = { vm.setSeekStep(v) }, label = { Text("$v s") })
+                                    }
+                                }
                             }
                         }
                         item { MoreOptions(showAdvanced) { showAdvanced = it } }
@@ -273,6 +280,15 @@ fun SettingsScreen(
                             item {
                                 Section("Altre opzioni") {
                                     ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
+                                    ToggleRow("Luminosità e volume trascinando sui lati", s.gestureControls) { vm.setGestureControls(it) }
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Picture-in-Picture")
+                                            Text("Uscendo dall'app il video continua in una finestrella sopra le altre app: il contenuto resta visibile a chi guarda lo schermo.",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Switch(checked = s.pictureInPicture, onCheckedChange = { vm.setPictureInPicture(it) })
+                                    }
                                 }
                             }
                             item {
@@ -748,6 +764,10 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Riprendi da dove eri rimasto", "riprendi posizione resume", SettingsPage.VIDEO),
     Triple("Ripeti in loop", "loop ripeti", SettingsPage.VIDEO),
     Triple("Avvia senza audio", "muto audio", SettingsPage.VIDEO),
+    Triple("Salto con doppio tocco", "doppio tocco salta secondi avanti indietro", SettingsPage.VIDEO),
+    Triple("Luminosità e volume con i gesti", "gesti luminosità volume", SettingsPage.VIDEO),
+    Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
+    Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
     Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
     Triple("Riga Recenti", "recenti ultime", SettingsPage.ETICHETTE),

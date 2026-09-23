@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -19,6 +20,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -41,6 +43,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.ScreenLockRotation
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -92,6 +96,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.AudioAttributes
@@ -149,7 +154,17 @@ fun ViewerScreen(
             it.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             it.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
-        onDispose { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+        onDispose {
+            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // Undo player-only changes: gesture brightness and auto-rotation/lock.
+            (view.context as? android.app.Activity)?.let { act ->
+                act.window.attributes = act.window.attributes.apply {
+                    screenBrightness = android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                }
+                act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            vm.rotationLocked.value = false
+        }
     }
 
     LaunchedEffect(message) {
@@ -187,7 +202,28 @@ fun ViewerScreen(
     var convertInBackground by remember { mutableStateOf(false) }
     LaunchedEffect(converting) { if (converting) convertInBackground = false }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black)
+            // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel.
+            // Videos consume their touches in the player, so they use the handle below instead.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Final)
+                    var dx = 0f; var dy = 0f
+                    var valid = true
+                    while (true) {
+                        val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Final)
+                        if (ev.changes.size > 1) { valid = false }
+                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        if (ch.isConsumed) valid = false
+                        dx += ch.position.x - ch.previousPosition.x
+                        dy += ch.position.y - ch.previousPosition.y
+                        if (!ch.pressed) break
+                    }
+                    if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
+                }
+            },
+    ) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             MediaPage(
                 id = ids[page],
@@ -200,8 +236,39 @@ fun ViewerScreen(
             )
         }
 
+        val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
+        // Bottom chrome: filmstrip of nearby files + the handle that opens the details panel.
+        val scope = rememberCoroutineScope()
+        val onVideo = currentFile?.let { com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } == true
         AnimatedVisibility(
-            visible = chromeVisible,
+            visible = chromeVisible && !inPip,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                // Above the player's seek bar for videos.
+                .padding(bottom = if (onVideo) 112.dp else 20.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (ids.size > 1) {
+                    Filmstrip(ids, pagerState.currentPage, vm) { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
+                }
+                Surface(
+                    color = Color.Black.copy(alpha = 0.55f), shape = CircleShape,
+                    modifier = Modifier.padding(top = 8.dp)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { change, dy -> if (dy < -8f) { change.consume(); showTags = true } }
+                        }
+                        .clickable { showTags = true },
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        Text(" Etichette e dettagli", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = chromeVisible && !inPip,
             // Fade only (no slide): a sliding bar moves the action icons under the finger, so a tap
             // on e.g. the tags button could miss while the bar was animating — it looked visible but
             // did nothing. Fading keeps each button in place and hittable the whole time it shows.
@@ -255,7 +322,7 @@ fun ViewerScreen(
                                 )
                             }
                             androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Informazioni") },
+                                text = { Text("Etichette e dettagli") },
                                 leadingIcon = { Icon(Icons.Filled.Info, null) },
                                 onClick = { menuOpen = false; showInfo = true },
                             )
@@ -313,23 +380,16 @@ fun ViewerScreen(
     }
 
     val file = currentFile
-    if (showTags && file != null) {
-        // Load the file's current tags first (null = not loaded yet) so the editor opens with
-        // them already selected instead of empty.
-        val initial by produceState<List<String>?>(initialValue = null, file.id, refresh) { value = vm.tagNamesOf(file.id) }
-        initial?.let { current ->
-            TagEditorDialog(
-                allTags = allTags,
-                initialSelected = current,
-                onConfirm = { vm.setTags(file.id, it); showTags = false },
-                onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
-                onCreateTag = { name, alias -> vm.createTag(name, alias) },
-                onDismiss = { showTags = false },
-                showRecents = displayPrefs.showRecentTags,
-                onSetColor = { name, c -> vm.setTagColor(name, c) },
-                onSetPinned = { name, p -> vm.setTagPinned(name, p) },
-            )
-        }
+    // Tags + details together in one panel (swipe up, the tags icon, or "Informazioni").
+    if ((showTags || showInfo) && file != null) {
+        DetailsSheet(
+            file = file,
+            allTags = allTags,
+            refresh = refresh,
+            showRecents = displayPrefs.showRecentTags,
+            vm = vm,
+            onDismiss = { showTags = false; showInfo = false },
+        )
     }
     val trashOn by vm.trashEnabled.collectAsState()
     if (confirmDelete && file != null) {
@@ -346,57 +406,6 @@ fun ViewerScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annulla") } },
-        )
-    }
-    if (showInfo && file != null) {
-        val infoTags by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
-        val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
-        val videoDiag by produceState(initialValue = "", file.id, isVid) {
-            value = if (isVid) vm.videoInfo(file) else ""
-        }
-        AlertDialog(
-            onDismissRequest = { showInfo = false },
-            title = { Text("Informazioni") },
-            text = {
-                var showTech by remember { mutableStateOf(false) }
-                androidx.compose.foundation.text.selection.SelectionContainer {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        InfoLine("Nome", file.originalName)
-                        InfoLine("Tipo", file.mimeType)
-                        InfoLine("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
-                        com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { InfoLine("Durata", it) }
-                        InfoLine(
-                            "Aggiunto",
-                            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                                .format(java.util.Date(file.createdAt)),
-                        )
-                        LinkInfoLine(
-                            value = file.sourceUrl?.takeIf { it.isNotBlank() },
-                            onSet = { vm.setSourceUrl(file.id, it) },
-                        )
-                        if (infoTags.isNotEmpty()) InfoLine("Tag", infoTags.joinToString(", "))
-                        if (isVid && videoDiag.isNotBlank()) {
-                            Row(
-                                Modifier.fillMaxWidth().clickable { showTech = !showTech }
-                                    .padding(top = 12.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall,
-                                    modifier = Modifier.weight(1f))
-                                Icon(
-                                    if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                    if (showTech) "Comprimi" else "Espandi",
-                                )
-                            }
-                            if (showTech) {
-                                Text(videoDiag, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Chiudi") } },
         )
     }
     if (confirmDownload && file != null) {
@@ -770,6 +779,13 @@ private fun VideoPlayer(
     var panY by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(modeIdx, file.id) { userZoom = 1f; panX = 0f; panY = 0f }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    val prefs by vm.playback.collectAsState()
+    val rotationLocked by vm.rotationLocked.collectAsState()
+    val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
+    val activity = LocalContext.current as? android.app.Activity
+    /** Overlay for the gesture in progress: "2×", "☀ 60%", "🔊 40%". */
+    var gestureLabel by remember { mutableStateOf<String?>(null) }
+    var videoAspect by remember(file.id) { mutableStateOf<android.util.Rational?>(null) }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(seekLabel) { if (seekLabel != null) { delay(650); seekLabel = null } }
@@ -780,14 +796,42 @@ private fun VideoPlayer(
             override fun onPlaybackStateChanged(state: Int) {
                 buffering = state == Player.STATE_BUFFERING
             }
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                if (videoSize.width <= 0 || videoSize.height <= 0) return
+                val w = videoSize.width * videoSize.pixelWidthHeightRatio
+                val h = videoSize.height.toFloat()
+                // Keep within the PiP limits (between 1:2.39 and 2.39:1).
+                val ratio = (w / h).coerceIn(1f / 2.39f, 2.39f)
+                videoAspect = android.util.Rational((ratio * 1000).toInt(), 1000)
+            }
         }
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
             if (resumeEnabled) vm.savePosition(file.id, player.currentPosition, player.duration)
+            com.cripta.app.viewer.PipController.armedAspect = null
+            // Leaving this video (e.g. swiping to a photo): drop its auto-rotation unless locked.
+            if (!vm.rotationLocked.value) activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             player.release()
         }
     }
+    // Auto-rotate to the video's orientation (unless the user locked the rotation).
+    LaunchedEffect(videoAspect, prefs.autoRotate, rotationLocked) {
+        val a = videoAspect ?: return@LaunchedEffect
+        if (activity == null || rotationLocked) return@LaunchedEffect
+        activity.requestedOrientation = when {
+            !prefs.autoRotate -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            a.toFloat() > 1.05f -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            a.toFloat() < 0.95f -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+    // Picture-in-Picture: armed while this video is on screen and the option is on.
+    LaunchedEffect(videoAspect, prefs.pip) {
+        com.cripta.app.viewer.PipController.armedAspect = if (prefs.pip) (videoAspect ?: android.util.Rational(16, 9)) else null
+    }
+    // In PiP only the video shows: no controller.
+    LaunchedEffect(inPip) { playerViewRef?.useController = !inPip }
 
     fun seekBy(deltaMs: Long) {
         val dur = player.duration
@@ -880,26 +924,84 @@ private fun VideoPlayer(
         // the bottom seek bar — otherwise, in landscape where the screen is short, they overlap
         // the time bar's ends and swallow the drag, making the slider impossible to move.
         val seekBarClearance = 96.dp
+        val stepMs = prefs.seekStepSec * 1000L
+        val scope = rememberCoroutineScope()
+        // Hold on a side = 2x speed until release (the menu speed setting is restored after).
+        suspend fun androidx.compose.foundation.gestures.PressGestureScope.holdForSpeed() {
+            val job = scope.launch {
+                delay(450)
+                val before = player.playbackParameters.speed
+                player.setPlaybackSpeed(2f)
+                gestureLabel = "2×"
+                try { kotlinx.coroutines.awaitCancellation() } finally {
+                    player.setPlaybackSpeed(before)
+                    gestureLabel = null
+                }
+            }
+            tryAwaitRelease()
+            job.cancel()
+        }
+        // Vertical drag on a side: left = screen brightness, right = media volume.
+        fun Modifier.sideDrag(brightness: Boolean): Modifier = if (!prefs.gestures || inPip) this else pointerInput(brightness) {
+            val audio = activity?.getSystemService(android.media.AudioManager::class.java)
+            var level = 0f
+            detectVerticalDragGestures(
+                onDragStart = {
+                    level = if (brightness) {
+                        activity?.window?.attributes?.screenBrightness?.takeIf { it >= 0f } ?: 0.5f
+                    } else {
+                        val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
+                        (audio?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0).toFloat() / max
+                    }
+                },
+                onDragEnd = { gestureLabel = null },
+                onDragCancel = { gestureLabel = null },
+                onVerticalDrag = { change, dy ->
+                    change.consume()
+                    level = (level - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
+                    if (brightness) {
+                        activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = level.coerceAtLeast(0.01f) } }
+                        gestureLabel = "☀ ${(level * 100).toInt()}%"
+                    } else {
+                        val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
+                        audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (level * max).toInt(), 0)
+                        gestureLabel = "🔊 ${(level * 100).toInt()}%"
+                    }
+                },
+            )
+        }
         Box(
             Modifier.align(Alignment.TopStart).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
-                .pointerInput(Unit) {
+                .pointerInput(stepMs) {
                     detectTapGestures(
-                        onDoubleTap = { seekBy(-10_000); seekLabel = "-10s" },
+                        onDoubleTap = { seekBy(-stepMs); seekLabel = "-${prefs.seekStepSec}s" },
                         onTap = { toggleController() },
+                        onPress = { holdForSpeed() },
                     )
                 }
+                .sideDrag(brightness = true)
         )
         Box(
             Modifier.align(Alignment.TopEnd).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
-                .pointerInput(Unit) {
+                .pointerInput(stepMs) {
                     detectTapGestures(
-                        onDoubleTap = { seekBy(10_000); seekLabel = "+10s" },
+                        onDoubleTap = { seekBy(stepMs); seekLabel = "+${prefs.seekStepSec}s" },
                         onTap = { toggleController() },
+                        onPress = { holdForSpeed() },
                     )
                 }
+                .sideDrag(brightness = false)
         )
+
+        gestureLabel?.let { lbl ->
+            Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 90.dp)) {
+                Text(lbl, color = Color.White, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+            }
+        }
 
         if (buffering) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
@@ -924,12 +1026,27 @@ private fun VideoPlayer(
                 .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Right))
                 .padding(end = 12.dp),
         ) {
-            Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
-                IconButton(onClick = {
-                    modeIdx = (modeIdx + 1) % modes.size
-                    modeLabel = modes[modeIdx].second
-                }) {
-                    Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White)
+            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                    IconButton(onClick = {
+                        modeIdx = (modeIdx + 1) % modes.size
+                        modeLabel = modes[modeIdx].second
+                    }) {
+                        Icon(Icons.Filled.AspectRatio, "Adatta/riempi", tint = Color.White)
+                    }
+                }
+                // Rotation lock: keeps the current orientation (auto-rotate resumes when unlocked).
+                Surface(color = if (rotationLocked) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                    IconButton(onClick = {
+                        val lock = !rotationLocked
+                        vm.rotationLocked.value = lock
+                        activity?.requestedOrientation = if (lock) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+                            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        modeLabel = if (lock) "Rotazione bloccata" else "Rotazione libera"
+                    }) {
+                        Icon(if (rotationLocked) Icons.Filled.ScreenLockRotation else Icons.Filled.ScreenRotation,
+                            if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione", tint = Color.White)
+                    }
                 }
             }
         }
@@ -945,3 +1062,156 @@ private fun VideoPlayer(
         }
     }
 }
+
+/** Horizontal strip of the neighbouring files' covers; tap one to jump to it. */
+@Composable
+private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, onPick: (Int) -> Unit) {
+    val state = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (current - 3).coerceAtLeast(0))
+    LaunchedEffect(current) { state.animateScrollToItem((current - 3).coerceAtLeast(0)) }
+    androidx.compose.foundation.lazy.LazyRow(
+        state = state,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        items(ids.size) { i ->
+            val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
+            val sel = i == current
+            Box(
+                Modifier.size(if (sel) 56.dp else 46.dp).clip(MaterialTheme.shapes.small)
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .then(if (sel) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small) else Modifier)
+                    .clickable { onPick(i) },
+            ) {
+                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            }
+        }
+    }
+}
+
+/**
+ * One panel for everything about the file: its details (size, duration, resolution, date, source
+ * link, technical info) and its tags, editable in place (tap toggles, long-press edits the tag).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DetailsSheet(
+    file: FileEntity,
+    allTags: List<com.cripta.app.data.db.TagEntity>,
+    refresh: Int,
+    showRecents: Boolean,
+    vm: ViewerViewModel,
+    onDismiss: () -> Unit,
+) {
+    val onFile by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
+    val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
+    val videoDiag by produceState(initialValue = "", file.id, isVid) { value = if (isVid) vm.videoInfo(file) else "" }
+    var editTag by remember { mutableStateOf<String?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var showTech by remember { mutableStateOf(false) }
+    val byName = remember(allTags) { allTags.associateBy { it.name } }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+        ) {
+            Column {
+                Text(file.originalName, style = MaterialTheme.typography.titleLarge, maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(
+                    "Aggiunto il " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                        .format(java.util.Date(file.createdAt)),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // Stats-style tiles.
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                DetailTile("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes), Modifier.weight(1f))
+                com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailTile("Durata", it, Modifier.weight(1f)) }
+                if (file.width != null && file.height != null) {
+                    DetailTile("Risoluzione", "${file.width}×${file.height}" +
+                        (com.cripta.app.ui.vault.qualityLabel(file.width, file.height)?.takeIf { isVid }?.let { " · $it" } ?: ""),
+                        Modifier.weight(1.3f))
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Etichette", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = { creating = true }) { Text("+ Nuova") }
+            }
+            Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e 📌.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            com.cripta.app.ui.vault.TagSections(
+                allTags = allTags,
+                extraNames = onFile,
+                showRecents = showRecents,
+                isSelected = { n -> onFile.any { it.equals(n, ignoreCase = true) } },
+                onToggle = { n ->
+                    val t = byName[n]
+                    if (t != null) vm.toggleTag(file.id, t.id)
+                    else vm.setTags(file.id, onFile + n)
+                },
+                onLongPress = { editTag = it },
+            )
+
+            HorizontalDividerCompat()
+            LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Column {
+                    InfoLine("Tipo", file.mimeType)
+                    if (isVid && videoDiag.isNotBlank()) {
+                        Row(
+                            Modifier.fillMaxWidth().clickable { showTech = !showTech }.padding(top = 8.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                            Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (showTech) "Comprimi" else "Espandi")
+                        }
+                        if (showTech) {
+                            Text(videoDiag, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    editTag?.let { name ->
+        val t = byName[name]
+        com.cripta.app.ui.vault.LabelEditorDialog(
+            title = "Modifica #$name",
+            initialName = name,
+            initialAlias = t?.alias ?: "",
+            onConfirm = { _, alias -> vm.setTagAlias(name, alias); editTag = null },
+            onDismiss = { editTag = null },
+            onColor = if (t != null) ({ c -> vm.setTagColor(name, c) }) else null,
+            initialColor = t?.color,
+            onPinned = if (t != null) ({ p -> vm.setTagPinned(name, p) }) else null,
+            initialPinned = t?.pinned == true,
+        )
+    }
+    if (creating) {
+        com.cripta.app.ui.vault.LabelEditorDialog(
+            title = "Nuova etichetta",
+            onConfirm = { name, alias ->
+                vm.createTag(name, alias)
+                vm.setTags(file.id, (onFile + name).distinct())
+                creating = false
+            },
+            onDismiss = { creating = false },
+        )
+    }
+}
+
+@Composable
+private fun DetailTile(label: String, value: String, modifier: Modifier) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = modifier) {
+        Column(Modifier.padding(12.dp)) {
+            Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun HorizontalDividerCompat() = androidx.compose.material3.HorizontalDivider()

@@ -64,12 +64,35 @@ class ViewerViewModel @Inject constructor(
 
     suspend fun fileById(id: String): FileEntity? = repo.fileById(id)
 
-    data class PlaybackPrefs(val loop: Boolean = true, val muted: Boolean = false, val resume: Boolean = true)
+    data class PlaybackPrefs(
+        val loop: Boolean = true,
+        val muted: Boolean = false,
+        val resume: Boolean = true,
+        val seekStepSec: Int = 10,
+        val gestures: Boolean = true,
+        val autoRotate: Boolean = true,
+        val pip: Boolean = false,
+    )
+
+    /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
+    val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map {
+        PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
+            it.gestureControls, it.autoRotate, it.pictureInPicture)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
+
+    /** Orientation lock chosen in the player; kept while swiping between videos. */
+    val rotationLocked = MutableStateFlow(false)
+
+    /** Cover of any file of the browse list (filmstrip). */
+    suspend fun thumbOf(id: String): android.graphics.Bitmap? = repo.fileById(id)?.let { thumbs.load(it) }
 
     /** Playback preferences read when a player is created. */
     suspend fun playbackPrefs(): PlaybackPrefs =
         runCatching { settingsStore.settingsOnce() }.getOrNull()
-            ?.let { PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback) } ?: PlaybackPrefs()
+            ?.let {
+                PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
+                    it.gestureControls, it.autoRotate, it.pictureInPicture)
+            } ?: PlaybackPrefs()
 
     /**
      * Remember where playback stopped. Near the end counts as finished (next time starts over).
