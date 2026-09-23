@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import android.view.View
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
@@ -207,6 +208,10 @@ fun ViewerScreen(
     var convertInBackground by remember { mutableStateOf(false) }
     LaunchedEffect(converting) { if (converting) convertInBackground = false }
     val pagerScope = rememberCoroutineScope()
+    // Measured height of the top chrome (bar + quick tags): overlays below it start there instead
+    // of at a guessed offset, which overlapped the title and tags in landscape.
+    var topChromeH by remember { mutableStateOf(0.dp) }
+    val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
     var showQueue by remember { mutableStateOf(false) }
 
     Box(
@@ -246,6 +251,7 @@ fun ViewerScreen(
                 onOpenDetails = { showTags = true },
                 onClose = onBack,
                 nextId = ids.getOrNull(page + 1),
+                topInset = topChromeH,
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
             )
         }
@@ -268,7 +274,8 @@ fun ViewerScreen(
                 exit = fadeOut(),
                 // Between the top chrome and the seek bar, clear of the side camera.
                 modifier = Modifier.align(Alignment.CenterStart)
-                    .padding(start = 8.dp + com.cripta.app.ui.LocalSideCutout.current.start, top = 104.dp, bottom = 96.dp),
+                    .padding(start = 8.dp + com.cripta.app.ui.LocalSideCutout.current.start,
+                        top = maxOf(104.dp, topChromeH + 8.dp), bottom = 96.dp),
             ) {
                 Filmstrip(ids, pagerState.currentPage, vm, vertical = true, onPick = pick)
             }
@@ -308,7 +315,7 @@ fun ViewerScreen(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
-          Column {
+          Column(Modifier.onGloballyPositioned { topChromeH = with(chromeDensity) { it.size.height.toDp() } }) {
             TopAppBar(
                 title = {
                     Column {
@@ -633,6 +640,7 @@ private fun MediaPage(
     onClose: () -> Unit,
     nextId: String?,
     onNext: () -> Unit,
+    topInset: androidx.compose.ui.unit.Dp,
 ) {
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
         value = vm.stateFor(id)
@@ -642,7 +650,7 @@ private fun MediaPage(
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset) else CircularProgressIndicator(color = Color.White)
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -784,6 +792,7 @@ private fun VideoPlayer(
     onClose: () -> Unit,
     nextId: String?,
     onNext: () -> Unit,
+    topInset: androidx.compose.ui.unit.Dp,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1171,7 +1180,7 @@ private fun VideoPlayer(
 
         gestureLabel?.let { lbl ->
             Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) 168.dp else 120.dp)) {
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp))) {
                 Text(lbl, color = Color.White, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
             }
@@ -1198,7 +1207,7 @@ private fun VideoPlayer(
             exit = fadeOut(),
             // Landscape: a row under the top chrome (a column would overlap the quick tags above
             // and the seek bar below on a short screen). Portrait: a column on the right edge.
-            modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = 112.dp) else Modifier.align(Alignment.CenterEnd))
+            modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = maxOf(112.dp, topInset + 8.dp)) else Modifier.align(Alignment.CenterEnd))
                 .padding(end = 12.dp + sideCut.end),
         ) {
           val sideButtons: @Composable () -> Unit = {
@@ -1248,7 +1257,7 @@ private fun VideoPlayer(
         modeLabel?.let { lbl ->
             Surface(
                 color = Color.Black.copy(alpha = 0.5f), shape = CircleShape,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) 168.dp else 120.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp)),
             ) {
                 Text(lbl, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
@@ -1328,7 +1337,7 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vert
                 val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
                 val sel = i == current
                 Box(
-                    Modifier.height(if (sel) 34.dp else 26.dp).aspectRatio(16f / 9f)
+                    Modifier.height(if (vertical) (if (sel) 28.dp else 22.dp) else (if (sel) 34.dp else 26.dp)).aspectRatio(16f / 9f)
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(Color.White.copy(alpha = 0.12f))
                         .then(if (sel) Modifier.border(1.5.dp, Color.White, MaterialTheme.shapes.extraSmall) else Modifier)
