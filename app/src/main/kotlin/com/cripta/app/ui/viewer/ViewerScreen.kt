@@ -293,7 +293,7 @@ fun ViewerScreen(
     var bottomChromeH by remember { mutableStateOf(0.dp) }
     // Distance of the player's seek bar top from the bottom edge, reported by the player (it
     // changes with orientation and font size): the filmstrip and the details hint sit above it.
-    var seekClear by remember { mutableStateOf(88.dp) }
+    var seekClear by remember { mutableStateOf(84.dp) }
     val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
 
     Box(
@@ -1255,6 +1255,21 @@ private fun VideoPlayer(
     LaunchedEffect(videoAspect, prefs.pip) {
         com.cripta.app.viewer.PipController.armedAspect = if (prefs.pip) (videoAspect ?: android.util.Rational(16, 9)) else null
     }
+    // Leaving the app (Home, recents, screen off) pauses the video when the option is on. ON_STOP
+    // is not reached in Picture-in-Picture or while visible in split screen / free-form windows
+    // (the activity is only paused there), and those are checked too in case of an early stop.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val latestPrefs by androidx.compose.runtime.rememberUpdatedState(prefs)
+    DisposableEffect(lifecycleOwner, player) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && latestPrefs.pauseOnLeave &&
+                activity?.isInPictureInPictureMode != true && activity?.isInMultiWindowMode != true) {
+                player.pause()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
     // In PiP only the video shows: no controller.
     LaunchedEffect(inPip) { playerViewRef?.useController = !inPip }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
@@ -1278,7 +1293,7 @@ private fun VideoPlayer(
     }
     // Where the seek bar is (its top, from the bottom edge), for the viewer's bottom chrome.
     val density = androidx.compose.ui.platform.LocalDensity.current
-    var seekClearHere by remember { mutableStateOf(88.dp) }
+    var seekClearHere by remember { mutableStateOf(84.dp) }
     val latestSeekClear by androidx.compose.runtime.rememberUpdatedState(onSeekClear)
     DisposableEffect(playerViewRef) {
         val pv = playerViewRef
@@ -1290,7 +1305,9 @@ private fun VideoPlayer(
             pv.getLocationInWindow(a); bar.getLocationInWindow(b)
             val fromBottom = (a[1] + pv.height) - b[1]
             if (fromBottom > 0) {
-                val dp = with(density) { fromBottom.toDp() }
+                // Never below 84dp: on some devices the measured view is not the visible bar (it
+                // reported ~48dp while the bar's line sat at ~70dp and the hint landed on it).
+                val dp = maxOf(with(density) { fromBottom.toDp() }, 84.dp)
                 seekClearHere = dp; latestSeekClear(dp)
             }
         }
