@@ -286,6 +286,8 @@ fun ViewerScreen(
     // Measured height of the top chrome (bar + quick tags): overlays below it start there instead
     // of at a guessed offset, which overlapped the title and tags in landscape.
     var topChromeH by remember { mutableStateOf(0.dp) }
+    // Same for the bottom chrome (filmstrip + handle): the "Prossimo" card sits right above it.
+    var bottomChromeH by remember { mutableStateOf(0.dp) }
     val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
     var showQueue by remember { mutableStateOf(false) }
 
@@ -333,6 +335,7 @@ fun ViewerScreen(
                 onClose = closeOnce,
                 nextId = ids.getOrNull(page + 1),
                 topInset = topChromeH,
+                bottomInset = if ((ids.size > 1 && playback.filmstrip) || !playback.swipeForDetails) bottomChromeH else 0.dp,
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
@@ -343,6 +346,12 @@ fun ViewerScreen(
         // Bottom chrome: filmstrip of nearby files + the handle that opens the details panel.
         val scope = rememberCoroutineScope()
         val onVideo = currentFile?.let { com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } == true
+        // Photos, notes and PDFs don't follow a video's forced orientation (unless the user locked it).
+        LaunchedEffect(currentFile?.id, onVideo) {
+            if (currentFile != null && !onVideo && !vm.rotationLocked.value) {
+                (ctx as? android.app.Activity)?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
         val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val showStrip = ids.size > 1 && playback.filmstrip
@@ -357,9 +366,9 @@ fun ViewerScreen(
                 // Between the top chrome and the seek bar, clear of the side camera.
                 modifier = Modifier.align(Alignment.CenterStart)
                     .padding(start = 8.dp + com.cripta.app.ui.LocalSideCutout.current.start,
-                        top = maxOf(104.dp, topChromeH + 8.dp), bottom = 96.dp),
+                        top = maxOf(104.dp, topChromeH + 8.dp), bottom = 88.dp),
             ) {
-                Filmstrip(ids, pagerState.currentPage, vm, vertical = true, onPick = pick)
+                Filmstrip(ids, pagerState.currentPage, vm, playback, vertical = true, onPick = pick)
             }
         } else {
             AnimatedVisibility(
@@ -367,14 +376,18 @@ fun ViewerScreen(
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    // Above the player's seek bar for videos.
-                    .padding(bottom = if (onVideo) 112.dp else 20.dp),
+                    // Just above the player's seek bar (its top edge is ~80dp up) for videos.
+                    .padding(bottom = if (onVideo) 88.dp else 16.dp),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, onPick = pick)
-                    Surface(
+                Column(
+                    Modifier.onGloballyPositioned { bottomChromeH = with(chromeDensity) { it.size.height.toDp() } },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, onPick = pick)
+                    // With swipe-up on, the gesture already opens the details: no handle to clutter the video.
+                    if (!playback.swipeForDetails) Surface(
                         color = Color.Black.copy(alpha = 0.55f), shape = CircleShape,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 4.dp)
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures { change, dy -> if (dy < -8f) { change.consume(); showTags = true } }
                             }
@@ -486,10 +499,11 @@ fun ViewerScreen(
             // Quick tags: pinned + recent tags, one tap toggles them on the file on screen.
             val qf = currentFile
             if (displayPrefs.viewerQuickTags && qf != null) {
-                val quick = remember(allTags) {
+                val recentN = displayPrefs.recentTagsCount
+                val quick = remember(allTags, recentN) {
                     (allTags.filter { it.pinned } +
-                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt })
-                        .distinctBy { it.id }.take(12)
+                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentN))
+                        .distinctBy { it.id }
                 }
                 val onFile by produceState(initialValue = emptyList<String>(), qf.id, refresh) { value = vm.tagNamesOf(qf.id) }
                 if (quick.isNotEmpty()) {
@@ -633,8 +647,12 @@ fun ViewerScreen(
                     CircularProgressIndicator(progress = { shownProgress }, color = Color.White,
                         strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("Conversione MP4 · $convertProgress%", color = Color.White,
-                        style = MaterialTheme.typography.labelLarge)
+                    val eta = com.cripta.app.ui.components.rememberEta(convertProgress / 100f, converting)
+                    Column {
+                        Text("Conversione MP4 · $convertProgress%", color = Color.White,
+                            style = MaterialTheme.typography.labelLarge)
+                        if (eta != null) Text(eta, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
+                    }
                     // Not "Annulla": this stops the running transcode (the original stays as it is).
                     TextButton(onClick = { vm.cancelConversion() }) { Text("Interrompi", color = Color(0xFFFF8A80)) }
                     IconButton(onClick = { convertInBackground = true }) {
@@ -756,6 +774,7 @@ private fun MediaPage(
     nextId: String?,
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
+    bottomInset: androidx.compose.ui.unit.Dp,
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
     onMissing: () -> Unit,
@@ -800,7 +819,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1060,6 +1079,8 @@ private fun VideoPlayer(
     nextId: String?,
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
+    /** Height of the viewer's bottom chrome (filmstrip / handle) while it shows, 0 if none. */
+    bottomInset: androidx.compose.ui.unit.Dp,
     /** Controller auto-hide delay; 0 = never hide (TalkBack touch exploration). */
     controlsTimeoutMs: Int,
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
@@ -1165,7 +1186,12 @@ private fun VideoPlayer(
     val cutPx = with(androidx.compose.ui.platform.LocalDensity.current) { sideCut.start.roundToPx() to sideCut.end.roundToPx() }
     /** Overlay for the gesture in progress: speed "2×", brightness / volume "60%", with its icon. */
     var gestureLabel by remember { mutableStateOf<GestureHud?>(null) }
-    var videoAspect by remember(file.id) { mutableStateOf<android.util.Rational?>(null) }
+    // Seeded from the stored size, so the orientation is right from the first frame instead of
+    // waiting for the decoder (the screen used to turn only after the video had started).
+    var videoAspect by remember(file.id) {
+        val w = file.width ?: 0; val h = file.height ?: 0
+        mutableStateOf(if (w > 0 && h > 0) android.util.Rational((w.toFloat() / h).coerceIn(1f / 2.39f, 2.39f).times(1000).toInt(), 1000) else null)
+    }
     var seekLabel by remember { mutableStateOf<String?>(null) }
     var modeLabel by remember { mutableStateOf<String?>(null) }
     // Bumped on every double-tap / mode change so a repeated identical label restarts its timer.
@@ -1211,8 +1237,8 @@ private fun VideoPlayer(
             latestPaused(false)
             if (resumeEnabled) vm.savePosition(file.id, player.currentPosition, player.duration)
             com.cripta.app.viewer.PipController.armedAspect = null
-            // Leaving this video (e.g. swiping to a photo): drop its auto-rotation unless locked.
-            if (!vm.rotationLocked.value) activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // No orientation reset here: swiping to another video must not bounce a landscape phone
+            // through portrait. The viewer resets it on a non-video page and when it closes.
             player.release()
         }
     }
@@ -1452,14 +1478,14 @@ private fun VideoPlayer(
         val rem = remainingMs
         val window = minOf(prefs.autoNextSec * 1000L, totalMs / 3)
         if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
-            // Tap = play the next file now. In portrait, while the controls show, it sits above the
-            // filmstrip + "Dettagli" handle instead of overlapping them.
+            // Tap = play the next file now. In portrait, while the controls show, it sits right above
+            // the filmstrip (and handle) instead of overlapping them.
             Surface(
                 onClick = onNext,
                 color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.align(Alignment.BottomEnd)
                     .padding(end = 12.dp + sideCut.end,
-                        bottom = seekBarClearance + 8.dp + if (controlsVisible && !vLandscape) 84.dp else 0.dp)
+                        bottom = if (controlsVisible && !vLandscape && bottomInset > 0.dp) 88.dp + bottomInset + 8.dp else seekBarClearance + 8.dp)
                     .widthIn(max = 300.dp),
             ) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1694,20 +1720,38 @@ private fun QueuePanel(
 private data class GestureHud(val icon: ImageVector, val text: String, val level: Float?)
 
 /**
- * Strip of the covers around the current file (3 each side, 2 in landscape), centred on it; tap one
- * to jump. When the file changes the strip glides to centre the new one while it grows to full size
- * and brightens and the previous one shrinks and dims, so the jump reads as movement along the list.
- * It can also be dragged to look further ahead.
+ * Strip of the covers around the current file ([ViewerViewModel.PlaybackPrefs.stripSpan] each side),
+ * centred on it; tap one to jump. When the file changes the strip glides to centre the new one while
+ * it grows to full size and brightens and the previous one shrinks and dims, so the jump reads as
+ * movement along the list. It can also be dragged to look further ahead. Shape, size and whether
+ * portrait files keep a vertical cover come from Settings › Video.
  */
 @Composable
-private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vertical: Boolean = false, onPick: (Int) -> Unit) {
-    val span = if (vertical) 2 else 3
-    val thumbH = if (vertical) 22.dp else 26.dp
-    val selH = if (vertical) 28.dp else 34.dp
+private fun Filmstrip(
+    ids: List<String>,
+    current: Int,
+    vm: ViewerViewModel,
+    prefs: ViewerViewModel.PlaybackPrefs,
+    vertical: Boolean = false,
+    onPick: (Int) -> Unit,
+) {
+    val span = prefs.stripSpan.coerceIn(1, 4)
+    // (other covers, current cover) height per size step; a bit smaller down the landscape edge.
+    val (thumbH, selH) = when (prefs.stripSize) {
+        0 -> if (vertical) 18.dp to 22.dp else 20.dp to 26.dp
+        2 -> if (vertical) 28.dp to 36.dp else 34.dp to 44.dp
+        else -> if (vertical) 22.dp to 28.dp else 26.dp to 34.dp
+    }
+    val rect = prefs.stripShape == com.cripta.app.data.StripShape.RECT
+    val baseAspect = if (rect) 16f / 9f else 1f
+    val shape = if (prefs.stripShape == com.cripta.app.data.StripShape.CIRCLE) CircleShape else MaterialTheme.shapes.extraSmall
     val gap = 4.dp
-    // Size of one cover along the strip, and the whole strip (current + span covers each side).
-    val along = { h: androidx.compose.ui.unit.Dp -> if (vertical) h else h * (16f / 9f) }
-    val full = along(selH) + (along(thumbH) + gap) * (2 * span)
+    // Width/height of each file's cover, learnt as the cells load (portrait files: up to 9:16).
+    val aspects = remember { androidx.compose.runtime.mutableStateMapOf<String, Float>() }
+    fun aspectOf(id: String) = if (rect && prefs.stripTrueAspect) aspects[id] ?: baseAspect else baseAspect
+    // Size of a cover along the strip: its height down the landscape edge, its width across.
+    fun along(h: androidx.compose.ui.unit.Dp, aspect: Float) = if (vertical) h else h * aspect
+    val full = along(selH, baseAspect) + (along(thumbH, baseAspect) + gap) * (2 * span)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = current)
     val animate = com.cripta.app.ui.theme.animationsEnabled()
     LaunchedEffect(current) {
@@ -1718,20 +1762,32 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vert
         if (vertical) Modifier.heightIn(max = full) else Modifier.widthIn(max = full),
     ) {
         // Padding on both ends = half the free space, so "scroll to item i" puts item i in the middle.
-        val extent = if (vertical) maxHeight else maxWidth
-        val edge = ((extent.coerceAtMost(full) - along(selH)) / 2).coerceAtLeast(0.dp)
+        val extent = (if (vertical) maxHeight else maxWidth).coerceAtMost(full)
+        val curAspect = ids.getOrNull(current)?.let { aspectOf(it) } ?: baseAspect
+        val edge by animateDpAsState(((extent - along(selH, curAspect)) / 2).coerceAtLeast(0.dp),
+            Motion.enter(Motion.MEDIUM), label = "stripEdge")
         val cell: @Composable (Int) -> Unit = { i ->
+            val id = ids[i]
             val sel = i == current
             val h by animateDpAsState(if (sel) selH else thumbH, Motion.enter(Motion.MEDIUM), label = "stripThumb")
             val dim by animateFloatAsState(if (sel) 1f else 0.6f, Motion.enter(Motion.MEDIUM), label = "stripDim")
             val ring by animateFloatAsState(if (sel) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripRing")
-            val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
+            val bmp by produceState<Bitmap?>(null, id) { value = vm.thumbOf(id) }
+            if (rect && prefs.stripTrueAspect) {
+                LaunchedEffect(id) {
+                    val f = vm.fileById(id)
+                    val w = f?.width ?: 0; val fh = f?.height ?: 0
+                    // Portrait keeps its shape (down to 9:16); landscape stays a uniform 16:9.
+                    aspects[id] = if (w > 0 && fh > w) (w.toFloat() / fh).coerceAtLeast(9f / 16f) else 16f / 9f
+                }
+            }
+            val aspect by animateFloatAsState(aspectOf(id), Motion.enter(Motion.MEDIUM), label = "stripAspect")
             val shown by animateFloatAsState(if (bmp != null) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripLoad")
             Box(
-                Modifier.height(h).aspectRatio(16f / 9f)
-                    .clip(MaterialTheme.shapes.extraSmall)
+                Modifier.height(h).aspectRatio(aspect)
+                    .clip(shape)
                     .background(Color.White.copy(alpha = 0.12f))
-                    .border(1.5.dp, Color.White.copy(alpha = ring), MaterialTheme.shapes.extraSmall)
+                    .border(1.5.dp, Color.White.copy(alpha = ring), shape)
                     .clickable(onClickLabel = "Apri") { onPick(i) }
                     .semantics {
                         this.contentDescription = "File ${i + 1} di ${ids.size}"
@@ -1747,7 +1803,7 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vert
         if (vertical) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.height(extent.coerceAtMost(full)).width(along(selH) * (16f / 9f)),
+                modifier = Modifier.height(extent).width(selH * baseAspect.coerceAtLeast(1f)),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = edge),
                 verticalArrangement = Arrangement.spacedBy(gap),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1755,7 +1811,7 @@ private fun Filmstrip(ids: List<String>, current: Int, vm: ViewerViewModel, vert
         } else {
             androidx.compose.foundation.lazy.LazyRow(
                 state = listState,
-                modifier = Modifier.width(extent.coerceAtMost(full)).height(selH),
+                modifier = Modifier.width(extent).height(selH),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = edge),
                 horizontalArrangement = Arrangement.spacedBy(gap),
                 verticalAlignment = Alignment.CenterVertically,

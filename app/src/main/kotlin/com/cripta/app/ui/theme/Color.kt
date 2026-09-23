@@ -72,6 +72,11 @@ object DefaultTagColor {
     var argb by mutableStateOf<Int?>(null)
 }
 
+/** How many recently used tags pickers show (Settings › Etichette). */
+object RecentTagsCount {
+    var value by mutableStateOf(6)
+}
+
 /** The automatic colour of a name (stable hash into [TagPalette]), ignoring the global default. */
 fun autoTagColor(name: String): Color =
     TagPalette[Math.floorMod(name.lowercase().hashCode(), TagPalette.size)]

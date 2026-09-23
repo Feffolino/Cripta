@@ -122,8 +122,9 @@ internal fun TagSections(
 ) {
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val pinned = remember(allTags) { allTags.filter { it.pinned } }
-    val recents = remember(allTags) {
-        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(6)
+    val recentCount = com.cripta.app.ui.theme.RecentTagsCount.value
+    val recents = remember(allTags, recentCount) {
+        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentCount)
     }
     // Library order as given (respects the user's tag order); names typed but not yet saved go last.
     val library = remember(allTags, extraNames) {

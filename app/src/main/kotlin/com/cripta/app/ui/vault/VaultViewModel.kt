@@ -176,13 +176,16 @@ class VaultViewModel @Inject constructor(
     val gridColumns: StateFlow<Int> =
         settings.settings.map { it.gridColumns }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+    val gridColumnsLandscape: StateFlow<Int> =
+        settings.settings.map { it.gridColumnsLandscape }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
 
     val display: StateFlow<DisplayPrefs> =
         settings.settings.map { it.display }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DisplayPrefs())
 
     fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
-    fun setGridColumns(cols: Int) = viewModelScope.launch { settings.setGridColumns(cols) }
+    fun setGridColumns(cols: Int, landscape: Boolean = false) = viewModelScope.launch { settings.setGridColumns(cols, landscape) }
 
     val allFolders: StateFlow<List<FolderEntity>> =
         repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

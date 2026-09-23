@@ -148,6 +148,8 @@ fun SettingsScreen(
     val dupWaiting by vm.dupResultWaiting.collectAsState()
     val dupUndo by vm.dupUndo.collectAsState()
     val backupBusy by vm.backupBusy.collectAsState()
+    val backupProgress by vm.backupProgress.collectAsState()
+    val backupEstimate by vm.backupEstimate.collectAsState()
 
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
@@ -390,6 +392,24 @@ fun SettingsScreen(
                                 ToggleRow("Anteprime dei file vicini", s.viewerFilmstrip,
                                     desc = "Piccole copertine dei file prima e dopo, insieme ai comandi.",
                                     icon = Icons.Filled.ViewCarousel) { vm.setViewerFilmstrip(it) }
+                                if (s.viewerFilmstrip) {
+                                    ChoiceRow("Forma", listOf(
+                                        com.cripta.app.data.StripShape.RECT to "Rettangolo",
+                                        com.cripta.app.data.StripShape.SQUARE to "Quadrato",
+                                        com.cripta.app.data.StripShape.CIRCLE to "Cerchio",
+                                    ), s.filmstripShape) { vm.setFilmstripShape(it) }
+                                    // Stored per side; shown as the whole strip, current file included.
+                                    ChoiceRow("Copertine al massimo", listOf(1 to "3", 2 to "5", 3 to "7", 4 to "9"),
+                                        s.filmstripSpan) { vm.setFilmstripSpan(it) }
+                                    ChoiceRow("Dimensione", listOf(0 to "Piccola", 1 to "Media", 2 to "Grande"),
+                                        s.filmstripSize) { vm.setFilmstripSize(it) }
+                                    if (s.filmstripShape == com.cripta.app.data.StripShape.RECT) {
+                                        ToggleRow("Video verticali in verticale", s.filmstripTrueAspect,
+                                            desc = "Le copertine dei video e delle foto verticali restano verticali invece di essere ritagliate in 16:9.") {
+                                            vm.setFilmstripTrueAspect(it)
+                                        }
+                                    }
+                                }
                                 ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
                                     desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
                                     icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }
@@ -476,7 +496,12 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Assegnazione rapida", "La libreria resta sempre nello stesso ordine; cambiano solo le righe in alto.") {
-                                ToggleRow("Riga \"Recenti\" (ultime 6 usate)", s.display.showRecentTags) { vm.setShowRecentTags(it) }
+                                ToggleRow("Riga \"Recenti\" (ultime ${s.display.recentTagsCount} usate)", s.display.showRecentTags) { vm.setShowRecentTags(it) }
+                                if (s.display.showRecentTags || s.display.viewerQuickTags) {
+                                    // Also sets how many recent tags the viewer's quick-tag bar adds after the pinned ones.
+                                    ChoiceRow("Etichette recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
+                                        s.display.recentTagsCount) { vm.setRecentTagsCount(it) }
+                                }
                                 ToggleRow("Etichette rapide nel visualizzatore", s.display.viewerQuickTags) { vm.setViewerQuickTags(it) }
                             }
                         }
@@ -589,7 +614,9 @@ fun SettingsScreen(
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 if (scanning) {
                                     val (done, total) = dupProgress
-                                    Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
+                                    val scanEta = com.cripta.app.ui.components.rememberEta(
+                                        if (total > 0) done.toFloat() / total else 0f, total > 0)
+                                    Text((if (total > 0) "Scansione… $done/$total" else "Scansione…") + (scanEta?.let { " · $it" } ?: ""),
                                         style = MaterialTheme.typography.bodyMedium)
                                     if (total > 0) {
                                         val smooth by animateFloatAsState(
@@ -648,6 +675,25 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
+                                // Always visible: how big the archive would be if made now.
+                                backupEstimate?.let { (n, bytes) ->
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Dimensione stimata", style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(com.cripta.app.ui.components.formatBytes(bytes), style = MaterialTheme.typography.titleMedium)
+                                        }
+                                        Text(if (n == 1) "1 file" else "$n file", style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Text(if (s.backupCompressDocs) "Stima approssimata: quanto rendono i documenti compressi si sa solo creando il backup."
+                                        else "Serve almeno questo spazio libero nella destinazione (i file multimediali non si comprimono).",
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                ToggleRow("Comprimi i documenti", s.backupCompressDocs,
+                                    desc = "Note, PDF e testi compressi senza perdita (identici al ripristino). Foto e video restano come sono: sono già compressi. Il ripristino richiede questa versione di Cripta o successive.") {
+                                    vm.setBackupCompressDocs(it)
+                                }
                                 androidx.compose.animation.AnimatedContent(
                                     targetState = backupBusy,
                                     transitionSpec = { calmSwap() },
@@ -657,9 +703,17 @@ fun SettingsScreen(
                                         // Runs on its own; the vault stays usable, the result arrives as a message.
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp),
                                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                                            Text(busy, style = MaterialTheme.typography.bodyMedium)
-                                            androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
-                                            Text("Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
+                                            val p = backupProgress
+                                            val eta = com.cripta.app.ui.components.rememberEta(p ?: 0f, p != null, key = busy)
+                                            Text(if (p != null) "$busy ${(p * 100).toInt()}%" else busy, style = MaterialTheme.typography.bodyMedium)
+                                            if (p != null) {
+                                                val smooth by animateFloatAsState(p, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "backupPct")
+                                                androidx.compose.material3.LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                            } else {
+                                                androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                                            }
+                                            Text(eta?.replaceFirstChar { it.uppercase() }?.let { "$it. Tieni l'app aperta." }
+                                                    ?: "Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
                                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     } else {
@@ -711,7 +765,8 @@ fun SettingsScreen(
                                         // Read the live state (not the frozen target) so the bar keeps moving.
                                         val pct = (updateState as? SettingsViewModel.UpdateState.Downloading)?.pct ?: u.pct
                                         val smooth by animateFloatAsState(pct / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "updatePct")
-                                        Text("Download dell'aggiornamento: $pct%", style = MaterialTheme.typography.bodyMedium)
+                                        val updEta = com.cripta.app.ui.components.rememberEta(pct / 100f)
+                                        Text("Download dell'aggiornamento: $pct%" + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
                                         androidx.compose.material3.LinearProgressIndicator(
                                             progress = { smooth }, modifier = Modifier.fillMaxWidth())
                                     }

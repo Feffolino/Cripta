@@ -30,6 +30,9 @@ enum class ConvertAfter { REPLACE, ASK, KEEP_BOTH }
 /** How a tag is written on a cover badge: its short alias/emoji, or its full name. */
 enum class CoverTagStyle { ALIAS, NAME }
 
+/** Shape of the covers in the player's filmstrip. */
+enum class StripShape { RECT, SQUARE, CIRCLE }
+
 /** Which optional details are drawn on file/folder cells. */
 data class DisplayPrefs(
     val showFileInfo: Boolean = true,     // size + duration captions
@@ -52,6 +55,8 @@ data class DisplayPrefs(
     val resumePlayback: Boolean = true,
     /** Tag pickers: show a "Recenti" row with the last used tags. */
     val showRecentTags: Boolean = true,
+    /** How many recently used tags the "Recenti" row (and the viewer's quick tags) show. */
+    val recentTagsCount: Int = 6,
     /** Viewer: quick-tag bar (pinned + recent tags, one tap to toggle). */
     val viewerQuickTags: Boolean = true,
 )
@@ -71,6 +76,8 @@ data class Settings(
     val deleteOriginalPolicy: DeleteOriginalPolicy = DeleteOriginalPolicy.ASK,
     val viewMode: ViewMode = ViewMode.GRID,
     val gridColumns: Int = 3,
+    /** Grid columns while the phone is in landscape (chosen separately from portrait). */
+    val gridColumnsLandscape: Int = 5,
     val sortKey: SortKey = SortKey.DATE,
     val sortAscending: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DARK,
@@ -97,6 +104,12 @@ data class Settings(
     val updatePrerelease: Boolean = true,
     /** Viewer: strip of the neighbouring files' covers while the controls show. */
     val viewerFilmstrip: Boolean = true,
+    /** Filmstrip: cover shape, covers on each side of the current one (1..4), size (0 S, 1 M, 2 L). */
+    val filmstripShape: StripShape = StripShape.RECT,
+    val filmstripSpan: Int = 3,
+    val filmstripSize: Int = 1,
+    /** Filmstrip: portrait videos and photos keep their vertical shape instead of a 16:9 crop. */
+    val filmstripTrueAspect: Boolean = true,
     /** Viewer: near the end of a video (loop off) show "Prossimo" and move on to the next file. */
     val autoNext: Boolean = true,
     /** Seconds before the end at which the "Prossimo" card appears (5 / 8 / 15). */
@@ -113,6 +126,8 @@ data class Settings(
     val controlsTimeoutSec: Int = 4,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
+    /** Backup: deflate documents (notes, PDF, text) losslessly; media is always stored as is. */
+    val backupCompressDocs: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
     val trashDays: Int = 7,
     val downloadDefaults: DownloadDefaults = DownloadDefaults(),
@@ -129,6 +144,7 @@ class SettingsStore @Inject constructor(
     private val delPolicy = intPreferencesKey("delete_original_policy")
     private val viewModeKey = intPreferencesKey("view_mode")
     private val gridColsKey = intPreferencesKey("grid_columns")
+    private val gridColsLandKey = intPreferencesKey("grid_columns_landscape")
     private val sortKeyKey = intPreferencesKey("sort_key")
     private val sortAscKey = booleanPreferencesKey("sort_asc")
     private val themeKey = intPreferencesKey("theme_mode")
@@ -165,6 +181,10 @@ class SettingsStore @Inject constructor(
     private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
     private val filmstripKey = booleanPreferencesKey("viewer_filmstrip")
+    private val stripShapeKey = intPreferencesKey("filmstrip_shape")
+    private val stripSpanKey = intPreferencesKey("filmstrip_span")
+    private val stripSizeKey = intPreferencesKey("filmstrip_size")
+    private val stripAspectKey = booleanPreferencesKey("filmstrip_true_aspect")
     private val autoNextKey = booleanPreferencesKey("auto_next")
     private val autoNextSecKey = intPreferencesKey("auto_next_sec")
     private val swipeCloseKey = booleanPreferencesKey("swipe_close")
@@ -173,6 +193,8 @@ class SettingsStore @Inject constructor(
     private val holdSpeedKey = intPreferencesKey("hold_speed_x10")
     private val controlsTimeoutKey = intPreferencesKey("controls_timeout_sec")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
+    private val recentTagsCountKey = intPreferencesKey("recent_tags_count")
+    private val backupCompressKey = booleanPreferencesKey("backup_compress_docs")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -182,6 +204,7 @@ class SettingsStore @Inject constructor(
                 .getOrElse(p[delPolicy] ?: 0) { DeleteOriginalPolicy.ASK },
             viewMode = ViewMode.entries.getOrElse(p[viewModeKey] ?: 0) { ViewMode.GRID },
             gridColumns = (p[gridColsKey] ?: 3).coerceIn(2, 5),
+            gridColumnsLandscape = (p[gridColsLandKey] ?: 5).coerceIn(3, 8),
             sortKey = SortKey.entries.getOrElse(p[sortKeyKey] ?: 0) { SortKey.DATE },
             sortAscending = p[sortAscKey] ?: false,
             themeMode = ThemeMode.entries.getOrElse(p[themeKey] ?: ThemeMode.DARK.ordinal) { ThemeMode.DARK },
@@ -204,9 +227,11 @@ class SettingsStore @Inject constructor(
                 showStatsStrip = p[statsStripKey] ?: true,
                 resumePlayback = p[resumeKey] ?: true,
                 showRecentTags = p[recentTagsKey] ?: true,
+                recentTagsCount = (p[recentTagsCountKey] ?: 6).coerceIn(1, 20),
                 viewerQuickTags = p[quickTagsKey] ?: true,
             ),
             trashEnabled = p[trashKey] ?: false,
+            backupCompressDocs = p[backupCompressKey] ?: false,
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
             convertAfter = ConvertAfter.entries.getOrElse(p[convertAfterKey] ?: 0) { ConvertAfter.REPLACE },
             convertAfterChosen = p[convertAfterChosenKey] ?: false,
@@ -225,6 +250,10 @@ class SettingsStore @Inject constructor(
             pictureInPicture = p[pipKey] ?: false,
             updatePrerelease = p[updatePreKey] ?: true,
             viewerFilmstrip = p[filmstripKey] ?: true,
+            filmstripShape = StripShape.entries.getOrElse(p[stripShapeKey] ?: 0) { StripShape.RECT },
+            filmstripSpan = (p[stripSpanKey] ?: 3).coerceIn(1, 4),
+            filmstripSize = (p[stripSizeKey] ?: 1).coerceIn(0, 2),
+            filmstripTrueAspect = p[stripAspectKey] ?: true,
             autoNext = p[autoNextKey] ?: true,
             autoNextSec = (p[autoNextSecKey] ?: 8).let { if (it in listOf(5, 8, 15)) it else 8 },
             swipeToClose = p[swipeCloseKey] ?: true,
@@ -267,8 +296,14 @@ class SettingsStore @Inject constructor(
     suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
+    suspend fun setFilmstripShape(v: StripShape) { context.dataStore.edit { it[stripShapeKey] = v.ordinal } }
+    suspend fun setFilmstripSpan(v: Int) { context.dataStore.edit { it[stripSpanKey] = v.coerceIn(1, 4) } }
+    suspend fun setFilmstripSize(v: Int) { context.dataStore.edit { it[stripSizeKey] = v.coerceIn(0, 2) } }
+    suspend fun setFilmstripTrueAspect(v: Boolean) { context.dataStore.edit { it[stripAspectKey] = v } }
     suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
+    suspend fun setBackupCompressDocs(v: Boolean) { context.dataStore.edit { it[backupCompressKey] = v } }
+    suspend fun setRecentTagsCount(v: Int) { context.dataStore.edit { it[recentTagsCountKey] = v.coerceIn(1, 20) } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }
     suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
@@ -304,8 +339,10 @@ class SettingsStore @Inject constructor(
         context.dataStore.edit { it[viewModeKey] = mode.ordinal }
     }
 
-    suspend fun setGridColumns(cols: Int) {
-        context.dataStore.edit { it[gridColsKey] = cols.coerceIn(2, 5) }
+    suspend fun setGridColumns(cols: Int, landscape: Boolean = false) {
+        context.dataStore.edit {
+            if (landscape) it[gridColsLandKey] = cols.coerceIn(3, 8) else it[gridColsKey] = cols.coerceIn(2, 5)
+        }
     }
 
     suspend fun settingsOnce(): Settings = settings.first()
@@ -320,9 +357,9 @@ class SettingsStore @Inject constructor(
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
-                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, autoNextKey, autoNextSecKey,
+                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, swipeDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
-            "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
+            "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)
             else -> emptyList()
