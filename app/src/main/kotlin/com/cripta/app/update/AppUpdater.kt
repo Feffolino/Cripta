@@ -34,7 +34,7 @@ class AppUpdater @Inject constructor() {
     /** Fetch the newest public release with an APK, or null. Uses the releases LIST (not
      *  /releases/latest, which skips prereleases — our CI publishes prereleases) and picks the
      *  highest build number that has an .apk asset. */
-    suspend fun latest(): Release? = withContext(Dispatchers.IO) {
+    suspend fun latest(includePrerelease: Boolean = true): Release? = withContext(Dispatchers.IO) {
         runCatching {
             val json = httpGet("https://api.github.com/repos/$REPO/releases?per_page=20")
             val arr = JSONArray(json)
@@ -42,6 +42,7 @@ class AppUpdater @Inject constructor() {
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
                 if (obj.optBoolean("draft")) continue
+                if (!includePrerelease && obj.optBoolean("prerelease")) continue
                 val tag = obj.optString("tag_name")            // e.g. v0.1.0-b123
                 val build = tag.substringAfterLast("-b", "").toIntOrNull() ?: continue
                 val assets = obj.optJSONArray("assets") ?: continue

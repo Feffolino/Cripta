@@ -547,6 +547,7 @@ fun SettingsScreen(
                                             color = MaterialTheme.colorScheme.error)
                                     SettingsViewModel.UpdateState.Idle -> {}
                                 }
+                                ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                                 if (updateState !is SettingsViewModel.UpdateState.Downloading) {
                                     androidx.compose.material3.FilledTonalButton(
                                         onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
@@ -779,7 +780,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("File duplicati / media simili", "duplicati simili doppioni", SettingsPage.STRUMENTI),
     Triple("Cestino", "cestino eliminati ripristina", SettingsPage.STRUMENTI),
     Triple("Backup cifrato", "backup esporta ripristina passphrase", SettingsPage.STRUMENTI),
-    Triple("Aggiornamenti", "aggiorna versione update", SettingsPage.INFO),
+    Triple("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO),
 )
 
 /** First level: search + preference pages + tools, each with a live summary. */

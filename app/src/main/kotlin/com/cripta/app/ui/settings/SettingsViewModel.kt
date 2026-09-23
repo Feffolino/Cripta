@@ -46,9 +46,10 @@ class SettingsViewModel @Inject constructor(
 
     fun checkUpdate(ctx: android.content.Context) = viewModelScope.launch {
         _update.value = UpdateState.Checking
-        val rel = updater.latest()
+        val pre = store.settingsOnce().updatePrerelease
+        val rel = updater.latest(includePrerelease = pre)
         _update.value = when {
-            rel == null -> UpdateState.Error("Nessuna release trovata")
+            rel == null -> UpdateState.Error(if (pre) "Nessuna release trovata" else "Nessuna release stabile trovata (attiva le pre-release)")
             rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
             else -> UpdateState.Available(rel)
         }
@@ -117,6 +118,7 @@ class SettingsViewModel @Inject constructor(
     fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }
     fun setAutoRotate(v: Boolean) = viewModelScope.launch { store.setAutoRotate(v) }
     fun setPictureInPicture(v: Boolean) = viewModelScope.launch { store.setPictureInPicture(v) }
+    fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch { store.setUpdatePrerelease(v); _update.value = UpdateState.Idle }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
