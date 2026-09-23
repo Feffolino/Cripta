@@ -2981,13 +2981,22 @@ fun FolderMosaic(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 44.dp)
                 }
+            } else if (previews.size == 1) {
+                // A single file fills the tile (it used to be drawn twice, side by side).
+                val f = previews[0]
+                val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                Box(Modifier.align(Alignment.BottomStart).padding(6.dp).size(30.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 20.dp)
+                }
             } else {
-                // 2x2 mosaic (1 preview fills it; 2-3 leave tinted cells).
+                // 2x2 mosaic (2-3 previews leave tinted cells).
                 Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (r in 0 until 2) {
                         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                             for (c in 0 until 2) {
-                                val f = if (previews.size == 1) previews[0] else previews.getOrNull(r * 2 + c)
+                                val f = previews.getOrNull(r * 2 + c)
                                 Box(Modifier.weight(1f).fillMaxHeight().background(accent.copy(alpha = 0.10f))) {
                                     if (f != null) {
                                         val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
@@ -2998,7 +3007,6 @@ fun FolderMosaic(
                                 }
                             }
                         }
-                        if (previews.size == 1) break
                     }
                 }
                 // Folder identity over the mosaic.

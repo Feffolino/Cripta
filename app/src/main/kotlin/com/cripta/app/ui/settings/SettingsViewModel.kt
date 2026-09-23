@@ -152,6 +152,8 @@ class SettingsViewModel @Inject constructor(
         repo.changes.flatMapLatest { repo.trashedFolders() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restore(id: String) = viewModelScope.launch { repo.restore(id) }
+    /** Cover of a trashed file (its blob and key are kept until it is destroyed). */
+    suspend fun thumbOf(f: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(f)
     fun restoreFolder(id: Long) = viewModelScope.launch { repo.restoreFolder(id) }
     fun deleteForever(id: String) = viewModelScope.launch { repo.secureDelete(id); thumbs.evict(id) }
     fun deleteFolderForever(id: Long) = viewModelScope.launch { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
