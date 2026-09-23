@@ -663,7 +663,31 @@ fun VaultScreen(
                         }
                     }
                     }
-                    FastScroller(gridState, Modifier.align(Alignment.CenterEnd))
+                    // Label per grid item for the fast-scroll bubble: where you are (day / letter /
+                    // size, depending on the sort) and the position in the list.
+                    val scrollLabels = remember(grouped, showFolders, sortKey) {
+                        val out = ArrayList<String?>()
+                        if (showFolders) out += "Cartelle"
+                        val fmt = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
+                        val total = grouped.sumOf { it.second.size }
+                        var n = 0
+                        grouped.forEach { (label, group) ->
+                            if (label.isNotEmpty()) out += label
+                            group.forEach { f ->
+                                n++
+                                val key = when (sortKey) {
+                                    SortKey.NAME -> f.file.originalName.firstOrNull()?.uppercaseChar()?.toString() ?: "#"
+                                    SortKey.SIZE -> com.cripta.app.ui.components.formatBytes(f.file.sizeBytes)
+                                    else -> label.ifEmpty {
+                                        Instant.ofEpochMilli(f.file.importedAt).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt)
+                                    }
+                                }
+                                out += "$key · $n/$total"
+                            }
+                        }
+                        out
+                    }
+                    FastScroller(gridState, Modifier.align(Alignment.CenterEnd), labelAt = { scrollLabels.getOrNull(it) })
                 }
             }
         }
@@ -937,6 +961,7 @@ private fun FolderCell(
 private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     state: androidx.compose.foundation.lazy.grid.LazyGridState,
     modifier: Modifier = Modifier,
+    labelAt: (Int) -> String? = { null },
 ) {
     val total = state.layoutInfo.totalItemsCount
     if (total <= 0) return
@@ -949,8 +974,27 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     val alpha by animateFloatAsState(if (active) 1f else 0f, label = "fastscroll")
     val density = LocalDensity.current
     val thumbH = 48.dp
+    val thumbPx = with(density) { thumbH.toPx() }
+    val maxOffset = (trackH - thumbPx).coerceAtLeast(0f)
+    val offsetY = with(density) { (fraction * maxOffset).toDp() }
+  Box(modifier.fillMaxHeight()) {
+    // Bubble next to the thumb while scrolling: section / position of the first visible item.
+    val label = if (alpha > 0f) labelAt(state.firstVisibleItemIndex) else null
+    if (label != null) {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = MaterialTheme.shapes.medium,
+            shadowElevation = 3.dp,
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 30.dp)
+                .offset(y = offsetY + 6.dp)
+                .graphicsLayer { this.alpha = alpha },
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                maxLines = 1, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+    }
     Box(
-        modifier
+        Modifier.align(Alignment.TopEnd)
             .fillMaxHeight()
             .width(28.dp)
             .onGloballyPositioned { trackH = it.size.height.toFloat() }
@@ -968,9 +1012,6 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
                 )
             },
     ) {
-        val thumbPx = with(density) { thumbH.toPx() }
-        val maxOffset = (trackH - thumbPx).coerceAtLeast(0f)
-        val offsetY = with(density) { (fraction * maxOffset).toDp() }
         Box(
             Modifier.align(Alignment.TopEnd)
                 .padding(end = 3.dp)
@@ -982,6 +1023,7 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
                 .background(MaterialTheme.colorScheme.primary),
         )
     }
+  }
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
