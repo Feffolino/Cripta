@@ -927,15 +927,18 @@ private fun VideoPlayer(
             player.release()
         }
     }
-    // Auto-rotate to the video's orientation (unless the user locked the rotation).
+    // Rotation while a video plays (unless the user locked it with the button):
+    // - option on: follow the video's orientation (landscape video -> landscape, either way up);
+    // - option off / square video: turn freely with the phone. FULL_SENSOR, not UNSPECIFIED: with
+    //   the system rotation lock on, UNSPECIFIED never rotated, so a video couldn't be turned at all.
     LaunchedEffect(videoAspect, prefs.autoRotate, rotationLocked) {
-        val a = videoAspect ?: return@LaunchedEffect
         if (activity == null || rotationLocked) return@LaunchedEffect
+        val a = videoAspect
         activity.requestedOrientation = when {
-            !prefs.autoRotate -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            !prefs.autoRotate || a == null -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             a.toFloat() > 1.05f -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             a.toFloat() < 0.95f -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-            else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
         }
     }
     // Picture-in-Picture: armed while this video is on screen and the option is on.
