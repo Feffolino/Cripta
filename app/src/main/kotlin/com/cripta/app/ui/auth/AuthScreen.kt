@@ -1,6 +1,8 @@
 package com.cripta.app.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,8 @@ import androidx.compose.ui.unit.dp
 fun AuthScreen(onAuthenticate: () -> Unit) {
     // Prompt immediately on entering the locked screen.
     LaunchedEffect(Unit) { onAuthenticate() }
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold { pad ->
         androidx.compose.foundation.layout.Box(
@@ -39,38 +43,29 @@ fun AuthScreen(onAuthenticate: () -> Unit) {
                         radius = 900f,
                     )
                 )
-                .padding(pad).padding(32.dp),
+                .padding(pad).padding(if (landscape) 16.dp else 32.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+            val badge: @Composable (Int) -> Unit = { sizeDp ->
                 androidx.compose.material3.Surface(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                     shape = androidx.compose.foundation.shape.CircleShape,
-                    modifier = Modifier.size(112.dp),
+                    modifier = Modifier.size(sizeDp.dp),
                 ) {
                     androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Filled.Lock,
-                            contentDescription = null,
-                            modifier = Modifier.size(52.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                        Icon(Icons.Filled.Lock, contentDescription = null,
+                            modifier = Modifier.size((sizeDp * 0.46f).dp), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-                Text(
-                    "Cripta",
-                    style = MaterialTheme.typography.displayMedium,
-                    modifier = Modifier.padding(top = 24.dp),
-                )
+            }
+            val texts: @Composable (Boolean) -> Unit = { compact ->
+                Text("Cripta", style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium)
                 Text(
                     "Vault cifrato. Autenticati per accedere.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 28.dp),
+                    textAlign = if (compact) TextAlign.Start else TextAlign.Center,
+                    modifier = Modifier.padding(top = 8.dp, bottom = if (compact) 16.dp else 28.dp),
                 )
                 Button(
                     onClick = onAuthenticate,
@@ -78,6 +73,26 @@ fun AuthScreen(onAuthenticate: () -> Unit) {
                 ) {
                     Icon(Icons.Filled.Lock, null, modifier = Modifier.size(18.dp))
                     Text("  Sblocca")
+                }
+            }
+            if (landscape) {
+                // Short screen: badge beside the text, so the unlock button is never cut off.
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    badge(88)
+                    Column(Modifier.padding(start = 28.dp)) { texts(true) }
+                }
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    badge(112)
+                    androidx.compose.foundation.layout.Spacer(Modifier.size(24.dp))
+                    texts(false)
                 }
             }
         }
