@@ -30,6 +30,13 @@ private val DarkColors = darkColorScheme(
     error = Danger,
     outline = Outline,
     outlineVariant = Outline,
+    // Containers were left to Material's baseline (purple/pink): set them in the Cripta palette.
+    secondaryContainer = androidx.compose.ui.graphics.Color(0xFF1E2A3D),
+    onSecondaryContainer = OnBg,
+    tertiaryContainer = androidx.compose.ui.graphics.Color(0xFF3A2E14),
+    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFFF5D08A),
+    errorContainer = androidx.compose.ui.graphics.Color(0xFF3B1417),
+    onErrorContainer = androidx.compose.ui.graphics.Color(0xFFFFB4AB),
 )
 
 private val LightColors = lightColorScheme(
@@ -47,6 +54,14 @@ private val LightColors = lightColorScheme(
     error = Danger,
     outline = LightOutline,
     outlineVariant = LightOutline,
+    primaryContainer = androidx.compose.ui.graphics.Color(0xFFDBE7FF),
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF0B2A66),
+    secondaryContainer = androidx.compose.ui.graphics.Color(0xFFE3EAF5),
+    onSecondaryContainer = LightOnBg,
+    tertiaryContainer = androidx.compose.ui.graphics.Color(0xFFFFEDC7),
+    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFF5A3B00),
+    errorContainer = androidx.compose.ui.graphics.Color(0xFFFDE2E1),
+    onErrorContainer = androidx.compose.ui.graphics.Color(0xFF7A1111),
 )
 
 @Composable

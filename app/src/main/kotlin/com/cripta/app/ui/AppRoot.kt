@@ -220,7 +220,7 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                 )
             }
             composable("download") {
-                com.cripta.app.ui.download.DownloadScreen()
+                com.cripta.app.ui.download.DownloadScreen(onOpenFile = { nav.navigate("viewer/$it") })
             }
             composable("settings") {
                 SettingsScreen(onBack = { nav.popBackStack() })

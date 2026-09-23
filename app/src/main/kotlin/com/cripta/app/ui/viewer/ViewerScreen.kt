@@ -289,11 +289,15 @@ fun ViewerScreen(
             )
         }
     }
+    val trashOn by vm.trashEnabled.collectAsState()
     if (confirmDelete && file != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Eliminare il file?") },
-            text = { Text("\"${file.originalName}\" verrà eliminato in modo sicuro. Irreversibile.") },
+            text = {
+                Text(if (trashOn) "\"${file.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Archivio)."
+                    else "\"${file.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
+            },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; vm.delete(file.id) { onBack() } }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
@@ -686,10 +690,16 @@ private fun VideoPlayer(
         }
     }
     // User playback preferences: loop on/off and start muted.
+    var resumeEnabled by remember(file.id) { mutableStateOf(true) }
     LaunchedEffect(player) {
-        val (loop, muted) = vm.playbackPrefs()
-        player.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-        if (muted) player.volume = 0f
+        val prefs = vm.playbackPrefs()
+        player.repeatMode = if (prefs.loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        if (prefs.muted) player.volume = 0f
+        resumeEnabled = prefs.resume
+        // Resume where it was left (skipping a position too close to either end).
+        val pos = file.playbackPosMs ?: 0L
+        val dur = file.durationMs ?: 0L
+        if (prefs.resume && pos > 3_000 && (dur <= 0 || pos < dur - 5_000)) player.seekTo(pos)
     }
     // Resize presets cycled by the aspect button: (resizeMode, label, videoScale). The PlayerView
     // always stays full-screen so the CONTROLS never move; zoom is applied only to the video
@@ -722,7 +732,11 @@ private fun VideoPlayer(
             }
         }
         player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
+        onDispose {
+            player.removeListener(listener)
+            if (resumeEnabled) vm.savePosition(file.id, player.currentPosition, player.duration)
+            player.release()
+        }
     }
 
     fun seekBy(deltaMs: Long) {

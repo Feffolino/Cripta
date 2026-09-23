@@ -64,17 +64,43 @@ class VaultRepository @Inject constructor(
     val conversionProgress: StateFlow<Int> = _conversionProgress
     fun setConversionProgress(pct: Int) { _conversionProgress.value = pct.coerceIn(0, 100) }
 
-    enum class DownloadPhase { IDLE, PREPARING, DOWNLOADING, DONE, FAILED, CANCELLED }
+    enum class DownloadPhase { QUEUED, PREPARING, DOWNLOADING, DONE, FAILED, CANCELLED }
 
-    /** Live state of the in-app URL downloader; drives the progress UI on the Download screen. */
-    data class DownloadState(
-        val phase: DownloadPhase = DownloadPhase.IDLE,
+    /** One link in the downloader queue, with its destination and live progress. */
+    data class DownloadJob(
+        val id: String,
+        val url: String,
+        val maxHeight: Int? = null,
+        val folderId: Long? = null,
+        val tagIds: List<Long> = emptyList(),
+        val phase: DownloadPhase = DownloadPhase.QUEUED,
         val pct: Int = 0,
         val etaSec: Long = 0,
+        /** File name once known, or the failure reason. */
         val message: String? = null,
+        /** Id of the imported file once done (for "Apri"). */
+        val fileId: String? = null,
     ) {
         val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
+        val finished: Boolean get() = phase == DownloadPhase.DONE || phase == DownloadPhase.FAILED || phase == DownloadPhase.CANCELLED
     }
+
+    private val _downloads = MutableStateFlow<List<DownloadJob>>(emptyList())
+    /** The downloader queue, oldest first: running, waiting and recently finished links. */
+    val downloads: StateFlow<List<DownloadJob>> = _downloads
+
+    fun enqueueDownload(job: DownloadJob) = _downloads.update { it + job }
+    fun updateDownload(id: String, f: (DownloadJob) -> DownloadJob) =
+        _downloads.update { list -> list.map { if (it.id == id) f(it) else it } }
+    /** Claim the next waiting link (marks it PREPARING), or null when the queue is drained. */
+    @Synchronized fun takeNextDownload(): DownloadJob? {
+        val next = _downloads.value.firstOrNull { it.phase == DownloadPhase.QUEUED } ?: return null
+        updateDownload(next.id) { it.copy(phase = DownloadPhase.PREPARING) }
+        return next
+    }
+    /** Remove a waiting or finished link from the list (a running one must be cancelled first). */
+    fun removeDownload(id: String) = _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
+    fun clearFinishedDownloads() = _downloads.update { list -> list.filterNot { it.finished } }
 
     /**
      * Live state of file imports (encryption into the vault), shared by every batch the service is
@@ -91,6 +117,8 @@ class VaultRepository @Inject constructor(
         val currentTotalBytes: Long = 0,
         /** True once every batch finished; stays until the user dismisses the result. */
         val finished: Boolean = false,
+        /** Just-imported files that were already in the vault: (new file id, name of the existing copy). */
+        val duplicates: List<Pair<String, String>> = emptyList(),
     ) {
         val succeeded: Int get() = done - failed
         /** Overall progress 0..1, counting the partial progress of the file being encrypted. */
@@ -124,6 +152,12 @@ class VaultRepository @Inject constructor(
         it.copy(done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0)
     }
 
+    fun importDuplicate(newId: String, existingName: String) =
+        _importState.update { it.copy(duplicates = it.duplicates + (newId to existingName)) }
+
+    /** Remove the given duplicates from the banner state (after the user resolved them). */
+    fun clearImportDuplicates() = _importState.update { it.copy(duplicates = emptyList()) }
+
     /** A batch ended; returns the final state when it was the last one running, else null. */
     fun importEnd(): ImportState? {
         if (importBatches.decrementAndGet() > 0) return null
@@ -136,9 +170,6 @@ class VaultRepository @Inject constructor(
         if (!_importState.value.active) _importState.value = ImportState()
     }
 
-    private val _downloadState = MutableStateFlow(DownloadState())
-    val downloadState: StateFlow<DownloadState> = _downloadState
-    fun setDownloadState(s: DownloadState) { _downloadState.value = s }
     fun emitConvertResult(event: ConversionEvent) { _convertEvents.tryEmit(event) }
 
     /**
@@ -374,7 +405,9 @@ class VaultRepository @Inject constructor(
     }
 
     /** Encrypt a freshly downloaded plaintext MP4 into the vault as a new file. */
-    suspend fun importDownloadedMp4(mp4: File, displayName: String, folderId: Long?, sourceUrl: String?): FileEntity =
+    suspend fun importDownloadedMp4(
+        mp4: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
+    ): FileEntity =
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
@@ -408,9 +441,12 @@ class VaultRepository @Inject constructor(
                 width = downloadedRes?.first,
                 height = downloadedRes?.second,
             )
-            db.fileDao().insert(entity)
+            // The chosen folder may have been deleted while downloading: fall back to the root.
+            val safeEntity = if (folderId != null && db.folderDao().byId(folderId) == null) entity.copy(folderId = null) else entity
+            db.fileDao().insert(safeEntity)
+            tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it)) }
             notifyChanged()
-            entity
+            safeEntity
         }
 
     /** Display resolution (rotation applied) of a plaintext video file; null on failure. */
@@ -654,7 +690,7 @@ class VaultRepository @Inject constructor(
         if (moved.isNotEmpty()) addTags(keepId, moved.toList())
         if (favorite != keep.file.isFavorite) db.fileDao().setFavorite(keepId, favorite)
         if (link != keep.file.sourceUrl) db.fileDao().setSourceUrl(keepId, link)
-        for (id in removeIds.filter { it != keepId }.distinct()) secureDelete(id)
+        for (id in removeIds.filter { it != keepId }.distinct()) deleteOrTrash(id)
         notifyChanged()
         moved.toList()
     }
@@ -662,6 +698,93 @@ class VaultRepository @Inject constructor(
     /** Tag names per file id (one query per file; meant for small sets like duplicate groups). */
     suspend fun tagNamesOf(fileIds: Collection<String>): Map<String, List<String>> = withContext(Dispatchers.IO) {
         fileIds.associateWith { id -> db.fileDao().withTagsById(id)?.tags?.map { it.name } ?: emptyList() }
+    }
+
+    // --- Trash (optional; see Settings.trashEnabled) ---
+
+    fun trashed(): Flow<List<FileWithTags>> = db.fileDao().trashedWithTags()
+
+    /** Move a file to the trash (restorable). Its key is kept until the trash is emptied. */
+    suspend fun trash(fileId: String) = withContext(Dispatchers.IO) {
+        db.fileDao().setDeletedAt(fileId, now()); notifyChanged()
+    }
+
+    /** Bring a trashed file back; to the root if its folder no longer exists. */
+    suspend fun restore(fileId: String) = withContext(Dispatchers.IO) {
+        val f = db.fileDao().byId(fileId) ?: return@withContext
+        if (f.folderId != null && db.folderDao().byId(f.folderId) == null) db.fileDao().move(fileId, null)
+        db.fileDao().setDeletedAt(fileId, null)
+        notifyChanged()
+    }
+
+    /**
+     * Delete honouring the user's trash setting: to the trash when enabled, otherwise crypto-shred
+     * right away. Returns true when the file went to the trash.
+     */
+    suspend fun deleteOrTrash(fileId: String): Boolean {
+        val useTrash = runCatching { settings.settingsOnce().trashEnabled }.getOrDefault(false)
+        if (useTrash) trash(fileId) else secureDelete(fileId)
+        return useTrash
+    }
+
+    /** Crypto-shred trashed files older than [days]; returns their ids (for cover eviction). */
+    suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
+        val ids = db.fileDao().trashedBefore(now() - days * 86_400_000L)
+        ids.forEach { secureDelete(it) }
+        ids
+    }
+
+    // --- Playback resume ---
+
+    /** Remember where playback stopped (null/0 = start over). No-op when unchanged. */
+    suspend fun setPlaybackPos(fileId: String, posMs: Long?) = withContext(Dispatchers.IO) {
+        val cur = db.fileDao().byId(fileId)?.playbackPosMs
+        val v = posMs?.takeIf { it > 0 }
+        if (cur != v) { db.fileDao().setPlaybackPos(fileId, v); notifyChanged() }
+    }
+
+    // --- "Already in the vault" checks ---
+
+    /** A live file previously downloaded from [url], if any. */
+    suspend fun fileBySourceUrl(url: String): FileEntity? = withContext(Dispatchers.IO) {
+        url.trim().takeIf { it.isNotEmpty() }?.let { db.fileDao().bySourceUrl(it) }
+    }
+
+    /** Live files with exactly the same size as [file] (the only possible byte-identical copies). */
+    suspend fun sameSizeAs(file: FileEntity): List<FileEntity> = withContext(Dispatchers.IO) {
+        db.fileDao().sameSize(file.sizeBytes, file.id)
+    }
+
+    // --- Saved filters (encrypted in the DB with the rest of the vault) ---
+
+    fun savedFilters(): Flow<List<com.cripta.app.data.db.SavedFilterEntity>> = db.savedFilterDao().all()
+
+    suspend fun saveFilter(name: String, json: String) = withContext(Dispatchers.IO) {
+        db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = name.trim(), json = json)); notifyChanged()
+    }
+
+    suspend fun deleteSavedFilter(id: Long) = withContext(Dispatchers.IO) {
+        db.savedFilterDao().delete(id); notifyChanged()
+    }
+
+    // --- Folders / tags helpers ---
+
+    /** Root-to-folder chain for [folderId] (empty when it doesn't exist). */
+    suspend fun folderPath(folderId: Long): List<FolderEntity> = withContext(Dispatchers.IO) {
+        val chain = ArrayDeque<FolderEntity>()
+        var cur = db.folderDao().byId(folderId)
+        var guard = 0
+        while (cur != null && guard++ < 64) {
+            chain.addFirst(cur)
+            cur = cur.parentId?.let { db.folderDao().byId(it) }
+        }
+        chain.toList()
+    }
+
+    /** Link existing tags (by id) to a file, keeping its other tags. */
+    suspend fun addTagIds(fileId: String, tagIds: Collection<Long>) = withContext(Dispatchers.IO) {
+        tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = fileId, tagId = it)) }
+        if (tagIds.isNotEmpty()) notifyChanged()
     }
 
     /** Best-effort deletion of the original picked files (SAF documents). */

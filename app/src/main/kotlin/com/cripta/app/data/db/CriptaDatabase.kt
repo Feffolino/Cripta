@@ -10,14 +10,15 @@ import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
 @Database(
-    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class],
-    version = 8,
+    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class],
+    version = 9,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
     abstract fun folderDao(): FolderDao
     abstract fun fileDao(): FileDao
     abstract fun tagDao(): TagDao
+    abstract fun savedFilterDao(): SavedFilterDao
 
     companion object {
         private const val NAME = "cripta.db"
@@ -70,6 +71,17 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE files ADD COLUMN playbackPosMs INTEGER")
+                db.execSQL("ALTER TABLE files ADD COLUMN deletedAt INTEGER")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `saved_filters` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `json` TEXT NOT NULL)"
+                )
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -81,7 +93,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
         }

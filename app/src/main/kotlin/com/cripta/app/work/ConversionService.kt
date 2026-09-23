@@ -42,6 +42,7 @@ class ConversionService : Service() {
     @Inject lateinit var converter: VideoConverter
     @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
     @Inject lateinit var thumbs: com.cripta.app.media.ThumbnailLoader
+    @Inject lateinit var dupScanner: com.cripta.app.data.dedup.DuplicateScanner
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -52,30 +53,50 @@ class ConversionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val mode = intent?.getStringExtra(EX_MODE)
-        if (mode == null) { stopSelf(startId); return START_NOT_STICKY }
+        if (mode == null) { stopIfIdle(startId); return START_NOT_STICKY }
         // Cancel request from the notification action: abort the running transcode/download and leave.
         if (mode == MODE_CANCEL) {
             cancelRequested = true
             ytdlpProcessId?.let { ytdlp.cancel(it) }
-            convertJob?.cancel()
-            stopSelf(startId)
+            // Only a running conversion is a cancellable coroutine; a download is cancelled by
+            // killing its yt-dlp process above, so the rest of the download queue keeps going.
+            if (currentDownloadId == null) convertJob?.cancel()
+            stopIfIdle(startId)
             return START_NOT_STICKY
         }
         // Completion-notification actions: delete or keep the original video.
         if (mode == MODE_DELETE_ORIG) {
             val oid = intent.getStringExtra(EX_ID)
             getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
-            scope.launch { oid?.let { runCatching { repo.secureDelete(it) } } }
-            stopSelf(startId)
+            scope.launch { oid?.let { runCatching { repo.deleteOrTrash(it) } } }
+            stopIfIdle(startId)
             return START_NOT_STICKY
         }
         if (mode == MODE_DISMISS) {
             getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
-            stopSelf(startId)
+            stopIfIdle(startId)
             return START_NOT_STICKY
         }
         ensureChannel()
+        lastStartId = startId
         startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
+        if (mode == MODE_DOWNLOAD_URL) {
+            val url = intent.getStringExtra(EX_URL)
+            if (url != null) {
+                repo.enqueueDownload(
+                    VaultRepository.DownloadJob(
+                        id = java.util.UUID.randomUUID().toString(),
+                        url = url,
+                        maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
+                        folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
+                        tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
+                    )
+                )
+            }
+            // A worker already running picks the new link up from the queue.
+            val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
+            if (!start) return START_NOT_STICKY
+        }
         active.incrementAndGet()
 
         val job = scope.launch {
@@ -94,24 +115,34 @@ class ConversionService : Service() {
                     MODE_CONVERT -> {
                         intent.getStringExtra(EX_ID)?.let { convertOne(it) }
                     }
-                    MODE_DOWNLOAD_URL -> {
-                        val url = intent.getStringExtra(EX_URL)
-                        val h = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 }
-                        if (url != null) downloadUrl(url, h)
-                    }
+                    MODE_DOWNLOAD_URL -> downloadWorker()
                 }
             } catch (_: Exception) {
                 // best-effort; individual items already guarded below
             } finally {
-                if (active.decrementAndGet() == 0) stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf(startId)
+                if (active.decrementAndGet() == 0) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    // The latest start id: stops only if no newer command arrived meanwhile.
+                    stopSelf(lastStartId)
+                }
             }
         }
-        if (mode == MODE_CONVERT || mode == MODE_DOWNLOAD_URL) convertJob = job
+        if (mode == MODE_CONVERT) convertJob = job
         return START_NOT_STICKY
     }
 
     @Volatile private var convertJob: kotlinx.coroutines.Job? = null
+    @Volatile private var lastStartId = 0
+    /** Guards [downloadWorkerRunning] so a link enqueued while the worker drains is never missed. */
+    private val workerLock = Any()
+    private var downloadWorkerRunning = false
+    /** Queue id of the link being downloaded now (null when none). */
+    @Volatile private var currentDownloadId: String? = null
+
+    /** Stop the service after a control command, unless work is still running. */
+    private fun stopIfIdle(startId: Int) {
+        if (active.get() == 0) stopSelf(startId)
+    }
     /** Id of the running yt-dlp process, so the Cancel action can kill the native process (a coroutine
      *  cancel alone can't interrupt the blocking execute call). */
     @Volatile private var ytdlpProcessId: String? = null
@@ -147,8 +178,9 @@ class ConversionService : Service() {
                 val st = repo.importState.value
                 notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = name))
                 var lastNotify = 0L
+                var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = runCatching {
-                    repo.import(uri, folderId) { bytes ->
+                    imported = repo.import(uri, folderId) { bytes ->
                         repo.importBytes(bytes)
                         val now = SystemClock.elapsedRealtime()
                         if (now - lastNotify > 500) {
@@ -159,6 +191,12 @@ class ConversionService : Service() {
                         }
                     }
                 }.onFailure { android.util.Log.e("ConversionService", "import failed: $name", it) }.isSuccess
+                // Already in the vault? (byte-identical; only same-size files are even checked)
+                imported?.let { f ->
+                    runCatching { dupScanner.copiesOf(f) }.getOrNull()?.firstOrNull()?.let { existing ->
+                        repo.importDuplicate(f.id, existing.originalName)
+                    }
+                }
                 repo.importItemDone(ok)
                 val cur = repo.importState.value
                 val elapsed = SystemClock.elapsedRealtime() - start
@@ -173,6 +211,7 @@ class ConversionService : Service() {
                     val text = buildString {
                         append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
                         if (fin.failed > 0) append(" · ${fin.failed} non importati")
+                        if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
                     }
                     notifyResult(title, text)
                 }
@@ -251,63 +290,82 @@ class ConversionService : Service() {
         }
     }
 
+    /** Process the downloader queue one link at a time until it is empty. */
+    private suspend fun downloadWorker() {
+        var drained = false
+        try {
+            while (true) {
+                val job = synchronized(workerLock) {
+                    repo.takeNextDownload() ?: run { downloadWorkerRunning = false; drained = true; null }
+                } ?: break
+                downloadUrl(job)
+            }
+        } finally {
+            // Exited early (e.g. cancelled): release the worker slot so the next link can start one.
+            if (!drained) synchronized(workerLock) { downloadWorkerRunning = false }
+        }
+    }
+
     /**
-     * Download a remote video (direct link or HLS) to MP4 and encrypt it into the vault. Progress
-     * and a Cancel action live in the notification; the source link is stored on the new file.
+     * Download a remote video (direct link or HLS) to MP4 and encrypt it into the vault, in the
+     * folder and with the tags chosen for [job]. Progress and a Cancel action live in the
+     * notification; the source link is stored on the new file. Cancelling stops only this link:
+     * the rest of the queue continues.
      */
-    private suspend fun downloadUrl(url: String, maxHeight: Int?) {
+    private suspend fun downloadUrl(job: VaultRepository.DownloadJob) {
+        val url = job.url
         var produced: java.io.File? = null
         val pid = java.util.UUID.randomUUID().toString()
         cancelRequested = false
         ytdlpProcessId = pid
+        currentDownloadId = job.id
+        fun set(f: (VaultRepository.DownloadJob) -> VaultRepository.DownloadJob) = repo.updateDownload(job.id, f)
+        val waiting = { repo.downloads.value.count { it.phase == VaultRepository.DownloadPhase.QUEUED } }
         try {
             repo.setConversionProgress(0)
-            repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.PREPARING))
+            set { it.copy(phase = VaultRepository.DownloadPhase.PREPARING) }
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
             notify(build("Preparazione…", 0, indeterminate = true, cancelable = true))
             produced = withContext(Dispatchers.IO) {
-                ytdlp.download(url, maxHeight, pid) { pct, eta ->
+                ytdlp.download(url, job.maxHeight, pid) { pct, eta ->
                     repo.setConversionProgress(pct)
-                    repo.setDownloadState(
-                        VaultRepository.DownloadState(VaultRepository.DownloadPhase.DOWNLOADING, pct, eta)
-                    )
-                    val sub = if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%"
+                    set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = eta) }
+                    val q = waiting().let { if (it > 0) " · $it in coda" else "" }
+                    val sub = (if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%") + q
                     notify(build("Download in corso", pct, sub = sub, cancelable = true))
                 }
             }
+            if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             if (!isPlayableVideo(produced, null)) {
-                repo.setDownloadState(
-                    VaultRepository.DownloadState(VaultRepository.DownloadPhase.FAILED, message = "Nessun video valido (link errato o DRM)")
-                )
-                notifyResult("Download fallito", "Nessun video valido (link errato o DRM)")
+                val msg = "Nessun video valido (link errato o DRM)"
+                set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
+                notifyResult("Download fallito", msg)
                 return
             }
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
-            repo.importDownloadedMp4(produced, name, folderId = null, sourceUrl = url)
-            repo.setDownloadState(
-                VaultRepository.DownloadState(VaultRepository.DownloadPhase.DONE, 100, message = name)
-            )
+            val file = repo.importDownloadedMp4(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
+            set { it.copy(phase = VaultRepository.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             notifyResult("Download completato", name)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.CANCELLED))
+            set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
             notifyResult("Download annullato", null)
             throw e
         } catch (e: Exception) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
-            // coroutine cancellation, so distinguish it here. Otherwise surface the real cause instead
-            // of letting onStartCommand swallow it (the old "flash then vanish" symptom).
+            // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
-                repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.CANCELLED))
+                set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
                 notifyResult("Download annullato", null)
             } else {
                 android.util.Log.e("ConversionService", "download failed: $url", e)
                 val msg = (e.message ?: e.javaClass.simpleName).take(200)
-                repo.setDownloadState(VaultRepository.DownloadState(VaultRepository.DownloadPhase.FAILED, message = msg))
+                set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download fallito", msg)
             }
         } finally {
             ytdlpProcessId = null
+            currentDownloadId = null
             withContext(NonCancellable) {
                 produced?.let { repo.shredTempFile(it); it.parentFile?.deleteRecursively() }
             }
@@ -426,6 +484,7 @@ class ConversionService : Service() {
         private const val MODE_DOWNLOAD_URL = "download_url"
         private const val EX_URL = "url"
         private const val EX_HEIGHT = "height"
+        private const val EX_TAGS = "tags"
         private const val DONE_NOTIF_ID = 4212
         private const val RESULT_NOTIF_ID = 4213
 
@@ -453,12 +512,17 @@ class ConversionService : Service() {
             }
         }
 
-        /** Start an in-app download of [url] to MP4, capped at [maxHeight]px (null = source quality). */
-        fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?) {
+        /**
+         * Queue an in-app download of [url] to MP4, capped at [maxHeight]px (null = source quality),
+         * saved into [folderId] (null = root) with [tagIds]. Links queue up and run one at a time.
+         */
+        fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList()) {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DOWNLOAD_URL)
                 putExtra(EX_URL, url)
                 maxHeight?.let { putExtra(EX_HEIGHT, it) }
+                folderId?.let { putExtra(EX_FOLDER, it) }
+                if (tagIds.isNotEmpty()) putExtra(EX_TAGS, tagIds.toLongArray())
             }
             ContextCompat.startForegroundService(ctx, i)
         }

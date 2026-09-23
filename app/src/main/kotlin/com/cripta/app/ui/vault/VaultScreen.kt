@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
@@ -205,6 +206,8 @@ fun VaultScreen(
     val coverVersions by vm.coverVersions.collectAsState()
     val stats by vm.stats.collectAsState()
     val importState by vm.importState.collectAsState()
+    val savedFilters by vm.savedFilters.collectAsState()
+    val trashEnabled by vm.trashEnabled.collectAsState()
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var searchExpanded by remember { mutableStateOf(false) }
@@ -240,8 +243,8 @@ fun VaultScreen(
     var showStats by remember { mutableStateOf(false) }
 
     // A clean import result disappears by itself; one with failures stays until dismissed.
-    LaunchedEffect(importState.finished, importState.failed) {
-        if (importState.finished && importState.failed == 0) {
+    LaunchedEffect(importState.finished, importState.failed, importState.duplicates.size) {
+        if (importState.finished && importState.failed == 0 && importState.duplicates.isEmpty()) {
             kotlinx.coroutines.delay(6000)
             vm.dismissImportResult()
         }
@@ -302,6 +305,12 @@ fun VaultScreen(
                 },
                 actions = {
                     if (inSelection) {
+                        val allIds = files.map { it.file.id }.toSet()
+                        val allSelected = allIds.isNotEmpty() && selection.containsAll(allIds)
+                        IconButton(onClick = { selection = if (allSelected) emptySet() else allIds }) {
+                            Icon(Icons.Filled.SelectAll, if (allSelected) "Deseleziona tutto" else "Seleziona tutto",
+                                tint = if (allSelected) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        }
                         val allFav = files.filter { it.file.id in selection }.all { it.file.isFavorite }
                         IconButton(onClick = { vm.setFavorite(selection.toList(), !allFav); selection = emptySet() }) {
                             Icon(Icons.Filled.Star, if (allFav) "Rimuovi preferito" else "Aggiungi preferito")
@@ -416,9 +425,13 @@ fun VaultScreen(
             }
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag, vm::clearFilters)
-            ImportBanner(importState, onDismiss = vm::dismissImportResult)
+            if (path.isNotEmpty() && !filters.active) {
+                Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
+            }
+            ImportBanner(importState, onDismiss = vm::dismissImportResult,
+                onRemoveDuplicates = { vm.removeImportDuplicates() })
             if (stats.scope.total > 0 && display.showStatsStrip) {
-                StatsStrip(stats, filters.active, onClick = { showStats = true })
+                StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
             }
 
             val manual = sortKey == SortKey.MANUAL
@@ -637,6 +650,11 @@ fun VaultScreen(
             onClear = { vm.clearFilters() },
             onDismiss = { showFilterSheet = false },
             tagColors = display.tagColors,
+            onTagMatchAll = vm::setTagMatchAll,
+            saved = savedFilters,
+            onApplySaved = vm::applySavedFilter,
+            onDeleteSaved = { vm.deleteSavedFilter(it) },
+            onSave = { vm.saveCurrentFilter(it) },
         )
     }
 
@@ -648,7 +666,10 @@ fun VaultScreen(
         AlertDialog(
             onDismissRequest = { confirmMultiDelete = false },
             title = { Text("Eliminare ${selection.size} file?") },
-            text = { Text("Eliminazione sicura (crypto-shredding). Irreversibile.") },
+            text = {
+                Text(if (trashEnabled) "Verranno spostati nel cestino: potrai ripristinarli da Impostazioni › Archivio."
+                    else "Eliminazione sicura (crypto-shredding). Irreversibile.")
+            },
             confirmButton = {
                 TextButton(onClick = { vm.deleteFiles(selection.toList()); selection = emptySet(); confirmMultiDelete = false }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
@@ -1003,6 +1024,16 @@ private fun ThumbBox(
                 modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
             )
         }
+        // "Resume" progress: how much of the video has already been watched.
+        val watched = if (isVideo && display?.resumePlayback != false) file?.let { f ->
+            val p = f.playbackPosMs; val d = f.durationMs
+            if (p != null && d != null && d > 0) (p.toFloat() / d).coerceIn(0f, 1f) else null
+        } else null
+        if (watched != null && watched > 0.01f) {
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.28f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(watched).background(MaterialTheme.colorScheme.primary))
+            }
+        }
         if (favorite) {
             Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(if (compact) 18.dp else 22.dp).clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
@@ -1246,14 +1277,37 @@ private fun FilterSortSheet(
     onClear: () -> Unit,
     onDismiss: () -> Unit,
     tagColors: Boolean = true,
+    onTagMatchAll: (Boolean) -> Unit = {},
+    saved: List<com.cripta.app.data.db.SavedFilterEntity> = emptyList(),
+    onApplySaved: (String) -> Unit = {},
+    onDeleteSaved: (Long) -> Unit = {},
+    onSave: (String) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var naming by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            if (saved.isNotEmpty()) {
+                Text("Filtri salvati", style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    saved.forEach { sf ->
+                        androidx.compose.material3.InputChip(
+                            selected = false,
+                            onClick = { onApplySaved(sf.json) },
+                            label = { Text(sf.name) },
+                            trailingIcon = {
+                                Icon(Icons.Filled.Close, "Elimina filtro salvato", modifier = Modifier.size(16.dp)
+                                    .clickable { onDeleteSaved(sf.id) })
+                            },
+                        )
+                    }
+                }
+                HorizontalDivider()
+            }
             Text("Ordina", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
@@ -1302,6 +1356,12 @@ private fun FilterSortSheet(
                 Text("Tag", style = MaterialTheme.typography.titleSmall)
                 Text("Tocca per includere, ancora per escludere (barrato, nascosto), ancora per azzerare.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // With several tags chosen: must a file have all of them, or is one enough?
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Mostra file con", style = MaterialTheme.typography.bodyMedium)
+                    FilterChip(selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, label = { Text("tutte") })
+                    FilterChip(selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, label = { Text("almeno una") })
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     tags.forEach { tag ->
                         val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
@@ -1323,10 +1383,16 @@ private fun FilterSortSheet(
 
             // Always laid out (just disabled when nothing is filtered): if it appeared/disappeared,
             // flipping a toggle would change the sheet's height and make it slide up/down.
-            TextButton(onClick = onClear, enabled = filters.active, modifier = Modifier.align(Alignment.End)) {
-                Text("Azzera filtri")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { naming = true }, enabled = filters.active) { Text("Salva filtro") }
+                TextButton(onClick = onClear, enabled = filters.active) { Text("Azzera filtri") }
             }
         }
+    }
+    if (naming) {
+        TextPromptDialog("Salva filtro", "Nome (es. Video da vedere)",
+            onConfirm = { onSave(it); naming = false },
+            onDismiss = { naming = false })
     }
 }
 
@@ -1684,7 +1750,7 @@ private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vect
  * processed and its progress; when done it confirms how many files made it (and how many failed).
  */
 @Composable
-private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Unit) {
+private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Unit, onRemoveDuplicates: () -> Unit) {
     AnimatedVisibility(
         visible = state.active || state.finished,
         enter = androidx.compose.animation.expandVertically() + fadeIn(),
@@ -1753,38 +1819,95 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                     Text("Puoi uscire dall'app: l'importazione continua in background.",
                         style = MaterialTheme.typography.labelSmall, color = onContainer.copy(alpha = 0.8f))
                 }
+                // Byte-identical copies of files already in the vault: offer to drop the new copies.
+                if (state.duplicates.isNotEmpty()) {
+                    val n = state.duplicates.size
+                    Text(
+                        if (n == 1) "\"${state.duplicates.first().second}\" era già nel vault."
+                        else "$n file erano già nel vault (copie identiche).",
+                        style = MaterialTheme.typography.bodySmall, color = onContainer,
+                    )
+                    if (!state.active) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            androidx.compose.material3.FilledTonalButton(onClick = onRemoveDuplicates) {
+                                Text(if (n == 1) "Rimuovi il doppione" else "Rimuovi i $n doppioni")
+                            }
+                            TextButton(onClick = onDismiss) { Text("Tienili", color = onContainer) }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/** One-line summary of what is on screen; tap for the full breakdown. */
+/**
+ * One-line summary of what is on screen. Tap the counter for the full breakdown; tap a type count
+ * to show only that type (tap again to show everything).
+ */
 @Composable
-private fun StatsStrip(stats: VaultStats, filtering: Boolean, onClick: () -> Unit) {
+private fun StatsStrip(stats: VaultStats, filtering: Boolean, type: TypeFilter, onOpen: () -> Unit, onType: (TypeFilter) -> Unit) {
     val shown = stats.shown
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         val lead = if (filtering || stats.filtered) "${shown.total} di ${stats.scope.total}"
             else if (shown.total == 1) "1 elemento" else "${shown.total} elementi"
         Text(lead, style = MaterialTheme.typography.labelLarge,
-            color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-        CountPill(Icons.Filled.Movie, shown.videos)
-        CountPill(Icons.Filled.Image, shown.images)
-        if (shown.others > 0) CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others)
+            color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
+        CountPill(Icons.Filled.Movie, shown.videos, type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
+        CountPill(Icons.Filled.Image, shown.images, type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
+        if (shown.others > 0 || type == TypeFilter.OTHER) {
+            CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others, type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
+        }
         Box(Modifier.weight(1f))
-        Icon(Icons.Filled.ExpandMore, "Riepilogo", tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp))
+        IconButton(onClick = onOpen, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Filled.ExpandMore, "Riepilogo", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** Clickable path "Radice › A › B": tap a level to jump straight back to it. */
+@Composable
+private fun Breadcrumb(names: List<String>, onGo: (Int) -> Unit) {
+    val scroll = rememberScrollState()
+    LaunchedEffect(names.size) { scroll.animateScrollTo(scroll.maxValue) }
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val all = listOf("Radice") + names
+        all.forEachIndexed { i, n ->
+            val last = i == all.lastIndex
+            Text(
+                n,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = Modifier.clip(MaterialTheme.shapes.small)
+                    .then(if (last) Modifier else Modifier.clickable { onGo(i) })
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            )
+            if (!last) Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
 @Composable
-private fun CountPill(icon: ImageVector, count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
-        Text(" $count", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun CountPill(icon: ImageVector, count: Int, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(MaterialTheme.shapes.small)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
+            .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
+        Text(" $count", style = MaterialTheme.typography.labelMedium, color = tint)
     }
 }
 

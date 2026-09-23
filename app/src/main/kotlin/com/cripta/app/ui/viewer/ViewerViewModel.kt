@@ -64,9 +64,24 @@ class ViewerViewModel @Inject constructor(
 
     suspend fun fileById(id: String): FileEntity? = repo.fileById(id)
 
-    /** Playback preferences read when a player is created: (loop, start muted). */
-    suspend fun playbackPrefs(): Pair<Boolean, Boolean> =
-        runCatching { settingsStore.settingsOnce() }.getOrNull()?.let { it.videoLoop to it.videoStartMuted } ?: (true to false)
+    data class PlaybackPrefs(val loop: Boolean = true, val muted: Boolean = false, val resume: Boolean = true)
+
+    /** Playback preferences read when a player is created. */
+    suspend fun playbackPrefs(): PlaybackPrefs =
+        runCatching { settingsStore.settingsOnce() }.getOrNull()
+            ?.let { PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback) } ?: PlaybackPrefs()
+
+    /**
+     * Remember where playback stopped. Near the end counts as finished (next time starts over).
+     * Runs outside viewModelScope: the viewer may be closing, which would cancel the save.
+     */
+    fun savePosition(fileId: String, posMs: Long, durationMs: Long) {
+        val finished = durationMs > 0 && posMs >= durationMs - 5_000
+        val value = if (finished || posMs < 3_000) null else posMs
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            runCatching { repo.setPlaybackPos(fileId, value) }
+        }
+    }
 
     /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */
     suspend fun videoInfo(file: FileEntity): String = thumbs.videoDiagnostics(file)
@@ -99,10 +114,14 @@ class ViewerViewModel @Inject constructor(
     }
 
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
-        repo.secureDelete(fileId)
-        thumbs.evict(fileId)
+        // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
+        if (!repo.deleteOrTrash(fileId)) thumbs.evict(fileId)
         onDone()
     }
+
+    val trashEnabled: StateFlow<Boolean> =
+        settingsStore.settings.map { it.trashEnabled }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** True while any video conversion is running (drives a progress indicator). Backed by the
      *  foreground service, so it stays correct even if the viewer is closed and reopened. */
@@ -127,7 +146,7 @@ class ViewerViewModel @Inject constructor(
 
     /** Delete the just-converted original (from the completion prompt). */
     fun deleteConvertedOriginal() = viewModelScope.launch {
-        _convertedOriginalId.value?.let { repo.secureDelete(it); thumbs.evict(it) }
+        _convertedOriginalId.value?.let { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }
         clearConverted()
     }
 

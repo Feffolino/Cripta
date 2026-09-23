@@ -118,6 +118,8 @@ fun SettingsScreen(
         }
     }
     var showAllTags by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
+    val trashed by vm.trashed.collectAsState()
 
     Scaffold(
         topBar = {
@@ -241,6 +243,14 @@ fun SettingsScreen(
             item(key = SettingsCategory.RIPRODUZIONE.name) {
                 CategoryBlock(SettingsCategory.RIPRODUZIONE) {
                     Section("Video") {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Riprendi da dove eri rimasto")
+                                Text("Riapre ogni video al punto in cui l'avevi lasciato e mostra una barra di avanzamento sulla copertina.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked = s.display.resumePlayback, onCheckedChange = { vm.setResumePlayback(it) })
+                        }
                         ToggleRow("Ripeti il video in loop", s.videoLoop) { vm.setVideoLoop(it) }
                         ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
                     }
@@ -328,7 +338,8 @@ fun SettingsScreen(
                         Text(
                             "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
                                 "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
-                                "la cancellazione fisica su memoria flash non è garantita dal sistema. Nessun permesso di rete.",
+                                "la cancellazione fisica su memoria flash non è garantita dal sistema. Internet è usato solo per " +
+                                "scaricare i video dai link e controllare gli aggiornamenti: i file del vault non lasciano mai il dispositivo.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -354,6 +365,24 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                    }
+                    Section("Cestino", "Se attivo, i file eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
+                        ToggleRow("Usa il cestino", s.trashEnabled) { vm.setTrashEnabled(it) }
+                        if (s.trashEnabled) {
+                            Text("Conserva per", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(3, 7, 30).forEach { d ->
+                                    FilterChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
+                                }
+                            }
+                        }
+                        if (trashed.isNotEmpty() || s.trashEnabled) {
+                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(if (trashed.isEmpty()) "Cestino vuoto" else "Apri cestino (${trashed.size})")
+                            }
+                        }
+                        Text("Finché un file è nel cestino la sua chiave non è ancora distrutta.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -438,6 +467,16 @@ fun SettingsScreen(
         }
     }
 
+    if (showTrash) {
+        TrashDialog(
+            items = trashed.map { it.file },
+            days = s.trashDays,
+            onRestore = { vm.restore(it) },
+            onDelete = { vm.deleteForever(it) },
+            onEmpty = { vm.emptyTrash() },
+            onDismiss = { showTrash = false },
+        )
+    }
     if (addTag) {
         LabelEditorDialog(
             title = "Nuova etichetta",
@@ -627,5 +666,66 @@ private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** Trash contents: restore or destroy each file, or empty everything at once. */
+@Composable
+private fun TrashDialog(
+    items: List<com.cripta.app.data.db.FileEntity>,
+    days: Int,
+    onRestore: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onEmpty: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var confirmEmpty by remember { mutableStateOf(false) }
+    val fmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cestino") },
+        text = {
+            if (items.isEmpty()) {
+                Text("Il cestino è vuoto.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items.forEach { f ->
+                        val left = f.deletedAt?.let { days - ((System.currentTimeMillis() - it) / 86_400_000L).toInt() } ?: days
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "Eliminato il ${f.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—"} · " +
+                                        if (left <= 1) "distrutto entro oggi" else "ancora $left giorni",
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            TextButton(onClick = { onRestore(f.id) }) { Text("Ripristina") }
+                            IconButton(onClick = { onDelete(f.id) }) {
+                                Icon(Icons.Filled.Delete, "Elimina definitivamente", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
+        dismissButton = {
+            if (items.isNotEmpty()) {
+                TextButton(onClick = { confirmEmpty = true }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
+            }
+        },
+    )
+    if (confirmEmpty) {
+        AlertDialog(
+            onDismissRequest = { confirmEmpty = false },
+            title = { Text("Svuotare il cestino?") },
+            text = { Text("${items.size} file verranno distrutti in modo sicuro. Irreversibile.") },
+            confirmButton = {
+                TextButton(onClick = { onEmpty(); confirmEmpty = false }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmEmpty = false }) { Text("Annulla") } },
+        )
     }
 }
