@@ -166,6 +166,7 @@ class SettingsViewModel @Inject constructor(
     fun setHoldSpeed(x10: Int) = viewModelScope.launch { store.setHoldSpeed(x10) }
     fun setControlsTimeout(sec: Int) = viewModelScope.launch { store.setControlsTimeout(sec) }
     fun setViewerFilmstrip(v: Boolean) = viewModelScope.launch { store.setViewerFilmstrip(v) }
+    fun setPauseOnLeave(v: Boolean) = viewModelScope.launch { store.setPauseOnLeave(v) }
     fun setFilmstripShape(v: com.cripta.app.data.StripShape) = viewModelScope.launch { store.setFilmstripShape(v) }
     fun setFilmstripSpan(v: Int) = viewModelScope.launch { store.setFilmstripSpan(v) }
     fun setFilmstripSize(v: Int) = viewModelScope.launch { store.setFilmstripSize(v) }

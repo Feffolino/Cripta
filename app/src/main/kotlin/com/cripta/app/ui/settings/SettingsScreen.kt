@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
@@ -410,6 +411,9 @@ fun SettingsScreen(
                                         }
                                     }
                                 }
+                                ToggleRow("Metti in pausa uscendo dall'app", s.pauseOnLeave,
+                                    desc = "Il video si ferma quando l'app va in background. Continua se è in Picture-in-Picture o a schermo diviso.",
+                                    icon = Icons.Filled.Pause) { vm.setPauseOnLeave(it) }
                                 ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
                                     desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
                                     icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }

@@ -104,6 +104,8 @@ data class Settings(
     val updatePrerelease: Boolean = true,
     /** Viewer: strip of the neighbouring files' covers while the controls show. */
     val viewerFilmstrip: Boolean = true,
+    /** Viewer: pause a video when leaving the app (not in Picture-in-Picture or split screen). */
+    val pauseOnLeave: Boolean = true,
     /** Filmstrip: cover shape, covers on each side of the current one (1..4), size (0 S, 1 M, 2 L). */
     val filmstripShape: StripShape = StripShape.RECT,
     val filmstripSpan: Int = 3,
@@ -181,6 +183,7 @@ class SettingsStore @Inject constructor(
     private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
     private val filmstripKey = booleanPreferencesKey("viewer_filmstrip")
+    private val pauseOnLeaveKey = booleanPreferencesKey("pause_on_leave")
     private val stripShapeKey = intPreferencesKey("filmstrip_shape")
     private val stripSpanKey = intPreferencesKey("filmstrip_span")
     private val stripSizeKey = intPreferencesKey("filmstrip_size")
@@ -250,6 +253,7 @@ class SettingsStore @Inject constructor(
             pictureInPicture = p[pipKey] ?: false,
             updatePrerelease = p[updatePreKey] ?: true,
             viewerFilmstrip = p[filmstripKey] ?: true,
+            pauseOnLeave = p[pauseOnLeaveKey] ?: true,
             filmstripShape = StripShape.entries.getOrElse(p[stripShapeKey] ?: 0) { StripShape.RECT },
             filmstripSpan = (p[stripSpanKey] ?: 3).coerceIn(1, 4),
             filmstripSize = (p[stripSizeKey] ?: 1).coerceIn(0, 2),
@@ -296,6 +300,7 @@ class SettingsStore @Inject constructor(
     suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
+    suspend fun setPauseOnLeave(v: Boolean) { context.dataStore.edit { it[pauseOnLeaveKey] = v } }
     suspend fun setFilmstripShape(v: StripShape) { context.dataStore.edit { it[stripShapeKey] = v.ordinal } }
     suspend fun setFilmstripSpan(v: Int) { context.dataStore.edit { it[stripSpanKey] = v.coerceIn(1, 4) } }
     suspend fun setFilmstripSize(v: Int) { context.dataStore.edit { it[stripSizeKey] = v.coerceIn(0, 2) } }
@@ -357,7 +362,7 @@ class SettingsStore @Inject constructor(
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
-                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
+                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, swipeDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
