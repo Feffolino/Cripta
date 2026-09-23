@@ -1,5 +1,7 @@
 package com.cripta.app.ui.home
 
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -109,9 +111,14 @@ fun HomeScreen(
         onOpenFile(id)
     }
 
+    // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
+    val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surface),
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
                 actions = {
                     // Tools (duplicates, trash, backup) one tap away from Home.
@@ -142,6 +149,7 @@ fun HomeScreen(
                     onVideos = { vm.showType(TypeFilter.VIDEO); onOpenFolders() },
                     onPhotos = { vm.showType(TypeFilter.IMAGE); onOpenFolders() },
                     onAll = onOpenFolders,
+                    compact = landscape,
                 )
             }
             if (savedFilters.isNotEmpty()) {
@@ -214,18 +222,29 @@ fun HomeScreen(
 
 /** Stats-style header: videos, photos and space, each tappable. */
 @Composable
-private fun SummaryCard(videos: Int, photos: Int, bytes: Long, onVideos: () -> Unit, onPhotos: () -> Unit, onAll: () -> Unit) {
+private fun SummaryCard(videos: Int, photos: Int, bytes: Long, onVideos: () -> Unit, onPhotos: () -> Unit, onAll: () -> Unit, compact: Boolean = false) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SummaryTile(Icons.Filled.Movie, Color(0xFF3B82F6), "$videos", if (videos == 1) "video" else "video", Modifier.weight(1f), onVideos)
-        SummaryTile(Icons.Filled.Image, Color(0xFF22C55E), "$photos", if (photos == 1) "foto" else "foto", Modifier.weight(1f), onPhotos)
-        SummaryTile(Icons.Filled.SdStorage, Color(0xFF8B5CF6), formatBytes(bytes), "occupati", Modifier.weight(1f), onAll)
+        SummaryTile(Icons.Filled.Movie, Color(0xFF3B82F6), "$videos", if (videos == 1) "video" else "video", Modifier.weight(1f), onVideos, compact)
+        SummaryTile(Icons.Filled.Image, Color(0xFF22C55E), "$photos", if (photos == 1) "foto" else "foto", Modifier.weight(1f), onPhotos, compact)
+        SummaryTile(Icons.Filled.SdStorage, Color(0xFF8B5CF6), formatBytes(bytes), "occupati", Modifier.weight(1f), onAll, compact)
     }
 }
 
 @Composable
-private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false) {
     Surface(color = tint.copy(alpha = 0.12f), shape = MaterialTheme.shapes.large,
         modifier = modifier.clip(MaterialTheme.shapes.large).clickable(onClick = onClick)) {
+        if (compact) {
+            // Landscape: icon beside the numbers, half the height of the stacked tile.
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = tint, shape = CircleShape, modifier = Modifier.size(30.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(17.dp)) }
+                }
+                Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
+                Text(" $label", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+            return@Surface
+        }
         Column(Modifier.padding(12.dp)) {
             Surface(color = tint, shape = CircleShape, modifier = Modifier.size(32.dp)) {
                 Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp)) }

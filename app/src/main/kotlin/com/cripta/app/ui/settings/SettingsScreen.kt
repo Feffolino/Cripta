@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.clickable
@@ -132,9 +133,20 @@ fun SettingsScreen(
         requestedPage?.let { page = it; vm.consumeRequestedPage() }
     }
 
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
+    val scrollBehavior = if (landscape) androidx.compose.material3.TopAppBarDefaults.enterAlwaysScrollBehavior()
+        else androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior()
+    val maxW = if (landscape) 1400.dp else 720.dp
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
+                scrollBehavior = scrollBehavior,
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                ),
                 title = { Text(current?.label ?: "Impostazioni") },
                 navigationIcon = {
                     IconButton(onClick = { if (current != null) page = null else onBack() }) {
@@ -154,7 +166,8 @@ fun SettingsScreen(
     ) { pad ->
         if (current == null) {
             MainSettingsList(
-                modifier = Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = maxW).fillMaxWidth(),
+                columns = if (landscape) 2 else 1,
                 query = query,
                 onQuery = { query = it },
                 summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size, dupWaiting?.groups?.size) },
@@ -162,11 +175,25 @@ fun SettingsScreen(
                 onLock = { vm.lockNow(); onBack() },
             )
         } else {
-            // Capped width, centred: in landscape rows no longer stretch across the whole screen.
-            LazyColumn(
-                Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth(),
+          Column(Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = maxW).fillMaxWidth()) {
+            if (current == SettingsPage.COPERTINE) {
+                // The live preview stays pinned on top while the options scroll under it.
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Bottom) {
+                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
+                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
+                    Text("Anteprima dal vivo", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            // Portrait: one column. Landscape: sections flow in two columns, so the width is used
+            // instead of stretching every row across the screen.
+            androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
+                columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(if (landscape) 2 else 1),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalItemSpacing = 12.dp,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (current) {
                     SettingsPage.ASPETTO -> {
@@ -209,18 +236,6 @@ fun SettingsScreen(
                     }
 
                     SettingsPage.COPERTINE -> {
-                        // The live preview stays pinned on top while the options scroll under it.
-                        stickyHeader {
-                            androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
-                                Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.Bottom) {
-                                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(132.dp))
-                                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(92.dp))
-                                    Text("Anteprima dal vivo", style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
                         item {
                             Section("Etichette sulla copertina") {
                                 ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
@@ -574,6 +589,7 @@ fun SettingsScreen(
                     }
                 }
             }
+          }
         }
     }
 
@@ -797,18 +813,24 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
 @Composable
 private fun MainSettingsList(
     modifier: Modifier,
+    columns: Int,
     query: String,
     onQuery: (String) -> Unit,
     summaries: Map<SettingsPage, String>,
     onOpen: (SettingsPage, Boolean) -> Unit,
     onLock: () -> Unit,
 ) {
-    LazyColumn(
-        modifier,
+    // Two columns of page rows in landscape; search, group labels and the lock button span the width.
+    val full: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope) -> androidx.compose.foundation.lazy.grid.GridItemSpan =
+        { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns),
+        modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
+        item(span = full) {
             OutlinedTextField(
                 value = query, onValueChange = onQuery,
                 placeholder = { Text("Cerca un'impostazione") },
@@ -822,7 +844,7 @@ private fun MainSettingsList(
         if (q.isNotEmpty()) {
             val hits = SEARCH_INDEX.filter { (label, kw, _) -> label.lowercase().contains(q) || kw.contains(q) }
             if (hits.isEmpty()) {
-                item { Text("Nessuna impostazione trovata.", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                item(span = full) { Text("Nessuna impostazione trovata.", color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(8.dp)) }
             }
             items(hits.size) { i ->
@@ -830,15 +852,15 @@ private fun MainSettingsList(
                 PageRow(p, label, "in ${p.label}") { onOpen(p, true) }
             }
         } else {
-            item { GroupLabel("Preferenze") }
+            item(span = full) { GroupLabel("Preferenze") }
             items(SettingsPage.entries.filter { !it.tool && it != SettingsPage.INFO }.size) { i ->
                 val p = SettingsPage.entries.filter { !it.tool && it != SettingsPage.INFO }[i]
                 PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, false) }
             }
-            item { GroupLabel("Strumenti") }
+            item(span = full) { GroupLabel("Strumenti") }
             item { PageRow(SettingsPage.STRUMENTI, "Duplicati, cestino e backup", summaries[SettingsPage.STRUMENTI].orEmpty()) { onOpen(SettingsPage.STRUMENTI, false) } }
             item { PageRow(SettingsPage.INFO, SettingsPage.INFO.label, summaries[SettingsPage.INFO].orEmpty()) { onOpen(SettingsPage.INFO, false) } }
-            item {
+            item(span = full) {
                 Button(onClick = onLock, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     Icon(Icons.Filled.Lock, null); Text("  Blocca ora")
                 }

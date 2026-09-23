@@ -1,5 +1,8 @@
 package com.cripta.app.ui.download
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import android.widget.Toast
@@ -128,11 +131,12 @@ fun DownloadScreen(
         else Toast.makeText(ctx, "Appunti vuoti", Toast.LENGTH_SHORT).show()
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Download") }) }) { pad ->
-        Column(
-            Modifier.padding(pad).fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
+    val scrollBehavior = if (landscape) androidx.compose.material3.TopAppBarDefaults.enterAlwaysScrollBehavior()
+        else androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior()
+    val form: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), shape = CircleShape, modifier = Modifier.size(48.dp)) {
@@ -279,6 +283,8 @@ fun DownloadScreen(
                 Text(if (downloads.any { it.active }) "  Aggiungi alla coda" else if (existing != null) "  Scarica comunque" else "  Scarica")
             }
 
+    }
+    val queue: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
             if (downloads.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Coda", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -300,6 +306,48 @@ fun DownloadScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+    }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text("Download") },
+                scrollBehavior = scrollBehavior,
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
+    ) { pad ->
+        if (landscape) {
+            // Landscape: the form on the left, the queue on the right, each scrolling on its own.
+            Row(
+                Modifier.padding(pad).fillMaxSize().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    content = form,
+                )
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    if (downloads.isEmpty()) {
+                        Text("Coda vuota", style = MaterialTheme.typography.titleMedium)
+                    }
+                    queue()
+                }
+            }
+        } else {
+            Column(
+                Modifier.padding(pad).fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                form()
+                queue()
+            }
         }
     }
 
