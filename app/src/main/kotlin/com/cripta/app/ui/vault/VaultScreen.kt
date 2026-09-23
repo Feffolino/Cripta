@@ -1275,10 +1275,12 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
                 Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad, top = badgeH),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                rows.forEachIndexed { r, row ->
+                // Filled from the bottom: the full rows sit on the cover's edge and the shorter
+                // last row (plus the "+N" badge) goes on top, so it hides less of the image.
+                rows.asReversed().forEachIndexed { r, row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         row.forEach { i -> TagBadge(tags[i], texts[i], display, availDp) }
-                        if (r == rows.lastIndex && extra > 0) TagBadge(null, "+$extra", display, availDp)
+                        if (r == 0 && extra > 0) TagBadge(null, "+$extra", display, availDp)
                     }
                 }
             }
