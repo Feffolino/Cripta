@@ -1,5 +1,18 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -226,7 +239,7 @@ fun SettingsScreen(
                             }
                         }
                         item {
-                            Section("Altre opzioni") {
+                            Section("Pulsanti e dettagli") {
                                 ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
                                 ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                                 ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
@@ -254,7 +267,7 @@ fun SettingsScreen(
                             }
                         }
                         item {
-                            Section("Altre opzioni") {
+                            Section("Testo e badge") {
                                 Text("Testo delle etichette", style = MaterialTheme.typography.labelLarge)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     FilterChip(selected = s.display.coverTagStyle == com.cripta.app.data.CoverTagStyle.ALIAS,
@@ -271,50 +284,72 @@ fun SettingsScreen(
 
                     SettingsPage.VIDEO -> {
                         item {
-                            Section("Riproduzione") {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Riprendi da dove eri rimasto")
-                                        Text("Riapre ogni video al punto in cui l'avevi lasciato e mostra una barra di avanzamento sulla copertina.",
-                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Switch(checked = s.display.resumePlayback, onCheckedChange = { vm.setResumePlayback(it) })
-                                }
-                                ToggleRow("Ripeti il video in loop", s.videoLoop) { vm.setVideoLoop(it) }
-                                ToggleRow("Rotazione automatica (orizzontale per i video orizzontali)", s.autoRotate) { vm.setAutoRotate(it) }
-                                Text("Doppio tocco sui lati: salta di", style = MaterialTheme.typography.labelLarge)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(5, 10, 30).forEach { v ->
-                                        FilterChip(selected = s.seekStepSec == v, onClick = { vm.setSeekStep(v) }, label = { Text("$v s") })
-                                    }
+                            Section("Riproduzione", "Come parte e si comporta ogni video.") {
+                                ToggleRow("Riprendi da dove eri rimasto", s.display.resumePlayback,
+                                    desc = "Riapre il video al punto lasciato; la copertina mostra quanto hai visto.",
+                                    icon = Icons.Filled.History) { vm.setResumePlayback(it) }
+                                ToggleRow("Ripeti in loop", s.videoLoop,
+                                    desc = "Il video ricomincia da capo quando finisce.",
+                                    icon = Icons.Filled.Repeat) { vm.setVideoLoop(it) }
+                                ToggleRow("Avvia senza audio", s.videoStartMuted,
+                                    desc = "Ogni video parte muto; l'audio si riattiva dai comandi.",
+                                    icon = Icons.AutoMirrored.Filled.VolumeOff) { vm.setVideoStartMuted(it) }
+                            }
+                        }
+                        item {
+                            Section("Fine video") {
+                                ToggleRow("Passa al file successivo", s.autoNext,
+                                    desc = if (s.videoLoop) "Non si attiva finché la ripetizione in loop è accesa."
+                                        else "Negli ultimi secondi compare «Prossimo» con il conto alla rovescia.",
+                                    icon = Icons.Filled.SkipNext) { vm.setAutoNext(it) }
+                                if (s.autoNext) {
+                                    ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
+                                        s.autoNextSec) { vm.setAutoNextSec(it) }
                                 }
                             }
                         }
-                        run {
-                            item {
-                                Section("Altre opzioni") {
-                                    ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
-                                    ToggleRow("Luminosità trascinando sul lato sinistro", s.gestureControls) { vm.setGestureControls(it) }
-                                    ToggleRow("Volume trascinando sul lato destro", s.gestureVolume) { vm.setGestureVolume(it) }
-                                    ToggleRow("Anteprime dei file vicini nel visualizzatore", s.viewerFilmstrip) { vm.setViewerFilmstrip(it) }
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text("Passa al file successivo a fine video")
-                                            Text("Negli ultimi secondi compare \"Prossimo\" con il conto alla rovescia. Non si attiva con la ripetizione (loop) accesa.",
-                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                        Switch(checked = s.autoNext, onCheckedChange = { vm.setAutoNext(it) })
-                                    }
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text("Picture-in-Picture automatico")
-                                            Text("Uscendo dall'app il video continua da solo in una finestrella sopra le altre app (il contenuto resta visibile a chi guarda lo schermo). Anche se spento, puoi aprirla dal pulsante nel player.",
-                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                        Switch(checked = s.pictureInPicture, onCheckedChange = { vm.setPictureInPicture(it) })
-                                    }
+                        item {
+                            Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
+                                ToggleRow("Scorri giù per chiudere", s.swipeToClose,
+                                    desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
+                                    icon = Icons.Filled.KeyboardArrowDown) { vm.setSwipeToClose(it) }
+                                ToggleRow("Scorri su per etichette e dettagli", s.swipeForDetails,
+                                    desc = "Trascina verso l'alto per aprire il pannello del file.",
+                                    icon = Icons.Filled.KeyboardArrowUp) { vm.setSwipeForDetails(it) }
+                                ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
+                                    desc = "Trascina in su o in giù sul lato sinistro del video.",
+                                    icon = Icons.Filled.LightMode) { vm.setGestureControls(it) }
+                                ToggleRow("Volume sul lato destro", s.gestureVolume,
+                                    desc = "Trascina in su o in giù sul lato destro del video.",
+                                    icon = Icons.AutoMirrored.Filled.VolumeUp) { vm.setGestureVolume(it) }
+                                ToggleRow("Tieni premuto per accelerare", s.holdForSpeed,
+                                    desc = "Tieni il dito su un lato: il video va più veloce finché non lo alzi.",
+                                    icon = Icons.Filled.FastForward) { vm.setHoldForSpeed(it) }
+                                if (s.holdForSpeed) {
+                                    ChoiceRow("Velocità tenendo premuto", listOf(15 to "1,5×", 20 to "2×", 30 to "3×"),
+                                        s.holdSpeedX10) { vm.setHoldSpeed(it) }
                                 }
+                                ChoiceRow("Doppio tocco sui lati: salta di", listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
+                                    s.seekStepSec, icon = Icons.Filled.FastRewind) { vm.setSeekStep(it) }
                             }
+                        }
+                        item {
+                            Section("Schermo") {
+                                ToggleRow("Segui l'orientamento del video", s.autoRotate,
+                                    desc = if (s.autoRotate) "I video orizzontali si girano in orizzontale, quelli verticali in verticale."
+                                        else "Lo schermo ruota liberamente con il telefono.",
+                                    icon = Icons.Filled.ScreenRotation) { vm.setAutoRotate(it) }
+                                ChoiceRow("I comandi restano visibili per", listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
+                                    s.controlsTimeoutSec, icon = Icons.Filled.Timer) { vm.setControlsTimeout(it) }
+                                ToggleRow("Anteprime dei file vicini", s.viewerFilmstrip,
+                                    desc = "Piccole copertine dei file prima e dopo, insieme ai comandi.",
+                                    icon = Icons.Filled.ViewCarousel) { vm.setViewerFilmstrip(it) }
+                                ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
+                                    desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
+                                    icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }
+                            }
+                        }
+                        run {
                             item {
                                 Section("Conversione in MP4", "La scelta viene chiesta alla prima conversione; qui puoi cambiarla.") {
                                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -793,6 +828,10 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VIDEO),
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
+    Triple("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VIDEO),
+    Triple("Scorri su per etichette e dettagli", "swipe dettagli pannello scorri su gesto", SettingsPage.VIDEO),
+    Triple("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VIDEO),
+    Triple("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VIDEO),
     Triple("Prossimo video a fine riproduzione", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VIDEO),
     Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
@@ -925,10 +964,54 @@ private fun Section(title: String, description: String? = null, content: @Compos
 }
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f))
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    desc: String? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onChange: (Boolean) -> Unit,
+) {
+    // The whole row toggles; an optional icon and one-line explanation make it readable at a glance.
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { onChange(!checked) }.padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 14.dp).size(22.dp))
+        }
+        Column(Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(label)
+            if (desc != null) {
+                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** A labelled single choice shown as chips, aligned with the toggle rows (icon column). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T> ChoiceRow(
+    label: String,
+    options: List<Pair<T, String>>,
+    selected: T,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onPick: (T) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        if (icon != null) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 14.dp, top = 2.dp).size(22.dp))
+        } else {
+            // Sub-option of the toggle above: indent it under that toggle's text.
+            androidx.compose.foundation.layout.Spacer(Modifier.width(36.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { (v, l) -> FilterChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
+            }
+        }
     }
 }
 

@@ -75,13 +75,22 @@ class ViewerViewModel @Inject constructor(
         val pip: Boolean = false,
         val filmstrip: Boolean = true,
         val autoNext: Boolean = true,
+        val autoNextSec: Int = 8,
+        val swipeToClose: Boolean = true,
+        val swipeForDetails: Boolean = true,
+        val holdForSpeed: Boolean = true,
+        val holdSpeed: Float = 2f,
+        val controlsTimeoutSec: Int = 4,
+    )
+
+    private fun com.cripta.app.data.Settings.toPlayback() = PlaybackPrefs(
+        videoLoop, videoStartMuted, display.resumePlayback, seekStepSec,
+        gestureControls, gestureVolume, autoRotate, pictureInPicture, viewerFilmstrip, autoNext,
+        autoNextSec, swipeToClose, swipeForDetails, holdForSpeed, holdSpeedX10 / 10f, controlsTimeoutSec,
     )
 
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
-    val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map {
-        PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
-            it.gestureControls, it.gestureVolume, it.autoRotate, it.pictureInPicture, it.viewerFilmstrip, it.autoNext)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
+    val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map { it.toPlayback() }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
 
     /** Orientation lock chosen in the player; kept while swiping between videos. */
     val rotationLocked = MutableStateFlow(false)
@@ -92,10 +101,7 @@ class ViewerViewModel @Inject constructor(
     /** Playback preferences read when a player is created. */
     suspend fun playbackPrefs(): PlaybackPrefs =
         runCatching { settingsStore.settingsOnce() }.getOrNull()
-            ?.let {
-                PlaybackPrefs(it.videoLoop, it.videoStartMuted, it.display.resumePlayback, it.seekStepSec,
-                    it.gestureControls, it.gestureVolume, it.autoRotate, it.pictureInPicture, it.viewerFilmstrip, it.autoNext)
-            } ?: PlaybackPrefs()
+            ?.toPlayback() ?: PlaybackPrefs()
 
     /**
      * Remember where playback stopped. Near the end counts as finished (next time starts over).

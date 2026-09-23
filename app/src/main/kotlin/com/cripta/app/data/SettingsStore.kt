@@ -97,6 +97,18 @@ data class Settings(
     val viewerFilmstrip: Boolean = true,
     /** Viewer: near the end of a video (loop off) show "Prossimo" and move on to the next file. */
     val autoNext: Boolean = true,
+    /** Seconds before the end at which the "Prossimo" card appears (5 / 8 / 15). */
+    val autoNextSec: Int = 8,
+    /** Viewer: vertical swipe down closes it. */
+    val swipeToClose: Boolean = true,
+    /** Viewer: vertical swipe up opens tags & details. */
+    val swipeForDetails: Boolean = true,
+    /** Player: hold on a side to play faster until release. */
+    val holdForSpeed: Boolean = true,
+    /** Speed while holding, in tenths (15 = 1.5x, 20 = 2x, 30 = 3x). */
+    val holdSpeedX10: Int = 20,
+    /** Seconds the player controls stay visible after a tap (2 / 4 / 8). */
+    val controlsTimeoutSec: Int = 4,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
@@ -151,6 +163,12 @@ class SettingsStore @Inject constructor(
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
     private val filmstripKey = booleanPreferencesKey("viewer_filmstrip")
     private val autoNextKey = booleanPreferencesKey("auto_next")
+    private val autoNextSecKey = intPreferencesKey("auto_next_sec")
+    private val swipeCloseKey = booleanPreferencesKey("swipe_close")
+    private val swipeDetailsKey = booleanPreferencesKey("swipe_details")
+    private val holdSpeedOnKey = booleanPreferencesKey("hold_speed_on")
+    private val holdSpeedKey = intPreferencesKey("hold_speed_x10")
+    private val controlsTimeoutKey = intPreferencesKey("controls_timeout_sec")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
@@ -204,6 +222,12 @@ class SettingsStore @Inject constructor(
             updatePrerelease = p[updatePreKey] ?: true,
             viewerFilmstrip = p[filmstripKey] ?: true,
             autoNext = p[autoNextKey] ?: true,
+            autoNextSec = (p[autoNextSecKey] ?: 8).let { if (it in listOf(5, 8, 15)) it else 8 },
+            swipeToClose = p[swipeCloseKey] ?: true,
+            swipeForDetails = p[swipeDetailsKey] ?: true,
+            holdForSpeed = p[holdSpeedOnKey] ?: true,
+            holdSpeedX10 = (p[holdSpeedKey] ?: 20).let { if (it in listOf(15, 20, 30)) it else 20 },
+            controlsTimeoutSec = (p[controlsTimeoutKey] ?: 4).let { if (it in listOf(2, 4, 8)) it else 4 },
         )
     }
 
@@ -229,6 +253,12 @@ class SettingsStore @Inject constructor(
     suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
     suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
     suspend fun setAutoNext(v: Boolean) { context.dataStore.edit { it[autoNextKey] = v } }
+    suspend fun setAutoNextSec(v: Int) { context.dataStore.edit { it[autoNextSecKey] = v } }
+    suspend fun setSwipeToClose(v: Boolean) { context.dataStore.edit { it[swipeCloseKey] = v } }
+    suspend fun setSwipeForDetails(v: Boolean) { context.dataStore.edit { it[swipeDetailsKey] = v } }
+    suspend fun setHoldForSpeed(v: Boolean) { context.dataStore.edit { it[holdSpeedOnKey] = v } }
+    suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
+    suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
     suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
@@ -283,7 +313,8 @@ class SettingsStore @Inject constructor(
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
-                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, autoNextKey)
+                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, autoNextKey, autoNextSecKey,
+                swipeCloseKey, swipeDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
             "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

@@ -188,7 +188,7 @@ fun ViewerScreen(
     // Bumped on quick-tag taps so the chrome stays up while tagging.
     var chromeTouch by remember { mutableIntStateOf(0) }
     LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch) {
-        if (chromeVisible && !menuOpen) { delay(3500); chromeVisible = false }
+        if (chromeVisible && !menuOpen) { delay(vm.playback.value.controlsTimeoutSec * 1000L - 500L); chromeVisible = false }
     }
 
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
@@ -236,9 +236,9 @@ fun ViewerScreen(
                         dy += ch.position.y - ch.previousPosition.y
                         if (!ch.pressed) break
                     }
-                    if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
+                    if (valid && vm.playback.value.swipeForDetails && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
-                    if (valid && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOnce()
+                    if (valid && vm.playback.value.swipeToClose && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOnce()
                 }
             },
     ) {
@@ -980,8 +980,9 @@ private fun VideoPlayer(
                     }
                     if (inPip || multi || onSide || userZoom > 1f) return@awaitEachGesture
                     if (kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) {
-                        if (dy < -h * 0.12f) onOpenDetails()
-                        else if (dy > h * 0.15f) onClose()
+                        val p = vm.playback.value
+                        if (dy < -h * 0.12f) { if (p.swipeForDetails) onOpenDetails() }
+                        else if (dy > h * 0.15f) { if (p.swipeToClose) onClose() }
                     }
                 }
             }
@@ -1047,6 +1048,7 @@ private fun VideoPlayer(
             // to the video surface (scaleX/scaleY), which the surrounding Box clips.
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
+                pv.controllerShowTimeoutMs = prefs.controlsTimeoutSec * 1000
                 // Keep the controls (time, buttons) clear of a side camera; the video stays full-bleed.
                 pv.findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(cutPx.first, 0, cutPx.second, 0)
                 val scale = modes[modeIdx].third * userZoom
@@ -1071,11 +1073,13 @@ private fun VideoPlayer(
         val scope = rememberCoroutineScope()
         // Hold on a side = 2x speed until release (the menu speed setting is restored after).
         suspend fun androidx.compose.foundation.gestures.PressGestureScope.holdForSpeed() {
+            if (!prefs.holdForSpeed) return
             val job = scope.launch {
                 delay(450)
                 val before = player.playbackParameters.speed
-                player.setPlaybackSpeed(2f)
-                gestureLabel = "2×"
+                val sp = prefs.holdSpeed
+                player.setPlaybackSpeed(sp)
+                gestureLabel = (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "×"
                 try { kotlinx.coroutines.awaitCancellation() } finally {
                     player.setPlaybackSpeed(before)
                     gestureLabel = null
@@ -1139,7 +1143,7 @@ private fun VideoPlayer(
         )
         // "Prossimo" card, bottom-right above the seek bar.
         val rem = remainingMs
-        val window = minOf(8_000L, totalMs / 3)
+        val window = minOf(prefs.autoNextSec * 1000L, totalMs / 3)
         if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
             // Tap = play the next file now. In portrait, while the controls show, it sits above the
             // filmstrip + "Dettagli" handle instead of overlapping them.
