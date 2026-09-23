@@ -93,15 +93,20 @@ class ConversionService : Service() {
         if (mode == MODE_DOWNLOAD_URL) {
             val url = intent.getStringExtra(EX_URL)
             if (url != null) {
-                repo.enqueueDownload(
-                    VaultRepository.DownloadJob(
-                        id = java.util.UUID.randomUUID().toString(),
-                        url = url,
-                        maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
-                        folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
-                        tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
-                    )
+                val job = VaultRepository.DownloadJob(
+                    id = java.util.UUID.randomUUID().toString(),
+                    url = url,
+                    maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
+                    folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
+                    tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
                 )
+                repo.enqueueDownload(job)
+                // Persisted so a waiting link survives the app being killed (resumed at next unlock).
+                scope.launch {
+                    repo.putPendingJob(job.id, "download", org.json.JSONObject()
+                        .put("url", job.url).put("height", job.maxHeight ?: 0).put("folder", job.folderId ?: -1L)
+                        .put("tags", org.json.JSONArray(job.tagIds)).toString())
+                }
             }
             // A worker already running picks the new link up from the queue.
             val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
@@ -125,7 +130,12 @@ class ConversionService : Service() {
                     MODE_CONVERT -> {
                         val after = intent.getIntExtra(EX_CONVERT_AFTER, -1)
                             .let { i -> com.cripta.app.data.ConvertAfter.entries.getOrNull(i) }
-                        intent.getStringExtra(EX_ID)?.let { convertOne(it, after) }
+                        intent.getStringExtra(EX_ID)?.let { fid ->
+                            // Persisted until done, so a queued conversion survives the app being killed.
+                            repo.putPendingJob("conv-$fid", "convert",
+                                org.json.JSONObject().put("id", fid).put("after", after?.ordinal ?: -1).toString())
+                            try { convertOne(fid, after) } finally { repo.deletePendingJob("conv-$fid") }
+                        }
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_DUP_SCAN -> {
@@ -522,6 +532,7 @@ class ConversionService : Service() {
         } finally {
             ytdlpProcessId = null
             currentDownloadId = null
+            repo.deletePendingJob(job.id)
             withContext(NonCancellable) {
                 produced?.let { repo.shredTempFile(it); it.parentFile?.deleteRecursively() }
             }

@@ -51,6 +51,8 @@ data class FileEntity(
     val deletedAt: Long? = null,
     /** When playback was last left unfinished (epoch ms), for "Continua a guardare". */
     val lastPlayedAt: Long? = null,
+    /** SHA-256 of the plaintext, computed while encrypting (instant "already in the vault" check). */
+    val contentHash: String? = null,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant
@@ -128,4 +130,18 @@ data class SavedFilterEntity(
     val name: String,
     /** Serialized [com.cripta.app.ui.vault.Filters] (JSON). */
     val json: String,
+)
+
+/**
+ * A queued background job (link download or MP4 conversion) persisted so that, if Android kills the
+ * app, waiting jobs are resumed at the next unlock instead of being lost. Stored encrypted.
+ */
+@Entity(tableName = "pending_jobs")
+data class PendingJobEntity(
+    @PrimaryKey val id: String,
+    /** "download" or "convert". */
+    val kind: String,
+    /** JSON with the job's parameters. */
+    val payload: String,
+    val createdAt: Long,
 )

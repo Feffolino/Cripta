@@ -760,7 +760,7 @@ fun VaultScreen(
     }
 
     if (showStats) {
-        StatsSheet(stats, filters.active, path.lastOrNull()?.name, onDismiss = { showStats = false })
+        StatsSheet(stats, filters.active, path.lastOrNull()?.name, subtree = path.lastOrNull()?.let { folderStats[it.id] }, onDismiss = { showStats = false })
     }
 
     if (confirmMultiDelete) {
@@ -2044,7 +2044,7 @@ private fun CountPill(icon: ImageVector, count: Int, selected: Boolean, onClick:
 /** Full-screen-ish breakdown: how many videos (and other media) are loaded, filtered or not. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String?, onDismiss: () -> Unit) {
+private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String?, subtree: com.cripta.app.data.FolderStat? = null, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -2061,6 +2061,11 @@ private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String
                 Text("Riepilogo", style = MaterialTheme.typography.headlineSmall)
                 Text(if (filtering) "Risultati filtrati · $scopeLabel" else scopeLabel,
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // The tiles below count this folder only; show the whole subtree too when it differs.
+                if (!filtering && subtree != null && subtree.count != stats.scope.total) {
+                    Text("Con le sottocartelle: ${subtree.count} file · ${com.cripta.app.ui.components.formatBytes(subtree.bytes)}",
+                        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
             }
 
             // Hero: the video count, the number people care about most.

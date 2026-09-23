@@ -10,8 +10,8 @@ import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
 @Database(
-    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class],
-    version = 12,
+    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class],
+    version = 13,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -19,6 +19,7 @@ abstract class CriptaDatabase : RoomDatabase() {
     abstract fun fileDao(): FileDao
     abstract fun tagDao(): TagDao
     abstract fun savedFilterDao(): SavedFilterDao
+    abstract fun pendingJobDao(): PendingJobDao
 
     companion object {
         private const val NAME = "cripta.db"
@@ -101,6 +102,17 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE files ADD COLUMN contentHash TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pending_jobs` (" +
+                        "`id` TEXT NOT NULL, `kind` TEXT NOT NULL, `payload` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -112,7 +124,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(passphrase.copyOf())
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
         }

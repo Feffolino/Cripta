@@ -335,7 +335,8 @@ class SettingsViewModel @Inject constructor(
         val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launch
         val remove = group.candidates.map { it.file.id }.filter { it != keepId }
         val moved = repo.mergeDuplicates(keepId, remove)
-        remove.forEach { thumbs.evict(it) }
+        // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
+        if (!trashOn()) remove.forEach { thumbs.evict(it) }
         dropFromResults(remove.toSet())
         val name = group.candidates.first { it.file.id == keepId }.file.originalName
         _dupNotice.value = buildString {
@@ -354,11 +355,13 @@ class SettingsViewModel @Inject constructor(
             if (g.bestId != fileId) g.bestId
             else rank(g.candidates.filter { it.file.id != fileId }).firstOrNull()?.file?.id
         }
-        val moved = if (heir != null) repo.mergeDuplicates(heir, listOf(fileId)) else { repo.secureDelete(fileId); emptyList() }
-        thumbs.evict(fileId)
+        val moved = if (heir != null) repo.mergeDuplicates(heir, listOf(fileId)) else { repo.deleteOrTrash(fileId); emptyList() }
+        if (!trashOn()) thumbs.evict(fileId)
         dropFromResults(setOf(fileId))
         if (moved.isNotEmpty()) _dupNotice.value = "Etichette spostate: ${moved.joinToString(", ") { "#$it" }}"
     }
+
+    private suspend fun trashOn(): Boolean = runCatching { store.settingsOnce().trashEnabled }.getOrDefault(false)
 
     /** Remove deleted files from every result set, dropping groups left with a single file. */
     private suspend fun dropFromResults(ids: Set<String>) {

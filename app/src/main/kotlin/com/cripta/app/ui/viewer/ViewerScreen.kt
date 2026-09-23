@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import android.view.View
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
@@ -233,6 +234,7 @@ fun ViewerScreen(
                 vm = vm,
                 setChrome = { chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
+                onOpenDetails = { showTags = true },
             )
         }
 
@@ -569,6 +571,7 @@ private fun MediaPage(
     vm: ViewerViewModel,
     setChrome: (Boolean) -> Unit,
     onToggleChrome: () -> Unit,
+    onOpenDetails: () -> Unit,
 ) {
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey) {
         value = vm.stateFor(id)
@@ -578,7 +581,7 @@ private fun MediaPage(
             is ViewerState.Loading -> CircularProgressIndicator(color = Color.White)
             is ViewerState.Error -> Text(s.message, color = Color.White)
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome) else CircularProgressIndicator(color = Color.White)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails) else CircularProgressIndicator(color = Color.White)
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes)
             is ViewerState.Other -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -716,6 +719,7 @@ private fun VideoPlayer(
     vm: ViewerViewModel,
     controlsVisible: Boolean,
     onControlsVisibilityChanged: (Boolean) -> Unit,
+    onOpenDetails: () -> Unit,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -993,6 +997,25 @@ private fun VideoPlayer(
                     )
                 }
                 .sideDrag(brightness = false)
+        )
+        // Bottom-centre strip just above the seek bar: swipe up opens tags & details, like on
+        // photos. It stays clear of the time bar and of the centre play/pause button.
+        if (!inPip) Box(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.4f).height(56.dp)
+                .offset(y = -seekBarClearance)
+                .pointerInput(Unit) { detectTapGestures(onTap = { toggleController() }) }
+                .pointerInput(Unit) {
+                    var total = 0f
+                    var fired = false
+                    detectVerticalDragGestures(
+                        onDragStart = { total = 0f; fired = false },
+                        onVerticalDrag = { change, dy ->
+                            change.consume()
+                            total += dy
+                            if (!fired && total < -40f) { fired = true; onOpenDetails() }
+                        },
+                    )
+                }
         )
 
         gestureLabel?.let { lbl ->
