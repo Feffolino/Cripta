@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -60,6 +61,7 @@ fun HomeScreen(
     val folders by vm.folders.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
     val loaded by vm.loaded.collectAsState()
+    val savedFilters by vm.savedFilters.collectAsState()
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -110,6 +112,20 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
+            if (savedFilters.isNotEmpty()) {
+                item { ShelfHeader("Filtri salvati") }
+                item {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(savedFilters, key = { it.id }) { sf ->
+                            androidx.compose.material3.AssistChip(
+                                onClick = { vm.applySavedFilter(sf.json); onOpenFolders() },
+                                label = { Text(sf.name) },
+                                leadingIcon = { Icon(Icons.Filled.FilterList, null, modifier = Modifier.size(18.dp)) },
+                            )
+                        }
+                    }
+                }
+            }
             if (recents.isNotEmpty()) {
                 item { ShelfHeader("Recenti") }
                 if (landscape) {
@@ -131,7 +147,7 @@ fun HomeScreen(
             }
             if (folders.isNotEmpty()) {
                 item { ShelfHeader("Cartelle") }
-                item { FolderShelf(folders, folderStats, onOpenFolders) }
+                item { FolderShelf(folders, folderStats) { id -> vm.openFolder(id); onOpenFolders() } }
             }
         }
     }
@@ -193,7 +209,7 @@ private fun MediaShelf(items: List<FileEntity>, onOpen: (String) -> Unit, vm: Ho
 private fun FolderShelf(
     folders: List<FolderEntity>,
     stats: Map<Long, FolderStat>,
-    onOpenFolders: () -> Unit,
+    onOpenFolder: (Long) -> Unit,
 ) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(folders, key = { it.id }) { folder ->
@@ -205,7 +221,7 @@ private fun FolderShelf(
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.width(120.dp),
             ) {
-                Column(Modifier.clickable(onClick = onOpenFolders).padding(12.dp).fillMaxWidth(),
+                Column(Modifier.clickable { onOpenFolder(folder.id) }.padding(12.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 36.dp)
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis,

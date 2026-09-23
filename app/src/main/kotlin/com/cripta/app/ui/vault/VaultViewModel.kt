@@ -39,6 +39,8 @@ data class Filters(
     val type: TypeFilter = TypeFilter.ALL,
     val favoritesOnly: Boolean = false,
     val untaggedOnly: Boolean = false,
+    /** Chosen tags: true = a file must have all of them, false = at least one. */
+    val tagMatchAll: Boolean = true,
 ) {
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
@@ -88,6 +90,7 @@ class VaultViewModel @Inject constructor(
     private val settings: SettingsStore,
     private val thumbs: ThumbnailLoader,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
+    private val navigator: VaultNavigator,
 ) : ViewModel() {
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
@@ -203,6 +206,14 @@ class VaultViewModel @Inject constructor(
     val importState: StateFlow<VaultRepository.ImportState> = repo.importState
     fun dismissImportResult() = repo.dismissImportResult()
 
+    /** Drop the just-imported copies of files that were already in the vault (identical bytes). */
+    fun removeImportDuplicates() = viewModelScope.launch {
+        val dups = importState.value.duplicates.map { it.first }
+        dups.forEach { repo.secureDelete(it); thumbs.evict(it) }
+        repo.clearImportDuplicates()
+        repo.dismissImportResult()
+    }
+
     /**
      * Proactively generate covers for [items] so thumbnails are ready as cells scroll in instead
      * of each being generated on demand. Driven from the vault screen (not the ViewModel) so it
@@ -231,7 +242,8 @@ class VaultViewModel @Inject constructor(
             val nameOk = f.query.isBlank() ||
                 fwt.file.originalName.contains(f.query, ignoreCase = true) ||
                 fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
-            val tagsOk = f.tagIds.isEmpty() || fwt.tags.map { it.id }.containsAll(f.tagIds)
+            val tagsOk = f.tagIds.isEmpty() ||
+                if (f.tagMatchAll) fwt.tags.map { it.id }.containsAll(f.tagIds) else fwt.tags.any { it.id in f.tagIds }
             val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
             val untaggedOk = !f.untaggedOnly || fwt.tags.isEmpty()
             val typeOk = when (f.type) {
@@ -263,6 +275,50 @@ class VaultViewModel @Inject constructor(
 
     val currentFolder: Long? get() = currentFolderId.value
 
+    /** Jump back to a level of the breadcrumb (0 = root). */
+    fun goToDepth(depth: Int) {
+        val p = _path.value
+        if (depth >= p.size) return
+        _coverOverrides.value = emptyMap()
+        _path.value = p.take(depth)
+        currentFolderId.value = _path.value.lastOrNull()?.id
+    }
+
+    /** Open [folderId] directly (e.g. from Home), rebuilding its breadcrumb. */
+    private fun openFolderById(folderId: Long) = viewModelScope.launch {
+        val chain = repo.folderPath(folderId)
+        if (chain.isEmpty()) return@launch
+        filters.value = Filters()
+        _coverOverrides.value = emptyMap()
+        _path.value = chain
+        currentFolderId.value = folderId
+    }
+
+    init {
+        // Requests from other screens (Home folder card, saved-filter shortcut).
+        viewModelScope.launch {
+            navigator.pendingFolder.collect { id -> if (id != null) { openFolderById(id); navigator.consumeFolder() } }
+        }
+        viewModelScope.launch {
+            navigator.pendingFilters.collect { f -> if (f != null) { filters.value = f; navigator.consumeFilters() } }
+        }
+    }
+
+    // --- Saved filters ---
+    val savedFilters: StateFlow<List<com.cripta.app.data.db.SavedFilterEntity>> =
+        refresh.flatMapLatest { repo.savedFilters() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun saveCurrentFilter(name: String) = viewModelScope.launch {
+        if (name.isNotBlank() && filters.value.active) repo.saveFilter(name, filters.value.toJson())
+    }
+    fun applySavedFilter(json: String) { filtersFromJson(json)?.let { filters.value = it } }
+    fun deleteSavedFilter(id: Long) = viewModelScope.launch { repo.deleteSavedFilter(id) }
+
+    /** Whether deleting moves to the trash (for the confirmation wording). */
+    val trashEnabled: StateFlow<Boolean> =
+        settings.settings.map { it.trashEnabled }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     // --- Filters ---
     fun setQuery(q: String) { filters.value = filters.value.copy(query = q) }
     fun toggleTag(id: Long) {
@@ -286,6 +342,9 @@ class VaultViewModel @Inject constructor(
         )
     }
     fun setType(t: TypeFilter) { filters.value = filters.value.copy(type = t) }
+    /** Tap on a count in the summary strip: filter to that type, or back to all when already on it. */
+    fun toggleType(t: TypeFilter) { setType(if (filters.value.type == t) TypeFilter.ALL else t) }
+    fun setTagMatchAll(all: Boolean) { filters.value = filters.value.copy(tagMatchAll = all) }
     fun setFavoritesOnly(b: Boolean) { filters.value = filters.value.copy(favoritesOnly = b) }
     /** Show only media with no tags. Mutually exclusive with picking specific tags. */
     fun setUntaggedOnly(b: Boolean) {
@@ -357,7 +416,8 @@ class VaultViewModel @Inject constructor(
         fileIds.forEach { repo.moveFile(it, folderId) }    }
 
     fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
-        fileIds.forEach { repo.secureDelete(it); thumbs.evict(it) }    }
+        // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
+        fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }    }
 
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
@@ -368,7 +428,8 @@ class VaultViewModel @Inject constructor(
      * if the id query yields nothing.
      */
     fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
-        val ids = repo.allFileIds()
+        // With a filter active, shuffle only the results; otherwise the whole library.
+        val ids = if (filters.value.active) files.value.map { it.file.id } else repo.allFileIds()
         val order = if (ids.isNotEmpty()) ids.shuffled() else files.value.map { it.file.id }.shuffled()
         if (order.isEmpty()) return@launch
         viewerQueue.set(order)

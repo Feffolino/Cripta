@@ -40,6 +40,18 @@ data class DisplayPrefs(
     val showDurationBadge: Boolean = true, // "3:12" on video covers
     val showQualityBadge: Boolean = true,  // "4K / HD / SD" on covers
     val showStatsStrip: Boolean = true,    // the counts strip above the grid
+    /** Resume videos where they were left, with a progress bar on their cover. */
+    val resumePlayback: Boolean = true,
+)
+
+/**
+ * Remembered downloader destination, so it doesn't have to be picked every time. Only ids are
+ * stored here (plain preferences); folder and tag names stay in the encrypted database.
+ */
+data class DownloadDefaults(
+    val folderId: Long? = null,
+    val tagIds: List<Long> = emptyList(),
+    val height: Int? = null,
 )
 
 data class Settings(
@@ -59,6 +71,11 @@ data class Settings(
     val videoLoop: Boolean = true,
     /** Viewer: start videos muted. */
     val videoStartMuted: Boolean = false,
+    /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
+    val trashEnabled: Boolean = false,
+    /** Days a trashed file is kept before being crypto-shredded. */
+    val trashDays: Int = 7,
+    val downloadDefaults: DownloadDefaults = DownloadDefaults(),
 )
 
 @Singleton
@@ -89,6 +106,12 @@ class SettingsStore @Inject constructor(
     private val statsStripKey = booleanPreferencesKey("stats_strip")
     private val videoLoopKey = booleanPreferencesKey("video_loop")
     private val videoMutedKey = booleanPreferencesKey("video_start_muted")
+    private val resumeKey = booleanPreferencesKey("resume_playback")
+    private val trashKey = booleanPreferencesKey("trash_enabled")
+    private val trashDaysKey = intPreferencesKey("trash_days")
+    private val dlFolderKey = androidx.datastore.preferences.core.longPreferencesKey("dl_folder")
+    private val dlTagsKey = androidx.datastore.preferences.core.stringPreferencesKey("dl_tag_ids")
+    private val dlHeightKey = intPreferencesKey("dl_height")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -116,6 +139,14 @@ class SettingsStore @Inject constructor(
                 showDurationBadge = p[durationBadgeKey] ?: true,
                 showQualityBadge = p[qualityBadgeKey] ?: true,
                 showStatsStrip = p[statsStripKey] ?: true,
+                resumePlayback = p[resumeKey] ?: true,
+            ),
+            trashEnabled = p[trashKey] ?: false,
+            trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
+            downloadDefaults = DownloadDefaults(
+                folderId = p[dlFolderKey]?.takeIf { it >= 0 },
+                tagIds = p[dlTagsKey].orEmpty().split(',').mapNotNull { it.trim().toLongOrNull() },
+                height = p[dlHeightKey]?.takeIf { it > 0 },
             ),
             videoLoop = p[videoLoopKey] ?: true,
             videoStartMuted = p[videoMutedKey] ?: false,
@@ -138,6 +169,16 @@ class SettingsStore @Inject constructor(
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
     suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
+    suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
+    suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }
+    suspend fun setTrashDays(v: Int) { context.dataStore.edit { it[trashDaysKey] = v.coerceIn(1, 90) } }
+    suspend fun setDownloadDefaults(d: DownloadDefaults) {
+        context.dataStore.edit {
+            it[dlFolderKey] = d.folderId ?: -1L
+            it[dlTagsKey] = d.tagIds.joinToString(",")
+            it[dlHeightKey] = d.height ?: 0
+        }
+    }
     suspend fun setVideoLoop(v: Boolean) { context.dataStore.edit { it[videoLoopKey] = v } }
     suspend fun setVideoStartMuted(v: Boolean) { context.dataStore.edit { it[videoMutedKey] = v } }
 

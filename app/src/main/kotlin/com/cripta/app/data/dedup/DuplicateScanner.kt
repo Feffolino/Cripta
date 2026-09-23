@@ -90,6 +90,21 @@ class DuplicateScanner @Inject constructor(
             ExactResult(confirmed.sortedByDescending { it.sizeBytes * (it.files.size - 1) }, all.size)
         }
 
+    /**
+     * Existing live files byte-identical to [file] (e.g. just imported). Only same-size files are
+     * candidates, and each is confirmed with the partial then the full hash, so the usual case (no
+     * same-size file) costs nothing. Used for the "già presente" warning after an import.
+     */
+    suspend fun copiesOf(file: FileEntity): List<FileEntity> = withContext(Dispatchers.IO) {
+        val candidates = repo.sameSizeAs(file)
+        if (candidates.isEmpty()) return@withContext emptyList()
+        val p = runCatching { partialHash(file) }.getOrNull() ?: return@withContext emptyList()
+        val sameHead = candidates.filter { runCatching { partialHash(it) }.getOrNull() == p }
+        if (sameHead.isEmpty()) return@withContext emptyList()
+        val full = runCatching { fullHash(file) }.getOrNull() ?: return@withContext emptyList()
+        sameHead.filter { runCatching { fullHash(it) }.getOrNull() == full }
+    }
+
     /** SHA-256 over size + the first and last [WINDOW] bytes, read via the seekable channel. */
     private fun partialHash(f: FileEntity): String {
         val md = MessageDigest.getInstance("SHA-256")

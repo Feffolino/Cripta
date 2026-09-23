@@ -13,9 +13,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val store: SettingsStore,
@@ -85,6 +87,19 @@ class SettingsViewModel @Inject constructor(
     fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
     fun setShowQualityBadge(v: Boolean) = viewModelScope.launch { store.setShowQualityBadge(v) }
     fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
+    fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
+    fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
+    fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
+
+    /** Files in the trash, newest first. */
+    val trashed: StateFlow<List<com.cripta.app.data.db.FileWithTags>> =
+        repo.changes.flatMapLatest { repo.trashed() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun restore(id: String) = viewModelScope.launch { repo.restore(id) }
+    fun deleteForever(id: String) = viewModelScope.launch { repo.secureDelete(id); thumbs.evict(id) }
+    fun emptyTrash() = viewModelScope.launch {
+        trashed.value.map { it.file.id }.forEach { repo.secureDelete(it); thumbs.evict(it) }
+    }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)

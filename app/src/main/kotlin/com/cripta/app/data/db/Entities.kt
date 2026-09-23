@@ -45,6 +45,10 @@ data class FileEntity(
     /** Display width/height in px (rotation applied) of an image/video; null until known. */
     val width: Int? = null,
     val height: Int? = null,
+    /** Where playback stopped last time (ms), for "resume"; null = from the start. */
+    val playbackPosMs: Long? = null,
+    /** Set when moved to the trash (epoch ms); null = live file. */
+    val deletedAt: Long? = null,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant
@@ -63,7 +67,9 @@ data class FileEntity(
             durationMs == other.durationMs &&
             sourceUrl == other.sourceUrl &&
             width == other.width &&
-            height == other.height
+            height == other.height &&
+            playbackPosMs == other.playbackPosMs &&
+            deletedAt == other.deletedAt
     }
 
     override fun hashCode(): Int {
@@ -79,6 +85,8 @@ data class FileEntity(
         result = 31 * result + (sourceUrl?.hashCode() ?: 0)
         result = 31 * result + (width ?: 0)
         result = 31 * result + (height ?: 0)
+        result = 31 * result + (playbackPosMs?.hashCode() ?: 0)
+        result = 31 * result + (deletedAt?.hashCode() ?: 0)
         return result
     }
 }
@@ -101,4 +109,13 @@ data class TagEntity(
 data class FileTagCrossRef(
     val fileId: String,
     val tagId: Long,
+)
+
+/** A named filter combination the user saved as a shortcut (stored encrypted with the vault). */
+@Entity(tableName = "saved_filters")
+data class SavedFilterEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    /** Serialized [com.cripta.app.ui.vault.Filters] (JSON). */
+    val json: String,
 )

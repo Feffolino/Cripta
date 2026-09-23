@@ -78,21 +78,40 @@ interface FileDao {
     suspend fun withTagsById(id: String): FileWithTags?
 
     @Transaction
-    @Query("SELECT * FROM files ORDER BY importedAt DESC")
+    @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")
     fun allWithTags(): Flow<List<FileWithTags>>
 
     @Transaction
-    @Query("SELECT * FROM files WHERE (:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId ORDER BY importedAt DESC")
+    @Query("SELECT * FROM files WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
+    fun trashedWithTags(): Flow<List<FileWithTags>>
+
+    @Query("SELECT id FROM files WHERE deletedAt IS NOT NULL AND deletedAt < :before")
+    suspend fun trashedBefore(before: Long): List<String>
+
+    @Query("UPDATE files SET deletedAt = :at WHERE id = :id")
+    suspend fun setDeletedAt(id: String, at: Long?)
+
+    @Query("UPDATE files SET playbackPosMs = :pos WHERE id = :id")
+    suspend fun setPlaybackPos(id: String, pos: Long?)
+
+    @Query("SELECT * FROM files WHERE sourceUrl = :url AND deletedAt IS NULL LIMIT 1")
+    suspend fun bySourceUrl(url: String): FileEntity?
+
+    @Query("SELECT * FROM files WHERE sizeBytes = :size AND id != :exceptId AND deletedAt IS NULL")
+    suspend fun sameSize(size: Long, exceptId: String): List<FileEntity>
+
+    @Transaction
+    @Query("SELECT * FROM files WHERE ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId) AND deletedAt IS NULL ORDER BY importedAt DESC")
     fun inFolderWithTags(folderId: Long?): Flow<List<FileWithTags>>
 
     @Query("SELECT id FROM files WHERE folderId = :folderId")
     suspend fun idsInFolder(folderId: Long): List<String>
 
-    @Query("SELECT id FROM files")
+    @Query("SELECT id FROM files WHERE deletedAt IS NULL")
     suspend fun allIds(): List<String>
 
     /** Direct (non-recursive) file count + total size per folder. Root files (null folder) are excluded. */
-    @Query("SELECT folderId AS folderId, COUNT(*) AS cnt, COALESCE(SUM(sizeBytes), 0) AS bytes FROM files WHERE folderId IS NOT NULL GROUP BY folderId")
+    @Query("SELECT folderId AS folderId, COUNT(*) AS cnt, COALESCE(SUM(sizeBytes), 0) AS bytes FROM files WHERE folderId IS NOT NULL AND deletedAt IS NULL GROUP BY folderId")
     fun folderAggregates(): Flow<List<FolderAgg>>
 
     @Query("UPDATE files SET isFavorite = :fav WHERE id = :id")
@@ -112,4 +131,15 @@ interface FileDao {
 
     @Query("UPDATE files SET sourceUrl = :url WHERE id = :id")
     suspend fun setSourceUrl(id: String, url: String?)
+}
+
+@Dao
+interface SavedFilterDao {
+    @Query("SELECT * FROM saved_filters ORDER BY name COLLATE NOCASE")
+    fun all(): Flow<List<SavedFilterEntity>>
+
+    @Insert suspend fun insert(f: SavedFilterEntity): Long
+
+    @Query("DELETE FROM saved_filters WHERE id = :id")
+    suspend fun delete(id: Long)
 }
