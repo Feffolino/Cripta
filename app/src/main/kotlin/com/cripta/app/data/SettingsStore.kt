@@ -91,6 +91,8 @@ data class Settings(
     val pictureInPicture: Boolean = false,
     /** Updates: also offer pre-releases (every CI build is published as one). */
     val updatePrerelease: Boolean = true,
+    /** Viewer: strip of the neighbouring files' covers while the controls show. */
+    val viewerFilmstrip: Boolean = true,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
@@ -142,6 +144,7 @@ class SettingsStore @Inject constructor(
     private val autoRotateKey = booleanPreferencesKey("auto_rotate")
     private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
+    private val filmstripKey = booleanPreferencesKey("viewer_filmstrip")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
@@ -191,6 +194,7 @@ class SettingsStore @Inject constructor(
             autoRotate = p[autoRotateKey] ?: true,
             pictureInPicture = p[pipKey] ?: false,
             updatePrerelease = p[updatePreKey] ?: true,
+            viewerFilmstrip = p[filmstripKey] ?: true,
         )
     }
 
@@ -214,6 +218,7 @@ class SettingsStore @Inject constructor(
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
     suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
     suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
+    suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
     suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
@@ -267,7 +272,7 @@ class SettingsStore @Inject constructor(
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
-                seekStepKey, gestureKey, autoRotateKey, pipKey)
+                seekStepKey, gestureKey, autoRotateKey, pipKey, filmstripKey)
             "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

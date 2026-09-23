@@ -281,10 +281,11 @@ fun SettingsScreen(
                                 Section("Altre opzioni") {
                                     ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
                                     ToggleRow("Luminosità e volume trascinando sui lati", s.gestureControls) { vm.setGestureControls(it) }
+                                    ToggleRow("Anteprime dei file vicini nel visualizzatore", s.viewerFilmstrip) { vm.setViewerFilmstrip(it) }
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
-                                            Text("Picture-in-Picture")
-                                            Text("Uscendo dall'app il video continua in una finestrella sopra le altre app: il contenuto resta visibile a chi guarda lo schermo.",
+                                            Text("Picture-in-Picture automatico")
+                                            Text("Uscendo dall'app il video continua da solo in una finestrella sopra le altre app (il contenuto resta visibile a chi guarda lo schermo). Anche se spento, puoi aprirla dal pulsante nel player.",
                                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                         Switch(checked = s.pictureInPicture, onCheckedChange = { vm.setPictureInPicture(it) })
@@ -769,6 +770,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Luminosità e volume con i gesti", "gesti luminosità volume", SettingsPage.VIDEO),
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
+    Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
     Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
     Triple("Riga Recenti", "recenti ultime", SettingsPage.ETICHETTE),
