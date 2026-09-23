@@ -368,6 +368,8 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                         WindowInsetsSides.Start + WindowInsetsSides.Top,
                     ),
                 ) {
+                    // Items centred vertically (equal flexible space above and below).
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                     tabs.forEach { tab ->
                         val selected = backStack?.destination?.hierarchy?.any { it.route == tab.route } == true
                         NavigationRailItem(
@@ -377,6 +379,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                             label = { Text(tab.label) },
                         )
                     }
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 }
             }
             NavHost(

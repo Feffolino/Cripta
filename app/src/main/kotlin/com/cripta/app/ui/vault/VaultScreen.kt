@@ -1,5 +1,13 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material.icons.automirrored.filled.LabelOff
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1093,6 +1101,7 @@ fun VaultScreen(
             onApplySaved = vm::applySavedFilter,
             onDeleteSaved = { vm.deleteSavedFilter(it) },
             onSave = { vm.saveCurrentFilter(it) },
+            resultCount = files.size,
         )
     }
 
@@ -1809,7 +1818,12 @@ private fun TagFilterChip(label: String, state: TagFilterState, dot: Color?, onC
     }
 }
 
-/** Unified sort + filter menu as a Material3 bottom sheet. */
+/**
+ * Sort + filter sheet. A fixed header keeps the live result count and "Azzera" in reach even at half
+ * height; below it the groups follow the order people reach for them: saved filters, order, what
+ * to show, then the (possibly long) tag library last. Every change applies at once; the sheet is
+ * only closed by the user. Tags keep the library's fixed order so each one is always in its place.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSortSheet(
@@ -1831,124 +1845,221 @@ private fun FilterSortSheet(
     onApplySaved: (String) -> Unit = {},
     onDeleteSaved: (Long) -> Unit = {},
     onSave: (String) -> Unit = {},
+    /** Files matching right now, shown in the header (-1 = unknown). */
+    resultCount: Int = -1,
 ) {
     // Opens at half height (drag up for the rest) instead of jumping to the top of the screen.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var naming by remember { mutableStateOf(false) }
+    val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
+        (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        // ---- Header: what the filters give, and the way back.
+        Row(
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Filtri e ordine", style = MaterialTheme.typography.titleLarge)
+                val summary = listOfNotNull(
+                    resultCount.takeIf { it >= 0 }?.let { if (it == 1) "1 file" else "$it file" },
+                    activeCount.takeIf { it > 0 }?.let { if (it == 1) "1 filtro attivo" else "$it filtri attivi" },
+                ).joinToString(" · ").ifEmpty { "Nessun filtro attivo" }
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+            }
+            TextButton(onClick = onClear, enabled = filters.active) { Text("Azzera") }
+        }
+        HorizontalDivider()
+
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            if (saved.isNotEmpty()) {
-                Text("Filtri salvati", style = MaterialTheme.typography.titleSmall)
-                com.cripta.app.ui.components.ChipFlowRow {
-                    saved.forEach { sf ->
-                        androidx.compose.material3.InputChip(
-                            selected = false,
-                            onClick = { onApplySaved(sf.json) },
-                            label = { Text(sf.name) },
-                            trailingIcon = {
-                                Icon(Icons.Filled.Close, "Elimina filtro salvato", modifier = Modifier.size(16.dp)
-                                    .clickable { onDeleteSaved(sf.id) })
-                            },
-                        )
-                    }
-                }
-                HorizontalDivider()
-            }
-            Text("Ordina", style = MaterialTheme.typography.titleSmall)
-            com.cripta.app.ui.components.ChipFlowRow {
-                listOf(
-                    SortKey.DATE to "Data", SortKey.NAME to "Nome",
-                    SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale",
-                ).forEach { (k, lbl) ->
-                    FilterChip(selected = sortKey == k, onClick = { onSort(k, sortAscending) }, label = { Text(lbl) })
-                }
-            }
-            // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
-            Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.CenterStart) {
-                if (sortKey == SortKey.MANUAL) {
-                    Text("Tieni premuto un elemento e trascinalo per riordinarlo (in griglia o in lista).",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    // Both directions shown, the current one selected: a choice, not a hidden state.
-                    val (descLabel, ascLabel) = when (sortKey) {
-                        SortKey.DATE -> "Più recenti prima" to "Meno recenti prima"
-                        SortKey.NAME -> "Z → A" to "A → Z"
-                        SortKey.SIZE -> "Più grandi prima" to "Più piccoli prima"
-                        else -> "Decrescente" to "Crescente"
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = !sortAscending, onClick = { onSort(sortKey, false) }, label = { Text(descLabel) })
-                        FilterChip(selected = sortAscending, onClick = { onSort(sortKey, true) }, label = { Text(ascLabel) })
-                    }
-                }
-            }
-
-            HorizontalDivider()
-
-            Text("Tipo", style = MaterialTheme.typography.titleSmall)
-            com.cripta.app.ui.components.ChipFlowRow {
-                TypeFilter.entries.forEach { t ->
-                    FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
-                }
-            }
-
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                    .toggleable(value = filters.favoritesOnly, role = Role.Switch, onValueChange = { onFav() }),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Solo preferiti", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = filters.favoritesOnly, onCheckedChange = null)
-            }
-
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                    .toggleable(value = filters.untaggedOnly, role = Role.Switch, onValueChange = { onUntagged() }),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Senza etichette", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = filters.untaggedOnly, onCheckedChange = null)
-            }
-
-            if (tags.isNotEmpty()) {
-                HorizontalDivider()
-                Text("Etichette", style = MaterialTheme.typography.titleSmall)
-                Text("Tocca per includere, ancora per escludere (barrato, nascosto), ancora per azzerare.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // With several tags chosen: must a file have all of them, or is one enough?
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Mostra file con", style = MaterialTheme.typography.bodyMedium)
-                    FilterChip(selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, label = { Text("tutte") })
-                    FilterChip(selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, label = { Text("almeno una") })
-                }
-                com.cripta.app.ui.components.ChipFlowRow {
-                    tags.forEach { tag ->
-                        val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
-                        val state = when {
-                            tag.id in filters.tagIds -> TagFilterState.INCLUDE
-                            tag.id in filters.excludedTagIds -> TagFilterState.EXCLUDE
-                            else -> TagFilterState.NEUTRAL
+            // ---- Saved filters: one tap applies; the current set can be saved from here.
+            if (saved.isNotEmpty() || filters.active) {
+                FilterGroup("Filtri salvati") {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        saved.forEach { sf ->
+                            androidx.compose.material3.InputChip(
+                                selected = false,
+                                onClick = { onApplySaved(sf.json) },
+                                label = { Text(sf.name, maxLines = 1) },
+                                trailingIcon = {
+                                    Icon(Icons.Filled.Close, "Elimina filtro salvato ${sf.name}",
+                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { onDeleteSaved(sf.id) })
+                                },
+                            )
                         }
-                        TagFilterChip(
-                            label = label,
-                            state = state,
-                            dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else null,
-                            // neutral -> include; include -> exclude; exclude -> neutral.
-                            onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
+                        androidx.compose.material3.AssistChip(
+                            onClick = { naming = true },
+                            enabled = filters.active,
+                            label = { Text("Salva questi filtri") },
+                            leadingIcon = { Icon(Icons.Filled.BookmarkAdd, null, Modifier.size(18.dp)) },
                         )
                     }
                 }
             }
 
-            // Always laid out (just disabled when nothing is filtered): if it appeared/disappeared,
-            // flipping a toggle would change the sheet's height and make it slide up/down.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { naming = true }, enabled = filters.active) { Text("Salva filtro") }
-                TextButton(onClick = onClear, enabled = filters.active) { Text("Azzera filtri") }
+            // ---- Order: key as one segmented control, direction spelled out.
+            FilterGroup("Ordina per") {
+                val keys = listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale")
+                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    keys.forEachIndexed { i, (k, lbl) ->
+                        SegmentedButton(
+                            selected = sortKey == k,
+                            onClick = { onSort(k, sortAscending) },
+                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
+                            icon = {},
+                            label = { Text(lbl, maxLines = 1) },
+                        )
+                    }
+                }
+                // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
+                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = sortKey == SortKey.MANUAL,
+                        transitionSpec = { fadeIn(Motion.enter(Motion.SHORT)) togetherWith fadeOut(Motion.exit(Motion.SHORT)) },
+                        label = "sortDirection",
+                    ) { manual ->
+                        if (manual) {
+                            Text("Tieni premuto un file e trascinalo per riordinarlo.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            val (descLabel, ascLabel) = when (sortKey) {
+                                SortKey.DATE -> "Più recenti" to "Meno recenti"
+                                SortKey.NAME -> "Z → A" to "A → Z"
+                                SortKey.SIZE -> "Più grandi" to "Più piccoli"
+                                else -> "Decrescente" to "Crescente"
+                            }
+                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                SegmentedButton(
+                                    selected = !sortAscending, onClick = { onSort(sortKey, false) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
+                                    icon = { Icon(Icons.Filled.ArrowDownward, null, Modifier.size(18.dp)) },
+                                    label = { Text(descLabel, maxLines = 1) },
+                                )
+                                SegmentedButton(
+                                    selected = sortAscending, onClick = { onSort(sortKey, true) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
+                                    icon = { Icon(Icons.Filled.ArrowUpward, null, Modifier.size(18.dp)) },
+                                    label = { Text(ascLabel, maxLines = 1) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---- What to show: type, then two quick narrowing switches as chips.
+            FilterGroup("Mostra") {
+                val types = TypeFilter.entries
+                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    types.forEachIndexed { i, t ->
+                        SegmentedButton(
+                            selected = filters.type == t,
+                            onClick = { onType(t) },
+                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, types.size),
+                            icon = {},
+                            label = { Text(typeLabel(t), maxLines = 1) },
+                        )
+                    }
+                }
+                com.cripta.app.ui.components.ChipFlowRow {
+                    FilterChip(
+                        selected = filters.favoritesOnly, onClick = onFav,
+                        label = { Text("Solo preferiti") },
+                        leadingIcon = {
+                            Icon(if (filters.favoritesOnly) Icons.Filled.Star else Icons.Filled.StarBorder, null,
+                                Modifier.size(FilterChipDefaults.IconSize))
+                        },
+                    )
+                    FilterChip(
+                        selected = filters.untaggedOnly, onClick = onUntagged,
+                        label = { Text("Senza etichette") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.LabelOff, null, Modifier.size(FilterChipDefaults.IconSize)) },
+                    )
+                }
+            }
+
+            // ---- Tags: tri-state chips in library order, a search once the library is long.
+            if (tags.isNotEmpty()) {
+                FilterGroup(
+                    "Etichette",
+                    trailing = {
+                        val n = filters.tagIds.size + filters.excludedTagIds.size
+                        if (n > 0) Text("$n scelte", style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                    },
+                ) {
+                    Text("Un tocco include, il secondo esclude (barrata), il terzo toglie.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // With two or more tags included: must a file have all of them, or is one enough?
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = filters.tagIds.size >= 2,
+                        enter = fadeIn(Motion.enter()) + androidx.compose.animation.expandVertically(Motion.enter()),
+                        exit = fadeOut(Motion.exit()) + androidx.compose.animation.shrinkVertically(Motion.exit()),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("File con", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 12.dp))
+                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                                SegmentedButton(
+                                    selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
+                                    icon = {}, label = { Text("tutte") },
+                                )
+                                SegmentedButton(
+                                    selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
+                                    icon = {}, label = { Text("almeno una") },
+                                )
+                            }
+                        }
+                    }
+                    var query by remember { mutableStateOf("") }
+                    if (tags.size > 12) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = query, onValueChange = { query = it },
+                            singleLine = true,
+                            placeholder = { Text("Cerca un'etichetta") },
+                            leadingIcon = { Icon(Icons.Filled.Search, null) },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Svuota ricerca") }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    val q = query.trim()
+                    val shown = if (q.isEmpty()) tags else tags.filter {
+                        it.name.contains(q, ignoreCase = true) || it.alias?.contains(q, ignoreCase = true) == true
+                    }
+                    if (shown.isEmpty()) {
+                        Text("Nessuna etichetta corrisponde a \"$q\".", style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    com.cripta.app.ui.components.ChipFlowRow {
+                        shown.forEach { tag ->
+                            val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
+                            val state = when {
+                                tag.id in filters.tagIds -> TagFilterState.INCLUDE
+                                tag.id in filters.excludedTagIds -> TagFilterState.EXCLUDE
+                                else -> TagFilterState.NEUTRAL
+                            }
+                            TagFilterChip(
+                                label = label,
+                                state = state,
+                                dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else null,
+                                // neutral -> include; include -> exclude; exclude -> neutral.
+                                onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1956,6 +2067,22 @@ private fun FilterSortSheet(
         TextPromptDialog("Salva filtro", "Nome (es. Video da vedere)", confirmLabel = "Salva",
             onConfirm = { onSave(it); naming = false },
             onDismiss = { naming = false })
+    }
+}
+
+/** A titled group of the filter sheet (title row with an optional trailing element, then content). */
+@Composable
+private fun FilterGroup(
+    title: String,
+    trailing: @Composable () -> Unit = {},
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().semantics { heading() }, verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            trailing()
+        }
+        content()
     }
 }
 

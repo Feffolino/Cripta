@@ -59,6 +59,7 @@ import android.view.View
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
@@ -288,6 +289,9 @@ fun ViewerScreen(
     var topChromeH by remember { mutableStateOf(0.dp) }
     // Same for the bottom chrome (filmstrip + handle): the "Prossimo" card sits right above it.
     var bottomChromeH by remember { mutableStateOf(0.dp) }
+    // Distance of the player's seek bar top from the bottom edge, reported by the player (it
+    // changes with orientation and font size): the filmstrip and the details hint sit above it.
+    var seekClear by remember { mutableStateOf(88.dp) }
     val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
     var showQueue by remember { mutableStateOf(false) }
 
@@ -335,7 +339,9 @@ fun ViewerScreen(
                 onClose = closeOnce,
                 nextId = ids.getOrNull(page + 1),
                 topInset = topChromeH,
-                bottomInset = if ((ids.size > 1 && playback.filmstrip) || !playback.swipeForDetails) bottomChromeH else 0.dp,
+                bottomInset = bottomChromeH,
+                onSeekClear = { seekClear = it },
+                pageShift = { (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction },
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
@@ -376,26 +382,23 @@ fun ViewerScreen(
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    // Just above the player's seek bar (its top edge is ~80dp up) for videos.
-                    .padding(bottom = if (onVideo) 88.dp else 16.dp),
+                    // Just above the player's seek bar for videos.
+                    .padding(bottom = if (onVideo) seekClear + 6.dp else 16.dp),
             ) {
                 Column(
                     Modifier.onGloballyPositioned { bottomChromeH = with(chromeDensity) { it.size.height.toDp() } },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, onPick = pick)
-                    // With swipe-up on, the gesture already opens the details: no handle to clutter the video.
-                    if (!playback.swipeForDetails) Surface(
-                        color = Color.Black.copy(alpha = 0.55f), shape = CircleShape,
-                        modifier = Modifier.padding(top = 4.dp)
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures { change, dy -> if (dy < -8f) { change.consume(); showTags = true } }
-                            }
-                            .clickable { showTags = true },
-                    ) {
-                        Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.ExpandLess, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Text(" Dettagli", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                    // Swipe-up on: a quiet hint (the gesture does it). Off: nothing here, the tags icon in the top bar opens them.
+                    if (playback.swipeForDetails) {
+                        Row(
+                            Modifier.padding(top = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))
+                                .padding(horizontal = 10.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Filled.ExpandLess, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
+                            Text(" Scorri su per i dettagli", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -464,7 +467,9 @@ fun ViewerScreen(
                                 )
                             }
                         }
-                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
+                        if (!playback.swipeForDetails) {
+                            IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
+                        }
                         if (ids.size > 1) {
                             IconButton(onClick = { showQueue = true }) {
                                 Icon(Icons.AutoMirrored.Filled.PlaylistPlay, "Coda")
@@ -775,6 +780,8 @@ private fun MediaPage(
     onNext: () -> Unit,
     topInset: androidx.compose.ui.unit.Dp,
     bottomInset: androidx.compose.ui.unit.Dp,
+    onSeekClear: (androidx.compose.ui.unit.Dp) -> Unit,
+    pageShift: () -> Float,
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
     onMissing: () -> Unit,
@@ -819,7 +826,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1081,6 +1088,10 @@ private fun VideoPlayer(
     topInset: androidx.compose.ui.unit.Dp,
     /** Height of the viewer's bottom chrome (filmstrip / handle) while it shows, 0 if none. */
     bottomInset: androidx.compose.ui.unit.Dp,
+    /** Reports how far the seek bar's top is from the bottom edge. */
+    onSeekClear: (androidx.compose.ui.unit.Dp) -> Unit,
+    /** This page's horizontal offset from its resting place, in page widths (0 = settled). */
+    pageShift: () -> Float,
     /** Controller auto-hide delay; 0 = never hide (TalkBack touch exploration). */
     controlsTimeoutMs: Int,
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
@@ -1273,6 +1284,36 @@ private fun VideoPlayer(
         else if (!controlsVisible && pv.isControllerFullyVisible) pv.hideController()
     }
 
+    // While swiping to another file only the picture slides: the seek bar, play/pause and the side
+    // buttons are held in place by moving them back by the page's offset.
+    var boxW by remember { mutableIntStateOf(0) }
+    val holdStill = Modifier.graphicsLayer { translationX = -pageShift() * boxW }
+    LaunchedEffect(playerViewRef) {
+        val ctl = playerViewRef?.findViewById<View>(androidx.media3.ui.R.id.exo_controller) ?: return@LaunchedEffect
+        androidx.compose.runtime.snapshotFlow { pageShift() * boxW }.collect { ctl.translationX = -it }
+    }
+    // Where the seek bar is (its top, from the bottom edge), for the viewer's bottom chrome.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var seekClearHere by remember { mutableStateOf(88.dp) }
+    val latestSeekClear by androidx.compose.runtime.rememberUpdatedState(onSeekClear)
+    DisposableEffect(playerViewRef) {
+        val pv = playerViewRef
+        val bar = pv?.findViewById<View>(androidx.media3.ui.R.id.exo_progress)
+            ?: pv?.findViewById<View>(androidx.media3.ui.R.id.exo_bottom_bar)
+        val l = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            if (pv == null || bar == null || bar.height == 0) return@OnLayoutChangeListener
+            val a = IntArray(2); val b = IntArray(2)
+            pv.getLocationInWindow(a); bar.getLocationInWindow(b)
+            val fromBottom = (a[1] + pv.height) - b[1]
+            if (fromBottom > 0) {
+                val dp = with(density) { fromBottom.toDp() }
+                seekClearHere = dp; latestSeekClear(dp)
+            }
+        }
+        bar?.addOnLayoutChangeListener(l)
+        onDispose { bar?.removeOnLayoutChangeListener(l) }
+    }
+
     fun seekBy(deltaMs: Long) {
         val dur = player.duration
         val max = if (dur > 0) dur else Long.MAX_VALUE
@@ -1284,6 +1325,7 @@ private fun VideoPlayer(
 
     Box(
         Modifier.fillMaxSize().clipToBounds()
+            .onSizeChanged { boxW = it.width }
             // Vertical swipe anywhere on the video: up = tags & details, down = close the player.
             // Observed in the Initial pass (nothing consumed) because the PlayerView under it takes
             // every touch, which used to leave these gestures working only outside the picture.
@@ -1483,9 +1525,10 @@ private fun VideoPlayer(
             Surface(
                 onClick = onNext,
                 color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.align(Alignment.BottomEnd)
+                modifier = Modifier.align(Alignment.BottomEnd).then(holdStill)
                     .padding(end = 12.dp + sideCut.end,
-                        bottom = if (controlsVisible && !vLandscape && bottomInset > 0.dp) 88.dp + bottomInset + 8.dp else seekBarClearance + 8.dp)
+                        bottom = if (controlsVisible && !vLandscape && bottomInset > 0.dp) seekClearHere + 6.dp + bottomInset + 8.dp
+                            else maxOf(seekBarClearance, seekClearHere) + 8.dp)
                     .widthIn(max = 300.dp),
             ) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1593,6 +1636,7 @@ private fun VideoPlayer(
             // Landscape: a row under the top chrome (a column would overlap the quick tags above
             // and the seek bar below on a short screen). Portrait: a column on the right edge.
             modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = maxOf(112.dp, topInset + 8.dp)) else Modifier.align(Alignment.CenterEnd))
+                .then(holdStill)
                 .padding(end = 12.dp + sideCut.end),
         ) {
           val sideButtons: @Composable () -> Unit = {
