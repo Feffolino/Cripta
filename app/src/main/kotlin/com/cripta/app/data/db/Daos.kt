@@ -15,11 +15,27 @@ interface FolderDao {
     @Update suspend fun update(folder: FolderEntity)
     @Delete suspend fun delete(folder: FolderEntity)
 
-    @Query("SELECT * FROM folders ORDER BY name COLLATE NOCASE")
+    /** Live folders only (trashed ones are listed by [trashed]). */
+    @Query("SELECT * FROM folders WHERE deletedAt IS NULL ORDER BY name COLLATE NOCASE")
     fun all(): Flow<List<FolderEntity>>
 
-    @Query("SELECT * FROM folders WHERE (:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId ORDER BY name COLLATE NOCASE")
+    @Query("SELECT * FROM folders WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND deletedAt IS NULL ORDER BY name COLLATE NOCASE")
     fun childrenOf(parentId: Long?): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders WHERE deletedAt IS NOT NULL ORDER BY name COLLATE NOCASE")
+    fun trashed(): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders WHERE deletedAt IS NOT NULL")
+    suspend fun trashedNow(): List<FolderEntity>
+
+    @Query("UPDATE folders SET deletedAt = :at WHERE id IN (:ids)")
+    suspend fun setDeletedAt(ids: List<Long>, at: Long?)
+
+    @Query("UPDATE folders SET parentId = :parentId WHERE id = :id")
+    suspend fun setParent(id: Long, parentId: Long?)
+
+    @Query("SELECT COUNT(*) FROM folders WHERE parentId = :id")
+    suspend fun childCount(id: Long): Int
 
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: Long): FolderEntity?
@@ -132,6 +148,17 @@ interface FileDao {
 
     @Query("SELECT id FROM files WHERE folderId = :folderId")
     suspend fun idsInFolder(folderId: Long): List<String>
+
+    @Query("SELECT id FROM files WHERE folderId IN (:folderIds) AND deletedAt IS NOT NULL")
+    suspend fun trashedIdsInFolders(folderIds: List<Long>): List<String>
+
+    /** Trash the live files of these folders, all with the same timestamp as the folders. */
+    @Query("UPDATE files SET deletedAt = :at WHERE folderId IN (:folderIds) AND deletedAt IS NULL")
+    suspend fun trashInFolders(folderIds: List<Long>, at: Long)
+
+    /** Restore the files trashed together with a folder (same timestamp). */
+    @Query("UPDATE files SET deletedAt = NULL WHERE folderId IN (:folderIds) AND deletedAt = :at")
+    suspend fun restoreInFolders(folderIds: List<Long>, at: Long)
 
     @Query("SELECT id FROM files WHERE deletedAt IS NULL")
     suspend fun allIds(): List<String>

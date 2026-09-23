@@ -284,15 +284,21 @@ class VaultRepository @Inject constructor(
      * Recursively crypto-shred every file in the folder subtree, then delete the folders.
      * Returns the ids of the deleted files so the caller can evict their cover cache.
      */
+    /**
+     * Delete a folder with everything in it. With the trash on, the whole subtree (folders and live
+     * files) goes to the trash with ONE timestamp, so it is browsable there and restorable as a unit
+     * or file by file; returns nothing to evict. Otherwise everything is crypto-shredded now.
+     */
     suspend fun deleteFolderRecursive(folderId: Long): List<String> = withContext(Dispatchers.IO) {
-        // Gather subtree by walking children via a snapshot query set.
-        val toVisit = ArrayDeque<Long>().apply { add(folderId) }
-        val subtree = mutableListOf<Long>()
-        val childrenMap = snapshotChildren()
-        while (toVisit.isNotEmpty()) {
-            val id = toVisit.removeFirst()
-            subtree.add(id)
-            childrenMap[id]?.forEach { toVisit.add(it) }
+        val subtree = subtreeOf(folderId)
+        if (runCatching { settings.settingsOnce().trashEnabled }.getOrDefault(false)) {
+            val at = now()
+            // Subfolders already in the trash keep their own date.
+            val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }
+            db.fileDao().trashInFolders(subtree, at)
+            db.folderDao().setDeletedAt(live, at)
+            notifyChanged()
+            return@withContext emptyList()
         }
         val deletedIds = mutableListOf<String>()
         for (fid in subtree) {
@@ -304,6 +310,20 @@ class VaultRepository @Inject constructor(
         }
         notifyChanged()
         deletedIds
+    }
+
+    /** [root] and every folder below it (live or trashed), parents before children. */
+    private suspend fun subtreeOf(root: Long): List<Long> {
+        val childrenMap = snapshotChildren()
+        val out = mutableListOf<Long>()
+        val todo = ArrayDeque<Long>().apply { add(root) }
+        while (todo.isNotEmpty() && out.size < 100_000) {
+            val id = todo.removeFirst()
+            if (id in out) continue
+            out.add(id)
+            childrenMap[id]?.let { todo.addAll(it) }
+        }
+        return out
     }
 
     private suspend fun snapshotChildren(): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
@@ -811,16 +831,78 @@ class VaultRepository @Inject constructor(
     // --- Trash (optional; see Settings.trashEnabled) ---
 
     fun trashed(): Flow<List<FileWithTags>> = live { it.fileDao().trashedWithTags() }
+    fun trashedFolders(): Flow<List<FolderEntity>> = live { it.folderDao().trashed() }
+
+    /**
+     * Make [folderId] and its ancestors live again (only those rows: their other content stays in
+     * the trash), so a restored item reappears at its original path. An ancestor that no longer
+     * exists cuts the chain: the topmost surviving folder moves to the root.
+     */
+    private suspend fun reviveChain(folderId: Long?) {
+        var id = folderId
+        var guard = 0
+        while (id != null && guard++ < 1000) {
+            val f = db.folderDao().byId(id) ?: return
+            if (f.deletedAt != null) db.folderDao().setDeletedAt(listOf(f.id), null)
+            if (f.parentId != null && db.folderDao().byId(f.parentId) == null) { db.folderDao().setParent(f.id, null); return }
+            id = f.parentId
+        }
+    }
+
+    /** Restore a trashed folder with what was trashed together with it, at its original place. */
+    suspend fun restoreFolder(folderId: Long) = withContext(Dispatchers.IO) {
+        val folder = db.folderDao().byId(folderId) ?: return@withContext
+        val at = folder.deletedAt ?: return@withContext
+        // Only what went to the trash in the same deletion: items trashed earlier stay there.
+        val together = subtreeOf(folderId).filter { db.folderDao().byId(it)?.deletedAt == at }
+        db.folderDao().setDeletedAt(together, null)
+        db.fileDao().restoreInFolders(together, at)
+        reviveChain(folder.parentId)
+        notifyChanged()
+    }
+
+    /** Destroy a trashed folder for good: its trashed files are shredded, its folders removed. */
+    suspend fun deleteFolderForever(folderId: Long): List<String> = withContext(Dispatchers.IO) {
+        val subtree = subtreeOf(folderId)
+        val ids = db.fileDao().trashedIdsInFolders(subtree)
+        ids.forEach { secureDelete(it) }
+        removeEmptyTrashedFolders(subtree.reversed())
+        notifyChanged()
+        ids
+    }
+
+    /** Remove trashed folders (deepest first) that no longer hold files or subfolders. */
+    private suspend fun removeEmptyTrashedFolders(deepestFirst: List<Long>) {
+        for (id in deepestFirst) {
+            val f = db.folderDao().byId(id) ?: continue
+            if (f.deletedAt == null) continue
+            if (db.fileDao().idsInFolder(id).isEmpty() && db.folderDao().childCount(id) == 0) db.folderDao().delete(f)
+        }
+    }
+
+    /** Empty the whole trash: every trashed file shredded, every trashed folder removed. */
+    suspend fun emptyTrash(): List<String> = withContext(Dispatchers.IO) {
+        val ids = db.fileDao().trashedBefore(Long.MAX_VALUE)
+        ids.forEach { secureDelete(it) }
+        val folders = db.folderDao().trashedNow().map { it.id }
+        removeEmptyTrashedFolders(folders.flatMap { subtreeOf(it) }.distinct().reversed())
+        notifyChanged()
+        ids
+    }
 
     /** Move a file to the trash (restorable). Its key is kept until the trash is emptied. */
     suspend fun trash(fileId: String) = withContext(Dispatchers.IO) {
         db.fileDao().setDeletedAt(fileId, now()); notifyChanged()
     }
 
-    /** Bring a trashed file back; to the root if its folder no longer exists. */
+    /**
+     * Bring a trashed file back at its original path: a trashed folder chain above it is made live
+     * again (without the rest of its content); to the root if its folder no longer exists.
+     */
     suspend fun restore(fileId: String) = withContext(Dispatchers.IO) {
         val f = db.fileDao().byId(fileId) ?: return@withContext
         if (f.folderId != null && db.folderDao().byId(f.folderId) == null) db.fileDao().move(fileId, null)
+        else reviveChain(f.folderId)
         db.fileDao().setDeletedAt(fileId, null)
         notifyChanged()
     }
@@ -837,8 +919,12 @@ class VaultRepository @Inject constructor(
 
     /** Crypto-shred trashed files older than [days]; returns their ids (for cover eviction). */
     suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
-        val ids = db.fileDao().trashedBefore(now() - days * 86_400_000L)
+        val cutoff = now() - days * 86_400_000L
+        val ids = db.fileDao().trashedBefore(cutoff)
         ids.forEach { secureDelete(it) }
+        // Expired trashed folders go once empty (their files, trashed at the same time, just went).
+        val expired = db.folderDao().trashedNow().filter { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }.map { it.id }
+        if (expired.isNotEmpty()) removeEmptyTrashedFolders(expired.flatMap { subtreeOf(it) }.distinct().reversed())
         ids
     }
 

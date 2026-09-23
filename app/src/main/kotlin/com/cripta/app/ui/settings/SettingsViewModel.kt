@@ -147,11 +147,15 @@ class SettingsViewModel @Inject constructor(
     val trashed: StateFlow<List<com.cripta.app.data.db.FileWithTags>> =
         repo.changes.flatMapLatest { repo.trashed() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** Folders in the trash (browsable: the trash dialog opens them). */
+    val trashedFolders: StateFlow<List<com.cripta.app.data.db.FolderEntity>> =
+        repo.changes.flatMapLatest { repo.trashedFolders() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restore(id: String) = viewModelScope.launch { repo.restore(id) }
+    fun restoreFolder(id: Long) = viewModelScope.launch { repo.restoreFolder(id) }
     fun deleteForever(id: String) = viewModelScope.launch { repo.secureDelete(id); thumbs.evict(id) }
-    fun emptyTrash() = viewModelScope.launch {
-        trashed.value.map { it.file.id }.forEach { repo.secureDelete(it); thumbs.evict(it) }
-    }
+    fun deleteFolderForever(id: Long) = viewModelScope.launch { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
+    fun emptyTrash() = viewModelScope.launch { repo.emptyTrash().forEach { thumbs.evict(it) } }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
     fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }
     fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }

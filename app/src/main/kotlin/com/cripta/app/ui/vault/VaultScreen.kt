@@ -1179,14 +1179,21 @@ fun VaultScreen(
             title = { Text("Eliminare la cartella?") },
             text = {
                 Text(
-                    if (n == 0) "\"${folder.name}\" è vuota e verrà eliminata."
-                    else "\"${folder.name}\" e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, " +
-                        "sottocartelle incluse) verranno eliminati in modo sicuro. Irreversibile.",
+                    when {
+                        trashEnabled -> "\"${folder.name}\"" + (if (n == 0) "" else " e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, sottocartelle incluse)") +
+                            " andrà nel cestino. Da Impostazioni › Archivio puoi aprirla e ripristinarla tutta o solo alcuni file."
+                        n == 0 -> "\"${folder.name}\" è vuota e verrà eliminata."
+                        else -> "\"${folder.name}\" e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, " +
+                            "sottocartelle incluse) verranno eliminati in modo sicuro. Irreversibile."
+                    },
                 )
             },
             confirmButton = {
-                TextButton(onClick = { vm.deleteFolder(folder); folderToDelete = null; notify("Cartella \"${folder.name}\" eliminata") }) {
-                    Text(if (n == 0) "Elimina" else "Elimina tutto", color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = {
+                    vm.deleteFolder(folder); folderToDelete = null
+                    notify(if (trashEnabled) "Cartella \"${folder.name}\" nel cestino" else "Cartella \"${folder.name}\" eliminata")
+                }) {
+                    Text(if (trashEnabled) "Sposta nel cestino" else if (n == 0) "Elimina" else "Elimina tutto", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { folderToDelete = null }) { Text("Annulla") } },
