@@ -408,7 +408,16 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("Annulla") } },
         )
     }
-    if (confirmConvert && file != null) {
+    val convertSettings by vm.convertSettings.collectAsState()
+    if (confirmConvert && file != null && !convertSettings.first) {
+        // First conversion: ask what to do with the original (and offer to remember it).
+        com.cripta.app.ui.components.ConvertChoiceDialog(
+            count = 1,
+            trashDays = convertSettings.second,
+            onConfirm = { after, rememberIt -> confirmConvert = false; vm.convertToMp4(file, after, rememberIt) },
+            onDismiss = { confirmConvert = false },
+        )
+    } else if (confirmConvert && file != null) {
         AlertDialog(
             onDismissRequest = { confirmConvert = false },
             title = { Text("Convertire in MP4?") },

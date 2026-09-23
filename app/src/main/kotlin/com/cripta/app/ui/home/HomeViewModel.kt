@@ -31,7 +31,11 @@ class HomeViewModel @Inject constructor(
     private val viewerQueue: ViewerQueue,
     private val navigator: com.cripta.app.ui.vault.VaultNavigator,
     private val settings: com.cripta.app.data.SettingsStore,
+    private val settingsNav: com.cripta.app.ui.settings.SettingsNav,
 ) : ViewModel() {
+
+    /** Ask Settings to open its Strumenti page (the caller then switches tab). */
+    fun openTools() = settingsNav.open(com.cripta.app.ui.settings.SettingsPage.STRUMENTI.name)
 
     init {
         // Shred trash entries past their retention (only when the trash is in use).

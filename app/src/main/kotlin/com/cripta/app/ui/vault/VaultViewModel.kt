@@ -211,6 +211,19 @@ class VaultViewModel @Inject constructor(
     fun dismissConvertResult() = repo.dismissConvertResult()
     fun cancelConversion() = com.cripta.app.work.ConversionService.cancelConvert(appContext)
 
+    val convertSettings: StateFlow<Pair<Boolean, Int>> =
+        settings.settings.map { it.convertAfterChosen to it.trashDays }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false to 7)
+
+    /** Batch conversion with the first-conversion choice (optionally remembered). */
+    fun convertToMp4(fileIds: List<String>, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
+        if (rememberChoice) viewModelScope.launch { settings.setConvertAfter(after) }
+        val ids = fileIds.toSet()
+        files.value.map { it.file }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) && it.mimeType != "video/mp4" }
+            .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id, after) }
+    }
+
     /** Queue the selected non-MP4 videos for conversion (they run one at a time). */
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()
