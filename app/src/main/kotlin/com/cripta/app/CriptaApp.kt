@@ -26,6 +26,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         TinkInit.ensureInitialized()
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
         // At cold start no conversion can be in flight, so any leftover decrypted conversion

@@ -1,6 +1,7 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.cripta.app.ui.viewer
 
-import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import android.graphics.Bitmap
@@ -64,6 +65,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -293,7 +295,6 @@ fun ViewerScreen(
     // changes with orientation and font size): the filmstrip and the details hint sit above it.
     var seekClear by remember { mutableStateOf(88.dp) }
     val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
-    var showQueue by remember { mutableStateOf(false) }
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
@@ -382,7 +383,10 @@ fun ViewerScreen(
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    // Just above the player's seek bar for videos.
+                    // Just above the player's seek bar for videos. Elsewhere clear of the system
+                    // navigation bar / gesture handle, even while it is hidden (immersive): swiping it
+                    // back in must not cover the hint.
+                    .then(if (onVideo) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility))
                     .padding(bottom = if (onVideo) seekClear + 6.dp else 16.dp),
             ) {
                 Column(
@@ -470,11 +474,6 @@ fun ViewerScreen(
                         if (!playback.swipeForDetails) {
                             IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
                         }
-                        if (ids.size > 1) {
-                            IconButton(onClick = { showQueue = true }) {
-                                Icon(Icons.AutoMirrored.Filled.PlaylistPlay, "Coda")
-                            }
-                        }
                         // The less-frequent / destructive actions live in an overflow menu so the bar
                         // stays uncluttered and Delete is separated from the safe actions.
                         IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
@@ -544,21 +543,6 @@ fun ViewerScreen(
           }
         }
 
-        // Queue: side panel with every file of the list (cover, name, duration); tap to jump.
-        AnimatedVisibility(visible = showQueue, enter = fadeIn(Motion.enter(Motion.LONG)), exit = fadeOut(Motion.exit(Motion.LONG)), modifier = Modifier.fillMaxSize()) {
-            Box(
-                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
-                    .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { showQueue = false },
-            ) {
-                QueuePanel(
-                    ids = ids, current = pagerState.currentPage, vm = vm,
-                    onPick = { i -> showQueue = false; pagerScope.launch { pagerState.scrollToPage(i) } },
-                    onDismiss = { showQueue = false },
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-        }
-        androidx.activity.compose.BackHandler(enabled = showQueue) { showQueue = false }
     }
 
     val file = currentFile
@@ -1698,63 +1682,6 @@ private fun VideoPlayer(
         ) {
             Surface(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape) {
                 Text(modeLabel ?: lastModeLabel, color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-        }
-    }
-}
-
-/** Side panel listing the whole browse list: cover, name, duration/size; the current file marked. */
-@Composable
-private fun QueuePanel(
-    ids: List<String>,
-    current: Int,
-    vm: ViewerViewModel,
-    onPick: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val cut = com.cripta.app.ui.LocalSideCutout.current
-    val width = minOf(340.dp, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp * 0.85f)
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (current - 2).coerceAtLeast(0))
-    Surface(
-        color = Color(0xF2121212),
-        modifier = modifier.fillMaxHeight().width(width)
-            // Taps inside the panel must not reach the scrim behind it (which closes the panel).
-            .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
-    ) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(end = cut.end)) {
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Coda · ${ids.size}", color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Chiudi coda", tint = Color.White) }
-            }
-            androidx.compose.foundation.lazy.LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                items(ids.size, key = { ids[it] }) { i ->
-                    val f by produceState<FileEntity?>(null, ids[i]) { value = vm.fileById(ids[i]) }
-                    val bmp by produceState<Bitmap?>(null, ids[i]) { value = vm.thumbOf(ids[i]) }
-                    val sel = i == current
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .background(if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else Color.Transparent)
-                            .clickable { onPick(i) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.height(44.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.extraSmall)
-                            .background(Color.White.copy(alpha = 0.12f))) {
-                            bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                        }
-                        Column(Modifier.padding(start = 10.dp).weight(1f)) {
-                            Text(f?.originalName ?: "", color = Color.White, style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            val meta = listOfNotNull(
-                                if (sel) "In riproduzione" else null,
-                                com.cripta.app.ui.components.formatDuration(f?.durationMs),
-                                f?.let { com.cripta.app.ui.components.formatBytes(it.sizeBytes) },
-                            ).joinToString(" · ")
-                            if (meta.isNotEmpty()) Text(meta, color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
             }
         }
     }

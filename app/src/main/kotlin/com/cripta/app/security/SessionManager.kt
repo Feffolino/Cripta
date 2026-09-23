@@ -103,7 +103,7 @@ class SessionManager @Inject constructor() {
             _database.value = null
             releaseKeysLocked()
         }
-        toClose?.let { runCatching { it.close() } }
+        toClose?.let { runCatching { it.close() }; it.wipeKey() }
     }
 
     /**
@@ -136,7 +136,20 @@ class SessionManager @Inject constructor() {
     }
 
     private fun closeAsync(d: CriptaDatabase) {
-        ioScope.launch { runCatching { d.close() } }
+        ioScope.launch {
+            // Screens stop their Room Flows when the lock shows, and view models keep upstreams
+            // for 5 s (WhileSubscribed(5000)): closing under them made Room reopen the database
+            // while cancelling. Close once they are gone; the key goes a while after that.
+            kotlinx.coroutines.delay(CLOSE_DELAY_MS)
+            runCatching { d.close() }
+            kotlinx.coroutines.delay(WIPE_DELAY_MS)
+            d.wipeKey()
+        }
+    }
+
+    private companion object {
+        const val CLOSE_DELAY_MS = 6_000L
+        const val WIPE_DELAY_MS = 30_000L
     }
 
     fun requireDek(): Aead = dek ?: error("Vault locked")
