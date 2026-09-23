@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -254,6 +255,27 @@ fun SettingsScreen(
                         ToggleRow("Ripeti il video in loop", s.videoLoop) { vm.setVideoLoop(it) }
                         ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
                     }
+                    Section("Conversione in MP4", "Per i video non scorribili (es. MPEG). Le conversioni vanno in coda, una alla volta, e ogni copia viene verificata prima di essere salvata.") {
+                        Text("Dopo la conversione", style = MaterialTheme.typography.labelLarge)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                com.cripta.app.data.ConvertAfter.REPLACE to "Sostituisci l'originale",
+                                com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
+                                com.cripta.app.data.ConvertAfter.KEEP_BOTH to "Tieni entrambi",
+                            ).forEach { (v, l) ->
+                                FilterChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
+                            }
+                        }
+                        Text(
+                            when (s.convertAfter) {
+                                com.cripta.app.data.ConvertAfter.REPLACE ->
+                                    "L'MP4 prende il posto dell'originale (cartella, etichette, posizione, copertina); l'originale va nel cestino per ${s.trashDays} giorni."
+                                com.cripta.app.data.ConvertAfter.ASK -> "A fine conversione ti viene chiesto se eliminare l'originale."
+                                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "Restano sia l'originale sia la copia MP4."
+                            },
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -277,9 +299,16 @@ fun SettingsScreen(
                             val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
                             visible.forEachIndexed { index, tag ->
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    // Tap the colour dot to change the colour (opens the editor).
                                     androidx.compose.foundation.layout.Box(
-                                        Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                            .background(com.cripta.app.ui.theme.tagColor(tag.name)))
+                                        Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                            .clickable { editTag = tag },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        androidx.compose.foundation.layout.Box(
+                                            Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                                .background(com.cripta.app.ui.theme.tagColor(tag)))
+                                    }
                                     Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 10.dp),
                                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     if (custom) {
@@ -478,9 +507,11 @@ fun SettingsScreen(
         )
     }
     if (addTag) {
+        var newColor by remember { mutableStateOf<Int?>(null) }
         LabelEditorDialog(
             title = "Nuova etichetta",
-            onConfirm = { name, alias -> vm.createTag(name, alias); addTag = false },
+            onColor = { newColor = it },
+            onConfirm = { name, alias -> vm.createTag(name, alias, newColor); addTag = false },
             onDismiss = { addTag = false },
         )
     }
@@ -500,6 +531,8 @@ fun SettingsScreen(
             title = "Modifica etichetta",
             initialName = tag.name,
             initialAlias = tag.alias ?: "",
+            initialColor = tag.color,
+            onColor = { vm.setTagColor(tag.id, it) },
             onConfirm = { name, alias -> vm.editTag(tag.id, name, alias); editTag = null },
             onDismiss = { editTag = null },
         )

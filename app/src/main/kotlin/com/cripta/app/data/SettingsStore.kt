@@ -21,6 +21,12 @@ enum class ViewMode { GRID, LIST }
 enum class SortKey { DATE, NAME, SIZE, MANUAL }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class TagSortMode { ALPHA, CUSTOM }
+/**
+ * What happens to the original after a successful MP4 conversion. REPLACE: the MP4 takes the
+ * original's place (same folder, tags, position, cover) and the original goes to the trash, so it
+ * stays recoverable. ASK: previous behaviour (prompt). KEEP_BOTH: keep both, no prompt.
+ */
+enum class ConvertAfter { REPLACE, ASK, KEEP_BOTH }
 /** How a tag is written on a cover badge: its short alias/emoji, or its full name. */
 enum class CoverTagStyle { ALIAS, NAME }
 
@@ -76,6 +82,7 @@ data class Settings(
     /** Days a trashed file is kept before being crypto-shredded. */
     val trashDays: Int = 7,
     val downloadDefaults: DownloadDefaults = DownloadDefaults(),
+    val convertAfter: ConvertAfter = ConvertAfter.REPLACE,
 )
 
 @Singleton
@@ -112,6 +119,7 @@ class SettingsStore @Inject constructor(
     private val dlFolderKey = androidx.datastore.preferences.core.longPreferencesKey("dl_folder")
     private val dlTagsKey = androidx.datastore.preferences.core.stringPreferencesKey("dl_tag_ids")
     private val dlHeightKey = intPreferencesKey("dl_height")
+    private val convertAfterKey = intPreferencesKey("convert_after")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -143,6 +151,7 @@ class SettingsStore @Inject constructor(
             ),
             trashEnabled = p[trashKey] ?: false,
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
+            convertAfter = ConvertAfter.entries.getOrElse(p[convertAfterKey] ?: 0) { ConvertAfter.REPLACE },
             downloadDefaults = DownloadDefaults(
                 folderId = p[dlFolderKey]?.takeIf { it >= 0 },
                 tagIds = p[dlTagsKey].orEmpty().split(',').mapNotNull { it.trim().toLongOrNull() },
@@ -169,6 +178,7 @@ class SettingsStore @Inject constructor(
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
     suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
+    suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal } }
     suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
     suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }
     suspend fun setTrashDays(v: Int) { context.dataStore.edit { it[trashDaysKey] = v.coerceIn(1, 90) } }

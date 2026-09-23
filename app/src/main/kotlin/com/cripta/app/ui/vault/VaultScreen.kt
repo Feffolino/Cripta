@@ -208,6 +208,7 @@ fun VaultScreen(
     val importState by vm.importState.collectAsState()
     val savedFilters by vm.savedFilters.collectAsState()
     val trashEnabled by vm.trashEnabled.collectAsState()
+    val convertStatus by vm.convertStatus.collectAsState()
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var searchExpanded by remember { mutableStateOf(false) }
@@ -332,6 +333,20 @@ fun VaultScreen(
                             if (selection.size == 1) {
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
                             }
+                            val convertible = files.count {
+                                it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4"
+                            }
+                            if (convertible > 0) {
+                                DropdownMenuItem(
+                                    text = { Text(if (convertible == 1) "Converti in MP4" else "Converti in MP4 ($convertible)") },
+                                    onClick = {
+                                        selMenu = false
+                                        vm.convertToMp4(selection.toList())
+                                        selection = emptySet()
+                                        Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
+                                    },
+                                )
+                            }
                             val videoCount = files.count { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }
                             if (videoCount > 0) {
                                 DropdownMenuItem(
@@ -430,6 +445,7 @@ fun VaultScreen(
             }
             ImportBanner(importState, onDismiss = vm::dismissImportResult,
                 onRemoveDuplicates = { vm.removeImportDuplicates() })
+            ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult)
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
             }
@@ -954,7 +970,7 @@ private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String =
 /** Badge/chip colour of a tag: its own stable colour, or the app accent when tag colours are off. */
 @Composable
 private fun tagBg(tag: TagEntity, display: DisplayPrefs?): Color =
-    if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag.name) else MaterialTheme.colorScheme.primary
+    if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary
 
 @Composable
 private fun tagFg(display: DisplayPrefs?): Color =
@@ -1078,7 +1094,7 @@ private fun TagBadge(tag: TagEntity?, text: String, display: DisplayPrefs?, maxW
 @Composable
 private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
     val colored = display.tagColors
-    val c = com.cripta.app.ui.theme.tagColor(tag.name)
+    val c = com.cripta.app.ui.theme.tagColor(tag)
     Box(
         Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
             .background(if (colored) c.copy(alpha = 0.22f) else MaterialTheme.colorScheme.secondaryContainer)
@@ -1373,7 +1389,7 @@ private fun FilterSortSheet(
                         TagFilterChip(
                             label = label,
                             state = state,
-                            dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag.name) else null,
+                            dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else null,
                             // neutral -> include; include -> exclude; exclude -> neutral.
                             onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
                         )
@@ -2034,4 +2050,54 @@ fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier) {
     }
     ThumbBox(null, Icons.Filled.Movie, isVideo = true, name = "Anteprima", selected = false, favorite = true,
         tags = if (display.showTagsOnCover) sample else emptyList(), modifier = modifier, file = file, display = display)
+}
+
+/** Conversion queue status: current video + progress + how many wait, then the outcome. */
+@Composable
+private fun ConvertBanner(state: VaultRepository.ConvertStatus, onCancel: () -> Unit, onDismiss: () -> Unit) {
+    AnimatedVisibility(
+        visible = state.active || state.lastResult != null,
+        enter = androidx.compose.animation.expandVertically() + fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
+    ) {
+        val container = when {
+            state.active -> MaterialTheme.colorScheme.secondaryContainer
+            state.lastOk -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.errorContainer
+        }
+        val on = when {
+            state.active -> MaterialTheme.colorScheme.onSecondaryContainer
+            state.lastOk -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onErrorContainer
+        }
+        Surface(color = container, shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (state.active) Icons.Filled.Movie else if (state.lastOk) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+                        null, tint = on, modifier = Modifier.size(20.dp))
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        if (state.active) {
+                            Text("Conversione in MP4 · ${state.pct}%" + if (state.waiting > 0) " · ${state.waiting} in coda" else "",
+                                style = MaterialTheme.typography.titleSmall, color = on)
+                            Text(state.currentName.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        } else {
+                            Text(state.lastResult.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on)
+                        }
+                    }
+                    if (state.active) TextButton(onClick = onCancel) { Text("Annulla", color = on) }
+                    else IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Close, "Chiudi", tint = on, modifier = Modifier.size(18.dp))
+                    }
+                }
+                if (state.active) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { state.pct / 100f }, color = on, trackColor = on.copy(alpha = 0.18f),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+    }
 }

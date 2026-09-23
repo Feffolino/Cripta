@@ -99,6 +99,8 @@ data class TagEntity(
     val alias: String? = null,
     /** User-defined position for the Custom tag order (ascending = first). */
     val orderIndex: Int = 0,
+    /** User-chosen colour (ARGB); null = automatic colour from the name. */
+    val color: Int? = null,
 )
 
 @Entity(

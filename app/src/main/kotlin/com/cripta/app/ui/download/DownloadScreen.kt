@@ -225,7 +225,7 @@ fun DownloadScreen(
                             selected = sel,
                             onClick = { tagIds = if (sel) tagIds - t.id else tagIds + t.id },
                             leadingIcon = {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t.name)))
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t)))
                             },
                             label = { Text(if (!t.alias.isNullOrBlank()) "${t.alias} ${t.name}" else t.name) },
                         )

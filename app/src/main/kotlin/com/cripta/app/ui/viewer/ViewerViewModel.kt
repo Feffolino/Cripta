@@ -154,8 +154,12 @@ class ViewerViewModel @Inject constructor(
         // Surface completions from the service (which may outlive a single viewer instance).
         viewModelScope.launch {
             repo.convertEvents.collect { event ->
-                _convertedId.value = event.newId
-                _convertedOriginalId.value = event.originalId
+                if (event.ask) {
+                    _convertedId.value = event.newId
+                    _convertedOriginalId.value = event.originalId
+                } else {
+                    _message.value = "Convertito in MP4"
+                }
                 _refresh.value++
             }
         }
@@ -168,6 +172,6 @@ class ViewerViewModel @Inject constructor(
      */
     fun convertToMp4(file: FileEntity) {
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id)
-        _message.value = "Conversione avviata"
+        _message.value = "Conversione avviata: prosegue in background"
     }
 }

@@ -104,7 +104,7 @@ class DownloadViewModel @Inject constructor(
     }
 
     /** Cancel the link being downloaded now (the rest of the queue continues). */
-    fun cancel(ctx: Context) = ConversionService.cancelConvert(ctx)
+    fun cancel(ctx: Context) = ConversionService.cancelDownload(ctx)
     fun remove(id: String) = repo.removeDownload(id)
     fun clearFinished() = repo.clearFinishedDownloads()
 

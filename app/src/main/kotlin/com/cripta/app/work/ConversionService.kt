@@ -55,12 +55,16 @@ class ConversionService : Service() {
         val mode = intent?.getStringExtra(EX_MODE)
         if (mode == null) { stopIfIdle(startId); return START_NOT_STICKY }
         // Cancel request from the notification action: abort the running transcode/download and leave.
+        if (mode == MODE_CANCEL_CONVERT) {
+            currentConvertJob?.cancel()
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
         if (mode == MODE_CANCEL) {
             cancelRequested = true
             ytdlpProcessId?.let { ytdlp.cancel(it) }
-            // Only a running conversion is a cancellable coroutine; a download is cancelled by
-            // killing its yt-dlp process above, so the rest of the download queue keeps going.
-            if (currentDownloadId == null) convertJob?.cancel()
+            // A download is cancelled by killing its yt-dlp process above, so the rest of the
+            // download queue keeps going. (Conversions have their own cancel command.)
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -219,54 +223,142 @@ class ConversionService : Service() {
         }
     }
 
+    /** Conversions run strictly one at a time: parallel transcodes fight over the hardware
+     *  encoder, which is a classic source of broken/garbled output. */
+    private val convertMutex = kotlinx.coroutines.sync.Mutex()
+    private val convertWaiting = java.util.concurrent.atomic.AtomicInteger(0)
+    @Volatile private var currentConvertJob: kotlinx.coroutines.Job? = null
+
     /**
      * Transcode one video to MP4 and encrypt it into the vault. Decrypted plaintext lives only in
      * app-private cache and is shredded in a NonCancellable finally block, so it is never left on
-     * disk even if the service is torn down mid-operation.
+     * disk even if the service is torn down mid-operation. The result is verified (duration, audio,
+     * frames decodable across the whole video) before it is imported; the original is never
+     * shredded here — at most it is moved to the trash when "Sostituisci" is chosen.
      */
     private suspend fun convertOne(id: String) {
         val file = repo.fileById(id) ?: return
         repo.setConverting(id, true)
-        notify(build("Conversione in MP4", 0, sub = "Ricodifica in corso…", indeterminate = true))
+        repo.updateConvertStatus { it.copy(waiting = convertWaiting.incrementAndGet() - 1) }
+        try {
+            convertMutex.lock()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            convertWaiting.decrementAndGet(); repo.setConverting(id, false); throw e
+        }
+        convertWaiting.decrementAndGet()
+        currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
+        notify(build("Conversione in MP4", 0, sub = file.originalName, indeterminate = true, cancelMode = MODE_CANCEL_CONVERT))
         var src: java.io.File? = null
         var out: java.io.File? = null
+        var result: Pair<Boolean, String>? = null
         try {
             val suffix = file.originalName.substringAfterLast('.', "mpg")
             src = repo.decryptToTempFile(file, suffix)
             out = repo.newTempFile("mp4")
-            // Transformer requires a Looper; the service main thread has one. Progress drives the
-            // notification so the user sees percentage and can leave the app / lock the screen.
+            val bitrate = targetBitrate(file.width, file.height)
+            // Transformer requires a Looper; the service main thread has one.
             repo.setConversionProgress(0)
-            notify(build("Conversione in MP4", 0, sub = "0%", cancelable = true))
             withContext(Dispatchers.Main) {
-                converter.toMp4(src!!, out!!) { pct ->
+                converter.toMp4(src!!, out!!, bitrate) { pct ->
                     repo.setConversionProgress(pct)
-                    notify(build("Conversione in MP4", pct, sub = "$pct%", cancelable = true))
+                    repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
+                    val q = convertWaiting.get().let { if (it > 0) " · $it in coda" else "" }
+                    notify(build("Conversione in MP4", pct, sub = "$pct% · ${file.originalName}$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT))
                 }
             }
-            // Never import a broken transcode: a corrupt/truncated output that still got saved would
-            // look like a valid file and could lead the user to delete the (good) original and lose
-            // the media. Verify the result is a playable video of plausible duration first.
-            if (!isPlayableVideo(out!!, file.durationMs)) {
-                notifyResult("Conversione fallita", "File originale intatto")
+            // Never import a broken transcode (a corrupt output that looked valid could lead to losing
+            // the good original). Verify it thoroughly first.
+            val problem = verifyConversion(out!!, src!!, file.durationMs)
+            if (problem != null) {
+                result = false to "Conversione scartata: $problem. Originale intatto."
+                notifyResult("Conversione non riuscita", "$problem · originale intatto")
                 return
             }
-            val newFile = repo.importConvertedMp4(file, out!!)
+            val mode = runCatching { settings.settingsOnce().convertAfter }.getOrDefault(com.cripta.app.data.ConvertAfter.REPLACE)
+            val replace = mode == com.cripta.app.data.ConvertAfter.REPLACE
+            val newFile = repo.importConvertedMp4(file, out!!, replace = replace)
             thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
-            repo.emitConvertResult(VaultRepository.ConversionEvent(id, newFile.id))
-            postConvertDone(id)
+            repo.emitConvertResult(
+                VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
+            )
+            when (mode) {
+                com.cripta.app.data.ConvertAfter.ASK -> postConvertDone(id)
+                com.cripta.app.data.ConvertAfter.REPLACE -> {
+                    val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
+                    notifyResult("Convertito in MP4", "${newFile.originalName} · originale nel cestino per $days giorni")
+                }
+                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Convertito in MP4", newFile.originalName)
+            }
+            result = true to if (replace) "Convertito: ${newFile.originalName} (originale nel cestino)" else "Convertito: ${newFile.originalName}"
         } catch (e: kotlinx.coroutines.CancellationException) {
+            result = false to "Conversione annullata. Originale intatto."
             notifyResult("Conversione annullata", "File originale intatto")
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "convert failed: $id", e)
-            notifyResult("Conversione fallita", e.message ?: e.javaClass.simpleName)
+            val msg = e.message ?: e.javaClass.simpleName
+            result = false to "Conversione fallita: $msg. Originale intatto."
+            notifyResult("Conversione fallita", msg)
         } finally {
             withContext(NonCancellable) {
                 src?.let { repo.shredTempFile(it) }
                 out?.let { repo.shredTempFile(it) }
                 repo.setConverting(id, false)
+                currentConvertJob = null
+                repo.updateConvertStatus {
+                    it.copy(currentName = null, pct = 0, waiting = convertWaiting.get(),
+                        lastResult = result?.second ?: it.lastResult, lastOk = result?.first ?: it.lastOk)
+                }
+                convertMutex.unlock()
             }
+        }
+    }
+
+    /** A bitrate that fits the resolution (≈0.12 bit per pixel per frame at 30 fps), or null = encoder default. */
+    private fun targetBitrate(w: Int?, h: Int?): Int? {
+        if (w == null || h == null || w <= 0 || h <= 0) return null
+        return (w.toLong() * h * 30 * 12 / 100).coerceIn(2_000_000L, 16_000_000L).toInt()
+    }
+
+    /**
+     * Thorough check of a transcode against its source. Returns null when it is good, otherwise a
+     * short reason: no video, wrong duration (must be within 10% of the source), lost audio track,
+     * or frames that can't be decoded at the start, middle and end.
+     */
+    private fun verifyConversion(out: java.io.File, src: java.io.File, knownDurMs: Long?): String? {
+        if (!out.exists() || out.length() <= 0L) return "file vuoto"
+        val srcR = MediaMetadataRetriever()
+        val (srcDur, srcAudio) = try {
+            srcR.setDataSource(src.absolutePath)
+            val d = knownDurMs?.takeIf { it > 0 }
+                ?: srcR.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            d to (srcR.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes")
+        } catch (e: Exception) {
+            (knownDurMs to false)
+        } finally { runCatching { srcR.release() } }
+
+        val r = MediaMetadataRetriever()
+        return try {
+            r.setDataSource(out.absolutePath)
+            if (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != "yes") return "nessuna traccia video"
+            val dur = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            if (dur <= 0) return "durata non valida"
+            if (srcDur != null && srcDur > 0 && (dur < srcDur * 9 / 10 || dur > srcDur * 11 / 10)) {
+                return "durata diversa dall'originale"
+            }
+            if (srcAudio && r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != "yes") return "audio perso"
+            for (frac in listOf(0.1, 0.5, 0.9)) {
+                val us = (dur * frac * 1000).toLong()
+                val frame = runCatching { r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
+                    ?: return "fotogrammi illeggibili"
+                frame.recycle()
+            }
+            null
+        } catch (e: Exception) {
+            "file non leggibile"
+        } finally {
+            runCatching { r.release() }
         }
     }
 
@@ -403,6 +495,7 @@ class ConversionService : Service() {
         sub: String? = null,
         indeterminate: Boolean = false,
         cancelable: Boolean = false,
+        cancelMode: String = MODE_CANCEL,
     ): Notification {
         val b = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -412,9 +505,9 @@ class ConversionService : Service() {
             .setOnlyAlertOnce(true)
             .setProgress(100, pct, indeterminate)
         if (cancelable) {
-            val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL)
+            val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             val pi = android.app.PendingIntent.getService(
-                this, 1, cancelIntent,
+                this, if (cancelMode == MODE_CANCEL) 1 else 4, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
             b.addAction(0, "Annulla", pi)
@@ -479,6 +572,7 @@ class ConversionService : Service() {
         private const val MODE_DOWNLOAD = "download"
         private const val MODE_CONVERT = "convert"
         private const val MODE_CANCEL = "cancel"
+        private const val MODE_CANCEL_CONVERT = "cancel_convert"
         private const val MODE_DELETE_ORIG = "delete_orig"
         private const val MODE_DISMISS = "dismiss"
         private const val MODE_DOWNLOAD_URL = "download_url"
@@ -505,8 +599,15 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, i)
         }
 
-        /** Cancel the running transcode (service is already up while converting). */
+        /** Cancel the running transcode (queued ones still run). */
         fun cancelConvert(ctx: Context) {
+            runCatching {
+                ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_CONVERT))
+            }
+        }
+
+        /** Cancel the link being downloaded now (the rest of the queue continues). */
+        fun cancelDownload(ctx: Context) {
             runCatching {
                 ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL))
             }

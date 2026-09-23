@@ -49,7 +49,8 @@ class VaultRepository @Inject constructor(
 
     // --- Video conversion events (foreground service -> UI) ---
     /** Emitted after a video is successfully transcoded+encrypted into the vault. */
-    data class ConversionEvent(val originalId: String, val newId: String)
+    /** [ask] = the user chose to be asked whether to delete the original (otherwise it's handled). */
+    data class ConversionEvent(val originalId: String, val newId: String, val ask: Boolean = true)
     private val _convertEvents =
         kotlinx.coroutines.flow.MutableSharedFlow<ConversionEvent>(extraBufferCapacity = 16)
     val convertEvents: kotlinx.coroutines.flow.SharedFlow<ConversionEvent> = _convertEvents
@@ -59,6 +60,23 @@ class VaultRepository @Inject constructor(
     fun setConverting(id: String, active: Boolean) {
         _convertingIds.value = if (active) _convertingIds.value + id else _convertingIds.value - id
     }
+    /** Conversion queue status for the in-app banner. */
+    data class ConvertStatus(
+        val currentName: String? = null,
+        val pct: Int = 0,
+        /** Videos waiting after the current one. */
+        val waiting: Int = 0,
+        /** Outcome of the last finished conversion, shown until dismissed. */
+        val lastResult: String? = null,
+        val lastOk: Boolean = true,
+    ) {
+        val active: Boolean get() = currentName != null
+    }
+    private val _convertStatus = MutableStateFlow(ConvertStatus())
+    val convertStatus: StateFlow<ConvertStatus> = _convertStatus
+    fun updateConvertStatus(f: (ConvertStatus) -> ConvertStatus) = _convertStatus.update(f)
+    fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null) }
+
     private val _conversionProgress = MutableStateFlow(0)
     /** 0-100 progress of the current transcode; drives the in-app progress popup. */
     val conversionProgress: StateFlow<Int> = _conversionProgress
@@ -370,13 +388,18 @@ class VaultRepository @Inject constructor(
      * folder, favorite and tags. The original is left untouched (the caller decides whether to
      * delete it). Returns the new file entity.
      */
-    suspend fun importConvertedMp4(original: FileEntity, mp4: File): FileEntity = withContext(Dispatchers.IO) {
+    suspend fun importConvertedMp4(original: FileEntity, mp4: File, replace: Boolean = false): FileEntity = withContext(Dispatchers.IO) {
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
         val written = mp4.inputStream().use { input ->
             blobs.blob(uuid).outputStream().use { out ->
                 FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
             }
+        }
+        // Never keep a short write: the vault copy must hold every byte of the verified MP4.
+        if (written != mp4.length()) {
+            blobs.shred(uuid)
+            throw java.io.IOException("Scrittura incompleta della copia convertita")
         }
         val baseName = original.originalName.substringBeforeLast('.', original.originalName)
         val convertedRes = videoResolutionOf(mp4)
@@ -388,18 +411,23 @@ class VaultRepository @Inject constructor(
             folderId = original.folderId,
             isFavorite = original.isFavorite,
             createdAt = original.createdAt,
-            importedAt = now(),
+            // Replacing: take the original's place in date and manual order too.
+            importedAt = if (replace) original.importedAt else now(),
             wrappedKeyset = wrapped,
             durationMs = original.durationMs,
-            sortWeight = now(),
+            sortWeight = if (replace) original.sortWeight else now(),
+            sourceUrl = original.sourceUrl,
             width = convertedRes?.first ?: original.width,
             height = convertedRes?.second ?: original.height,
+            playbackPosMs = if (replace) original.playbackPosMs else null,
         )
         db.fileDao().insert(entity)
         // Carry over the original's tags.
         db.fileDao().withTagsById(original.id)?.tags?.forEach {
             db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
         }
+        // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
+        if (replace) db.fileDao().setDeletedAt(original.id, now())
         notifyChanged()
         entity
     }
@@ -579,6 +607,15 @@ class VaultRepository @Inject constructor(
         // Tag already existed (insert ignored): just refresh its alias if one was provided.
         if (id == -1L && a != null) db.tagDao().setAlias(n, a)
         notifyChanged()
+    }
+
+    /** Set a tag's colour (null = automatic). */
+    suspend fun setTagColor(tagId: Long, color: Int?) = withContext(Dispatchers.IO) {
+        db.tagDao().setColor(tagId, color); notifyChanged()
+    }
+
+    suspend fun setTagColorByName(name: String, color: Int?) = withContext(Dispatchers.IO) {
+        db.tagDao().setColorByName(name.trim(), color); notifyChanged()
     }
 
     suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
@@ -833,7 +870,10 @@ class VaultRepository @Inject constructor(
                 folders.forEach { put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL).put("createdAt", it.createdAt)) }
             })
             put("tags", org.json.JSONArray().apply {
-                tags.forEach { put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)) }
+                tags.forEach {
+                    put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)
+                        .put("color", it.color ?: org.json.JSONObject.NULL))
+                }
             })
             put("files", org.json.JSONArray().apply {
                 files.forEach { fwt ->
@@ -906,6 +946,8 @@ class VaultRepository @Inject constructor(
                     val name = o.getString("name")
                     db.tagDao().insert(TagEntity(name = name))
                     if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
+                    // Optional (older backups have no colour).
+                    if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
                 }
 
                 // Files: order matches the blob stream order.

@@ -52,3 +52,6 @@ val TagPalette = listOf(
 
 fun tagColor(name: String): Color =
     TagPalette[Math.floorMod(name.lowercase().hashCode(), TagPalette.size)]
+
+/** A tag's colour: the one the user picked, else the automatic one from its name. */
+fun tagColor(tag: com.cripta.app.data.db.TagEntity): Color = tag.color?.let { Color(it) } ?: tagColor(tag.name)
