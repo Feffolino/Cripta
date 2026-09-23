@@ -1118,12 +1118,15 @@ private fun VideoPlayer(
         val rem = remainingMs
         val window = minOf(8_000L, totalMs / 3)
         if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
+            // Tap = play the next file now. In portrait, while the controls show, it sits above the
+            // filmstrip + "Dettagli" handle instead of overlapping them.
             Surface(
+                onClick = onNext,
                 color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.align(Alignment.BottomEnd)
-                    .padding(end = 12.dp + sideCut.end, bottom = seekBarClearance + 8.dp)
-                    .widthIn(max = 300.dp)
-                    .clickable { onNext() },
+                    .padding(end = 12.dp + sideCut.end,
+                        bottom = seekBarClearance + 8.dp + if (controlsVisible && !vLandscape) 84.dp else 0.dp)
+                    .widthIn(max = 300.dp),
             ) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.height(40.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.extraSmall)
@@ -1135,6 +1138,9 @@ private fun VideoPlayer(
                             style = MaterialTheme.typography.labelMedium)
                         Text(nextFile?.originalName ?: "", color = Color.White, style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        com.cripta.app.ui.components.formatDuration(nextFile?.durationMs)?.let {
+                            Text(it, color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     IconButton(onClick = { nextCancelled = true }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Filled.Close, "Annulla prossimo", tint = Color.White, modifier = Modifier.size(18.dp))
