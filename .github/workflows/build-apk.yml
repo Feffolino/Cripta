@@ -107,17 +107,3 @@ jobs:
           fail_on_unmatched_files: true
           draft: false
           prerelease: true
-
-      # The in-app updater needs the APK attached to the release. Since build 125 the action above
-      # has been creating releases without the asset, so make sure it is there (re-upload if not).
-      - name: Ensure APK is attached
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          NAME=$(basename "${{ steps.apk.outputs.path }}")
-          if gh release view "${{ steps.ver.outputs.tag }}" --repo "${{ github.repository }}" --json assets --jq '.assets[].name' | grep -qx "$NAME"; then
-            echo "APK already attached."
-          else
-            gh release upload "${{ steps.ver.outputs.tag }}" "${{ steps.apk.outputs.path }}" --repo "${{ github.repository }}" --clobber
-            gh release view "${{ steps.ver.outputs.tag }}" --repo "${{ github.repository }}" --json assets --jq '.assets[].name' | grep -qx "$NAME"
-          fi
