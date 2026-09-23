@@ -4,6 +4,11 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish as a stable release (not a pre-release)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -50,6 +55,13 @@ jobs:
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "version=${BASE}-${LABEL}" >> "$GITHUB_OUTPUT"
           echo "tag=v${BASE}-${LABEL}" >> "$GITHUB_OUTPUT"
+          # Stable release: "[release]" in the pushed commit message, or the manual-run switch.
+          # The tag keeps "-b<run>" because the in-app updater reads the build number from it.
+          if [ "${{ contains(github.event.head_commit.message, '[release]') || inputs.release == true }}" = "true" ]; then
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Crypto unit tests
         run: gradle :crypto:testDebugUnitTest --stacktrace --no-daemon
@@ -100,9 +112,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
-          name: Cripta ${{ steps.ver.outputs.version }}
+          name: Cripta ${{ steps.ver.outputs.version }}${{ steps.ver.outputs.stable == 'true' && ' (stabile)' || '' }}
           body: |
-            Build automatica da CI.
+            ${{ steps.ver.outputs.stable == 'true' && 'Release stabile.' || 'Build automatica da CI.' }}
             - Versione: ${{ steps.ver.outputs.version }}
             - Commit: ${{ steps.ver.outputs.sha }}
             - Build #${{ github.run_number }}
@@ -114,4 +126,5 @@ jobs:
             ${{ steps.apk.outputs.sha }}
           fail_on_unmatched_files: true
           draft: false
-          prerelease: true
+          prerelease: ${{ steps.ver.outputs.stable != 'true' }}
+          make_latest: ${{ steps.ver.outputs.stable == 'true' }}
