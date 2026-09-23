@@ -276,7 +276,7 @@ fun SettingsScreen(
                         item {
                             Section("Pulsanti e dettagli") {
                                 ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
-                                ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
+                                ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                                 ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
                                 ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
                             }

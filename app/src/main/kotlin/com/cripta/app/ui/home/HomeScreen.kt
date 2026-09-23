@@ -240,7 +240,7 @@ fun HomeScreen(
                                 stat = folderStats[folder.id],
                                 previews = folderPreviews[folder.id].orEmpty(),
                                 thumb = vm::thumb,
-                                modifier = Modifier.width(128.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
+                                modifier = Modifier.width(128.dp).pressScale(source)
                                     .clickable(source, LocalIndication.current, role = Role.Button,
                                         onClickLabel = "Apri cartella") { vm.openFolder(folder.id); onOpenFolders() },
                             )
