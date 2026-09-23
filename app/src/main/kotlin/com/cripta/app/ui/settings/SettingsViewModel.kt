@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,6 +21,8 @@ import javax.inject.Inject
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
+    private val dupStore: com.cripta.app.data.dedup.DupScanStore,
     private val store: SettingsStore,
     private val session: SessionManager,
     private val repo: VaultRepository,
@@ -158,10 +161,16 @@ class SettingsViewModel @Inject constructor(
 
     private val _dupMode = kotlinx.coroutines.flow.MutableStateFlow(DupMode.NONE)
     val dupMode: StateFlow<DupMode> = _dupMode
-    private val _dupScanning = kotlinx.coroutines.flow.MutableStateFlow(false)
-    val dupScanning: StateFlow<Boolean> = _dupScanning
-    private val _dupProgress = kotlinx.coroutines.flow.MutableStateFlow(0 to 0)
-    val dupProgress: StateFlow<Pair<Int, Int>> = _dupProgress
+    /** The scan runs in the foreground service (continues in background); progress comes from the store. */
+    val dupScanning: StateFlow<Boolean> =
+        dupStore.state.map { it.running != null }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val dupProgress: StateFlow<Pair<Int, Int>> =
+        dupStore.state.map { it.done to it.total }.stateIn(viewModelScope, SharingStarted.Eagerly, 0 to 0)
+    /** A finished scan the user hasn't opened yet (e.g. it completed in the background). */
+    val dupResultWaiting: StateFlow<com.cripta.app.data.dedup.DupScanStore.Result?> =
+        dupStore.state.map { it.result?.takeIf { r -> !r.seen } }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /** Set when this screen started the scan: open the results as soon as it finishes. */
+    private var openWhenDone = false
     private val _exactGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.ExactGroup>>(emptyList())
     val exactGroups: StateFlow<List<DuplicateScanner.ExactGroup>> = _exactGroups
     private val _similarGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.SimilarGroup>>(emptyList())
@@ -169,7 +178,6 @@ class SettingsViewModel @Inject constructor(
     /** How many files/images the last scan actually examined — shown so the user sees it ran. */
     private val _dupScannedCount = kotlinx.coroutines.flow.MutableStateFlow(0)
     val dupScannedCount: StateFlow<Int> = _dupScannedCount
-    private var scanJob: kotlinx.coroutines.Job? = null
 
     /** One file of a duplicate group, with what's needed to compare it against the others. */
     data class DupCandidate(
@@ -258,46 +266,49 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun scanExact() {
-        if (_dupScanning.value) return
-        _dupScanning.value = true
-        _dupProgress.value = 0 to 0
-        scanJob = viewModelScope.launch {
-            val result = runCatching {
-                val r = scanner.scanExact { done, total -> _dupProgress.value = done to total }
-                r to buildGroups(r.groups.map { it.files }, exact = true)
-            }
-            _dupScanning.value = false
-            result.onSuccess { (r, groups) ->
-                _exactGroups.value = r.groups
-                _dupGroups.value = groups
-                _dupScannedCount.value = r.filesScanned
-                _dupMode.value = DupMode.EXACT
-            }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
-        }
+        if (dupScanning.value) return
+        openWhenDone = true
+        com.cripta.app.work.ConversionService.startDupScan(appContext, similar = false)
     }
 
     fun scanSimilar() {
-        if (_dupScanning.value) return
-        _dupScanning.value = true
-        _dupProgress.value = 0 to 0
-        scanJob = viewModelScope.launch {
-            val result = runCatching {
-                val r = scanner.scanSimilar { done, total -> _dupProgress.value = done to total }
-                r to buildGroups(r.groups.map { it.files }, exact = false)
-            }
-            _dupScanning.value = false
-            result.onSuccess { (r, groups) ->
-                _similarGroups.value = r.groups
-                _dupGroups.value = groups
-                _dupScannedCount.value = r.mediaScanned
-                _dupMode.value = DupMode.SIMILAR
-            }.onFailure { if (it !is kotlinx.coroutines.CancellationException) _message.value = "Scansione fallita: ${it.message}" }
-        }
+        if (dupScanning.value) return
+        openWhenDone = true
+        com.cripta.app.work.ConversionService.startDupScan(appContext, similar = true)
     }
 
     fun cancelScan() {
-        scanJob?.cancel()
-        _dupScanning.value = false
+        openWhenDone = false
+        com.cripta.app.work.ConversionService.cancelDupScan(appContext)
+    }
+
+    /** Open the stored scan result in the comparison screen. */
+    fun openScanResult() = viewModelScope.launch {
+        val r = dupStore.state.value.result ?: return@launch
+        val exact = r.mode == com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
+        _exactGroups.value = if (exact) r.groups.map { DuplicateScanner.ExactGroup(it.first().sizeBytes, it) } else emptyList()
+        _similarGroups.value = if (!exact) r.groups.map { DuplicateScanner.SimilarGroup(it, 0) } else emptyList()
+        _dupGroups.value = buildGroups(r.groups, exact)
+        _dupScannedCount.value = r.scanned
+        _dupMode.value = if (exact) DupMode.EXACT else DupMode.SIMILAR
+        dupStore.markSeen()
+    }
+
+    init {
+        // Results produced by the background scan: open them if this screen asked for the scan,
+        // or when the user tapped the "scan finished" notification.
+        viewModelScope.launch {
+            dupStore.state.collect { st ->
+                val r = st.result
+                if (r != null && !r.seen && openWhenDone && st.running == null) { openWhenDone = false; openScanResult() }
+                if (st.error != null && openWhenDone) { openWhenDone = false; _message.value = "Scansione fallita: ${st.error}" }
+            }
+        }
+        viewModelScope.launch {
+            dupStore.openRequested.collect { req ->
+                if (req) { dupStore.consumeOpen(); if (dupStore.state.value.result != null) openScanResult() }
+            }
+        }
     }
 
     /**
@@ -335,6 +346,7 @@ class SettingsViewModel @Inject constructor(
 
     /** Remove deleted files from every result set, dropping groups left with a single file. */
     private suspend fun dropFromResults(ids: Set<String>) {
+        dupStore.dropFiles(ids)
         _exactGroups.value = _exactGroups.value
             .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
             .filter { it.files.size > 1 }
@@ -356,6 +368,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun closeDuplicates() {
+        dupStore.markSeen()
         _dupMode.value = DupMode.NONE
         _dupGroups.value = emptyList()
         _dupNotice.value = null
