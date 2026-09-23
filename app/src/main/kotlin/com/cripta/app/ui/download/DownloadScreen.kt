@@ -1,5 +1,7 @@
 package com.cripta.app.ui.download
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -128,7 +130,7 @@ fun DownloadScreen(
 
     Scaffold(topBar = { TopAppBar(title = { Text("Download") }) }) { pad ->
         Column(
-            Modifier.padding(pad).padding(16.dp).fillMaxWidth().verticalScroll(rememberScrollState()),
+            Modifier.padding(pad).fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Header
