@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,6 +46,26 @@ data class Filters(
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
             type != TypeFilter.ALL || favoritesOnly || untaggedOnly
+}
+
+/** True when [fwt] passes these filters (shared by the vault grid and the Home saved-filter counts). */
+fun Filters.matches(fwt: FileWithTags): Boolean {
+    val f = this
+    val nameOk = f.query.isBlank() ||
+        fwt.file.originalName.contains(f.query, ignoreCase = true) ||
+        fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
+    val tagsOk = f.tagIds.isEmpty() ||
+        if (f.tagMatchAll) fwt.tags.map { it.id }.containsAll(f.tagIds) else fwt.tags.any { it.id in f.tagIds }
+    val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
+    val untaggedOk = !f.untaggedOnly || fwt.tags.isEmpty()
+    val typeOk = when (f.type) {
+        TypeFilter.ALL -> true
+        TypeFilter.IMAGE -> VaultRepository.isImage(fwt.file.mimeType)
+        TypeFilter.VIDEO -> VaultRepository.isVideo(fwt.file.mimeType)
+        TypeFilter.OTHER -> !VaultRepository.isImage(fwt.file.mimeType) && !VaultRepository.isVideo(fwt.file.mimeType)
+    }
+    val favOk = !f.favoritesOnly || fwt.file.isFavorite
+    return nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk
 }
 
 /** Per-type counts of a file list. */
@@ -138,6 +159,11 @@ class VaultViewModel @Inject constructor(
         combine(currentFolderId, refresh) { id, _ -> id }
             .flatMapLatest { repo.folders(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Newest covers of each visible folder, for the folder mosaics. */
+    val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> =
+        folders.mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val tags: StateFlow<List<TagEntity>> =
         refresh.flatMapLatest { repo.tags() }
@@ -263,26 +289,7 @@ class VaultViewModel @Inject constructor(
         return if (key == com.cripta.app.data.SortKey.MANUAL || ascending) sorted else sorted.reversed()
     }
 
-    private fun applyFilters(list: List<FileWithTags>, f: Filters): List<FileWithTags> {
-        return list.filter { fwt ->
-            val nameOk = f.query.isBlank() ||
-                fwt.file.originalName.contains(f.query, ignoreCase = true) ||
-                fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
-            val tagsOk = f.tagIds.isEmpty() ||
-                if (f.tagMatchAll) fwt.tags.map { it.id }.containsAll(f.tagIds) else fwt.tags.any { it.id in f.tagIds }
-            val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
-            val untaggedOk = !f.untaggedOnly || fwt.tags.isEmpty()
-            val typeOk = when (f.type) {
-                TypeFilter.ALL -> true
-                TypeFilter.IMAGE -> VaultRepository.isImage(fwt.file.mimeType)
-                TypeFilter.VIDEO -> VaultRepository.isVideo(fwt.file.mimeType)
-                TypeFilter.OTHER -> !VaultRepository.isImage(fwt.file.mimeType) &&
-                    !VaultRepository.isVideo(fwt.file.mimeType)
-            }
-            val favOk = !f.favoritesOnly || fwt.file.isFavorite
-            nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk
-        }
-    }
+    private fun applyFilters(list: List<FileWithTags>, f: Filters): List<FileWithTags> = list.filter { f.matches(it) }
 
     // --- Navigation ---
     fun enterFolder(folder: FolderEntity) {

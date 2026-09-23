@@ -3,12 +3,18 @@ package com.cripta.app.ui.home
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cripta.app.data.DisplayPrefs
 import com.cripta.app.data.FolderStat
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.computeFolderStats
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.data.db.FolderEntity
+import com.cripta.app.data.db.SavedFilterEntity
 import com.cripta.app.media.ThumbnailLoader
+import com.cripta.app.ui.vault.TypeCounts
+import com.cripta.app.ui.vault.filtersFromJson
+import com.cripta.app.ui.vault.matches
 import com.cripta.app.viewer.ViewerQueue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +25,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -47,36 +55,51 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    val savedFilters: StateFlow<List<com.cripta.app.data.db.SavedFilterEntity>> =
-        repo.changes.flatMapLatest { repo.savedFilters() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    /** Ask the Cartelle screen to open this folder (the caller then switches tab). */
-    fun openFolder(id: Long) = navigator.openFolder(id)
-
-    /** Ask the Cartelle screen to apply a saved filter (the caller then switches tab). */
-    fun applySavedFilter(json: String) {
-        com.cripta.app.ui.vault.filtersFromJson(json)?.let { navigator.applyFilters(it) }
-    }
-
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
     /** Per-file cover version; shelves re-key on it so covers refresh after a regeneration. */
-    val coverVersions: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = thumbs.versions
+    val coverVersions: StateFlow<Map<String, Int>> = thumbs.versions
 
-    val recents: StateFlow<List<FileEntity>> =
-        repo.changes.flatMapLatest { repo.allFiles() }
-            .map { list -> list.map { it.file }.take(24) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val display: StateFlow<DisplayPrefs> =
+        settings.settings.map { it.display }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DisplayPrefs())
 
-    val favorites: StateFlow<List<FileEntity>> =
-        repo.changes.flatMapLatest { repo.allFiles() }
-            .map { list -> list.map { it.file }.filter { it.isFavorite }.take(24) }
+    /** Every live file with its tags, newest import first (one query shared by all shelves). */
+    private val all = repo.changes.flatMapLatest { repo.allFiles() }
+        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+
+    /** Header summary: how many videos / photos and how much space. */
+    val summary: StateFlow<TypeCounts> = all.map { TypeCounts.of(it) }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TypeCounts())
+
+    /** Videos started and not finished, most recently watched first. */
+    val continueWatching: StateFlow<List<FileWithTags>> = all.map { list ->
+        list.filter { VaultRepository.isVideo(it.file.mimeType) && (it.file.playbackPosMs ?: 0L) > 0 }
+            .sortedByDescending { it.file.lastPlayedAt ?: 0L }.take(12)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recents: StateFlow<List<FileWithTags>> = all.map { it.take(24) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val favorites: StateFlow<List<FileWithTags>> = all.map { list -> list.filter { it.file.isFavorite }.take(24) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val favoriteCount: StateFlow<Int> = all.map { list -> list.count { it.file.isFavorite } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** Saved filters with how many files each one currently matches. */
+    val savedFilters: StateFlow<List<Pair<SavedFilterEntity, Int>>> =
+        combine(repo.changes.flatMapLatest { repo.savedFilters() }, all) { saved, files ->
+            saved.map { sf -> sf to (filtersFromJson(sf.json)?.let { f -> files.count { f.matches(it) } } ?: 0) }
+        }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val folders: StateFlow<List<FolderEntity>> =
         repo.changes.flatMapLatest { repo.folders(null) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Newest covers of each root folder, for the folder mosaics. */
+    val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> =
+        folders.mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     /** False until the vault content has been read once, so the empty state doesn't flash on the
      *  first frame after unlock while the DB queries are still loading. */
@@ -91,4 +114,15 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun publishQueue(ids: List<String>) = viewerQueue.set(ids)
+
+    /** Ask the Cartelle screen to open this folder (the caller then switches tab). */
+    fun openFolder(id: Long) = navigator.openFolder(id)
+
+    /** Ask the Cartelle screen to apply a saved filter (the caller then switches tab). */
+    fun applySavedFilter(json: String) {
+        filtersFromJson(json)?.let { navigator.applyFilters(it) }
+    }
+
+    /** Open Cartelle filtered to one type (from the summary card). */
+    fun showType(type: com.cripta.app.ui.vault.TypeFilter) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type))
 }

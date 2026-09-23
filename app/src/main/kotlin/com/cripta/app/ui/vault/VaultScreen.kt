@@ -110,6 +110,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -201,6 +202,7 @@ fun VaultScreen(
     val sortKey by vm.sortKey.collectAsState()
     val sortAscending by vm.sortAscending.collectAsState()
     val folderStats by vm.folderStats.collectAsState()
+    val folderPreviews by vm.folderPreviews.collectAsState()
     val display by vm.display.collectAsState()
     val coverOverrides by vm.coverOverrides.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
@@ -315,24 +317,68 @@ fun VaultScreen(
                             Icon(Icons.Filled.SelectAll, if (allSelected) "Deseleziona tutto" else "Seleziona tutto",
                                 tint = if (allSelected) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
-                        val allFav = files.filter { it.file.id in selection }.all { it.file.isFavorite }
-                        IconButton(onClick = { vm.setFavorite(selection.toList(), !allFav); selection = emptySet() }) {
-                            Icon(Icons.Filled.Star, if (allFav) "Rimuovi preferito" else "Aggiungi preferito")
+                    } else {
+                        // Search is an icon that opens the field (it stays open while a query is typed).
+                        IconButton(onClick = { searchExpanded = !searchExpanded }) {
+                            Icon(Icons.Filled.Search, "Cerca",
+                                tint = if (searchExpanded || filters.query.isNotBlank())
+                                    MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
-                        IconButton(onClick = { confirmMultiDelete = true }) {
-                            Icon(Icons.Filled.Delete, "Elimina")
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            Icon(Icons.Filled.Tune, "Filtri e ordinamento",
+                                tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
-                        var selMenu by remember { mutableStateOf(false) }
-                        IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(expanded = selMenu, onDismissRequest = { selMenu = false }) {
-                            DropdownMenuItem(text = { Text("Sposta") }, onClick = { selMenu = false; showMove = true })
+                        // One "Vista" menu: grid / list and the number of columns.
+                        var viewMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { viewMenu = true }) {
+                            Icon(if (viewMode == ViewMode.GRID) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList, "Vista")
+                        }
+                        DropdownMenu(expanded = viewMenu, onDismissRequest = { viewMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text(if (selection.size == 1) "Etichette" else "Etichette (${selection.size})") },
-                                onClick = {
-                                    selMenu = false
-                                    if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
-                                },
+                                text = { Text("Griglia") },
+                                leadingIcon = { Icon(Icons.Filled.GridView, null) },
+                                trailingIcon = { if (viewMode == ViewMode.GRID) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = { vm.setViewMode(ViewMode.GRID) },
                             )
+                            DropdownMenuItem(
+                                text = { Text("Lista") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ViewList, null) },
+                                trailingIcon = { if (viewMode == ViewMode.LIST) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = { vm.setViewMode(ViewMode.LIST); viewMenu = false },
+                            )
+                            if (viewMode == ViewMode.GRID) {
+                                HorizontalDivider()
+                                Text("Colonne", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    (2..5).forEach { n ->
+                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n) }, label = { Text("$n") })
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            // Selection actions at the bottom, labelled and within thumb reach.
+            if (inSelection) {
+                val allFav = files.filter { it.file.id in selection }.all { it.file.isFavorite }
+                var selMenu by remember { mutableStateOf(false) }
+                androidx.compose.material3.BottomAppBar {
+                    SelectionAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito", Modifier.weight(1f)) {
+                        vm.setFavorite(selection.toList(), !allFav); selection = emptySet()
+                    }
+                    SelectionAction(Icons.Filled.Label, "Etichette", Modifier.weight(1f)) {
+                        if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
+                    }
+                    SelectionAction(Icons.Filled.DriveFileMove, "Sposta", Modifier.weight(1f)) { showMove = true }
+                    SelectionAction(Icons.Filled.Delete, "Elimina", Modifier.weight(1f), destructive = true) { confirmMultiDelete = true }
+                    Box(Modifier.weight(1f)) {
+                        SelectionAction(Icons.Filled.MoreVert, "Altro", Modifier.fillMaxWidth()) { selMenu = true }
+                        DropdownMenu(expanded = selMenu, onDismissRequest = { selMenu = false }) {
                             if (selection.size == 1) {
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
                             }
@@ -361,30 +407,14 @@ fun VaultScreen(
                                     onClick = { selMenu = false; showRegenCover = true },
                                 )
                             }
-                        }
-                    } else {
-                        if (landscape) {
-                            IconButton(onClick = { searchExpanded = !searchExpanded }) {
-                                Icon(Icons.Filled.Search, "Cerca",
-                                    tint = if (searchExpanded || filters.query.isNotBlank())
-                                        MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                            if (selection.size != 1 && convertible == 0 && videoCount == 0) {
+                                DropdownMenuItem(text = { Text("Nessun'altra azione", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    onClick = { selMenu = false }, enabled = false)
                             }
-                        }
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Filled.Tune, "Filtri e ordinamento",
-                                tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
-                        }
-                        if (viewMode == ViewMode.GRID) {
-                            IconButton(onClick = { vm.setGridColumns(if (gridColumns >= 5) 2 else gridColumns + 1) }) {
-                                Icon(Icons.Filled.ViewModule, "Dimensione griglia")
-                            }
-                        }
-                        IconButton(onClick = { vm.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID) }) {
-                            Icon(if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView, "Vista")
                         }
                     }
-                },
-            )
+                }
+            }
         },
         floatingActionButton = {
             if (!inSelection) {
@@ -433,7 +463,7 @@ fun VaultScreen(
             // Landscape has little vertical room: the inline search bar is revealed on demand from
             // the top-bar search icon. Portrait: keep it, but hide it while scrolling down (same
             // gesture that hides the FABs) so the grid gets full height, and bring it back on scroll up.
-            val showSearch = if (landscape) searchExpanded else (fabsVisible || searchExpanded)
+            val showSearch = searchExpanded || filters.query.isNotBlank()
             AnimatedVisibility(visible = showSearch) {
                 OutlinedTextField(
                     value = filters.query,
@@ -473,11 +503,16 @@ fun VaultScreen(
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
             }
+            // Folder cards live in a horizontal row; their on-screen bounds let a drag-selection
+            // still be dropped onto a folder (the grid's own hit-testing can't see inside the row).
+            val folderBounds = remember { androidx.compose.runtime.mutableStateMapOf<Long, androidx.compose.ui.geometry.Rect>() }
+            var gridCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
             when {
                 folders.isEmpty() && files.isEmpty() ->
                     EmptyState(filters.active, Modifier.weight(1f).fillMaxWidth(),
-                        onImport = { importLauncher.launch(arrayOf("*/*")) })
+                        onImport = { importLauncher.launch(arrayOf("*/*")) },
+                        folderName = path.lastOrNull()?.name)
                 manual ->
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         ReorderableFileGrid(
@@ -498,6 +533,7 @@ fun VaultScreen(
                     columns = columns,
                     state = gridState,
                     modifier = Modifier.fillMaxSize()
+                        .onGloballyPositioned { gridCoords = it }
                         // Tap: open a file (or toggle it in selection mode), open a folder.
                         .pointerInput(orderedIds, inSelection) {
                             detectTapGestures(onTap = { off ->
@@ -533,8 +569,10 @@ fun VaultScreen(
                                 val anchor = dragAnchor
                                 if (anchor != null) {
                                     val curKey = keyAt(selPointer, gridState) as? String
-                                    if (curKey != null && curKey.startsWith("f-")) {
-                                        hoverFolder = folders.firstOrNull { "f-${it.id}" == curKey }?.id
+                                    val rootPos = gridCoords?.takeIf { it.isAttached }?.localToRoot(selPointer)
+                                    val overFolder = rootPos?.let { p -> folderBounds.entries.firstOrNull { it.value.contains(p) }?.key }
+                                    if (overFolder != null) {
+                                        hoverFolder = overFolder
                                     } else {
                                         hoverFolder = null
                                         val cur = curKey?.takeIf { it in idSet }
@@ -570,15 +608,38 @@ fun VaultScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (showFolders) {
-                        header("Cartelle")
-                        items(folders, key = { "f-${it.id}" }, span = { GridItemSpan(1) }) { folder ->
-                            FolderCell(folder, viewMode, folderStats[folder.id], display.showFolderInfo,
-                                modifier = Modifier.animateItem(placementSpec = null),
-                                onOpen = { vm.enterFolder(folder) }, onLongPress = { folderMenu = folder })
+                        // Folders in their own scrollable row, so the files below stay a uniform grid.
+                        item(key = "folders", span = { GridItemSpan(maxLineSpan) }) {
+                            Column {
+                                SectionLabel("Cartelle", folders.size)
+                                androidx.compose.foundation.lazy.LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                ) {
+                                    items(folders.size, key = { folders[it].id }) { i ->
+                                        val folder = folders[i]
+                                        androidx.compose.runtime.DisposableEffect(folder.id) {
+                                            onDispose { folderBounds.remove(folder.id) }
+                                        }
+                                        FolderMosaic(
+                                            folder = folder,
+                                            stat = folderStats[folder.id],
+                                            previews = folderPreviews[folder.id].orEmpty(),
+                                            thumb = { vm.thumb(it) },
+                                            showInfo = display.showFolderInfo,
+                                            highlighted = hoverFolder == folder.id,
+                                            modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
+                                                .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
+                                                .clip(MaterialTheme.shapes.medium)
+                                                .combinedClickable(onClick = { vm.enterFolder(folder) }, onLongClick = { folderMenu = folder }),
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     grouped.forEach { (label, group) ->
-                        if (label.isNotEmpty()) header(label)
+                        if (label.isNotEmpty()) header(label, group.size)
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                             FileCell(fwt, viewMode, fwt.file.id in selection, inSelection, display,
                                 // No placement animation: toggling a filter reshuffles the whole
@@ -764,10 +825,19 @@ fun VaultScreen(
     }
 }
 
-private fun LazyGridScope.header(text: String) {
-    item(span = { GridItemSpan(maxLineSpan) }) {
-        Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
-    }
+private fun LazyGridScope.header(text: String, count: Int? = null) {
+    item(span = { GridItemSpan(maxLineSpan) }) { SectionLabel(text, count) }
+}
+
+/** Light section label: "OGGI · 12" in small caps, instead of a big title. */
+@Composable
+private fun SectionLabel(text: String, count: Int? = null) {
+    Text(
+        text.uppercase() + (count?.let { " · $it" } ?: ""),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 2.dp),
+    )
 }
 
 private fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWithTags>>> {
@@ -1744,7 +1814,27 @@ private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean =
 }
 
 @Composable
-private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> Unit = {}) {
+private fun EmptyState(filtering: Boolean, modifier: Modifier, onImport: () -> Unit = {}, folderName: String? = null) {
+    if (!filtering && folderName != null) {
+        // Empty folder: say where we are and how to fill it.
+        Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), shape = CircleShape, modifier = Modifier.size(96.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
+                }
+            }
+            Text("\"$folderName\" è vuota", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp),
+                textAlign = TextAlign.Center)
+            Text("Importa qui dei file, oppure torna indietro, tieni premuto un file e trascinalo su questa cartella.",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
+                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(18.dp))
+                Text("  Importa qui")
+            }
+        }
+        return
+    }
     Column(modifier.padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -2123,5 +2213,106 @@ private fun ConvertBanner(state: VaultRepository.ConvertStatus, onCancel: () -> 
                 }
             }
         }
+    }
+}
+
+/**
+ * The vault's cover (tags on up to 3 rows, duration/quality badges, watched progress, favorite),
+ * for other screens such as Home, so every thumbnail in the app looks and reads the same.
+ */
+@Composable
+fun CoverThumb(
+    file: com.cripta.app.data.db.FileEntity,
+    tags: List<TagEntity>,
+    display: DisplayPrefs,
+    bmp: android.graphics.Bitmap?,
+    modifier: Modifier = Modifier,
+) {
+    val isVideo = VaultRepository.isVideo(file.mimeType)
+    val icon = when {
+        VaultRepository.isImage(file.mimeType) -> Icons.Filled.Image
+        isVideo -> Icons.Filled.Movie
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+    }
+    ThumbBox(bmp, icon, isVideo, file.originalName, selected = false, favorite = file.isFavorite,
+        tags = if (display.showTagsOnCover) tags else emptyList(), modifier = modifier, file = file, display = display)
+}
+
+/**
+ * Folder card with a 2x2 mosaic of its newest covers, a band in the folder's colour, its emoji or
+ * glyph, and a file-count badge — recognisable at a glance instead of a flat grey tile.
+ */
+@Composable
+fun FolderMosaic(
+    folder: FolderEntity,
+    stat: FolderStat?,
+    previews: List<com.cripta.app.data.db.FileEntity>,
+    thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+    modifier: Modifier = Modifier,
+    showInfo: Boolean = true,
+    highlighted: Boolean = false,
+) {
+    val accent = folder.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
+    Column(modifier) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium)
+                .background(accent.copy(alpha = 0.16f))
+                .then(if (highlighted) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier),
+        ) {
+            if (previews.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 44.dp)
+                }
+            } else {
+                // 2x2 mosaic (1 preview fills it; 2-3 leave tinted cells).
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (r in 0 until 2) {
+                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            for (c in 0 until 2) {
+                                val f = if (previews.size == 1) previews[0] else previews.getOrNull(r * 2 + c)
+                                Box(Modifier.weight(1f).fillMaxHeight().background(accent.copy(alpha = 0.10f))) {
+                                    if (f != null) {
+                                        val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+                                        bmp?.let {
+                                            Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (previews.size == 1) break
+                    }
+                }
+                // Folder identity over the mosaic.
+                Box(Modifier.align(Alignment.BottomStart).padding(6.dp).size(30.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 20.dp)
+                }
+            }
+            // Colour band on top.
+            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(4.dp).background(accent))
+            if (stat != null && stat.count > 0) {
+                Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) { CornerBadge("${stat.count}") }
+            }
+        }
+        Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+        if (showInfo) {
+            Text(folderSubtitle(stat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
+        }
+    }
+}
+
+/** One labelled action of the bottom selection bar. */
+@Composable
+private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier, destructive: Boolean = false, onClick: () -> Unit) {
+    val tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, label, tint = tint)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
     }
 }
