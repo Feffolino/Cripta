@@ -23,6 +23,17 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
 import androidx.compose.material3.AlertDialog
@@ -57,7 +68,7 @@ import com.cripta.app.data.db.TagEntity
 import com.cripta.app.ui.vault.LabelEditorDialog
 import com.cripta.app.ui.vault.tagAlias
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -95,241 +106,333 @@ fun SettingsScreen(
     val dupGroups by vm.dupGroups.collectAsState()
     val dupNotice by vm.dupNotice.collectAsState()
 
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // Item 0 is the sticky category bar; category i lives at item i + 1.
+    val currentCat by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            val first = listState.firstVisibleItemIndex
+            val atEnd = !listState.canScrollForward
+            if (atEnd) SettingsCategory.entries.last() else
+                SettingsCategory.entries[(first - 1).coerceIn(0, SettingsCategory.entries.lastIndex)]
+        }
+    }
+    var showAllTags by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { com.cripta.app.ui.components.HeaderTitle("Impostazioni") },
+                title = { Text("Impostazioni") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
+                actions = {
+                    // Quick lock, always at hand instead of buried mid-list.
+                    IconButton(onClick = { vm.lockNow(); onBack() }) { Icon(Icons.Filled.Lock, "Blocca ora") }
+                },
             )
         },
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            state = listState,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp),
         ) {
-            item {
-                Section("Aspetto", "Tema e colori dell'app.") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        com.cripta.app.data.ThemeMode.entries.forEach { m ->
-                            FilterChip(
-                                selected = s.themeMode == m,
-                                onClick = { vm.setThemeMode(m) },
-                                label = {
-                                    Text(when (m) {
-                                        com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
-                                        com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
-                                        com.cripta.app.data.ThemeMode.DARK -> "Scuro"
-                                    })
-                                },
-                            )
+            stickyHeader(key = "nav") {
+                CategoryBar(currentCat) { cat ->
+                    scope.launch { listState.animateScrollToItem(cat.ordinal + 1) }
+                }
+            }
+
+            item(key = SettingsCategory.ASPETTO.name) {
+                CategoryBlock(SettingsCategory.ASPETTO) {
+                    Section("Tema", "Tema e colori dell'app.") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            com.cripta.app.data.ThemeMode.entries.forEach { m ->
+                                FilterChip(
+                                    selected = s.themeMode == m,
+                                    onClick = { vm.setThemeMode(m) },
+                                    label = {
+                                        Text(when (m) {
+                                            com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
+                                            com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
+                                            com.cripta.app.data.ThemeMode.DARK -> "Scuro"
+                                        })
+                                    },
+                                )
+                            }
                         }
+                        ToggleRow("Colori dinamici (Material You)", s.dynamicColor) { vm.setDynamicColor(it) }
                     }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Colori dinamici (Material You)", Modifier.weight(1f))
-                        Switch(checked = s.dynamicColor, onCheckedChange = { vm.setDynamicColor(it) })
-                    }
-                }
-            }
-
-            item {
-                Section("Dettagli visualizzati", "Scegli quali informazioni mostrare su file e cartelle.") {
-                    ToggleRow("Dimensione e durata", s.display.showFileInfo) { vm.setShowFileInfo(it) }
-                    ToggleRow("Tag sulle copertine", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
-                    ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
-                    ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
-                }
-            }
-
-            item {
-                Section("Pulsanti azione", "Nascondi i pulsanti flottanti che non usi.") {
-                    ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
-                    ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
-                }
-            }
-
-            item {
-                Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
-                            FilterChip(
-                                selected = s.autoLockMinutes == m,
-                                onClick = { vm.setAutoLock(m) },
-                                label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
-                            )
+                    Section("Vista del vault", "Come vengono mostrati i file all'apertura.") {
+                        Text("Vista", style = MaterialTheme.typography.labelLarge)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = s.viewMode == ViewMode.GRID, onClick = { vm.setViewMode(ViewMode.GRID) },
+                                label = { Text("Griglia") })
+                            FilterChip(selected = s.viewMode == ViewMode.LIST, onClick = { vm.setViewMode(ViewMode.LIST) },
+                                label = { Text("Lista") })
                         }
-                    }
-                }
-            }
-
-            item {
-                Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DeleteOriginalPolicy.entries.forEach { p ->
-                            FilterChip(
-                                selected = s.deleteOriginalPolicy == p,
-                                onClick = { vm.setDeletePolicy(p) },
-                                label = {
-                                    Text(when (p) {
-                                        DeleteOriginalPolicy.ASK -> "Chiedi"
-                                        DeleteOriginalPolicy.ALWAYS -> "Elimina"
-                                        DeleteOriginalPolicy.NEVER -> "Mantieni"
-                                    })
-                                },
-                            )
+                        Text("Colonne della griglia", style = MaterialTheme.typography.labelLarge)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            (2..5).forEach { n ->
+                                FilterChip(selected = s.gridColumns == n, onClick = { vm.setGridColumns(n) }, label = { Text("$n") })
+                            }
                         }
-                    }
-                }
-            }
-
-            item {
-                Section("Etichette", "Crea, riordina e rinomina le etichette dei file.") {
-                    val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = !custom,
-                            onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                            label = { Text("Alfabetico") })
-                        FilterChip(selected = custom,
-                            onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                            label = { Text("Personalizzato") })
-                    }
-                    if (tags.isEmpty()) {
-                        Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        tags.forEachIndexed { index, tag ->
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f),
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (custom) {
-                                    IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                        Icon(Icons.Filled.KeyboardArrowUp, "Su")
-                                    }
-                                    IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                        Icon(Icons.Filled.KeyboardArrowDown, "Giù")
-                                    }
+                        Text("Ordinamento", style = MaterialTheme.typography.labelLarge)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale")
+                                .forEach { (k, l) ->
+                                    FilterChip(selected = s.sortKey == k, onClick = { vm.setSort(k, s.sortAscending) }, label = { Text(l) })
                                 }
-                                IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
-                                IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
+                        }
+                        if (s.sortKey != SortKey.MANUAL) {
+                            ToggleRow("Ordine crescente", s.sortAscending) { vm.setSort(s.sortKey, it) }
+                        }
+                    }
+                    Section("Dettagli visualizzati", "Informazioni mostrate nel vault.") {
+                        ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
+                        ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
+                        ToggleRow("Dettagli cartelle (conteggio e peso)", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
+                        ToggleRow("Riepilogo conteggi sopra la griglia", s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
+                        ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
+                        ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
+                    }
+                }
+            }
+
+            item(key = SettingsCategory.COPERTINE.name) {
+                CategoryBlock(SettingsCategory.COPERTINE) {
+                    Section("Anteprima", "Si aggiorna mentre cambi le opzioni qui sotto.") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+                            // Two sizes: roughly a 2-column and a 3-column grid cell.
+                            com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(150.dp))
+                            com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(104.dp))
+                        }
+                    }
+                    Section("Etichette sulla copertina") {
+                        ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
+                        if (s.display.showTagsOnCover) {
+                            Text("Righe di etichette", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3").forEach { (v, l) ->
+                                    FilterChip(selected = s.display.coverTagRows == v, onClick = { vm.setCoverTagRows(v) }, label = { Text(l) })
+                                }
+                            }
+                            Text("Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Testo", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = s.display.coverTagStyle == com.cripta.app.data.CoverTagStyle.ALIAS,
+                                    onClick = { vm.setCoverTagStyle(com.cripta.app.data.CoverTagStyle.ALIAS) },
+                                    label = { Text("Sigla / emoji") })
+                                FilterChip(selected = s.display.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME,
+                                    onClick = { vm.setCoverTagStyle(com.cripta.app.data.CoverTagStyle.NAME) },
+                                    label = { Text("Nome intero") })
+                            }
+                        }
+                        ToggleRow("Un colore per ogni etichetta", s.display.tagColors) { vm.setTagColors(it) }
+                    }
+                    Section("Badge sui video") {
+                        ToggleRow("Durata (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
+                        ToggleRow("Qualità (4K / HD / SD)", s.display.showQualityBadge) { vm.setShowQualityBadge(it) }
+                    }
+                }
+            }
+
+            item(key = SettingsCategory.RIPRODUZIONE.name) {
+                CategoryBlock(SettingsCategory.RIPRODUZIONE) {
+                    Section("Video") {
+                        ToggleRow("Ripeti il video in loop", s.videoLoop) { vm.setVideoLoop(it) }
+                        ToggleRow("Avvia senza audio", s.videoStartMuted) { vm.setVideoStartMuted(it) }
+                    }
+                }
+            }
+
+            item(key = SettingsCategory.ETICHETTE.name) {
+                CategoryBlock(SettingsCategory.ETICHETTE) {
+                    Section("Libreria etichette", "${tags.size} etichette · crea, riordina e rinomina.") {
+                        val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = !custom,
+                                onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
+                                label = { Text("Alfabetico") })
+                            FilterChip(selected = custom,
+                                onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
+                                label = { Text("Personalizzato") })
+                        }
+                        if (tags.isEmpty()) {
+                            Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            // Long libraries are collapsed so the rest of the settings stay reachable.
+                            val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
+                            visible.forEachIndexed { index, tag ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    androidx.compose.foundation.layout.Box(
+                                        Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(com.cripta.app.ui.theme.tagColor(tag.name)))
+                                    Text("${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 10.dp),
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (custom) {
+                                        IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
+                                            Icon(Icons.Filled.KeyboardArrowUp, "Su")
+                                        }
+                                        IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
+                                            Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                                        }
+                                    }
+                                    IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
+                                    IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
+                                }
+                            }
+                            if (tags.size > 8) {
+                                TextButton(onClick = { showAllTags = !showAllTags }) {
+                                    Text(if (showAllTags) "Mostra meno" else "Mostra tutte (${tags.size})")
+                                }
+                            }
+                        }
+                        androidx.compose.material3.FilledTonalButton(
+                            onClick = { addTag = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Icon(Icons.Filled.Add, null); Text("  Aggiungi etichetta") }
+                    }
+                }
+            }
+
+            item(key = SettingsCategory.SICUREZZA.name) {
+                CategoryBlock(SettingsCategory.SICUREZZA) {
+                    Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
+                                FilterChip(
+                                    selected = s.autoLockMinutes == m,
+                                    onClick = { vm.setAutoLock(m) },
+                                    label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
+                                )
+                            }
+                        }
+                        Button(onClick = { vm.lockNow(); onBack() }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.Lock, null); Text("  Blocca ora")
+                        }
+                    }
+                    Section("Privacy") {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Consenti screenshot")
+                                Text("Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked = s.allowScreenshots, onCheckedChange = { vm.setAllowScreenshots(it) })
+                        }
+                    }
+                    Section("Limiti di sicurezza") {
+                        Text(
+                            "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
+                                "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
+                                "la cancellazione fisica su memoria flash non è garantita dal sistema. Nessun permesso di rete.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            item(key = SettingsCategory.ARCHIVIO.name) {
+                CategoryBlock(SettingsCategory.ARCHIVIO) {
+                    Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DeleteOriginalPolicy.entries.forEach { p ->
+                                FilterChip(
+                                    selected = s.deleteOriginalPolicy == p,
+                                    onClick = { vm.setDeletePolicy(p) },
+                                    label = {
+                                        Text(when (p) {
+                                            DeleteOriginalPolicy.ASK -> "Chiedi"
+                                            DeleteOriginalPolicy.ALWAYS -> "Elimina"
+                                            DeleteOriginalPolicy.NEVER -> "Mantieni"
+                                        })
+                                    },
+                                )
                             }
                         }
                     }
-                    androidx.compose.material3.FilledTonalButton(
-                        onClick = { addTag = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Icon(Icons.Filled.Add, null); Text("  Aggiungi etichetta") }
-                }
-            }
-
-            item {
-                Section("Backup cifrato") {
-                    Text("Esporta/importa un archivio cifrato del vault, protetto da una passphrase. " +
-                        "Ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.FilledTonalButton(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
-                            Text("Esporta")
-                        }
-                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
-                            Text("Ripristina")
+                    Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            androidx.compose.material3.FilledTonalButton(onClick = { exportLauncher.launch("cripta-backup.criptabak") }, modifier = Modifier.weight(1f)) {
+                                Text("Esporta")
+                            }
+                            androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                                Text("Ripristina")
+                            }
                         }
                     }
-                }
-            }
-
-            item {
-                Section("File duplicati", "Trova file identici o immagini simili per liberare spazio. Tutto avviene sul dispositivo, sui dati decifrati in memoria.") {
-                    if (dupScanning) {
-                        val (done, total) = dupProgress
-                        Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
-                            style = MaterialTheme.typography.bodyMedium)
-                        androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Annulla")
-                        }
-                    } else {
-                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Duplicati esatti")
-                        }
-                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Media simili")
-                        }
-                        Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati (i video vengono decifrati temporaneamente per campionare i fotogrammi).",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-
-            item {
-                Button(onClick = { vm.lockNow(); onBack() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Blocca ora")
-                }
-            }
-
-            item {
-                Section("Privacy") {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Consenti screenshot")
-                            Text("Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.",
+                    Section("File duplicati", "Trova file identici o media simili, confrontali e libera spazio. Tutto sul dispositivo.") {
+                        if (dupScanning) {
+                            val (done, total) = dupProgress
+                            Text(if (total > 0) "Scansione… $done/$total" else "Scansione…",
+                                style = MaterialTheme.typography.bodyMedium)
+                            if (total > 0) {
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { done.toFloat() / total }, modifier = Modifier.fillMaxWidth())
+                            } else {
+                                androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                            }
+                            androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Annulla")
+                            }
+                        } else {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
+                                    Text("Esatti")
+                                }
+                                androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.weight(1f)) {
+                                    Text("Simili")
+                                }
+                            }
+                            Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Switch(checked = s.allowScreenshots, onCheckedChange = { vm.setAllowScreenshots(it) })
                     }
                 }
             }
 
-            item {
-                Section("Sicurezza — limiti") {
-                    Text(
-                        "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
-                            "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
-                            "la cancellazione fisica su memoria flash non è garantita dal sistema. Nessun permesso di rete.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            item {
-                Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
-                    when (val u = updateState) {
-                        SettingsViewModel.UpdateState.Checking ->
-                            Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium)
-                        SettingsViewModel.UpdateState.UpToDate ->
-                            Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
-                        is SettingsViewModel.UpdateState.Available -> {
-                            Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
-                                style = MaterialTheme.typography.bodyMedium)
-                            Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Scarica e installa")
+            item(key = SettingsCategory.INFO.name) {
+                CategoryBlock(SettingsCategory.INFO) {
+                    Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
+                        when (val u = updateState) {
+                            SettingsViewModel.UpdateState.Checking ->
+                                Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium)
+                            SettingsViewModel.UpdateState.UpToDate ->
+                                Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
+                            is SettingsViewModel.UpdateState.Available -> {
+                                Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
+                                    style = MaterialTheme.typography.bodyMedium)
+                                Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Scarica e installa")
+                                }
+                            }
+                            is SettingsViewModel.UpdateState.Downloading -> {
+                                Text("Download: ${u.pct}%", style = MaterialTheme.typography.bodyMedium)
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { u.pct / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                            }
+                            is SettingsViewModel.UpdateState.Error ->
+                                Text("Errore: ${u.message}", style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error)
+                            SettingsViewModel.UpdateState.Idle -> {}
+                        }
+                        if (updateState !is SettingsViewModel.UpdateState.Downloading) {
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Controlla aggiornamenti")
                             }
                         }
-                        is SettingsViewModel.UpdateState.Downloading -> {
-                            Text("Download: ${u.pct}%", style = MaterialTheme.typography.bodyMedium)
-                            androidx.compose.material3.LinearProgressIndicator(
-                                progress = { u.pct / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                        }
-                        is SettingsViewModel.UpdateState.Error ->
-                            Text("Errore: ${u.message}", style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error)
-                        SettingsViewModel.UpdateState.Idle -> {}
                     }
-                    if (updateState !is SettingsViewModel.UpdateState.Downloading) {
-                        androidx.compose.material3.FilledTonalButton(
-                            onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Controlla aggiornamenti")
-                        }
+                    Section("Informazioni") {
+                        InfoRow("Versione", pkgInfo?.versionName ?: "—")
+                        InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
+                        InfoRow("Pacchetto", ctx.packageName)
+                        InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                     }
-                }
-            }
-
-            item {
-                Section("Informazioni") {
-                    InfoRow("Versione", pkgInfo?.versionName ?: "—")
-                    InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
-                    InfoRow("Pacchetto", ctx.packageName)
-                    InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                 }
             }
         }
@@ -433,10 +536,67 @@ private fun PassphraseDialog(title: String, onConfirm: (String) -> Unit, onDismi
     )
 }
 
+/** Settings categories, in screen order; each has its own icon and accent (stats-screen style). */
+private enum class SettingsCategory(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val tint: androidx.compose.ui.graphics.Color,
+) {
+    ASPETTO("Aspetto", Icons.Filled.Palette, androidx.compose.ui.graphics.Color(0xFF3B82F6)),
+    COPERTINE("Copertine", Icons.Filled.Image, androidx.compose.ui.graphics.Color(0xFF8B5CF6)),
+    RIPRODUZIONE("Video", Icons.Filled.PlayCircle, androidx.compose.ui.graphics.Color(0xFFEC4899)),
+    ETICHETTE("Etichette", Icons.AutoMirrored.Filled.Label, androidx.compose.ui.graphics.Color(0xFFF59E0B)),
+    SICUREZZA("Sicurezza", Icons.Filled.Lock, androidx.compose.ui.graphics.Color(0xFFEF4444)),
+    ARCHIVIO("Archivio", Icons.Filled.Inventory2, androidx.compose.ui.graphics.Color(0xFF10B981)),
+    INFO("Info", Icons.Filled.Info, androidx.compose.ui.graphics.Color(0xFF64748B)),
+}
+
+/** Sticky chip bar: jump to a category; the one on screen is highlighted as you scroll. */
+@Composable
+private fun CategoryBar(current: SettingsCategory, onPick: (SettingsCategory) -> Unit) {
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(current) { rowState.animateScrollToItem(current.ordinal) }
+    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
+        androidx.compose.foundation.lazy.LazyRow(
+            state = rowState,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(SettingsCategory.entries) { c ->
+                FilterChip(
+                    selected = c == current,
+                    onClick = { onPick(c) },
+                    leadingIcon = { Icon(c.icon, null, tint = c.tint, modifier = Modifier.size(18.dp)) },
+                    label = { Text(c.label) },
+                )
+            }
+        }
+    }
+}
+
+/** A category: coloured icon badge + big title, then its sections. */
+@Composable
+private fun CategoryBlock(cat: SettingsCategory, content: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Surface(color = cat.tint.copy(alpha = 0.16f), shape = androidx.compose.foundation.shape.CircleShape,
+                modifier = Modifier.size(40.dp)) {
+                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                    Icon(cat.icon, null, tint = cat.tint, modifier = Modifier.size(22.dp))
+                }
+            }
+            Text(cat.label, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 12.dp))
+        }
+        content()
+    }
+}
+
 @Composable
 private fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
-    // Grouped, elevated card: gives the flat settings list real depth and binds each group's
-    // controls together (iOS-style grouped list / M3 setting card).
+    // Grouped, elevated card: binds each group's controls together.
     androidx.compose.material3.Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.large,

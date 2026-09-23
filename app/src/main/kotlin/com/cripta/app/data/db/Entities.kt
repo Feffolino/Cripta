@@ -42,6 +42,9 @@ data class FileEntity(
     val sortWeight: Long = 0,
     /** Source link for files downloaded in-app (shown in the Info dialog); null otherwise. */
     val sourceUrl: String? = null,
+    /** Display width/height in px (rotation applied) of an image/video; null until known. */
+    val width: Int? = null,
+    val height: Int? = null,
 ) {
     // Include every display-affecting field so Compose/StateFlow detect changes such as
     // toggling isFavorite or renaming. wrappedKeyset is excluded on purpose: it's constant
@@ -57,7 +60,10 @@ data class FileEntity(
             isFavorite == other.isFavorite &&
             createdAt == other.createdAt &&
             importedAt == other.importedAt &&
-            durationMs == other.durationMs
+            durationMs == other.durationMs &&
+            sourceUrl == other.sourceUrl &&
+            width == other.width &&
+            height == other.height
     }
 
     override fun hashCode(): Int {
@@ -70,6 +76,9 @@ data class FileEntity(
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + importedAt.hashCode()
         result = 31 * result + (durationMs?.hashCode() ?: 0)
+        result = 31 * result + (sourceUrl?.hashCode() ?: 0)
+        result = 31 * result + (width ?: 0)
+        result = 31 * result + (height ?: 0)
         return result
     }
 }

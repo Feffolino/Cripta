@@ -33,6 +33,7 @@ class ViewerViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
+    private val settingsStore: com.cripta.app.data.SettingsStore,
     queue: ViewerQueue,
 ) : ViewModel() {
 
@@ -62,6 +63,10 @@ class ViewerViewModel @Inject constructor(
     }.getOrElse { ViewerState.Error(it.message ?: "Errore") }
 
     suspend fun fileById(id: String): FileEntity? = repo.fileById(id)
+
+    /** Playback preferences read when a player is created: (loop, start muted). */
+    suspend fun playbackPrefs(): Pair<Boolean, Boolean> =
+        runCatching { settingsStore.settingsOnce() }.getOrNull()?.let { it.videoLoop to it.videoStartMuted } ?: (true to false)
 
     /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */
     suspend fun videoInfo(file: FileEntity): String = thumbs.videoDiagnostics(file)

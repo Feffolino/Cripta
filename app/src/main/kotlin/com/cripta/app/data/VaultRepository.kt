@@ -250,6 +250,8 @@ class VaultRepository @Inject constructor(
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
         // Read media duration from the still-plaintext source before it is encrypted.
         val duration = if (isPlayable(mime)) durationOf(uri) else null
+        // Resolution too (drives the HD/4K badge on covers), also read before encryption.
+        val res = resolutionOf(uri, mime)
         val uuid = UUID.randomUUID().toString()
         val wrappedKeyset = FileCrypto.createWrappedFileKeyset(dek)
         val blob = blobs.blob(uuid)
@@ -288,6 +290,8 @@ class VaultRepository @Inject constructor(
             wrappedKeyset = wrappedKeyset,
             durationMs = duration,
             sortWeight = now(),   // new files append to the bottom of the manual order
+            width = res?.first,
+            height = res?.second,
         )
         db.fileDao().insert(entity)
         notifyChanged()
@@ -344,6 +348,7 @@ class VaultRepository @Inject constructor(
             }
         }
         val baseName = original.originalName.substringBeforeLast('.', original.originalName)
+        val convertedRes = videoResolutionOf(mp4)
         val entity = FileEntity(
             id = uuid,
             originalName = "$baseName.mp4",
@@ -356,6 +361,8 @@ class VaultRepository @Inject constructor(
             wrappedKeyset = wrapped,
             durationMs = original.durationMs,
             sortWeight = now(),
+            width = convertedRes?.first ?: original.width,
+            height = convertedRes?.second ?: original.height,
         )
         db.fileDao().insert(entity)
         // Carry over the original's tags.
@@ -384,6 +391,7 @@ class VaultRepository @Inject constructor(
                         ?.toLongOrNull()?.takeIf { it > 0 }
                 } finally { runCatching { r.release() } }
             }.getOrNull()
+            val downloadedRes = videoResolutionOf(mp4)
             val name = displayName.ifBlank { "download" }.let { if (it.endsWith(".mp4")) it else "$it.mp4" }
             val entity = FileEntity(
                 id = uuid,
@@ -397,11 +405,60 @@ class VaultRepository @Inject constructor(
                 durationMs = duration,
                 sortWeight = now(),
                 sourceUrl = sourceUrl,
+                width = downloadedRes?.first,
+                height = downloadedRes?.second,
             )
             db.fileDao().insert(entity)
             notifyChanged()
             entity
         }
+
+    /** Display resolution (rotation applied) of a plaintext video file; null on failure. */
+    private fun videoResolutionOf(f: File): Pair<Int, Int>? {
+        val r = android.media.MediaMetadataRetriever()
+        return try {
+            r.setDataSource(f.absolutePath)
+            resolutionFrom(r)
+        } catch (e: Exception) {
+            null
+        } finally {
+            runCatching { r.release() }
+        }
+    }
+
+    /** Display resolution of an image or video content uri (before it is encrypted); null if unknown. */
+    private fun resolutionOf(uri: Uri, mime: String): Pair<Int, Int>? = runCatching {
+        when {
+            isImage(mime) -> {
+                val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, o) }
+                if (o.outWidth > 0 && o.outHeight > 0) o.outWidth to o.outHeight else null
+            }
+            isVideo(mime) -> {
+                val r = android.media.MediaMetadataRetriever()
+                try { r.setDataSource(context, uri); resolutionFrom(r) } finally { runCatching { r.release() } }
+            }
+            else -> null
+        }
+    }.getOrNull()
+
+    private fun resolutionFrom(r: android.media.MediaMetadataRetriever): Pair<Int, Int>? {
+        val w = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+        val h = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+        val rot = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+        if (w <= 0 || h <= 0) return null
+        return if (rot == 90 || rot == 270) h to w else w to h
+    }
+
+    /**
+     * Store resolutions discovered after import (backfill for files imported before it was
+     * recorded). One change notification for the whole batch, so the grid re-queries once.
+     */
+    suspend fun setResolutions(values: Map<String, Pair<Int, Int>>) = withContext(Dispatchers.IO) {
+        if (values.isEmpty()) return@withContext
+        values.forEach { (id, wh) -> db.fileDao().setResolution(id, wh.first, wh.second) }
+        notifyChanged()
+    }
 
     /** Best-effort media duration (ms) read directly from a content uri; null on failure. */
     private fun durationOf(uri: Uri): Long? {
