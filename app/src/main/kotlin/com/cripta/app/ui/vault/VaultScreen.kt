@@ -109,7 +109,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -1073,17 +1072,13 @@ private fun TagFilterChip(label: String, state: TagFilterState, onClick: () -> U
         TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.onSurface
     }
     Surface(color = bg, shape = MaterialTheme.shapes.small, modifier = Modifier.clickable(onClick = onClick)) {
-        // A leading "⊘" marks an excluded (hidden) tag at a glance. It is always laid out (transparent
-        // unless excluded) so the chip keeps the same width in every state: a width change would
-        // reflow the tag rows and make the sheet jump.
-        val text = androidx.compose.ui.text.buildAnnotatedString {
-            withStyle(androidx.compose.ui.text.SpanStyle(
-                color = if (state == TagFilterState.EXCLUDE) fg else Color.Transparent,
-            )) { append("⊘ ") }
-            append(label)
-        }
+        // An excluded (hidden) tag is struck through instead of getting a "⊘" prefix: the chip keeps
+        // exactly the same width in every state (a width change reflows the rows and makes the sheet
+        // jump) without the invisible leading space a reserved prefix would leave.
         Text(
-            text,
+            label,
+            textDecoration = if (state == TagFilterState.EXCLUDE)
+                androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
             style = MaterialTheme.typography.labelLarge,
             color = fg,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -1161,7 +1156,7 @@ private fun FilterSortSheet(
             if (tags.isNotEmpty()) {
                 HorizontalDivider()
                 Text("Tag", style = MaterialTheme.typography.titleSmall)
-                Text("Tocca per includere, ancora per escludere (nascondi), ancora per azzerare.",
+                Text("Tocca per includere, ancora per escludere (barrato, nascosto), ancora per azzerare.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     tags.forEach { tag ->

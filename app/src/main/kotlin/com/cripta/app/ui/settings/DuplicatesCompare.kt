@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
@@ -86,12 +91,16 @@ fun DuplicatesCompare(
     emptyText: String,
     notice: String?,
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
+    channelFor: (FileEntity) -> java.nio.channels.SeekableByteChannel,
+    imageBytes: suspend (FileEntity) -> ByteArray,
     onKeepOnly: (String) -> Unit,
     onDelete: (String) -> Unit,
     onClearNotice: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var pending by remember { mutableStateOf<DupAction?>(null) }
+    /** Group + index of the copy being previewed full screen. */
+    var preview by remember { mutableStateOf<Pair<SettingsViewModel.DupGroup, Int>?>(null) }
     LaunchedEffect(notice) {
         if (notice != null) { kotlinx.coroutines.delay(4000); onClearNotice() }
     }
@@ -133,9 +142,21 @@ fun DuplicatesCompare(
                         thumb = thumb,
                         onKeep = { c -> pending = DupAction.KeepOnly(g, c) },
                         onDelete = { c -> pending = DupAction.DeleteOne(g, c) },
+                        onPreview = { c -> preview = g to g.candidates.indexOf(c) },
                     )
                 }
             }
+        }
+
+        preview?.let { (g, index) ->
+            PreviewDialog(
+                group = g,
+                startIndex = index,
+                channelFor = channelFor,
+                imageBytes = imageBytes,
+                onKeep = { c -> preview = null; pending = DupAction.KeepOnly(g, c) },
+                onDismiss = { preview = null },
+            )
         }
 
         pending?.let { action -> ConfirmDialog(action, onConfirm = {
@@ -191,6 +212,7 @@ private fun GroupCard(
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
     onKeep: (SettingsViewModel.DupCandidate) -> Unit,
     onDelete: (SettingsViewModel.DupCandidate) -> Unit,
+    onPreview: (SettingsViewModel.DupCandidate) -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -230,6 +252,7 @@ private fun GroupCard(
                         thumb = thumb,
                         onKeep = { onKeep(c) },
                         onDelete = { onDelete(c) },
+                        onPreview = { onPreview(c) },
                     )
                 }
             }
@@ -257,6 +280,7 @@ private fun CandidateCard(
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
     onKeep: () -> Unit,
     onDelete: () -> Unit,
+    onPreview: () -> Unit,
 ) {
     val f = c.file
     val border = if (best) BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -268,7 +292,8 @@ private fun CandidateCard(
         modifier = Modifier.width(188.dp),
     ) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small)) {
+            // Tap the cover to watch the video / see the photo full size before choosing.
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).clickable(onClick = onPreview)) {
                 val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                 Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
                 Crossfade(bmp, label = "dupthumb") { b ->
@@ -292,6 +317,15 @@ private fun CandidateCard(
                         modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
                         Text("CONSIGLIATO", style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                if (VaultRepository.isVideo(f.mimeType) || VaultRepository.isImage(f.mimeType)) {
+                    Box(Modifier.align(Alignment.Center).size(40.dp).clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        Icon(
+                            if (VaultRepository.isVideo(f.mimeType)) Icons.Filled.PlayArrow else Icons.Filled.ZoomIn,
+                            "Anteprima", tint = Color.White, modifier = Modifier.size(26.dp),
+                        )
                     }
                 }
                 if (f.isFavorite) {
@@ -351,4 +385,120 @@ private fun CandidateCard(
             }
         }
     }
+}
+
+/**
+ * Full-screen preview of one copy of a duplicate group: videos play in place (streamed from the
+ * decrypting channel, never written to disk), photos show at full size. Arrows switch between the
+ * copies of the group, keeping the same playback position, so they can be compared directly.
+ */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun PreviewDialog(
+    group: SettingsViewModel.DupGroup,
+    startIndex: Int,
+    channelFor: (FileEntity) -> java.nio.channels.SeekableByteChannel,
+    imageBytes: suspend (FileEntity) -> ByteArray,
+    onKeep: (SettingsViewModel.DupCandidate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var index by remember { mutableStateOf(startIndex.coerceIn(0, group.candidates.lastIndex)) }
+    // Position carried across copies so the same moment of each video can be compared.
+    var positionMs by remember { mutableStateOf(0L) }
+    val c = group.candidates[index]
+    val best = c.file.id == group.bestId
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Chiudi", tint = Color.White) }
+                    Column(Modifier.weight(1f)) {
+                        Text(c.file.originalName, color = Color.White, style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            listOfNotNull(
+                                "Copia ${index + 1} di ${group.candidates.size}",
+                                c.resolution?.let { "${it.first}×${it.second}" },
+                                formatBytes(c.file.sizeBytes),
+                                if (best) "consigliato" else null,
+                            ).joinToString(" · "),
+                            color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val f = c.file
+                    when {
+                        VaultRepository.isVideo(f.mimeType) -> androidx.compose.runtime.key(f.id) {
+                            PreviewVideo(f, channelFor, positionMs) { positionMs = it }
+                        }
+                        VaultRepository.isImage(f.mimeType) -> {
+                            val bmp by produceState<android.graphics.Bitmap?>(null, f.id) {
+                                value = runCatching {
+                                    val bytes = imageBytes(f)
+                                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                }.getOrNull()
+                            }
+                            val b = bmp
+                            if (b != null) Image(b.asImageBitmap(), f.originalName, contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize())
+                            else androidx.compose.material3.CircularProgressIndicator(color = Color.White)
+                        }
+                        else -> Text("Anteprima non disponibile", color = Color.White)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(onClick = { index-- }, enabled = index > 0) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Copia precedente",
+                            tint = if (index > 0) Color.White else Color.White.copy(alpha = 0.3f))
+                    }
+                    Button(onClick = { onKeep(c) }, modifier = Modifier.weight(1f)) { Text("Tieni solo questo") }
+                    IconButton(onClick = { index++ }, enabled = index < group.candidates.lastIndex) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Copia successiva",
+                            tint = if (index < group.candidates.lastIndex) Color.White else Color.White.copy(alpha = 0.3f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun PreviewVideo(
+    file: FileEntity,
+    channelFor: (FileEntity) -> java.nio.channels.SeekableByteChannel,
+    startMs: Long,
+    onPosition: (Long) -> Unit,
+) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val player = remember(file.id) {
+        androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
+            val factory = com.cripta.app.viewer.EncryptedDataSource.Factory(
+                channelProvider = { channelFor(file) },
+                plaintextLength = file.sizeBytes,
+            )
+            val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
+                .setConstantBitrateSeekingEnabled(true)
+            setMediaSource(
+                androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(factory, extractors)
+                    .createMediaSource(androidx.media3.common.MediaItem.fromUri("cripta://${file.id}"))
+            )
+            repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
+            prepare()
+            if (startMs > 0) seekTo(startMs)
+            playWhenReady = true
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(player) {
+        onDispose {
+            onPosition(player.currentPosition)
+            player.release()
+        }
+    }
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { androidx.media3.ui.PlayerView(it).apply { this.player = player; useController = true } },
+        modifier = Modifier.fillMaxSize(),
+    )
 }
