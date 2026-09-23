@@ -133,7 +133,7 @@ internal fun TagSections(
     fun row(title: String, names: List<String>) {
         Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // Vertical gap congruent with the filter-sheet tag chips.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        com.cripta.app.ui.components.ChipFlowRow {
             names.forEach { name ->
                 val t = byName[name]
                 TagChip(
@@ -157,7 +157,7 @@ internal fun TagSections(
         } else row("Risultati", matches)
         return
     }
-    if (pinned.isNotEmpty()) row("📌 Fissate", pinned.map { it.name })
+    if (pinned.isNotEmpty()) row("Fissate", pinned.map { it.name })
     if (showRecents && recents.isNotEmpty()) row("Recenti", recents.map { it.name })
     if (library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
 }
@@ -250,18 +250,10 @@ fun LabelEditorDialog(
                 if (onColor != null) {
                     Text("Colore", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // "Auto" = colour derived from the name (the default), then the palette.
+                    // "A" = the colour every uncoloured tag gets (Settings › Copertine, else one
+                    // colour per name), then the palette.
                     val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
-                    androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        ColorDot(auto, selected = color == null, label = "A", description = "Colore automatico") { color = null }
-                        com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
-                            val argb = c.toArgb()
-                            ColorDot(c, selected = color == argb, description = "Colore ${i + 1}") { color = argb }
-                        }
-                    }
+                    TagColorPicker(selected = color, autoColor = auto, autoDescription = "Colore predefinito") { color = it }
                     // Live preview of the badge as it will look on covers.
                     val preview = color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto
                     Surface(color = preview, shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)) {
@@ -504,6 +496,24 @@ internal fun takeGraphemes(s: String, max: Int): String {
 }
 
 /** Round colour swatch; [label] marks the special "automatic" choice. */
+/** "A" (automatic / default colour) followed by the tag palette; [onPick] gets null for "A". */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun TagColorPicker(
+    selected: Int?,
+    autoColor: androidx.compose.ui.graphics.Color,
+    autoDescription: String,
+    onPick: (Int?) -> Unit,
+) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ColorDot(autoColor, selected = selected == null, label = "A", description = autoDescription) { onPick(null) }
+        com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
+            val argb = c.toArgb()
+            ColorDot(c, selected = selected == argb, description = "Colore ${i + 1}") { onPick(argb) }
+        }
+    }
+}
+
 @Composable
 private fun ColorDot(
     c: androidx.compose.ui.graphics.Color,

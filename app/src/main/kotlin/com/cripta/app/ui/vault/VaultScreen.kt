@@ -140,6 +140,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1267,8 +1268,30 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     val scope = rememberCoroutineScope()
     var trackH by remember { mutableFloatStateOf(0f) }
     var dragging by remember { mutableStateOf(false) }
-    val fraction = if (total <= 1) 0f
-        else (state.firstVisibleItemIndex.toFloat() / (total - 1)).coerceIn(0f, 1f)
+    // Where the finger put the thumb: while dragging the thumb follows the finger exactly instead
+    // of the list, whose position moves in whole rows (with few files that made it jump in steps).
+    var dragFraction by remember { mutableFloatStateOf(0f) }
+    // Scroll position as a continuous 0..1: the first visible item plus how far its row is scrolled,
+    // against the first index reachable at the very end (not the last index, which is never at the
+    // top: with a short list the thumb stopped halfway and then snapped to the bottom).
+    val listFraction by remember(state) {
+        derivedStateOf {
+            val info = state.layoutInfo
+            val vis = info.visibleItemsInfo
+            when {
+                info.totalItemsCount <= 1 || vis.isEmpty() || !state.canScrollBackward -> 0f
+                !state.canScrollForward -> 1f
+                else -> {
+                    val first = vis.first()
+                    val cols = vis.count { it.offset.y == first.offset.y }.coerceAtLeast(1)
+                    val pos = first.index + state.firstVisibleItemScrollOffset.toFloat() / first.size.height.coerceAtLeast(1) * cols
+                    val maxPos = (info.totalItemsCount - vis.size).coerceAtLeast(1)
+                    (pos / maxPos).coerceIn(0f, 1f)
+                }
+            }
+        }
+    }
+    val fraction = if (dragging) dragFraction else listFraction
     val active = state.isScrollInProgress || dragging
     val alpha by animateFloatAsState(if (active) 1f else 0f, label = "fastscroll")
     // The strip only takes drags while the scroller is visible: when hidden, touches on the right
@@ -1302,16 +1325,35 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
             .width(28.dp)
             .onGloballyPositioned { trackH = it.size.height.toFloat() }
             .then(if (!visible) Modifier else Modifier.pointerInput(total, trackH) {
+                // Grabbed on the thumb: it keeps the same point under the finger (no jump). Grabbed
+                // elsewhere on the track: the thumb centres on the finger.
+                var grab = 0f
+                fun follow(y: Float) {
+                    if (maxOffset <= 0f) return
+                    dragFraction = ((y - grab) / maxOffset).coerceIn(0f, 1f)
+                    // Same mapping as listFraction, with the offset inside the row, so the list
+                    // glides under the thumb instead of stepping a row at a time.
+                    val info = state.layoutInfo
+                    val vis = info.visibleItemsInfo
+                    val cols = vis.firstOrNull()?.let { f -> vis.count { it.offset.y == f.offset.y } }?.coerceAtLeast(1) ?: 1
+                    val rowH = vis.firstOrNull()?.size?.height ?: 0
+                    val pos = dragFraction * (total - vis.size).coerceAtLeast(1)
+                    val idx = pos.toInt().coerceIn(0, total - 1)
+                    val rowStart = idx - idx % cols
+                    val within = ((pos - rowStart) / cols * rowH).roundToInt().coerceAtLeast(0)
+                    scope.launch { state.scrollToItem(rowStart, within) }
+                }
                 detectVerticalDragGestures(
-                    onDragStart = { dragging = true },
+                    onDragStart = { o ->
+                        val top = listFraction * maxOffset
+                        grab = if (o.y in top..(top + thumbPx)) o.y - top else thumbPx / 2f
+                        dragFraction = listFraction
+                        dragging = true
+                        follow(o.y)
+                    },
                     onDragEnd = { dragging = false },
                     onDragCancel = { dragging = false },
-                    onVerticalDrag = { change, _ ->
-                        if (trackH > 0f) {
-                            val f = (change.position.y / trackH).coerceIn(0f, 1f)
-                            scope.launch { state.scrollToItem((f * (total - 1)).roundToInt()) }
-                        }
-                    },
+                    onVerticalDrag = { change, _ -> change.consume(); follow(change.position.y) },
                 )
             }),
     ) {
@@ -1798,7 +1840,7 @@ private fun FilterSortSheet(
         ) {
             if (saved.isNotEmpty()) {
                 Text("Filtri salvati", style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.cripta.app.ui.components.ChipFlowRow {
                     saved.forEach { sf ->
                         androidx.compose.material3.InputChip(
                             selected = false,
@@ -1814,7 +1856,7 @@ private fun FilterSortSheet(
                 HorizontalDivider()
             }
             Text("Ordina", style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.cripta.app.ui.components.ChipFlowRow {
                 listOf(
                     SortKey.DATE to "Data", SortKey.NAME to "Nome",
                     SortKey.SIZE to "Dimensione", SortKey.MANUAL to "Manuale",
@@ -1845,7 +1887,7 @@ private fun FilterSortSheet(
             HorizontalDivider()
 
             Text("Tipo", style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.cripta.app.ui.components.ChipFlowRow {
                 TypeFilter.entries.forEach { t ->
                     FilterChip(selected = filters.type == t, onClick = { onType(t) }, label = { Text(typeLabel(t)) })
                 }
@@ -1880,7 +1922,7 @@ private fun FilterSortSheet(
                     FilterChip(selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, label = { Text("tutte") })
                     FilterChip(selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, label = { Text("almeno una") })
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                com.cripta.app.ui.components.ChipFlowRow {
                     tags.forEach { tag ->
                         val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
                         val state = when {

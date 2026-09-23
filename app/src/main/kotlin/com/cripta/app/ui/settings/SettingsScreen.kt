@@ -244,7 +244,7 @@ fun SettingsScreen(
                     SettingsPage.ASPETTO -> {
                         item {
                             Section("Tema", "Tema e colori dell'app.") {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                com.cripta.app.ui.components.ChipFlowRow {
                                     com.cripta.app.data.ThemeMode.entries.forEach { m ->
                                         FilterChip(
                                             selected = s.themeMode == m,
@@ -294,7 +294,21 @@ fun SettingsScreen(
                                     Text("Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                ToggleRow("Un colore per ogni etichetta", s.display.tagColors) { vm.setTagColors(it) }
+                                ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
+                                if (s.display.tagColors) {
+                                    Text("Colore predefinito", style = MaterialTheme.typography.labelLarge)
+                                    com.cripta.app.ui.vault.TagColorPicker(
+                                        selected = s.display.defaultTagColor,
+                                        autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
+                                        autoDescription = "Automatico: un colore diverso per ogni nome",
+                                        onPick = { vm.setDefaultTagColor(it) },
+                                    )
+                                    Text(
+                                        if (s.display.defaultTagColor == null) "A: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
+                                        else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                                 ToggleRow("Durata sui video (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
                             }
                         }
@@ -384,7 +398,7 @@ fun SettingsScreen(
                         run {
                             item {
                                 Section("Conversione in MP4", "La scelta viene chiesta alla prima conversione; qui puoi cambiarla.") {
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    com.cripta.app.ui.components.ChipFlowRow {
                                         listOf(
                                             com.cripta.app.data.ConvertAfter.REPLACE to "Sostituisci l'originale",
                                             com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
@@ -486,7 +500,7 @@ fun SettingsScreen(
                     SettingsPage.SICUREZZA -> {
                         item {
                             Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                com.cripta.app.ui.components.ChipFlowRow {
                                     listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
                                         FilterChip(
                                             selected = s.autoLockMinutes == m,
@@ -522,7 +536,7 @@ fun SettingsScreen(
                     SettingsPage.IMPORT -> {
                         item {
                             Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                com.cripta.app.ui.components.ChipFlowRow {
                                     DeleteOriginalPolicy.entries.forEach { p ->
                                         FilterChip(
                                             selected = s.deleteOriginalPolicy == p,
@@ -1195,7 +1209,7 @@ private fun <T> ChoiceRow(
         }
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.cripta.app.ui.components.ChipFlowRow {
                 options.forEach { (v, l) -> FilterChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
             }
         }

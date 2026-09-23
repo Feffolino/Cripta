@@ -43,6 +43,8 @@ data class DisplayPrefs(
     val coverTagStyle: CoverTagStyle = CoverTagStyle.ALIAS,
     /** Give each tag its own stable colour (same tag = same colour everywhere). */
     val tagColors: Boolean = true,
+    /** Colour (ARGB) of every tag without its own colour; null = automatic, one per name. */
+    val defaultTagColor: Int? = null,
     val showDurationBadge: Boolean = true, // "3:12" on video covers
     val showQualityBadge: Boolean = true,  // "4K / HD / SD" on covers
     val showStatsStrip: Boolean = true,    // the counts strip above the grid
@@ -142,6 +144,7 @@ class SettingsStore @Inject constructor(
     private val coverTagRowsKey = intPreferencesKey("cover_tag_rows")
     private val coverTagStyleKey = intPreferencesKey("cover_tag_style")
     private val tagColorsKey = booleanPreferencesKey("tag_colors")
+    private val defaultTagColorKey = intPreferencesKey("default_tag_color")
     private val durationBadgeKey = booleanPreferencesKey("duration_badge")
     private val qualityBadgeKey = booleanPreferencesKey("quality_badge")
     private val statsStripKey = booleanPreferencesKey("stats_strip")
@@ -195,6 +198,7 @@ class SettingsStore @Inject constructor(
                 coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
                 coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.ALIAS },
                 tagColors = p[tagColorsKey] ?: true,
+                defaultTagColor = p[defaultTagColorKey],
                 showDurationBadge = p[durationBadgeKey] ?: true,
                 showQualityBadge = p[qualityBadgeKey] ?: true,
                 showStatsStrip = p[statsStripKey] ?: true,
@@ -244,6 +248,9 @@ class SettingsStore @Inject constructor(
     suspend fun setCoverTagRows(v: Int) { context.dataStore.edit { it[coverTagRowsKey] = v.coerceIn(0, 3) } }
     suspend fun setCoverTagStyle(v: CoverTagStyle) { context.dataStore.edit { it[coverTagStyleKey] = v.ordinal } }
     suspend fun setTagColors(v: Boolean) { context.dataStore.edit { it[tagColorsKey] = v } }
+    suspend fun setDefaultTagColor(argb: Int?) {
+        context.dataStore.edit { if (argb == null) it.remove(defaultTagColorKey) else it[defaultTagColorKey] = argb }
+    }
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
     suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
@@ -311,7 +318,7 @@ class SettingsStore @Inject constructor(
         val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
                 showFolderInfoKey, showNoteFabKey, showRandomFabKey)
-            "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
+            "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, swipeDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)

@@ -233,7 +233,7 @@ fun DownloadScreen(
             }
 
             Text("Qualità", style = MaterialTheme.typography.labelLarge, modifier = Modifier.semantics { heading() })
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            com.cripta.app.ui.components.ChipFlowRow {
                 qualities.forEach { (h, label) ->
                     FilterChip(
                         selected = quality == h,
@@ -306,7 +306,7 @@ fun DownloadScreen(
                     }
                 }
                 androidx.compose.animation.AnimatedVisibility(visible = tagsOpen) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    com.cripta.app.ui.components.ChipFlowRow {
                         tags.forEach { t ->
                             val sel = t.id in effectiveTags
                             FilterChip(

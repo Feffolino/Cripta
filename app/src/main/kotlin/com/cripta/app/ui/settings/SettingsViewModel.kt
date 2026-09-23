@@ -126,6 +126,7 @@ class SettingsViewModel @Inject constructor(
     fun setCoverTagRows(v: Int) = viewModelScope.launch { store.setCoverTagRows(v) }
     fun setCoverTagStyle(v: com.cripta.app.data.CoverTagStyle) = viewModelScope.launch { store.setCoverTagStyle(v) }
     fun setTagColors(v: Boolean) = viewModelScope.launch { store.setTagColors(v) }
+    fun setDefaultTagColor(argb: Int?) = viewModelScope.launch { store.setDefaultTagColor(argb) }
     fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
     fun setShowQualityBadge(v: Boolean) = viewModelScope.launch { store.setShowQualityBadge(v) }
     fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
