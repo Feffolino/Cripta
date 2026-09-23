@@ -209,6 +209,9 @@ fun VaultScreen(
     val savedFilters by vm.savedFilters.collectAsState()
     val trashEnabled by vm.trashEnabled.collectAsState()
     val convertStatus by vm.convertStatus.collectAsState()
+    val convertSettings by vm.convertSettings.collectAsState()
+    /** Ids waiting for the first-conversion choice dialog. */
+    var convertAsk by remember { mutableStateOf<List<String>?>(null) }
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var searchExpanded by remember { mutableStateOf(false) }
@@ -341,9 +344,13 @@ fun VaultScreen(
                                     text = { Text(if (convertible == 1) "Converti in MP4" else "Converti in MP4 ($convertible)") },
                                     onClick = {
                                         selMenu = false
-                                        vm.convertToMp4(selection.toList())
+                                        if (!convertSettings.first) {
+                                            convertAsk = selection.toList()
+                                        } else {
+                                            vm.convertToMp4(selection.toList())
+                                            Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
+                                        }
                                         selection = emptySet()
-                                        Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
                                     },
                                 )
                             }
@@ -675,6 +682,19 @@ fun VaultScreen(
             onApplySaved = vm::applySavedFilter,
             onDeleteSaved = { vm.deleteSavedFilter(it) },
             onSave = { vm.saveCurrentFilter(it) },
+        )
+    }
+
+    convertAsk?.let { ids ->
+        com.cripta.app.ui.components.ConvertChoiceDialog(
+            count = files.count { it.file.id in ids && VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4" },
+            trashDays = convertSettings.second,
+            onConfirm = { after, rememberIt ->
+                vm.convertToMp4(ids, after, rememberIt)
+                convertAsk = null
+                Toast.makeText(ctx, "Conversione in coda: prosegue in background", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { convertAsk = null },
         )
     }
 

@@ -123,7 +123,9 @@ class ConversionService : Service() {
                         run("Download", ids.size) { i -> repo.fileById(ids[i])?.let { repo.restoreToGallery(it) } }
                     }
                     MODE_CONVERT -> {
-                        intent.getStringExtra(EX_ID)?.let { convertOne(it) }
+                        val after = intent.getIntExtra(EX_CONVERT_AFTER, -1)
+                            .let { i -> com.cripta.app.data.ConvertAfter.entries.getOrNull(i) }
+                        intent.getStringExtra(EX_ID)?.let { convertOne(it, after) }
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_DUP_SCAN -> {
@@ -251,7 +253,7 @@ class ConversionService : Service() {
      * frames decodable across the whole video) before it is imported; the original is never
      * shredded here — at most it is moved to the trash when "Sostituisci" is chosen.
      */
-    private suspend fun convertOne(id: String) {
+    private suspend fun convertOne(id: String, afterOverride: com.cripta.app.data.ConvertAfter? = null) {
         val file = repo.fileById(id) ?: return
         repo.setConverting(id, true)
         repo.updateConvertStatus { it.copy(waiting = convertWaiting.incrementAndGet() - 1) }
@@ -290,7 +292,8 @@ class ConversionService : Service() {
                 notifyResult("Conversione non riuscita", "$problem · originale intatto")
                 return
             }
-            val mode = runCatching { settings.settingsOnce().convertAfter }.getOrDefault(com.cripta.app.data.ConvertAfter.REPLACE)
+            val mode = afterOverride
+                ?: runCatching { settings.settingsOnce().convertAfter }.getOrDefault(com.cripta.app.data.ConvertAfter.REPLACE)
             val replace = mode == com.cripta.app.data.ConvertAfter.REPLACE
             val newFile = repo.importConvertedMp4(file, out!!, replace = replace)
             thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
@@ -680,6 +683,7 @@ class ConversionService : Service() {
         private const val MODE_DUP_SCAN = "dup_scan"
         private const val MODE_CANCEL_SCAN = "cancel_scan"
         private const val EX_SIMILAR = "similar"
+        private const val EX_CONVERT_AFTER = "convert_after"
         private const val MODE_DELETE_ORIG = "delete_orig"
         private const val MODE_DISMISS = "dismiss"
         private const val MODE_DOWNLOAD_URL = "download_url"
@@ -749,10 +753,12 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, i)
         }
 
-        fun startConvert(ctx: Context, id: String) {
+        /** Queue a conversion; [after] overrides the saved "Dopo la conversione" choice for this one. */
+        fun startConvert(ctx: Context, id: String, after: com.cripta.app.data.ConvertAfter? = null) {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_CONVERT)
                 putExtra(EX_ID, id)
+                after?.let { putExtra(EX_CONVERT_AFTER, it.ordinal) }
             }
             ContextCompat.startForegroundService(ctx, i)
         }

@@ -182,6 +182,18 @@ class ViewerViewModel @Inject constructor(
      * the original. Runs in the foreground service so it survives leaving the viewer/backgrounding
      * and never leaves decrypted plaintext on disk.
      */
+    /** Whether the user already chose what happens after a conversion (else the viewer asks). */
+    val convertSettings: StateFlow<Pair<Boolean, Int>> =
+        settingsStore.settings.map { it.convertAfterChosen to it.trashDays }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false to 7)
+
+    /** Convert with the choice made in the first-conversion dialog, optionally remembering it. */
+    fun convertToMp4(file: FileEntity, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
+        if (rememberChoice) viewModelScope.launch { settingsStore.setConvertAfter(after) }
+        com.cripta.app.work.ConversionService.startConvert(appContext, file.id, after)
+        _message.value = "Conversione avviata: prosegue in background"
+    }
+
     fun convertToMp4(file: FileEntity) {
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id)
         _message.value = "Conversione avviata: prosegue in background"

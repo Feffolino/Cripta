@@ -23,6 +23,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val dupStore: com.cripta.app.data.dedup.DupScanStore,
+    private val nav: SettingsNav,
     private val store: SettingsStore,
     private val session: SessionManager,
     private val repo: VaultRepository,
@@ -90,6 +91,13 @@ class SettingsViewModel @Inject constructor(
     fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
     fun setShowQualityBadge(v: Boolean) = viewModelScope.launch { store.setShowQualityBadge(v) }
     fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
+    /** Page requested from another screen (Home "Strumenti", scan notification). */
+    val requestedPage: StateFlow<String?> = nav.page
+    fun consumeRequestedPage() = nav.consume()
+
+    /** Reset one page's preferences to their defaults (files and tags are never touched). */
+    fun resetPage(page: String) = viewModelScope.launch { store.resetPage(page) }
+
     fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = viewModelScope.launch { store.setConvertAfter(v) }
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
     fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
@@ -306,7 +314,11 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             dupStore.openRequested.collect { req ->
-                if (req) { dupStore.consumeOpen(); if (dupStore.state.value.result != null) openScanResult() }
+                if (req) {
+                    dupStore.consumeOpen()
+                    nav.open(SettingsPage.STRUMENTI.name)
+                    if (dupStore.state.value.result != null) openScanResult()
+                }
             }
         }
     }

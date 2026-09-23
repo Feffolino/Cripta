@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ fun HomeScreen(
     onOpenFolders: () -> Unit,
     onOpenFavorites: () -> Unit = {},
     onLock: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val recents by vm.recents.collectAsState()
@@ -69,7 +71,11 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
-                actions = { IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") } },
+                actions = {
+                    // Tools (duplicates, trash, backup) one tap away from Home.
+                    IconButton(onClick = { vm.openTools(); onOpenSettings() }) { Icon(Icons.Filled.Build, "Strumenti") }
+                    IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") }
+                },
             )
         },
     ) { pad ->

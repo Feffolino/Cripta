@@ -87,6 +87,8 @@ data class Settings(
     val trashDays: Int = 7,
     val downloadDefaults: DownloadDefaults = DownloadDefaults(),
     val convertAfter: ConvertAfter = ConvertAfter.REPLACE,
+    /** False until the user picked (and chose to remember) what happens after a conversion. */
+    val convertAfterChosen: Boolean = false,
 )
 
 @Singleton
@@ -124,6 +126,7 @@ class SettingsStore @Inject constructor(
     private val dlTagsKey = androidx.datastore.preferences.core.stringPreferencesKey("dl_tag_ids")
     private val dlHeightKey = intPreferencesKey("dl_height")
     private val convertAfterKey = intPreferencesKey("convert_after")
+    private val convertAfterChosenKey = booleanPreferencesKey("convert_after_chosen")
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
 
@@ -160,6 +163,7 @@ class SettingsStore @Inject constructor(
             trashEnabled = p[trashKey] ?: false,
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
             convertAfter = ConvertAfter.entries.getOrElse(p[convertAfterKey] ?: 0) { ConvertAfter.REPLACE },
+            convertAfterChosen = p[convertAfterChosenKey] ?: false,
             downloadDefaults = DownloadDefaults(
                 folderId = p[dlFolderKey]?.takeIf { it >= 0 },
                 tagIds = p[dlTagsKey].orEmpty().split(',').mapNotNull { it.trim().toLongOrNull() },
@@ -188,7 +192,7 @@ class SettingsStore @Inject constructor(
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
-    suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal } }
+    suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }
     suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
     suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }
     suspend fun setTrashDays(v: Int) { context.dataStore.edit { it[trashDaysKey] = v.coerceIn(1, 90) } }
@@ -227,6 +231,24 @@ class SettingsStore @Inject constructor(
     }
 
     suspend fun settingsOnce(): Settings = settings.first()
+
+    /**
+     * Reset the preferences shown on one Settings page (by page name) to their defaults by
+     * removing their keys. Only preferences: vault content is never affected.
+     */
+    suspend fun resetPage(page: String) {
+        val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
+            "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
+                showFolderInfoKey, showNoteFabKey, showRandomFabKey)
+            "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, durationBadgeKey, qualityBadgeKey)
+            "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey)
+            "ETICHETTE" -> listOf(recentTagsKey, quickTagsKey, tagSortModeKey)
+            "SICUREZZA" -> listOf(autoLock, allowShotsKey)
+            "IMPORT" -> listOf(delPolicy)
+            else -> emptyList()
+        }
+        if (keys.isNotEmpty()) context.dataStore.edit { p -> keys.forEach { p.remove(it) } }
+    }
 
     suspend fun setAutoLockMinutes(minutes: Int) {
         context.dataStore.edit { it[autoLock] = minutes }

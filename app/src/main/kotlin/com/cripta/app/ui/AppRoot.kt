@@ -215,6 +215,7 @@ fun AppRoot(session: SessionManager, onAuthenticate: () -> Unit) {
                     },
                     onOpenFavorites = { nav.navigate("favorites") },
                     onLock = { session.lock() },
+                    onOpenSettings = { onTab("settings") },
                 )
             }
             composable("folders") {
