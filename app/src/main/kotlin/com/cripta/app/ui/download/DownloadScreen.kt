@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
@@ -105,6 +108,7 @@ fun DownloadScreen(
     val effectiveFolder = if (folderValid) folderId else null
     val effectiveTags = tagIds.filter { id -> tags.any { it.id == id } }
     var pickFolder by remember { mutableStateOf(false) }
+    var tagsOpen by remember { mutableStateOf(false) }
 
     // A link shared from another app: pre-fill the field so the user can pick a resolution.
     LaunchedEffect(pending) {
@@ -217,18 +221,39 @@ fun DownloadScreen(
                 }
             }
             if (tags.isNotEmpty()) {
-                Text("Etichette", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tags.forEach { t ->
-                        val sel = t.id in effectiveTags
-                        FilterChip(
-                            selected = sel,
-                            onClick = { tagIds = if (sel) tagIds - t.id else tagIds + t.id },
-                            leadingIcon = {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t)))
-                            },
-                            label = { Text(if (!t.alias.isNullOrBlank()) "${t.alias} ${t.name}" else t.name) },
-                        )
+                // Collapsed by default: a one-line summary of the chosen tags; tap to expand the picker.
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable { tagsOpen = !tagsOpen },
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.AutoMirrored.Filled.Label, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text("Etichette", style = MaterialTheme.typography.bodyLarge)
+                            val chosen = tags.filter { it.id in effectiveTags }
+                            Text(
+                                if (chosen.isEmpty()) "Nessuna" else chosen.joinToString(", ") { it.name },
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Icon(if (tagsOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            if (tagsOpen) "Comprimi" else "Espandi", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(visible = tagsOpen) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        tags.forEach { t ->
+                            val sel = t.id in effectiveTags
+                            FilterChip(
+                                selected = sel,
+                                onClick = { tagIds = if (sel) tagIds - t.id else tagIds + t.id },
+                                leadingIcon = {
+                                    Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t)))
+                                },
+                                label = { Text(if (!t.alias.isNullOrBlank()) "${t.alias} ${t.name}" else t.name) },
+                            )
+                        }
                     }
                 }
             }
