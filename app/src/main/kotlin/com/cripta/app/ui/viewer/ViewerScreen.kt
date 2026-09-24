@@ -399,9 +399,29 @@ fun ViewerScreen(
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val showStrip = ids.size > 1 && playback.filmstrip
         val pick: (Int) -> Unit = { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
+        val detailsHint: @Composable () -> Unit = {
+            Row(
+                Modifier.padding(top = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))
+                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.ExpandLess, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
+                Text(" Scorri su per i dettagli", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+            }
+        }
         if (landscape) {
             // Landscape: the strip runs down the left edge, where a 16:9 video leaves a black band,
-            // so it never sits over the picture. The details handle is not shown: swipe up does it.
+            // so it never sits over the picture. The swipe-up hint sits alone above the seek bar.
+            AnimatedVisibility(
+                visible = chromeVisible && !inPip && playback.swipeForDetails,
+                enter = chromeEnter,
+                exit = chromeExit,
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .then(if (onVideo) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility))
+                    .padding(bottom = if (onVideo) seekClear + 6.dp else 16.dp),
+            ) {
+                detailsHint()
+            }
             AnimatedVisibility(
                 visible = chromeVisible && !inPip && showStrip,
                 enter = chromeEnter,
@@ -431,16 +451,7 @@ fun ViewerScreen(
                 ) {
                     if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, onPick = pick)
                     // Swipe-up on: a quiet hint (the gesture does it). Off: nothing here, the tags icon in the top bar opens them.
-                    if (playback.swipeForDetails) {
-                        Row(
-                            Modifier.padding(top = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))
-                                .padding(horizontal = 10.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Filled.ExpandLess, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
-                            Text(" Scorri su per i dettagli", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
+                    if (playback.swipeForDetails) detailsHint()
                 }
             }
         }
@@ -590,7 +601,8 @@ fun ViewerScreen(
             refresh = refresh,
             showRecents = displayPrefs.showRecentTags,
             vm = vm,
-            onDismiss = { showTags = false },
+            // Back to the media, not to its controls: the swipe that opened the panel had shown them.
+            onDismiss = { showTags = false; chromeVisible = false },
         )
     }
     val trashOn by vm.trashEnabled.collectAsState()
