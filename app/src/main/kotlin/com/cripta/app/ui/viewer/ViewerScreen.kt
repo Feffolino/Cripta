@@ -1298,15 +1298,11 @@ private fun VideoPlayer(
         // Not only when fully visible: a controller still fading in must be hidden too.
         else if (!controlsVisible) pv.hideController()
     }
-    // Details panel closed: back to the bare video. The swipe that opened the panel also reached the
-    // PlayerView, which toggles its controls on every touch release, and they reappeared afterwards;
-    // hiding again once the panel is gone catches that late toggle.
+    // Details panel closed: back to the bare video (the swipe that opens it no longer toggles the
+    // controls, see the PlayerView touch filter, so there is nothing left to catch afterwards).
     LaunchedEffect(hideControlsTick) {
         if (hideControlsTick == 0 || inPip) return@LaunchedEffect
-        repeat(3) {
-            playerViewRef?.hideController()
-            delay(200)
-        }
+        playerViewRef?.hideController()
     }
 
     // While swiping to another file only the picture slides: the seek bar, play/pause and the side
@@ -1437,6 +1433,22 @@ private fun VideoPlayer(
                     setControllerVisibilityListener(
                         PlayerView.ControllerVisibilityListener { vis -> onControlsVisibilityChanged(vis == View.VISIBLE) }
                     )
+                    // PlayerView shows/hides its controls on every finger lift, swipes included: the
+                    // swipe up for the details (and down to close, the side brightness/volume drags,
+                    // a pinch) made them pop up. Only a tap toggles them now; a lift after the finger
+                    // moved past the touch slop is swallowed before PlayerView sees it.
+                    val slop = android.view.ViewConfiguration.get(it).scaledTouchSlop
+                    var downX = 0f; var downY = 0f; var moved = false
+                    @Suppress("ClickableViewAccessibility")
+                    setOnTouchListener { _, e ->
+                        when (e.actionMasked) {
+                            android.view.MotionEvent.ACTION_DOWN -> { downX = e.x; downY = e.y; moved = false }
+                            android.view.MotionEvent.ACTION_POINTER_DOWN -> moved = true
+                            android.view.MotionEvent.ACTION_MOVE ->
+                                if (!moved && (kotlin.math.abs(e.x - downX) > slop || kotlin.math.abs(e.y - downY) > slop)) moved = true
+                        }
+                        e.actionMasked == android.view.MotionEvent.ACTION_UP && moved
+                    }
                     playerViewRef = this
                 }
             },
