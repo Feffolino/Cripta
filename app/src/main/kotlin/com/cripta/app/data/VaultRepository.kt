@@ -73,13 +73,15 @@ class VaultRepository @Inject constructor(
         /** Outcome of the last finished conversion, shown until dismissed. */
         val lastResult: String? = null,
         val lastOk: Boolean = true,
+        /** Original of the last conversion done with "Chiedimi alla fine": delete or keep it? */
+        val askOriginalId: String? = null,
     ) {
         val active: Boolean get() = currentName != null
     }
     private val _convertStatus = MutableStateFlow(ConvertStatus())
     val convertStatus: StateFlow<ConvertStatus> = _convertStatus
     fun updateConvertStatus(f: (ConvertStatus) -> ConvertStatus) = _convertStatus.update(f)
-    fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null) }
+    fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null, askOriginalId = null) }
 
     private val _conversionProgress = MutableStateFlow(0)
     /** 0-100 progress of the current transcode; drives the in-app progress popup. */

@@ -86,6 +86,10 @@ class ConversionService : Service() {
         if (mode == MODE_DELETE_ORIG) {
             val oid = intent.getStringExtra(EX_ID)
             getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            // Answered (notification or the Cartelle banner): the banner stops asking.
+            repo.updateConvertStatus {
+                if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale eliminato. Resta la copia MP4.") else it
+            }
             if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
             active.incrementAndGet()
             lastStartId = startId
@@ -106,6 +110,10 @@ class ConversionService : Service() {
         }
         if (mode == MODE_DISMISS) {
             getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            val oid = intent.getStringExtra(EX_ID)
+            repo.updateConvertStatus {
+                if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale mantenuto accanto alla copia MP4.") else it
+            }
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -359,14 +367,21 @@ class ConversionService : Service() {
                 VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
             )
             when (mode) {
-                com.cripta.app.data.ConvertAfter.ASK -> postConvertDone(id)
+                com.cripta.app.data.ConvertAfter.ASK -> {
+                    postConvertDone(id)
+                    repo.updateConvertStatus { it.copy(askOriginalId = id) }
+                }
                 com.cripta.app.data.ConvertAfter.REPLACE -> {
                     val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
                     notifyResult("Convertito in MP4", "${newFile.originalName} · originale nel cestino per $days giorni")
                 }
                 com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Convertito in MP4", newFile.originalName)
             }
-            result = true to if (replace) "Convertito: ${newFile.originalName} (originale nel cestino)" else "Convertito: ${newFile.originalName}"
+            result = true to when {
+                replace -> "Convertito: ${newFile.originalName} (originale nel cestino)"
+                mode == com.cripta.app.data.ConvertAfter.ASK -> "Convertito: ${newFile.originalName}. Eliminare l'originale?"
+                else -> "Convertito: ${newFile.originalName}"
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             result = false to "Conversione annullata. Originale intatto."
             notifyResult("Conversione annullata", "File originale intatto")
@@ -809,6 +824,14 @@ class ConversionService : Service() {
         }
 
         /** Cancel the running transcode (queued ones still run). */
+        /** Answer "delete or keep the original?" of an ASK conversion (same as its notification). */
+        fun resolveOriginal(ctx: Context, originalId: String, delete: Boolean) {
+            runCatching {
+                ctx.startService(Intent(ctx, ConversionService::class.java)
+                    .putExtra(EX_MODE, if (delete) MODE_DELETE_ORIG else MODE_DISMISS).putExtra(EX_ID, originalId))
+            }
+        }
+
         fun cancelConvert(ctx: Context) {
             runCatching {
                 ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_CONVERT))

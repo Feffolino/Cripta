@@ -117,6 +117,7 @@ fun HomeScreen(
     val summary by vm.summary.collectAsState()
     val display by vm.display.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
+    val convertStatus by vm.convertStatus.collectAsState()
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -173,6 +174,12 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            if (convertStatus.active || convertStatus.lastResult != null) {
+                item {
+                    com.cripta.app.ui.vault.ConvertBanner(convertStatus, onCancel = vm::cancelConversion,
+                        onDismiss = vm::dismissConvertResult, onResolveOriginal = vm::resolveOriginal)
+                }
+            }
             item {
                 SummaryCard(
                     videos = summary.videos, photos = summary.images, bytes = summary.bytes,
