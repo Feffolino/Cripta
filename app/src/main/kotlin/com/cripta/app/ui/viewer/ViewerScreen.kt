@@ -274,6 +274,21 @@ fun ViewerScreen(
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val splitDetails = playback.splitDetails && portraitNow
     var sheetTopPx by remember { mutableFloatStateOf(-1f) }
+    // The media's own shape (width / height, rotation applied), to fit it into the space above the
+    // panel: a landscape video keeps the full width, a vertical one the full height of that space.
+    val mediaAspect = currentFile?.let { f ->
+        val w = f.width ?: 0; val h = f.height ?: 0
+        if (w > 0 && h > 0) w.toFloat() / h else null
+    }
+    val splitDensity = androidx.compose.ui.platform.LocalDensity.current
+    // Clear of the status bar / camera at the top, and a gap above the panel.
+    val splitTopPx = with(splitDensity) {
+        maxOf(
+            WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding(),
+            WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
+        ).toPx()
+    }
+    val splitGapPx = with(splitDensity) { 16.dp.toPx() }
     // Split view: only the media above the panel, no bars over it.
     LaunchedEffect(showTags, splitDetails) { if (showTags && splitDetails) chromeVisible = false }
     // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
@@ -381,10 +396,21 @@ fun ViewerScreen(
                 // Split view: scaled from the top centre to fit above the panel, following it as it
                 // is dragged (read here, at draw time: no recomposition per frame).
                 val top = sheetTopPx
-                if (top > 0f && size.height > 0f) {
-                    val sc = (top / size.height).coerceIn(0.2f, 1f)
+                val fullW = size.width; val fullH = size.height
+                if (top > 0f && fullH > 0f && fullW > 0f) {
+                    // The margins (top inset, gap above the panel) come in over the first third of
+                    // the panel's rise, so nothing jumps when it starts or finishes moving.
+                    val f = ((fullH - top) / (fullH / 3f)).coerceIn(0f, 1f)
+                    val avail = (top - f * (splitTopPx + splitGapPx)).coerceAtLeast(fullH * 0.12f)
+                    // Fit the media (as shown now: fitted to the screen) into fullW x avail.
+                    val a = mediaAspect ?: (fullW / fullH)
+                    val shownW = minOf(fullW, fullH * a)
+                    val targetW = minOf(fullW, avail * a)
+                    val sc = (targetW / shownW).coerceIn(0.05f, 1f)
                     scaleX = sc; scaleY = sc
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                    // Centre of the media moves to the centre of the free space.
+                    translationY = (f * splitTopPx + avail / 2f) - fullH / 2f
                 }
             },
             userScrollEnabled = !verticalLock,
@@ -2051,7 +2077,7 @@ private fun DetailsSheet(
         onDismissRequest = onDismiss, state = sheet, wideInLandscape = true,
         // Split view: the media stays bright above the panel, which stops at about two thirds.
         scrimColor = if (split) Color.Transparent else androidx.compose.material3.BottomSheetDefaults.ScrimColor,
-        maxHeightFraction = if (split) 0.65f else null,
+        heightFraction = if (split) 0.62f else null,
     ) {
         if (landscape) {
             // Two columns that scroll on their own: details on the left, tags on the right, so the

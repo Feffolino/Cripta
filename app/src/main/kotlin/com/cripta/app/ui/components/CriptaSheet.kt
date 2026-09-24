@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
@@ -110,8 +111,11 @@ fun CriptaSheet(
     wideInLandscape: Boolean = false,
     /** Dimming behind the sheet; transparent when the screen behind must stay in view. */
     scrimColor: androidx.compose.ui.graphics.Color = BottomSheetDefaults.ScrimColor,
-    /** Caps the sheet at this share of the screen height (null: up to the camera area). */
-    maxHeightFraction: Float? = null,
+    /**
+     * The sheet is exactly this share of the screen height, whatever its content (null: as tall as
+     * its content, up to the camera area). Gives a split view the same opening every time.
+     */
+    heightFraction: Float? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // Locked vault: nothing of it may show over the lock screen (the sheet has its own window,
@@ -137,9 +141,9 @@ fun CriptaSheet(
         sheetMaxWidth = if (landscape && wideInLandscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
     ) {
         BoxWithConstraints {
-            val cap = maxHeightFraction?.let { maxHeight * it } ?: maxHeight
+            val limit = (maxHeight - topGap).coerceAtLeast(0.dp)
             Column(
-                Modifier.heightIn(max = minOf(cap, maxHeight - topGap).coerceAtLeast(0.dp))
+                (if (heightFraction != null) Modifier.height(minOf(maxHeight * heightFraction, limit)) else Modifier.heightIn(max = limit))
                     .then(
                         if (landscape) Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         else Modifier
