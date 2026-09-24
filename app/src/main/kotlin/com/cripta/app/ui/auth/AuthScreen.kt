@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -136,7 +137,14 @@ fun AuthScreen(
                     }
                 }
             }
-            val texts: @Composable (Boolean) -> Unit = { compact ->
+            val pinOnly = !state.firstRun && (state.pin == PinStep.REQUIRED || state.pin == PinStep.SECOND)
+            val hasCode = !state.firstRun && !state.noDeviceCredential && state.pin != PinStep.NONE
+            val code: @Composable (Boolean) -> Unit = { compact ->
+                CodeEntry(kind = state.secretKind, busy = state.pinBusy, alternative = !pinOnly,
+                    compact = compact, onSubmit = onSubmitPin)
+            }
+            // withCode = false: the code entry is laid out elsewhere (its own pane in landscape).
+            val texts: @Composable (Boolean, Boolean) -> Unit = { compact, withCode ->
                 val align = if (compact) TextAlign.Start else TextAlign.Center
                 Text(
                     if (state.firstRun) "Crea il tuo vault" else "Cripta",
@@ -187,7 +195,6 @@ fun AuthScreen(
                             Text("Riprova")
                         }
                     } else {
-                        val pinOnly = !state.firstRun && (state.pin == PinStep.REQUIRED || state.pin == PinStep.SECOND)
                         if (!pinOnly) {
                             Button(
                                 onClick = onAuthenticate,
@@ -198,10 +205,9 @@ fun AuthScreen(
                                 Text(if (state.firstRun) "Crea vault" else "Sblocca")
                             }
                         }
-                        if (!state.firstRun && state.pin != PinStep.NONE) {
+                        if (withCode && hasCode) {
                             if (!pinOnly) Spacer(Modifier.size(8.dp)) else Spacer(Modifier.size(4.dp))
-                            CodeEntry(kind = state.secretKind, busy = state.pinBusy, alternative = !pinOnly,
-                                compact = compact, onSubmit = onSubmitPin)
+                            code(compact)
                         }
                     }
                     // Persistent (not a Toast): stays until the next attempt, read out by TalkBack.
@@ -219,14 +225,32 @@ fun AuthScreen(
                     }
                 }
             }
-            if (landscape) {
+            if (landscape && hasCode) {
+                // Short screen with the app code: text on the left, keypad / field on the right, so
+                // the keypad fits the height instead of scrolling under the title.
+                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        badge(64)
+                        Column(Modifier.padding(start = 20.dp)) { texts(true, false) }
+                    }
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.weight(1f).verticalScroll(rememberScrollState()).entrance({ actionsIn.value }),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { code(true) }
+                    }
+                }
+            } else if (landscape) {
                 // Short screen: badge beside the text, so the unlock button is never cut off.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                 ) {
                     badge(88)
-                    Column(Modifier.padding(start = 28.dp)) { texts(true) }
+                    Column(Modifier.padding(start = 28.dp)) { texts(true, true) }
                 }
             } else {
                 Column(
@@ -236,7 +260,7 @@ fun AuthScreen(
                 ) {
                     badge(112)
                     Spacer(Modifier.size(24.dp))
-                    texts(false)
+                    texts(false, true)
                 }
             }
         }
@@ -269,8 +293,9 @@ private fun CodeEntry(
 private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
     var digits by remember { mutableStateOf("") }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-    val key = if (compact) 56.dp else 72.dp
-    val gap = if (compact) 10.dp else 16.dp
+    // Compact (landscape): five rows in about 270dp, within a phone's short side.
+    val key = if (compact) 52.dp else 72.dp
+    val gap = if (compact) 8.dp else 16.dp
     val ready = digits.length >= com.cripta.app.security.PinCrypto.MIN_LENGTH && !busy
     fun tap() = haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
     fun add(d: Char) {
