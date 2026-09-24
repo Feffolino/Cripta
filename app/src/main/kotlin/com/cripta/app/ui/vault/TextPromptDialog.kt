@@ -49,7 +49,7 @@ fun TextPromptDialog(
     }
     val canConfirm = value.text.isNotBlank()
     val confirm: () -> Unit = { if (canConfirm) onConfirm(value.text.trim()) }
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {

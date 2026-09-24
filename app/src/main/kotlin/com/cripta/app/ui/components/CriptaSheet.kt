@@ -37,7 +37,9 @@ import kotlinx.coroutines.launch
  * pickers, trash details…) uses it, so they all behave the same:
  *  - portrait: opens in two steps (half, then full on a swipe up); a swipe down from full closes it
  *    in one go instead of stopping at half;
- *  - landscape (short screen): opens fully at once and uses the screen width;
+ *  - landscape (short screen): opens fully at once; content panels ([wideInLandscape]: file
+ *    details, filters, stats) use the screen width, menus and lists stay 640dp wide and centred
+ *    (full-width rows put the label far from the middle);
  *  - fully open, it stops below the status bar / camera instead of running under it;
  *  - Back closes it (with its animation) and returns to the screen below;
  *  - an action inside it slides it away first ([LocalCriptaSheet] + [CriptaSheetState.closeThen]);
@@ -102,6 +104,7 @@ fun rememberCriptaSheetState(onDismiss: () -> Unit): CriptaSheetState {
 fun CriptaSheet(
     onDismissRequest: () -> Unit,
     state: CriptaSheetState = rememberCriptaSheetState(onDismissRequest),
+    wideInLandscape: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // Locked vault: nothing of it may show over the lock screen (the sheet has its own window,
@@ -119,8 +122,8 @@ fun CriptaSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = state.sheet,
-        // Landscape: the full width (as in Impostazioni and Scarica) instead of a narrow centred strip.
-        sheetMaxWidth = if (landscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
+        // Landscape content panels: the full width (as in Impostazioni and Scarica).
+        sheetMaxWidth = if (landscape && wideInLandscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
     ) {
         BoxWithConstraints {
             Column(

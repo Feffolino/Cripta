@@ -122,7 +122,7 @@ fun NoteEditorScreen(
     }
 
     if (confirmDelete && fileId != null) {
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Eliminare la nota?") },
             text = { Text("\"${vm.name.ifBlank { "Nota" }}\" verrà eliminata (nel cestino se attivo in Impostazioni).") },

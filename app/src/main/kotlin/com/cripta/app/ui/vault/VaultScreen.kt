@@ -477,7 +477,7 @@ fun VaultScreen(
                             Icon(if (viewMode == ViewMode.GRID) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
                                 if (viewMode == ViewMode.GRID) "Vista: griglia, $gridColumns colonne" else "Vista: lista")
                         }
-                        DropdownMenu(expanded = viewMenu, onDismissRequest = { viewMenu = false }) {
+                        DropdownMenu(expanded = viewMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { viewMenu = false }) {
                             DropdownMenuItem(
                                 text = { Text("Griglia") },
                                 leadingIcon = { Icon(Icons.Filled.GridView, null) },
@@ -531,7 +531,7 @@ fun VaultScreen(
                     SelectionAction(Icons.Filled.Delete, "Elimina", Modifier.weight(1f), destructive = true) { confirmMultiDelete = true }
                     Box(Modifier.weight(1f)) {
                         SelectionAction(Icons.Filled.MoreVert, "Altro", Modifier.fillMaxWidth()) { selMenu = true }
-                        DropdownMenu(expanded = selMenu, onDismissRequest = { selMenu = false }) {
+                        DropdownMenu(expanded = selMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { selMenu = false }) {
                             if (selection.size == 1) {
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
                             }
@@ -1131,7 +1131,7 @@ fun VaultScreen(
 
     if (confirmMultiDelete) {
         val n = selection.size
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmMultiDelete = false },
             title = { Text(if (n == 1) "Eliminare 1 file?" else "Eliminare $n file?") },
             text = {
@@ -1175,7 +1175,7 @@ fun VaultScreen(
 
     folderToDelete?.let { folder ->
         val n = folderStats[folder.id]?.count ?: 0
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { folderToDelete = null },
             title = { Text("Eliminare la cartella?") },
             text = {
@@ -1203,7 +1203,7 @@ fun VaultScreen(
 
     if (pendingOriginals.isNotEmpty()) {
         val n = pendingOriginals.size
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.clearPendingOriginals() },
             title = { Text(if (n == 1) "Eliminare l'originale?" else "Eliminare gli originali?") },
             text = {
@@ -1866,7 +1866,7 @@ private fun FilterSortSheet(
     var naming by remember { mutableStateOf(false) }
     val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
         (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size
-    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
         // ---- Header: what the filters give, and the way back.
         Row(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 10.dp),
@@ -2368,7 +2368,7 @@ private fun CoverOptionDialog(
         ThumbnailLoader.VideoCover.END to "Fine",
         ThumbnailLoader.VideoCover.RANDOM to "Fotogramma casuale",
     )
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (count == 1) "Rigenera copertina" else "Rigenera copertina ($count)") },
         text = {
@@ -2405,7 +2405,7 @@ private fun FolderStyleDialog(
     var color by remember { mutableStateOf(initialColor) }
     var emoji by remember { mutableStateOf(initialEmoji ?: "") }
     val emojis = listOf("📁", "⭐", "🔒", "❤️", "📷", "🎬", "🎵", "📄", "💼", "🎨", "🔑", "🎁", "🌍", "🔥", "💡", "✅")
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Personalizza cartella") },
         text = {
@@ -2748,7 +2748,7 @@ private fun CountPill(icon: ImageVector, count: Int, what: String, selected: Boo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String?, subtree: com.cripta.app.data.FolderStat? = null, onDismiss: () -> Unit) {
-    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),

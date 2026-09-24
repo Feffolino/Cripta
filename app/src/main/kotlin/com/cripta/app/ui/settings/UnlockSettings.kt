@@ -168,7 +168,7 @@ private fun CurrentPinDialog(kind: SecretKind, onCheck: (CharArray, (String) -> 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val noun = kind.noun
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (kind == SecretKind.PIN) "PIN attuale" else "Password attuale") },
         text = {
@@ -204,7 +204,7 @@ private fun NewPinDialog(
     val isPin = kind == SecretKind.PIN
     val tooShort = pin.length < PinCrypto.MIN_LENGTH
     val mismatch = again.isNotEmpty() && again != pin
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (changing) "Nuovo codice" else "Scegli il codice di Cripta") },
         text = {

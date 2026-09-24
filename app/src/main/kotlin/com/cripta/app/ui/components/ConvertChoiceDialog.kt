@@ -46,7 +46,7 @@ fun ConvertChoiceDialog(
         ConvertAfter.KEEP_BOTH to ("Tieni entrambi" to "Restano l'originale e la copia MP4."),
         ConvertAfter.ASK to ("Chiedimi alla fine" to "A conversione finita scegli se eliminare l'originale."),
     )
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (count == 1) "Convertire in MP4?" else "Convertire $count video in MP4?") },
         text = {
