@@ -123,8 +123,16 @@ internal fun TagSections(
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val pinned = remember(allTags) { allTags.filter { it.pinned } }
     val recentCount = com.cripta.app.ui.theme.RecentTagsCount.value
-    val recents = remember(allTags, recentCount) {
-        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentCount)
+    // Frozen while this list is on screen: tapping a tag marks it as just used, and re-sorting at
+    // once moved the chips under the finger (and the rows below). Taken when the list appears
+    // (again once the tags have loaded); tags deleted or pinned meanwhile drop out.
+    val frozenRecents = remember(recentCount, allTags.isEmpty()) {
+        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }
+            .take(recentCount).map { it.id }
+    }
+    val recents = remember(allTags, frozenRecents) {
+        val byId = allTags.associateBy { it.id }
+        frozenRecents.mapNotNull { byId[it] }.filter { !it.pinned }
     }
     // Library order as given (respects the user's tag order); names typed but not yet saved go last.
     val library = remember(allTags, extraNames) {

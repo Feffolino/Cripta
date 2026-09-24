@@ -268,6 +268,9 @@ fun ViewerScreen(
     val chromeExit = fadeOut(Motion.exit(Motion.MEDIUM))
 
     var showTags by remember { mutableStateOf(false) }
+    // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
+    var recentsEpoch by remember { mutableIntStateOf(0) }
+    LaunchedEffect(chromeVisible) { if (!chromeVisible) recentsEpoch++ }
     // Bumped when the details panel closes: the player hides its controls for good (see VideoPlayer).
     var hideControlsTick by remember { mutableIntStateOf(0) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -509,10 +512,17 @@ fun ViewerScreen(
             if (displayPrefs.viewerQuickTags && qf != null) {
                 val recentN = displayPrefs.recentTagsCount
                 val withRecents = displayPrefs.showRecentTags
-                val quick = remember(allTags, recentN, withRecents) {
+                // The recent ones keep their order while the bar is on screen (a tap marks a tag as
+                // just used: re-sorting at once moved the chips under the finger). The order is
+                // refreshed while the bar is hidden, so it never changes in front of the user.
+                val recentIds = remember(recentN, recentsEpoch, allTags.isEmpty()) {
+                    allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }
+                        .take(recentN).map { it.id }
+                }
+                val quick = remember(allTags, recentIds, withRecents) {
+                    val byId = allTags.associateBy { it.id }
                     val pinned = allTags.filter { it.pinned }
-                    val rest = if (withRecents)
-                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentN)
+                    val rest = if (withRecents) recentIds.mapNotNull { byId[it] }.filter { !it.pinned }
                     else allTags.filter { !it.pinned }
                     (pinned + rest).distinctBy { it.id }
                 }
