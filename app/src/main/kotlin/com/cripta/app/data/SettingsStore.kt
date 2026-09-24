@@ -119,7 +119,6 @@ data class Settings(
     /** Viewer: vertical swipe down closes it. */
     val swipeToClose: Boolean = true,
     /** Viewer: vertical swipe up opens tags & details. */
-    val swipeForDetails: Boolean = true,
     /** Player: hold on a side to play faster until release. */
     val holdForSpeed: Boolean = true,
     /** Speed while holding, in tenths (15 = 1.5x, 20 = 2x, 30 = 3x). */
@@ -191,7 +190,6 @@ class SettingsStore @Inject constructor(
     private val autoNextKey = booleanPreferencesKey("auto_next")
     private val autoNextSecKey = intPreferencesKey("auto_next_sec")
     private val swipeCloseKey = booleanPreferencesKey("swipe_close")
-    private val swipeDetailsKey = booleanPreferencesKey("swipe_details")
     private val holdSpeedOnKey = booleanPreferencesKey("hold_speed_on")
     private val holdSpeedKey = intPreferencesKey("hold_speed_x10")
     private val controlsTimeoutKey = intPreferencesKey("controls_timeout_sec")
@@ -261,7 +259,6 @@ class SettingsStore @Inject constructor(
             autoNext = p[autoNextKey] ?: true,
             autoNextSec = (p[autoNextSecKey] ?: 8).let { if (it in listOf(5, 8, 15)) it else 8 },
             swipeToClose = p[swipeCloseKey] ?: true,
-            swipeForDetails = p[swipeDetailsKey] ?: true,
             holdForSpeed = p[holdSpeedOnKey] ?: true,
             holdSpeedX10 = (p[holdSpeedKey] ?: 20).let { if (it in listOf(15, 20, 30)) it else 20 },
             controlsTimeoutSec = (p[controlsTimeoutKey] ?: 4).let { if (it in listOf(2, 4, 8)) it else 4 },
@@ -295,7 +292,6 @@ class SettingsStore @Inject constructor(
     suspend fun setAutoNext(v: Boolean) { context.dataStore.edit { it[autoNextKey] = v } }
     suspend fun setAutoNextSec(v: Int) { context.dataStore.edit { it[autoNextSecKey] = v } }
     suspend fun setSwipeToClose(v: Boolean) { context.dataStore.edit { it[swipeCloseKey] = v } }
-    suspend fun setSwipeForDetails(v: Boolean) { context.dataStore.edit { it[swipeDetailsKey] = v } }
     suspend fun setHoldForSpeed(v: Boolean) { context.dataStore.edit { it[holdSpeedOnKey] = v } }
     suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
@@ -363,7 +359,7 @@ class SettingsStore @Inject constructor(
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
-                swipeCloseKey, swipeDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
+                swipeCloseKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

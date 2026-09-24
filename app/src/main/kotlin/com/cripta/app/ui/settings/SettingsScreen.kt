@@ -370,11 +370,6 @@ fun SettingsScreen(
                                 ToggleRow("Scorri giù per chiudere", s.swipeToClose,
                                     desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
                                     icon = Icons.Filled.KeyboardArrowDown) { vm.setSwipeToClose(it) }
-                                ToggleRow("Scorri su per il pannello del file", s.swipeForDetails,
-                                    desc = if (s.swipeForDetails) "Trascina verso l'alto per etichette, dettagli e azioni (preferito, esporta, " +
-                                        "converti, elimina). La barra in alto mostra solo il nome del file."
-                                        else "Spento: le azioni e il pulsante etichette restano nella barra in alto.",
-                                    icon = Icons.Filled.KeyboardArrowUp) { vm.setSwipeForDetails(it) }
                                 ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
                                     desc = "Trascina in su o in giù sul lato sinistro del video.",
                                     icon = Icons.Filled.LightMode) { vm.setGestureControls(it) }
@@ -1120,7 +1115,6 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
     Triple("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VIDEO),
-    Triple("Scorri su per il pannello del file", "swipe dettagli etichette pannello scorri su gesto azioni barra preferito esporta elimina", SettingsPage.VIDEO),
     Triple("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VIDEO),
     Triple("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VIDEO),
     Triple("Prossimo video a fine riproduzione", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VIDEO),
