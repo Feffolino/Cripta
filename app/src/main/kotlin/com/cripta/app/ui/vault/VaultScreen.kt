@@ -2329,11 +2329,12 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
         return d
     }
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+        val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             Text("Sposta in…", style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
             Row(
-                Modifier.fillMaxWidth().clickable { onPick(null) }.padding(horizontal = 20.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clickable { afterSheet { onPick(null) } }.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
@@ -2341,7 +2342,7 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
             }
             folders.forEach { f ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { onPick(f.id) }
+                    Modifier.fillMaxWidth().clickable { afterSheet { onPick(f.id) } }
                         .padding(horizontal = 20.dp, vertical = 12.dp).padding(start = (12 * depth(f)).dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -2480,8 +2481,10 @@ private fun EmojiPick(label: String, selected: Boolean, description: String, onC
 @Composable
 private fun SheetAction(icon: ImageVector, label: String, destructive: Boolean = false, onClick: () -> Unit) {
     val tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    // The sheet slides away first, then the action runs (a dialog, opening the folder…).
+    val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable { afterSheet(onClick) }.padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = tint)
