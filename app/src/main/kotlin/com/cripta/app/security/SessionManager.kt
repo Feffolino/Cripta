@@ -29,6 +29,8 @@ class SessionManager @Inject constructor() {
 
     @Volatile private var dek: Aead? = null
     @Volatile private var db: CriptaDatabase? = null
+    /** The DEK keyset bytes, kept only to re-wrap them when the unlock mode changes. */
+    @Volatile private var dekBytes: ByteArray? = null
 
     private val _locked = MutableStateFlow(true)
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
@@ -54,7 +56,7 @@ class SessionManager @Inject constructor() {
     /** True when the vault is unlocked for the user (keys present AND not UI-locked). */
     val isUnlocked: Boolean get() = !_locked.value && dek != null && db != null
 
-    fun activate(dek: Aead, db: CriptaDatabase) {
+    fun activate(dek: Aead, db: CriptaDatabase, dekBytes: ByteArray? = null) {
         val stale: CriptaDatabase? = synchronized(lock) {
             val retained = this.db
             val drop = if (retained != null && releasePending) {
@@ -66,6 +68,8 @@ class SessionManager @Inject constructor() {
             } else {
                 this.dek = dek
                 this.db = db
+                this.dekBytes?.fill(0)
+                this.dekBytes = dekBytes?.copyOf()
                 if (retained != null && retained !== db) retained else null
             }
             _database.value = this.db
@@ -127,10 +131,15 @@ class SessionManager @Inject constructor() {
     /** True while background work keeps the session alive. */
     val hasActiveWork: Boolean get() = synchronized(lock) { workCount > 0 }
 
+    /** A copy of the DEK keyset bytes while unlocked (wipe it after use), else null. */
+    fun dekBytesCopy(): ByteArray? = synchronized(lock) { if (_locked.value) null else dekBytes?.copyOf() }
+
     private fun releaseKeysLocked(): CriptaDatabase? {
         val old = db
         db = null
         dek = null
+        dekBytes?.fill(0)
+        dekBytes = null
         releasePending = false
         return old
     }

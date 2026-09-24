@@ -131,6 +131,7 @@ fun AppRoot(
     onAuthenticate: () -> Unit,
     authState: AuthUiState = AuthUiState(),
     onOpenSecuritySettings: () -> Unit = {},
+    onSubmitPin: (CharArray) -> Unit = {},
 ) {
     val locked by session.locked.collectAsState()
     // The vault UI is composed from the first unlock on and then KEPT across locks: a lock no
@@ -201,6 +202,7 @@ fun AppRoot(
                     onAuthenticate = onAuthenticate,
                     state = authState,
                     onOpenSecuritySettings = onOpenSecuritySettings,
+                    onSubmitPin = onSubmitPin,
                 )
             }
         }
