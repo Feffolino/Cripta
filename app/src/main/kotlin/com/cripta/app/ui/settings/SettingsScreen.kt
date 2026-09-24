@@ -368,6 +368,15 @@ fun SettingsScreen(
                             }
                         }
                         item {
+                            Section("Pannello info", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
+                                ToggleRow("Video sopra il pannello", s.splitDetails,
+                                    desc = if (s.splitDetails) "In verticale lo schermo si divide: il video si rimpicciolisce in alto e continua " +
+                                        "a riprodursi, il pannello sta sotto (come i commenti di Instagram). Tocca il video o scorri giù per " +
+                                        "chiudere. La barra etichette del visualizzatore è nascosta: le etichette sono nel pannello."
+                                        else "Il pannello copre il video, che resta dietro oscurato.") { vm.setSplitDetails(it) }
+                            }
+                        }
+                        item {
                             Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
                                 ToggleRow("Scorri giù per chiudere", s.swipeToClose,
                                     desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
@@ -520,6 +529,7 @@ fun SettingsScreen(
                                 }
                                 ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
                                     desc = when {
+                                        s.splitDetails -> "Nascosta con \"Video sopra il pannello\" (Impostazioni › Video): le etichette sono nel pannello info."
                                         !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
                                         s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
                                         else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
@@ -1135,6 +1145,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VIDEO),
     Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
     Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
+    Triple("Video sopra il pannello", "pannello info diviso instagram commenti video in alto split", SettingsPage.VIDEO),
     Triple("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VIDEO),
     Triple("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VIDEO),
     Triple("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VIDEO),

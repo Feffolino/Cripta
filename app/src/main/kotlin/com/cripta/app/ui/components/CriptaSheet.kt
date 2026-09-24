@@ -55,6 +55,9 @@ class CriptaSheetState internal constructor(
     private val scope: CoroutineScope,
     private val dismiss: () -> Unit,
 ) {
+    /** Top edge of the sheet in its (full-screen) window, px; null before it is laid out. */
+    fun topPx(): Float? = runCatching { sheet.requireOffset() }.getOrNull()
+
     /** Closes with the slide-down animation, then reports the dismissal. */
     fun close() {
         scope.launch { sheet.hide() }.invokeOnCompletion { if (!sheet.isVisible) dismiss() }
@@ -105,6 +108,10 @@ fun CriptaSheet(
     onDismissRequest: () -> Unit,
     state: CriptaSheetState = rememberCriptaSheetState(onDismissRequest),
     wideInLandscape: Boolean = false,
+    /** Dimming behind the sheet; transparent when the screen behind must stay in view. */
+    scrimColor: androidx.compose.ui.graphics.Color = BottomSheetDefaults.ScrimColor,
+    /** Caps the sheet at this share of the screen height (null: up to the camera area). */
+    maxHeightFraction: Float? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // Locked vault: nothing of it may show over the lock screen (the sheet has its own window,
@@ -122,6 +129,7 @@ fun CriptaSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = state.sheet,
+        scrimColor = scrimColor,
         // Material's own Back first collapses a full sheet to half and needs a second press: off,
         // Back is handled below (in the sheet's window) and closes it in one go.
         properties = androidx.compose.material3.ModalBottomSheetProperties(shouldDismissOnBackPress = false),
@@ -129,8 +137,9 @@ fun CriptaSheet(
         sheetMaxWidth = if (landscape && wideInLandscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
     ) {
         BoxWithConstraints {
+            val cap = maxHeightFraction?.let { maxHeight * it } ?: maxHeight
             Column(
-                Modifier.heightIn(max = (maxHeight - topGap).coerceAtLeast(0.dp))
+                Modifier.heightIn(max = minOf(cap, maxHeight - topGap).coerceAtLeast(0.dp))
                     .then(
                         if (landscape) Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         else Modifier

@@ -168,6 +168,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoNext(v: Boolean) = viewModelScope.launch { store.setAutoNext(v) }
     fun setAutoNextSec(v: Int) = viewModelScope.launch { store.setAutoNextSec(v) }
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
+    fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
     fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }
     fun setHoldSpeed(x10: Int) = viewModelScope.launch { store.setHoldSpeed(x10) }
     fun setControlsTimeout(sec: Int) = viewModelScope.launch { store.setControlsTimeout(sec) }
