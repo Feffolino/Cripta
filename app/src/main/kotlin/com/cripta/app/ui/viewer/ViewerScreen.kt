@@ -101,6 +101,11 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Transform
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -495,7 +500,9 @@ fun ViewerScreen(
                     actionIconContentColor = Color.White,
                 ),
                 actions = {
-                    currentFile?.let { file ->
+                    // Swipe up on: every action lives in the details panel, so the bar only carries the
+                    // name, which then gets the whole width and stays readable.
+                    currentFile?.takeIf { !playback.swipeForDetails }?.let { file ->
                         if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) {
                             IconButton(onClick = { onEditNote(file.id) }) {
                                 Icon(Icons.Filled.Edit, "Modifica")
@@ -523,9 +530,7 @@ fun ViewerScreen(
                                 )
                             }
                         }
-                        if (!playback.swipeForDetails) {
-                            IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
-                        }
+                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
                         // The less-frequent / destructive actions live in an overflow menu so the bar
                         // stays uncluttered and Delete is separated from the safe actions.
                         IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
@@ -608,6 +613,15 @@ fun ViewerScreen(
             vm = vm,
             // Back to the media, not to its controls: the swipe that opened the panel had shown them.
             onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
+            // The top bar's actions, here instead when the swipe opens the panel.
+            actions = if (!playback.swipeForDetails) null else SheetActions(
+                onFavorite = { vm.toggleFavorite(file) },
+                onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
+                onExport = { confirmDownload = true },
+                onConvert = if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4")
+                    ({ confirmConvert = true }) else null,
+                onDelete = { confirmDelete = true },
+            ),
         )
     }
     val trashOn by vm.trashEnabled.collectAsState()
@@ -1887,6 +1901,7 @@ private fun DetailsSheet(
     showRecents: Boolean,
     vm: ViewerViewModel,
     onDismiss: () -> Unit,
+    actions: SheetActions? = null,
 ) {
     val onFile by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
     val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
@@ -1931,15 +1946,76 @@ private fun DetailsSheet(
     // back event (immersive viewer), and then it went to the viewer, which closed instead.
     androidx.activity.compose.BackHandler(onBack = close)
 
+    val thumb by produceState<Bitmap?>(initialValue = null, file.id, refresh) { value = vm.thumbOf(file.id) }
+    val kind = when {
+        isVid -> "Video"
+        com.cripta.app.data.VaultRepository.isImage(file.mimeType) -> "Foto"
+        com.cripta.app.data.VaultRepository.isNote(file.mimeType) -> "Nota"
+        file.mimeType == "application/pdf" -> "PDF"
+        else -> "File"
+    }
+    val ext = file.originalName.substringAfterLast('.', "").uppercase().takeIf { it.isNotBlank() && it.length <= 5 && it != kind }
+    // Header: preview + name, date and type; then the file's actions when the top bar hands them over.
     val header: @Composable () -> Unit = {
-        Column {
-            Text(file.originalName, style = MaterialTheme.typography.titleLarge, maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(
-                "Aggiunto il " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                    .format(java.util.Date(file.createdAt)),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.size(width = 96.dp, height = 72.dp)) {
+                    val b = thumb
+                    if (b != null) {
+                        Image(b.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                when (kind) {
+                                    "Video" -> Icons.Filled.Movie
+                                    "Foto" -> Icons.Filled.Photo
+                                    "Nota" -> Icons.Filled.Description
+                                    "PDF" -> Icons.Filled.PictureAsPdf
+                                    else -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                },
+                                null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
+                    Text(file.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(
+                        java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                            .format(java.util.Date(file.createdAt)),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.padding(top = 2.dp)) {
+                        Text(kind + (ext?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                    }
+                }
+            }
+            actions?.let { a ->
+                // Actions that leave the panel (a dialog, the editor) close it first.
+                val leave: (() -> Unit) -> () -> Unit = { act -> { close(); act() } }
+                Row(Modifier.fillMaxWidth()) {
+                    SheetActionButton(
+                        if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        if (file.isFavorite) "Preferito" else "Preferiti",
+                        a.onFavorite,
+                        tint = if (file.isFavorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f).semantics {
+                            stateDescription = if (file.isFavorite) "Nei preferiti" else "Non nei preferiti"
+                        },
+                    )
+                    a.onEditNote?.let { SheetActionButton(Icons.Filled.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(Icons.Filled.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
+                    a.onConvert?.let { SheetActionButton(Icons.Filled.Transform, "In MP4", leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(Icons.Filled.Delete, "Elimina", leave(a.onDelete),
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
     // Stats-style tiles.
@@ -2060,6 +2136,33 @@ private fun DetailsSheet(
             },
             onDismiss = { creating = false },
         )
+    }
+}
+
+/** The viewer's file actions, shown in the details panel instead of the top bar. */
+private class SheetActions(
+    val onFavorite: () -> Unit,
+    val onEditNote: (() -> Unit)?,
+    val onExport: () -> Unit,
+    val onConvert: (() -> Unit)?,
+    val onDelete: () -> Unit,
+)
+
+@Composable
+private fun SheetActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+) {
+    Column(
+        modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 8.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, null, tint = tint)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
