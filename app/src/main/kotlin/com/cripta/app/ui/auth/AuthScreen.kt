@@ -27,6 +27,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -48,18 +52,35 @@ import kotlinx.coroutines.launch
  *   prompt is not an error and never shows up here.
  * @param noDeviceCredential the device has no screen lock / biometrics, so the vault can't be
  *   protected: explain and offer a shortcut to the security settings.
+ * @param pin where the app PIN comes in (see [PinStep]).
+ * @param pinBusy a PIN is being checked (the key derivation takes a moment).
  */
 data class AuthUiState(
     val firstRun: Boolean = false,
     val error: String? = null,
     val noDeviceCredential: Boolean = false,
+    val pin: PinStep = PinStep.NONE,
+    val pinBusy: Boolean = false,
 )
+
+/** The app PIN on the lock screen. */
+enum class PinStep {
+    /** No app PIN: the system prompt only. */
+    NONE,
+    /** The system prompt, or the app PIN instead. */
+    OPTIONAL,
+    /** The app PIN only. */
+    REQUIRED,
+    /** The system prompt succeeded; now the app PIN (two-step unlock). */
+    SECOND,
+}
 
 @Composable
 fun AuthScreen(
     onAuthenticate: () -> Unit,
     state: AuthUiState = AuthUiState(),
     onOpenSecuritySettings: () -> Unit = {},
+    onSubmitPin: (CharArray) -> Unit = {},
 ) {
     // Prompt immediately on entering the locked screen (never delayed by the entrance animation).
     // Not on first run (the explanation must be readable first) nor without a device credential
@@ -130,7 +151,12 @@ fun AuthScreen(
                         )
                         state.firstRun -> FirstRunExplanation(compact)
                         else -> Text(
-                            "Vault cifrato. Autenticati per accedere.",
+                            when (state.pin) {
+                                PinStep.REQUIRED -> "Vault cifrato. Inserisci il PIN di Cripta."
+                                PinStep.SECOND -> "Identità confermata. Ora inserisci il PIN di Cripta."
+                                PinStep.OPTIONAL -> "Vault cifrato. Usa l'impronta oppure il PIN di Cripta."
+                                PinStep.NONE -> "Vault cifrato. Autenticati per accedere."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = align,
@@ -155,13 +181,24 @@ fun AuthScreen(
                             Text("Riprova")
                         }
                     } else {
-                        Button(
-                            onClick = onAuthenticate,
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 32.dp, vertical = 12.dp),
-                        ) {
-                            Icon(Icons.Filled.Lock, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text(if (state.firstRun) "Crea vault" else "Sblocca")
+                        val pinOnly = !state.firstRun && (state.pin == PinStep.REQUIRED || state.pin == PinStep.SECOND)
+                        if (!pinOnly) {
+                            Button(
+                                onClick = onAuthenticate,
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 32.dp, vertical = 12.dp),
+                            ) {
+                                Icon(Icons.Filled.Lock, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text(if (state.firstRun) "Crea vault" else "Sblocca")
+                            }
+                        }
+                        if (!state.firstRun && state.pin != PinStep.NONE) {
+                            if (!pinOnly) {
+                                Text("oppure", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 12.dp))
+                            }
+                            PinEntry(busy = state.pinBusy, autoFocus = pinOnly, compact = compact, onSubmit = onSubmitPin)
                         }
                     }
                     // Persistent (not a Toast): stays until the next attempt, read out by TalkBack.
@@ -199,6 +236,46 @@ fun AuthScreen(
                     texts(false)
                 }
             }
+        }
+    }
+}
+
+/** The app PIN field: digits only, masked, submitted with the keyboard's Done or the button. */
+@Composable
+private fun PinEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
+    var pin by remember { mutableStateOf("") }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
+    val ready = pin.length >= com.cripta.app.security.PinCrypto.MIN_LENGTH && !busy
+    val submit = {
+        if (ready) {
+            onSubmit(pin.toCharArray())
+            pin = "" // never kept around, and cleared for the next try after a wrong PIN
+        }
+    }
+    Column(horizontalAlignment = if (compact) Alignment.Start else Alignment.CenterHorizontally) {
+        androidx.compose.material3.OutlinedTextField(
+            value = pin,
+            onValueChange = { v ->
+                if (v.length <= com.cripta.app.security.PinCrypto.MAX_LENGTH && v.all { it in '0'..'9' }) pin = v
+            },
+            label = { Text("PIN di Cripta") },
+            singleLine = true,
+            enabled = !busy,
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+            ),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { submit() }),
+            modifier = Modifier.widthIn(max = 280.dp).focusRequester(focus),
+        )
+        androidx.compose.material3.FilledTonalButton(onClick = submit, enabled = ready, modifier = Modifier.padding(top = 8.dp)) {
+            if (busy) {
+                androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            }
+            Text(if (busy) "Verifica…" else "Sblocca con PIN")
         }
     }
 }

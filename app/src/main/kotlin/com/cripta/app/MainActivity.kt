@@ -25,6 +25,7 @@ import com.cripta.app.security.KeyVault
 import com.cripta.app.security.SessionManager
 import com.cripta.app.ui.AppRoot
 import com.cripta.app.ui.auth.AuthUiState
+import com.cripta.app.ui.auth.PinStep
 import com.cripta.app.ui.auth.KeyInvalidatedDialog
 import com.cripta.app.ui.theme.CriptaTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -186,7 +187,9 @@ class MainActivity : FragmentActivity() {
         }
         authUi.value = AuthUiState(
             firstRun = !keyVault.isInitialized,
-            noDeviceCredential = !BiometricAuth.canAuthenticate(this),
+            // "Solo PIN dell'app" needs no screen lock on the phone.
+            noDeviceCredential = needsSystemPrompt() && !BiometricAuth.canAuthenticate(this),
+            pin = pinStepFor(keyVault.unlockMode),
         )
         // A recreated activity gets its original intent back: don't import a share twice.
         if (savedInstanceState == null) handleShare(intent)
@@ -222,6 +225,7 @@ class MainActivity : FragmentActivity() {
                     onAuthenticate = { authenticate() },
                     authState = auth,
                     onOpenSecuritySettings = { openSecuritySettings() },
+                    onSubmitPin = { submitPin(it) },
                 )
                 if (invalidated) {
                     KeyInvalidatedDialog(
@@ -310,21 +314,91 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /** The system prompt is part of unlocking (always for the first setup). */
+    private fun needsSystemPrompt(): Boolean = !keyVault.isInitialized || keyVault.unlockMode.usesSystem
+
+    private fun pinStepFor(mode: com.cripta.app.security.UnlockMode): PinStep = when (mode) {
+        com.cripta.app.security.UnlockMode.SYSTEM -> PinStep.NONE
+        com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN -> PinStep.OPTIONAL
+        com.cripta.app.security.UnlockMode.SYSTEM_AND_PIN -> PinStep.NONE // SECOND after the prompt
+        com.cripta.app.security.UnlockMode.PIN -> PinStep.REQUIRED
+    }
+
+    /** Two-step unlock: what the system prompt unwrapped, waiting for the app PIN. Memory only. */
+    private var systemLayer: ByteArray? = null
+
+    private fun clearSystemLayer() {
+        systemLayer?.fill(0)
+        systemLayer = null
+    }
+
+    /** Checks the app PIN off the main thread and unlocks (see [KeyVault.unlockWithPin]). */
+    private fun submitPin(pin: CharArray) {
+        if (authUi.value.pinBusy) { pin.fill('0'); return }
+        authUi.value = authUi.value.copy(pinBusy = true, error = null)
+        lifecycleScope.launch {
+            val r = withContext(Dispatchers.Default) {
+                runCatching { keyVault.unlockWithPin(pin, systemLayer) }.also { pin.fill('0') }
+            }
+            r.onSuccess { res ->
+                when (res) {
+                    KeyVault.PinResult.Ok -> {
+                        clearSystemLayer()
+                        authUi.value = authUi.value.copy(pinBusy = false, error = null, firstRun = false,
+                            pin = pinStepFor(keyVault.unlockMode))
+                    }
+                    is KeyVault.PinResult.Wrong -> authUi.value = authUi.value.copy(pinBusy = false,
+                        error = if (res.waitSeconds > 0) "PIN errato. Troppi tentativi: riprova tra ${waitText(res.waitSeconds)}."
+                        else "PIN errato. Riprova.")
+                    is KeyVault.PinResult.Wait -> authUi.value = authUi.value.copy(pinBusy = false,
+                        error = "Troppi tentativi con il PIN: riprova tra ${waitText(res.seconds)}.")
+                }
+            }.onFailure {
+                android.util.Log.e("MainActivity", "PIN unlock failed", it)
+                authUi.value = authUi.value.copy(pinBusy = false, error = "Sblocco non riuscito. Riprova.")
+            }
+        }
+    }
+
+    private fun waitText(seconds: Long): String =
+        if (seconds < 60) "$seconds secondi" else "${(seconds + 59) / 60} minuti"
+
     /** Runs setup on first launch, otherwise unlock. */
     private fun authenticate() {
         if (authInFlight) return
+        val mode = keyVault.unlockMode
+        if (keyVault.isInitialized && !mode.usesSystem) {
+            // "Solo PIN dell'app": nothing to prompt, the lock screen shows the PIN field.
+            authUi.value = authUi.value.copy(firstRun = false, noDeviceCredential = false, pin = PinStep.REQUIRED)
+            return
+        }
+        if (keyVault.isInitialized && mode == com.cripta.app.security.UnlockMode.SYSTEM_AND_PIN && systemLayer != null) {
+            authUi.value = authUi.value.copy(pin = PinStep.SECOND) // first step already done
+            return
+        }
+        if (keyVault.isInitialized && mode == com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN &&
+            !BiometricAuth.canAuthenticate(this)) {
+            // No usable screen lock / fingerprint right now: the app PIN alone still opens the vault.
+            authUi.value = authUi.value.copy(firstRun = false, noDeviceCredential = false, pin = PinStep.REQUIRED)
+            return
+        }
         if (!BiometricAuth.canAuthenticate(this)) {
             // Explained on the lock screen itself, with a shortcut to the security settings.
             authUi.value = authUi.value.copy(noDeviceCredential = true, error = null)
             return
         }
         val setup = !keyVault.isInitialized
-        authUi.value = authUi.value.copy(firstRun = setup, noDeviceCredential = false, error = null)
+        val twoStep = !setup && mode == com.cripta.app.security.UnlockMode.SYSTEM_AND_PIN
+        authUi.value = authUi.value.copy(firstRun = setup, noDeviceCredential = false, error = null,
+            pin = if (setup) PinStep.NONE else pinStepFor(mode))
         val cipher = runCatching {
             if (setup) keyVault.cipherForSetup() else keyVault.cipherForUnlock()
         }.getOrElse {
             android.util.Log.e("MainActivity", "cipher init failed", it)
-            if (keyVault.isKeyInvalidated(it)) {
+            if (keyVault.isKeyInvalidated(it) && mode == com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN) {
+                // The PIN still opens the vault: no reset needed.
+                authUi.value = authUi.value.copy(error = "L'impronta non è più utilizzabile: sblocca con il PIN di Cripta.")
+            } else if (keyVault.isKeyInvalidated(it)) {
                 keyInvalidated.value = true
             } else {
                 authUi.value = authUi.value.copy(
@@ -344,9 +418,18 @@ class MainActivity : FragmentActivity() {
                 authInFlight = false
                 lifecycleScope.launch {
                     runCatching {
-                        if (setup) keyVault.completeSetup(authed) else keyVault.completeUnlock(authed)
+                        if (setup) {
+                            keyVault.completeSetup(authed)
+                        } else if (twoStep) {
+                            val layer = keyVault.unwrapSystemLayer(authed)
+                            clearSystemLayer()
+                            systemLayer = layer
+                        } else {
+                            keyVault.completeUnlock(authed)
+                        }
                     }.onSuccess {
-                        authUi.value = authUi.value.copy(firstRun = false, error = null)
+                        authUi.value = authUi.value.copy(firstRun = false, error = null,
+                            pin = if (twoStep) PinStep.SECOND else pinStepFor(keyVault.unlockMode))
                     }.onFailure {
                         android.util.Log.e("MainActivity", "unlock failed", it)
                         if (keyVault.isKeyInvalidated(it)) {
@@ -411,7 +494,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         // Back from the security settings with a screen lock now set up: offer the prompt again.
-        if (authUi.value.noDeviceCredential && BiometricAuth.canAuthenticate(this)) {
+        if (authUi.value.noDeviceCredential && (!needsSystemPrompt() || BiometricAuth.canAuthenticate(this))) {
             authUi.value = authUi.value.copy(noDeviceCredential = false, error = null)
             if (session.locked.value) authenticate()
         }
@@ -419,6 +502,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        // Leaving halfway through a two-step unlock: start over next time.
+        if (systemLayer != null) {
+            clearSystemLayer()
+            authUi.value = authUi.value.copy(pin = pinStepFor(keyVault.unlockMode))
+        }
         if (session.isUnlocked) backgroundedAt = System.currentTimeMillis()
     }
 

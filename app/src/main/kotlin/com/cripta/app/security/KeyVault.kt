@@ -21,6 +21,12 @@ import javax.inject.Singleton
  * wraps the SQLCipher database passphrase. One biometric authorization unlocks everything.
  *
  * The wrapped blobs are ciphertext and safe to store in plain SharedPreferences.
+ *
+ * With an app PIN ([UnlockMode]) the DEK is also, or instead, sealed by [PinCrypto]:
+ *  - SYSTEM:          wrapped_dek = KEK(dek)
+ *  - SYSTEM_OR_PIN:   wrapped_dek = KEK(dek), wrapped_dek_pin = PIN(dek)   (either opens it)
+ *  - SYSTEM_AND_PIN:  wrapped_dek = KEK(PIN(dek))                         (both are needed)
+ *  - PIN:             wrapped_dek_pin = PIN(dek)
  */
 @Singleton
 class KeyVault @Inject constructor(
@@ -42,7 +48,9 @@ class KeyVault @Inject constructor(
     }
     private val kek = AndroidKeystoreKekProvider(requireAuth = true, alias = activeAlias)
 
-    val isInitialized: Boolean get() = prefs.contains(KEY_WRAPPED_DEK)
+    val isInitialized: Boolean get() = prefs.contains(KEY_WRAPPED_DEK) || prefs.contains(KEY_WRAPPED_DEK_PIN)
+
+    val unlockMode: UnlockMode get() = UnlockMode.from(prefs.getString(KEY_UNLOCK_MODE, null))
 
     // --- Cipher factories to feed BiometricPrompt.CryptoObject ---
 
@@ -74,20 +82,17 @@ class KeyVault @Inject constructor(
         storeBytes(KEY_WRAPPED_DBKEY, wrappedDbKey)
 
         val db = CriptaDatabase.open(context, dbKey)
-        session.activate(dek, db)
+        session.activate(dek, db, dekBytes)
+        dekBytes.fill(0)
     }
 
-    /** Returning user: unwrap DEK, decrypt DB key, open DB, activate session. */
+    /**
+     * Returning user: unwrap DEK, decrypt DB key, open DB, activate session. Not for
+     * [UnlockMode.SYSTEM_AND_PIN], where the prompt only yields [unwrapSystemLayer]'s blob.
+     */
     fun completeUnlock(authorizedDecryptCipher: Cipher) {
-        val wrappedDek = loadBytes(KEY_WRAPPED_DEK) ?: error("Not initialized")
-        val dekBytes = kek.unwrapWith(authorizedDecryptCipher, wrappedDek)
-        val dek = DekManager.dekAeadFromBytes(dekBytes)
-
-        val wrappedDbKey = loadBytes(KEY_WRAPPED_DBKEY) ?: error("Missing DB key")
-        val dbKey = dek.decrypt(wrappedDbKey, DB_KEY_AAD)
-
-        val db = CriptaDatabase.open(context, dbKey)
-        session.activate(dek, db)
+        val dekBytes = unwrapSystemLayer(authorizedDecryptCipher)
+        try { openWith(dekBytes) } finally { dekBytes.fill(0) }
 
         // Record the alias marker for pre-marker installs so this only happens once. We do NOT
         // re-wrap under a new key here: a proactive rewrap would need a second BiometricPrompt,
@@ -97,6 +102,134 @@ class KeyVault @Inject constructor(
         // KeyInvalidatedDialog.
         if (!prefs.contains(KEY_KEK_ALIAS)) {
             prefs.edit().putString(KEY_KEK_ALIAS, activeAlias).apply()
+        }
+    }
+
+    /** What the system prompt unwraps: the DEK, or (SYSTEM_AND_PIN) the PIN-sealed DEK. */
+    fun unwrapSystemLayer(authorizedDecryptCipher: Cipher): ByteArray {
+        val wrappedDek = loadBytes(KEY_WRAPPED_DEK) ?: error("Not initialized")
+        return kek.unwrapWith(authorizedDecryptCipher, wrappedDek)
+    }
+
+    private fun openWith(dekBytes: ByteArray) {
+        val dek = DekManager.dekAeadFromBytes(dekBytes)
+        val wrappedDbKey = loadBytes(KEY_WRAPPED_DBKEY) ?: error("Missing DB key")
+        val dbKey = dek.decrypt(wrappedDbKey, DB_KEY_AAD)
+        try {
+            val db = CriptaDatabase.open(context, dbKey)
+            session.activate(dek, db, dekBytes)
+        } finally {
+            dbKey.fill(0)
+        }
+    }
+
+    // --- App PIN ---
+
+    sealed interface PinResult {
+        data object Ok : PinResult
+        /** Wrong PIN; [waitSeconds] > 0 when this failure started a pause before the next try. */
+        data class Wrong(val waitSeconds: Long) : PinResult
+        /** Too many wrong PINs: no attempt is made until the pause ends. */
+        data class Wait(val seconds: Long) : PinResult
+    }
+
+    /** Seconds left before another PIN attempt is allowed (0 = now). */
+    fun pinWaitSeconds(): Long {
+        val left = prefs.getLong(KEY_PIN_WAIT_UNTIL, 0L) - System.currentTimeMillis()
+        return if (left <= 0L) 0L else (left + 999L) / 1000L
+    }
+
+    /**
+     * Unlocks with the app PIN. [systemLayer] is the blob from [unwrapSystemLayer] in
+     * SYSTEM_AND_PIN mode, null otherwise. Slow (key derivation): call it off the main thread.
+     */
+    fun unlockWithPin(pin: CharArray, systemLayer: ByteArray?): PinResult {
+        val sealed = if (unlockMode == UnlockMode.SYSTEM_AND_PIN) systemLayer ?: error("System step missing")
+            else loadBytes(KEY_WRAPPED_DEK_PIN) ?: error("No PIN set")
+        val dekBytes = when (val r = checkPin(pin, sealed)) {
+            is PinCheck.Opened -> r.bytes
+            is PinCheck.Refused -> return r.result
+        }
+        try { openWith(dekBytes) } finally { dekBytes.fill(0) }
+        return PinResult.Ok
+    }
+
+    /** Checks the current PIN (to confirm a settings change in PIN-only mode), counting failures. */
+    fun verifyPin(pin: CharArray): PinResult {
+        val sealed = loadBytes(KEY_WRAPPED_DEK_PIN) ?: error("No PIN set")
+        return when (val r = checkPin(pin, sealed)) {
+            is PinCheck.Opened -> { r.bytes.fill(0); PinResult.Ok }
+            is PinCheck.Refused -> r.result
+        }
+    }
+
+    private sealed interface PinCheck {
+        class Opened(val bytes: ByteArray) : PinCheck
+        class Refused(val result: PinResult) : PinCheck
+    }
+
+    private fun checkPin(pin: CharArray, sealed: ByteArray): PinCheck {
+        pinWaitSeconds().takeIf { it > 0 }?.let { return PinCheck.Refused(PinResult.Wait(it)) }
+        val salt = loadBytes(KEY_PIN_SALT) ?: error("No PIN salt")
+        val opened = PinCrypto.open(pin, salt, sealed, PIN_AAD)
+        if (opened == null) {
+            // A pause grows with repeated failures (5th wrong PIN on): on this phone, with the
+            // hardware-bound pepper, that is what keeps a short PIN from being guessed.
+            val fails = prefs.getInt(KEY_PIN_FAILS, 0) + 1
+            val wait = when {
+                fails < 5 -> 0L
+                fails == 5 -> 30L
+                fails == 6 -> 60L
+                fails == 7 -> 5 * 60L
+                else -> 15 * 60L
+            }
+            prefs.edit().putInt(KEY_PIN_FAILS, fails)
+                .putLong(KEY_PIN_WAIT_UNTIL, if (wait > 0) System.currentTimeMillis() + wait * 1000L else 0L)
+                .commit()
+            return PinCheck.Refused(PinResult.Wrong(wait))
+        }
+        prefs.edit().remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL).commit()
+        return PinCheck.Opened(opened)
+    }
+
+    // --- Changing the unlock mode (vault unlocked) ---
+
+    /** Encrypt cipher to authorize with the system prompt before [changeMode] (and to confirm it). */
+    fun cipherForModeChange(): Cipher {
+        kek.ensureKey()
+        return kek.encryptCipher()
+    }
+
+    /**
+     * Re-wraps the DEK for [newMode]. [newPin] is required when the mode uses a PIN, and
+     * [authorizedEncryptCipher] (from [cipherForModeChange], authorized by the prompt) when it
+     * uses the system prompt. Needs the vault unlocked. Slow: call it off the main thread.
+     */
+    fun changeMode(newMode: UnlockMode, newPin: CharArray?, authorizedEncryptCipher: Cipher?) {
+        val dekBytes = session.dekBytesCopy() ?: error("Vault locked")
+        try {
+            val salt = PinCrypto.newSalt()
+            val pinSealed = if (newMode.usesPin) {
+                require(newPin != null && PinCrypto.isValid(newPin)) { "Invalid PIN" }
+                PinCrypto.seal(newPin, salt, dekBytes, PIN_AAD)
+            } else null
+            val kekBlob = when (newMode) {
+                UnlockMode.SYSTEM, UnlockMode.SYSTEM_OR_PIN -> kek.wrapWith(requireNotNull(authorizedEncryptCipher), dekBytes)
+                UnlockMode.SYSTEM_AND_PIN -> kek.wrapWith(requireNotNull(authorizedEncryptCipher), pinSealed!!)
+                UnlockMode.PIN -> null
+            }
+            val e = prefs.edit()
+            if (kekBlob != null) e.putString(KEY_WRAPPED_DEK, encode(kekBlob)) else e.remove(KEY_WRAPPED_DEK)
+            if (newMode == UnlockMode.SYSTEM_OR_PIN || newMode == UnlockMode.PIN) e.putString(KEY_WRAPPED_DEK_PIN, encode(pinSealed!!))
+            else e.remove(KEY_WRAPPED_DEK_PIN)
+            if (newMode.usesPin) e.putString(KEY_PIN_SALT, encode(salt)) else e.remove(KEY_PIN_SALT)
+            e.putString(KEY_UNLOCK_MODE, newMode.name)
+                .putString(KEY_KEK_ALIAS, activeAlias)
+                .remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL)
+            // One synchronous write: the old and new wrapping never end up mixed on disk.
+            check(e.commit()) { "Could not save the unlock mode" }
+        } finally {
+            dekBytes.fill(0)
         }
     }
 
@@ -131,14 +264,17 @@ class KeyVault @Inject constructor(
         runCatching { kek.deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2).deleteKey() }
+        runCatching { PinCrypto.deletePepper() }
         prefs.edit().clear().apply()
         runCatching { CriptaDatabase.deleteDatabase(context) }
         runCatching { blobs.wipeAll() }
     }
 
     private fun storeBytes(key: String, value: ByteArray) {
-        prefs.edit().putString(key, Base64.encodeToString(value, Base64.NO_WRAP)).apply()
+        prefs.edit().putString(key, encode(value)).apply()
     }
+
+    private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
 
     private fun loadBytes(key: String): ByteArray? =
         prefs.getString(key, null)?.let { Base64.decode(it, Base64.NO_WRAP) }
@@ -147,6 +283,12 @@ class KeyVault @Inject constructor(
         private const val KEY_WRAPPED_DEK = "wrapped_dek"
         private const val KEY_WRAPPED_DBKEY = "wrapped_dbkey"
         private const val KEY_KEK_ALIAS = "kek_alias"
+        private const val KEY_WRAPPED_DEK_PIN = "wrapped_dek_pin"
+        private const val KEY_PIN_SALT = "pin_salt"
+        private const val KEY_UNLOCK_MODE = "unlock_mode"
+        private const val KEY_PIN_FAILS = "pin_fails"
+        private const val KEY_PIN_WAIT_UNTIL = "pin_wait_until"
+        private val PIN_AAD = "cripta-dek-pin".toByteArray()
         private const val LEGACY_ALIAS = "cripta_kek"
         private const val ALIAS_V2 = "cripta_kek_v2"
         private val DB_KEY_AAD = "cripta-db-key".toByteArray()

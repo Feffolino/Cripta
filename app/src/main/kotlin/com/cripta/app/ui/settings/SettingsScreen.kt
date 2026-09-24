@@ -533,6 +533,11 @@ fun SettingsScreen(
 
                     SettingsPage.SICUREZZA -> {
                         item {
+                            Section("Sblocco", "Come si apre il vault. Il PIN dell'app è solo di Cripta e cifra la chiave del vault insieme alla sicurezza del telefono.") {
+                                UnlockModeOptions(vm)
+                            }
+                        }
+                        item {
                             Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
                                 com.cripta.app.ui.components.ChipFlowRow {
                                     listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
@@ -1129,6 +1134,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT),
     Triple("File duplicati / media simili", "duplicati simili doppioni", SettingsPage.STRUMENTI),
     Triple("Cestino", "cestino eliminati ripristina", SettingsPage.STRUMENTI),
+    Triple("Modalità di sblocco", "sblocco pin codice impronta biometria due fattori password accesso", SettingsPage.SICUREZZA),
     Triple("Backup cifrato", "backup esporta ripristina passphrase", SettingsPage.STRUMENTI),
     Triple("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO),
 )

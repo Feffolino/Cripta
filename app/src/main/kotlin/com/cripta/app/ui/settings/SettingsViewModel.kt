@@ -31,6 +31,7 @@ class SettingsViewModel @Inject constructor(
     private val scanner: DuplicateScanner,
     private val updater: com.cripta.app.update.AppUpdater,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
+    private val keyVault: com.cripta.app.security.KeyVault,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -264,6 +265,40 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun lockNow() = session.lock()
+
+    // --- Unlock mode (app PIN) ---
+
+    private val _unlockMode = kotlinx.coroutines.flow.MutableStateFlow(keyVault.unlockMode)
+    val unlockMode: StateFlow<com.cripta.app.security.UnlockMode> = _unlockMode
+
+    /** Cipher the system prompt authorizes to confirm the change and re-wrap the vault key. */
+    fun cipherForModeChange(): javax.crypto.Cipher? =
+        runCatching { keyVault.cipherForModeChange() }
+            .onFailure { android.util.Log.e("SettingsVM", "mode-change cipher", it) }
+            .getOrNull()
+
+    /** Confirms the current app PIN (PIN-only mode) before a change. */
+    suspend fun verifyCurrentPin(pin: CharArray): com.cripta.app.security.KeyVault.PinResult =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            try { keyVault.verifyPin(pin) } finally { pin.fill('0') }
+        }
+
+    fun pinWaitSeconds(): Long = keyVault.pinWaitSeconds()
+
+    /** Applies [mode]; [pin] when it uses the app PIN, [cipher] (authorized) when it uses the prompt. */
+    fun applyUnlockMode(mode: com.cripta.app.security.UnlockMode, pin: CharArray?, cipher: javax.crypto.Cipher?) =
+        viewModelScope.launch {
+            val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                try { runCatching { keyVault.changeMode(mode, pin, cipher) } } finally { pin?.fill('0') }
+            }
+            r.onSuccess {
+                _unlockMode.value = keyVault.unlockMode
+                _message.value = "Sblocco: ${mode.label.replaceFirstChar { it.lowercase() }}."
+            }.onFailure {
+                android.util.Log.e("SettingsVM", "unlock mode change failed", it)
+                _message.value = "Modifica non riuscita: la modalità di sblocco è rimasta com'era."
+            }
+        }
 
     // --- Duplicate scan (delegates to the dedicated DuplicateScanner module) ---
 
