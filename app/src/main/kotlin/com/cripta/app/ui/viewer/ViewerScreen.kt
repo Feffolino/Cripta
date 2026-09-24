@@ -1879,8 +1879,9 @@ private fun DetailsSheet(
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    // Landscape: the screen is short, so the panel opens fully (no half-open step hiding the tags).
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = landscape)
+    // No half-open step: the panel opens fully and one swipe down closes it (it used to collapse
+    // first and need a second swipe).
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val sheetScope = rememberCoroutineScope()
     val close: () -> Unit = {
         sheetScope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
