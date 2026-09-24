@@ -854,7 +854,7 @@ fun SettingsScreen(
     }
 
     confirmReset?.let { p ->
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmReset = null },
             title = { Text("Ripristinare i predefiniti?") },
             text = { Text("Le opzioni di \"${p.label}\" tornano ai valori iniziali. I file e le etichette non vengono toccati.") },
@@ -955,7 +955,7 @@ fun SettingsScreen(
         SettingsViewModel.DupMode.NONE -> Unit
     }
     deleteTag?.let { tag ->
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { deleteTag = null },
             title = { Text("Eliminare l'etichetta?") },
             text = { Text("\"#${tag.name}\" verrà rimossa da tutti i file.") },
@@ -992,7 +992,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
             )
         }
     }
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -1371,7 +1371,7 @@ private fun TrashDialog(
     }
     fun filesUnder(id: Long): List<com.cripta.app.data.db.FileEntity> = subtree(id).let { ids -> items.filter { it.folderId in ids } }
 
-    androidx.compose.ui.window.Dialog(
+    com.cripta.app.ui.components.CriptaDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
@@ -1533,7 +1533,7 @@ private fun TrashDialog(
         }
         confirmFolder?.let { fo ->
             val n = filesUnder(fo.id).size
-            AlertDialog(
+            com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmFolder = null },
                 title = { Text("Eliminare definitivamente?") },
                 text = { Text("\"${fo.name}\" e ${if (n == 1) "1 file" else "$n file"} al suo interno verranno distrutti in modo sicuro. Irreversibile.") },
@@ -1544,7 +1544,7 @@ private fun TrashDialog(
             )
         }
         if (confirmEmpty) {
-            AlertDialog(
+            com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmEmpty = false },
                 title = { Text("Svuotare il cestino?") },
                 text = {

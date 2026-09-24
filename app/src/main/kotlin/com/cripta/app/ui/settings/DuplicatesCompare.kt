@@ -120,7 +120,7 @@ fun DuplicatesCompare(
     LaunchedEffect(notice, canUndo) {
         if (notice != null) { kotlinx.coroutines.delay(if (canUndo) 8000L else 4000L); onClearNotice() }
     }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -232,7 +232,7 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
             }
         }
     }
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body) },
@@ -448,7 +448,7 @@ private fun PreviewDialog(
     var positionMs by remember { mutableStateOf(0L) }
     val c = group.candidates[index]
     val best = c.file.id == group.bestId
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {

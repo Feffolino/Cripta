@@ -571,7 +571,7 @@ fun ViewerScreen(
     }
     val trashOn by vm.trashEnabled.collectAsState()
     if (confirmDelete && file != null) {
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Eliminare il file?") },
             text = {
@@ -587,7 +587,7 @@ fun ViewerScreen(
         )
     }
     if (confirmDownload && file != null) {
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDownload = false },
             title = { Text("Esportare sul dispositivo?") },
             text = {
@@ -609,7 +609,7 @@ fun ViewerScreen(
             onDismiss = { confirmConvert = false },
         )
     } else if (confirmConvert && file != null) {
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmConvert = false },
             title = { Text("Convertire in MP4?") },
             text = {
@@ -626,7 +626,8 @@ fun ViewerScreen(
     }
     // Non-blocking progress pill: the conversion runs in the service (queued, one at a time);
     // the viewer stays fully usable and the pill can be hidden.
-    if (converting && !convertInBackground) {
+    // Its own window too: not over the lock screen.
+    if (converting && !convertInBackground && com.cripta.app.ui.components.vaultUnlocked()) {
         androidx.compose.ui.window.Popup(
             alignment = Alignment.BottomCenter,
             // Above the seek bar (dp, not raw pixels, so it lands in the same place on every screen).
@@ -665,7 +666,7 @@ fun ViewerScreen(
     }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsState()
-        AlertDialog(
+        com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.clearConverted() },
             title = { Text("Video convertito") },
             text = { Text("La copia MP4 scorribile è nella stessa cartella. Vuoi eliminare l'originale?") },
@@ -1989,7 +1990,7 @@ private fun DetailsSheet(
         }
     }
 
-    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, state = sheet) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, state = sheet, wideInLandscape = true) {
         if (landscape) {
             // Two columns that scroll on their own: details on the left, tags on the right, so the
             // tags are reachable without scrolling past the details on a short screen.

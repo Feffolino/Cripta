@@ -192,7 +192,7 @@ fun LabelEditorDialog(
     var alias by remember { mutableStateOf(initialAlias) }
     var color by remember { mutableStateOf(initialColor) }
 
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -304,7 +304,7 @@ fun TagEditorDialog(
     var query by remember { mutableStateOf("") }
     val byName = remember(allTags) { allTags.associateBy { it.name } }
 
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Etichette") },
         text = {
@@ -392,7 +392,7 @@ fun BatchTagDialog(
     var query by remember { mutableStateOf("") }
     val items = if (count == 1) "1 elemento" else "$count elementi"
 
-    AlertDialog(
+    com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Etichette per $items") },
         text = {
