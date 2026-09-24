@@ -507,13 +507,23 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Assegnazione rapida", "La libreria resta sempre nello stesso ordine; cambiano solo le righe in alto.") {
-                                ToggleRow("Riga \"Recenti\" (ultime ${s.display.recentTagsCount} usate)", s.display.showRecentTags) { vm.setShowRecentTags(it) }
-                                if (s.display.showRecentTags || s.display.viewerQuickTags) {
-                                    // Also sets how many recent tags the viewer's quick-tag bar adds after the pinned ones.
-                                    ChoiceRow("Etichette recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
+                                ToggleRow("Etichette recenti", s.display.showRecentTags,
+                                    desc = if (s.display.showRecentTags) "Una riga con le ultime ${s.display.recentTagsCount} usate, nelle " +
+                                        "etichette di un file (anche nel pannello info del visualizzatore) e nella barra del visualizzatore."
+                                        else "Spento: nessuna riga \"Recenti\"; la barra del visualizzatore mostra tutte le etichette.") {
+                                    vm.setShowRecentTags(it)
+                                }
+                                if (s.display.showRecentTags) {
+                                    // Also how many recent tags the viewer's bar adds after the pinned ones.
+                                    ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
                                         s.display.recentTagsCount) { vm.setRecentTagsCount(it) }
                                 }
-                                ToggleRow("Etichette rapide nel visualizzatore", s.display.viewerQuickTags) { vm.setViewerQuickTags(it) }
+                                ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
+                                    desc = when {
+                                        !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
+                                        s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
+                                        else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
+                                    }) { vm.setViewerQuickTags(it) }
                             }
                         }
                         item {
@@ -1132,8 +1142,8 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
     Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
-    Triple("Riga Recenti", "recenti ultime", SettingsPage.ETICHETTE),
-    Triple("Etichette rapide nel visualizzatore", "rapide visualizzatore quick", SettingsPage.ETICHETTE),
+    Triple("Etichette recenti", "recenti ultime usate riga", SettingsPage.ETICHETTE),
+    Triple("Barra etichette nel visualizzatore", "rapide visualizzatore quick barra player tutte", SettingsPage.ETICHETTE),
     Triple("Ordine delle etichette", "ordine alfabetico personalizzato", SettingsPage.ETICHETTE),
     Triple("Blocco automatico", "blocco lock timeout", SettingsPage.SICUREZZA),
     Triple("Screenshot", "screenshot recenti privacy", SettingsPage.SICUREZZA),
