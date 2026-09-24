@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.aspectRatio
@@ -1382,9 +1384,18 @@ private fun TrashDialog(
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         androidx.activity.compose.BackHandler { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }
+        // Its own full-screen window: the camera cutout (a side one in landscape) is not kept clear
+        // by the app's usual insets here, and covered the back arrow, the title and the first
+        // covers. safeDrawing = system bars + cutout (+ keyboard).
+        val safe = androidx.compose.foundation.layout.WindowInsets.safeDrawing
         androidx.compose.material3.Scaffold(
+            contentWindowInsets = safe,
             topBar = {
                 androidx.compose.material3.TopAppBar(
+                    windowInsets = safe.only(
+                        androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
+                            androidx.compose.foundation.layout.WindowInsetsSides.Top
+                    ),
                     navigationIcon = {
                         IconButton(onClick = { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
