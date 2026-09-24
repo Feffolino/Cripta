@@ -502,14 +502,19 @@ fun ViewerScreen(
                 // No actions here: they all live in the details panel (swipe up), so the bar only
                 // carries the name, which gets the whole width and stays readable.
             )
-            // Quick tags: pinned + recent tags, one tap toggles them on the file on screen.
+            // Quick tags, one tap toggles them on the file on screen. With "Etichette recenti" on:
+            // pinned + the last ones used. Off: pinned first, then every other tag in library order
+            // (the bar scrolls sideways), so any tag is one tap away without opening the panel.
             val qf = currentFile
             if (displayPrefs.viewerQuickTags && qf != null) {
                 val recentN = displayPrefs.recentTagsCount
-                val quick = remember(allTags, recentN) {
-                    (allTags.filter { it.pinned } +
-                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentN))
-                        .distinctBy { it.id }
+                val withRecents = displayPrefs.showRecentTags
+                val quick = remember(allTags, recentN, withRecents) {
+                    val pinned = allTags.filter { it.pinned }
+                    val rest = if (withRecents)
+                        allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }.take(recentN)
+                    else allTags.filter { !it.pinned }
+                    (pinned + rest).distinctBy { it.id }
                 }
                 val onFile by produceState(initialValue = emptyList<String>(), qf.id, refresh) { value = vm.tagNamesOf(qf.id) }
                 if (quick.isNotEmpty()) {
