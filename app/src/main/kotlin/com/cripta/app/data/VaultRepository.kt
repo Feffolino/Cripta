@@ -326,7 +326,7 @@ class VaultRepository @Inject constructor(
         return out
     }
 
-    private suspend fun snapshotChildren(): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
+    private suspend fun snapshotChildren(db: com.cripta.app.data.db.CriptaDatabase = this.db): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
         // One-shot read of the folder table to build a parent -> children map.
         val result = mutableMapOf<Long?, MutableList<Long>>()
         // Use a blocking first collection via a simple query through DAO.all() is a Flow;
@@ -968,15 +968,24 @@ class VaultRepository @Inject constructor(
      * (a folder holding only subfolders still shows covers).
      */
     suspend fun folderPreviews(folderIds: List<Long>, limit: Int = 4): Map<Long, List<FileEntity>> = withContext(Dispatchers.IO) {
-        val children = snapshotChildren()
-        folderIds.associateWith { root ->
-            val subtree = ArrayList<Long>()
-            val todo = ArrayDeque<Long>().apply { add(root) }
-            while (todo.isNotEmpty() && subtree.size < 500) {
-                val id = todo.removeFirst(); subtree += id
-                children[id]?.let { todo.addAll(it) }
+        // Re-run by the Home/Vault view models whenever they resubscribe, which can happen after
+        // the vault locked (their folder list keeps its last value): no covers then, not a crash.
+        val d = session.database.value ?: return@withContext emptyMap()
+        try {
+            val children = snapshotChildren(d)
+            folderIds.associateWith { root ->
+                val subtree = ArrayList<Long>()
+                val todo = ArrayDeque<Long>().apply { add(root) }
+                while (todo.isNotEmpty() && subtree.size < 500) {
+                    val id = todo.removeFirst(); subtree += id
+                    children[id]?.let { todo.addAll(it) }
+                }
+                d.fileDao().latestInFolders(subtree, limit)
             }
-            db.fileDao().latestInFolders(subtree, limit)
+        } catch (e: IllegalStateException) {
+            emptyMap() // the database closed under the query (vault locked meanwhile)
+        } catch (e: android.database.SQLException) {
+            emptyMap()
         }
     }
 
