@@ -226,7 +226,7 @@ fun SettingsScreen(
                 columns = if (landscape) 2 else 1,
                 query = query,
                 onQuery = { query = it },
-                summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size, dupWaiting?.groups?.size) },
+                summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size + trashedFolders.size, dupWaiting?.groups?.size) },
                 onOpen = { p, _ -> page = p.name; query = "" },
                 onLock = { vm.lockNow(); onBack() },
             )
@@ -675,8 +675,7 @@ fun SettingsScreen(
                             Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
                                 androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
-                                        else "Apri cestino (" + listOfNotNull(elementsLabel(trashed.size),
-                                            trashedFolders.size.takeIf { it > 0 }?.let(::foldersLabel)).joinToString(", ") + ")")
+                                        else "Apri cestino (${trashed.size + trashedFolders.size})")
                                 }
                                 ToggleRow("Usa il cestino quando elimini", s.trashEnabled) { vm.setTrashEnabled(it) }
                                 Text("Conserva per", style = MaterialTheme.typography.labelLarge)
@@ -1065,10 +1064,8 @@ enum class SettingsPage(
 }
 
 /** One-line summary of a page's current state, shown under its name in the list. */
-/** "1 elemento" / "N elementi": what the trash counts (files of every kind). */
+/** "1 elemento" / "N elementi": what the trash counts. Files and folders alike are elements. */
 private fun elementsLabel(n: Int): String = if (n == 1) "1 elemento" else "$n elementi"
-
-private fun foldersLabel(n: Int): String = if (n == 1) "1 cartella" else "$n cartelle"
 
 private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCount: Int, trashCount: Int, dupGroups: Int?): String = when (p) {
     SettingsPage.ASPETTO -> when (s.themeMode) {
@@ -1377,6 +1374,8 @@ private fun TrashDialog(
         return ids
     }
     fun filesUnder(id: Long): List<com.cripta.app.data.db.FileEntity> = subtree(id).let { ids -> items.filter { it.folderId in ids } }
+    /** Elements inside a trashed folder: its files and its subfolders, at every depth. */
+    fun elementsUnder(id: Long): Int = subtree(id).let { ids -> items.count { it.folderId in ids } + ids.size - 1 }
 
     com.cripta.app.ui.components.CriptaDialog(
         onDismissRequest = onDismiss,
@@ -1395,8 +1394,8 @@ private fun TrashDialog(
                         Column {
                             Text(if (openId == null) "Cestino" else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val sub = if (openId == null) {
-                                listOfNotNull(elementsLabel(items.size), folders.size.takeIf { it > 0 }?.let(::foldersLabel))
-                                    .joinToString(" · ") + " · distrutti dopo $days giorni"
+                                // One count (files and folders are both elements), short enough for one line.
+                                "${elementsLabel(items.size + folders.size)} · distrutti dopo $days giorni"
                             } else {
                                 (listOf("Cestino") + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › ")
                             }
@@ -1437,7 +1436,7 @@ private fun TrashDialog(
                         Column {
                             com.cripta.app.ui.vault.FolderMosaic(
                                 folder = fo,
-                                stat = com.cripta.app.data.FolderStat(under.size, under.sumOf { it.sizeBytes }),
+                                stat = com.cripta.app.data.FolderStat(elementsUnder(fo.id), under.sumOf { it.sizeBytes }),
                                 previews = under.sortedByDescending { it.importedAt }.take(4),
                                 thumb = thumb,
                                 onMore = { folderSheet = fo },
@@ -1524,7 +1523,7 @@ private fun TrashDialog(
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(fo.name, style = MaterialTheme.typography.titleMedium)
-                    InfoRow("Contenuto", elementsLabel(under.size) +
+                    InfoRow("Contenuto", elementsLabel(elementsUnder(fo.id)) +
                         " · " + com.cripta.app.ui.components.formatBytes(under.sumOf { it.sizeBytes }))
                     InfoRow("Eliminata il", fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
@@ -1540,11 +1539,14 @@ private fun TrashDialog(
             }
         }
         confirmFolder?.let { fo ->
-            val n = filesUnder(fo.id).size
+            val n = elementsUnder(fo.id)
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmFolder = null },
                 title = { Text("Eliminare definitivamente?") },
-                text = { Text("\"${fo.name}\" e ${elementsLabel(n)} al suo interno verranno distrutti in modo sicuro. Irreversibile.") },
+                text = {
+                    Text(if (n == 0) "\"${fo.name}\" verrà distrutta in modo sicuro. Irreversibile."
+                        else "\"${fo.name}\" e ${elementsLabel(n)} al suo interno verranno distrutti in modo sicuro. Irreversibile.")
+                },
                 confirmButton = {
                     TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
                 },
@@ -1556,9 +1558,9 @@ private fun TrashDialog(
                 onDismissRequest = { confirmEmpty = false },
                 title = { Text("Svuotare il cestino?") },
                 text = {
-                    Text(elementsLabel(items.size) +
-                        (if (folders.isNotEmpty()) " e ${foldersLabel(folders.size)}" else "") +
-                        " verranno distrutti in modo sicuro. Irreversibile.")
+                    val total = items.size + folders.size
+                    Text(elementsLabel(total) + (if (total == 1) " verrà distrutto" else " verranno distrutti") +
+                        " in modo sicuro. Irreversibile.")
                 },
                 confirmButton = {
                     TextButton(onClick = { onEmpty(); confirmEmpty = false }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
