@@ -1477,6 +1477,7 @@ private fun TrashDialog(
         // ---- details + actions of a file
         fileSheet?.let { f ->
             com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { fileSheet = null }) {
+                val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(f.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -1495,10 +1496,10 @@ private fun TrashDialog(
                     ).forEach { (k, v) -> InfoRow(k, v) }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.OutlinedButton(
-                            onClick = { onDelete(f.id); fileSheet = null }, modifier = Modifier.weight(1f),
+                            onClick = { afterSheet { onDelete(f.id) } }, modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) { Text("Elimina") }
-                        Button(onClick = { onRestore(f.id); fileSheet = null }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
+                        Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
                     }
                     if (f.folderId != null && f.folderId in trashedIds) {
                         Text("Torna nella sua cartella, che viene ricreata se serve.", style = MaterialTheme.typography.bodySmall,
@@ -1511,6 +1512,7 @@ private fun TrashDialog(
         folderSheet?.let { fo ->
             val under = filesUnder(fo.id)
             com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { folderSheet = null }) {
+                val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(fo.name, style = MaterialTheme.typography.titleMedium)
@@ -1520,12 +1522,12 @@ private fun TrashDialog(
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.OutlinedButton(
-                            onClick = { confirmFolder = fo; folderSheet = null }, modifier = Modifier.weight(1f),
+                            onClick = { afterSheet { confirmFolder = fo } }, modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) { Text("Elimina") }
-                        Button(onClick = { onRestoreFolder(fo.id); folderSheet = null }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
+                        Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
                     }
-                    TextButton(onClick = { path.add(fo.id); folderSheet = null }, modifier = Modifier.fillMaxWidth()) { Text("Apri e scegli i file") }
+                    TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { Text("Apri e scegli i file") }
                 }
             }
         }

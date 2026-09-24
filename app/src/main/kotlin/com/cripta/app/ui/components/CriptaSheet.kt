@@ -39,7 +39,10 @@ import kotlinx.coroutines.launch
  *    in one go instead of stopping at half;
  *  - landscape (short screen): opens fully at once and uses the screen width;
  *  - fully open, it stops below the status bar / camera instead of running under it;
- *  - Back closes it (with its animation) and returns to the screen below.
+ *  - Back closes it (with its animation) and returns to the screen below;
+ *  - an action inside it slides it away first ([LocalCriptaSheet] + [CriptaSheetState.closeThen]);
+ *  - while the vault is locked it is not shown at all (it lives in its own window, above the lock
+ *    screen): it comes back after unlocking.
  *
  * New sheets should use this instead of a bare [ModalBottomSheet].
  */
@@ -54,6 +57,21 @@ class CriptaSheetState internal constructor(
     fun close() {
         scope.launch { sheet.hide() }.invokeOnCompletion { if (!sheet.isVisible) dismiss() }
     }
+
+    /** Slides the sheet away, then dismisses it and runs [action] (open a dialog, apply a pick…). */
+    fun closeThen(action: () -> Unit) {
+        scope.launch { sheet.hide() }.invokeOnCompletion { if (!sheet.isVisible) { dismiss(); action() } }
+    }
+}
+
+/** The sheet a composable is in (null outside one): `LocalCriptaSheet.current?.closeThen { … }`. */
+val LocalCriptaSheet = androidx.compose.runtime.staticCompositionLocalOf<CriptaSheetState?> { null }
+
+/** Runs [action] after sliding the enclosing [CriptaSheet] away, or at once outside a sheet. */
+@Composable
+fun rememberSheetAction(): (() -> Unit) -> Unit {
+    val sheet = LocalCriptaSheet.current
+    return remember(sheet) { { action -> if (sheet != null) sheet.closeThen(action) else action() } }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +104,9 @@ fun CriptaSheet(
     state: CriptaSheetState = rememberCriptaSheetState(onDismissRequest),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // Locked vault: nothing of it may show over the lock screen (the sheet has its own window,
+    // which the vault's hidden content does not cover). It is shown again after unlocking.
+    if (com.cripta.app.ui.LocalVaultLocked.current) return
     val landscape = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // Back closes the sheet and returns to the screen below. The sheet's own window does not always
     // get the back event (immersive viewer), and then the screen underneath handled it instead.
@@ -108,8 +129,9 @@ fun CriptaSheet(
                         if (landscape) Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         else Modifier
                     ),
-                content = content,
-            )
+            ) {
+                androidx.compose.runtime.CompositionLocalProvider(LocalCriptaSheet provides state) { content() }
+            }
         }
     }
 }

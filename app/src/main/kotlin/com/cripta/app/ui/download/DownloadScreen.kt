@@ -426,16 +426,17 @@ private fun folderLabel(f: FolderEntity, all: List<FolderEntity>): String {
 @Composable
 private fun FolderPickerSheet(folders: List<FolderEntity>, selected: Long?, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+        val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             Text("Salva in…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
-            FolderRow("Radice", null, null, selected == null, 0) { onPick(null) }
+            FolderRow("Radice", null, null, selected == null, 0) { afterSheet { onPick(null) } }
             // Tree order: each folder under its parent, indented by depth.
             val children = folders.groupBy { it.parentId }
             fun walk(parent: Long?, depth: Int, out: MutableList<Pair<FolderEntity, Int>>) {
                 children[parent].orEmpty().forEach { out += it to depth; walk(it.id, depth + 1, out) }
             }
             val ordered = mutableListOf<Pair<FolderEntity, Int>>().also { walk(null, 0, it) }
-            ordered.forEach { (f, d) -> FolderRow(f.name, f.color, f.emoji, selected == f.id, d) { onPick(f.id) } }
+            ordered.forEach { (f, d) -> FolderRow(f.name, f.color, f.emoji, selected == f.id, d) { afterSheet { onPick(f.id) } } }
         }
     }
 }
