@@ -581,8 +581,9 @@ fun ViewerScreen(
             // pinned + the last ones used. Off: pinned first, then every other tag in library order
             // (the bar scrolls sideways), so any tag is one tap away without opening the panel.
             val qf = currentFile
-            // Hidden with "Video sopra il pannello": the tags are in the panel.
-            if (displayPrefs.viewerQuickTags && !playback.splitDetails && qf != null) {
+            // Shown as usual; hidden only while the split view is open (the whole top chrome is),
+            // since the panel below carries the tags then.
+            if (displayPrefs.viewerQuickTags && qf != null) {
                 val recentN = displayPrefs.recentTagsCount
                 val withRecents = displayPrefs.showRecentTags
                 // The recent ones keep their order while the bar is on screen (a tap marks a tag as

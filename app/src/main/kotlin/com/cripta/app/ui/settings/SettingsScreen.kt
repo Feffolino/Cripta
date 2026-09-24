@@ -370,9 +370,10 @@ fun SettingsScreen(
                         item {
                             Section("Pannello info", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
                                 ToggleRow("Video sopra il pannello", s.splitDetails,
-                                    desc = if (s.splitDetails) "In verticale lo schermo si divide: il video si rimpicciolisce in alto e continua " +
-                                        "a riprodursi, il pannello sta sotto (come i commenti di Instagram). Tocca il video o scorri giù per " +
-                                        "chiudere. La barra etichette del visualizzatore è nascosta: le etichette sono nel pannello."
+                                    desc = if (s.splitDetails) "In verticale lo schermo si divide: il video resta in alto e continua a " +
+                                        "riprodursi, con i suoi comandi, e il pannello sta sotto (come i commenti di Instagram). Per chiudere " +
+                                        "trascina giù il pannello, scorri giù sul video o premi Indietro. Mentre è aperto, la barra " +
+                                        "etichette del visualizzatore si nasconde: le etichette sono nel pannello."
                                         else "Il pannello copre il video, che resta dietro oscurato.") { vm.setSplitDetails(it) }
                             }
                         }
@@ -529,7 +530,6 @@ fun SettingsScreen(
                                 }
                                 ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
                                     desc = when {
-                                        s.splitDetails -> "Nascosta con \"Video sopra il pannello\" (Impostazioni › Video): le etichette sono nel pannello info."
                                         !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
                                         s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
                                         else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
