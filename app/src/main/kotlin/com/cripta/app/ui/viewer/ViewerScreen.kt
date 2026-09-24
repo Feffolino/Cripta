@@ -243,7 +243,6 @@ fun ViewerScreen(
     }
 
     var chromeVisible by remember { mutableStateOf(true) }
-    var menuOpen by remember { mutableStateOf(false) }
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
     val currentFile by produceState<FileEntity?>(initialValue = null, currentId, refresh) {
         value = vm.fileById(currentId)
@@ -259,8 +258,8 @@ fun ViewerScreen(
     val onMediaPage = currentFile?.let {
         com.cripta.app.data.VaultRepository.isImage(it.mimeType) || com.cripta.app.data.VaultRepository.isPlayable(it.mimeType)
     } == true
-    LaunchedEffect(chromeVisible, pagerState.currentPage, menuOpen, chromeTouch, onMediaPage, chromeTimeoutMs, videoPaused) {
-        if (chromeVisible && !menuOpen && onMediaPage && chromeTimeoutMs > 0 && !videoPaused) {
+    LaunchedEffect(chromeVisible, pagerState.currentPage, chromeTouch, onMediaPage, chromeTimeoutMs, videoPaused) {
+        if (chromeVisible && onMediaPage && chromeTimeoutMs > 0 && !videoPaused) {
             delay((chromeTimeoutMs - 500L).coerceAtLeast(500L)); chromeVisible = false
         }
     }
@@ -359,7 +358,7 @@ fun ViewerScreen(
                         dy += ch.position.y - ch.previousPosition.y
                         if (!ch.pressed) break
                     }
-                    if (valid && vm.playback.value.swipeForDetails && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
+                    if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
                     if (valid && vm.playback.value.swipeToClose && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOnce()
                 }
@@ -409,9 +408,11 @@ fun ViewerScreen(
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val showStrip = ids.size > 1 && playback.filmstrip
         val pick: (Int) -> Unit = { i -> chromeTouch++; scope.launch { pagerState.scrollToPage(i) } }
+        // Also a button: the way in where a swipe up can't be used (a note or PDF that scrolls, TalkBack).
         val detailsHint: @Composable () -> Unit = {
             Row(
                 Modifier.padding(top = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(onClickLabel = "Apri etichette, dettagli e azioni") { chromeTouch++; showTags = true }
                     .padding(horizontal = 10.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -423,7 +424,7 @@ fun ViewerScreen(
             // Landscape: the strip runs down the left edge, where a 16:9 video leaves a black band,
             // so it never sits over the picture. The swipe-up hint sits alone above the seek bar.
             AnimatedVisibility(
-                visible = chromeVisible && !inPip && playback.swipeForDetails,
+                visible = chromeVisible && !inPip,
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -460,8 +461,7 @@ fun ViewerScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, onPick = pick)
-                    // Swipe-up on: a quiet hint (the gesture does it). Off: nothing here, the tags icon in the top bar opens them.
-                    if (playback.swipeForDetails) detailsHint()
+                    detailsHint()
                 }
             }
         }
@@ -499,63 +499,8 @@ fun ViewerScreen(
                     navigationIconContentColor = Color.White,
                     actionIconContentColor = Color.White,
                 ),
-                actions = {
-                    // Swipe up on: every action lives in the details panel, so the bar only carries the
-                    // name, which then gets the whole width and stays readable.
-                    currentFile?.takeIf { !playback.swipeForDetails }?.let { file ->
-                        if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) {
-                            IconButton(onClick = { onEditNote(file.id) }) {
-                                Icon(Icons.Filled.Edit, "Modifica")
-                            }
-                        }
-                        IconButton(
-                            onClick = { chromeTouch++; vm.toggleFavorite(file) },
-                            modifier = Modifier.semantics {
-                                stateDescription = if (file.isFavorite) "Nei preferiti" else "Non nei preferiti"
-                            },
-                        ) {
-                            // The star pops in (0.5→1, ease-out, no overshoot) and turns gold when set.
-                            AnimatedContent(
-                                targetState = file.isFavorite,
-                                transitionSpec = {
-                                    (scaleIn(tween(Motion.MEDIUM, easing = Motion.EaseOutQuint), initialScale = 0.5f) +
-                                        fadeIn(Motion.enter(Motion.SHORT))) togetherWith fadeOut(Motion.exit(Motion.SHORT))
-                                },
-                                label = "favoriteStar",
-                            ) { fav ->
-                                Icon(
-                                    if (fav) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                    if (fav) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
-                                    tint = if (fav) com.cripta.app.ui.theme.Favorite else Color.White,
-                                )
-                            }
-                        }
-                        IconButton(onClick = { showTags = true }) { Icon(Icons.AutoMirrored.Filled.Label, "Etichette e dettagli") }
-                        // The less-frequent / destructive actions live in an overflow menu so the bar
-                        // stays uncluttered and Delete is separated from the safe actions.
-                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4") {
-                                androidx.compose.material3.DropdownMenuItem(
-                                    text = { Text("Converti in MP4") },
-                                    leadingIcon = { Icon(Icons.Filled.Transform, null) },
-                                    onClick = { menuOpen = false; confirmConvert = true },
-                                )
-                            }
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Esporta sul dispositivo") },
-                                leadingIcon = { Icon(Icons.Filled.Download, null) },
-                                onClick = { menuOpen = false; confirmDownload = true },
-                            )
-                            androidx.compose.material3.HorizontalDivider()
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                onClick = { menuOpen = false; confirmDelete = true },
-                            )
-                        }
-                    }
-                },
+                // No actions here: they all live in the details panel (swipe up), so the bar only
+                // carries the name, which gets the whole width and stays readable.
             )
             // Quick tags: pinned + recent tags, one tap toggles them on the file on screen.
             val qf = currentFile
@@ -603,7 +548,7 @@ fun ViewerScreen(
     }
 
     val file = currentFile
-    // Tags + details together in one panel (swipe up, the tags icon or the "Dettagli" handle).
+    // Tags, details and actions together in one panel (swipe up, or tap the "Scorri su" hint).
     if (showTags && file != null) {
         DetailsSheet(
             file = file,
@@ -613,8 +558,8 @@ fun ViewerScreen(
             vm = vm,
             // Back to the media, not to its controls: the swipe that opened the panel had shown them.
             onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
-            // The top bar's actions, here instead when the swipe opens the panel.
-            actions = if (!playback.swipeForDetails) null else SheetActions(
+            // The file's actions: the panel is their only home (the top bar carries just the name).
+            actions = SheetActions(
                 onFavorite = { vm.toggleFavorite(file) },
                 onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
                 onExport = { confirmDownload = true },
@@ -1429,7 +1374,7 @@ private fun VideoPlayer(
                     if (inPip || multi || onSide || userZoom > 1f) return@awaitEachGesture
                     if (kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) {
                         val p = vm.playback.value
-                        if (dy < -h * 0.12f) { if (p.swipeForDetails) onOpenDetails() }
+                        if (dy < -h * 0.12f) onOpenDetails()
                         else if (dy > h * 0.15f) { if (p.swipeToClose) onClose() }
                     }
                 }

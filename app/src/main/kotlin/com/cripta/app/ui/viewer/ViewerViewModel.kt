@@ -104,7 +104,6 @@ class ViewerViewModel @Inject constructor(
         val autoNext: Boolean = true,
         val autoNextSec: Int = 8,
         val swipeToClose: Boolean = true,
-        val swipeForDetails: Boolean = true,
         val holdForSpeed: Boolean = true,
         val holdSpeed: Float = 2f,
         val controlsTimeoutSec: Int = 4,
@@ -118,7 +117,7 @@ class ViewerViewModel @Inject constructor(
     private fun com.cripta.app.data.Settings.toPlayback() = PlaybackPrefs(
         videoLoop, videoStartMuted, display.resumePlayback, seekStepSec,
         gestureControls, gestureVolume, autoRotate, pictureInPicture, viewerFilmstrip, autoNext,
-        autoNextSec, swipeToClose, swipeForDetails, holdForSpeed, holdSpeedX10 / 10f, controlsTimeoutSec,
+        autoNextSec, swipeToClose, holdForSpeed, holdSpeedX10 / 10f, controlsTimeoutSec,
         stripShape = filmstripShape, stripSpan = filmstripSpan, stripSize = filmstripSize,
         stripTrueAspect = filmstripTrueAspect, pauseOnLeave = pauseOnLeave,
     )
