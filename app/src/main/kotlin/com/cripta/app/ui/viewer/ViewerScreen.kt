@@ -135,6 +135,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
@@ -274,12 +275,9 @@ fun ViewerScreen(
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val splitDetails = playback.splitDetails && portraitNow
     var sheetTopPx by remember { mutableFloatStateOf(-1f) }
-    // The media's own shape (width / height, rotation applied), to fit it into the space above the
-    // panel: a landscape video keeps the full width, a vertical one the full height of that space.
-    val mediaAspect = currentFile?.let { f ->
-        val w = f.width ?: 0; val h = f.height ?: 0
-        if (w > 0 && h > 0) w.toFloat() / h else null
-    }
+    // The split panel lives inside the viewer (not in a window above it): the media above it is
+    // laid out into the free space, controls included, and stays touchable.
+    val splitPanel = com.cripta.app.ui.components.rememberSplitPanelState()
     val splitDensity = androidx.compose.ui.platform.LocalDensity.current
     // Clear of the status bar / camera at the top, and a gap above the panel.
     val splitTopPx = with(splitDensity) {
@@ -289,11 +287,9 @@ fun ViewerScreen(
         ).toPx()
     }
     val splitGapPx = with(splitDensity) { 16.dp.toPx() }
-    // Split view: only the media above the panel, no bars over it (title bar, quick tags,
-    // filmstrip and hint stay hidden while it is open, whatever else shows the chrome).
+    // Split view: no title bar, quick tags, filmstrip or hint over the media while it is open (the
+    // player's own controls do show, laid out in the space above the panel).
     val splitOpen = splitDetails && showTags
-    // Split view: only the media above the panel, no bars over it.
-    LaunchedEffect(showTags, splitDetails) { if (showTags && splitDetails) chromeVisible = false }
     // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
     var recentsEpoch by remember { mutableIntStateOf(0) }
     LaunchedEffect(chromeVisible) { if (!chromeVisible) recentsEpoch++ }
@@ -312,6 +308,10 @@ fun ViewerScreen(
     // Swipe-to-close can be seen by more than one gesture layer: pop the viewer only once.
     var closing by remember { mutableStateOf(false) }
     val closeOnce: () -> Unit = { if (!closing) { closing = true; onBack() } }
+    // Swipe down: closes the split panel when it is open, the viewer otherwise. Reads the state
+    // when called (gesture handlers keep the lambda they started with).
+    val splitDetailsNow by androidx.compose.runtime.rememberUpdatedState(splitDetails)
+    val closeOrLeaveSplit: () -> Unit = { if (splitDetailsNow && showTags) splitPanel.close() else closeOnce() }
     // A deleted (or vanished) file leaves the list and the viewer moves on to the next one (the
     // previous, if it was the last); only the last remaining file closes the viewer.
     val removePage: (String) -> Unit = { id ->
@@ -336,6 +336,32 @@ fun ViewerScreen(
     // close, scrolling a note/PDF): the pager is frozen until the finger lifts, so the small sideways
     // drift of a swipe up no longer flings to the next video.
     var verticalLock by remember { mutableStateOf(false) }
+
+    // One place for the details panel's wiring: the regular sheet (after the Box) and the split
+    // view's panel (inside it, so it is part of the screen) both use it.
+    val detailsPanel: @Composable (FileEntity, Boolean) -> Unit = { file, split ->
+        DetailsSheet(
+            file = file,
+            allTags = allTags,
+            refresh = refresh,
+            showRecents = displayPrefs.showRecentTags,
+            vm = vm,
+            // Back to the media, not to its controls: the swipe that opened the panel had shown them.
+            onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
+            split = split,
+            splitPanel = splitPanel,
+            onSheetTop = { sheetTopPx = it },
+            // The file's actions: the panel is their only home (the top bar carries just the name).
+            actions = SheetActions(
+                onFavorite = { vm.toggleFavorite(file) },
+                onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
+                onExport = { confirmDownload = true },
+                onConvert = if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4")
+                    ({ confirmConvert = true }) else null,
+                onDelete = { confirmDelete = true },
+            ),
+        )
+    }
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
@@ -389,31 +415,29 @@ fun ViewerScreen(
                     }
                     if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
-                    if (valid && vm.playback.value.swipeToClose && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOnce()
+                    if (valid && vm.playback.value.swipeToClose && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOrLeaveSplit()
                 }
             },
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize().graphicsLayer {
-                // Split view: scaled from the top centre to fit above the panel, following it as it
-                // is dragged (read here, at draw time: no recomposition per frame).
+            modifier = Modifier.fillMaxSize().layout { measurable, constraints ->
+                // Split view: the pages are laid out in the space above the panel (full width, the
+                // height left), so a video fits itself there and its controls span that whole area.
+                // Read at layout time: following the panel costs a relayout, not a recomposition.
                 val top = sheetTopPx
-                val fullW = size.width; val fullH = size.height
-                if (top > 0f && fullH > 0f && fullW > 0f) {
+                val fullH = constraints.maxHeight.toFloat()
+                if (top <= 0f || !constraints.hasBoundedHeight) {
+                    val p = measurable.measure(constraints)
+                    layout(p.width, p.height) { p.place(0, 0) }
+                } else {
                     // The margins (top inset, gap above the panel) come in over the first third of
                     // the panel's rise, so nothing jumps when it starts or finishes moving.
                     val f = ((fullH - top) / (fullH / 3f)).coerceIn(0f, 1f)
-                    val avail = (top - f * (splitTopPx + splitGapPx)).coerceAtLeast(fullH * 0.12f)
-                    // Fit the media (as shown now: fitted to the screen) into fullW x avail.
-                    val a = mediaAspect ?: (fullW / fullH)
-                    val shownW = minOf(fullW, fullH * a)
-                    val targetW = minOf(fullW, avail * a)
-                    val sc = (targetW / shownW).coerceIn(0.05f, 1f)
-                    scaleX = sc; scaleY = sc
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                    // Centre of the media moves to the centre of the free space.
-                    translationY = (f * splitTopPx + avail / 2f) - fullH / 2f
+                    val y = (f * splitTopPx).toInt()
+                    val h = (top - f * (splitTopPx + splitGapPx)).coerceIn(fullH * 0.12f, fullH).toInt()
+                    val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                    layout(constraints.maxWidth, constraints.maxHeight) { p.place(0, y) }
                 }
             },
             userScrollEnabled = !verticalLock,
@@ -431,19 +455,17 @@ fun ViewerScreen(
                 setChrome = { chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
                 onOpenDetails = { showTags = true },
-                onClose = closeOnce,
+                onClose = closeOrLeaveSplit,
                 nextId = ids.getOrNull(page + 1),
-                topInset = topChromeH,
-                bottomInset = bottomChromeH,
+                // Split view: no top bar or filmstrip over the media, so nothing to keep clear of.
+                topInset = if (splitOpen) 0.dp else topChromeH,
+                bottomInset = if (splitOpen) 0.dp else bottomChromeH,
                 onSeekClear = { seekClear = it },
                 pageShift = { (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction },
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
                 hideControlsTick = hideControlsTick,
-                // Split view open: the player's own controls are switched off (it would bring them
-                // back by itself, e.g. while paused, and they would shrink with the picture).
-                suppressControls = splitOpen,
             )
         }
 
@@ -611,32 +633,14 @@ fun ViewerScreen(
           }
         }
 
+        // Split view: the panel is part of the screen, the media laid out above it.
+        if (showTags && splitDetails) currentFile?.let { detailsPanel(it, true) }
     }
 
     val file = currentFile
-    // Tags, details and actions together in one panel (swipe up, or tap the "Scorri su" hint).
-    if (showTags && file != null) {
-        DetailsSheet(
-            file = file,
-            allTags = allTags,
-            refresh = refresh,
-            showRecents = displayPrefs.showRecentTags,
-            vm = vm,
-            // Back to the media, not to its controls: the swipe that opened the panel had shown them.
-            onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
-            split = splitDetails,
-            onSheetTop = { sheetTopPx = it },
-            // The file's actions: the panel is their only home (the top bar carries just the name).
-            actions = SheetActions(
-                onFavorite = { vm.toggleFavorite(file) },
-                onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
-                onExport = { confirmDownload = true },
-                onConvert = if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4")
-                    ({ confirmConvert = true }) else null,
-                onDelete = { confirmDelete = true },
-            ),
-        )
-    }
+    // Tags, details and actions together in one panel (swipe up, or tap the "Scorri su" hint). The
+    // split view's panel is drawn inside the viewer's Box instead (see detailsPanel above).
+    if (showTags && !splitDetails && file != null) detailsPanel(file, false)
     val trashOn by vm.trashEnabled.collectAsState()
     if (confirmDelete && file != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
@@ -850,7 +854,6 @@ private fun MediaPage(
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
-    suppressControls: Boolean = false,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -893,7 +896,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, suppressControls = suppressControls)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1164,8 +1167,6 @@ private fun VideoPlayer(
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
-    /** Split view open: no player controls at all (see ViewerScreen). */
-    suppressControls: Boolean = false,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1357,12 +1358,7 @@ private fun VideoPlayer(
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     // In PiP only the video shows: no controller.
-    LaunchedEffect(inPip, suppressControls, playerViewRef) {
-        playerViewRef?.let { pv ->
-            pv.useController = !inPip && !suppressControls
-            if (suppressControls) pv.hideController()
-        }
-    }
+    LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
@@ -1634,8 +1630,7 @@ private fun VideoPlayer(
         // "Prossimo" card, bottom-right above the seek bar.
         val rem = remainingMs
         val window = minOf(prefs.autoNextSec * 1000L, totalMs / 3)
-        // Not in the split view: it would shrink with the picture (the countdown still runs).
-        if (autoNextOn && !nextCancelled && !suppressControls && rem != null && window > 0 && rem <= window) {
+        if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
             // Tap = play the next file now. In portrait, while the controls show, it sits right above
             // the filmstrip (and handle) instead of overlapping them.
             Surface(
@@ -1717,7 +1712,7 @@ private fun VideoPlayer(
 
         // One-time explanation of the invisible gestures.
         AnimatedVisibility(
-            visible = showGestureHint && !inPip && !suppressControls,
+            visible = showGestureHint && !inPip,
             enter = fadeIn(Motion.enter(Motion.LONG)),
             exit = fadeOut(Motion.exit(Motion.LONG)),
             modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
@@ -1937,8 +1932,9 @@ private fun DetailsSheet(
     vm: ViewerViewModel,
     onDismiss: () -> Unit,
     actions: SheetActions? = null,
-    /** Split view: no dimming, the panel capped below the media, its top edge reported. */
+    /** Split view: the panel is laid out inside the viewer ([splitPanel]), its top edge reported. */
     split: Boolean = false,
+    splitPanel: com.cripta.app.ui.components.SplitPanelState? = null,
     onSheetTop: (Float) -> Unit = {},
 ) {
     val onFile by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
@@ -1953,13 +1949,8 @@ private fun DetailsSheet(
     // The app's shared sheet (two-step opening, one-swipe close, Back, below the camera, full width
     // in landscape); close() slides it away before an action opens a dialog or the editor.
     val sheet = com.cripta.app.ui.components.rememberCriptaSheetState(onDismiss)
-    val close: () -> Unit = sheet::close
-    val latestSheetTop by androidx.compose.runtime.rememberUpdatedState(onSheetTop)
-    LaunchedEffect(sheet, split) {
-        if (!split) { latestSheetTop(-1f); return@LaunchedEffect }
-        androidx.compose.runtime.snapshotFlow { sheet.topPx() ?: -1f }.collect { latestSheetTop(it) }
-    }
-    DisposableEffect(Unit) { onDispose { latestSheetTop(-1f) } }
+    val inSplit = split && splitPanel != null
+    val close: () -> Unit = if (inSplit) ({ splitPanel!!.close() }) else sheet::close
 
     val thumb by produceState<Bitmap?>(initialValue = null, file.id, refresh) { value = vm.thumbOf(file.id) }
     val kind = when {
@@ -2088,36 +2079,40 @@ private fun DetailsSheet(
         }
     }
 
-    com.cripta.app.ui.components.CriptaSheet(
-        onDismissRequest = onDismiss, state = sheet, wideInLandscape = true,
-        // Split view: the media stays bright above the panel, which stops at about two thirds.
-        scrimColor = if (split) Color.Transparent else androidx.compose.material3.BottomSheetDefaults.ScrimColor,
-        heightFraction = if (split) 0.62f else null,
-    ) {
-        if (landscape) {
-            // Two columns that scroll on their own: details on the left, tags on the right, so the
-            // tags are reachable without scrolling past the details on a short screen.
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
-            ) {
-                Column(
-                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+    // Portrait: one scrolling column.
+    val column: @Composable () -> Unit = {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+        ) {
+            header(); tiles(); tags(); HorizontalDividerCompat(); info()
+        }
+    }
+    if (inSplit) {
+        // "Video sopra il pannello": part of the viewer, always the same height, the media above.
+        com.cripta.app.ui.components.SplitPanel(
+            state = splitPanel!!, heightFraction = 0.62f, onDismiss = onDismiss, onTop = onSheetTop,
+        ) { column() }
+    } else {
+        com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, state = sheet, wideInLandscape = true) {
+            if (landscape) {
+                // Two columns that scroll on their own: details on the left, tags on the right, so the
+                // tags are reachable without scrolling past the details on a short screen.
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
                 ) {
-                    header(); tiles(); HorizontalDividerCompat(); info()
+                    Column(
+                        Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+                    ) {
+                        header(); tiles(); HorizontalDividerCompat(); info()
+                    }
+                    Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+                        tags()
+                    }
                 }
-                Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
-                    tags()
-                }
-            }
-        } else {
-            Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
-            ) {
-                header(); tiles(); tags(); HorizontalDividerCompat(); info()
-            }
+            } else column()
         }
     }
     editTag?.let { name ->
