@@ -112,6 +112,7 @@ class ViewerViewModel @Inject constructor(
         val stripSize: Int = 1,
         val stripTrueAspect: Boolean = true,
         val pauseOnLeave: Boolean = true,
+        val splitDetails: Boolean = false,
     )
 
     private fun com.cripta.app.data.Settings.toPlayback() = PlaybackPrefs(
@@ -119,7 +120,7 @@ class ViewerViewModel @Inject constructor(
         gestureControls, gestureVolume, autoRotate, pictureInPicture, viewerFilmstrip, autoNext,
         autoNextSec, swipeToClose, holdForSpeed, holdSpeedX10 / 10f, controlsTimeoutSec,
         stripShape = filmstripShape, stripSpan = filmstripSpan, stripSize = filmstripSize,
-        stripTrueAspect = filmstripTrueAspect, pauseOnLeave = pauseOnLeave,
+        stripTrueAspect = filmstripTrueAspect, pauseOnLeave = pauseOnLeave, splitDetails = splitDetails,
     )
 
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
