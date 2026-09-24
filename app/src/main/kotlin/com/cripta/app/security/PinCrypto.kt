@@ -23,8 +23,9 @@ import javax.crypto.spec.SecretKeySpec
  * [KeyVault] limits the attempts.
  */
 object PinCrypto {
-    const val MIN_LENGTH = 6
-    const val MAX_LENGTH = 16
+    const val MIN_LENGTH = 4
+    const val MAX_PIN_LENGTH = 16
+    const val MAX_PASSWORD_LENGTH = 64
 
     private const val ITERATIONS = 210_000
     private const val PEPPER_ALIAS = "cripta_pin_pepper_v1"
@@ -32,7 +33,15 @@ object PinCrypto {
     private const val IV_LEN = 12
     private const val TAG_BITS = 128
 
-    fun isValid(pin: CharArray): Boolean = pin.size in MIN_LENGTH..MAX_LENGTH && pin.all { it in '0'..'9' }
+    fun maxLength(kind: SecretKind): Int = if (kind == SecretKind.PIN) MAX_PIN_LENGTH else MAX_PASSWORD_LENGTH
+
+    /** A PIN is 4-16 digits; a password 4-64 characters of any kind. */
+    fun isValid(secret: CharArray, kind: SecretKind): Boolean =
+        secret.size in MIN_LENGTH..maxLength(kind) && (kind == SecretKind.PASSWORD || secret.all { it in '0'..'9' })
+
+    /** What may be typed so far (the length is checked on submit). */
+    fun accepts(text: String, kind: SecretKind): Boolean =
+        text.length <= maxLength(kind) && (kind == SecretKind.PASSWORD || text.all { it in '0'..'9' })
 
     fun newSalt(): ByteArray = ByteArray(16).also { SecureRandom().nextBytes(it) }
 

@@ -190,6 +190,7 @@ class MainActivity : FragmentActivity() {
             // "Solo PIN dell'app" needs no screen lock on the phone.
             noDeviceCredential = needsSystemPrompt() && !BiometricAuth.canAuthenticate(this),
             pin = pinStepFor(keyVault.unlockMode),
+            secretKind = keyVault.secretKind,
         )
         // A recreated activity gets its original intent back: don't import a share twice.
         if (savedInstanceState == null) handleShare(intent)
@@ -347,11 +348,14 @@ class MainActivity : FragmentActivity() {
                         authUi.value = authUi.value.copy(pinBusy = false, error = null, firstRun = false,
                             pin = pinStepFor(keyVault.unlockMode))
                     }
-                    is KeyVault.PinResult.Wrong -> authUi.value = authUi.value.copy(pinBusy = false,
-                        error = if (res.waitSeconds > 0) "PIN errato. Troppi tentativi: riprova tra ${waitText(res.waitSeconds)}."
-                        else "PIN errato. Riprova.")
+                    is KeyVault.PinResult.Wrong -> {
+                        val what = if (keyVault.secretKind == com.cripta.app.security.SecretKind.PIN) "PIN errato" else "Password errata"
+                        authUi.value = authUi.value.copy(pinBusy = false,
+                            error = if (res.waitSeconds > 0) "$what. Troppi tentativi: riprova tra ${waitText(res.waitSeconds)}."
+                            else "$what. Riprova.")
+                    }
                     is KeyVault.PinResult.Wait -> authUi.value = authUi.value.copy(pinBusy = false,
-                        error = "Troppi tentativi con il PIN: riprova tra ${waitText(res.seconds)}.")
+                        error = "Troppi tentativi: riprova tra ${waitText(res.seconds)}.")
                 }
             }.onFailure {
                 android.util.Log.e("MainActivity", "PIN unlock failed", it)
@@ -367,6 +371,7 @@ class MainActivity : FragmentActivity() {
     private fun authenticate() {
         if (authInFlight) return
         val mode = keyVault.unlockMode
+        authUi.value = authUi.value.copy(secretKind = keyVault.secretKind)
         if (keyVault.isInitialized && !mode.usesSystem) {
             // "Solo PIN dell'app": nothing to prompt, the lock screen shows the PIN field.
             authUi.value = authUi.value.copy(firstRun = false, noDeviceCredential = false, pin = PinStep.REQUIRED)
@@ -397,7 +402,7 @@ class MainActivity : FragmentActivity() {
             android.util.Log.e("MainActivity", "cipher init failed", it)
             if (keyVault.isKeyInvalidated(it) && mode == com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN) {
                 // The PIN still opens the vault: no reset needed.
-                authUi.value = authUi.value.copy(error = "L'impronta non è più utilizzabile: sblocca con il PIN di Cripta.")
+                authUi.value = authUi.value.copy(error = "L'impronta non è più utilizzabile: sblocca con il codice di Cripta.")
             } else if (keyVault.isKeyInvalidated(it)) {
                 keyInvalidated.value = true
             } else {
