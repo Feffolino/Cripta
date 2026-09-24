@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
  *    details, filters, stats) use the screen width, menus and lists stay 640dp wide and centred
  *    (full-width rows put the label far from the middle);
  *  - fully open, it stops below the status bar / camera instead of running under it;
- *  - Back closes it (with its animation) and returns to the screen below;
+ *  - Back closes it in one press (with its animation) and returns to the screen below;
  *  - an action inside it slides it away first ([LocalCriptaSheet] + [CriptaSheetState.closeThen]);
  *  - while the vault is locked it is not shown at all (it lives in its own window, above the lock
  *    screen): it comes back after unlocking.
@@ -122,6 +122,9 @@ fun CriptaSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = state.sheet,
+        // Material's own Back first collapses a full sheet to half and needs a second press: off,
+        // Back is handled below (in the sheet's window) and closes it in one go.
+        properties = androidx.compose.material3.ModalBottomSheetProperties(shouldDismissOnBackPress = false),
         // Landscape content panels: the full width (as in Impostazioni and Scarica).
         sheetMaxWidth = if (landscape && wideInLandscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
     ) {
@@ -133,6 +136,9 @@ fun CriptaSheet(
                         else Modifier
                     ),
             ) {
+                // Inside the sheet's own window (its dialog dispatcher), where Back arrives while it
+                // has focus; the handler above covers the case where the screen's window gets it.
+                BackHandler(onBack = state::close)
                 androidx.compose.runtime.CompositionLocalProvider(LocalCriptaSheet provides state) { content() }
             }
         }

@@ -672,9 +672,11 @@ fun SettingsScreen(
                             }
                         }
                         item {
-                            Section("Cestino", "Se attivo, i file eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
+                            Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
                                 androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (trashed.isEmpty()) "Cestino vuoto" else "Apri cestino (${trashed.size})")
+                                    Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
+                                        else "Apri cestino (" + listOfNotNull(elementsLabel(trashed.size),
+                                            trashedFolders.size.takeIf { it > 0 }?.let(::foldersLabel)).joinToString(", ") + ")")
                                 }
                                 ToggleRow("Usa il cestino quando elimini", s.trashEnabled) { vm.setTrashEnabled(it) }
                                 Text("Conserva per", style = MaterialTheme.typography.labelLarge)
@@ -1063,6 +1065,11 @@ enum class SettingsPage(
 }
 
 /** One-line summary of a page's current state, shown under its name in the list. */
+/** "1 elemento" / "N elementi": what the trash counts (files of every kind). */
+private fun elementsLabel(n: Int): String = if (n == 1) "1 elemento" else "$n elementi"
+
+private fun foldersLabel(n: Int): String = if (n == 1) "1 cartella" else "$n cartelle"
+
 private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCount: Int, trashCount: Int, dupGroups: Int?): String = when (p) {
     SettingsPage.ASPETTO -> when (s.themeMode) {
         com.cripta.app.data.ThemeMode.SYSTEM -> "Tema di sistema"
@@ -1388,7 +1395,8 @@ private fun TrashDialog(
                         Column {
                             Text(if (openId == null) "Cestino" else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val sub = if (openId == null) {
-                                "${items.size} file · distrutti dopo $days giorni"
+                                listOfNotNull(elementsLabel(items.size), folders.size.takeIf { it > 0 }?.let(::foldersLabel))
+                                    .joinToString(" · ") + " · distrutti dopo $days giorni"
                             } else {
                                 (listOf("Cestino") + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › ")
                             }
@@ -1516,7 +1524,7 @@ private fun TrashDialog(
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(fo.name, style = MaterialTheme.typography.titleMedium)
-                    InfoRow("Contenuto", (if (under.size == 1) "1 file" else "${under.size} file") +
+                    InfoRow("Contenuto", elementsLabel(under.size) +
                         " · " + com.cripta.app.ui.components.formatBytes(under.sumOf { it.sizeBytes }))
                     InfoRow("Eliminata il", fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
@@ -1527,7 +1535,7 @@ private fun TrashDialog(
                         ) { Text("Elimina") }
                         Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
                     }
-                    TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { Text("Apri e scegli i file") }
+                    TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { Text("Apri e scegli gli elementi") }
                 }
             }
         }
@@ -1536,7 +1544,7 @@ private fun TrashDialog(
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmFolder = null },
                 title = { Text("Eliminare definitivamente?") },
-                text = { Text("\"${fo.name}\" e ${if (n == 1) "1 file" else "$n file"} al suo interno verranno distrutti in modo sicuro. Irreversibile.") },
+                text = { Text("\"${fo.name}\" e ${elementsLabel(n)} al suo interno verranno distrutti in modo sicuro. Irreversibile.") },
                 confirmButton = {
                     TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
                 },
@@ -1548,8 +1556,8 @@ private fun TrashDialog(
                 onDismissRequest = { confirmEmpty = false },
                 title = { Text("Svuotare il cestino?") },
                 text = {
-                    Text("${if (items.size == 1) "1 file" else "${items.size} file"}" +
-                        (if (folders.isNotEmpty()) " e ${if (folders.size == 1) "1 cartella" else "${folders.size} cartelle"}" else "") +
+                    Text(elementsLabel(items.size) +
+                        (if (folders.isNotEmpty()) " e ${foldersLabel(folders.size)}" else "") +
                         " verranno distrutti in modo sicuro. Irreversibile.")
                 },
                 confirmButton = {

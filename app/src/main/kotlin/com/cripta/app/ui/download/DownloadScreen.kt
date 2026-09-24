@@ -91,6 +91,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.cripta.app.ui.theme.Motion
+import androidx.compose.ui.graphics.graphicsLayer
 
 /**
  * In-app video downloader: paste (or share in) a link, pick a quality — with a size estimate per
@@ -286,37 +287,53 @@ fun DownloadScreen(
             }
             if (tags.isNotEmpty()) {
                 // Collapsed by default: a one-line summary of the chosen tags; tap to expand the picker.
+                // The chips open INSIDE the same card, growing downwards only (the generic
+                // AnimatedVisibility grew them from the top-left corner, outside the card).
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable { tagsOpen = !tagsOpen },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.Label, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text("Etichette", style = MaterialTheme.typography.bodyLarge)
-                            val chosen = tags.filter { it.id in effectiveTags }
-                            Text(
-                                if (chosen.isEmpty()) "Nessuna" else chosen.joinToString(", ") { it.name },
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            )
+                    Column {
+                        Row(
+                            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+                                .clickable(onClickLabel = if (tagsOpen) "Comprimi" else "Espandi") { tagsOpen = !tagsOpen }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Label, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text("Etichette", style = MaterialTheme.typography.bodyLarge)
+                                val chosen = tags.filter { it.id in effectiveTags }
+                                Text(
+                                    if (chosen.isEmpty()) "Nessuna" else chosen.joinToString(", ") { it.name },
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            // The chevron turns instead of swapping icons.
+                            val turn by androidx.compose.animation.core.animateFloatAsState(
+                                if (tagsOpen) 180f else 0f, Motion.enter(Motion.MEDIUM), label = "tagsChevron")
+                            Icon(Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.graphicsLayer { rotationZ = turn })
                         }
-                        Icon(if (tagsOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                            if (tagsOpen) "Comprimi" else "Espandi", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                androidx.compose.animation.AnimatedVisibility(visible = tagsOpen) {
-                    com.cripta.app.ui.components.ChipFlowRow {
-                        tags.forEach { t ->
-                            val sel = t.id in effectiveTags
-                            FilterChip(
-                                selected = sel,
-                                onClick = { tagIds = if (sel) tagIds - t.id else tagIds + t.id },
-                                leadingIcon = {
-                                    Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t)))
-                                },
-                                label = { Text(if (!t.alias.isNullOrBlank()) "${t.alias} ${t.name}" else t.name) },
-                            )
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = tagsOpen,
+                            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter(), expandFrom = Alignment.Top),
+                            exit = fadeOut(Motion.exit()) + androidx.compose.animation.shrinkVertically(Motion.exit(), shrinkTowards = Alignment.Top),
+                        ) {
+                            com.cripta.app.ui.components.ChipFlowRow(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+                                tags.forEach { t ->
+                                    val sel = t.id in effectiveTags
+                                    FilterChip(
+                                        selected = sel,
+                                        onClick = { tagIds = if (sel) tagIds - t.id else tagIds + t.id },
+                                        leadingIcon = {
+                                            Box(Modifier.size(8.dp).clip(CircleShape).background(com.cripta.app.ui.theme.tagColor(t)))
+                                        },
+                                        label = { Text(if (!t.alias.isNullOrBlank()) "${t.alias} ${t.name}" else t.name) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
