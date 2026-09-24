@@ -289,6 +289,9 @@ fun ViewerScreen(
         ).toPx()
     }
     val splitGapPx = with(splitDensity) { 16.dp.toPx() }
+    // Split view: only the media above the panel, no bars over it (title bar, quick tags,
+    // filmstrip and hint stay hidden while it is open, whatever else shows the chrome).
+    val splitOpen = splitDetails && showTags
     // Split view: only the media above the panel, no bars over it.
     LaunchedEffect(showTags, splitDetails) { if (showTags && splitDetails) chromeVisible = false }
     // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
@@ -440,7 +443,7 @@ fun ViewerScreen(
                 hideControlsTick = hideControlsTick,
                 // Split view open: the player's own controls are switched off (it would bring them
                 // back by itself, e.g. while paused, and they would shrink with the picture).
-                suppressControls = splitDetails && showTags,
+                suppressControls = splitOpen,
             )
         }
 
@@ -474,7 +477,7 @@ fun ViewerScreen(
             // Landscape: the strip runs down the left edge, where a 16:9 video leaves a black band,
             // so it never sits over the picture. The swipe-up hint sits alone above the seek bar.
             AnimatedVisibility(
-                visible = chromeVisible && !inPip,
+                visible = chromeVisible && !inPip && !splitOpen,
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -484,7 +487,7 @@ fun ViewerScreen(
                 detailsHint()
             }
             AnimatedVisibility(
-                visible = chromeVisible && !inPip && showStrip,
+                visible = chromeVisible && !inPip && !splitOpen && showStrip,
                 enter = chromeEnter,
                 exit = chromeExit,
                 // Between the top chrome and the seek bar, clear of the side camera.
@@ -496,7 +499,7 @@ fun ViewerScreen(
             }
         } else {
             AnimatedVisibility(
-                visible = chromeVisible && !inPip,
+                visible = chromeVisible && !inPip && !splitOpen,
                 enter = chromeEnter,
                 exit = chromeExit,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
@@ -516,7 +519,7 @@ fun ViewerScreen(
             }
         }
         AnimatedVisibility(
-            visible = chromeVisible && !inPip,
+            visible = chromeVisible && !inPip && !splitOpen,
             // Fade only (no slide): a sliding bar moves the action icons under the finger, so a tap
             // on e.g. the tags button could miss while the bar was animating — it looked visible but
             // did nothing. Fading keeps each button in place and hittable the whole time it shows.
