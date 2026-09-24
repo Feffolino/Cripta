@@ -66,6 +66,8 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -262,6 +264,8 @@ fun ViewerScreen(
     val chromeExit = fadeOut(Motion.exit(Motion.MEDIUM))
 
     var showTags by remember { mutableStateOf(false) }
+    // Bumped when the details panel closes: the player hides its controls for good (see VideoPlayer).
+    var hideControlsTick by remember { mutableIntStateOf(0) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmConvert by remember { mutableStateOf(false) }
@@ -382,6 +386,7 @@ fun ViewerScreen(
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
+                hideControlsTick = hideControlsTick,
             )
         }
 
@@ -602,7 +607,7 @@ fun ViewerScreen(
             showRecents = displayPrefs.showRecentTags,
             vm = vm,
             // Back to the media, not to its controls: the swipe that opened the panel had shown them.
-            onDismiss = { showTags = false; chromeVisible = false },
+            onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
         )
     }
     val trashOn by vm.trashEnabled.collectAsState()
@@ -816,6 +821,7 @@ private fun MediaPage(
     pageShift: () -> Float,
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
+    hideControlsTick: Int = 0,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -858,7 +864,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1128,6 +1134,7 @@ private fun VideoPlayer(
     controlsTimeoutMs: Int,
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
     onPausedChanged: (Boolean) -> Unit,
+    hideControlsTick: Int = 0,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1328,7 +1335,18 @@ private fun VideoPlayer(
         val pv = playerViewRef ?: return@LaunchedEffect
         if (inPip) return@LaunchedEffect
         if (controlsVisible && !pv.isControllerFullyVisible) pv.showController()
-        else if (!controlsVisible && pv.isControllerFullyVisible) pv.hideController()
+        // Not only when fully visible: a controller still fading in must be hidden too.
+        else if (!controlsVisible) pv.hideController()
+    }
+    // Details panel closed: back to the bare video. The swipe that opened the panel also reached the
+    // PlayerView, which toggles its controls on every touch release, and they reappeared afterwards;
+    // hiding again once the panel is gone catches that late toggle.
+    LaunchedEffect(hideControlsTick) {
+        if (hideControlsTick == 0 || inPip) return@LaunchedEffect
+        repeat(3) {
+            playerViewRef?.hideController()
+            delay(200)
+        }
     }
 
     // While swiping to another file only the picture slides: the seek bar, play/pause and the side
@@ -1879,10 +1897,33 @@ private fun DetailsSheet(
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    // No half-open step: the panel opens fully and one swipe down closes it (it used to collapse
-    // first and need a second swipe).
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val sheetScope = rememberCoroutineScope()
+    // Opens in two steps (half, then full on a swipe up), closes in one: a swipe down from the full
+    // panel goes straight to closed instead of stopping at half. Landscape (short screen) opens
+    // fully at once.
+    // Remembered: the sheet state is re-created whenever this callback changes identity.
+    val sheetRef = remember { arrayOfNulls<androidx.compose.material3.SheetState>(1) }
+    val latestDismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
+    val confirmSheetValue: (androidx.compose.material3.SheetValue) -> Boolean = remember {
+        { v ->
+            val st = sheetRef[0]
+            if (st != null && v == androidx.compose.material3.SheetValue.PartiallyExpanded &&
+                st.currentValue == androidx.compose.material3.SheetValue.Expanded) {
+                sheetScope.launch { st.hide() }.invokeOnCompletion { if (!st.isVisible) latestDismiss() }
+                false
+            } else true
+        }
+    }
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        skipPartiallyExpanded = landscape,
+        confirmValueChange = confirmSheetValue,
+    )
+    sheetRef[0] = sheetState
+    // Fully open, the panel stops below the camera / status bar area instead of running under it.
+    val topGap = maxOf(
+        WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding(),
+        WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
+    ) + 8.dp
     val close: () -> Unit = {
         sheetScope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
     }
@@ -1962,6 +2003,8 @@ private fun DetailsSheet(
         // Landscape: the full width (as in Impostazioni and Scarica) instead of a narrow centred strip.
         sheetMaxWidth = if (landscape) 1400.dp else androidx.compose.material3.BottomSheetDefaults.SheetMaxWidth,
     ) {
+      androidx.compose.foundation.layout.BoxWithConstraints {
+       Box(Modifier.heightIn(max = (maxHeight - topGap).coerceAtLeast(0.dp))) {
         if (landscape) {
             // Two columns that scroll on their own: details on the left, tags on the right, so the
             // tags are reachable without scrolling past the details on a short screen.
@@ -1989,6 +2032,8 @@ private fun DetailsSheet(
                 header(); tiles(); tags(); HorizontalDividerCompat(); info()
             }
         }
+       }
+      }
     }
     editTag?.let { name ->
         val t = byName[name]
