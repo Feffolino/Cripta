@@ -52,6 +52,9 @@ class KeyVault @Inject constructor(
 
     val unlockMode: UnlockMode get() = UnlockMode.from(prefs.getString(KEY_UNLOCK_MODE, null))
 
+    /** Whether the app code is a numeric PIN or a password (meaningful when [unlockMode] uses one). */
+    val secretKind: SecretKind get() = SecretKind.from(prefs.getString(KEY_SECRET_KIND, null))
+
     // --- Cipher factories to feed BiometricPrompt.CryptoObject ---
 
     /** Encrypt cipher for first-time setup. Ensures the Keystore key exists. */
@@ -205,12 +208,12 @@ class KeyVault @Inject constructor(
      * [authorizedEncryptCipher] (from [cipherForModeChange], authorized by the prompt) when it
      * uses the system prompt. Needs the vault unlocked. Slow: call it off the main thread.
      */
-    fun changeMode(newMode: UnlockMode, newPin: CharArray?, authorizedEncryptCipher: Cipher?) {
+    fun changeMode(newMode: UnlockMode, newPin: CharArray?, kind: SecretKind, authorizedEncryptCipher: Cipher?) {
         val dekBytes = session.dekBytesCopy() ?: error("Vault locked")
         try {
             val salt = PinCrypto.newSalt()
             val pinSealed = if (newMode.usesPin) {
-                require(newPin != null && PinCrypto.isValid(newPin)) { "Invalid PIN" }
+                require(newPin != null && PinCrypto.isValid(newPin, kind)) { "Invalid PIN" }
                 PinCrypto.seal(newPin, salt, dekBytes, PIN_AAD)
             } else null
             val kekBlob = when (newMode) {
@@ -222,7 +225,8 @@ class KeyVault @Inject constructor(
             if (kekBlob != null) e.putString(KEY_WRAPPED_DEK, encode(kekBlob)) else e.remove(KEY_WRAPPED_DEK)
             if (newMode == UnlockMode.SYSTEM_OR_PIN || newMode == UnlockMode.PIN) e.putString(KEY_WRAPPED_DEK_PIN, encode(pinSealed!!))
             else e.remove(KEY_WRAPPED_DEK_PIN)
-            if (newMode.usesPin) e.putString(KEY_PIN_SALT, encode(salt)) else e.remove(KEY_PIN_SALT)
+            if (newMode.usesPin) e.putString(KEY_PIN_SALT, encode(salt)).putString(KEY_SECRET_KIND, kind.name)
+            else e.remove(KEY_PIN_SALT).remove(KEY_SECRET_KIND)
             e.putString(KEY_UNLOCK_MODE, newMode.name)
                 .putString(KEY_KEK_ALIAS, activeAlias)
                 .remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL)
@@ -286,6 +290,7 @@ class KeyVault @Inject constructor(
         private const val KEY_WRAPPED_DEK_PIN = "wrapped_dek_pin"
         private const val KEY_PIN_SALT = "pin_salt"
         private const val KEY_UNLOCK_MODE = "unlock_mode"
+        private const val KEY_SECRET_KIND = "secret_kind"
         private const val KEY_PIN_FAILS = "pin_fails"
         private const val KEY_PIN_WAIT_UNTIL = "pin_wait_until"
         private val PIN_AAD = "cripta-dek-pin".toByteArray()

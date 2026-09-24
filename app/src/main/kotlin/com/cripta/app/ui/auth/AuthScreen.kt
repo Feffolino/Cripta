@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -61,6 +66,7 @@ data class AuthUiState(
     val noDeviceCredential: Boolean = false,
     val pin: PinStep = PinStep.NONE,
     val pinBusy: Boolean = false,
+    val secretKind: com.cripta.app.security.SecretKind = com.cripta.app.security.SecretKind.PIN,
 )
 
 /** The app PIN on the lock screen. */
@@ -152,9 +158,9 @@ fun AuthScreen(
                         state.firstRun -> FirstRunExplanation(compact)
                         else -> Text(
                             when (state.pin) {
-                                PinStep.REQUIRED -> "Vault cifrato. Inserisci il PIN di Cripta."
-                                PinStep.SECOND -> "Identità confermata. Ora inserisci il PIN di Cripta."
-                                PinStep.OPTIONAL -> "Vault cifrato. Usa l'impronta oppure il PIN di Cripta."
+                                PinStep.REQUIRED -> "Vault cifrato. Inserisci il ${state.secretKind.noun} di Cripta."
+                                PinStep.SECOND -> "Identità confermata. Ora inserisci il ${state.secretKind.noun} di Cripta."
+                                PinStep.OPTIONAL -> "Vault cifrato. Usa l'impronta oppure il ${state.secretKind.noun} di Cripta."
                                 PinStep.NONE -> "Vault cifrato. Autenticati per accedere."
                             },
                             style = MaterialTheme.typography.bodyMedium,
@@ -193,12 +199,9 @@ fun AuthScreen(
                             }
                         }
                         if (!state.firstRun && state.pin != PinStep.NONE) {
-                            if (!pinOnly) {
-                                Text("oppure", style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 12.dp))
-                            }
-                            PinEntry(busy = state.pinBusy, autoFocus = pinOnly, compact = compact, onSubmit = onSubmitPin)
+                            if (!pinOnly) Spacer(Modifier.size(8.dp)) else Spacer(Modifier.size(4.dp))
+                            CodeEntry(kind = state.secretKind, busy = state.pinBusy, alternative = !pinOnly,
+                                compact = compact, onSubmit = onSubmitPin)
                         }
                     }
                     // Persistent (not a Toast): stays until the next attempt, read out by TalkBack.
@@ -240,31 +243,140 @@ fun AuthScreen(
     }
 }
 
-/** The app PIN field: digits only, masked, submitted with the keyboard's Done or the button. */
+/**
+ * The app code on the lock screen: a keypad for a PIN, a masked field for a password. In the
+ * "fingerprint or code" mode it starts folded behind a button, so the screen stays short.
+ */
 @Composable
-private fun PinEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
-    var pin by remember { mutableStateOf("") }
+private fun CodeEntry(
+    kind: com.cripta.app.security.SecretKind,
+    busy: Boolean,
+    alternative: Boolean,
+    compact: Boolean,
+    onSubmit: (CharArray) -> Unit,
+) {
+    var open by remember(alternative) { mutableStateOf(!alternative) }
+    if (!open) {
+        TextButton(onClick = { open = true }) { Text("Usa il ${kind.noun} di Cripta") }
+        return
+    }
+    if (kind == com.cripta.app.security.SecretKind.PIN) PinKeypad(busy, compact, onSubmit)
+    else PasswordEntry(busy, autoFocus = true, compact = compact, onSubmit = onSubmit)
+}
+
+/** Numeric keypad: dots for the digits typed, ⌫ (hold to clear), ✓ to unlock. */
+@Composable
+private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
+    var digits by remember { mutableStateOf("") }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val key = if (compact) 56.dp else 72.dp
+    val gap = if (compact) 10.dp else 16.dp
+    val ready = digits.length >= com.cripta.app.security.PinCrypto.MIN_LENGTH && !busy
+    fun tap() = haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+    fun add(d: Char) {
+        if (!busy && digits.length < com.cripta.app.security.PinCrypto.MAX_PIN_LENGTH) { tap(); digits += d }
+    }
+    fun submit() {
+        if (ready) {
+            onSubmit(digits.toCharArray())
+            digits = "" // never kept around, and cleared for the next try after a wrong PIN
+        }
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
+        androidx.compose.foundation.layout.Box(
+            Modifier.size(width = 240.dp, height = 28.dp).semantics {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = if (busy) "Verifica del PIN" else "${digits.length} cifre inserite"
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                busy -> androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                digits.isEmpty() -> Text("Inserisci il PIN", style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    repeat(digits.length) {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape),
+                        )
+                    }
+                }
+            }
+        }
+        listOf("123", "456", "789").forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                row.forEach { d -> KeypadKey(key, enabled = !busy, onClick = { add(d) }) { Text(d.toString(), style = MaterialTheme.typography.headlineMedium) } }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            KeypadKey(key, enabled = !busy && digits.isNotEmpty(), tonal = false,
+                onClick = { tap(); digits = digits.dropLast(1) }, onLongClick = { tap(); digits = "" },
+                label = "Cancella") {
+                Icon(Icons.AutoMirrored.Filled.Backspace, null)
+            }
+            KeypadKey(key, enabled = !busy, onClick = { add('0') }) { Text("0", style = MaterialTheme.typography.headlineMedium) }
+            KeypadKey(key, enabled = ready, primary = true, onClick = { submit() }, label = "Sblocca") {
+                Icon(Icons.Filled.Check, null)
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun KeypadKey(
+    size: androidx.compose.ui.unit.Dp,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    tonal: Boolean = true,
+    primary: Boolean = false,
+    label: String? = null,
+    content: @Composable () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val bg = when {
+        primary && enabled -> cs.primary
+        tonal -> cs.surfaceVariant
+        else -> androidx.compose.ui.graphics.Color.Transparent
+    }
+    val fg = if (primary && enabled) cs.onPrimary else cs.onSurface
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape).background(bg)
+            .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = onLongClick,
+                role = androidx.compose.ui.semantics.Role.Button, onClickLabel = label)
+            .graphicsLayer { alpha = if (enabled || primary) 1f else 0.38f }
+            .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides fg) { content() }
+    }
+}
+
+/** A password: masked text field, submitted with the keyboard's Done or the button. */
+@Composable
+private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
+    var text by remember { mutableStateOf("") }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
-    val ready = pin.length >= com.cripta.app.security.PinCrypto.MIN_LENGTH && !busy
+    val kind = com.cripta.app.security.SecretKind.PASSWORD
+    val ready = text.length >= com.cripta.app.security.PinCrypto.MIN_LENGTH && !busy
     val submit = {
         if (ready) {
-            onSubmit(pin.toCharArray())
-            pin = "" // never kept around, and cleared for the next try after a wrong PIN
+            onSubmit(text.toCharArray())
+            text = ""
         }
     }
     Column(horizontalAlignment = if (compact) Alignment.Start else Alignment.CenterHorizontally) {
         androidx.compose.material3.OutlinedTextField(
-            value = pin,
-            onValueChange = { v ->
-                if (v.length <= com.cripta.app.security.PinCrypto.MAX_LENGTH && v.all { it in '0'..'9' }) pin = v
-            },
-            label = { Text("PIN di Cripta") },
+            value = text,
+            onValueChange = { v -> if (com.cripta.app.security.PinCrypto.accepts(v, kind)) text = v },
+            label = { Text("Password di Cripta") },
             singleLine = true,
             enabled = !busy,
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
                 imeAction = androidx.compose.ui.text.input.ImeAction.Done,
             ),
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { submit() }),
@@ -275,7 +387,7 @@ private fun PinEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, onSubm
                 androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             }
-            Text(if (busy) "Verifica…" else "Sblocca con PIN")
+            Text(if (busy) "Verifica…" else "Sblocca")
         }
     }
 }

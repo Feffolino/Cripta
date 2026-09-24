@@ -286,10 +286,17 @@ class SettingsViewModel @Inject constructor(
     fun pinWaitSeconds(): Long = keyVault.pinWaitSeconds()
 
     /** Applies [mode]; [pin] when it uses the app PIN, [cipher] (authorized) when it uses the prompt. */
-    fun applyUnlockMode(mode: com.cripta.app.security.UnlockMode, pin: CharArray?, cipher: javax.crypto.Cipher?) =
+    val secretKind: com.cripta.app.security.SecretKind get() = keyVault.secretKind
+
+    fun applyUnlockMode(
+        mode: com.cripta.app.security.UnlockMode,
+        pin: CharArray?,
+        kind: com.cripta.app.security.SecretKind,
+        cipher: javax.crypto.Cipher?,
+    ) =
         viewModelScope.launch {
             val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                try { runCatching { keyVault.changeMode(mode, pin, cipher) } } finally { pin?.fill('0') }
+                try { runCatching { keyVault.changeMode(mode, pin, kind, cipher) } } finally { pin?.fill('0') }
             }
             r.onSuccess {
                 _unlockMode.value = keyVault.unlockMode

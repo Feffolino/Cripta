@@ -10,17 +10,17 @@ enum class UnlockMode(val label: String, val description: String) {
         "Impronta, volto o il PIN/sequenza del telefono. Come finora.",
     ),
     SYSTEM_OR_PIN(
-        "Impronta oppure PIN dell'app",
-        "Come sopra, e in alternativa un PIN solo di Cripta (utile quando l'impronta non va).",
+        "Impronta oppure codice dell'app",
+        "Basta l'impronta; in alternativa un PIN o una password solo di Cripta (utile quando l'impronta non va).",
     ),
     SYSTEM_AND_PIN(
-        "Impronta e PIN dell'app",
-        "Due passaggi: prima impronta o blocco del telefono, poi il PIN di Cripta. Chi ha un dito " +
-            "registrato sul telefono non entra senza il PIN.",
+        "Impronta e codice dell'app",
+        "Due passaggi: prima impronta o blocco del telefono, poi il PIN o la password di Cripta. Chi ha " +
+            "un dito registrato sul telefono non entra senza il codice.",
     ),
     PIN(
-        "Solo PIN dell'app",
-        "Solo il PIN di Cripta: impronte e PIN del telefono non aprono il vault.",
+        "Solo codice dell'app",
+        "Solo il PIN o la password di Cripta: impronte e blocco del telefono non aprono il vault.",
     );
 
     val usesSystem: Boolean get() = this != PIN
@@ -28,5 +28,15 @@ enum class UnlockMode(val label: String, val description: String) {
 
     companion object {
         fun from(name: String?): UnlockMode = entries.firstOrNull { it.name == name } ?: SYSTEM
+    }
+}
+
+/** The app's own secret: a numeric PIN (keypad on the lock screen) or an alphanumeric password. */
+enum class SecretKind(val noun: String) {
+    PIN("PIN"),
+    PASSWORD("password");
+
+    companion object {
+        fun from(name: String?): SecretKind = entries.firstOrNull { it.name == name } ?: PIN
     }
 }
