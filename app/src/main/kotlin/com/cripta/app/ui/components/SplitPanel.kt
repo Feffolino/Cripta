@@ -2,6 +2,7 @@ package com.cripta.app.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -110,7 +111,8 @@ fun SplitPanel(
     val latestDismiss by rememberUpdatedState(onDismiss)
     SideEffect { state.onClosed = { latestDismiss() } }
     LaunchedEffect(state) { state.open() }
-    BackHandler(onBack = state::close)
+    // Not while the vault is locked: Back then belongs to the lock screen.
+    BackHandler(enabled = !com.cripta.app.ui.LocalVaultLocked.current, onBack = state::close)
     val latestTop by rememberUpdatedState(onTop)
     DisposableEffect(state) { onDispose { latestTop(-1f) } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -157,12 +159,15 @@ fun SplitPanel(
             shadowElevation = 8.dp,
         ) {
             Column(Modifier.fillMaxSize()) {
+                // The handle: drag it, or tap it (TalkBack: "Chiudi pannello") to close.
                 Box(
-                    Modifier.fillMaxWidth().draggable(
-                        state = drag,
-                        orientation = Orientation.Vertical,
-                        onDragStopped = { v -> state.settle(v / panelH) },
-                    ),
+                    Modifier.fillMaxWidth()
+                        .clickable(onClickLabel = "Chiudi pannello", role = androidx.compose.ui.semantics.Role.Button) { state.close() }
+                        .draggable(
+                            state = drag,
+                            orientation = Orientation.Vertical,
+                            onDragStopped = { v -> state.settle(v / panelH) },
+                        ),
                     contentAlignment = Alignment.Center,
                 ) { BottomSheetDefaults.DragHandle() }
                 content()
