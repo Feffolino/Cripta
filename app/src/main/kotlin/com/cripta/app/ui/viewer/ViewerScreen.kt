@@ -1857,39 +1857,10 @@ private fun DetailsSheet(
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val sheetScope = rememberCoroutineScope()
-    // Opens in two steps (half, then full on a swipe up), closes in one: a swipe down from the full
-    // panel goes straight to closed instead of stopping at half. Landscape (short screen) opens
-    // fully at once.
-    // Remembered: the sheet state is re-created whenever this callback changes identity.
-    val sheetRef = remember { arrayOfNulls<androidx.compose.material3.SheetState>(1) }
-    val latestDismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
-    val confirmSheetValue: (androidx.compose.material3.SheetValue) -> Boolean = remember {
-        { v ->
-            val st = sheetRef[0]
-            if (st != null && v == androidx.compose.material3.SheetValue.PartiallyExpanded &&
-                st.currentValue == androidx.compose.material3.SheetValue.Expanded) {
-                sheetScope.launch { st.hide() }.invokeOnCompletion { if (!st.isVisible) latestDismiss() }
-                false
-            } else true
-        }
-    }
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
-        skipPartiallyExpanded = landscape,
-        confirmValueChange = confirmSheetValue,
-    )
-    sheetRef[0] = sheetState
-    // Fully open, the panel stops below the camera / status bar area instead of running under it.
-    val topGap = maxOf(
-        WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding(),
-        WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
-    ) + 8.dp
-    val close: () -> Unit = {
-        sheetScope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
-    }
-    // Back closes the panel and returns to the media. The sheet's own window does not always get the
-    // back event (immersive viewer), and then it went to the viewer, which closed instead.
-    androidx.activity.compose.BackHandler(onBack = close)
+    // The app's shared sheet (two-step opening, one-swipe close, Back, below the camera, full width
+    // in landscape); close() slides it away before an action opens a dialog or the editor.
+    val sheet = com.cripta.app.ui.components.rememberCriptaSheetState(onDismiss)
+    val close: () -> Unit = sheet::close
 
     val thumb by produceState<Bitmap?>(initialValue = null, file.id, refresh) { value = vm.thumbOf(file.id) }
     val kind = when {
@@ -1956,7 +1927,7 @@ private fun DetailsSheet(
                     )
                     a.onEditNote?.let { SheetActionButton(Icons.Filled.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
-                    a.onConvert?.let { SheetActionButton(Icons.Filled.Transform, "In MP4", leave(it), modifier = Modifier.weight(1f)) }
+                    a.onConvert?.let { SheetActionButton(Icons.Filled.Transform, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Delete, "Elimina", leave(a.onDelete),
                         tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 }
@@ -2018,21 +1989,12 @@ private fun DetailsSheet(
         }
     }
 
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        // Landscape: the full width (as in Impostazioni and Scarica) instead of a narrow centred strip.
-        sheetMaxWidth = if (landscape) 1400.dp else androidx.compose.material3.BottomSheetDefaults.SheetMaxWidth,
-    ) {
-      androidx.compose.foundation.layout.BoxWithConstraints {
-       Box(Modifier.heightIn(max = (maxHeight - topGap).coerceAtLeast(0.dp))) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, state = sheet) {
         if (landscape) {
             // Two columns that scroll on their own: details on the left, tags on the right, so the
             // tags are reachable without scrolling past the details on a short screen.
             Row(
-                Modifier.fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.displayCutout.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
-                    .padding(horizontal = 20.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
             ) {
                 Column(
@@ -2053,8 +2015,6 @@ private fun DetailsSheet(
                 header(); tiles(); tags(); HorizontalDividerCompat(); info()
             }
         }
-       }
-      }
     }
     editTag?.let { name ->
         val t = byName[name]
@@ -2106,7 +2066,9 @@ private fun SheetActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = tint)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1,
+        // Up to two lines: "Converti in MP4" reads in full instead of a cryptic short label.
+        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
     }
 }

@@ -239,6 +239,8 @@ class VaultViewModel @Inject constructor(
     val convertStatus: StateFlow<VaultRepository.ConvertStatus> = repo.convertStatus
     fun dismissConvertResult() = repo.dismissConvertResult()
     fun cancelConversion() = com.cripta.app.work.ConversionService.cancelConvert(appContext)
+    fun resolveOriginal(originalId: String, delete: Boolean) =
+        com.cripta.app.work.ConversionService.resolveOriginal(appContext, originalId, delete)
 
     val convertSettings: StateFlow<Pair<Boolean, Int>> =
         settings.settings.map { it.convertAfterChosen to it.trashDays }

@@ -46,6 +46,13 @@ class HomeViewModel @Inject constructor(
     /** Ask Settings to open its Strumenti page (the caller then switches tab). */
     fun openTools() = settingsNav.open(com.cripta.app.ui.settings.SettingsPage.STRUMENTI.name)
 
+    /** MP4 conversion progress / outcome, the same banner as in Cartelle. */
+    val convertStatus: kotlinx.coroutines.flow.StateFlow<VaultRepository.ConvertStatus> = repo.convertStatus
+    fun dismissConvertResult() = repo.dismissConvertResult()
+    fun cancelConversion() = com.cripta.app.work.ConversionService.cancelConvert(appContext)
+    fun resolveOriginal(originalId: String, delete: Boolean) =
+        com.cripta.app.work.ConversionService.resolveOriginal(appContext, originalId, delete)
+
     init {
         // Shred trash entries past their retention (only when the trash is in use).
         viewModelScope.launch {

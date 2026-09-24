@@ -1476,7 +1476,7 @@ private fun TrashDialog(
 
         // ---- details + actions of a file
         fileSheet?.let { f ->
-            androidx.compose.material3.ModalBottomSheet(onDismissRequest = { fileSheet = null }) {
+            com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { fileSheet = null }) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(f.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -1510,7 +1510,7 @@ private fun TrashDialog(
         // ---- details + actions of a folder
         folderSheet?.let { fo ->
             val under = filesUnder(fo.id)
-            androidx.compose.material3.ModalBottomSheet(onDismissRequest = { folderSheet = null }) {
+            com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { folderSheet = null }) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(fo.name, style = MaterialTheme.typography.titleMedium)

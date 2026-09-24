@@ -425,7 +425,7 @@ private fun folderLabel(f: FolderEntity, all: List<FolderEntity>): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FolderPickerSheet(folders: List<FolderEntity>, selected: Long?, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             Text("Salva in…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
             FolderRow("Radice", null, null, selected == null, 0) { onPick(null) }

@@ -675,7 +675,8 @@ fun VaultScreen(
             }
             ImportBanner(importState, onDismiss = vm::dismissImportResult,
                 onRemoveDuplicates = { vm.removeImportDuplicates() })
-            ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult)
+            ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult,
+                onResolveOriginal = vm::resolveOriginal)
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
             }
@@ -1047,7 +1048,7 @@ fun VaultScreen(
     }
 
     folderMenu?.let { folder ->
-        ModalBottomSheet(onDismissRequest = { folderMenu = null }) {
+        com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { folderMenu = null }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp).semantics { heading() })
@@ -1861,12 +1862,11 @@ private fun FilterSortSheet(
     /** Files matching right now, shown in the header (-1 = unknown). */
     resultCount: Int = -1,
 ) {
-    // Opens at half height (drag up for the rest) instead of jumping to the top of the screen.
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    // The shared sheet: opens at half height (drag up for the rest), one swipe down closes it.
     var naming by remember { mutableStateOf(false) }
     val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
         (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         // ---- Header: what the filters give, and the way back.
         Row(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 10.dp),
@@ -2326,7 +2326,7 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
         while (p != null && guard < 50) { d++; p = byId[p]?.parentId; guard++ }
         return d
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             Text("Sposta in…", style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
@@ -2743,8 +2743,7 @@ private fun CountPill(icon: ImageVector, count: Int, what: String, selected: Boo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String?, subtree: com.cripta.app.data.FolderStat? = null, onDismiss: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),
@@ -2871,7 +2870,12 @@ fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier) {
 
 /** Conversion queue status: current video + progress + how many wait, then the outcome. */
 @Composable
-private fun ConvertBanner(state: VaultRepository.ConvertStatus, onCancel: () -> Unit, onDismiss: () -> Unit) {
+fun ConvertBanner(
+    state: VaultRepository.ConvertStatus,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+    onResolveOriginal: (originalId: String, delete: Boolean) -> Unit = { _, _ -> },
+) {
     AnimatedVisibility(
         visible = state.active || state.lastResult != null,
         enter = androidx.compose.animation.expandVertically() + fadeIn(),
@@ -2906,6 +2910,16 @@ private fun ConvertBanner(state: VaultRepository.ConvertStatus, onCancel: () -> 
                     if (state.active) TextButton(onClick = onCancel) { Text("Annulla", color = on) }
                     else IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Filled.Close, "Chiudi", tint = on, modifier = Modifier.size(18.dp))
+                    }
+                }
+                // "Chiedimi alla fine": the same choice as the completion notification, here too.
+                val ask = state.askOriginalId
+                if (!state.active && ask != null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                        TextButton(onClick = { onResolveOriginal(ask, false) }) { Text("Mantieni", color = on) }
+                        androidx.compose.material3.FilledTonalButton(onClick = { onResolveOriginal(ask, true) }) {
+                            Text("Elimina originale")
+                        }
                     }
                 }
                 if (state.active) {
