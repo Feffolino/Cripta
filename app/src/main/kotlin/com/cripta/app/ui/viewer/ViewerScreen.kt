@@ -295,9 +295,44 @@ fun ViewerScreen(
     // changes with orientation and font size): the filmstrip and the details hint sit above it.
     var seekClear by remember { mutableStateOf(84.dp) }
     val chromeDensity = androidx.compose.ui.platform.LocalDensity.current
+    // Set while a one-finger gesture has turned out to be vertical (swipe up for details, down to
+    // close, scrolling a note/PDF): the pager is frozen until the finger lifts, so the small sideways
+    // drift of a swipe up no longer flings to the next video.
+    var verticalLock by remember { mutableStateOf(false) }
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
+            // Seen in the Initial pass, before the pager: decides the gesture's axis as soon as it
+            // passes the touch slop. Nothing is consumed, so the page below still gets every touch.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val slop = viewConfiguration.touchSlop
+                    var dx = 0f; var dy = 0f
+                    try {
+                        while (true) {
+                            val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!ch.pressed) break
+                            dx += ch.position.x - ch.previousPosition.x
+                            dy += ch.position.y - ch.previousPosition.y
+                            val ax = kotlin.math.abs(dx); val ay = kotlin.math.abs(dy)
+                            // Horizontal first: a real page swipe, leave it to the pager.
+                            if (ax > slop && ax >= ay) break
+                            if (ay > slop && ay > 1.5f * ax) { verticalLock = true; break }
+                        }
+                        // Locked: hold it until every finger is up.
+                        if (verticalLock) {
+                            while (true) {
+                                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                if (ev.changes.none { it.pressed }) break
+                            }
+                        }
+                    } finally {
+                        verticalLock = false
+                    }
+                }
+            }
             // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel,
             // swipe down closes the viewer.
             // Videos consume their touches in the player, so they use the handle below instead.
@@ -323,6 +358,7 @@ fun ViewerScreen(
     ) {
         HorizontalPager(
             state = pagerState, modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = !verticalLock,
             // Keyed by file so removing a page never shows the neighbour's stale state.
             key = { ids.getOrNull(it) ?: it },
         ) { page ->
@@ -1829,31 +1865,43 @@ private fun DetailsSheet(
     var creating by remember { mutableStateOf(false) }
     var showTech by remember { mutableStateOf(false) }
     val byName = remember(allTags) { allTags.associateBy { it.name } }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
-        ) {
-            Column {
-                Text(file.originalName, style = MaterialTheme.typography.titleLarge, maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text(
-                    "Aggiunto il " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                        .format(java.util.Date(file.createdAt)),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // Stats-style tiles.
-            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                DetailTile("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes), Modifier.weight(1f))
-                com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailTile("Durata", it, Modifier.weight(1f)) }
-                if (file.width != null && file.height != null) {
-                    DetailTile("Risoluzione", "${file.width}×${file.height}" +
-                        (com.cripta.app.ui.vault.qualityLabel(file.width, file.height)?.takeIf { isVid }?.let { " · $it" } ?: ""),
-                        Modifier.weight(1.3f))
-                }
-            }
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // Landscape: the screen is short, so the panel opens fully (no half-open step hiding the tags).
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = landscape)
+    val sheetScope = rememberCoroutineScope()
+    val close: () -> Unit = {
+        sheetScope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
+    }
+    // Back closes the panel and returns to the media. The sheet's own window does not always get the
+    // back event (immersive viewer), and then it went to the viewer, which closed instead.
+    androidx.activity.compose.BackHandler(onBack = close)
 
+    val header: @Composable () -> Unit = {
+        Column {
+            Text(file.originalName, style = MaterialTheme.typography.titleLarge, maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(
+                "Aggiunto il " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                    .format(java.util.Date(file.createdAt)),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    // Stats-style tiles.
+    val tiles: @Composable () -> Unit = {
+        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            DetailTile("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes), Modifier.weight(1f))
+            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailTile("Durata", it, Modifier.weight(1f)) }
+            if (file.width != null && file.height != null) {
+                DetailTile("Risoluzione", "${file.width}×${file.height}" +
+                    (com.cripta.app.ui.vault.qualityLabel(file.width, file.height)?.takeIf { isVid }?.let { " · $it" } ?: ""),
+                    Modifier.weight(1.3f))
+            }
+        }
+    }
+    val tags: @Composable () -> Unit = {
+        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Etichette", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 TextButton(onClick = { creating = true }) { Text("+ Nuova") }
@@ -1872,25 +1920,60 @@ private fun DetailsSheet(
                 },
                 onLongPress = { editTag = it },
             )
-
-            HorizontalDividerCompat()
-            LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
-            androidx.compose.foundation.text.selection.SelectionContainer {
-                Column {
-                    InfoLine("Tipo", file.mimeType)
-                    if (isVid && videoDiag.isNotBlank()) {
-                        Row(
-                            Modifier.fillMaxWidth().clickable { showTech = !showTech }.padding(top = 8.dp, bottom = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                            Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (showTech) "Comprimi" else "Espandi")
-                        }
-                        if (showTech) {
-                            Text(videoDiag, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+        }
+    }
+    val info: @Composable () -> Unit = {
+        LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Column {
+                InfoLine("Tipo", file.mimeType)
+                if (isVid && videoDiag.isNotBlank()) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { showTech = !showTech }.padding(top = 8.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (showTech) "Comprimi" else "Espandi")
+                    }
+                    if (showTech) {
+                        Text(videoDiag, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            }
+        }
+    }
+
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        // Landscape: the full width (as in Impostazioni and Scarica) instead of a narrow centred strip.
+        sheetMaxWidth = if (landscape) 1400.dp else androidx.compose.material3.BottomSheetDefaults.SheetMaxWidth,
+    ) {
+        if (landscape) {
+            // Two columns that scroll on their own: details on the left, tags on the right, so the
+            // tags are reachable without scrolling past the details on a short screen.
+            Row(
+                Modifier.fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.displayCutout.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
+            ) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+                ) {
+                    header(); tiles(); HorizontalDividerCompat(); info()
+                }
+                Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+                    tags()
+                }
+            }
+        } else {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+            ) {
+                header(); tiles(); tags(); HorizontalDividerCompat(); info()
             }
         }
     }
