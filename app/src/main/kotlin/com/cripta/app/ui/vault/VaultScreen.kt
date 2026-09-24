@@ -1890,8 +1890,10 @@ private fun FilterSortSheet(
                 .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // ---- Saved filters: one tap applies; the current set can be saved from here.
-            if (saved.isNotEmpty() || filters.active) {
+            // ---- Saved filters: one tap applies; the current set can be saved from here. Always
+            // shown (the save chip is just disabled without filters): appearing with the first
+            // filter pushed everything below it down under the finger.
+            run {
                 FilterGroup("Filtri salvati") {
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -2013,25 +2015,25 @@ private fun FilterSortSheet(
                     Text("Un tocco include, il secondo esclude (barrata), il terzo toglie.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     // With two or more tags included: must a file have all of them, or is one enough?
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = filters.tagIds.size >= 2,
-                        enter = fadeIn(Motion.enter()) + androidx.compose.animation.expandVertically(Motion.enter()),
-                        exit = fadeOut(Motion.exit()) + androidx.compose.animation.shrinkVertically(Motion.exit()),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("File con", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 12.dp))
-                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                                SegmentedButton(
-                                    selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
-                                    icon = {}, label = { Text("tutte") },
-                                )
-                                SegmentedButton(
-                                    selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
-                                    icon = {}, label = { Text("almeno una") },
-                                )
-                            }
+                    // Always in place (disabled below two tags): appearing with the second tag moved
+                    // every chip down, so the next tap landed on a different tag.
+                    val canMatch = filters.tagIds.size >= 2
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("File con", style = MaterialTheme.typography.bodyMedium,
+                            color = if (canMatch) androidx.compose.ui.graphics.Color.Unspecified
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(end = 12.dp))
+                        androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                            SegmentedButton(
+                                selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, enabled = canMatch,
+                                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
+                                icon = {}, label = { Text("tutte") },
+                            )
+                            SegmentedButton(
+                                selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, enabled = canMatch,
+                                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
+                                icon = {}, label = { Text("almeno una") },
+                            )
                         }
                     }
                     var query by remember { mutableStateOf("") }
