@@ -2,6 +2,8 @@ package com.cripta.app.ui.settings
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -170,7 +172,8 @@ private fun CurrentPinDialog(kind: SecretKind, onCheck: (CharArray, (String) -> 
         onDismissRequest = onDismiss,
         title = { Text(if (kind == SecretKind.PIN) "PIN attuale" else "Password attuale") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Scrolls on a short (landscape) screen with the keyboard open.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Inserisci il $noun di Cripta per confermare la modifica.")
                 PinField(pin, { pin = it; error = null }, if (kind == SecretKind.PIN) "PIN attuale" else "Password attuale",
                     kind, isError = error != null, supporting = error)
@@ -205,7 +208,8 @@ private fun NewPinDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (changing) "Nuovo codice" else "Scegli il codice di Cripta") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Scrolls on a short (landscape) screen with the keyboard open.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // PIN: a keypad on the lock screen. Password: letters, digits and symbols, keyboard.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SecretKind.entries.forEach { k ->
