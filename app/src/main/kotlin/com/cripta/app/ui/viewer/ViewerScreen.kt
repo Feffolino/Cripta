@@ -635,7 +635,8 @@ fun ViewerScreen(
         }
 
         // Split view: the panel is part of the screen, the media laid out above it.
-        if (showTags && splitDetails) currentFile?.let { detailsPanel(it, true) }
+        // Not in Picture-in-Picture: the small window shows the media alone.
+        if (showTags && splitDetails && !inPip) currentFile?.let { detailsPanel(it, true) }
     }
 
     val file = currentFile
