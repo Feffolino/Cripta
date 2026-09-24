@@ -438,6 +438,9 @@ fun ViewerScreen(
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
                 hideControlsTick = hideControlsTick,
+                // Split view open: the player's own controls are switched off (it would bring them
+                // back by itself, e.g. while paused, and they would shrink with the picture).
+                suppressControls = splitDetails && showTags,
             )
         }
 
@@ -844,6 +847,7 @@ private fun MediaPage(
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
+    suppressControls: Boolean = false,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -886,7 +890,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, suppressControls = suppressControls)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1157,6 +1161,8 @@ private fun VideoPlayer(
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
+    /** Split view open: no player controls at all (see ViewerScreen). */
+    suppressControls: Boolean = false,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1348,7 +1354,12 @@ private fun VideoPlayer(
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     // In PiP only the video shows: no controller.
-    LaunchedEffect(inPip) { playerViewRef?.useController = !inPip }
+    LaunchedEffect(inPip, suppressControls, playerViewRef) {
+        playerViewRef?.let { pv ->
+            pv.useController = !inPip && !suppressControls
+            if (suppressControls) pv.hideController()
+        }
+    }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
@@ -1620,7 +1631,8 @@ private fun VideoPlayer(
         // "Prossimo" card, bottom-right above the seek bar.
         val rem = remainingMs
         val window = minOf(prefs.autoNextSec * 1000L, totalMs / 3)
-        if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
+        // Not in the split view: it would shrink with the picture (the countdown still runs).
+        if (autoNextOn && !nextCancelled && !suppressControls && rem != null && window > 0 && rem <= window) {
             // Tap = play the next file now. In portrait, while the controls show, it sits right above
             // the filmstrip (and handle) instead of overlapping them.
             Surface(
@@ -1702,7 +1714,7 @@ private fun VideoPlayer(
 
         // One-time explanation of the invisible gestures.
         AnimatedVisibility(
-            visible = showGestureHint && !inPip,
+            visible = showGestureHint && !inPip && !suppressControls,
             enter = fadeIn(Motion.enter(Motion.LONG)),
             exit = fadeOut(Motion.exit(Motion.LONG)),
             modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
