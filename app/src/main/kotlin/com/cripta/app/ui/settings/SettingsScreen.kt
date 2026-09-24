@@ -1462,7 +1462,10 @@ private fun TrashDialog(
                     }
                     items(shownFiles.size, key = { "f" + shownFiles[it].id }) { i ->
                         val f = shownFiles[i]
-                        Column(Modifier.clip(MaterialTheme.shapes.medium).clickable(onClickLabel = "Dettagli") { fileSheet = f }) {
+                        // The rounded clip bounds the touch ripple; the bottom padding keeps the two text
+                        // lines out of its lower corners, which used to shave off their first/last letters.
+                        Column(Modifier.clip(MaterialTheme.shapes.medium).clickable(onClickLabel = "Dettagli") { fileSheet = f }
+                            .padding(bottom = 8.dp)) {
                             Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium)
                                 .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                                 val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
