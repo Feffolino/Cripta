@@ -416,6 +416,13 @@ fun ViewerScreen(
                     if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
                     if (valid && vm.playback.value.swipeToClose && dy > size.height * 0.15f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) closeOrLeaveSplit()
+                    // A sideways swipe nobody took (it started on the title bar or on the tag bar,
+                    // which sit above the pager and keep it from seeing the gesture): change file
+                    // here, as the pager would have.
+                    if (valid && kotlin.math.abs(dx) > size.width * 0.2f && kotlin.math.abs(dx) > 2 * kotlin.math.abs(dy)) {
+                        val target = (pagerState.currentPage + if (dx < 0) 1 else -1).coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+                        if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
+                    }
                 }
             },
     ) {
@@ -466,6 +473,10 @@ fun ViewerScreen(
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },
                 hideControlsTick = hideControlsTick,
+                // Split view: the player runs its controls on its own (tap / its timer). Kept in
+                // sync with the viewer's chrome both ways, the two kept re-showing and re-hiding
+                // each other in the resized player: an endless blink.
+                selfManagedControls = splitOpen,
             )
         }
 
@@ -602,8 +613,14 @@ fun ViewerScreen(
                 }
                 val onFile by produceState(initialValue = emptyList<String>(), qf.id, refresh) { value = vm.tagNamesOf(qf.id) }
                 if (quick.isNotEmpty()) {
+                    // The bar scrolls sideways only when its tags overflow, and never during a
+                    // vertical swipe: otherwise it took every swipe starting on a tag (changing
+                    // file, closing), which then did nothing.
+                    val quickState = androidx.compose.foundation.lazy.rememberLazyListState()
                     androidx.compose.foundation.lazy.LazyRow(
                         Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)),
+                        state = quickState,
+                        userScrollEnabled = !verticalLock && (quickState.canScrollForward || quickState.canScrollBackward),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {
@@ -856,6 +873,7 @@ private fun MediaPage(
     controlsTimeoutMs: Int,
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
+    selfManagedControls: Boolean = false,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -898,7 +916,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1169,6 +1187,8 @@ private fun VideoPlayer(
     /** True while paused or ended: the chrome then stays visible instead of auto-hiding. */
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
+    /** Split view: no sync between the player's controls and the viewer's chrome. */
+    selfManagedControls: Boolean = false,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1365,9 +1385,10 @@ private fun VideoPlayer(
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
     // show and hide together — including right after opening, when they used to drift apart.
-    LaunchedEffect(controlsVisible, playerViewRef, inPip) {
+    val selfManagedNow by androidx.compose.runtime.rememberUpdatedState(selfManagedControls)
+    LaunchedEffect(controlsVisible, playerViewRef, inPip, selfManagedControls) {
         val pv = playerViewRef ?: return@LaunchedEffect
-        if (inPip) return@LaunchedEffect
+        if (inPip || selfManagedControls) return@LaunchedEffect
         if (controlsVisible && !pv.isControllerFullyVisible) pv.showController()
         // Not only when fully visible: a controller still fading in must be hidden too.
         else if (!controlsVisible) pv.hideController()
@@ -1505,7 +1526,9 @@ private fun VideoPlayer(
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
                     setControllerVisibilityListener(
-                        PlayerView.ControllerVisibilityListener { vis -> onControlsVisibilityChanged(vis == View.VISIBLE) }
+                        PlayerView.ControllerVisibilityListener { vis ->
+                            if (!selfManagedNow) onControlsVisibilityChanged(vis == View.VISIBLE)
+                        }
                     )
                     // PlayerView shows/hides its controls on every finger lift, swipes included: the
                     // swipe up for the details (and down to close, the side brightness/volume drags,
