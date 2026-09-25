@@ -402,6 +402,10 @@ fun ViewerScreen(
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Final)
+                    // Split view: a gesture that starts on the panel belongs to the panel (scroll,
+                    // drag to close), never to the viewer (close, change file, details).
+                    val panelTop = sheetTopPx
+                    if (panelTop > 0f && down.position.y >= panelTop) return@awaitEachGesture
                     var dx = 0f; var dy = 0f
                     var valid = true
                     while (true) {
