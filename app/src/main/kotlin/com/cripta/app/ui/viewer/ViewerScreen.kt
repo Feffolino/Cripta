@@ -546,7 +546,7 @@ fun ViewerScreen(
                     Modifier.onGloballyPositioned { bottomChromeH = with(chromeDensity) { it.size.height.toDp() } },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, onPick = pick)
+                    if (showStrip) Filmstrip(ids, pagerState.currentPage, vm, playback, swipeLocked = verticalLock, onPick = pick)
                     detailsHint()
                 }
             }
@@ -1856,6 +1856,8 @@ private fun Filmstrip(
     vm: ViewerViewModel,
     prefs: ViewerViewModel.PlaybackPrefs,
     vertical: Boolean = false,
+    /** A vertical swipe is under way (see verticalLock): the horizontal strip must not take it. */
+    swipeLocked: Boolean = false,
     onPick: (Int) -> Unit,
 ) {
     val span = prefs.stripSpan.coerceIn(1, 4)
@@ -1932,8 +1934,11 @@ private fun Filmstrip(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { items(ids.size, key = { ids[it] }) { cell(it) } }
         } else {
+            // Not during a vertical swipe: the strip sits where the swipe up for the details starts,
+            // and its sideways scroll took that swipe as soon as the finger drifted a little.
             androidx.compose.foundation.lazy.LazyRow(
                 state = listState,
+                userScrollEnabled = !swipeLocked,
                 modifier = Modifier.width(extent).height(selH),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = edge),
                 horizontalArrangement = Arrangement.spacedBy(gap),
