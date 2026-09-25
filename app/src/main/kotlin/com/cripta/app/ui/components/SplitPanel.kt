@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -148,11 +147,10 @@ fun SplitPanel(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .height(with(LocalDensity.current) { panelH.toDp() })
                 .graphicsLayer { translationY = panelH * state.hidden.value }
-                // What the panel's children leave is consumed here: a swipe on the panel must not
-                // reach the viewer's own gestures underneath (close the viewer, change file).
-                .pointerInput(Unit) {
-                    awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
-                }
+                // Nothing is consumed here: consuming the panel's touches (to keep them from the
+                // viewer's gestures) made a slow scroll of its content fail, since a scroll checks
+                // that nobody took the touch before it starts. The viewer ignores gestures that
+                // begin on the panel instead (see its onTop area).
                 .nestedScroll(nested),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
