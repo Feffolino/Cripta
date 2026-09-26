@@ -3055,7 +3055,7 @@ private class SelAction(val icon: ImageVector, val label: String, val destructiv
 /**
  * The bottom selection bar. When its actions don't all fit (portrait), it scrolls sideways: the
  * last visible action is cut in half, the edge fades with a chevron pointing to the rest, and the
- * first couple of times ever it nudges on appearing to show that it moves.
+ * very first time it nudges on appearing to show that it moves.
  */
 @Composable
 private fun SelectionBar(actions: List<SelAction>) {
@@ -3071,13 +3071,13 @@ private fun SelectionBar(actions: List<SelAction>) {
                 // 4.5 per screen width: the half action at the edge says there is more.
                 val itemW = maxWidth / 4.5f
                 val density = LocalDensity.current
-                // The nudge only the first couple of times ever: after that the half-cut action, the
+                // The nudge only the very first time: after that the half-cut action, the
                 // fade and the chevron are enough, and sliding on every selection was too much.
                 val ctx = androidx.compose.ui.platform.LocalContext.current
                 LaunchedEffect(Unit) {
                     val prefs = ctx.getSharedPreferences("vault_hints", android.content.Context.MODE_PRIVATE)
                     val shown = prefs.getInt("selection_bar_nudges", 0)
-                    if (shown >= 2) return@LaunchedEffect
+                    if (shown >= 1) return@LaunchedEffect
                     prefs.edit().putInt("selection_bar_nudges", shown + 1).apply()
                     kotlinx.coroutines.delay(350)
                     val px = with(density) { (itemW * 0.6f).roundToPx() }
