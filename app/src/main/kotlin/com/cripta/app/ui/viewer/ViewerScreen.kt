@@ -475,7 +475,7 @@ fun ViewerScreen(
                 isCurrent = page == pagerState.currentPage,
                 chromeVisible = chromeVisible,
                 vm = vm,
-                setChrome = { chromeVisible = it },
+                setChrome = { if (!holdControls || !it) chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
                 onOpenDetails = { showTags = true },
                 onClose = closeOrLeaveSplit,
@@ -1400,20 +1400,20 @@ private fun VideoPlayer(
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     // In PiP only the video shows: no controller.
-    LaunchedEffect(inPip, playerViewRef, controlsHeld) {
-        playerViewRef?.let { pv ->
-            pv.useController = !inPip && !controlsHeld
-            if (controlsHeld) pv.hideController()
-        }
-    }
+    LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
+    // Held (details sheet open, or just closed): the controller stays enabled, but any attempt to
+    // show it is undone at once (see the visibility listener) and never reaches the viewer's chrome.
+    // Switching the controller off and back on made it flash a couple of times around the sheet.
+    val heldNow by androidx.compose.runtime.rememberUpdatedState(controlsHeld)
+    LaunchedEffect(controlsHeld, playerViewRef) { if (controlsHeld) playerViewRef?.hideController() }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
     // show and hide together — including right after opening, when they used to drift apart.
     val selfManagedNow by androidx.compose.runtime.rememberUpdatedState(selfManagedControls)
-    LaunchedEffect(controlsVisible, playerViewRef, inPip, selfManagedControls) {
+    LaunchedEffect(controlsVisible, playerViewRef, inPip, selfManagedControls, controlsHeld) {
         val pv = playerViewRef ?: return@LaunchedEffect
-        if (inPip || selfManagedControls) return@LaunchedEffect
+        if (inPip || selfManagedControls || controlsHeld) return@LaunchedEffect
         if (controlsVisible && !pv.isControllerFullyVisible) pv.showController()
         // Not only when fully visible: a controller still fading in must be hidden too.
         else if (!controlsVisible) pv.hideController()
@@ -1552,6 +1552,10 @@ private fun VideoPlayer(
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
                     setControllerVisibilityListener(
                         PlayerView.ControllerVisibilityListener { vis ->
+                            if (heldNow) {
+                                if (vis == View.VISIBLE) post { hideController() }
+                                return@ControllerVisibilityListener
+                            }
                             if (!selfManagedNow) onControlsVisibilityChanged(vis == View.VISIBLE)
                         }
                     )
