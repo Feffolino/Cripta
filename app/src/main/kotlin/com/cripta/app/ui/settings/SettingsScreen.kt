@@ -1388,6 +1388,8 @@ private fun IslandDebugSection() {
             }
             androidx.compose.material3.AssistChip(onClick = { com.cripta.app.work.ConversionService.debugChoice(ctx) }, label = { Text("Solo scelta") })
         }
+        ChoiceRow("Durata prova", listOf(3 to "3 s", 5 to "5 s", 10 to "10 s", 20 to "20 s"), c.sampleSeconds) { update(c.copy(sampleSeconds = it)) }
+        ChoiceRow("Esito nell'isola per", listOf(3 to "3 s", 5 to "5 s", 8 to "8 s", 15 to "15 s"), c.resultSeconds) { update(c.copy(resultSeconds = it)) }
         ChoiceRow("Modello espanso", listOf("chat" to "Chat", "base" to "Base"), c.template) { update(c.copy(template = it)) }
         ChoiceRow("Tasti", listOf("icon" to "Icone rotonde", "pill" to "Testo accanto", "row" to "Riga sotto"), c.buttons) { update(c.copy(buttons = it)) }
         ChoiceRow("Aggiornamenti", listOf(500 to "0,5 s", 1000 to "1 s", 2000 to "2 s"), c.intervalMs) { update(c.copy(intervalMs = it)) }
