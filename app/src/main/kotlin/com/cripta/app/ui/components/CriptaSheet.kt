@@ -28,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -118,9 +121,10 @@ fun CriptaSheet(
      */
     heightFraction: Float? = null,
     /**
-     * false: scrolling the content never drags the sheet down (it closes by its handle, Back or a
-     * tap outside). For short, fully-open sheets with scrolling columns (landscape details), where
-     * a scroll that reached the top kept turning into a close.
+     * false: a scroll of the content only drags the sheet down (and closes it) when the gesture
+     * STARTS with the content already at its top. A scroll that was moving the content and reaches
+     * the top stops there instead of carrying on into a close. For short, fully-open sheets with
+     * scrolling columns (landscape details), where reading kept turning into closing.
      */
     contentDragCloses: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
@@ -149,20 +153,31 @@ fun CriptaSheet(
     ) {
         BoxWithConstraints {
             val limit = (maxHeight - topGap).coerceAtLeast(0.dp)
-            // Swallows what the content's scrolls leave going down, before the sheet (its parent in
-            // the nested-scroll chain) can turn it into a drag or a fling to close.
+            // Between the content and the sheet (its parent in the nested-scroll chain): a gesture
+            // that moved the content keeps its downward leftover (and fling) from reaching the
+            // sheet; one that starts with the content at its top goes through and drags it.
             val keepOpen = remember {
                 object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                    var scrolledContent = false
                     override fun onPostScroll(
                         consumed: androidx.compose.ui.geometry.Offset,
                         available: androidx.compose.ui.geometry.Offset,
                         source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
-                    ) = androidx.compose.ui.geometry.Offset(0f, available.y.coerceAtLeast(0f))
+                    ): androidx.compose.ui.geometry.Offset {
+                        if (consumed.y != 0f) scrolledContent = true
+                        return if (scrolledContent) androidx.compose.ui.geometry.Offset(0f, available.y.coerceAtLeast(0f))
+                        else androidx.compose.ui.geometry.Offset.Zero
+                    }
 
                     override suspend fun onPostFling(
                         consumed: androidx.compose.ui.unit.Velocity,
                         available: androidx.compose.ui.unit.Velocity,
-                    ) = androidx.compose.ui.unit.Velocity(0f, available.y.coerceAtLeast(0f))
+                    ): androidx.compose.ui.unit.Velocity {
+                        val keep = scrolledContent || consumed.y != 0f
+                        scrolledContent = false
+                        return if (keep) androidx.compose.ui.unit.Velocity(0f, available.y.coerceAtLeast(0f))
+                        else androidx.compose.ui.unit.Velocity.Zero
+                    }
                 }
             }
             Column(
@@ -171,7 +186,18 @@ fun CriptaSheet(
                         if (landscape) Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         else Modifier
                     )
-                    .then(if (contentDragCloses) Modifier else Modifier.nestedScroll(keepOpen)),
+                    .then(
+                        if (contentDragCloses) Modifier
+                        else Modifier
+                            // A new touch is a new gesture: it may close the sheet again.
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                    keepOpen.scrolledContent = false
+                                }
+                            }
+                            .nestedScroll(keepOpen)
+                    ),
             ) {
                 // Inside the sheet's own window (its dialog dispatcher), where Back arrives while it
                 // has focus; the handler above covers the case where the screen's window gets it.
