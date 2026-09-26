@@ -57,12 +57,34 @@ internal object HyperFocus {
         null
     }
 
+    /**
+     * The focus protocol version the system speaks (HyperOS publishes it in Settings.System;
+     * 0 = unknown). A payload newer than the system's is ignored, so it is written in this one.
+     */
+    private fun protocol(ctx: Context): Int = try {
+        android.provider.Settings.System.getInt(ctx.contentResolver, "notification_focus_protocol", 0)
+    } catch (e: Exception) {
+        0
+    }
+
+    @SuppressLint("PrivateApi")
+    private fun osVersion(): String? = try {
+        Class.forName("android.os.SystemProperties").getDeclaredMethod("get", String::class.java)
+            .invoke(null, "ro.mi.os.version.name") as? String
+    } catch (e: Exception) {
+        null
+    }?.takeIf { it.isNotBlank() }
+
     /** For Impostazioni › Informazioni: what the phone says about the island, to tell why it does or doesn't show. */
     fun diagnosis(ctx: Context): String {
         if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return "Non disponibile (non Xiaomi)"
         val island = islandFeature()
+        val details = listOfNotNull(
+            protocol(ctx).takeIf { it > 0 }?.let { "protocollo $it" },
+            osVersion()?.let { "HyperOS $it" },
+        ).joinToString(", ").let { if (it.isEmpty()) "" else " ($it)" }
         return when (canShowFocus(ctx)) {
-            true -> if (island) "Attiva" else "Consentita, isola non segnalata"
+            true -> if (island) "Attiva$details" else "Consentita, isola non segnalata$details"
             false -> if (island) "Non consentita per Cripta" else "Non disponibile su questo sistema"
             null -> if (island) "Isola presente, permesso sconosciuto" else "Non disponibile su questo sistema"
         }
@@ -112,7 +134,7 @@ internal object HyperFocus {
                 .put("textInfo", JSONObject().put("title", title)))
         right.keys().forEach { big.put(it, right.get(it)) }
         val param = JSONObject()
-            .put("protocol", 3)
+            .put("protocol", protocol(ctx).takeIf { it in 1..3 } ?: 3)
             .put("business", business)
             .put("updatable", true)
             .put("ticker", chip)
