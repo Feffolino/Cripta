@@ -145,15 +145,17 @@ internal object HyperFocus {
                 .put("smallIslandArea", small)
                 .put("bigIslandArea", big))
         if (progress != null) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
+        // Variant B (to compare with the text buttons): the buttons as the template's actions,
+        // as HyperBridge sends them: text-only (type 2), intent type 1, a background colour.
         if (buttons.isNotEmpty()) {
-            param.put("textButton", JSONArray().apply {
+            param.put("actions", JSONArray().apply {
                 buttons.forEach { b ->
                     put(JSONObject()
-                        .put("type", 1)
+                        .put("type", 2)
+                        .put("action", ACTION + b.key)
                         .put("actionTitle", b.title)
-                        .put("actionIntentType", if (b.service) 3 else 1)
-                        .put("actionIntent", ACTION + b.key)
-                        .put("action", ACTION + b.key))
+                        .put("actionIntentType", 1)
+                        .put("actionBgColor", "#FF2F6FB3"))
                 }
             })
         }
