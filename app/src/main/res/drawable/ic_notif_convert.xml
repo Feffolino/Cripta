@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar / Live Update icon (conversion to MP4, same glyph as in the app): Android draws only the alpha channel. Material icon. -->
+<!-- Notification / Live Update icon (conversion to MP4): the Cripta shield with the operation's symbol cut
+     out (evenOdd), so the app stays recognisable in the status bar and the Hyper Island. Android
+     draws only the alpha channel. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +9,6 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,6v3l4,-4 -4,-4v3c-4.42,0 -8,3.58 -8,8 0,1.57 0.46,3.03 1.24,4.26L6.7,14.8c-0.45,-0.83 -0.7,-1.79 -0.7,-2.8 0,-3.31 2.69,-6 6,-6zM18.76,7.74L17.3,9.2c0.44,0.84 0.7,1.79 0.7,2.8 0,3.31 -2.69,6 -6,6v-3l-4,4 4,4v-3c4.42,0 8,-3.58 8,-8 0,-1.57 -0.46,-3.03 -1.24,-4.26z" />
+        android:fillType="evenOdd"
+        android:pathData="M12,1.5 L20.5,5.2 L20.5,11.5 C20.5,17.2 16.9,21.4 12,22.8 C7.1,21.4 3.5,17.2 3.5,11.5 L3.5,5.2 Z M 12,9.14 v 1.38 l 1.84,-1.84 -1.84,-1.84 v 1.38 c -2.033,0,-3.68,1.647,-3.68,3.68 0,0.722,0.212,1.394,0.57,1.96 L 9.562,13.188 c -0.207,-0.382,-0.322,-0.823,-0.322,-1.288 0,-1.523,1.237,-2.76,2.76,-2.76 z m 3.11,0.8 L 14.438,10.612 c 0.202,0.386,0.322,0.823,0.322,1.288 0,1.523,-1.237,2.76,-2.76,2.76 v -1.38 l -1.84,1.84 1.84,1.84 v -1.38 c 2.033,0,3.68,-1.647,3.68,-3.68 0,-0.722,-0.212,-1.394,-0.57,-1.96 z" />
 </vector>

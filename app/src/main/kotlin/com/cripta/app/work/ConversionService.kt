@@ -69,6 +69,46 @@ class ConversionService : Service() {
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
+        // Import / export: stop after the file being processed (never half a file).
+        if (mode == MODE_CANCEL_BATCH) {
+            batchCancel = true
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        // "Elimina originali / Mantieni" of an import with the "Chiedi" policy (notification or app).
+        if (mode == MODE_ORIGINALS_DELETE || mode == MODE_ORIGINALS_KEEP) {
+            getSystemService(NotificationManager::class.java).cancel(ResultKind.IMPORT.id)
+            val uris = repo.pendingOriginals.value
+            repo.clearPendingOriginals()
+            if (mode == MODE_ORIGINALS_KEEP || uris.isEmpty()) { stopIfIdle(startId); return START_NOT_STICKY }
+            active.incrementAndGet()
+            lastStartId = startId
+            scope.launch {
+                try {
+                    repo.deleteOriginals(uris)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.e("ConversionService", "delete originals failed", e)
+                } finally {
+                    if (active.decrementAndGet() == 0) stopSelf(lastStartId)
+                }
+            }
+            return START_NOT_STICKY
+        }
+        // "Riprova" on a failed download: only with the vault open (it writes into the vault; the
+        // button must not do anything for someone holding the phone while Cripta is locked).
+        if (mode == MODE_DOWNLOAD_URL && intent.getBooleanExtra(EX_RETRY, false) && session.locked.value) {
+            ensureChannel()
+            // Started as a foreground service (the button's PendingIntent): it must go foreground
+            // before leaving, even to do nothing.
+            startForeground(NOTIF_ID, build("Download", 0, indeterminate = true, icon = R.drawable.ic_notif_download))
+            if (active.get() == 0) stopForeground(STOP_FOREGROUND_REMOVE)
+            notifyResult("Download non riuscito", "Sblocca Cripta, poi tocca Riprova", ResultKind.DOWNLOAD, state = ResultState.FAILED,
+                actions = listOf(retryAction(intent)))
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
         if (mode == MODE_CANCEL_CONVERT) {
             currentConvertJob?.cancel()
             stopIfIdle(startId)
@@ -121,6 +161,7 @@ class ConversionService : Service() {
         lastStartId = startId
         startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
         if (mode == MODE_DOWNLOAD_URL) {
+            if (intent.getBooleanExtra(EX_RETRY, false)) getSystemService(NotificationManager::class.java).cancel(ResultKind.DOWNLOAD.id)
             val url = intent.getStringExtra(EX_URL)
             if (url != null) {
                 val job = VaultRepository.DownloadJob(
@@ -161,7 +202,7 @@ class ConversionService : Service() {
                     }
                     MODE_DOWNLOAD -> {
                         val ids = intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
-                        run("Download", ids.size) { i -> repo.fileById(ids[i])?.let { repo.restoreToGallery(it) } }
+                        exportBatch(ids)
                     }
                     MODE_CONVERT -> {
                         val after = intent.getIntExtra(EX_CONVERT_AFTER, -1)
@@ -217,23 +258,46 @@ class ConversionService : Service() {
     /** True when the user hit Cancel, so a resulting yt-dlp failure is reported as "annullato". */
     @Volatile private var cancelRequested = false
 
-    private inline fun run(label: String, total: Int, op: (Int) -> Unit) {
+    /** Set by the Annulla of an import / export: the batch stops after the current file. */
+    @Volatile private var batchCancel = false
+
+    /** Decrypt [ids] back to the gallery one by one ("Esporta"), with progress and a final result. */
+    private suspend fun exportBatch(ids: List<String>) {
+        val total = ids.size
         if (total == 0) return
+        batchCancel = false
         val start = SystemClock.elapsedRealtime()
-        for (i in 0 until total) {
+        var saved = 0; var failed = 0; var done = 0
+        notify(build("Esportazione in galleria", 0, sub = "File 1 di $total", chip = "0/$total",
+            cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+        for (id in ids) {
+            if (batchCancel) break
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
-                op(i)
+                val f = repo.fileById(id)
+                if (f != null) { repo.restoreToGallery(f); saved++ } else failed++
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                android.util.Log.e("ConversionService", "$label item $i failed", e)
+                android.util.Log.e("ConversionService", "export item failed", e)
+                failed++
             }
-            val done = i + 1
+            done++
             val pct = done * 100 / total
             val elapsed = SystemClock.elapsedRealtime() - start
-            val eta = if (done > 0) (elapsed / done) * (total - done) else 0L
-            notify(build("$label $done/$total", pct, sub = "${pct}% · ${etaText(eta)}", icon = R.drawable.ic_notif_download))
+            val eta = if (done < total) etaText(elapsed / done * (total - done)) else null
+            notify(build("Esportazione in galleria", pct, sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
+                chip = "$done/$total", header = eta, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+        }
+        val cancelled = done < total
+        val text = buildString {
+            append(if (saved == 1) "1 file salvato nella galleria" else "$saved file salvati nella galleria")
+            if (failed > 0) append(" · $failed non esportati")
+        }
+        when {
+            cancelled -> notifyResult("Esportazione annullata", text, ResultKind.EXPORT, state = ResultState.CANCELLED)
+            saved == 0 -> notifyResult("Esportazione non riuscita", text, ResultKind.EXPORT, state = ResultState.FAILED)
+            else -> notifyResult(if (failed == 0) "Esportazione completata" else "Esportazione completata con errori", text, ResultKind.EXPORT)
         }
     }
 
@@ -246,14 +310,17 @@ class ConversionService : Service() {
         if (uris.isEmpty()) return emptyList()
         val done = mutableListOf<Uri>()
         repo.importBegin(uris.size)
+        batchCancel = false
+        var cancelled = false
         val start = SystemClock.elapsedRealtime()
         try {
             for (uri in uris) {
+                if (batchCancel) { cancelled = true; break }
                 val (name, size) = repo.nameAndSize(uri)
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = "Cifratura in corso", icon = R.drawable.ic_notif_import))
+                notify(importNote(st.done + 1, st.total, (st.fraction * 100).toInt(), "cifratura in corso", start))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -263,8 +330,8 @@ class ConversionService : Service() {
                         if (now - lastNotify > 500) {
                             lastNotify = now
                             val cur = repo.importState.value
-                            val filePct = if (size > 0) "File al ${(bytes * 100 / size).coerceAtMost(100)}%" else "Cifratura in corso"
-                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = filePct, icon = R.drawable.ic_notif_import))
+                            val filePct = if (size > 0) "cifrato al ${(bytes * 100 / size).coerceAtMost(100)}%" else "cifratura in corso"
+                            notify(importNote(cur.done + 1, cur.total, (cur.fraction * 100).toInt(), filePct, start))
                         }
                     }
                     true
@@ -286,25 +353,46 @@ class ConversionService : Service() {
                 repo.importItemDone(ok, if (ok) uri else null)
                 if (ok) done += uri
                 val cur = repo.importState.value
-                val elapsed = SystemClock.elapsedRealtime() - start
-                val left = cur.total - cur.done
-                val eta = if (cur.done > 0 && left > 0) " · ${etaText(elapsed / cur.done * left)}" else ""
-                notify(build("Importazione ${cur.done}/${cur.total}", (cur.fraction * 100).toInt(), sub = "${(cur.fraction * 100).toInt()}%$eta", icon = R.drawable.ic_notif_import))
+                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, (cur.fraction * 100).toInt(), "in coda", start))
             }
         } finally {
             withContext(NonCancellable) {
                 repo.importEnd()?.let { fin ->
-                    val title = if (fin.failed == 0) "Importazione completata" else "Importazione completata con errori"
-                    val text = buildString {
-                        append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
-                        if (fin.failed > 0) append(" · ${fin.failed} non importati")
-                        if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
+                    val title = when {
+                        cancelled -> "Importazione annullata"
+                        fin.succeeded == 0 && fin.failed > 0 -> "Importazione non riuscita"
+                        fin.failed == 0 -> "Importazione completata"
+                        else -> "Importazione completata con errori"
                     }
-                    notifyResult(title, text, ResultKind.IMPORT)
+                    val text = importSummary(fin)
+                    lastImportSummary = text
+                    notifyResult(title, text, ResultKind.IMPORT, state = when {
+                        cancelled -> ResultState.CANCELLED
+                        fin.succeeded == 0 && fin.failed > 0 -> ResultState.FAILED
+                        else -> ResultState.DONE
+                    })
                 }
             }
         }
         return done
+    }
+
+    /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti". */
+    private fun importSummary(fin: VaultRepository.ImportState) = buildString {
+        append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
+        if (fin.failed > 0) append(" · ${fin.failed} non importati")
+        if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
+    }
+    /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
+    @Volatile private var lastImportSummary: String? = null
+
+    /** Progress of an import: file [n] of [total] and what is happening to it; never its name. */
+    private fun importNote(n: Int, total: Int, pct: Int, what: String, start: Long): Notification {
+        val done = n - 1
+        val elapsed = SystemClock.elapsedRealtime() - start
+        val eta = if (done > 0 && done < total) etaText(elapsed / done * (total - done)) else null
+        return build("Importazione", pct, sub = "File $n di $total · $what", chip = "$done/$total", header = eta,
+            cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
     }
 
     /** Conversions run strictly one at a time: parallel transcodes fight over the hardware
@@ -333,7 +421,9 @@ class ConversionService : Service() {
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
         // No file names in notifications (the in-app banner shows it, behind the lock).
-        notify(build("Conversione in MP4", 0, sub = "Preparazione…", indeterminate = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
+        val queued = { convertWaiting.get().let { if (it > 0) "$it in coda" else null } }
+        notify(build("Conversione in MP4", 0, sub = "Preparazione del video…", indeterminate = true, header = queued(),
+            cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
         var src: java.io.File? = null
         var out: java.io.File? = null
         var result: Pair<Boolean, String>? = null
@@ -348,8 +438,8 @@ class ConversionService : Service() {
                 converter.toMp4(src!!, out!!, bitrate) { pct ->
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
-                    val q = convertWaiting.get().let { if (it > 0) " · $it in coda" else "" }
-                    notify(build("Conversione in MP4", pct, sub = "$pct%$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
+                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", header = queued(),
+                        cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
                 }
             }
             // Never import a broken transcode (a corrupt output that looked valid could lead to losing
@@ -357,7 +447,7 @@ class ConversionService : Service() {
             val problem = verifyConversion(out!!, src!!, file.durationMs)
             if (problem != null) {
                 result = false to "Conversione scartata: $problem. Originale intatto."
-                notifyResult("Conversione non riuscita", "$problem · originale intatto")
+                notifyResult("Conversione non riuscita", "${problem.replaceFirstChar { it.uppercase() }} · originale intatto", state = ResultState.FAILED)
                 return
             }
             val mode = afterOverride
@@ -375,9 +465,9 @@ class ConversionService : Service() {
                 }
                 com.cripta.app.data.ConvertAfter.REPLACE -> {
                     val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
-                    notifyResult("Convertito in MP4", "Originale nel cestino per $days giorni")
+                    notifyResult("Conversione completata", "Copia MP4 creata · originale nel cestino per $days giorni")
                 }
-                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Convertito in MP4", "Copia MP4 aggiunta accanto all'originale")
+                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Conversione completata", "Copia MP4 aggiunta accanto all'originale")
             }
             result = true to when {
                 replace -> "Convertito: ${newFile.originalName} (originale nel cestino)"
@@ -386,13 +476,13 @@ class ConversionService : Service() {
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             result = false to "Conversione annullata. Originale intatto."
-            notifyResult("Conversione annullata", "File originale intatto")
+            notifyResult("Conversione annullata", "File originale intatto", state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "convert failed: $id", e)
             val msg = convertErrorText(e)
             result = false to "Conversione fallita: $msg. Originale intatto."
-            notifyResult("Conversione fallita", msg)
+            notifyResult("Conversione non riuscita", "${msg.replaceFirstChar { it.uppercase() }} · originale intatto", state = ResultState.FAILED)
         } finally {
             withContext(NonCancellable) {
                 src?.let { repo.shredTempFile(it) }
@@ -492,7 +582,8 @@ class ConversionService : Service() {
             if (now - last > 400 || done == total) {
                 last = now
                 val pct = if (total > 0) done * 100 / total else 0
-                notify(build(label, pct, sub = "$done di $total", indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
+                notify(build(label, pct, sub = if (total > 0) "$done di $total elementi confrontati" else "Preparazione…",
+                    indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
             }
         }
         try {
@@ -506,17 +597,19 @@ class ConversionService : Service() {
             dupStore.finish(com.cripta.app.data.dedup.DupScanStore.Result(mode, groups, scanned))
             val title = if (groups.isEmpty()) "$label completata" else if (similar) "Media simili trovati" else "Duplicati trovati"
             val text = if (groups.isEmpty()) "Nessun risultato su $scanned elementi"
-                else "${groups.size} gruppi su $scanned elementi · tocca per confrontarli"
-            notifyResult(title, text, ResultKind.SCAN, openDuplicates = true)
+                else "${groups.size} gruppi su $scanned elementi"
+            notifyResult(title, text, ResultKind.SCAN, openDuplicates = true,
+                actions = if (groups.isEmpty()) emptyList()
+                    else listOf(NotificationCompat.Action(0, "Vedi risultati", openAppIntent(openDuplicates = true))))
         } catch (e: kotlinx.coroutines.CancellationException) {
             dupStore.cancelled()
-            notifyResult("$label annullata", null, ResultKind.SCAN)
+            notifyResult("$label annullata", null, ResultKind.SCAN, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "duplicate scan failed", e)
             val msg = UserErrors.of(e)
             dupStore.fail(msg)
-            notifyResult("$label non riuscita", msg, ResultKind.SCAN)
+            notifyResult("$label non riuscita", msg, ResultKind.SCAN, state = ResultState.FAILED)
         } finally {
             scanJob = null
         }
@@ -558,21 +651,22 @@ class ConversionService : Service() {
             set { it.copy(phase = VaultRepository.DownloadPhase.PREPARING) }
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
-            notify(build("Preparazione…", 0, indeterminate = true, cancelable = true, icon = R.drawable.ic_notif_download))
+            val queued = { waiting().let { if (it > 0) "$it in coda" else null } }
+            notify(build("Download", 0, sub = "Analisi del link…", indeterminate = true, header = queued(), cancelable = true, icon = R.drawable.ic_notif_download))
             produced = withContext(Dispatchers.IO) {
                 ytdlp.download(url, job.maxHeight, pid) { pct, eta ->
                     repo.setConversionProgress(pct)
                     set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = eta) }
-                    val q = waiting().let { if (it > 0) " · $it in coda" else "" }
-                    val sub = (if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%") + q
-                    notify(build("Download in corso", pct, sub = sub, cancelable = true, icon = R.drawable.ic_notif_download))
+                    val sub = if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%"
+                    notify(build("Download", pct, sub = sub, header = queued(), cancelable = true, icon = R.drawable.ic_notif_download))
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             if (!isPlayableVideo(produced, null)) {
                 val msg = "Nessun video valido (link errato o DRM)"
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download fallito", msg, ResultKind.DOWNLOAD)
+                notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
+                    actions = listOf(retryAction(job)))
                 return
             }
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
@@ -582,19 +676,20 @@ class ConversionService : Service() {
             notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
         } catch (e: kotlinx.coroutines.CancellationException) {
             set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
-            notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
+            notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
             // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
                 set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
-                notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
+                notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             } else {
                 android.util.Log.e("ConversionService", "download failed: $url", e)
                 val msg = UserErrors.ofDownload(e)
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download fallito", msg, ResultKind.DOWNLOAD)
+                notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
+                    actions = listOf(retryAction(job)))
             }
         } finally {
             ytdlpProcessId = null
@@ -624,8 +719,12 @@ class ConversionService : Service() {
             } catch (e: Exception) {
                 android.util.Log.e("ConversionService", "delete originals failed", e)
             }
-            // "Chiedi": hand them to the app, which shows the keep/delete prompt in the vault.
-            DeleteOriginalPolicy.ASK -> repo.addPendingOriginals(uris)
+            // "Chiedi": the app shows the keep/delete prompt in the vault, and the import's result
+            // notification becomes the same choice (it stays in the Hyper Island until answered).
+            DeleteOriginalPolicy.ASK -> {
+                repo.addPendingOriginals(uris)
+                postOriginalsChoice(repo.pendingOriginals.value.size)
+            }
             DeleteOriginalPolicy.NEVER -> Unit
         }
     }
@@ -664,6 +763,18 @@ class ConversionService : Service() {
         }
     }
 
+    /**
+     * The ongoing notification of an operation, laid out the same way for all of them:
+     *  - title: the operation ("Download", "Importazione"…), never a file name or title;
+     *  - text: what is happening now ("File 3 di 10 · cifrato al 40%", "Codifica del video · 42%");
+     *  - [header]: a short extra next to the app name (time left, how many are queued);
+     *  - the progress bar and, with [cancelable], an Annulla button;
+     *  - Android 16 Live Update (status chip, lock screen; HyperOS 3 shows it in the Hyper Island):
+     *    compact it shows the operation's [icon] (the Cripta shield with its symbol) and [chip]
+     *    (default: the percentage, "Avvio" while there is none yet).
+     * The Live Update keys are set by name: the constants are API 36 and the project compiles
+     * against 34; older systems ignore them. The user can still turn it off per app.
+     */
     private fun build(
         title: String,
         pct: Int,
@@ -671,31 +782,30 @@ class ConversionService : Service() {
         indeterminate: Boolean = false,
         cancelable: Boolean = false,
         cancelMode: String = MODE_CANCEL,
-        /** The operation's own icon: the Live Update chip / Hyper Island shows little else. */
         icon: Int = R.drawable.ic_notification,
+        chip: String? = null,
+        header: String? = null,
     ): Notification {
         val b = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(sub)
+            .setSubText(header)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setShowWhen(false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(100, pct, indeterminate)
             .setContentIntent(openAppIntent())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            // Android 16 Live Update: ask for the ongoing progress to be promoted (status bar chip,
-            // lock screen; HyperOS 3 shows it in the Hyper Island), with the percentage as the chip's
-            // short text. Set by key: the constants are API 36 and the project compiles against 34;
-            // older systems ignore them. The user can still turn it off per app.
-            .addExtras(android.os.Bundle().apply {
-                putBoolean("android.requestPromotedOngoing", true)
-                if (!indeterminate) putCharSequence("android.shortCriticalText", "$pct%")
-            })
+            .setPublicVersion(publicVersion(title, icon))
+            .addExtras(liveUpdate(chip ?: if (indeterminate) "Avvio" else "$pct%"))
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
+            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; else -> 6 }
             val pi = android.app.PendingIntent.getService(
-                this, if (cancelMode == MODE_CANCEL) 1 else 4, cancelIntent,
+                this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
             b.addAction(0, "Annulla", pi)
@@ -703,21 +813,34 @@ class ConversionService : Service() {
         return b.build()
     }
 
+    /** Extras asking for a Live Update (promoted ongoing) with [chip] as its short text. */
+    private fun liveUpdate(chip: String) = android.os.Bundle().apply {
+        putBoolean("android.requestPromotedOngoing", true)
+        putCharSequence("android.shortCriticalText", chip)
+    }
+
+    /** What the lock screen shows instead: the operation's title, no details, no buttons. */
+    private fun publicVersion(title: String, icon: Int): Notification =
+        NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(icon)
+            .setColor(BRAND_COLOR)
+            .setContentTitle(title)
+            .build()
+
     private fun notify(n: Notification) {
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
     }
 
-    /**
-     * Post a terminal result (completed / failed / cancelled) as a dismissible notification under
-     * its own id. Must NOT reuse [NOTIF_ID]: that is the ongoing foreground notification, which
-     * onStartCommand's finally tears down with stopForeground(REMOVE) the instant the job ends —
-     * a result posted there just flashes and disappears.
-     */
     /** Which kind of operation a result belongs to; each keeps its own notification. */
     private enum class ResultKind(val id: Int, val icon: Int) {
         IMPORT(4220, R.drawable.ic_notif_import), DOWNLOAD(4221, R.drawable.ic_notif_download),
         CONVERT(4222, R.drawable.ic_notif_convert), SCAN(4223, R.drawable.ic_notif_scan),
+        EXPORT(4224, R.drawable.ic_notif_export),
     }
+
+    /** How an operation ended; its icon is the shield with a tick, an exclamation mark, or (when
+     *  cancelled) the operation's own symbol. */
+    private enum class ResultState { DONE, FAILED, CANCELLED }
 
     /** Tap on a notification: bring the app to the front (optionally straight to the duplicate results). */
     private fun openAppIntent(openDuplicates: Boolean = false): android.app.PendingIntent = android.app.PendingIntent.getActivity(
@@ -730,67 +853,105 @@ class ConversionService : Service() {
     /**
      * Post a terminal result (completed / failed / cancelled) as a dismissible notification. Each
      * [kind] has its own id (an import result no longer overwrites a download one), and never
-     * [NOTIF_ID], the ongoing foreground notification that is removed when the job ends. File names
-     * are hidden on the lock screen (public version without details).
+     * [NOTIF_ID], the ongoing foreground notification that is removed when the job ends. Expanded
+     * it shows the whole [text] and the [actions]; the lock screen gets only the title.
      */
-    private fun notifyResult(title: String, text: String?, kind: ResultKind = ResultKind.CONVERT, openDuplicates: Boolean = false) {
+    private fun notifyResult(
+        title: String,
+        text: String?,
+        kind: ResultKind = ResultKind.CONVERT,
+        openDuplicates: Boolean = false,
+        state: ResultState = ResultState.DONE,
+        actions: List<NotificationCompat.Action> = emptyList(),
+    ) {
+        val icon = when (state) {
+            ResultState.DONE -> R.drawable.ic_notif_done
+            ResultState.FAILED -> R.drawable.ic_notif_error
+            ResultState.CANCELLED -> kind.icon
+        }
         val public = NotificationCompat.Builder(this, RESULT_CHANNEL)
-            .setSmallIcon(kind.icon)
+            .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
-            .setContentTitle("Cripta")
-            .setContentText(title)
+            .setContentTitle(title)
             .build()
-        val n = NotificationCompat.Builder(this, RESULT_CHANNEL)
-            .setSmallIcon(kind.icon)
+        val b = NotificationCompat.Builder(this, RESULT_CHANNEL)
+            .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setStyle(text?.let { NotificationCompat.BigTextStyle().bigText(it) })
+            .setCategory(if (state == ResultState.FAILED) NotificationCompat.CATEGORY_ERROR else NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(openAppIntent(openDuplicates))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setAutoCancel(true)
-            .build()
-        getSystemService(NotificationManager::class.java).notify(kind.id, n)
+        actions.forEach { b.addAction(it) }
+        getSystemService(NotificationManager::class.java).notify(kind.id, b.build())
+    }
+
+    /** "Riprova" for a failed download: queues the same link again, same quality, folder and tags. */
+    private fun retryAction(job: VaultRepository.DownloadJob): NotificationCompat.Action =
+        retryAction(downloadUrlIntent(this, job.url, job.maxHeight, job.folderId, job.tagIds))
+
+    private fun retryAction(download: Intent): NotificationCompat.Action {
+        val i = Intent(download).putExtra(EX_RETRY, true)
+        val pi = android.app.PendingIntent.getForegroundService(
+            this, 7, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Action(0, "Riprova", pi)
     }
 
     /**
-     * Completion notification offering to delete or keep the original video. It stays a Live
-     * Update (ongoing, promoted) until answered, so the Hyper Island / status chip keeps it: compact
-     * it reads "Fatto", tapped or expanded it shows the two buttons. After [DONE_TIMEOUT_MS]
-     * unanswered it goes away; the choice stays in the app's conversion banner. Buttons are hidden
-     * on the lock screen (public version).
+     * A choice left to answer at the end of an operation: a Live Update (ongoing, promoted) so the
+     * Hyper Island / status chip keeps it; compact it reads "Fatto", tapped or expanded it shows
+     * the buttons. After [DONE_TIMEOUT_MS] unanswered it goes away and the choice stays in the app.
+     * Buttons and details are hidden on the lock screen.
      */
-    private fun postConvertDone(originalId: String) {
-        fun pi(mode: String, req: Int) = android.app.PendingIntent.getService(
-            this, req,
-            Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).putExtra(EX_ID, originalId),
-            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val public = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notif_convert)
+    private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
+        val b = NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
-            .setContentTitle("Conversione completata")
-            .build()
-        val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notif_convert)
-            .setColor(BRAND_COLOR)
-            .setContentTitle("Conversione completata")
-            .setContentText("Copia MP4 creata. Eliminare l'originale?")
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(openAppIntent())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setTimeoutAfter(DONE_TIMEOUT_MS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(public)
-            .addExtras(android.os.Bundle().apply {
-                putBoolean("android.requestPromotedOngoing", true)
-                putCharSequence("android.shortCriticalText", "Fatto")
-            })
-            .addAction(0, "Elimina originale", pi(MODE_DELETE_ORIG, 2))
-            .addAction(0, "Mantieni", pi(MODE_DISMISS, 3))
-            .build()
-        getSystemService(NotificationManager::class.java).notify(DONE_NOTIF_ID, n)
+            .setPublicVersion(publicVersion(title, icon))
+            .addExtras(liveUpdate("Fatto"))
+        actions.forEach { b.addAction(it) }
+        getSystemService(NotificationManager::class.java).notify(id, b.build())
+    }
+
+    private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null) = NotificationCompat.Action(
+        0, label,
+        android.app.PendingIntent.getService(
+            this, req,
+            Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).apply { originalId?.let { putExtra(EX_ID, it) } },
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+        ),
+    )
+
+    /** An ASK conversion finished: delete (to the trash) or keep the original video. */
+    private fun postConvertDone(originalId: String) = postChoice(
+        DONE_NOTIF_ID, R.drawable.ic_notif_done, "Conversione completata", "Copia MP4 creata. Eliminare l'originale?",
+        serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, originalId),
+        serviceAction("Mantieni", MODE_DISMISS, 3, originalId),
+    )
+
+    /** An import with the "Chiedi" policy finished: delete the originals from the device, or keep them. */
+    private fun postOriginalsChoice(n: Int) {
+        if (n <= 0) return
+        val summary = lastImportSummary?.let { "$it. " }.orEmpty()
+        postChoice(
+            ResultKind.IMPORT.id, R.drawable.ic_notif_done, "Importazione completata",
+            summary + if (n == 1) "Eliminare l'originale dal dispositivo?" else "Eliminare i $n originali dal dispositivo?",
+            serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8),
+            serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9),
+        )
     }
 
     private fun Intent.getParcelableArrayListExtraCompat(key: String): ArrayList<Uri> =
@@ -822,6 +983,10 @@ class ConversionService : Service() {
         private const val EX_URL = "url"
         private const val EX_HEIGHT = "height"
         private const val EX_TAGS = "tags"
+        private const val MODE_CANCEL_BATCH = "cancel_batch"
+        private const val MODE_ORIGINALS_DELETE = "originals_delete"
+        private const val MODE_ORIGINALS_KEEP = "originals_keep"
+        private const val EX_RETRY = "retry"
         private const val DONE_NOTIF_ID = 4212
         /** How long the unanswered keep/delete choice stays in the notifications (10 min). */
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
@@ -899,14 +1064,21 @@ class ConversionService : Service() {
          * saved into [folderId] (null = root) with [tagIds]. Links queue up and run one at a time.
          */
         fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList()) {
-            val i = Intent(ctx, ConversionService::class.java).apply {
+            ContextCompat.startForegroundService(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds))
+        }
+
+        private fun downloadUrlIntent(ctx: Context, url: String, maxHeight: Int?, folderId: Long?, tagIds: List<Long>) =
+            Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DOWNLOAD_URL)
                 putExtra(EX_URL, url)
                 maxHeight?.let { putExtra(EX_HEIGHT, it) }
                 folderId?.let { putExtra(EX_FOLDER, it) }
                 if (tagIds.isNotEmpty()) putExtra(EX_TAGS, tagIds.toLongArray())
             }
-            ContextCompat.startForegroundService(ctx, i)
+
+        /** The import's "delete the originals?" was answered in the app: its notification goes. */
+        fun dismissImportOriginalsChoice(ctx: Context) {
+            runCatching { ctx.getSystemService(NotificationManager::class.java).cancel(ResultKind.IMPORT.id) }
         }
 
         /** Queue a conversion; [after] overrides the saved "Dopo la conversione" choice for this one. */
