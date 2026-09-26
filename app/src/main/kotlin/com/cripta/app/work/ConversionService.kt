@@ -310,14 +310,16 @@ class ConversionService : Service() {
                 kotlinx.coroutines.delay(400)
             }
             when (kind) {
-                "import" -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "$files file cifrati nel vault", "Eliminare i $files originali?",
+                "import" -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "$files file importati", "Eliminare gli originali?",
                     closeOnly("Elimina originali", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
                 "export" -> notifyResult("Esportazione completata", "$files file salvati nella galleria", ResultKind.EXPORT)
-                "scan" -> notifyResult("Duplicati trovati", "3 gruppi su 200 elementi", ResultKind.SCAN, openDuplicates = true)
-                "update" -> notifyResult("Aggiornamento pronto", "Prova: nessun file da installare", ResultKind.UPDATE)
+                "scan" -> notifyResult("Duplicati trovati", "3 gruppi su 200 elementi", ResultKind.SCAN, openDuplicates = true,
+                    actions = listOf(closeOnly("Vedi risultati", 23, R.drawable.ic_action_open)))
+                "update" -> notifyResult("Aggiornamento pronto", "Prova: nessun file da installare", ResultKind.UPDATE,
+                    actions = listOf(closeOnly("Installa", 24, R.drawable.ic_action_install)))
                 "download" -> notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
                 "download_fail" -> notifyResult("Download non riuscito", "Prova di errore: link non raggiungibile", ResultKind.DOWNLOAD,
-                    state = ResultState.FAILED, actions = listOf(closeOnly("Riprova", 22, 0)))
+                    state = ResultState.FAILED, actions = listOf(closeOnly("Riprova", 22, R.drawable.ic_action_retry)))
                 else -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
                     closeOnly("Elimina originale", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
             }
@@ -359,7 +361,7 @@ class ConversionService : Service() {
             )
             notifyResult("Aggiornamento pronto", "Cripta ${rel.versionName} è stato scaricato: tocca per installarlo",
                 ResultKind.UPDATE, contentIntent = install,
-                actions = listOf(NotificationCompat.Action(0, "Installa", install)))
+                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_install, "Installa", install)))
         } catch (e: kotlinx.coroutines.CancellationException) {
             updater.publish(com.cripta.app.update.AppUpdater.Download.Cancelled(rel))
             notifyResult("Aggiornamento annullato", null, ResultKind.UPDATE, state = ResultState.CANCELLED)
@@ -497,6 +499,7 @@ class ConversionService : Service() {
                     }
                     val text = importSummary(fin)
                     lastImportSummary = text
+                    lastImportCount = fin.succeeded
                     notifyResult(title, text, ResultKind.IMPORT, state = when {
                         cancelled -> ResultState.CANCELLED
                         fin.succeeded == 0 && fin.failed > 0 -> ResultState.FAILED
@@ -516,6 +519,7 @@ class ConversionService : Service() {
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
     @Volatile private var lastImportSummary: String? = null
+    @Volatile private var lastImportCount: Int? = null
 
     /** Progress of an import: file [n] of [total] and what is happening to it; never its name. */
     private fun importNote(n: Int, total: Int, pct: Int, what: String, start: Long): Notification {
@@ -731,7 +735,7 @@ class ConversionService : Service() {
                 else "${groups.size} gruppi su $scanned elementi"
             notifyResult(title, text, ResultKind.SCAN, openDuplicates = true,
                 actions = if (groups.isEmpty()) emptyList()
-                    else listOf(NotificationCompat.Action(0, "Vedi risultati", openAppIntent(openDuplicates = true))))
+                    else listOf(NotificationCompat.Action(R.drawable.ic_action_open, "Vedi risultati", openAppIntent(openDuplicates = true))))
         } catch (e: kotlinx.coroutines.CancellationException) {
             dupStore.cancelled()
             notifyResult("$label annullata", null, ResultKind.SCAN, state = ResultState.CANCELLED)
@@ -1071,7 +1075,10 @@ class ConversionService : Service() {
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .build()
-        val b = NotificationCompat.Builder(this, RESULT_CHANNEL)
+        // HyperOS: the result goes through the island too (it used to just vanish from it at the end):
+        // for a few seconds, with its buttons, then it stays as a normal notification.
+        val island = HyperFocus.isSupported(this)
+        val b = NotificationCompat.Builder(this, if (island) ongoingChannel() else RESULT_CHANNEL)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1083,6 +1090,17 @@ class ConversionService : Service() {
             .setPublicVersion(public)
             .setAutoCancel(true)
         actions.forEach { b.addAction(it) }
+        if (island) {
+            val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
+            b.addExtras(HyperFocus.extras(
+                this, "cripta_result", title, text, chip, icon, progress = null,
+                buttons = actions.mapIndexedNotNull { i, a ->
+                    a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it, service = false,
+                        icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
+                },
+                float = true, islandTimeoutSec = 5,
+            ))
+        }
         getSystemService(NotificationManager::class.java).notify(kind.id, b.build())
     }
 
@@ -1095,7 +1113,7 @@ class ConversionService : Service() {
         val pi = android.app.PendingIntent.getForegroundService(
             this, 7, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        return NotificationCompat.Action(0, "Riprova", pi)
+        return NotificationCompat.Action(R.drawable.ic_action_retry, "Riprova", pi)
     }
 
     /**
@@ -1153,10 +1171,10 @@ class ConversionService : Service() {
     private fun postOriginalsChoice(n: Int) {
         if (n <= 0) return
         // Short lines: the island's template shows one line each (the counts become the title).
-        val title = lastImportSummary?.substringBefore(" · ") ?: "Importazione completata"
+        val title = lastImportCount?.let { if (it == 1) "1 file importato" else "$it file importati" } ?: "Importazione completata"
         postChoice(
             ResultKind.IMPORT.id, R.drawable.ic_notif_done, title,
-            if (n == 1) "Eliminare l'originale?" else "Eliminare i $n originali?",
+            if (n == 1) "Eliminare l'originale?" else "Eliminare gli originali?",
             serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8, icon = R.drawable.ic_action_delete),
             serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9, icon = R.drawable.ic_action_keep),
         )

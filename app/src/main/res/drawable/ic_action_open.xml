@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round icon button of the Hyper Island (Vedi risultati), drawn like the system Clock's: a dark grey
+     disc with a small white glyph in the middle. Glyph: Material Symbols Rounded, filled,
+     weight 700 ("arrow_forward"), by Google, Apache License 2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FF2E2E30"
+        android:pathData="M480,0A480,480 0,1 1,480 960A480,480 0,1 1,480 0Z" />
+    <group
+        android:pivotX="480"
+        android:pivotY="480"
+        android:scaleX="0.46"
+        android:scaleY="0.46">
+        <group android:translateY="960">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M645-433H182q-20 0-33.5-13.5T135-480q0-20 13.5-33.5T182-527h463L447-725q-14-14-14.5-33.5T446-793q14-14 34-13.5t34 14.5l278 278q7 7 11 16t4 18q0 9-4 18t-11 16L513-168q-15 15-34 15t-33-15q-14-14-14-33t14-33l199-199Z" />
+        </group>
+    </group>
+</vector>

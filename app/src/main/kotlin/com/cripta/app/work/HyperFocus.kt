@@ -86,7 +86,9 @@ internal object HyperFocus {
      */
     private fun islandLabel(title: String): String = when {
         title.startsWith("Conversione") || title.startsWith("Copia MP4") -> "MP4"
-        title.contains("cifrat") -> "Importa"
+        title.contains("cifrat") || title.contains("importat") -> "Importa"
+        title.startsWith("Duplicati") || title.startsWith("Media simili") -> "Ricerca"
+        title.startsWith("Aggiornamento") -> "Aggiorna"
         title.startsWith("Importazione") -> "Importa"
         title.startsWith("Esportazione") -> "Esporta"
         title.startsWith("Download") -> "Download"
@@ -110,6 +112,8 @@ internal object HyperFocus {
         progress: Int?,
         buttons: List<Button>,
         float: Boolean,
+        /** A finished operation: shown in the island for this many seconds, then it goes (null: stays). */
+        islandTimeoutSec: Int? = null,
     ): Bundle {
         if (!isSupported(ctx)) return Bundle()
         val dbg = IslandDebug.get(ctx)
@@ -158,7 +162,8 @@ internal object HyperFocus {
             .put("param_island", JSONObject()
                 .put("islandProperty", 1)
                 .put("islandPriority", 2)
-                .put("dismissIsland", false)
+                .put("dismissIsland", islandTimeoutSec != null)
+                .apply { islandTimeoutSec?.let { put("islandTimeout", it) } }
                 .put("needCloseAnimation", true)
                 .put("highlightColor", BRAND)
                 .put("smallIslandArea", small)
