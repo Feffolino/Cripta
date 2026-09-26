@@ -1020,6 +1020,31 @@ class ConversionService : Service() {
      * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped;
      * a new operation (another title) always goes through at once.
      */
+    /**
+     * The operation is over: take its progress out of the island at once, so its result shows
+     * there right away. The foreground notification itself only goes when the service's job
+     * ends, after the clean-up (shredding the temporary files of a conversion or a download),
+     * and until then the island kept showing the progress and the result waited behind it.
+     * It is swapped for a quiet notification outside the island; the next operation's progress,
+     * if any, replaces it at its first update.
+     */
+    @Synchronized
+    private fun retireProgress() {
+        val quiet = NotificationCompat.Builder(this, CHANNEL)
+            .setGroup(GROUP_ONGOING)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(BRAND_COLOR)
+            .setContentTitle("Cripta")
+            .setContentText("Completamento…")
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setContentIntent(openAppIntent())
+            .build()
+        lastPostKey = null; lastPostTitle = null; lastPostAt = 0L
+        runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_ID, quiet) }
+    }
+
     @Synchronized
     private fun notify(n: Notification) {
         val e = n.extras
@@ -1096,6 +1121,7 @@ class ConversionService : Service() {
         val mgr = getSystemService(NotificationManager::class.java)
         val normal = base(RESULT_CHANNEL).build()
         if (!HyperFocus.isSupported(this)) { mgr.notify(kind.id, normal); return }
+        retireProgress()
         // HyperOS: the island only takes ongoing notifications, so the result goes there first as
         // an ongoing one for a few seconds (chip Fatto / Errore / Annullato, its buttons), then is
         // replaced by the normal, dismissible result. The timeout clears the ongoing one even if
@@ -1145,6 +1171,7 @@ class ConversionService : Service() {
      * Buttons and details are hidden on the lock screen.
      */
     private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
+        if (HyperFocus.isSupported(this)) retireProgress()
         val b = NotificationCompat.Builder(this, ongoingChannel())
             .setGroup("cripta_choice_$id")
             .setSmallIcon(icon)
