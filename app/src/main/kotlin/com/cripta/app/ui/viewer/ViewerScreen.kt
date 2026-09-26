@@ -789,11 +789,11 @@ fun ViewerScreen(
                 TextButton(onClick = {
                     // The original's page leaves the list (the viewer moves on instead of closing).
                     val orig = originalId
-                    vm.deleteConvertedOriginal()
+                    vm.resolveConvertedOriginal(delete = true)
                     if (orig != null && orig in vm.liveIds) removePage(orig)
                 }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { vm.clearConverted() }) { Text("Mantieni") } },
+            dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { Text("Mantieni") } },
         )
     }
 }
