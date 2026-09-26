@@ -77,6 +77,19 @@ internal object HyperFocus {
     }
 
     /**
+     * The island has room for a word next to the icon ("Conversione in MP4" was cut to
+     * "Conversione co…"): a short name of the operation there, the full title when expanded.
+     */
+    private fun islandLabel(title: String): String = when {
+        title.startsWith("Conversione") -> "MP4"
+        title.startsWith("Importazione") -> "Importa"
+        title.startsWith("Esportazione") -> "Esporta"
+        title.startsWith("Download") -> "Download"
+        title.startsWith("Ricerca") -> "Ricerca"
+        else -> "Cripta"
+    }
+
+    /**
      * Extras for one focus notification, or an empty bundle where unsupported.
      * @param chip short text of the island ("42%", "3/10", "Fatto").
      * @param progress 0..100 for an operation in progress, null for a finished one (a choice).
@@ -108,7 +121,7 @@ internal object HyperFocus {
             .put("textInfo", JSONObject().put("title", chip)))
         val big = JSONObject()
             .put("imageTextInfoLeft", JSONObject().put("type", 1).put("picInfo", pic)
-                .put("textInfo", JSONObject().put("title", title)))
+                .put("textInfo", JSONObject().put("title", islandLabel(title))))
         right.keys().forEach { big.put(it, right.get(it)) }
         val param = JSONObject()
             .put("protocol", protocol(ctx).takeIf { it in 1..3 } ?: 3)
