@@ -242,9 +242,16 @@ class ViewerViewModel @Inject constructor(
     val convertedOriginalId: StateFlow<String?> = _convertedOriginalId
     fun clearConverted() { _convertedId.value = null; _convertedOriginalId.value = null }
 
-    /** Delete the just-converted original (from the completion prompt). */
-    fun deleteConvertedOriginal() = viewModelScope.launch {
-        _convertedOriginalId.value?.let { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }
+    /**
+     * Answer the completion prompt: delete (to the trash) or keep the just-converted original.
+     * Through the service, like the notification's buttons and the vault banner, so all three
+     * agree: the notification goes away and the banner stops asking.
+     */
+    fun resolveConvertedOriginal(delete: Boolean) {
+        _convertedOriginalId.value?.let {
+            com.cripta.app.work.ConversionService.resolveOriginal(appContext, it, delete)
+            if (delete) thumbs.evict(it)
+        }
         clearConverted()
     }
 

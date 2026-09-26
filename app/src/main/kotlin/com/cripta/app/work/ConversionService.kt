@@ -754,21 +754,39 @@ class ConversionService : Service() {
         getSystemService(NotificationManager::class.java).notify(kind.id, n)
     }
 
-    /** Dismissible completion notification offering to delete or keep the original video. */
+    /**
+     * Completion notification offering to delete or keep the original video. It stays a Live
+     * Update (ongoing, promoted) until answered, so the Hyper Island / status chip keeps it: compact
+     * it reads "Fatto", tapped or expanded it shows the two buttons. After [DONE_TIMEOUT_MS]
+     * unanswered it goes away; the choice stays in the app's conversion banner. Buttons are hidden
+     * on the lock screen (public version).
+     */
     private fun postConvertDone(originalId: String) {
         fun pi(mode: String, req: Int) = android.app.PendingIntent.getService(
             this, req,
             Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).putExtra(EX_ID, originalId),
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val public = NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notif_convert)
+            .setColor(BRAND_COLOR)
+            .setContentTitle("Conversione completata")
+            .build()
         val n = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif_convert)
             .setColor(BRAND_COLOR)
-            .setContentTitle("Video convertito")
+            .setContentTitle("Conversione completata")
             .setContentText("Copia MP4 creata. Eliminare l'originale?")
             .setContentIntent(openAppIntent())
-            .setAutoCancel(true)
+            .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setTimeoutAfter(DONE_TIMEOUT_MS)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public)
+            .addExtras(android.os.Bundle().apply {
+                putBoolean("android.requestPromotedOngoing", true)
+                putCharSequence("android.shortCriticalText", "Fatto")
+            })
             .addAction(0, "Elimina originale", pi(MODE_DELETE_ORIG, 2))
             .addAction(0, "Mantieni", pi(MODE_DISMISS, 3))
             .build()
@@ -805,6 +823,8 @@ class ConversionService : Service() {
         private const val EX_HEIGHT = "height"
         private const val EX_TAGS = "tags"
         private const val DONE_NOTIF_ID = 4212
+        /** How long the unanswered keep/delete choice stays in the notifications (10 min). */
+        private const val DONE_TIMEOUT_MS = 10 * 60_000L
         private const val RESULT_CHANNEL = "results"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
