@@ -97,12 +97,12 @@ class EtaEstimatorTest {
 
     @Test
     fun formats() {
-        assertEquals("pochi secondi", formatEtaShort(9_000))
-        assertEquals("resta circa 15 s", formatEtaShort(11_000))
-        assertEquals("resta circa 1 min", formatEtaShort(57_000))
-        assertEquals("resta circa 2 min", formatEtaShort(61_000))
-        assertEquals("resta circa 1 h", formatEtaShort(3_599_000))
-        assertEquals("resta circa 1 h 21 min", formatEtaShort(4_830_000))
+        assertEquals("quasi finito", formatEtaShort(9_000))
+        assertEquals("ancora 15 s", formatEtaShort(11_000))
+        assertEquals("ancora 1 min", formatEtaShort(57_000))
+        assertEquals("ancora 2 min", formatEtaShort(61_000))
+        assertEquals("ancora 1 h", formatEtaShort(3_599_000))
+        assertEquals("ancora 1 h 21 min", formatEtaShort(4_830_000))
         assertEquals("circa 3 min rimanenti", formatEta(170_000))
         assertEquals("pochi secondi rimanenti", formatEta(2_000))
     }

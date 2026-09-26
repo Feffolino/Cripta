@@ -59,6 +59,11 @@ class ConversionService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        // An outcome still in the island moves to its own notification now (it went with the service).
+        synchronized(lock) {
+            main.removeCallbacks(flushProgress); pendingProgress = null
+            hold?.let { endHold(it, moveOn = true) }
+        }
         // Nothing may outlive the service: cancel whatever is still attached to its scope.
         scope.cancel()
         super.onDestroy()
@@ -81,7 +86,7 @@ class ConversionService : Service() {
         }
         // "Elimina originali / Mantieni" of an import with the "Chiedi" policy (notification or app).
         if (mode == MODE_ORIGINALS_DELETE || mode == MODE_ORIGINALS_KEEP) {
-            getSystemService(NotificationManager::class.java).cancel(ResultKind.IMPORT.id)
+            cancelOutcome(ResultKind.IMPORT.id)
             val uris = repo.pendingOriginals.value
             repo.clearPendingOriginals()
             if (mode == MODE_ORIGINALS_KEEP || uris.isEmpty()) { stopIfIdle(startId); return START_NOT_STICKY }
@@ -95,7 +100,7 @@ class ConversionService : Service() {
                 } catch (e: Exception) {
                     android.util.Log.e("ConversionService", "delete originals failed", e)
                 } finally {
-                    if (active.decrementAndGet() == 0) stopSelf(lastStartId)
+                    if (active.decrementAndGet() == 0) stopWhenIdle()
                 }
             }
             return START_NOT_STICKY
@@ -106,8 +111,8 @@ class ConversionService : Service() {
             ensureChannel()
             // Started as a foreground service (the button's PendingIntent): it must go foreground
             // before leaving, even to do nothing.
+            // On HyperOS the answer then shows in the island in its place.
             startForeground(NOTIF_ID, build("Download", 0, indeterminate = true, icon = R.drawable.ic_notif_download))
-            if (active.get() == 0) stopForeground(STOP_FOREGROUND_REMOVE)
             notifyResult("Download non riuscito", "Sblocca Cripta, poi tocca Riprova", ResultKind.DOWNLOAD, state = ResultState.FAILED,
                 actions = listOf(retryAction(intent)))
             stopIfIdle(startId)
@@ -121,11 +126,20 @@ class ConversionService : Service() {
         // Debug isola: sample notifications to try the variants without a real operation.
         if (mode == MODE_CANCEL_DEBUG) { debugJob?.cancel(); stopIfIdle(startId); return START_NOT_STICKY }
         if (mode == MODE_DEBUG_DISMISS) {
+            // Any sample outcome still in the island goes too (their buttons all land here).
+            synchronized(lock) { hold?.let { endHold(it, moveOn = false) } }
             getSystemService(NotificationManager::class.java).cancel(DEBUG_NOTIF_ID)
+            stopIfIdle(startId); return START_NOT_STICKY
+        }
+        // A choice answered in the app: its notification goes, and from the island too.
+        if (mode == MODE_DROP_OUTCOME) {
+            cancelOutcome(intent.getIntExtra(EX_NOTIF_ID, 0))
             stopIfIdle(startId); return START_NOT_STICKY
         }
         if (mode == MODE_DEBUG_CHOICE) {
             ensureChannel()
+            // Foreground, as a real choice: HyperOS only puts the service's own notification in the island.
+            startForeground(NOTIF_ID, build("Prova scelta", 0, indeterminate = true, icon = R.drawable.ic_notif_done))
             postChoice(
                 DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Prova scelta", "Due tasti di prova",
                 serviceAction("Elimina", MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
@@ -149,7 +163,7 @@ class ConversionService : Service() {
         // Completion-notification actions: delete or keep the original video.
         if (mode == MODE_DELETE_ORIG) {
             val oid = intent.getStringExtra(EX_ID)
-            getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            cancelOutcome(DONE_NOTIF_ID)
             // Answered (notification or the Cartelle banner): the banner stops asking.
             repo.updateConvertStatus {
                 if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale eliminato. Resta la copia MP4.") else it
@@ -167,13 +181,13 @@ class ConversionService : Service() {
                     android.util.Log.e("ConversionService", "delete original failed: $oid", e)
                 } finally {
                     if (held) session.endWork()
-                    if (active.decrementAndGet() == 0) stopSelf(lastStartId)
+                    if (active.decrementAndGet() == 0) stopWhenIdle()
                 }
             }
             return START_NOT_STICKY
         }
         if (mode == MODE_DISMISS) {
-            getSystemService(NotificationManager::class.java).cancel(DONE_NOTIF_ID)
+            cancelOutcome(DONE_NOTIF_ID)
             val oid = intent.getStringExtra(EX_ID)
             repo.updateConvertStatus {
                 if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale mantenuto accanto alla copia MP4.") else it
@@ -183,6 +197,8 @@ class ConversionService : Service() {
         }
         ensureChannel()
         lastStartId = startId
+        // A new operation takes the island: an outcome still there moves to its own notification.
+        synchronized(lock) { hold?.let { endHold(it, moveOn = true, replaced = true) } }
         startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
         if (mode == MODE_DOWNLOAD_URL) {
             if (intent.getBooleanExtra(EX_RETRY, false)) getSystemService(NotificationManager::class.java).cancel(ResultKind.DOWNLOAD.id)
@@ -253,11 +269,7 @@ class ConversionService : Service() {
                 android.util.Log.e("ConversionService", "job failed: $mode", e)
             } finally {
                 if (holdsSession) session.endWork()
-                if (active.decrementAndGet() == 0) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    // The latest start id: stops only if no newer command arrived meanwhile.
-                    stopSelf(lastStartId)
-                }
+                if (active.decrementAndGet() == 0) stopWhenIdle()
             }
         }
         if (mode == MODE_CONVERT) convertJob = job
@@ -288,22 +300,22 @@ class ConversionService : Service() {
             val left = eta.left(p / 100f)
             return when (kind) {
                 "download", "download_fail" -> build("Download", p, sub = "Scaricamento del video · $p%",
-                    header = header(left, "1 in coda"), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                    eta = left, header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
                 "import" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
                     build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
-                        header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
+                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
                 }
                 "export" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
                     build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
-                        header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
+                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
                 }
                 "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
-                    header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
+                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
                 "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
-                    header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
-                else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", header = header(left, "1 in coda"),
+                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", eta = left, header = "1 in coda",
                     cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
             }
         }
@@ -363,7 +375,7 @@ class ConversionService : Service() {
         try {
             val apk = updater.download(this, rel.apkUrl, rel.sha256Url) { pct ->
                 updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, pct))
-                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%", header = eta.left(pct / 100f),
+                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%", eta = eta.left(pct / 100f),
                     cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
             }
             updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
@@ -393,9 +405,26 @@ class ConversionService : Service() {
     /** Queue id of the link being downloaded now (null when none). */
     @Volatile private var currentDownloadId: String? = null
 
-    /** Stop the service after a control command, unless work is still running. */
+    /**
+     * Stop the service after a control command, unless work is still running or an outcome is in
+     * the island (it stops when that ends, with this command's id).
+     */
     private fun stopIfIdle(startId: Int) {
-        if (active.get() == 0) stopSelf(startId)
+        synchronized(lock) {
+            if (hold != null) lastStartId = maxOf(lastStartId, startId)
+            else if (active.get() == 0) stopSelf(startId)
+        }
+    }
+
+    /** The last job ended: out of the foreground and stop, unless an outcome is still in the island. */
+    private fun stopWhenIdle() {
+        synchronized(lock) {
+            if (active.get() != 0 || hold != null) return
+            main.removeCallbacks(flushProgress); pendingProgress = null
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            // The latest start id: stops only if no newer command arrived meanwhile.
+            stopSelf(lastStartId)
+        }
     }
     /** Id of the running yt-dlp process, so the Cancel action can kill the native process (a coroutine
      *  cancel alone can't interrupt the blocking execute call). */
@@ -441,7 +470,7 @@ class ConversionService : Service() {
             val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
             val left = if (done < total) eta.left(fraction) else null
             notify(build("Esportazione in galleria", (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
-                chip = "$done/$total", header = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+                chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
         }
         val cancelled = done < total
         val text = buildString {
@@ -554,7 +583,7 @@ class ConversionService : Service() {
         val left = eta.left(fraction)
         val stopping = batchCancel
         return build("Importazione", (fraction * 100).toInt(), sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
-            chip = "$done/$total", header = left.takeUnless { stopping },
+            chip = "$done/$total", eta = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
     }
 
@@ -602,7 +631,7 @@ class ConversionService : Service() {
                 converter.toMp4(src!!, out!!, bitrate) { pct ->
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
-                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", header = header(eta.left(pct / 100f), queued()),
+                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", eta = eta.left(pct / 100f), header = queued(),
                         cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
                 }
             }
@@ -748,7 +777,7 @@ class ConversionService : Service() {
                 last = now
                 val pct = if (total > 0) done * 100 / total else 0
                 notify(build(label, pct, sub = if (total > 0) "$done di $total elementi confrontati" else "Preparazione…",
-                    header = if (total > 0) eta.left(done.toFloat() / total) else null,
+                    eta = if (total > 0) eta.left(done.toFloat() / total) else null,
                     indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
             }
         }
@@ -827,7 +856,7 @@ class ConversionService : Service() {
                     repo.setConversionProgress(pct)
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
                     set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
-                    notify(build("Download", pct, sub = "Scaricamento del video · $pct%", header = header(leftMs?.let(::formatEtaShort), queued()),
+                    notify(build("Download", pct, sub = "Scaricamento del video · $pct%", eta = leftMs?.let(::formatEtaShort), header = queued(),
                         cancelable = true, icon = R.drawable.ic_notif_download))
                 }
             }
@@ -910,12 +939,12 @@ class ConversionService : Service() {
         }
     }
 
-    /** "resta circa 3 min" at [fraction] (0..1) of the job, or null while there is no estimate yet. */
+    /** "ancora 3 min" at [fraction] (0..1) of the job, or null while there is no estimate yet. */
     private fun EtaEstimator.left(fraction: Float): String? =
         update(fraction, SystemClock.elapsedRealtime())?.let(::formatEtaShort)
 
-    /** The short extra next to the app name: its parts that are there, "resta circa 3 min · 2 in coda". */
-    private fun header(vararg parts: String?): String? = parts.filterNotNull().joinToString(" · ").ifEmpty { null }
+    /** The parts that are there, joined: "ancora 3 min · 2 in coda". */
+    private fun joinParts(vararg parts: String?): String? = parts.filterNotNull().joinToString(" · ").ifEmpty { null }
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -969,6 +998,8 @@ class ConversionService : Service() {
         icon: Int = R.drawable.ic_notification,
         chip: String? = null,
         header: String? = null,
+        /** Time left ("ancora 3 min"), shown before the [header]. */
+        eta: String? = null,
     ): Notification {
         val b = NotificationCompat.Builder(this, ongoingChannel())
             // Each notification its own group: with four or more ungrouped ones Android folds
@@ -978,7 +1009,7 @@ class ConversionService : Service() {
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(sub)
-            .setSubText(header)
+            .setSubText(joinParts(eta, header))
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setShowWhen(false)
             .setOngoing(true)
@@ -1001,10 +1032,10 @@ class ConversionService : Service() {
             cancelPi = pi
         }
         // HyperOS: the Hyper Island's own template on top (large rounded buttons); ignored elsewhere.
-        // Its expanded text also carries the [header] (time left, how many queued), which the
-        // template has no place for otherwise.
+        // Its expanded text also carries the time left and the [header], which the template has
+        // no place for otherwise; the time left first, as the line is cut at the end when long.
         b.addExtras(HyperFocus.extras(
-            this, "cripta_progress", title, listOfNotNull(sub, header).joinToString(" · ").ifEmpty { null }, chipText, icon,
+            this, "cripta_progress", title, joinParts(eta, sub, header), chipText, icon,
             // Not started yet (no percentage): no ring or bar, which stood at 0 as if stuck.
             progress = if (indeterminate) null else pct,
             buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it, icon = R.drawable.ic_action_cancel) }),
@@ -1051,54 +1082,118 @@ class ConversionService : Service() {
     private var lastPostKey: String? = null
     private var lastPostTitle: String? = null
 
+    /** Guards the ongoing notification: its updates and the outcome shown in the island in its place. */
+    private val lock = Any()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** An update held back by the once-a-second limit, posted when the interval is up. */
+    private var pendingProgress: Notification? = null
+    private val flushProgress = Runnable {
+        synchronized(lock) {
+            val n = pendingProgress ?: return@synchronized
+            pendingProgress = null
+            if (active.get() > 0) notify(n)
+        }
+    }
+
+    /** A result or choice shown in the island in place of the progress (see [holdInIsland]). */
+    private class Hold(val id: Int, val moveOn: () -> Unit) { lateinit var end: Runnable }
+    private var hold: Hold? = null
+
     /**
-     * The operation is over: take its progress out of the island at once, so its result shows
-     * there right away. The foreground notification itself only goes when the service's job
-     * ends, after the clean-up (shredding the temporary files of a conversion or a download),
-     * and until then the island kept showing the progress and the result waited behind it.
-     * It is swapped for a quiet notification outside the island; the next operation's progress,
-     * if any, replaces it at its first update. Only while an operation runs: with none (Solo
-     * scelta, Riprova with Cripta locked) there is no progress to take out, and the quiet
-     * notification, not tied to the foreground service, stayed there ongoing for good.
+     * HyperOS: show [n], the outcome of an operation (a result or a choice), in the island in place
+     * of its progress: in the foreground notification itself, so the island turns from "42%" into
+     * "Fatto" where it is. A separate notification never showed there (HyperOS puts only the
+     * service's own in the island), so the progress just vanished. After [seconds], [moveOn] puts
+     * the outcome in its own notification ([id]: the result, or the choice with its buttons) and
+     * the island's place goes back to what is still running, or the service stops. A newer
+     * outcome, or another operation's progress, moves it on at once.
      */
-    @Synchronized
-    private fun retireProgress() {
-        if (active.get() == 0) return
-        val quiet = NotificationCompat.Builder(this, CHANNEL)
-            .setGroup(GROUP_ONGOING)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(BRAND_COLOR)
-            .setContentTitle("Cripta")
-            .setContentText("Completamento…")
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setContentIntent(openAppIntent())
-            .build()
-        lastPostKey = null; lastPostTitle = null; lastPostAt = 0L
-        runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_ID, quiet) }
+    private fun holdInIsland(id: Int, n: Notification, seconds: Int, moveOn: () -> Unit) {
+        synchronized(lock) {
+            hold?.let { endHold(it, moveOn = true, replaced = true) }
+            main.removeCallbacks(flushProgress); pendingProgress = null
+            val h = Hold(id, moveOn)
+            h.end = Runnable { synchronized(lock) { if (hold === h) endHold(h, moveOn = true, stopId = lastStartId) } }
+            hold = h
+            getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
+            // The next progress (another operation's) goes through at once.
+            lastPostKey = null; lastPostTitle = null; lastPostAt = 0L
+            main.postDelayed(h.end, seconds * 1000L)
+        }
+    }
+
+    /**
+     * Ends [h]: its outcome moves to its own notification ([moveOn]; not when it was answered).
+     * With [replaced] the caller puts its own notification in its place; otherwise the place goes
+     * back to the operation still running (a quiet placeholder until its next update) or, with
+     * nothing running, the service leaves the foreground and, given [stopId], stops. Under [lock].
+     */
+    private fun endHold(h: Hold, moveOn: Boolean, replaced: Boolean = false, stopId: Int? = null) {
+        main.removeCallbacks(h.end)
+        hold = null
+        if (moveOn) runCatching { h.moveOn() }
+        if (replaced) return
+        val mgr = getSystemService(NotificationManager::class.java)
+        if (active.get() > 0) {
+            // Still running (the clean-up after a conversion or a download, or another operation).
+            val quiet = NotificationCompat.Builder(this, CHANNEL)
+                .setGroup(GROUP_ONGOING)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(BRAND_COLOR)
+                .setContentTitle("Cripta")
+                .setContentText("Completamento…")
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .setContentIntent(openAppIntent())
+                .build()
+            lastPostKey = null; lastPostTitle = null; lastPostAt = 0L
+            runCatching { mgr.notify(NOTIF_ID, quiet) }
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            runCatching { mgr.cancel(NOTIF_ID) }
+            stopId?.let { stopSelf(it) }
+        }
+    }
+
+    /** The outcome [id] was answered or is no longer wanted: its notification goes, and from the island. */
+    private fun cancelOutcome(id: Int) {
+        synchronized(lock) { hold?.takeIf { it.id == id }?.let { endHold(it, moveOn = false) } }
+        getSystemService(NotificationManager::class.java).cancel(id)
     }
 
     /**
      * Update the ongoing notification, at most about once a second. Progress arrived far more often
      * (yt-dlp several times a second, the transcoder every 500 ms even when unchanged) and every
      * post re-laid out the notification and the Hyper Island: it looked laggy, and Android drops
-     * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped;
-     * a new operation (another title) always goes through at once.
+     * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped; one
+     * too soon is posted when the interval is up, unless a newer one comes first (it used to be
+     * dropped, so the island could stand at 60 % when the operation ended); a new operation
+     * (another title) always goes through at once.
      */
-    @Synchronized
     private fun notify(n: Notification) {
-        val e = n.extras
-        val title = e.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-        val key = listOf(
-            title, e.getCharSequence(Notification.EXTRA_TEXT), e.getCharSequence(Notification.EXTRA_SUB_TEXT),
-            e.getInt(Notification.EXTRA_PROGRESS), e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE),
-        ).joinToString("|")
-        if (key == lastPostKey) return
-        val now = SystemClock.elapsedRealtime()
-        if (title == lastPostTitle && now - lastPostAt < IslandDebug.get(this).intervalMs) return
-        lastPostAt = now; lastPostKey = key; lastPostTitle = title
-        getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
+        synchronized(lock) {
+            // Progress again: an outcome still in the island moves to its own notification.
+            hold?.let { endHold(it, moveOn = true, replaced = true) }
+            val e = n.extras
+            val title = e.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+            val key = listOf(
+                title, e.getCharSequence(Notification.EXTRA_TEXT), e.getCharSequence(Notification.EXTRA_SUB_TEXT),
+                e.getInt(Notification.EXTRA_PROGRESS), e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE),
+            ).joinToString("|")
+            if (key == lastPostKey) return
+            val now = SystemClock.elapsedRealtime()
+            val interval = IslandDebug.get(this).intervalMs
+            if (title == lastPostTitle && now - lastPostAt < interval) {
+                if (pendingProgress == null) main.postDelayed(flushProgress, lastPostAt + interval - now)
+                pendingProgress = n
+                return
+            }
+            main.removeCallbacks(flushProgress); pendingProgress = null
+            lastPostAt = now; lastPostKey = key; lastPostTitle = title
+            getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
+        }
     }
 
     /** Which kind of operation a result belongs to; each keeps its own notification. */
@@ -1161,21 +1256,16 @@ class ConversionService : Service() {
             .apply { actions.forEach { addAction(it) } }
         val mgr = getSystemService(NotificationManager::class.java)
         if (!HyperFocus.isSupported(this)) { post(mgr, kind.id, base(RESULT_CHANNEL).build()); return }
-        retireProgress()
-        // HyperOS: the island only takes ongoing notifications, so the result goes there first as
-        // an ongoing one for a few seconds (chip Fatto / Errore / Annullato, its buttons), then is
-        // replaced by the normal, dismissible result. The timeout clears the ongoing one even if
-        // the app is gone before the swap.
-        val secs = IslandDebug.get(this).resultSeconds
-        val token = SystemClock.elapsedRealtimeNanos()
+        // HyperOS: the result takes the progress's place in the island for a few seconds (chip
+        // Fatto / Errore / Annullato, its buttons), then becomes the normal, dismissible result.
         val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
-        val live = base(ongoingChannel())
+        val island = base(ongoingChannel())
+            .setGroup(GROUP_ONGOING)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setTimeoutAfter((secs + 5) * 1000L)
             .addExtras(liveUpdate(chip))
             .addExtras(HyperFocus.extras(
-                this, "cripta_result", title, text, chip, icon, progress = null,
+                this, "cripta_progress", title, text, chip, icon, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it,
                         icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
@@ -1183,21 +1273,10 @@ class ConversionService : Service() {
                 // Not for a cancellation: the user just tapped Annulla, the island needn't pop open to say so.
                 float = state != ResultState.CANCELLED,
             ))
-            .addExtras(android.os.Bundle().apply { putLong(EXTRA_ISLAND_RESULT, token) })
             .build()
         // Silent: the island popping open was the alert; a sound at the swap came seconds late.
         val normal = base(RESULT_CHANNEL).setSilent(true).build()
-        post(mgr, kind.id, live)
-        // The main looper outlives this service (it may stop right after posting the result).
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            runCatching {
-                // Only if this very result is still showing: not tapped or answered meanwhile, nor
-                // replaced by a newer result of its kind or by the import's keep/delete choice
-                // (posted on the same id, which the swap used to overwrite with the plain result).
-                val shown = mgr.activeNotifications.firstOrNull { it.id == kind.id && it.tag == null }
-                if (shown?.notification?.extras?.getLong(EXTRA_ISLAND_RESULT) == token) post(mgr, kind.id, normal)
-            }
-        }, secs * 1000L)
+        holdInIsland(kind.id, island, IslandDebug.get(this).resultSeconds) { post(mgr, kind.id, normal) }
     }
 
     /**
@@ -1232,9 +1311,7 @@ class ConversionService : Service() {
      * Buttons and details are hidden on the lock screen.
      */
     private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
-        if (HyperFocus.isSupported(this)) retireProgress()
-        val b = NotificationCompat.Builder(this, ongoingChannel())
-            .setGroup("cripta_choice_$id")
+        fun base(channel: String) = NotificationCompat.Builder(this, channel)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1244,21 +1321,35 @@ class ConversionService : Service() {
             .setContentIntent(openAppIntent())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setTimeoutAfter(DONE_TIMEOUT_MS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(publicVersion(title, icon))
-            .addExtras(liveUpdate("Fatto"))
-        actions.forEach { b.addAction(it) }
-        // HyperOS: the choice as the island's own buttons, popping it open once.
-        b.addExtras(HyperFocus.extras(
-            this, "cripta_choice", title, text, "Fatto", icon, progress = null,
-            // The round icon of each (its NotificationCompat.Action icon), as the Clock's buttons.
-            buttons = actions.mapIndexedNotNull { i, a ->
-                a.actionIntent?.let { HyperFocus.Button("choice$i", a.title.toString(), it, icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
-            },
-            float = true,
-        ))
-        post(getSystemService(NotificationManager::class.java), id, b.build())
+            .apply { actions.forEach { addAction(it) } }
+        val shade = base(ongoingChannel())
+            .setGroup("cripta_choice_$id")
+            .setTimeoutAfter(DONE_TIMEOUT_MS)
+            .addExtras(liveUpdate("Scegli"))
+            .build()
+        val mgr = getSystemService(NotificationManager::class.java)
+        if (!HyperFocus.isSupported(this)) { post(mgr, id, shade); return }
+        // HyperOS: the choice takes the progress's place in the island, popping it open, with its
+        // buttons as text ("Elimina originale" in red, "Mantieni"): as round icons a trash can and
+        // a tick read as "delete? yes". Then it stays in the notifications until answered.
+        val island = base(ongoingChannel())
+            .setGroup(GROUP_ONGOING)
+            .addExtras(liveUpdate("Scegli"))
+            .addExtras(HyperFocus.extras(
+                this, "cripta_progress", title, text, "Scegli", icon, progress = null,
+                buttons = actions.mapIndexedNotNull { i, a ->
+                    a.actionIntent?.let {
+                        HyperFocus.Button("choice$i", a.title.toString(), it,
+                            // The action that deletes: its button stands out.
+                            danger = a.iconCompat?.resId == R.drawable.ic_action_delete)
+                    }
+                },
+                float = true,
+            ))
+            .build()
+        holdInIsland(id, island, IslandDebug.get(this).choiceSeconds) { post(mgr, id, shade) }
     }
 
     private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null, icon: Int = 0) = NotificationCompat.Action(
@@ -1342,8 +1433,8 @@ class ConversionService : Service() {
         private const val MODE_DEBUG_DISMISS = "debug_dismiss"
         private const val MODE_CANCEL_DEBUG = "cancel_debug"
         private const val DEBUG_NOTIF_ID = 4230
-        /** Marks an island result (see notifyResult) with the token of the post that showed it. */
-        private const val EXTRA_ISLAND_RESULT = "cripta.island_result"
+        private const val MODE_DROP_OUTCOME = "drop_outcome"
+        private const val EX_NOTIF_ID = "notif_id"
         private const val EX_DEBUG_KIND = "debug_kind"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
@@ -1453,7 +1544,7 @@ class ConversionService : Service() {
         }
         /** Debug isola › Solo scelta: a sample two-button choice. */
         fun debugChoice(ctx: Context) {
-            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE)) }
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE))
         }
 
         fun cancelUpdateDownload(ctx: Context) {
@@ -1463,6 +1554,11 @@ class ConversionService : Service() {
         /** The import's "delete the originals?" was answered in the app: its notification goes. */
         fun dismissImportOriginalsChoice(ctx: Context) {
             runCatching { ctx.getSystemService(NotificationManager::class.java).cancel(ResultKind.IMPORT.id) }
+            // Also from the island, if it is showing there (the service holds it in its own notification).
+            runCatching {
+                ctx.startService(Intent(ctx, ConversionService::class.java)
+                    .putExtra(EX_MODE, MODE_DROP_OUTCOME).putExtra(EX_NOTIF_ID, ResultKind.IMPORT.id))
+            }
         }
 
         /** Queue a conversion; [after] overrides the saved "Dopo la conversione" choice for this one. */

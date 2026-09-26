@@ -35,6 +35,8 @@ internal object IslandDebug {
         val floatOnChoice: Boolean = true,
         /** How long a result stays in the island before it becomes a normal notification, s. */
         val resultSeconds: Int = 5,
+        /** How long a choice stays in the island before it waits in the notifications, s. */
+        val choiceSeconds: Int = 15,
         /** Length of a sample operation (Notifiche di prova), s. */
         val sampleSeconds: Int = 5,
     )
@@ -59,6 +61,7 @@ internal object IslandDebug {
             progressBar = p.getBoolean("progressBar", d.progressBar),
             floatOnChoice = p.getBoolean("floatOnChoice", d.floatOnChoice),
             resultSeconds = p.getInt("resultSeconds", d.resultSeconds),
+            choiceSeconds = p.getInt("choiceSeconds", d.choiceSeconds),
             sampleSeconds = p.getInt("sampleSeconds", d.sampleSeconds),
         )
     }
@@ -77,6 +80,7 @@ internal object IslandDebug {
             .putBoolean("progressBar", c.progressBar)
             .putBoolean("floatOnChoice", c.floatOnChoice)
             .putInt("resultSeconds", c.resultSeconds)
+            .putInt("choiceSeconds", c.choiceSeconds)
             .putInt("sampleSeconds", c.sampleSeconds)
             .apply()
         cached = c

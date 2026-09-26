@@ -30,9 +30,10 @@ internal object HyperFocus {
     private const val PIC = "miui.focus.pic_"
     private const val ACTION = "miui.focus.action_"
     private const val BRAND = "#5AA9FF"
+    private const val DANGER = "#E5484D"
 
-    /** A button of the focus notification. */
-    class Button(val key: String, val title: String, val intent: PendingIntent, val icon: Int? = null)
+    /** A button of the focus notification; [danger]: it deletes something (drawn in red). */
+    class Button(val key: String, val title: String, val intent: PendingIntent, val icon: Int? = null, val danger: Boolean = false)
 
     /**
      * The protocol's `actionIntentType` of a button: 1 activity, 2 broadcast, 3 service. Read from
@@ -186,10 +187,12 @@ internal object HyperFocus {
                 .put("bigIslandArea", big))
         if (progress != null && dbg.progressBar) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
         // Buttons as the system Clock shows them: round icon buttons beside the title (the
-        // template's actions, icon only), which leaves the progress bar room below and fits two.
+        // template's actions, icon only), which leaves the progress bar room below. Only for an
+        // operation in progress (Annulla): a choice or a result has text buttons, as a trash can
+        // and a tick under "Eliminare l'originale?" read as "yes, delete".
         // Without icons: one as the template's text pill, several as the row of text buttons.
         val style = when {
-            dbg.buttons == "icon" && buttons.all { it.icon != null } -> "icon"
+            dbg.buttons == "icon" && progress != null && buttons.all { it.icon != null } -> "icon"
             dbg.buttons == "row" -> "row"
             dbg.buttons == "pill" -> "pill"
             buttons.size == 1 -> "pill"
@@ -212,7 +215,8 @@ internal object HyperFocus {
                         .put("type", 2)
                         .put("action", ACTION + tag + "_" + b.key)
                         .put("actionTitle", b.title)
-                        .put("actionIntentType", intentType(b.intent)))
+                        .put("actionIntentType", intentType(b.intent))
+                        .apply { if (b.danger) put("actionBgColor", DANGER) })
                 }
             })
         } else if (buttons.isNotEmpty()) {
@@ -223,7 +227,11 @@ internal object HyperFocus {
                         .put("actionTitle", b.title)
                         .put("actionIntentType", intentType(b.intent))
                         .put("actionIntent", ACTION + tag + "_" + b.key)
-                        .put("action", ACTION + tag + "_" + b.key))
+                        .put("action", ACTION + tag + "_" + b.key)
+                        .apply {
+                            if (b.danger) put("actionBgColor", DANGER).put("actionBgColorDark", DANGER)
+                                .put("actionTitleColor", "#FFFFFF").put("actionTitleColorDark", "#FFFFFF")
+                        })
                 }
             })
         }
