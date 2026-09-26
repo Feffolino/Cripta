@@ -46,14 +46,8 @@ class AppUpdater @Inject constructor() {
     val downloadState: kotlinx.coroutines.flow.StateFlow<Download> = _download
     fun publish(d: Download) { _download.value = d }
 
-    /** The system installer for [apk], as an intent (the "Installa" of the notification opens it). */
-    fun installIntent(ctx: Context, apk: File): Intent {
-        val uri: Uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", apk)
-        return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
+    /** The system installer for [apk], as an intent. */
+    fun installIntent(ctx: Context, apk: File): Intent = installerIntent(ctx, apk)
 
     /** Checksum asset per APK url, remembered from [latest] so [download] can verify it. */
     private val checksumFor = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -121,7 +115,7 @@ class AppUpdater @Inject constructor() {
         sha256Url: String? = null,
         onProgress: (Int) -> Unit,
     ): File = withContext(Dispatchers.IO) {
-        val out = File(ctx.cacheDir, "update.apk").apply { if (exists()) delete() }
+        val out = File(ctx.cacheDir, APK_NAME).apply { if (exists()) delete() }
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = true; connectTimeout = 20000; readTimeout = 20000
@@ -185,5 +179,16 @@ class AppUpdater @Inject constructor() {
         // The app checks this repo's public GitHub releases (the repo is public; the signing key is
         // kept out of it via CI secrets, so making it public never exposes the key).
         const val REPO = "Feffolino/Cripta"
+        /** The downloaded update, in the app cache (shared with the FileProvider as "updates"). */
+        const val APK_NAME = "update.apk"
+
+        /** The system installer for [apk] (see also [InstallUpdateActivity], the notification's way to it). */
+        fun installerIntent(ctx: Context, apk: File): Intent {
+            val uri: Uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", apk)
+            return Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
     }
 }

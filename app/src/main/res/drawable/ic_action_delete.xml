@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Round icon button of the Hyper Island (Elimina originale), drawn like the system Clock's: a dark grey
-     disc with a small white glyph in the middle. HyperOS draws an app's action icon as it is
+<!-- Round icon button of the Hyper Island (Elimina originale), drawn like the system Clock's: a
+     disc with a small white glyph in the middle, red as it deletes (grey beside ✕ Mantieni, a
+     trash can read as just another option). HyperOS draws an app's action icon as it is
      (no background of its own: a bare glyph filled the whole button). Glyph: Material Symbols
      Rounded, filled, weight 700 ("delete"), by Google, Apache License 2.0. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -9,7 +10,7 @@
     android:viewportWidth="960"
     android:viewportHeight="960">
     <path
-        android:fillColor="#FF2E2E30"
+        android:fillColor="#FFE5484D"
         android:pathData="M480,0A480,480 0,1 1,480 960A480,480 0,1 1,480 0Z" />
     <group
         android:pivotX="480"

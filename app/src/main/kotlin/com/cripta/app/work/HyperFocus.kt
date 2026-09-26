@@ -187,12 +187,10 @@ internal object HyperFocus {
                 .put("bigIslandArea", big))
         if (progress != null && dbg.progressBar) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
         // Buttons as the system Clock shows them: round icon buttons beside the title (the
-        // template's actions, icon only), which leaves the progress bar room below. Only for an
-        // operation in progress (Annulla): a choice or a result has text buttons, as a trash can
-        // and a tick under "Eliminare l'originale?" read as "yes, delete".
+        // template's actions, icon only), which leaves the progress bar room below and fits two.
         // Without icons: one as the template's text pill, several as the row of text buttons.
         val style = when {
-            dbg.buttons == "icon" && progress != null && buttons.all { it.icon != null } -> "icon"
+            dbg.buttons == "icon" && buttons.all { it.icon != null } -> "icon"
             dbg.buttons == "row" -> "row"
             dbg.buttons == "pill" -> "pill"
             buttons.size == 1 -> "pill"
