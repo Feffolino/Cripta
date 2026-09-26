@@ -825,6 +825,10 @@ class ConversionService : Service() {
 
     /** Extras asking for a Live Update (promoted ongoing) with [chip] as its short text. */
     private fun liveUpdate(chip: String) = android.os.Bundle().apply {
+        // HyperOS with focus notifications active: the island's own template (HyperFocus) instead.
+        // With both, HyperOS showed the Android Live Update and ignored the focus one (standard
+        // buttons instead of the island's large rounded ones).
+        if (HyperFocus.isSupported(this@ConversionService)) return@apply
         putBoolean("android.requestPromotedOngoing", true)
         putCharSequence("android.shortCriticalText", chip)
     }
