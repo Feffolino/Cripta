@@ -252,7 +252,8 @@ class ConversionService : Service() {
                 val (name, size) = repo.nameAndSize(uri)
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
-                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = name))
+                // Never a file name in a notification (it shows outside the vault): counts only.
+                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = "Cifratura in corso"))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -262,8 +263,8 @@ class ConversionService : Service() {
                         if (now - lastNotify > 500) {
                             lastNotify = now
                             val cur = repo.importState.value
-                            val filePct = if (size > 0) " · ${(bytes * 100 / size).coerceAtMost(100)}%" else ""
-                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = "$name$filePct"))
+                            val filePct = if (size > 0) "File al ${(bytes * 100 / size).coerceAtMost(100)}%" else "Cifratura in corso"
+                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = filePct))
                         }
                     }
                     true
@@ -331,7 +332,8 @@ class ConversionService : Service() {
         convertWaiting.decrementAndGet()
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
-        notify(build("Conversione in MP4", 0, sub = file.originalName, indeterminate = true, cancelMode = MODE_CANCEL_CONVERT))
+        // No file names in notifications (the in-app banner shows it, behind the lock).
+        notify(build("Conversione in MP4", 0, sub = "Preparazione…", indeterminate = true, cancelMode = MODE_CANCEL_CONVERT))
         var src: java.io.File? = null
         var out: java.io.File? = null
         var result: Pair<Boolean, String>? = null
@@ -347,7 +349,7 @@ class ConversionService : Service() {
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
                     val q = convertWaiting.get().let { if (it > 0) " · $it in coda" else "" }
-                    notify(build("Conversione in MP4", pct, sub = "$pct% · ${file.originalName}$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT))
+                    notify(build("Conversione in MP4", pct, sub = "$pct%$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT))
                 }
             }
             // Never import a broken transcode (a corrupt output that looked valid could lead to losing
@@ -373,9 +375,9 @@ class ConversionService : Service() {
                 }
                 com.cripta.app.data.ConvertAfter.REPLACE -> {
                     val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
-                    notifyResult("Convertito in MP4", "${newFile.originalName} · originale nel cestino per $days giorni")
+                    notifyResult("Convertito in MP4", "Originale nel cestino per $days giorni")
                 }
-                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Convertito in MP4", newFile.originalName)
+                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Convertito in MP4", "Copia MP4 aggiunta accanto all'originale")
             }
             result = true to when {
                 replace -> "Convertito: ${newFile.originalName} (originale nel cestino)"
@@ -576,7 +578,8 @@ class ConversionService : Service() {
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
             val file = repo.importDownloadedMp4(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
             set { it.copy(phase = VaultRepository.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
-            notifyResult("Download completato", name, ResultKind.DOWNLOAD)
+            // The title stays inside the app (queue, vault): the notification only says it is done.
+            notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
         } catch (e: kotlinx.coroutines.CancellationException) {
             set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
             notifyResult("Download annullato", null, ResultKind.DOWNLOAD)
