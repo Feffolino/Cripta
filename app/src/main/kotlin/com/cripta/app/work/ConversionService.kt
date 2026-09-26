@@ -679,6 +679,14 @@ class ConversionService : Service() {
             .setProgress(100, pct, indeterminate)
             .setContentIntent(openAppIntent())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            // Android 16 Live Update: ask for the ongoing progress to be promoted (status bar chip,
+            // lock screen; HyperOS 3 shows it in the Hyper Island), with the percentage as the chip's
+            // short text. Set by key: the constants are API 36 and the project compiles against 34;
+            // older systems ignore them. The user can still turn it off per app.
+            .addExtras(android.os.Bundle().apply {
+                putBoolean("android.requestPromotedOngoing", true)
+                if (!indeterminate) putCharSequence("android.shortCriticalText", "$pct%")
+            })
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             val pi = android.app.PendingIntent.getService(
