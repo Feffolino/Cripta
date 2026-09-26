@@ -846,7 +846,8 @@ fun SettingsScreen(
                                 InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                             }
                         }
-                        item { IslandDebugSection() }
+                        // Only where the island's notifications are sent: elsewhere its switches do nothing.
+                        if (com.cripta.app.work.HyperFocus.isSupported(ctx)) item { IslandDebugSection() }
                         item {
                             var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
                             Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
