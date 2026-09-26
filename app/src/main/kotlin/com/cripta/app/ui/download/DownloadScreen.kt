@@ -557,7 +557,7 @@ private fun JobCard(
                         DownloadPhase.QUEUED -> "In coda · in $destination"
                         DownloadPhase.PREPARING -> "Preparazione…"
                         DownloadPhase.DOWNLOADING ->
-                            "${job.pct}%" + if (job.etaSec > 0) " · resta ${etaText(job.etaSec)}" else ""
+                            "${job.pct}%" + if (job.etaSec > 0) " · " + com.cripta.app.util.formatEtaShort(job.etaSec * 1000) else ""
                         DownloadPhase.DONE -> "Completato · salvato in $destination"
                         DownloadPhase.FAILED -> friendlyDownloadError(job.message)
                         DownloadPhase.CANCELLED -> "Annullato"
@@ -619,9 +619,6 @@ private fun phaseGroup(p: DownloadPhase): PhaseGroup = when (p) {
     DownloadPhase.DONE -> PhaseGroup.DONE
     DownloadPhase.FAILED, DownloadPhase.CANCELLED -> PhaseGroup.STOPPED
 }
-
-private fun etaText(sec: Long): String =
-    if (sec >= 60) "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}" else "${sec}s"
 
 /**
  * Preview of an analysed link: the site's cover, title and length. The cover is fetched straight
