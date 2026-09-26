@@ -116,7 +116,9 @@ fun FavoritesScreen(
                             ) {
                                 MediaThumbCell(file, vm::thumb, onClick = {
                                     vm.publishQueue(favorites.map { it.id }); onOpenFile(file.id)
-                                }, coverVersion = coverVersions[file.id] ?: 0)
+                                }, coverVersion = coverVersions[file.id] ?: 0,
+                                    // The remove button below is the star here: no second one on the cover.
+                                    showFavoriteBadge = false)
                                 // Unfavorite in place (with undo), instead of opening each file.
                                 Surface(
                                     color = Color.Black.copy(alpha = 0.45f), shape = CircleShape,

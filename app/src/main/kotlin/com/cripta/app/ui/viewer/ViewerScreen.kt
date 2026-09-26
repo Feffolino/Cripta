@@ -1791,8 +1791,11 @@ private fun VideoPlayer(
             enter = fadeIn(Motion.enter(Motion.MEDIUM)),
             exit = fadeOut(Motion.exit(Motion.MEDIUM)),
             // Landscape: a row under the top chrome (a column would overlap the quick tags above
-            // and the seek bar below on a short screen). Portrait: a column on the right edge.
-            modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = maxOf(112.dp, topInset + 8.dp)) else Modifier.align(Alignment.CenterEnd))
+            // and the seek bar below on a short screen). Portrait: a column on the right edge, at the
+            // top just under the title bar and quick tags (centred, it sat over the middle of the
+            // picture).
+            modifier = (if (vLandscape) Modifier.align(Alignment.TopEnd).padding(top = maxOf(112.dp, topInset + 8.dp))
+                else Modifier.align(Alignment.TopEnd).padding(top = maxOf(topInset, 24.dp) + 12.dp))
                 .then(holdStill)
                 .padding(end = 12.dp + sideCut.end),
         ) {

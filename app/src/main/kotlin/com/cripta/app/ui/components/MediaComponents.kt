@@ -94,6 +94,8 @@ fun MediaThumb(
     selected: Boolean = false,
     coverVersion: Int = 0,
     selectionMode: Boolean = false,
+    /** false where the screen draws its own star (Preferiti's remove button). */
+    showFavoriteBadge: Boolean = true,
 ) {
     val bmp by produceState<Bitmap?>(initialValue = null, file.id, coverVersion) { value = thumb(file) }
     val icon = typeIconFor(file.mimeType)
@@ -115,7 +117,7 @@ fun MediaThumb(
                 Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(28.dp))
             }
         }
-        if (file.isFavorite) {
+        if (file.isFavorite && showFavoriteBadge) {
             Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp).clip(CircleShape)
                 .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(16.dp))
@@ -170,9 +172,11 @@ fun MediaThumbCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     coverVersion: Int = 0,
+    showFavoriteBadge: Boolean = true,
 ) {
     Column(modifier.clickable(onClickLabel = "Apri", onClick = onClick)) {
-        MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion)
+        MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion,
+            showFavoriteBadge = showFavoriteBadge)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
         Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,
