@@ -1,15 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Round icon button of the Hyper Island (Annulla), like the system Clock's: white glyph, the
-     system draws the round background. Material Symbols Rounded, filled, weight 700 ("close"),
-     by Google, Apache License 2.0: solid and rounded, close to HyperOS's own icons. -->
+<!-- Round icon button of the Hyper Island (Annulla), drawn like the system Clock's: a dark grey
+     disc with a small white glyph in the middle. HyperOS draws an app's action icon as it is
+     (no background of its own: a bare glyph filled the whole button). Glyph: Material Symbols
+     Rounded, filled, weight 700 ("close"), by Google, Apache License 2.0. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
+    android:width="48dp"
+    android:height="48dp"
     android:viewportWidth="960"
     android:viewportHeight="960">
-    <group android:translateY="960">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M480-414 282-216q-14 14-33 14t-33-14q-14-14-14-33t14-33l198-198-198-198q-14-14-14-33t14-33q14-14 33-14t33 14l198 198 198-198q14-14 33-14t33 14q14 14 14 33t-14 33L546-480l198 198q14 14 14 33t-14 33q-14 14-33 14t-33-14L480-414Z" />
+    <path
+        android:fillColor="#FF2E2E30"
+        android:pathData="M480,0A480,480 0,1 1,480 960A480,480 0,1 1,480 0Z" />
+    <group
+        android:pivotX="480"
+        android:pivotY="480"
+        android:scaleX="0.46"
+        android:scaleY="0.46">
+        <group android:translateY="960">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M480-414 282-216q-14 14-33 14t-33-14q-14-14-14-33t14-33l198-198-198-198q-14-14-14-33t14-33q14-14 33-14t33 14l198 198 198-198q14-14 33-14t33 14q14 14 14 33t-14 33L546-480l198 198q14 14 14 33t-14 33q-14 14-33 14t-33-14L480-414Z" />
+        </group>
     </group>
 </vector>
