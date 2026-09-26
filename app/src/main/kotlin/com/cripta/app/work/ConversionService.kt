@@ -1050,7 +1050,8 @@ class ConversionService : Service() {
 
     /** An ASK conversion finished: delete (to the trash) or keep the original video. */
     private fun postConvertDone(originalId: String) = postChoice(
-        DONE_NOTIF_ID, R.drawable.ic_notif_done, "Conversione completata", "Copia MP4 creata. Eliminare l'originale?",
+        // Short lines: the island's template shows one line each.
+        DONE_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
         serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, originalId),
         serviceAction("Mantieni", MODE_DISMISS, 3, originalId),
     )
@@ -1058,10 +1059,11 @@ class ConversionService : Service() {
     /** An import with the "Chiedi" policy finished: delete the originals from the device, or keep them. */
     private fun postOriginalsChoice(n: Int) {
         if (n <= 0) return
-        val summary = lastImportSummary?.let { "$it. " }.orEmpty()
+        // Short lines: the island's template shows one line each (the counts become the title).
+        val title = lastImportSummary?.substringBefore(" · ") ?: "Importazione completata"
         postChoice(
-            ResultKind.IMPORT.id, R.drawable.ic_notif_done, "Importazione completata",
-            summary + if (n == 1) "Eliminare l'originale dal dispositivo?" else "Eliminare i $n originali dal dispositivo?",
+            ResultKind.IMPORT.id, R.drawable.ic_notif_done, title,
+            if (n == 1) "Eliminare l'originale?" else "Eliminare i $n originali?",
             serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8),
             serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9),
         )
