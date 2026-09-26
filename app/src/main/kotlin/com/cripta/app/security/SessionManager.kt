@@ -163,4 +163,6 @@ class SessionManager @Inject constructor() {
 
     fun requireDek(): Aead = dek ?: error("Vault locked")
     fun requireDb(): CriptaDatabase = db ?: error("Vault locked")
+    /** The open database, also while locked if background work still holds it; null once released. */
+    fun dbOrNull(): CriptaDatabase? = db
 }
