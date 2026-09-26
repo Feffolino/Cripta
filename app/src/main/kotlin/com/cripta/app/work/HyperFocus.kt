@@ -31,8 +31,19 @@ internal object HyperFocus {
     private const val ACTION = "miui.focus.action_"
     private const val BRAND = "#5AA9FF"
 
-    /** A text button of the focus notification. [service]: the intent starts a service (else an activity). */
-    class Button(val key: String, val title: String, val intent: PendingIntent, val service: Boolean = true, val icon: Int? = null)
+    /** A button of the focus notification. */
+    class Button(val key: String, val title: String, val intent: PendingIntent, val icon: Int? = null)
+
+    /**
+     * The protocol's `actionIntentType` of a button: 1 activity, 2 broadcast, 3 service. Read from
+     * the PendingIntent itself: Annulla, the keep/delete choices and Riprova start the service,
+     * Installa and Vedi risultati an activity (all were declared as activities before).
+     */
+    private fun intentType(pi: PendingIntent): Int = when {
+        pi.isActivity -> 1
+        pi.isBroadcast -> 2
+        else -> 3
+    }
 
     @Volatile private var supported: Boolean? = null
 
@@ -190,7 +201,7 @@ internal object HyperFocus {
                         .put("type", 0)
                         .put("action", ACTION + tag + "_" + b.key)
                         .put("actionTitle", "")
-                        .put("actionIntentType", 1))
+                        .put("actionIntentType", intentType(b.intent)))
                 }
             })
         } else if (buttons.isNotEmpty() && style == "pill") {
@@ -200,7 +211,7 @@ internal object HyperFocus {
                         .put("type", 2)
                         .put("action", ACTION + tag + "_" + b.key)
                         .put("actionTitle", b.title)
-                        .put("actionIntentType", 1))
+                        .put("actionIntentType", intentType(b.intent)))
                 }
             })
         } else if (buttons.isNotEmpty()) {
@@ -209,7 +220,7 @@ internal object HyperFocus {
                     put(JSONObject()
                         .put("type", 1)
                         .put("actionTitle", b.title)
-                        .put("actionIntentType", if (b.service) 3 else 1)
+                        .put("actionIntentType", intentType(b.intent))
                         .put("actionIntent", ACTION + tag + "_" + b.key)
                         .put("action", ACTION + tag + "_" + b.key))
                 }

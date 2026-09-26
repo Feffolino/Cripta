@@ -1014,22 +1014,18 @@ class ConversionService : Service() {
     private var lastPostTitle: String? = null
 
     /**
-     * Update the ongoing notification, at most about once a second. Progress arrived far more often
-     * (yt-dlp several times a second, the transcoder every 500 ms even when unchanged) and every
-     * post re-laid out the notification and the Hyper Island: it looked laggy, and Android drops
-     * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped;
-     * a new operation (another title) always goes through at once.
-     */
-    /**
      * The operation is over: take its progress out of the island at once, so its result shows
      * there right away. The foreground notification itself only goes when the service's job
      * ends, after the clean-up (shredding the temporary files of a conversion or a download),
      * and until then the island kept showing the progress and the result waited behind it.
      * It is swapped for a quiet notification outside the island; the next operation's progress,
-     * if any, replaces it at its first update.
+     * if any, replaces it at its first update. Only while an operation runs: with none (Solo
+     * scelta, Riprova with Cripta locked) there is no progress to take out, and the quiet
+     * notification, not tied to the foreground service, stayed there ongoing for good.
      */
     @Synchronized
     private fun retireProgress() {
+        if (active.get() == 0) return
         val quiet = NotificationCompat.Builder(this, CHANNEL)
             .setGroup(GROUP_ONGOING)
             .setSmallIcon(R.drawable.ic_notification)
@@ -1045,6 +1041,13 @@ class ConversionService : Service() {
         runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_ID, quiet) }
     }
 
+    /**
+     * Update the ongoing notification, at most about once a second. Progress arrived far more often
+     * (yt-dlp several times a second, the transcoder every 500 ms even when unchanged) and every
+     * post re-laid out the notification and the Hyper Island: it looked laggy, and Android drops
+     * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped;
+     * a new operation (another title) always goes through at once.
+     */
     @Synchronized
     private fun notify(n: Notification) {
         val e = n.extras
@@ -1119,14 +1122,14 @@ class ConversionService : Service() {
             .setAutoCancel(true)
             .apply { actions.forEach { addAction(it) } }
         val mgr = getSystemService(NotificationManager::class.java)
-        val normal = base(RESULT_CHANNEL).build()
-        if (!HyperFocus.isSupported(this)) { mgr.notify(kind.id, normal); return }
+        if (!HyperFocus.isSupported(this)) { post(mgr, kind.id, base(RESULT_CHANNEL).build()); return }
         retireProgress()
         // HyperOS: the island only takes ongoing notifications, so the result goes there first as
         // an ongoing one for a few seconds (chip Fatto / Errore / Annullato, its buttons), then is
         // replaced by the normal, dismissible result. The timeout clears the ongoing one even if
         // the app is gone before the swap.
         val secs = IslandDebug.get(this).resultSeconds
+        val token = SystemClock.elapsedRealtimeNanos()
         val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
         val live = base(ongoingChannel())
             .setOngoing(true)
@@ -1136,20 +1139,39 @@ class ConversionService : Service() {
             .addExtras(HyperFocus.extras(
                 this, "cripta_result", title, text, chip, icon, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
-                    a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it, service = false,
+                    a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it,
                         icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
                 },
                 float = true,
             ))
+            .addExtras(android.os.Bundle().apply { putLong(EXTRA_ISLAND_RESULT, token) })
             .build()
-        mgr.notify(kind.id, live)
+        // Silent: the island popping open was the alert; a sound at the swap came seconds late.
+        val normal = base(RESULT_CHANNEL).setSilent(true).build()
+        post(mgr, kind.id, live)
         // The main looper outlives this service (it may stop right after posting the result).
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             runCatching {
-                // Only if the result is still showing (not tapped or answered meanwhile).
-                if (mgr.activeNotifications.any { it.id == kind.id }) mgr.notify(kind.id, normal)
+                // Only if this very result is still showing: not tapped or answered meanwhile, nor
+                // replaced by a newer result of its kind or by the import's keep/delete choice
+                // (posted on the same id, which the swap used to overwrite with the plain result).
+                val shown = mgr.activeNotifications.firstOrNull { it.id == kind.id && it.tag == null }
+                if (shown?.notification?.extras?.getLong(EXTRA_ISLAND_RESULT) == token) post(mgr, kind.id, normal)
             }
         }, secs * 1000L)
+    }
+
+    /**
+     * Post [n] as notification [id]. A replaced notification keeps the timer of its setTimeoutAfter
+     * (on Android 14, and 15 without its newer timer helper, only a cancel clears it), and when it
+     * fires it removes whatever has that id by then: the island result's timer took away the
+     * normal result that had replaced it a few seconds before. So a notification with a timer is
+     * cancelled first when [n] has none (a new timer just replaces the old one).
+     */
+    private fun post(mgr: NotificationManager, id: Int, n: Notification) {
+        val old = runCatching { mgr.activeNotifications.firstOrNull { it.id == id && it.tag == null } }.getOrNull()
+        if (old != null && old.notification.timeoutAfter > 0 && n.timeoutAfter <= 0) mgr.cancel(id)
+        mgr.notify(id, n)
     }
 
     /** "Riprova" for a failed download: queues the same link again, same quality, folder and tags. */
@@ -1197,7 +1219,7 @@ class ConversionService : Service() {
             },
             float = true,
         ))
-        getSystemService(NotificationManager::class.java).notify(id, b.build())
+        post(getSystemService(NotificationManager::class.java), id, b.build())
     }
 
     private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null, icon: Int = 0) = NotificationCompat.Action(
@@ -1281,6 +1303,8 @@ class ConversionService : Service() {
         private const val MODE_DEBUG_DISMISS = "debug_dismiss"
         private const val MODE_CANCEL_DEBUG = "cancel_debug"
         private const val DEBUG_NOTIF_ID = 4230
+        /** Marks an island result (see notifyResult) with the token of the post that showed it. */
+        private const val EXTRA_ISLAND_RESULT = "cripta.island_result"
         private const val EX_DEBUG_KIND = "debug_kind"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
@@ -1315,7 +1339,6 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, i)
         }
 
-        /** Cancel the running transcode (queued ones still run). */
         /** Answer "delete or keep the original?" of an ASK conversion (same as its notification). */
         fun resolveOriginal(ctx: Context, originalId: String, delete: Boolean) {
             runCatching {
@@ -1324,6 +1347,7 @@ class ConversionService : Service() {
             }
         }
 
+        /** Cancel the running transcode (queued ones still run). */
         fun cancelConvert(ctx: Context) {
             runCatching {
                 ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_CONVERT))
@@ -1380,12 +1404,15 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, i)
         }
 
-        /** Debug isola: a 20-second sample operation with Annulla, or a sample two-button choice. */
-        /** [kind]: convert, download, download_fail, import, export, scan, update. */
+        /**
+         * Debug isola: a sample operation with Annulla, lasting Durata prova (see [debugRun]).
+         * [kind]: convert, download, download_fail, import, export, scan, update.
+         */
         fun debugProgress(ctx: Context, kind: String = "convert") {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_DEBUG_PROGRESS).putExtra(EX_DEBUG_KIND, kind))
         }
+        /** Debug isola › Solo scelta: a sample two-button choice. */
         fun debugChoice(ctx: Context) {
             runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE)) }
         }
