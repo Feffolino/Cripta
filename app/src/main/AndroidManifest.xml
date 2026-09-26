@@ -51,6 +51,16 @@
             </intent-filter>
         </activity>
 
+        <!-- "Installa" of the update notification: opens the system installer from Cripta's own
+             activity (handed straight to the notification it did not open on HyperOS). -->
+        <activity
+            android:name=".update.InstallUpdateActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".work.ConversionService"
             android:exported="false"

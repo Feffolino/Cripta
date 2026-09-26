@@ -379,8 +379,10 @@ class ConversionService : Service() {
                     cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
             }
             updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
+            // Through Cripta's own invisible activity: the installer handed straight to the
+            // notification did not open on HyperOS (see InstallUpdateActivity).
             val install = android.app.PendingIntent.getActivity(
-                this, 12, updater.installIntent(this, apk),
+                this, 12, Intent(this, com.cripta.app.update.InstallUpdateActivity::class.java),
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
             notifyResult("Aggiornamento pronto", "Cripta ${rel.versionName} è stato scaricato: tocca per installarlo",
@@ -1332,8 +1334,9 @@ class ConversionService : Service() {
         val mgr = getSystemService(NotificationManager::class.java)
         if (!HyperFocus.isSupported(this)) { post(mgr, id, shade); return }
         // HyperOS: the choice takes the progress's place in the island, popping it open, with its
-        // buttons as text ("Elimina originale" in red, "Mantieni"): as round icons a trash can and
-        // a tick read as "delete? yes". Then it stays in the notifications until answered.
+        // round buttons: the trash can on red (it deletes) and ✕ (keep: "no"; a tick under
+        // "Eliminare l'originale?" read as "yes, delete"). Then it stays in the notifications
+        // until answered.
         val island = base(ongoingChannel())
             .setGroup(GROUP_ONGOING)
             .addExtras(liveUpdate("Scegli"))
@@ -1341,9 +1344,10 @@ class ConversionService : Service() {
                 this, "cripta_progress", title, text, "Scegli", icon, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let {
-                        HyperFocus.Button("choice$i", a.title.toString(), it,
-                            // The action that deletes: its button stands out.
-                            danger = a.iconCompat?.resId == R.drawable.ic_action_delete)
+                        val res = a.iconCompat?.resId?.takeIf { r -> r != 0 }
+                        HyperFocus.Button("choice$i", a.title.toString(), it, icon = res,
+                            // The action that deletes: in red also as a text button (Debug isola › Tasti).
+                            danger = res == R.drawable.ic_action_delete)
                     }
                 },
                 float = true,
