@@ -46,6 +46,7 @@ class ConversionService : Service() {
     @Inject lateinit var dupScanner: com.cripta.app.data.dedup.DuplicateScanner
     @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
     @Inject lateinit var session: com.cripta.app.security.SessionManager
+    @Inject lateinit var updater: com.cripta.app.update.AppUpdater
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -106,6 +107,11 @@ class ConversionService : Service() {
             if (active.get() == 0) stopForeground(STOP_FOREGROUND_REMOVE)
             notifyResult("Download non riuscito", "Sblocca Cripta, poi tocca Riprova", ResultKind.DOWNLOAD, state = ResultState.FAILED,
                 actions = listOf(retryAction(intent)))
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        if (mode == MODE_CANCEL_UPDATE) {
+            updateJob?.cancel()
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -215,6 +221,7 @@ class ConversionService : Service() {
                         }
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
+                    MODE_UPDATE -> downloadUpdate(intent)
                     MODE_DUP_SCAN -> {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
@@ -236,12 +243,59 @@ class ConversionService : Service() {
         }
         if (mode == MODE_CONVERT) convertJob = job
         if (mode == MODE_DUP_SCAN) scanJob = job
+        if (mode == MODE_UPDATE) updateJob = job
         return START_NOT_STICKY
     }
 
     @Volatile private var convertJob: kotlinx.coroutines.Job? = null
     @Volatile private var lastStartId = 0
     @Volatile private var scanJob: kotlinx.coroutines.Job? = null
+    @Volatile private var updateJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Download the app update in the background (the app can be closed meanwhile): progress and
+     * Annulla in the notification, then "Aggiornamento pronto" whose tap / Installa opens the
+     * system installer. The settings screen follows it through [AppUpdater.downloadState].
+     */
+    private suspend fun downloadUpdate(intent: Intent) {
+        val rel = com.cripta.app.update.AppUpdater.Release(
+            versionName = intent.getStringExtra(EX_UPD_VERSION) ?: return,
+            buildNumber = intent.getIntExtra(EX_UPD_BUILD, 0),
+            apkUrl = intent.getStringExtra(EX_URL) ?: return,
+            sizeBytes = intent.getLongExtra(EX_UPD_SIZE, 0L),
+            sha256Url = intent.getStringExtra(EX_UPD_SHA),
+        )
+        val title = "Aggiornamento di Cripta"
+        updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, 0))
+        notify(build(title, 0, sub = "Versione ${rel.versionName}", indeterminate = true,
+            cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
+        try {
+            val apk = updater.download(this, rel.apkUrl, rel.sha256Url) { pct ->
+                updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, pct))
+                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%",
+                    cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
+            }
+            updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
+            val install = android.app.PendingIntent.getActivity(
+                this, 12, updater.installIntent(this, apk),
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            notifyResult("Aggiornamento pronto", "Cripta ${rel.versionName} è stato scaricato: tocca per installarlo",
+                ResultKind.UPDATE, contentIntent = install,
+                actions = listOf(NotificationCompat.Action(0, "Installa", install)))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            updater.publish(com.cripta.app.update.AppUpdater.Download.Cancelled(rel))
+            notifyResult("Aggiornamento annullato", null, ResultKind.UPDATE, state = ResultState.CANCELLED)
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("ConversionService", "update download failed", e)
+            updater.publish(com.cripta.app.update.AppUpdater.Download.Failed(rel, e))
+            notifyResult("Aggiornamento non riuscito", "Riprova da Impostazioni › Versione e aggiornamenti",
+                ResultKind.UPDATE, state = ResultState.FAILED)
+        } finally {
+            updateJob = null
+        }
+    }
     /** Guards [downloadWorkerRunning] so a link enqueued while the worker drains is never missed. */
     private val workerLock = Any()
     private var downloadWorkerRunning = false
@@ -817,7 +871,7 @@ class ConversionService : Service() {
         var cancelPi: android.app.PendingIntent? = null
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
-            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; else -> 6 }
+            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; else -> 6 }
             val pi = android.app.PendingIntent.getService(
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
@@ -886,7 +940,7 @@ class ConversionService : Service() {
     private enum class ResultKind(val id: Int, val icon: Int) {
         IMPORT(4220, R.drawable.ic_notif_import), DOWNLOAD(4221, R.drawable.ic_notif_download),
         CONVERT(4222, R.drawable.ic_notif_convert), SCAN(4223, R.drawable.ic_notif_scan),
-        EXPORT(4224, R.drawable.ic_notif_export),
+        EXPORT(4224, R.drawable.ic_notif_export), UPDATE(4225, R.drawable.ic_notif_download),
     }
 
     /** How an operation ended; its icon is the shield with a tick, an exclamation mark, or (when
@@ -914,6 +968,8 @@ class ConversionService : Service() {
         openDuplicates: Boolean = false,
         state: ResultState = ResultState.DONE,
         actions: List<NotificationCompat.Action> = emptyList(),
+        /** Tap target instead of opening the app (the update's installer). */
+        contentIntent: android.app.PendingIntent? = null,
     ) {
         val icon = when (state) {
             ResultState.DONE -> R.drawable.ic_notif_done
@@ -932,7 +988,7 @@ class ConversionService : Service() {
             .setContentText(text)
             .setStyle(text?.let { NotificationCompat.BigTextStyle().bigText(it) })
             .setCategory(if (state == ResultState.FAILED) NotificationCompat.CATEGORY_ERROR else NotificationCompat.CATEGORY_STATUS)
-            .setContentIntent(openAppIntent(openDuplicates))
+            .setContentIntent(contentIntent ?: openAppIntent(openDuplicates))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setAutoCancel(true)
@@ -1041,6 +1097,12 @@ class ConversionService : Service() {
         private const val EX_HEIGHT = "height"
         private const val EX_TAGS = "tags"
         private const val MODE_CANCEL_BATCH = "cancel_batch"
+        private const val MODE_UPDATE = "update"
+        private const val MODE_CANCEL_UPDATE = "cancel_update"
+        private const val EX_UPD_VERSION = "upd_version"
+        private const val EX_UPD_BUILD = "upd_build"
+        private const val EX_UPD_SIZE = "upd_size"
+        private const val EX_UPD_SHA = "upd_sha"
         private const val MODE_ORIGINALS_DELETE = "originals_delete"
         private const val MODE_ORIGINALS_KEEP = "originals_keep"
         private const val EX_RETRY = "retry"
@@ -1133,6 +1195,23 @@ class ConversionService : Service() {
                 folderId?.let { putExtra(EX_FOLDER, it) }
                 if (tagIds.isNotEmpty()) putExtra(EX_TAGS, tagIds.toLongArray())
             }
+
+        /** Download the app update [rel] in the background (see [downloadUpdate]). */
+        fun startUpdateDownload(ctx: Context, rel: com.cripta.app.update.AppUpdater.Release) {
+            val i = Intent(ctx, ConversionService::class.java).apply {
+                putExtra(EX_MODE, MODE_UPDATE)
+                putExtra(EX_URL, rel.apkUrl)
+                putExtra(EX_UPD_VERSION, rel.versionName)
+                putExtra(EX_UPD_BUILD, rel.buildNumber)
+                putExtra(EX_UPD_SIZE, rel.sizeBytes)
+                rel.sha256Url?.let { putExtra(EX_UPD_SHA, it) }
+            }
+            ContextCompat.startForegroundService(ctx, i)
+        }
+
+        fun cancelUpdateDownload(ctx: Context) {
+            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_UPDATE)) }
+        }
 
         /** The import's "delete the originals?" was answered in the app: its notification goes. */
         fun dismissImportOriginalsChoice(ctx: Context) {

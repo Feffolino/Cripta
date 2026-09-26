@@ -67,19 +67,43 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Download the update in the background service: it goes on with the app closed, with its own
+     * notification; this screen follows it (updater.downloadState) and, when it is open as the
+     * download ends, opens the installer as before.
+     */
     fun downloadUpdate(ctx: android.content.Context) {
         val rel = (_update.value as? UpdateState.Available)?.release ?: return
+        _update.value = UpdateState.Downloading(0)
+        watchingDownload = true
+        com.cripta.app.work.ConversionService.startUpdateDownload(ctx, rel)
+    }
+
+    fun cancelUpdateDownload(ctx: android.content.Context) = com.cripta.app.work.ConversionService.cancelUpdateDownload(ctx)
+
+    /** Set when the download was started from this screen: its end opens the installer. */
+    private var watchingDownload = false
+
+    init {
         viewModelScope.launch {
-            _update.value = UpdateState.Downloading(0)
-            runCatching {
-                updater.download(ctx, rel.apkUrl, rel.sha256Url) { pct -> _update.value = UpdateState.Downloading(pct) }
-            }.onSuccess { apk ->
-                // Stay on "ready" rather than "100%": the system installer may be cancelled.
-                _update.value = UpdateState.ReadyToInstall(rel, apk)
-                openInstaller(ctx, apk)
-            }.onFailure {
-                if (it is kotlinx.coroutines.CancellationException) throw it
-                _update.value = UpdateState.Error(networkError(it, "Download dell'aggiornamento non riuscito."))
+            updater.downloadState.collect { d ->
+                when (d) {
+                    com.cripta.app.update.AppUpdater.Download.Idle -> Unit
+                    is com.cripta.app.update.AppUpdater.Download.Running -> _update.value = UpdateState.Downloading(d.pct)
+                    is com.cripta.app.update.AppUpdater.Download.Ready -> {
+                        // Stay on "ready" rather than "100%": the system installer may be cancelled.
+                        _update.value = UpdateState.ReadyToInstall(d.release, d.apk)
+                        if (watchingDownload) { watchingDownload = false; openInstaller(appContext, d.apk) }
+                    }
+                    is com.cripta.app.update.AppUpdater.Download.Failed -> {
+                        watchingDownload = false
+                        _update.value = UpdateState.Error(networkError(d.error, "Download dell'aggiornamento non riuscito."))
+                    }
+                    is com.cripta.app.update.AppUpdater.Download.Cancelled -> {
+                        watchingDownload = false
+                        _update.value = UpdateState.Available(d.release)
+                    }
+                }
             }
         }
     }
