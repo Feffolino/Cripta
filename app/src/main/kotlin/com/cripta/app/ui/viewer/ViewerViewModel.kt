@@ -151,6 +151,18 @@ class ViewerViewModel @Inject constructor(
 
     /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */
     suspend fun videoInfo(file: FileEntity): String = thumbs.videoDiagnostics(file)
+
+    /**
+     * Worth converting to MP4: any video that is not already an H.264/HEVC MP4. An MP4 can hold
+     * other codecs (AV1, VP9…) that some devices can neither seek nor thumbnail; by the file type
+     * alone those looked "already MP4" and the conversion was never offered.
+     */
+    suspend fun canConvertToMp4(file: FileEntity): Boolean {
+        if (!com.cripta.app.data.VaultRepository.isVideo(file.mimeType)) return false
+        if (file.mimeType != "video/mp4") return true
+        val codec = thumbs.videoCodec(file) ?: return false
+        return codec != "video/avc" && codec != "video/hevc"
+    }
     suspend fun tagNamesOf(id: String): List<String> = repo.tagNamesOf(id)
 
     fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)

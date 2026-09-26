@@ -231,6 +231,11 @@ class ThumbnailLoader @Inject constructor(
      * color info) — used by the viewer's Info dialog so the user can share why a cover looks wrong.
      * Reads over the in-memory channel; returns a human-readable multi-line string.
      */
+    /** The video track's codec mime type (e.g. video/avc, video/av01), or null if unreadable. */
+    suspend fun videoCodec(file: FileEntity): String? = withContext(Dispatchers.IO) {
+        if (!VaultRepository.isVideo(file.mimeType)) null else runCatching { videoMime(file) }.getOrNull()
+    }
+
     suspend fun videoDiagnostics(file: FileEntity): String = withContext(Dispatchers.IO) {
         if (!VaultRepository.isVideo(file.mimeType)) return@withContext ""
         val sb = StringBuilder()
