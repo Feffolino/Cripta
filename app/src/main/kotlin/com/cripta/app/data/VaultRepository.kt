@@ -723,10 +723,11 @@ class VaultRepository @Inject constructor(
     /**
      * A read the screens run on their own (produceState, a page coming back into view…), which can
      * land just after the vault locked: then there is nothing to show, not a crash ("Vault locked",
-     * or the database closing under the query).
+     * or the database closing under the query). Background work that keeps the keys past a lock
+     * (a conversion finishing) still reads normally.
      */
     private inline fun <T> readOrDefault(default: T, read: (com.cripta.app.data.db.CriptaDatabase) -> T): T {
-        val d = session.database.value ?: return default
+        val d = session.dbOrNull() ?: return default
         return try {
             read(d)
         } catch (e: IllegalStateException) {
