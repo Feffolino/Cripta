@@ -713,11 +713,27 @@ class VaultRepository @Inject constructor(
 
     // --- Read / open ---
     suspend fun fileById(id: String): FileEntity? = withContext(Dispatchers.IO) {
-        db.fileDao().byId(id)
+        readOrDefault(null) { it.fileDao().byId(id) }
     }
 
     suspend fun tagNamesOf(fileId: String): List<String> = withContext(Dispatchers.IO) {
-        db.fileDao().withTagsById(fileId)?.tags?.map { it.name } ?: emptyList()
+        readOrDefault(emptyList()) { d -> d.fileDao().withTagsById(fileId)?.tags?.map { it.name } ?: emptyList() }
+    }
+
+    /**
+     * A read the screens run on their own (produceState, a page coming back into view…), which can
+     * land just after the vault locked: then there is nothing to show, not a crash ("Vault locked",
+     * or the database closing under the query).
+     */
+    private inline fun <T> readOrDefault(default: T, read: (com.cripta.app.data.db.CriptaDatabase) -> T): T {
+        val d = session.database.value ?: return default
+        return try {
+            read(d)
+        } catch (e: IllegalStateException) {
+            default
+        } catch (e: android.database.SQLException) {
+            default
+        }
     }
 
     suspend fun decryptBytes(file: FileEntity): ByteArray = withContext(Dispatchers.IO) {
