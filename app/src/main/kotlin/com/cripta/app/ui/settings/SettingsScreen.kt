@@ -808,6 +808,12 @@ fun SettingsScreen(
                                         Text("Download dell'aggiornamento: $pct%" + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
                                         androidx.compose.material3.LinearProgressIndicator(
                                             progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Continua anche se chiudi l'app: ti avvisa una notifica.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                            TextButton(onClick = { vm.cancelUpdateDownload(ctx) }) { Text("Annulla") }
+                                        }
                                     }
                                     is SettingsViewModel.UpdateState.ReadyToInstall -> {
                                         Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
