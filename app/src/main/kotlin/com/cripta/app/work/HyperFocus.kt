@@ -68,29 +68,6 @@ internal object HyperFocus {
     }
 
     @SuppressLint("PrivateApi")
-    private fun osVersion(): String? = try {
-        Class.forName("android.os.SystemProperties").getDeclaredMethod("get", String::class.java)
-            .invoke(null, "ro.mi.os.version.name") as? String
-    } catch (e: Exception) {
-        null
-    }?.takeIf { it.isNotBlank() }
-
-    /** For Impostazioni › Informazioni: what the phone says about the island, to tell why it does or doesn't show. */
-    fun diagnosis(ctx: Context): String {
-        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return "Non disponibile (non Xiaomi)"
-        val island = islandFeature()
-        val details = listOfNotNull(
-            protocol(ctx).takeIf { it > 0 }?.let { "protocollo $it" },
-            osVersion()?.let { "HyperOS $it" },
-        ).joinToString(", ").let { if (it.isEmpty()) "" else " ($it)" }
-        return when (canShowFocus(ctx)) {
-            true -> if (island) "Attiva$details" else "Consentita, isola non segnalata$details"
-            false -> if (island) "Non consentita per Cripta" else "Non disponibile su questo sistema"
-            null -> if (island) "Isola presente, permesso sconosciuto" else "Non disponibile su questo sistema"
-        }
-    }
-
-    @SuppressLint("PrivateApi")
     private fun islandFeature(): Boolean = try {
         Class.forName("android.os.SystemProperties")
             .getDeclaredMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)

@@ -836,8 +836,6 @@ fun SettingsScreen(
                                 InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
                                 InfoRow("Pacchetto", ctx.packageName)
                                 InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
-                                val focus = remember { com.cripta.app.work.HyperFocus.diagnosis(ctx) }
-                                InfoRow("Notifiche focus HyperOS", focus)
                             }
                         }
                         item {
