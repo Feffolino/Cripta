@@ -233,7 +233,7 @@ class ConversionService : Service() {
             val pct = done * 100 / total
             val elapsed = SystemClock.elapsedRealtime() - start
             val eta = if (done > 0) (elapsed / done) * (total - done) else 0L
-            notify(build("$label $done/$total", pct, sub = "${pct}% · ${etaText(eta)}"))
+            notify(build("$label $done/$total", pct, sub = "${pct}% · ${etaText(eta)}", icon = R.drawable.ic_notif_download))
         }
     }
 
@@ -253,7 +253,7 @@ class ConversionService : Service() {
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = "Cifratura in corso"))
+                notify(build("Importazione ${st.done + 1}/${st.total}", (st.fraction * 100).toInt(), sub = "Cifratura in corso", icon = R.drawable.ic_notif_import))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -264,7 +264,7 @@ class ConversionService : Service() {
                             lastNotify = now
                             val cur = repo.importState.value
                             val filePct = if (size > 0) "File al ${(bytes * 100 / size).coerceAtMost(100)}%" else "Cifratura in corso"
-                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = filePct))
+                            notify(build("Importazione ${cur.done + 1}/${cur.total}", (cur.fraction * 100).toInt(), sub = filePct, icon = R.drawable.ic_notif_import))
                         }
                     }
                     true
@@ -289,7 +289,7 @@ class ConversionService : Service() {
                 val elapsed = SystemClock.elapsedRealtime() - start
                 val left = cur.total - cur.done
                 val eta = if (cur.done > 0 && left > 0) " · ${etaText(elapsed / cur.done * left)}" else ""
-                notify(build("Importazione ${cur.done}/${cur.total}", (cur.fraction * 100).toInt(), sub = "${(cur.fraction * 100).toInt()}%$eta"))
+                notify(build("Importazione ${cur.done}/${cur.total}", (cur.fraction * 100).toInt(), sub = "${(cur.fraction * 100).toInt()}%$eta", icon = R.drawable.ic_notif_import))
             }
         } finally {
             withContext(NonCancellable) {
@@ -333,7 +333,7 @@ class ConversionService : Service() {
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
         // No file names in notifications (the in-app banner shows it, behind the lock).
-        notify(build("Conversione in MP4", 0, sub = "Preparazione…", indeterminate = true, cancelMode = MODE_CANCEL_CONVERT))
+        notify(build("Conversione in MP4", 0, sub = "Preparazione…", indeterminate = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
         var src: java.io.File? = null
         var out: java.io.File? = null
         var result: Pair<Boolean, String>? = null
@@ -349,7 +349,7 @@ class ConversionService : Service() {
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
                     val q = convertWaiting.get().let { if (it > 0) " · $it in coda" else "" }
-                    notify(build("Conversione in MP4", pct, sub = "$pct%$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT))
+                    notify(build("Conversione in MP4", pct, sub = "$pct%$q", cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
                 }
             }
             // Never import a broken transcode (a corrupt output that looked valid could lead to losing
@@ -484,7 +484,7 @@ class ConversionService : Service() {
         val mode = if (similar) com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR else com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
         val label = if (similar) "Ricerca media simili" else "Ricerca duplicati"
         dupStore.start(mode)
-        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN))
+        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
         var last = 0L
         val onProgress: (Int, Int) -> Unit = { done, total ->
             dupStore.progress(done, total)
@@ -492,7 +492,7 @@ class ConversionService : Service() {
             if (now - last > 400 || done == total) {
                 last = now
                 val pct = if (total > 0) done * 100 / total else 0
-                notify(build(label, pct, sub = "$done di $total", indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN))
+                notify(build(label, pct, sub = "$done di $total", indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
             }
         }
         try {
@@ -558,14 +558,14 @@ class ConversionService : Service() {
             set { it.copy(phase = VaultRepository.DownloadPhase.PREPARING) }
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
-            notify(build("Preparazione…", 0, indeterminate = true, cancelable = true))
+            notify(build("Preparazione…", 0, indeterminate = true, cancelable = true, icon = R.drawable.ic_notif_download))
             produced = withContext(Dispatchers.IO) {
                 ytdlp.download(url, job.maxHeight, pid) { pct, eta ->
                     repo.setConversionProgress(pct)
                     set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = eta) }
                     val q = waiting().let { if (it > 0) " · $it in coda" else "" }
                     val sub = (if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%") + q
-                    notify(build("Download in corso", pct, sub = sub, cancelable = true))
+                    notify(build("Download in corso", pct, sub = sub, cancelable = true, icon = R.drawable.ic_notif_download))
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
@@ -671,9 +671,11 @@ class ConversionService : Service() {
         indeterminate: Boolean = false,
         cancelable: Boolean = false,
         cancelMode: String = MODE_CANCEL,
+        /** The operation's own icon: the Live Update chip / Hyper Island shows little else. */
+        icon: Int = R.drawable.ic_notification,
     ): Notification {
         val b = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(sub)
@@ -712,7 +714,10 @@ class ConversionService : Service() {
      * a result posted there just flashes and disappears.
      */
     /** Which kind of operation a result belongs to; each keeps its own notification. */
-    private enum class ResultKind(val id: Int) { IMPORT(4220), DOWNLOAD(4221), CONVERT(4222), SCAN(4223) }
+    private enum class ResultKind(val id: Int, val icon: Int) {
+        IMPORT(4220, R.drawable.ic_notif_import), DOWNLOAD(4221, R.drawable.ic_notif_download),
+        CONVERT(4222, R.drawable.ic_notif_convert), SCAN(4223, R.drawable.ic_notif_scan),
+    }
 
     /** Tap on a notification: bring the app to the front (optionally straight to the duplicate results). */
     private fun openAppIntent(openDuplicates: Boolean = false): android.app.PendingIntent = android.app.PendingIntent.getActivity(
@@ -730,13 +735,13 @@ class ConversionService : Service() {
      */
     private fun notifyResult(title: String, text: String?, kind: ResultKind = ResultKind.CONVERT, openDuplicates: Boolean = false) {
         val public = NotificationCompat.Builder(this, RESULT_CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(kind.icon)
             .setColor(BRAND_COLOR)
             .setContentTitle("Cripta")
             .setContentText(title)
             .build()
         val n = NotificationCompat.Builder(this, RESULT_CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(kind.icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .setContentText(text)
@@ -757,7 +762,7 @@ class ConversionService : Service() {
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notif_convert)
             .setColor(BRAND_COLOR)
             .setContentTitle("Video convertito")
             .setContentText("Copia MP4 creata. Eliminare l'originale?")

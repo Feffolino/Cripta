@@ -73,7 +73,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Transform
+import androidx.compose.material.icons.filled.SwitchVideo
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -543,7 +543,7 @@ fun VaultScreen(
                     })
                     add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
                     add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
-                    if (convertible > 0) add(SelAction(Icons.Filled.Transform, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
+                    if (convertible > 0) add(SelAction(Icons.Filled.SwitchVideo, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
                         val ids = convertibleIds.toList()
                         if (!convertSettings.first) {
                             convertAsk = ids
