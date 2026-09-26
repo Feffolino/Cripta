@@ -81,7 +81,8 @@ internal object HyperFocus {
      * "Conversione co…"): a short name of the operation there, the full title when expanded.
      */
     private fun islandLabel(title: String): String = when {
-        title.startsWith("Conversione") -> "MP4"
+        title.startsWith("Conversione") || title.startsWith("Copia MP4") -> "MP4"
+        title.contains("cifrat") -> "Importa"
         title.startsWith("Importazione") -> "Importa"
         title.startsWith("Esportazione") -> "Esporta"
         title.startsWith("Download") -> "Download"
@@ -145,17 +146,25 @@ internal object HyperFocus {
                 .put("smallIslandArea", small)
                 .put("bigIslandArea", big))
         if (progress != null) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
-        // Variant B (to compare with the text buttons): the buttons as the template's actions,
-        // as HyperBridge sends them: text-only (type 2), intent type 1, a background colour.
-        if (buttons.isNotEmpty()) {
-            param.put("actions", JSONArray().apply {
+        // One button (Annulla while an operation runs): the chat template's own action, a compact
+        // pill beside the title, which leaves room for the progress bar below. Two or more (a
+        // choice): the row of large text buttons, since the chat template shows only one action.
+        if (buttons.size == 1) {
+            val b = buttons.single()
+            param.put("actions", JSONArray().put(JSONObject()
+                .put("type", 2)
+                .put("action", ACTION + b.key)
+                .put("actionTitle", b.title)
+                .put("actionIntentType", 1)))
+        } else if (buttons.isNotEmpty()) {
+            param.put("textButton", JSONArray().apply {
                 buttons.forEach { b ->
                     put(JSONObject()
-                        .put("type", 2)
-                        .put("action", ACTION + b.key)
+                        .put("type", 1)
                         .put("actionTitle", b.title)
-                        .put("actionIntentType", 1)
-                        .put("actionBgColor", "#FF2F6FB3"))
+                        .put("actionIntentType", if (b.service) 3 else 1)
+                        .put("actionIntent", ACTION + b.key)
+                        .put("action", ACTION + b.key))
                 }
             })
         }
