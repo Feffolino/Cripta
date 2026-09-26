@@ -290,14 +290,12 @@ fun ViewerScreen(
     // Split view: no title bar, quick tags, filmstrip or hint over the media while it is open (the
     // player's own controls do show, laid out in the space above the panel).
     val splitOpen = splitDetails && showTags
-    // Regular details sheet (not the split view): the video's controls are switched off while it
-    // is open and for a moment after it closes. The swipe, the sheet's window taking and giving back
-    // focus and the layout settling made the player bring them up on opening and on closing.
+    // Opening or closing the details (sheet or split panel) hides the video's controls, and they stay
+    // hidden until the user next touches the viewer. Until then any attempt of the player to bring
+    // them back (the swipe, the sheet's window taking and giving back focus, the layout settling)
+    // is undone unseen. A timed hold let a late one through: the controls hid, then came back.
     var holdControls by remember { mutableStateOf(false) }
-    LaunchedEffect(showTags, splitDetails) {
-        if (showTags && !splitDetails) { holdControls = true; chromeVisible = false }
-        else if (holdControls) { delay(600); holdControls = false }
-    }
+    LaunchedEffect(showTags) { if (showTags) { holdControls = true; chromeVisible = false } }
     // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
     var recentsEpoch by remember { mutableIntStateOf(0) }
     LaunchedEffect(chromeVisible) { if (!chromeVisible) recentsEpoch++ }
@@ -360,7 +358,7 @@ fun ViewerScreen(
             showRecents = displayPrefs.showRecentTags,
             vm = vm,
             // Back to the media, not to its controls: the swipe that opened the panel had shown them.
-            onDismiss = { showTags = false; chromeVisible = false; hideControlsTick++ },
+            onDismiss = { showTags = false; chromeVisible = false; holdControls = true; hideControlsTick++ },
             split = split,
             splitPanel = splitPanel,
             onSheetTop = { sheetTopPx = it },
@@ -406,6 +404,15 @@ fun ViewerScreen(
                     } finally {
                         verticalLock = false
                     }
+                }
+            }
+            // The user touching the viewer (not the split panel) ends the controls' hold (see
+            // holdControls): from here on a tap shows them as usual.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val panelTop = sheetTopPx
+                    if (!(panelTop > 0f && down.position.y >= panelTop)) holdControls = false
                 }
             }
             // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel,
@@ -1401,11 +1408,17 @@ private fun VideoPlayer(
     }
     // In PiP only the video shows: no controller.
     LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
-    // Held (details sheet open, or just closed): the controller stays enabled, but any attempt to
+    // Held (details just opened or closed, until the next touch): the controller stays enabled, but any attempt to
     // show it is undone at once (see the visibility listener) and never reaches the viewer's chrome.
     // Switching the controller off and back on made it flash a couple of times around the sheet.
+    // The controller is also made transparent meanwhile, so that an attempt undone a moment later
+    // is not even seen as a flash.
     val heldNow by androidx.compose.runtime.rememberUpdatedState(controlsHeld)
-    LaunchedEffect(controlsHeld, playerViewRef) { if (controlsHeld) playerViewRef?.hideController() }
+    LaunchedEffect(controlsHeld, playerViewRef) {
+        val pv = playerViewRef ?: return@LaunchedEffect
+        val ctl = pv.findViewById<View>(androidx.media3.ui.R.id.exo_controller)
+        if (controlsHeld) { ctl?.alpha = 0f; pv.hideController() } else ctl?.alpha = 1f
+    }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
