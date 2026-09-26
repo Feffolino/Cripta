@@ -117,7 +117,11 @@ internal object HyperFocus {
     ): Bundle {
         if (!isSupported(ctx)) return Bundle()
         val dbg = IslandDebug.get(ctx)
-        val picKey = PIC + "icon"
+        // Keys unique to this icon and this notification: HyperOS keeps the pictures and buttons
+        // of all of an app's focus notifications by key, and with several at once (a download and
+        // a conversion result…) the shared "icon" / "choice0" keys got mixed up (a square icon).
+        val picKey = PIC + runCatching { ctx.resources.getResourceEntryName(icon) }.getOrDefault("icon")
+        val tag = (business + title).hashCode().toUInt().toString(16)
         val pic = JSONObject().put("type", 1).put("pic", picKey)
         val small = if (progress != null) {
             JSONObject().put("combinePicInfo", JSONObject().put("picInfo", pic)
@@ -184,7 +188,7 @@ internal object HyperFocus {
                 buttons.forEach { b ->
                     put(JSONObject()
                         .put("type", 0)
-                        .put("action", ACTION + b.key)
+                        .put("action", ACTION + tag + "_" + b.key)
                         .put("actionTitle", "")
                         .put("actionIntentType", 1))
                 }
@@ -194,7 +198,7 @@ internal object HyperFocus {
                 buttons.forEach { b ->
                     put(JSONObject()
                         .put("type", 2)
-                        .put("action", ACTION + b.key)
+                        .put("action", ACTION + tag + "_" + b.key)
                         .put("actionTitle", b.title)
                         .put("actionIntentType", 1))
                 }
@@ -206,14 +210,14 @@ internal object HyperFocus {
                         .put("type", 1)
                         .put("actionTitle", b.title)
                         .put("actionIntentType", if (b.service) 3 else 1)
-                        .put("actionIntent", ACTION + b.key)
-                        .put("action", ACTION + b.key))
+                        .put("actionIntent", ACTION + tag + "_" + b.key)
+                        .put("action", ACTION + tag + "_" + b.key))
                 }
             })
         }
         val actions = Bundle()
         buttons.forEach { b ->
-            actions.putParcelable(ACTION + b.key,
+            actions.putParcelable(ACTION + tag + "_" + b.key,
                 Notification.Action.Builder(Icon.createWithResource(ctx, b.icon ?: icon), b.title, b.intent).build())
         }
         val json = JSONObject().put("param_v2", param).put("isShowNotification", true).toString()

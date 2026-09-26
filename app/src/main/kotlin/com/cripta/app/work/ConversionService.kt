@@ -934,6 +934,9 @@ class ConversionService : Service() {
         header: String? = null,
     ): Notification {
         val b = NotificationCompat.Builder(this, ongoingChannel())
+            // Each notification its own group: with four or more ungrouped ones Android folds
+            // them into one automatic summary, whose icon HyperOS shows as a plain square.
+            .setGroup(GROUP_ONGOING)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1079,6 +1082,7 @@ class ConversionService : Service() {
         // for a few seconds, with its buttons, then it stays as a normal notification.
         val island = HyperFocus.isSupported(this)
         val b = NotificationCompat.Builder(this, if (island) ongoingChannel() else RESULT_CHANNEL)
+            .setGroup("cripta_result_${kind.name}")
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1124,6 +1128,7 @@ class ConversionService : Service() {
      */
     private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
         val b = NotificationCompat.Builder(this, ongoingChannel())
+            .setGroup("cripta_choice_$id")
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1224,6 +1229,7 @@ class ConversionService : Service() {
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
         private const val RESULT_CHANNEL = "results"
         private const val LIVE_CHANNEL = "progress_island"
+        private const val GROUP_ONGOING = "cripta_ongoing"
         private const val LIVE_CHANNEL_HIGH = "progress_island_debug_high"
         private const val MODE_DEBUG_PROGRESS = "debug_progress"
         private const val MODE_DEBUG_CHOICE = "debug_choice"
