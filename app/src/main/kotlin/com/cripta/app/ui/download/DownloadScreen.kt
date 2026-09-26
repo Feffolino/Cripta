@@ -216,6 +216,11 @@ fun DownloadScreen(
                 }
             }
 
+            // What the link is, once analysed: its cover, title and length, before downloading.
+            (estimate as? DownloadViewModel.Estimate.Ready)?.takeIf { it.thumbnailUrl != null || it.title != null }?.let { e ->
+                LinkPreview(e)
+            }
+
             // Already downloaded from this link?
             existing?.let { f ->
                 Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium,
@@ -309,6 +314,12 @@ fun DownloadScreen(
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
+                            }
+                            // Clear every chosen tag at once (instead of untapping them one by one).
+                            if (effectiveTags.isNotEmpty()) {
+                                IconButton(onClick = { tagIds = emptySet() }) {
+                                    Icon(Icons.Filled.Clear, "Togli tutte le etichette", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                             // The chevron turns instead of swapping icons.
                             val turn by androidx.compose.animation.core.animateFloatAsState(
@@ -611,3 +622,45 @@ private fun phaseGroup(p: DownloadPhase): PhaseGroup = when (p) {
 
 private fun etaText(sec: Long): String =
     if (sec >= 60) "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}" else "${sec}s"
+
+/**
+ * Preview of an analysed link: the site's cover, title and length. The cover is fetched straight
+ * from the site (as the download will be) and kept in memory only, never in a disk cache.
+ */
+@Composable
+private fun LinkPreview(e: DownloadViewModel.Estimate.Ready) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(width = 112.dp, height = 63.dp).clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                e.thumbnailUrl?.let { url ->
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    coil.compose.AsyncImage(
+                        model = coil.request.ImageRequest.Builder(ctx).data(url)
+                            .diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                            .crossfade(true).build(),
+                        contentDescription = "Copertina",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
+                com.cripta.app.ui.components.formatDuration(e.durationSec * 1000L)?.let { d ->
+                    Text(d, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(MaterialTheme.shapes.extraSmall)
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp))
+                }
+            }
+            Text(
+                e.title ?: "Video trovato",
+                style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(start = 12.dp),
+            )
+        }
+    }
+}
+

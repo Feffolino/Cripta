@@ -54,7 +54,13 @@ class DownloadViewModel @Inject constructor(
     sealed interface Estimate {
         data object Idle : Estimate
         data object Loading : Estimate
-        data class Ready(val bytesByHeight: Map<Int?, Long?>) : Estimate
+        /** Sizes per quality, plus what the link is (for a preview card before downloading). */
+        data class Ready(
+            val bytesByHeight: Map<Int?, Long?>,
+            val title: String? = null,
+            val thumbnailUrl: String? = null,
+            val durationSec: Int = 0,
+        ) : Estimate
         data class Error(val message: String) : Estimate
     }
 
@@ -81,10 +87,15 @@ class DownloadViewModel @Inject constructor(
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val info = ytdlp.info(u)
-                    heights.associateWith { h -> ytdlp.estimateBytes(info, h) }
+                    Estimate.Ready(
+                        heights.associateWith { h -> ytdlp.estimateBytes(info, h) },
+                        title = info.title?.takeIf { it.isNotBlank() },
+                        thumbnailUrl = info.thumbnail?.takeIf { it.startsWith("https://") || it.startsWith("http://") },
+                        durationSec = info.duration,
+                    )
                 }
             }
-            result.onSuccess { _estimate.value = Estimate.Ready(it) }
+            result.onSuccess { _estimate.value = it }
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) throw it
                     android.util.Log.w("DownloadViewModel", "estimate failed: $u", it)
