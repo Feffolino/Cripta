@@ -110,7 +110,8 @@ internal object HyperFocus {
     /**
      * Extras for one focus notification, or an empty bundle where unsupported.
      * @param chip short text of the island ("42%", "3/10", "Fatto").
-     * @param progress 0..100 for an operation in progress, null for a finished one (a choice).
+     * @param progress 0..100 for an operation in progress, null for a finished one (a choice) or
+     *   one still starting (no percentage yet).
      * @param float pop the island open once (a choice to make), not on every progress update.
      */
     fun extras(

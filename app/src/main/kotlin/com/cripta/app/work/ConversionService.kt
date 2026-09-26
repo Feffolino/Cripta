@@ -523,13 +523,19 @@ class ConversionService : Service() {
     @Volatile private var lastImportSummary: String? = null
     @Volatile private var lastImportCount: Int? = null
 
-    /** Progress of an import: file [n] of [total] and what is happening to it; never its name. */
+    /**
+     * Progress of an import: file [n] of [total] and what is happening to it; never its name.
+     * After Annulla it says the import stops after this file (a large one can take a while, and
+     * the button seemed to do nothing), without the button.
+     */
     private fun importNote(n: Int, total: Int, pct: Int, what: String, start: Long): Notification {
         val done = n - 1
         val elapsed = SystemClock.elapsedRealtime() - start
         val eta = if (done > 0 && done < total) etaText(elapsed / done * (total - done)) else null
-        return build("Importazione", pct, sub = "File $n di $total · $what", chip = "$done/$total", header = eta,
-            cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
+        val stopping = batchCancel
+        return build("Importazione", pct, sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
+            chip = "$done/$total", header = eta.takeUnless { stopping },
+            cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
     }
 
     /** Conversions run strictly one at a time: parallel transcodes fight over the hardware
@@ -966,9 +972,12 @@ class ConversionService : Service() {
             cancelPi = pi
         }
         // HyperOS: the Hyper Island's own template on top (large rounded buttons); ignored elsewhere.
+        // Its expanded text also carries the [header] (time left, how many queued), which the
+        // template has no place for otherwise.
         b.addExtras(HyperFocus.extras(
-            this, "cripta_progress", title, sub, chipText, icon,
-            progress = if (indeterminate) 0 else pct,
+            this, "cripta_progress", title, listOfNotNull(sub, header).joinToString(" · ").ifEmpty { null }, chipText, icon,
+            // Not started yet (no percentage): no ring or bar, which stood at 0 as if stuck.
+            progress = if (indeterminate) null else pct,
             buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it, icon = R.drawable.ic_action_cancel) }),
             float = false,
         ))
@@ -1142,7 +1151,8 @@ class ConversionService : Service() {
                     a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it,
                         icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
                 },
-                float = true,
+                // Not for a cancellation: the user just tapped Annulla, the island needn't pop open to say so.
+                float = state != ResultState.CANCELLED,
             ))
             .addExtras(android.os.Bundle().apply { putLong(EXTRA_ISLAND_RESULT, token) })
             .build()
