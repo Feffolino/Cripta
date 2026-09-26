@@ -348,6 +348,11 @@ fun ViewerScreen(
     // One place for the details panel's wiring: the regular sheet (after the Box) and the split
     // view's panel (inside it, so it is part of the screen) both use it.
     val detailsPanel: @Composable (FileEntity, Boolean) -> Unit = { file, split ->
+        // By the codec, not only the file type (an .mp4 with AV1 inside needs it too).
+        val convertible by produceState(
+            initialValue = com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4",
+            file.id,
+        ) { value = vm.canConvertToMp4(file) }
         DetailsSheet(
             file = file,
             allTags = allTags,
@@ -364,8 +369,7 @@ fun ViewerScreen(
                 onFavorite = { vm.toggleFavorite(file) },
                 onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
                 onExport = { confirmDownload = true },
-                onConvert = if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType) && file.mimeType != "video/mp4")
-                    ({ confirmConvert = true }) else null,
+                onConvert = if (convertible) ({ confirmConvert = true }) else null,
                 onDelete = { confirmDelete = true },
             ),
         )
