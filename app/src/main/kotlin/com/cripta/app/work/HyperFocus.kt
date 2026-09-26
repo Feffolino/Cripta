@@ -32,7 +32,7 @@ internal object HyperFocus {
     private const val BRAND = "#5AA9FF"
 
     /** A text button of the focus notification. [service]: the intent starts a service (else an activity). */
-    class Button(val key: String, val title: String, val intent: PendingIntent, val service: Boolean = true)
+    class Button(val key: String, val title: String, val intent: PendingIntent, val service: Boolean = true, val icon: Int? = null)
 
     @Volatile private var supported: Boolean? = null
 
@@ -146,10 +146,20 @@ internal object HyperFocus {
                 .put("smallIslandArea", small)
                 .put("bigIslandArea", big))
         if (progress != null) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
-        // One button (Annulla while an operation runs): the chat template's own action, a compact
-        // pill beside the title, which leaves room for the progress bar below. Two or more (a
-        // choice): the row of large text buttons, since the chat template shows only one action.
-        if (buttons.size == 1) {
+        // Buttons as the system Clock shows them: round icon buttons beside the title (the
+        // template's actions, icon only), which leaves the progress bar room below and fits two.
+        // Without icons: one as the template's text pill, several as the row of text buttons.
+        if (buttons.isNotEmpty() && buttons.all { it.icon != null }) {
+            param.put("actions", JSONArray().apply {
+                buttons.forEach { b ->
+                    put(JSONObject()
+                        .put("type", 0)
+                        .put("action", ACTION + b.key)
+                        .put("actionTitle", "")
+                        .put("actionIntentType", 1))
+                }
+            })
+        } else if (buttons.size == 1) {
             val b = buttons.single()
             param.put("actions", JSONArray().put(JSONObject()
                 .put("type", 2)
@@ -171,7 +181,7 @@ internal object HyperFocus {
         val actions = Bundle()
         buttons.forEach { b ->
             actions.putParcelable(ACTION + b.key,
-                Notification.Action.Builder(Icon.createWithResource(ctx, icon), b.title, b.intent).build())
+                Notification.Action.Builder(Icon.createWithResource(ctx, b.icon ?: icon), b.title, b.intent).build())
         }
         return Bundle().apply {
             putString("miui.focus.param", JSONObject().put("param_v2", param).put("isShowNotification", true).toString())

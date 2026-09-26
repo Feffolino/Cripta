@@ -883,7 +883,7 @@ class ConversionService : Service() {
         b.addExtras(HyperFocus.extras(
             this, "cripta_progress", title, sub, chipText, icon,
             progress = if (indeterminate) 0 else pct,
-            buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it) }),
+            buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it, icon = R.drawable.ic_action_cancel) }),
             float = false,
         ))
         return b.build()
@@ -1033,14 +1033,17 @@ class ConversionService : Service() {
         // HyperOS: the choice as the island's own buttons, popping it open once.
         b.addExtras(HyperFocus.extras(
             this, "cripta_choice", title, text, "Fatto", icon, progress = null,
-            buttons = actions.mapIndexedNotNull { i, a -> a.actionIntent?.let { HyperFocus.Button("choice$i", a.title.toString(), it) } },
+            // The round icon of each (its NotificationCompat.Action icon), as the Clock's buttons.
+            buttons = actions.mapIndexedNotNull { i, a ->
+                a.actionIntent?.let { HyperFocus.Button("choice$i", a.title.toString(), it, icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
+            },
             float = true,
         ))
         getSystemService(NotificationManager::class.java).notify(id, b.build())
     }
 
-    private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null) = NotificationCompat.Action(
-        0, label,
+    private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null, icon: Int = 0) = NotificationCompat.Action(
+        icon, label,
         android.app.PendingIntent.getService(
             this, req,
             Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).apply { originalId?.let { putExtra(EX_ID, it) } },
@@ -1052,8 +1055,8 @@ class ConversionService : Service() {
     private fun postConvertDone(originalId: String) = postChoice(
         // Short lines: the island's template shows one line each.
         DONE_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
-        serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, originalId),
-        serviceAction("Mantieni", MODE_DISMISS, 3, originalId),
+        serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, originalId, R.drawable.ic_action_delete),
+        serviceAction("Mantieni", MODE_DISMISS, 3, originalId, R.drawable.ic_action_keep),
     )
 
     /** An import with the "Chiedi" policy finished: delete the originals from the device, or keep them. */
@@ -1064,8 +1067,8 @@ class ConversionService : Service() {
         postChoice(
             ResultKind.IMPORT.id, R.drawable.ic_notif_done, title,
             if (n == 1) "Eliminare l'originale?" else "Eliminare i $n originali?",
-            serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8),
-            serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9),
+            serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8, icon = R.drawable.ic_action_delete),
+            serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9, icon = R.drawable.ic_action_keep),
         )
     }
 
