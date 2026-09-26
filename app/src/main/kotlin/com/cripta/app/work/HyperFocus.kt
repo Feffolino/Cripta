@@ -36,19 +36,35 @@ internal object HyperFocus {
 
     @Volatile private var supported: Boolean? = null
 
-    /** Xiaomi, with the island, and focus notifications allowed for this app. Checked once per process. */
+    /**
+     * Xiaomi with the island: the focus extras are added. Whether Cripta may show focus
+     * notifications is not a condition any more: that check (canShowFocus) can answer false or
+     * fail where the island would take them anyway, and the extras are ignored when not allowed.
+     * Checked once per process.
+     */
     fun isSupported(ctx: Context): Boolean = supported ?: check(ctx).also { supported = it }
 
-    private fun check(ctx: Context): Boolean {
-        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return false
-        if (!islandFeature()) return false
-        return try {
-            ctx.contentResolver.call(
-                Uri.parse("content://miui.statusbar.notification.public"), "canShowFocus", null,
-                Bundle().apply { putString("package", ctx.packageName) },
-            )?.getBoolean("canShowFocus", false) ?: false
-        } catch (e: Exception) {
-            false
+    private fun check(ctx: Context): Boolean =
+        Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) && (islandFeature() || canShowFocus(ctx) == true)
+
+    /** HyperOS's own answer on whether Cripta may show focus notifications (null: no answer). */
+    private fun canShowFocus(ctx: Context): Boolean? = try {
+        ctx.contentResolver.call(
+            Uri.parse("content://miui.statusbar.notification.public"), "canShowFocus", null,
+            Bundle().apply { putString("package", ctx.packageName) },
+        )?.getBoolean("canShowFocus", false)
+    } catch (e: Exception) {
+        null
+    }
+
+    /** For Impostazioni › Informazioni: what the phone says about the island, to tell why it does or doesn't show. */
+    fun diagnosis(ctx: Context): String {
+        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return "Non disponibile (non Xiaomi)"
+        val island = islandFeature()
+        return when (canShowFocus(ctx)) {
+            true -> if (island) "Attiva" else "Consentita, isola non segnalata"
+            false -> if (island) "Non consentita per Cripta" else "Non disponibile su questo sistema"
+            null -> if (island) "Isola presente, permesso sconosciuto" else "Non disponibile su questo sistema"
         }
     }
 
