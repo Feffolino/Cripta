@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notification / Live Update icon (download): the Cripta shield with the operation's symbol cut
+<!-- Notification / Live Update icon (export to the gallery): the Cripta shield with the operation's symbol cut
      out (evenOdd), so the app stays recognisable in the status bar and the Hyper Island. Android
      draws only the alpha channel. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -10,5 +10,5 @@
     <path
         android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
-        android:pathData="M12,1.5 L20.5,5.2 L20.5,11.5 C20.5,17.2 16.9,21.4 12,22.8 C7.1,21.4 3.5,17.2 3.5,11.5 L3.5,5.2 Z M 15.22,10.52 h -1.84 V 7.76 H 10.62 v 2.76 H 8.78 l 3.22,3.22 3.22,-3.22 z M 8.78,14.66 v 0.92 h 6.44 v -0.92 H 8.78 z" />
+        android:pathData="M12,1.5 L20.5,5.2 L20.5,11.5 C20.5,17.2 16.9,21.4 12,22.8 C7.1,21.4 3.5,17.2 3.5,11.5 L3.5,5.2 Z M 10.62,13.74 h 2.76 v -2.76 h 1.84 l -3.22,-3.22 -3.22,3.22 h 1.84 z m -1.84,0.92 h 6.44 v 0.92 H 8.78 z" />
 </vector>

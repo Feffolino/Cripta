@@ -438,9 +438,14 @@ class VaultViewModel @Inject constructor(
     /** Originals of a finished import waiting for "Elimina originali / Mantieni" (policy "Chiedi"). */
     val pendingOriginals: StateFlow<List<android.net.Uri>> = repo.pendingOriginals
 
-    fun clearPendingOriginals() = repo.clearPendingOriginals()
+    // Answered here: the same choice in the notifications (Hyper Island) goes away too.
+    fun clearPendingOriginals() {
+        repo.clearPendingOriginals()
+        com.cripta.app.work.ConversionService.dismissImportOriginalsChoice(appContext)
+    }
 
     fun deleteOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
+        com.cripta.app.work.ConversionService.dismissImportOriginalsChoice(appContext)
         repo.deleteOriginals(uris)
         repo.clearPendingOriginals()
     }
