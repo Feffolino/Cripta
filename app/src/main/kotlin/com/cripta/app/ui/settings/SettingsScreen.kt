@@ -1369,6 +1369,7 @@ private fun InfoRow(label: String, value: String) {
  * Debug isola: every Hyper Island variant as a switch, read at the next notification, plus two
  * sample notifications, so a variant can be tried on the phone without a new build.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IslandDebugSection() {
     val ctx = LocalContext.current
