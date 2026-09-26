@@ -151,13 +151,20 @@ class VaultRepository @Inject constructor(
         val failures: List<Pair<String, String>> = emptyList(),
         /** Source uris imported successfully in the current run (all batches since the banner reset). */
         val importedUris: List<Uri> = emptyList(),
+        /** Weight ([com.cripta.app.util.batchWeight]) of every file of the running batches, and of the finished ones. */
+        val weightTotal: Long = 0,
+        val weightDone: Long = 0,
     ) {
         val succeeded: Int get() = done - failed
-        /** Overall progress 0..1, counting the partial progress of the file being encrypted. */
+        /**
+         * Overall progress 0..1, counting the partial progress of the file being encrypted. By the
+         * files' weight (their size) when known, so a large video counts for the time it takes.
+         */
         val fraction: Float get() {
             if (total <= 0) return 0f
-            val partial = if (active && currentTotalBytes > 0)
-                (currentBytes.toFloat() / currentTotalBytes).coerceIn(0f, 1f) else 0f
+            val partialBytes = if (active && currentTotalBytes > 0) currentBytes.coerceIn(0L, currentTotalBytes) else 0L
+            if (weightTotal > 0) return ((weightDone + partialBytes).toDouble() / weightTotal).toFloat().coerceIn(0f, 1f)
+            val partial = if (currentTotalBytes > 0) partialBytes.toFloat() / currentTotalBytes else 0f
             return ((done + partial) / total).coerceIn(0f, 1f)
         }
     }
@@ -166,12 +173,15 @@ class VaultRepository @Inject constructor(
     val importState: StateFlow<ImportState> = _importState
     private val importBatches = java.util.concurrent.atomic.AtomicInteger(0)
 
-    /** A batch of [count] files is starting (batches started while another runs are merged). */
-    fun importBegin(count: Int) {
+    /**
+     * A batch of [count] files weighing [weight] in all is starting (batches started while another
+     * runs are merged).
+     */
+    fun importBegin(count: Int, weight: Long = 0) {
         val first = importBatches.getAndIncrement() == 0
         _importState.update { s ->
-            if (first || !s.active) ImportState(active = true, total = count)
-            else s.copy(total = s.total + count)
+            if (first || !s.active) ImportState(active = true, total = count, weightTotal = weight)
+            else s.copy(total = s.total + count, weightTotal = s.weightTotal + weight)
         }
     }
 
@@ -180,10 +190,11 @@ class VaultRepository @Inject constructor(
 
     fun importBytes(bytes: Long) = _importState.update { it.copy(currentBytes = bytes) }
 
-    /** One item finished; [uri] is its source when it was imported successfully. */
-    fun importItemDone(ok: Boolean, uri: Uri? = null) = _importState.update {
+    /** One item of [weight] finished; [uri] is its source when it was imported successfully. */
+    fun importItemDone(ok: Boolean, uri: Uri? = null, weight: Long = 0) = _importState.update {
         it.copy(
             done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0,
+            weightDone = it.weightDone + weight,
             importedUris = if (ok && uri != null) it.importedUris + uri else it.importedUris,
         )
     }

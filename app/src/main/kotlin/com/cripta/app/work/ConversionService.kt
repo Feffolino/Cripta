@@ -19,6 +19,9 @@ import com.cripta.app.data.DeleteOriginalPolicy
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.media.VideoConverter
+import com.cripta.app.util.EtaEstimator
+import com.cripta.app.util.batchWeight
+import com.cripta.app.util.formatEtaShort
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -278,25 +281,31 @@ class ConversionService : Service() {
     private suspend fun debugRun(kind: String) {
         debugJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         val files = 5
-        fun step(p: Int) = when (kind) {
-            "download", "download_fail" -> build("Download", p, sub = "$p% · ${etaText(((100 - p) * 200).toLong())}",
-                header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
-            "import" -> {
-                val n = (p * files / 100).coerceAtMost(files - 1)
-                build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
-                    header = etaText(((100 - p) * 200).toLong()), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
+        // The time left from the same calculation as the real operations (nothing the first
+        // seconds: with a short Durata prova it only shows near the end, if at all).
+        val eta = EtaEstimator()
+        fun step(p: Int): Notification {
+            val left = eta.left(p / 100f)
+            return when (kind) {
+                "download", "download_fail" -> build("Download", p, sub = "Scaricamento del video · $p%",
+                    header = header(left, "1 in coda"), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                "import" -> {
+                    val n = (p * files / 100).coerceAtMost(files - 1)
+                    build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
+                        header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
+                }
+                "export" -> {
+                    val n = (p * files / 100).coerceAtMost(files - 1)
+                    build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
+                        header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
+                }
+                "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
+                    header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
+                "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
+                    header = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", header = header(left, "1 in coda"),
+                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
             }
-            "export" -> {
-                val n = (p * files / 100).coerceAtMost(files - 1)
-                build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
-                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
-            }
-            "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
-                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
-            "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
-                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
-            else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", header = "1 in coda",
-                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
         }
         val closeOnly = { label: String, req: Int, icon: Int -> serviceAction(label, MODE_DEBUG_DISMISS, req, icon = icon) }
         // Debug isola › Durata prova: the whole sample in about this many seconds.
@@ -350,10 +359,11 @@ class ConversionService : Service() {
         updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, 0))
         notify(build(title, 0, sub = "Versione ${rel.versionName}", indeterminate = true,
             cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
+        val eta = EtaEstimator()
         try {
             val apk = updater.download(this, rel.apkUrl, rel.sha256Url) { pct ->
                 updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, pct))
-                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%",
+                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%", header = eta.left(pct / 100f),
                     cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
             }
             updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
@@ -396,20 +406,29 @@ class ConversionService : Service() {
     /** Set by the Annulla of an import / export: the batch stops after the current file. */
     @Volatile private var batchCancel = false
 
-    /** Decrypt [ids] back to the gallery one by one ("Esporta"), with progress and a final result. */
+    /**
+     * Decrypt [ids] back to the gallery one by one ("Esporta"), with progress and a final result.
+     * Progress and time left go by the files' size ([batchWeight]), not their count.
+     */
     private suspend fun exportBatch(ids: List<String>) {
         val total = ids.size
         if (total == 0) return
         batchCancel = false
-        val start = SystemClock.elapsedRealtime()
+        val files = ids.map { id ->
+            try { repo.fileById(id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+        }
+        val weightTotal = files.sumOf { batchWeight(it?.sizeBytes ?: 0L) }
+        var weightDone = 0L
+        val eta = EtaEstimator()
         var saved = 0; var failed = 0; var done = 0
         notify(build("Esportazione in galleria", 0, sub = "File 1 di $total", chip = "0/$total",
             cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
-        for (id in ids) {
+        // Starts the measurement at 0, so the end of the first file already gives a speed.
+        eta.left(0f)
+        for (f in files) {
             if (batchCancel) break
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
-                val f = repo.fileById(id)
                 if (f != null) { repo.restoreToGallery(f); saved++ } else failed++
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -418,11 +437,11 @@ class ConversionService : Service() {
                 failed++
             }
             done++
-            val pct = done * 100 / total
-            val elapsed = SystemClock.elapsedRealtime() - start
-            val eta = if (done < total) etaText(elapsed / done * (total - done)) else null
-            notify(build("Esportazione in galleria", pct, sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
-                chip = "$done/$total", header = eta, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+            weightDone += batchWeight(f?.sizeBytes ?: 0L)
+            val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
+            val left = if (done < total) eta.left(fraction) else null
+            notify(build("Esportazione in galleria", (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
+                chip = "$done/$total", header = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
         }
         val cancelled = done < total
         val text = buildString {
@@ -444,18 +463,20 @@ class ConversionService : Service() {
     private suspend fun importBatch(uris: List<Uri>, folderId: Long?): List<Uri> {
         if (uris.isEmpty()) return emptyList()
         val done = mutableListOf<Uri>()
-        repo.importBegin(uris.size)
+        // Names and sizes up front: the progress (and the time left) goes by the files' size.
+        val info = uris.map { repo.nameAndSize(it) }
+        repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         batchCancel = false
         var cancelled = false
-        val start = SystemClock.elapsedRealtime()
+        val eta = EtaEstimator()
         try {
-            for (uri in uris) {
+            for ((i, uri) in uris.withIndex()) {
                 if (batchCancel) { cancelled = true; break }
-                val (name, size) = repo.nameAndSize(uri)
+                val (name, size) = info[i]
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(importNote(st.done + 1, st.total, (st.fraction * 100).toInt(), "cifratura in corso", start))
+                notify(importNote(st.done + 1, st.total, st.fraction, "cifratura in corso", eta))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -466,7 +487,7 @@ class ConversionService : Service() {
                             lastNotify = now
                             val cur = repo.importState.value
                             val filePct = if (size > 0) "cifrato al ${(bytes * 100 / size).coerceAtMost(100)}%" else "cifratura in corso"
-                            notify(importNote(cur.done + 1, cur.total, (cur.fraction * 100).toInt(), filePct, start))
+                            notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta))
                         }
                     }
                     true
@@ -485,10 +506,10 @@ class ConversionService : Service() {
                         repo.importDuplicate(f.id, existing.originalName)
                     }
                 }
-                repo.importItemDone(ok, if (ok) uri else null)
+                repo.importItemDone(ok, if (ok) uri else null, batchWeight(size))
                 if (ok) done += uri
                 val cur = repo.importState.value
-                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, (cur.fraction * 100).toInt(), "in coda", start))
+                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, "in coda", eta))
             }
         } finally {
             withContext(NonCancellable) {
@@ -528,13 +549,12 @@ class ConversionService : Service() {
      * After Annulla it says the import stops after this file (a large one can take a while, and
      * the button seemed to do nothing), without the button.
      */
-    private fun importNote(n: Int, total: Int, pct: Int, what: String, start: Long): Notification {
+    private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator): Notification {
         val done = n - 1
-        val elapsed = SystemClock.elapsedRealtime() - start
-        val eta = if (done > 0 && done < total) etaText(elapsed / done * (total - done)) else null
+        val left = eta.left(fraction)
         val stopping = batchCancel
-        return build("Importazione", pct, sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
-            chip = "$done/$total", header = eta.takeUnless { stopping },
+        return build("Importazione", (fraction * 100).toInt(), sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
+            chip = "$done/$total", header = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
     }
 
@@ -565,6 +585,7 @@ class ConversionService : Service() {
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
         // No file names in notifications (the in-app banner shows it, behind the lock).
         val queued = { convertWaiting.get().let { if (it > 0) "$it in coda" else null } }
+        val eta = EtaEstimator()
         notify(build("Conversione in MP4", 0, sub = "Preparazione del video…", indeterminate = true, header = queued(),
             cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
         var src: java.io.File? = null
@@ -581,7 +602,7 @@ class ConversionService : Service() {
                 converter.toMp4(src!!, out!!, bitrate) { pct ->
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
-                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", header = queued(),
+                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", header = header(eta.left(pct / 100f), queued()),
                         cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
                 }
             }
@@ -719,6 +740,7 @@ class ConversionService : Service() {
         dupStore.start(mode)
         notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
         var last = 0L
+        val eta = EtaEstimator()
         val onProgress: (Int, Int) -> Unit = { done, total ->
             dupStore.progress(done, total)
             val now = SystemClock.elapsedRealtime()
@@ -726,6 +748,7 @@ class ConversionService : Service() {
                 last = now
                 val pct = if (total > 0) done * 100 / total else 0
                 notify(build(label, pct, sub = if (total > 0) "$done di $total elementi confrontati" else "Preparazione…",
+                    header = if (total > 0) eta.left(done.toFloat() / total) else null,
                     indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
             }
         }
@@ -796,12 +819,16 @@ class ConversionService : Service() {
             // until real progress arrives.
             val queued = { waiting().let { if (it > 0) "$it in coda" else null } }
             notify(build("Download", 0, sub = "Analisi del link…", indeterminate = true, header = queued(), cancelable = true, icon = R.drawable.ic_notif_download))
+            // The time left by our own estimate, not yt-dlp's (it swings on every fragment of a
+            // stream); the download screen shows the same one.
+            val eta = EtaEstimator()
             produced = withContext(Dispatchers.IO) {
-                ytdlp.download(url, job.maxHeight, pid) { pct, eta ->
+                ytdlp.download(url, job.maxHeight, pid) { pct, _ ->
                     repo.setConversionProgress(pct)
-                    set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = eta) }
-                    val sub = if (eta > 0) "$pct% · ${etaText(eta * 1000)}" else "$pct%"
-                    notify(build("Download", pct, sub = sub, header = queued(), cancelable = true, icon = R.drawable.ic_notif_download))
+                    val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
+                    set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
+                    notify(build("Download", pct, sub = "Scaricamento del video · $pct%", header = header(leftMs?.let(::formatEtaShort), queued()),
+                        cancelable = true, icon = R.drawable.ic_notif_download))
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
@@ -883,10 +910,12 @@ class ConversionService : Service() {
         }
     }
 
-    private fun etaText(ms: Long): String {
-        val s = ms / 1000
-        return if (s >= 60) "resta ${s / 60}:${(s % 60).toString().padStart(2, '0')}" else "resta ${s}s"
-    }
+    /** "resta circa 3 min" at [fraction] (0..1) of the job, or null while there is no estimate yet. */
+    private fun EtaEstimator.left(fraction: Float): String? =
+        update(fraction, SystemClock.elapsedRealtime())?.let(::formatEtaShort)
+
+    /** The short extra next to the app name: its parts that are there, "resta circa 3 min · 2 in coda". */
+    private fun header(vararg parts: String?): String? = parts.filterNotNull().joinToString(" · ").ifEmpty { null }
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
