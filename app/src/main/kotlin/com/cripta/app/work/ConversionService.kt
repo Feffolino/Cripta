@@ -299,15 +299,17 @@ class ConversionService : Service() {
                 cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
         }
         val closeOnly = { label: String, req: Int, icon: Int -> serviceAction(label, MODE_DEBUG_DISMISS, req, icon = icon) }
+        // Debug isola › Durata prova: the whole sample in about this many seconds.
+        val stepMs = (IslandDebug.get(this).sampleSeconds * 1000L / 25).coerceAtLeast(120L)
         try {
             notify(build(if (kind == "download" || kind == "download_fail") "Download" else "Preparazione…", 0,
                 sub = "Avvio della prova…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
                 icon = R.drawable.ic_notif_download.takeIf { kind.startsWith("download") } ?: R.drawable.ic_notification))
-            kotlinx.coroutines.delay(1200)
-            for (p in 0..100 step 2) {
-                if (kind == "download_fail" && p == 60) break
+            kotlinx.coroutines.delay(stepMs * 2)
+            for (p in 0..100 step 4) {
+                if (kind == "download_fail" && p >= 60) break
                 notify(step(p))
-                kotlinx.coroutines.delay(400)
+                kotlinx.coroutines.delay(stepMs)
             }
             when (kind) {
                 "import" -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "$files file importati", "Eliminare gli originali?",
@@ -1078,10 +1080,7 @@ class ConversionService : Service() {
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
             .build()
-        // HyperOS: the result goes through the island too (it used to just vanish from it at the end):
-        // for a few seconds, with its buttons, then it stays as a normal notification.
-        val island = HyperFocus.isSupported(this)
-        val b = NotificationCompat.Builder(this, if (island) ongoingChannel() else RESULT_CHANNEL)
+        fun base(channel: String) = NotificationCompat.Builder(this, channel)
             .setGroup("cripta_result_${kind.name}")
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
@@ -1093,19 +1092,38 @@ class ConversionService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setAutoCancel(true)
-        actions.forEach { b.addAction(it) }
-        if (island) {
-            val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
-            b.addExtras(HyperFocus.extras(
+            .apply { actions.forEach { addAction(it) } }
+        val mgr = getSystemService(NotificationManager::class.java)
+        val normal = base(RESULT_CHANNEL).build()
+        if (!HyperFocus.isSupported(this)) { mgr.notify(kind.id, normal); return }
+        // HyperOS: the island only takes ongoing notifications, so the result goes there first as
+        // an ongoing one for a few seconds (chip Fatto / Errore / Annullato, its buttons), then is
+        // replaced by the normal, dismissible result. The timeout clears the ongoing one even if
+        // the app is gone before the swap.
+        val secs = IslandDebug.get(this).resultSeconds
+        val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
+        val live = base(ongoingChannel())
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setTimeoutAfter((secs + 5) * 1000L)
+            .addExtras(liveUpdate(chip))
+            .addExtras(HyperFocus.extras(
                 this, "cripta_result", title, text, chip, icon, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it, service = false,
                         icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
                 },
-                float = true, islandTimeoutSec = 5,
+                float = true,
             ))
-        }
-        getSystemService(NotificationManager::class.java).notify(kind.id, b.build())
+            .build()
+        mgr.notify(kind.id, live)
+        // The main looper outlives this service (it may stop right after posting the result).
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            runCatching {
+                // Only if the result is still showing (not tapped or answered meanwhile).
+                if (mgr.activeNotifications.any { it.id == kind.id }) mgr.notify(kind.id, normal)
+            }
+        }, secs * 1000L)
     }
 
     /** "Riprova" for a failed download: queues the same link again, same quality, folder and tags. */
