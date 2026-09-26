@@ -800,7 +800,9 @@ class ConversionService : Service() {
             .setContentIntent(openAppIntent())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(publicVersion(title, icon))
-            .addExtras(liveUpdate(chip ?: if (indeterminate) "Avvio" else "$pct%"))
+        val chipText = chip ?: if (indeterminate) "Avvio" else "$pct%"
+        b.addExtras(liveUpdate(chipText))
+        var cancelPi: android.app.PendingIntent? = null
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; else -> 6 }
@@ -809,7 +811,15 @@ class ConversionService : Service() {
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
             b.addAction(0, "Annulla", pi)
+            cancelPi = pi
         }
+        // HyperOS: the Hyper Island's own template on top (large rounded buttons); ignored elsewhere.
+        b.addExtras(HyperFocus.extras(
+            this, "cripta_progress", title, sub, chipText, icon,
+            progress = if (indeterminate) 0 else pct,
+            buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it) }),
+            float = false,
+        ))
         return b.build()
     }
 
@@ -945,6 +955,12 @@ class ConversionService : Service() {
             .setPublicVersion(publicVersion(title, icon))
             .addExtras(liveUpdate("Fatto"))
         actions.forEach { b.addAction(it) }
+        // HyperOS: the choice as the island's own buttons, popping it open once.
+        b.addExtras(HyperFocus.extras(
+            this, "cripta_choice", title, text, "Fatto", icon, progress = null,
+            buttons = actions.mapIndexedNotNull { i, a -> a.actionIntent?.let { HyperFocus.Button("choice$i", a.title.toString(), it) } },
+            float = true,
+        ))
         getSystemService(NotificationManager::class.java).notify(id, b.build())
     }
 
