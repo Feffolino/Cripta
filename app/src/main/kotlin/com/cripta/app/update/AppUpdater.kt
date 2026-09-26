@@ -31,6 +31,30 @@ class AppUpdater @Inject constructor() {
         val sha256Url: String? = null,
     )
 
+    /**
+     * The update download, which runs in the background service (it goes on with the app closed):
+     * the settings screen follows it from here, whenever it is open.
+     */
+    sealed interface Download {
+        data object Idle : Download
+        data class Running(val release: Release, val pct: Int) : Download
+        data class Ready(val release: Release, val apk: File) : Download
+        data class Failed(val release: Release, val error: Throwable) : Download
+        data class Cancelled(val release: Release) : Download
+    }
+    private val _download = kotlinx.coroutines.flow.MutableStateFlow<Download>(Download.Idle)
+    val downloadState: kotlinx.coroutines.flow.StateFlow<Download> = _download
+    fun publish(d: Download) { _download.value = d }
+
+    /** The system installer for [apk], as an intent (the "Installa" of the notification opens it). */
+    fun installIntent(ctx: Context, apk: File): Intent {
+        val uri: Uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", apk)
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
     /** Checksum asset per APK url, remembered from [latest] so [download] can verify it. */
     private val checksumFor = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -141,12 +165,7 @@ class AppUpdater @Inject constructor() {
 
     /** Hand the downloaded APK to the system installer. */
     fun install(ctx: Context, apk: File) {
-        val uri: Uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", apk)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        ctx.startActivity(intent)
+        ctx.startActivity(installIntent(ctx, apk))
     }
 
     private fun httpGet(url: String, accept: String? = "application/vnd.github+json"): String {
