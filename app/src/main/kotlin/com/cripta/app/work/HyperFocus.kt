@@ -132,6 +132,9 @@ internal object HyperFocus {
             .put("enableFloat", float)
             .put("islandFirstFloat", float)
             .put("isShowNotification", true)
+            // Swipe down on the island: Cripta in a small floating window, as the system apps do
+            // (the vault's own lock screen shows first when it is locked).
+            .put("smallWindowInfo", JSONObject().put("targetPage", "com.cripta.app.MainActivity"))
             // Expanded: the chat template (the operation's icon on the left, title and text beside
             // it, as HyperOS lays out its own ongoing items). The base template put the text above
             // the title with the icon squeezed after it, and its padding flag didn't add margins.
