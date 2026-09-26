@@ -115,6 +115,21 @@ class ConversionService : Service() {
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
+        // Debug isola: sample notifications to try the variants without a real operation.
+        if (mode == MODE_CANCEL_DEBUG) { debugJob?.cancel(); stopIfIdle(startId); return START_NOT_STICKY }
+        if (mode == MODE_DEBUG_DISMISS) {
+            getSystemService(NotificationManager::class.java).cancel(DEBUG_NOTIF_ID)
+            stopIfIdle(startId); return START_NOT_STICKY
+        }
+        if (mode == MODE_DEBUG_CHOICE) {
+            ensureChannel()
+            postChoice(
+                DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Prova scelta", "Due tasti di prova",
+                serviceAction("Elimina", MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
+                serviceAction("Mantieni", MODE_DEBUG_DISMISS, 21, icon = R.drawable.ic_action_keep),
+            )
+            stopIfIdle(startId); return START_NOT_STICKY
+        }
         if (mode == MODE_CANCEL_CONVERT) {
             currentConvertJob?.cancel()
             stopIfIdle(startId)
@@ -222,6 +237,16 @@ class ConversionService : Service() {
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_UPDATE -> downloadUpdate(intent)
+                    MODE_DEBUG_PROGRESS -> {
+                        debugJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+                        try {
+                            for (p in 0..100 step 2) {
+                                notify(build("Prova isola", p, sub = "Avanzamento di prova · $p%", cancelable = true,
+                                    cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert))
+                                kotlinx.coroutines.delay(400)
+                            }
+                        } finally { debugJob = null }
+                    }
                     MODE_DUP_SCAN -> {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
@@ -251,6 +276,7 @@ class ConversionService : Service() {
     @Volatile private var lastStartId = 0
     @Volatile private var scanJob: kotlinx.coroutines.Job? = null
     @Volatile private var updateJob: kotlinx.coroutines.Job? = null
+    @Volatile private var debugJob: kotlinx.coroutines.Job? = null
 
     /**
      * Download the app update in the background (the app can be closed meanwhile): progress and
@@ -871,7 +897,7 @@ class ConversionService : Service() {
         var cancelPi: android.app.PendingIntent? = null
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
-            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; else -> 6 }
+            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; else -> 6 }
             val pi = android.app.PendingIntent.getService(
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
@@ -890,14 +916,27 @@ class ConversionService : Service() {
     }
 
     /** Channel of the ongoing notification and the choices: the island's own on HyperOS (see ensureChannel). */
-    private fun ongoingChannel() = if (HyperFocus.isSupported(this)) LIVE_CHANNEL else CHANNEL
+    private fun ongoingChannel(): String {
+        if (!HyperFocus.isSupported(this)) return CHANNEL
+        if (!IslandDebug.get(this).highChannel) return LIVE_CHANNEL
+        // Debug isola: a silent high-importance channel, created when first chosen.
+        val mgr = getSystemService(NotificationManager::class.java)
+        if (mgr.getNotificationChannel(LIVE_CHANNEL_HIGH) == null) {
+            mgr.createNotificationChannel(
+                NotificationChannel(LIVE_CHANNEL_HIGH, "Operazioni in corso (isola, prova)", NotificationManager.IMPORTANCE_HIGH).apply {
+                    setSound(null, null); enableVibration(false); setShowBadge(false)
+                }
+            )
+        }
+        return LIVE_CHANNEL_HIGH
+    }
 
     /** Extras asking for a Live Update (promoted ongoing) with [chip] as its short text. */
     private fun liveUpdate(chip: String) = android.os.Bundle().apply {
         // HyperOS with focus notifications active: the island's own template (HyperFocus) instead.
         // With both, HyperOS showed the Android Live Update and ignored the focus one (standard
         // buttons instead of the island's large rounded ones).
-        if (HyperFocus.isSupported(this@ConversionService)) return@apply
+        if (HyperFocus.isSupported(this@ConversionService) && !IslandDebug.get(this@ConversionService).liveUpdate) return@apply
         putBoolean("android.requestPromotedOngoing", true)
         putCharSequence("android.shortCriticalText", chip)
     }
@@ -931,7 +970,7 @@ class ConversionService : Service() {
         ).joinToString("|")
         if (key == lastPostKey) return
         val now = SystemClock.elapsedRealtime()
-        if (title == lastPostTitle && now - lastPostAt < 1000L) return
+        if (title == lastPostTitle && now - lastPostAt < IslandDebug.get(this).intervalMs) return
         lastPostAt = now; lastPostKey = key; lastPostTitle = title
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
     }
@@ -1116,6 +1155,12 @@ class ConversionService : Service() {
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
         private const val RESULT_CHANNEL = "results"
         private const val LIVE_CHANNEL = "progress_island"
+        private const val LIVE_CHANNEL_HIGH = "progress_island_debug_high"
+        private const val MODE_DEBUG_PROGRESS = "debug_progress"
+        private const val MODE_DEBUG_CHOICE = "debug_choice"
+        private const val MODE_DEBUG_DISMISS = "debug_dismiss"
+        private const val MODE_CANCEL_DEBUG = "cancel_debug"
+        private const val DEBUG_NOTIF_ID = 4230
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         /**
@@ -1212,6 +1257,14 @@ class ConversionService : Service() {
                 rel.sha256Url?.let { putExtra(EX_UPD_SHA, it) }
             }
             ContextCompat.startForegroundService(ctx, i)
+        }
+
+        /** Debug isola: a 20-second sample operation with Annulla, or a sample two-button choice. */
+        fun debugProgress(ctx: Context) {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_PROGRESS))
+        }
+        fun debugChoice(ctx: Context) {
+            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE)) }
         }
 
         fun cancelUpdateDownload(ctx: Context) {

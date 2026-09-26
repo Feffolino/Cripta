@@ -36,6 +36,10 @@ internal object HyperFocus {
 
     @Volatile private var supported: Boolean? = null
 
+    /** The last focus payload sent (Debug isola › Copia payload), to compare what HyperOS got. */
+    @Volatile var lastPayload: String? = null
+        private set
+
     /**
      * Xiaomi with the island: the focus extras are added. Whether Cripta may show focus
      * notifications is not a condition any more: that check (canShowFocus) can answer false or
@@ -108,6 +112,7 @@ internal object HyperFocus {
         float: Boolean,
     ): Bundle {
         if (!isSupported(ctx)) return Bundle()
+        val dbg = IslandDebug.get(ctx)
         val picKey = PIC + "icon"
         val pic = JSONObject().put("type", 1).put("pic", picKey)
         val small = if (progress != null) {
@@ -122,24 +127,34 @@ internal object HyperFocus {
             .put("textInfo", JSONObject().put("title", chip)))
         val big = JSONObject()
             .put("imageTextInfoLeft", JSONObject().put("type", 1).put("picInfo", pic)
-                .put("textInfo", JSONObject().put("title", islandLabel(title))))
+                .put("textInfo", JSONObject().put("title", if (dbg.shortLabel) islandLabel(title) else title)))
         right.keys().forEach { big.put(it, right.get(it)) }
         val param = JSONObject()
             .put("protocol", protocol(ctx).takeIf { it in 1..3 } ?: 3)
             .put("business", business)
             .put("updatable", true)
             .put("ticker", chip)
-            .put("enableFloat", float)
-            .put("islandFirstFloat", float)
+            .put("enableFloat", if (progress != null) dbg.floatOnUpdate else float && dbg.floatOnChoice)
+            .put("islandFirstFloat", if (progress != null) dbg.floatOnUpdate else float && dbg.floatOnChoice)
             .put("isShowNotification", true)
-            // Swipe down on the island: Cripta in a small floating window, as the system apps do
-            // (the vault's own lock screen shows first when it is locked).
-            .put("smallWindowInfo", JSONObject().put("targetPage", "com.cripta.app.MainActivity"))
-            // Expanded: the chat template (the operation's icon on the left, title and text beside
-            // it, as HyperOS lays out its own ongoing items). The base template put the text above
-            // the title with the icon squeezed after it, and its padding flag didn't add margins.
-            .put("chatInfo", JSONObject().put("title", title).put("content", text ?: "")
+        if (dbg.padding) param.put("padding", true)
+        // Swipe down on the island: Cripta in a small floating window, as the system apps do
+        // (the vault's own lock screen shows first when it is locked).
+        when (dbg.smallWindow) {
+            "class" -> param.put("smallWindowInfo", JSONObject().put("targetPage", "com.cripta.app.MainActivity"))
+            "component" -> param.put("smallWindowInfo", JSONObject().put("targetPage", "${ctx.packageName}/com.cripta.app.MainActivity"))
+        }
+        // Expanded: the chat template (the operation's icon on the left, title and text beside
+        // it, as HyperOS lays out its own ongoing items). The base template put the text above
+        // the title with the icon squeezed after it, and its padding flag didn't add margins.
+        if (dbg.template == "base") {
+            param.put("baseInfo", JSONObject().put("type", 1).put("title", title).put("content", text ?: "")
                 .put("picFunction", picKey))
+        } else {
+            param.put("chatInfo", JSONObject().put("title", title).put("content", text ?: "")
+                .put("picFunction", picKey))
+        }
+        param
             .put("param_island", JSONObject()
                 .put("islandProperty", 1)
                 .put("islandPriority", 2)
@@ -148,11 +163,18 @@ internal object HyperFocus {
                 .put("highlightColor", BRAND)
                 .put("smallIslandArea", small)
                 .put("bigIslandArea", big))
-        if (progress != null) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
+        if (progress != null && dbg.progressBar) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
         // Buttons as the system Clock shows them: round icon buttons beside the title (the
         // template's actions, icon only), which leaves the progress bar room below and fits two.
         // Without icons: one as the template's text pill, several as the row of text buttons.
-        if (buttons.isNotEmpty() && buttons.all { it.icon != null }) {
+        val style = when {
+            dbg.buttons == "icon" && buttons.all { it.icon != null } -> "icon"
+            dbg.buttons == "row" -> "row"
+            dbg.buttons == "pill" -> "pill"
+            buttons.size == 1 -> "pill"
+            else -> "row"
+        }
+        if (buttons.isNotEmpty() && style == "icon") {
             param.put("actions", JSONArray().apply {
                 buttons.forEach { b ->
                     put(JSONObject()
@@ -162,13 +184,16 @@ internal object HyperFocus {
                         .put("actionIntentType", 1))
                 }
             })
-        } else if (buttons.size == 1) {
-            val b = buttons.single()
-            param.put("actions", JSONArray().put(JSONObject()
-                .put("type", 2)
-                .put("action", ACTION + b.key)
-                .put("actionTitle", b.title)
-                .put("actionIntentType", 1)))
+        } else if (buttons.isNotEmpty() && style == "pill") {
+            param.put("actions", JSONArray().apply {
+                buttons.forEach { b ->
+                    put(JSONObject()
+                        .put("type", 2)
+                        .put("action", ACTION + b.key)
+                        .put("actionTitle", b.title)
+                        .put("actionIntentType", 1))
+                }
+            })
         } else if (buttons.isNotEmpty()) {
             param.put("textButton", JSONArray().apply {
                 buttons.forEach { b ->
@@ -186,8 +211,10 @@ internal object HyperFocus {
             actions.putParcelable(ACTION + b.key,
                 Notification.Action.Builder(Icon.createWithResource(ctx, b.icon ?: icon), b.title, b.intent).build())
         }
+        val json = JSONObject().put("param_v2", param).put("isShowNotification", true).toString()
+        lastPayload = json
         return Bundle().apply {
-            putString("miui.focus.param", JSONObject().put("param_v2", param).put("isShowNotification", true).toString())
+            putString("miui.focus.param", json)
             putBundle("miui.focus.actions", actions)
             putBundle("miui.focus.pics", Bundle().apply { putParcelable(picKey, Icon.createWithResource(ctx, icon)) })
         }

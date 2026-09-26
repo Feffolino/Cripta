@@ -846,6 +846,7 @@ fun SettingsScreen(
                                 InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                             }
                         }
+                        item { IslandDebugSection() }
                         item {
                             var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
                             Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
@@ -1361,6 +1362,49 @@ private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/**
+ * Debug isola: every Hyper Island variant as a switch, read at the next notification, plus two
+ * sample notifications, so a variant can be tried on the phone without a new build.
+ */
+@Composable
+private fun IslandDebugSection() {
+    val ctx = LocalContext.current
+    var c by remember { mutableStateOf(com.cripta.app.work.IslandDebug.get(ctx)) }
+    fun update(n: com.cripta.app.work.IslandDebug.Config) { c = n; com.cripta.app.work.IslandDebug.set(ctx, n) }
+    Section("Debug isola HyperOS", "Solo telefoni Xiaomi con l'isola. Le modifiche valgono dalla prossima notifica: usa le prove qui sotto.") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.FilledTonalButton(onClick = { com.cripta.app.work.ConversionService.debugProgress(ctx) },
+                modifier = Modifier.weight(1f)) { Text("Prova avanzamento") }
+            androidx.compose.material3.FilledTonalButton(onClick = { com.cripta.app.work.ConversionService.debugChoice(ctx) },
+                modifier = Modifier.weight(1f)) { Text("Prova scelta") }
+        }
+        ChoiceRow("Modello espanso", listOf("chat" to "Chat", "base" to "Base"), c.template) { update(c.copy(template = it)) }
+        ChoiceRow("Tasti", listOf("icon" to "Icone rotonde", "pill" to "Testo accanto", "row" to "Riga sotto"), c.buttons) { update(c.copy(buttons = it)) }
+        ChoiceRow("Aggiornamenti", listOf(500 to "0,5 s", 1000 to "1 s", 2000 to "2 s"), c.intervalMs) { update(c.copy(intervalMs = it)) }
+        ChoiceRow("Trascina giù", listOf("class" to "Finestra (classe)", "component" to "Finestra (pacchetto/classe)", "off" to "Niente"), c.smallWindow) {
+            update(c.copy(smallWindow = it))
+        }
+        ToggleRow("Barra di avanzamento", c.progressBar) { update(c.copy(progressBar = it)) }
+        ToggleRow("Nome breve nell'isola", c.shortLabel, desc = "\"MP4\" invece del titolo intero") { update(c.copy(shortLabel = it)) }
+        ToggleRow("Canale ad alta importanza", c.highChannel, desc = "Silenzioso; al posto di quello normale") { update(c.copy(highChannel = it)) }
+        ToggleRow("Anche Live Update di Android 16", c.liveUpdate) { update(c.copy(liveUpdate = it)) }
+        ToggleRow("Campo padding", c.padding) { update(c.copy(padding = it)) }
+        ToggleRow("Apri l'isola a ogni aggiornamento", c.floatOnUpdate) { update(c.copy(floatOnUpdate = it)) }
+        ToggleRow("Apri l'isola alle scelte", c.floatOnChoice) { update(c.copy(floatOnChoice = it)) }
+        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.OutlinedButton(onClick = {
+                val p = com.cripta.app.work.HyperFocus.lastPayload
+                if (p != null) clipboard.setText(androidx.compose.ui.text.AnnotatedString(p))
+                android.widget.Toast.makeText(ctx, if (p != null) "Payload copiato" else "Nessuna notifica ancora", android.widget.Toast.LENGTH_SHORT).show()
+            }, modifier = Modifier.weight(1f)) { Text("Copia payload") }
+            androidx.compose.material3.OutlinedButton(onClick = {
+                com.cripta.app.work.IslandDebug.reset(ctx); c = com.cripta.app.work.IslandDebug.get(ctx)
+            }, modifier = Modifier.weight(1f)) { Text("Predefiniti") }
+        }
     }
 }
 
