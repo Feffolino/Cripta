@@ -246,20 +246,28 @@ class VaultViewModel @Inject constructor(
         settings.settings.map { it.convertAfterChosen to it.trashDays }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false to 7)
 
-    /** Batch conversion with the first-conversion choice (optionally remembered). */
+    /**
+     * Of [fileIds], the videos worth converting ([ThumbnailLoader.worthConvertingToMp4]): every
+     * non-MP4 video, and MP4s holding a codec other than H.264/HEVC (AV1, VP9…).
+     */
+    suspend fun convertibleIds(fileIds: Set<String>): Set<String> =
+        files.value.map { it.file }.filter { it.id in fileIds && thumbs.worthConvertingToMp4(it) }.map { it.id }.toSet()
+
+    /** Batch conversion with the first-conversion choice (optionally remembered); [fileIds]
+     *  already narrowed by [convertibleIds]. */
     fun convertToMp4(fileIds: List<String>, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
         if (rememberChoice) viewModelScope.launch { settings.setConvertAfter(after) }
         val ids = fileIds.toSet()
         files.value.map { it.file }
-            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) && it.mimeType != "video/mp4" }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
             .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id, after) }
     }
 
-    /** Queue the selected non-MP4 videos for conversion (they run one at a time). */
+    /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()
         files.value.map { it.file }
-            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) && it.mimeType != "video/mp4" }
+            .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
             .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id) }
     }
 

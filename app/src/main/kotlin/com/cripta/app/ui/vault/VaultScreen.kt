@@ -73,6 +73,12 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Transform
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircle
@@ -519,54 +525,40 @@ fun VaultScreen(
             // Selection actions at the bottom, labelled and within thumb reach.
             if (inSelection) {
                 val allFav = files.filter { it.file.id in selection }.all { it.file.isFavorite }
-                var selMenu by remember { mutableStateOf(false) }
-                androidx.compose.material3.BottomAppBar {
-                    SelectionAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito", Modifier.weight(1f)) {
+                val videoCount = files.count { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }
+                // By codec, as in the viewer: an MP4 holding AV1/VP9 is offered too. The file type
+                // gives a first answer at once, the codec check refines it.
+                val convertibleIds by produceState(
+                    initialValue = files.filter { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4" }
+                        .map { it.file.id }.toSet(),
+                    selection, files,
+                ) { value = vm.convertibleIds(selection) }
+                val convertible = convertibleIds.size
+                val actions = buildList {
+                    add(SelAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito") {
                         favoriteWithUndo(selection.toList(), !allFav); selection = emptySet()
-                    }
-                    SelectionAction(Icons.Filled.Label, "Etichette", Modifier.weight(1f)) {
+                    })
+                    add(SelAction(Icons.Filled.Label, "Etichette") {
                         if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
-                    }
-                    SelectionAction(Icons.Filled.DriveFileMove, "Sposta", Modifier.weight(1f)) { showMove = true }
-                    SelectionAction(Icons.Filled.Delete, "Elimina", Modifier.weight(1f), destructive = true) { confirmMultiDelete = true }
-                    Box(Modifier.weight(1f)) {
-                        SelectionAction(Icons.Filled.MoreVert, "Altro", Modifier.fillMaxWidth()) { selMenu = true }
-                        DropdownMenu(expanded = selMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { selMenu = false }) {
-                            if (selection.size == 1) {
-                                DropdownMenuItem(text = { Text("Rinomina") }, onClick = { selMenu = false; renameTargetId = selection.first() })
-                            }
-                            val convertible = files.count {
-                                it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4"
-                            }
-                            if (convertible > 0) {
-                                DropdownMenuItem(
-                                    text = { Text(if (convertible == 1) "Converti in MP4" else "Converti in MP4 ($convertible)") },
-                                    onClick = {
-                                        selMenu = false
-                                        if (!convertSettings.first) {
-                                            convertAsk = selection.toList()
-                                        } else {
-                                            vm.convertToMp4(selection.toList())
-                                            notify("Conversione in coda: prosegue in background")
-                                        }
-                                        selection = emptySet()
-                                    },
-                                )
-                            }
-                            val videoCount = files.count { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }
-                            if (videoCount > 0) {
-                                DropdownMenuItem(
-                                    text = { Text(if (videoCount == 1) "Rigenera copertina" else "Rigenera copertina ($videoCount)") },
-                                    onClick = { selMenu = false; showRegenCover = true },
-                                )
-                            }
-                            if (selection.size != 1 && convertible == 0 && videoCount == 0) {
-                                DropdownMenuItem(text = { Text("Nessun'altra azione", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { selMenu = false }, enabled = false)
-                            }
+                    })
+                    add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
+                    add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
+                    if (convertible > 0) add(SelAction(Icons.Filled.Transform, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
+                        val ids = convertibleIds.toList()
+                        if (!convertSettings.first) {
+                            convertAsk = ids
+                        } else {
+                            vm.convertToMp4(ids)
+                            notify("Conversione in coda: prosegue in background")
                         }
-                    }
+                        selection = emptySet()
+                    })
+                    if (videoCount > 0) add(SelAction(Icons.Filled.Image, if (videoCount == 1) "Copertina" else "Copertine ($videoCount)") {
+                        showRegenCover = true
+                    })
+                    if (selection.size == 1) add(SelAction(Icons.Filled.Edit, "Rinomina") { renameTargetId = selection.first() })
                 }
+                SelectionBar(actions)
             }
         },
         floatingActionButton = {
@@ -1114,7 +1106,7 @@ fun VaultScreen(
 
     convertAsk?.let { ids ->
         com.cripta.app.ui.components.ConvertChoiceDialog(
-            count = files.count { it.file.id in ids && VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4" },
+            count = ids.size,
             trashDays = convertSettings.second,
             onConfirm = { after, rememberIt ->
                 vm.convertToMp4(ids, after, rememberIt)
@@ -3058,6 +3050,70 @@ fun FolderMosaic(
     }
 }
 
+private class SelAction(val icon: ImageVector, val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
+
+/**
+ * The bottom selection bar. When its actions don't all fit (portrait), it scrolls sideways: the
+ * last visible action is cut in half, the edge fades with a chevron pointing to the rest, and on
+ * appearing it nudges once to show that it moves.
+ */
+@Composable
+private fun SelectionBar(actions: List<SelAction>) {
+    androidx.compose.material3.BottomAppBar(contentPadding = PaddingValues(0.dp)) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val fit = maxWidth / actions.size >= 72.dp
+            val scroll = rememberScrollState()
+            if (fit) {
+                Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    actions.forEach { SelectionAction(it.icon, it.label, Modifier.weight(1f), it.destructive, it.onClick) }
+                }
+            } else {
+                // 4.5 per screen width: the half action at the edge says there is more.
+                val itemW = maxWidth / 4.5f
+                val density = LocalDensity.current
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(350)
+                    val px = with(density) { (itemW * 0.6f).roundToPx() }
+                    scroll.animateScrollTo(px, androidx.compose.animation.core.tween(320))
+                    scroll.animateScrollTo(0, androidx.compose.animation.core.tween(380))
+                }
+                val fadeW = with(density) { 28.dp.toPx() }
+                Row(
+                    Modifier.fillMaxSize()
+                        .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val clear = androidx.compose.ui.graphics.Color.Transparent
+                            val solid = androidx.compose.ui.graphics.Color.Black
+                            if (scroll.canScrollBackward) drawRect(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(clear, solid), 0f, fadeW),
+                                size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                            )
+                            if (scroll.canScrollForward) drawRect(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(solid, clear), size.width - fadeW, size.width),
+                                topLeft = androidx.compose.ui.geometry.Offset(size.width - fadeW, 0f),
+                                size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                            )
+                        }
+                        .horizontalScroll(scroll),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    actions.forEach { SelectionAction(it.icon, it.label, Modifier.width(itemW), it.destructive, it.onClick) }
+                }
+                // Chevrons at the edges while there is more that way.
+                val fwd by animateFloatAsState(if (scroll.canScrollForward) 1f else 0f, label = "selFwd")
+                val back by animateFloatAsState(if (scroll.canScrollBackward) 1f else 0f, label = "selBack")
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (scroll.canScrollForward) "Altre azioni" else null,
+                    Modifier.align(Alignment.CenterEnd).size(20.dp).graphicsLayer { alpha = fwd },
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null,
+                    Modifier.align(Alignment.CenterStart).size(20.dp).graphicsLayer { alpha = back },
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
 /** One labelled action of the bottom selection bar. */
 @Composable
 private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier, destructive: Boolean = false, onClick: () -> Unit) {
@@ -3067,6 +3123,6 @@ private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = tint)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
