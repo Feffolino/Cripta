@@ -290,6 +290,14 @@ fun ViewerScreen(
     // Split view: no title bar, quick tags, filmstrip or hint over the media while it is open (the
     // player's own controls do show, laid out in the space above the panel).
     val splitOpen = splitDetails && showTags
+    // Regular details sheet (not the split view): the video's controls are switched off while it
+    // is open and for a moment after it closes. The swipe, the sheet's window taking and giving back
+    // focus and the layout settling made the player bring them up on opening and on closing.
+    var holdControls by remember { mutableStateOf(false) }
+    LaunchedEffect(showTags, splitDetails) {
+        if (showTags && !splitDetails) { holdControls = true; chromeVisible = false }
+        else if (holdControls) { delay(600); holdControls = false }
+    }
     // Bumped each time the top chrome hides: the quick-tag bar re-sorts its recent tags only then.
     var recentsEpoch by remember { mutableIntStateOf(0) }
     LaunchedEffect(chromeVisible) { if (!chromeVisible) recentsEpoch++ }
@@ -481,6 +489,7 @@ fun ViewerScreen(
                 // sync with the viewer's chrome both ways, the two kept re-showing and re-hiding
                 // each other in the resized player: an endless blink.
                 selfManagedControls = splitOpen,
+                controlsHeld = holdControls,
             )
         }
 
@@ -878,6 +887,7 @@ private fun MediaPage(
     onPausedChanged: (Boolean) -> Unit,
     hideControlsTick: Int = 0,
     selfManagedControls: Boolean = false,
+    controlsHeld: Boolean = false,
     onMissing: () -> Unit,
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
@@ -920,7 +930,7 @@ private fun MediaPage(
                 }
             }
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
-            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls)
+            is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls, controlsHeld = controlsHeld)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
@@ -1193,6 +1203,8 @@ private fun VideoPlayer(
     hideControlsTick: Int = 0,
     /** Split view: no sync between the player's controls and the viewer's chrome. */
     selfManagedControls: Boolean = false,
+    /** Regular details sheet open (or just closed): no player controls at all. */
+    controlsHeld: Boolean = false,
 ) {
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
@@ -1384,7 +1396,12 @@ private fun VideoPlayer(
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     // In PiP only the video shows: no controller.
-    LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
+    LaunchedEffect(inPip, playerViewRef, controlsHeld) {
+        playerViewRef?.let { pv ->
+            pv.useController = !inPip && !controlsHeld
+            if (controlsHeld) pv.hideController()
+        }
+    }
     // One layer, not two: the ExoPlayer controls (seek bar, play/pause) follow the app chrome
     // (top bar, tags, filmstrip). The controller's own visibility changes already flow back into
     // the chrome through the visibility listener; this is the other direction, so they always
@@ -2128,7 +2145,11 @@ private fun DetailsSheet(
             state = splitPanel!!, heightFraction = 0.62f, onDismiss = onDismiss, onTop = onSheetTop,
         ) { column() }
     } else {
-        com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, state = sheet, wideInLandscape = true) {
+        com.cripta.app.ui.components.CriptaSheet(
+            onDismissRequest = onDismiss, state = sheet, wideInLandscape = true,
+            // Landscape: fully open, two scrolling columns; a scroll must not close it.
+            contentDragCloses = !landscape,
+        ) {
             if (landscape) {
                 // Two columns that scroll on their own: details on the left, tags on the right, so the
                 // tags are reachable without scrolling past the details on a short screen.

@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -116,6 +117,12 @@ fun CriptaSheet(
      * its content, up to the camera area). Gives a split view the same opening every time.
      */
     heightFraction: Float? = null,
+    /**
+     * false: scrolling the content never drags the sheet down (it closes by its handle, Back or a
+     * tap outside). For short, fully-open sheets with scrolling columns (landscape details), where
+     * a scroll that reached the top kept turning into a close.
+     */
+    contentDragCloses: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // Locked vault: nothing of it may show over the lock screen (the sheet has its own window,
@@ -142,12 +149,29 @@ fun CriptaSheet(
     ) {
         BoxWithConstraints {
             val limit = (maxHeight - topGap).coerceAtLeast(0.dp)
+            // Swallows what the content's scrolls leave going down, before the sheet (its parent in
+            // the nested-scroll chain) can turn it into a drag or a fling to close.
+            val keepOpen = remember {
+                object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                    override fun onPostScroll(
+                        consumed: androidx.compose.ui.geometry.Offset,
+                        available: androidx.compose.ui.geometry.Offset,
+                        source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+                    ) = androidx.compose.ui.geometry.Offset(0f, available.y.coerceAtLeast(0f))
+
+                    override suspend fun onPostFling(
+                        consumed: androidx.compose.ui.unit.Velocity,
+                        available: androidx.compose.ui.unit.Velocity,
+                    ) = androidx.compose.ui.unit.Velocity(0f, available.y.coerceAtLeast(0f))
+                }
+            }
             Column(
                 (if (heightFraction != null) Modifier.height(minOf(maxHeight * heightFraction, limit)) else Modifier.heightIn(max = limit))
                     .then(
                         if (landscape) Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         else Modifier
-                    ),
+                    )
+                    .then(if (contentDragCloses) Modifier else Modifier.nestedScroll(keepOpen)),
             ) {
                 // Inside the sheet's own window (its dialog dispatcher), where Back arrives while it
                 // has focus; the handler above covers the case where the screen's window gets it.
