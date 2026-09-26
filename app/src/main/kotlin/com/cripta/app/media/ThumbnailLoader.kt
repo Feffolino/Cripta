@@ -431,6 +431,42 @@ class ThumbnailLoader @Inject constructor(
      * Bitmap). Returns null on any failure.
      */
     private fun decodeFrameWithCodec(file: FileEntity, cover: VideoCover?): Bitmap? {
+        // The default decoder first (usually the hardware one); then the software ones. Some
+        // hardware decoders (AV1 in particular) only output frames in a private layout that cannot
+        // be read back as an image, so every cover attempt failed with them.
+        decodeFrameWith(file, cover, null)?.let { return it }
+        val mime = runCatching { videoMime(file) }.getOrNull() ?: return null
+        for (name in softwareDecoders(mime)) {
+            decodeFrameWith(file, cover, name)?.let { return it }
+        }
+        return null
+    }
+
+    private fun videoMime(file: FileEntity): String? {
+        val extractor = MediaExtractor()
+        var channel: SeekableByteChannel? = null
+        try {
+            channel = repo.seekableChannel(file)
+            extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+            for (i in 0 until extractor.trackCount) {
+                val m = extractor.getTrackFormat(i).getString(MediaFormat.KEY_MIME)
+                if (m?.startsWith("video/") == true) return m
+            }
+            return null
+        } finally {
+            runCatching { extractor.release() }
+            runCatching { channel?.close() }
+        }
+    }
+
+    /** Software decoders for [mime] (e.g. c2.android.av1.decoder / dav1d), in platform order. */
+    private fun softwareDecoders(mime: String): List<String> =
+        android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
+            .filter { !it.isEncoder && it.isSoftwareOnly && it.supportedTypes.any { t -> t.equals(mime, ignoreCase = true) } }
+            .map { it.name }
+
+    /** One decode attempt with the decoder [codecName] (null = the platform's default for the type). */
+    private fun decodeFrameWith(file: FileEntity, cover: VideoCover?, codecName: String?): Bitmap? {
         val extractor = MediaExtractor()
         var channel: SeekableByteChannel? = null
         var codec: MediaCodec? = null
@@ -459,10 +495,20 @@ class ThumbnailLoader @Inject constructor(
                 VideoCover.END -> durUs * 9 / 10
                 VideoCover.RANDOM -> if (durUs > 0) (Math.random() * durUs).toLong() else 0L
             }
-            if (seekUs > 0) extractor.seekTo(seekUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+            var targetUs = seekUs
+            if (seekUs > 0) {
+                extractor.seekTo(seekUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                // A file without a seek index (some WebM/MKV) lands back at the start: decoding
+                // minutes of video to reach the frame gave up and the cover failed. Take the first
+                // frame from where it landed instead.
+                val landed = extractor.sampleTime
+                if (landed >= 0 && seekUs - landed > 20_000_000L) targetUs = 0L
+            }
 
             val mime = fmt.getString(MediaFormat.KEY_MIME)!!
-            codec = MediaCodec.createDecoderByType(mime)
+            codec = if (codecName != null) MediaCodec.createByCodecName(codecName) else MediaCodec.createDecoderByType(mime)
+            // Ask for a readable YUV layout (the default can be a private tiled one).
+            fmt.setInteger(MediaFormat.KEY_COLOR_FORMAT, android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
             codec.configure(fmt, null, null, 0)   // null surface -> Image/ByteBuffer output
             codec.start()
             val info = MediaCodec.BufferInfo()
@@ -489,7 +535,7 @@ class ThumbnailLoader @Inject constructor(
                 val outIdx = codec.dequeueOutputBuffer(info, 10_000)
                 if (outIdx >= 0) {
                     val isEos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                    val reachedTarget = seekUs <= 0L || info.presentationTimeUs >= seekUs || isEos
+                    val reachedTarget = targetUs <= 0L || info.presentationTimeUs >= targetUs || isEos
                     if (reachedTarget) {
                         val bmp = runCatching {
                             val image = codec.getOutputImage(outIdx)
@@ -497,7 +543,9 @@ class ThumbnailLoader @Inject constructor(
                         }.getOrNull()
                         codec.releaseOutputBuffer(outIdx, false)
                         if (bmp != null) return applyRotation(scaleDown(bmp, target), rotation)
-                        if (isEos) return null
+                        // The frame is there but cannot be read as an image: this decoder will not do
+                        // better on the next ones, let the caller try another decoder.
+                        return null
                     } else {
                         // Not yet at the requested position: drop this frame and keep decoding.
                         codec.releaseOutputBuffer(outIdx, false)
