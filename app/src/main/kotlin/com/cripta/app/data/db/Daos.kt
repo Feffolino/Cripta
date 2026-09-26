@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
 interface FolderDao {
     @Insert suspend fun insert(folder: FolderEntity): Long
     @Update suspend fun update(folder: FolderEntity)
+    @Query("UPDATE folders SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
     @Delete suspend fun delete(folder: FolderEntity)
 
     /** Live folders only (trashed ones are listed by [trashed]). */

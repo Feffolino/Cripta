@@ -73,13 +73,19 @@ class HomeViewModel @Inject constructor(
             when (job.kind) {
                 "download" -> {
                     val url = o.optString("url")
-                    repo.deletePendingJob(job.id)   // the service stores it again under a new id
-                    if (url.isBlank() || url in queuedUrls) continue
+                    // Blank, or already queued in this process (the service keeps its own record).
+                    if (url.isBlank() || url in queuedUrls) { repo.deletePendingJob(job.id); continue }
                     val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
-                    com.cripta.app.work.ConversionService.startDownloadUrl(
-                        appContext, url, o.optInt("height", 0).takeIf { it > 0 },
-                        o.optLong("folder", -1L).takeIf { it >= 0 }, tags,
-                    )
+                    // Start first, delete after: if the start throws (e.g. the app is in the
+                    // background and a foreground service can't be started) the saved link stays
+                    // for the next launch instead of being lost.
+                    val started = runCatching {
+                        com.cripta.app.work.ConversionService.startDownloadUrl(
+                            appContext, url, o.optInt("height", 0).takeIf { it > 0 },
+                            o.optLong("folder", -1L).takeIf { it >= 0 }, tags,
+                        )
+                    }.isSuccess
+                    if (started) repo.deletePendingJob(job.id)   // the service stores it again under a new id
                 }
                 "convert" -> {
                     val id = o.optString("id")

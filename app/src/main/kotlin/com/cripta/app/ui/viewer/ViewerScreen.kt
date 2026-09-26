@@ -301,9 +301,12 @@ fun ViewerScreen(
     LaunchedEffect(chromeVisible) { if (!chromeVisible) recentsEpoch++ }
     // Bumped when the details panel closes: the player hides its controls for good (see VideoPlayer).
     var hideControlsTick by remember { mutableIntStateOf(0) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var confirmDownload by remember { mutableStateOf(false) }
-    var confirmConvert by remember { mutableStateOf(false) }
+    // The file each confirmation is about, captured when its dialog opens (null = closed). Reading
+    // the live current file on confirm acted on the wrong one when auto-next (or a swipe) moved the
+    // pager while the dialog was up: "Elimina" deleted the NEXT file.
+    var confirmDelete by remember { mutableStateOf<FileEntity?>(null) }
+    var confirmDownload by remember { mutableStateOf<FileEntity?>(null) }
+    var confirmConvert by remember { mutableStateOf<FileEntity?>(null) }
     val convertedId by vm.convertedId.collectAsState()
     val converting by vm.converting.collectAsState()
     val convertProgress by vm.convertingProgress.collectAsState()
@@ -324,9 +327,17 @@ fun ViewerScreen(
         val i = vm.liveIds.indexOf(id)
         if (vm.liveIds.size <= 1) closeOnce()
         else if (i >= 0) {
+            val cur = pagerState.currentPage
+            // The file on screen, unless it is the one going away: removing another page (e.g. a
+            // delete confirmed after auto-next moved on) must not jump the viewer to a third file.
+            val keepId = vm.liveIds.getOrNull(cur)?.takeIf { it != id }
             vm.liveIds.removeAt(i)
-            val target = i.coerceAtMost(vm.liveIds.lastIndex)
-            pagerScope.launch { pagerState.scrollToPage(target) }
+            pagerScope.launch {
+                // Resolved when it runs: a page removed before the shown one shifts its index down.
+                val target = keepId?.let { vm.liveIds.indexOf(it) }?.takeIf { it >= 0 }
+                    ?: i.coerceAtMost(vm.liveIds.lastIndex)
+                if (target != pagerState.currentPage) pagerState.scrollToPage(target)
+            }
         }
     }
     // Measured height of the top chrome (bar + quick tags): overlays below it start there instead
@@ -366,9 +377,9 @@ fun ViewerScreen(
             actions = SheetActions(
                 onFavorite = { vm.toggleFavorite(file) },
                 onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
-                onExport = { confirmDownload = true },
-                onConvert = if (convertible) ({ confirmConvert = true }) else null,
-                onDelete = { confirmDelete = true },
+                onExport = { confirmDownload = file },
+                onConvert = if (convertible) ({ confirmConvert = file }) else null,
+                onDelete = { confirmDelete = file },
             ),
         )
     }
@@ -685,47 +696,51 @@ fun ViewerScreen(
     // split view's panel is drawn inside the viewer's Box instead (see detailsPanel above).
     if (showTags && !splitDetails && file != null) detailsPanel(file, false)
     val trashOn by vm.trashEnabled.collectAsState()
-    if (confirmDelete && file != null) {
+    // Each dialog names and acts on the file captured when it opened, even if the pager moved since.
+    val delTarget = confirmDelete
+    if (delTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
-            onDismissRequest = { confirmDelete = false },
+            onDismissRequest = { confirmDelete = null },
             title = { Text("Eliminare il file?") },
             text = {
-                Text(if (trashOn) "\"${file.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Archivio)."
-                    else "\"${file.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
+                Text(if (trashOn) "\"${delTarget.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Archivio)."
+                    else "\"${delTarget.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
             },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; val id = file.id; vm.delete(id) { removePage(id) } }) {
+                TextButton(onClick = { confirmDelete = null; val id = delTarget.id; vm.delete(id) { removePage(id) } }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Annulla") } },
         )
     }
-    if (confirmDownload && file != null) {
+    val exportTarget = confirmDownload
+    if (exportTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
-            onDismissRequest = { confirmDownload = false },
+            onDismissRequest = { confirmDownload = null },
             title = { Text("Esportare sul dispositivo?") },
             text = {
-                Text("Una copia NON cifrata di \"${file.originalName}\" verrà salvata in " +
-                    "${ViewerViewModel.exportFolder(file.mimeType)}, visibile alle altre app. " +
+                Text("Una copia NON cifrata di \"${exportTarget.originalName}\" verrà salvata in " +
+                    "${ViewerViewModel.exportFolder(exportTarget.mimeType)}, visibile alle altre app. " +
                     "Il file resta anche nel vault.")
             },
-            confirmButton = { TextButton(onClick = { confirmDownload = false; vm.download(file) }) { Text("Esporta") } },
-            dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmDownload = null; vm.download(exportTarget) }) { Text("Esporta") } },
+            dismissButton = { TextButton(onClick = { confirmDownload = null }) { Text("Annulla") } },
         )
     }
     val convertSettings by vm.convertSettings.collectAsState()
-    if (confirmConvert && file != null && !convertSettings.first) {
+    val convertTarget = confirmConvert
+    if (convertTarget != null && !convertSettings.first) {
         // First conversion: ask what to do with the original (and offer to remember it).
         com.cripta.app.ui.components.ConvertChoiceDialog(
             count = 1,
             trashDays = convertSettings.second,
-            onConfirm = { after, rememberIt -> confirmConvert = false; vm.convertToMp4(file, after, rememberIt) },
-            onDismiss = { confirmConvert = false },
+            onConfirm = { after, rememberIt -> confirmConvert = null; vm.convertToMp4(convertTarget, after, rememberIt) },
+            onDismiss = { confirmConvert = null },
         )
-    } else if (confirmConvert && file != null) {
+    } else if (convertTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
-            onDismissRequest = { confirmConvert = false },
+            onDismissRequest = { confirmConvert = null },
             title = { Text("Convertire in MP4?") },
             text = {
                 Text(
@@ -735,8 +750,8 @@ fun ViewerScreen(
                         "Impostazioni › Video."
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmConvert = false; vm.convertToMp4(file) }) { Text("Converti") } },
-            dismissButton = { TextButton(onClick = { confirmConvert = false }) { Text("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { Text("Converti") } },
+            dismissButton = { TextButton(onClick = { confirmConvert = null }) { Text("Annulla") } },
         )
     }
     // Non-blocking progress pill: the conversion runs in the service (queued, one at a time);
@@ -1020,8 +1035,15 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                         val newScale = (scale.value * zoom).coerceIn(1f, 6f)
                         if (newScale != scale.value) scope.launch { scale.snapTo(newScale) }
                         if (newScale > 1f) {
-                            scope.launch { offX.snapTo(offX.value + pan.x) }
-                            scope.launch { offY.snapTo(offY.value + pan.y) }
+                            // Clamped to the scaled content's bounds (as the video and PDF viewers
+                            // do): unclamped, the photo could be dragged fully off-screen. Also
+                            // re-clamps while pinching out, when the allowed range shrinks.
+                            val maxX = (newScale - 1f) * size.width / 2f
+                            val maxY = (newScale - 1f) * size.height / 2f
+                            val nx = (offX.value + pan.x).coerceIn(-maxX, maxX)
+                            val ny = (offY.value + pan.y).coerceIn(-maxY, maxY)
+                            scope.launch { offX.snapTo(nx) }
+                            scope.launch { offY.snapTo(ny) }
                         } else if (offX.value != 0f || offY.value != 0f) {
                             scope.launch { offX.snapTo(0f) }
                             scope.launch { offY.snapTo(0f) }
@@ -1250,6 +1272,9 @@ private fun VideoPlayer(
     }
     // User playback preferences: loop on/off and start muted.
     var resumeEnabled by remember(file.id) { mutableStateOf(true) }
+    // Set once the resume seek below has been applied (or found unnecessary). A fling across a video
+    // composes and disposes its player before that: saving then stored 0 and wiped the resume point.
+    var resumeSettled by remember(file.id) { mutableStateOf(false) }
     LaunchedEffect(player) {
         val prefs = vm.playbackPrefs()
         player.repeatMode = if (prefs.loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -1259,6 +1284,8 @@ private fun VideoPlayer(
         val pos = file.playbackPosMs ?: 0L
         val dur = file.durationMs ?: 0L
         if (prefs.resume && pos > 3_000 && (dur <= 0 || pos < dur - 5_000)) player.seekTo(pos)
+        // After seekTo the player reports the target as its position even before it is ready.
+        resumeSettled = true
     }
     // Resize presets cycled by the aspect button: (resizeMode, label, videoScale). The PlayerView
     // always stays full-screen so the CONTROLS never move; zoom is applied only to the video
@@ -1344,6 +1371,8 @@ private fun VideoPlayer(
     }
 
     val latestPaused by androidx.compose.runtime.rememberUpdatedState(onPausedChanged)
+    // Drives the PlayerView's keepScreenOn: the display may time out on a paused or finished video.
+    var playing by remember(file.id) { mutableStateOf(false) }
     DisposableEffect(file.id) {
         fun reportPaused() = latestPaused(!player.playWhenReady || player.playbackState == Player.STATE_ENDED)
         val listener = object : Player.Listener {
@@ -1352,6 +1381,7 @@ private fun VideoPlayer(
                 reportPaused()
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reportPaused()
+            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width <= 0 || videoSize.height <= 0) return
                 val w = videoSize.width * videoSize.pixelWidthHeightRatio
@@ -1366,7 +1396,8 @@ private fun VideoPlayer(
         onDispose {
             player.removeListener(listener)
             latestPaused(false)
-            if (resumeEnabled) vm.savePosition(file.id, player.currentPosition, player.duration)
+            // Only once the resume point was applied: otherwise the saved one is left untouched.
+            if (resumeEnabled && resumeSettled) vm.savePosition(file.id, player.currentPosition, player.duration)
             com.cripta.app.viewer.PipController.armedAspect = null
             // No orientation reset here: swiping to another video must not bounce a landscape phone
             // through portrait. The viewer resets it on a non-video page and when it closes.
@@ -1398,13 +1429,35 @@ private fun VideoPlayer(
     val latestPrefs by androidx.compose.runtime.rememberUpdatedState(prefs)
     DisposableEffect(lifecycleOwner, player) {
         val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && latestPrefs.pauseOnLeave &&
-                activity?.isInPictureInPictureMode != true && activity?.isInMultiWindowMode != true) {
-                player.pause()
-            }
+            if (event != androidx.lifecycle.Lifecycle.Event.ON_STOP) return@LifecycleEventObserver
+            val inPipNow = activity?.isInPictureInPictureMode == true
+            // Stopped while still flagged as in PiP with the screen on: the user closed the PiP window
+            // (Android stops the activity before reporting the PiP exit). Nothing is left on screen,
+            // so always pause; with the screen off the usual option below decides.
+            val interactive = activity?.getSystemService(android.os.PowerManager::class.java)?.isInteractive != false
+            if (inPipNow && interactive) player.pause()
+            else if (latestPrefs.pauseOnLeave && !inPipNow && activity?.isInMultiWindowMode != true) player.pause()
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+    // The documented PiP-dismissal signal, in case the ON_STOP above saw the PiP flag already cleared:
+    // PiP ended while the activity is stopped (expanding back to full screen leaves it started).
+    // Collected as flows (not keyed effects): composition is paused while the activity is stopped.
+    LaunchedEffect(player, lifecycleOwner) {
+        var wasInPip = false
+        com.cripta.app.viewer.PipController.inPip.collect { now ->
+            if (wasInPip && !now &&
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                player.pause()
+            }
+            wasInPip = now
+        }
+    }
+    // Vault locked: always pause, whatever "pause on leave" says, so nothing plays on behind the lock
+    // screen (or in the background after a lock).
+    LaunchedEffect(player) {
+        vm.vaultLocked.collect { locked -> if (locked) player.pause() }
     }
     // In PiP only the video shows: no controller.
     LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
@@ -1559,7 +1612,7 @@ private fun VideoPlayer(
                     clipChildren = false
                     setShowNextButton(false)
                     setShowPreviousButton(false)
-                    keepScreenOn = true            // don't let the screen dim during playback
+                    // keepScreenOn follows actual playback (see update below), not always on.
                     controllerShowTimeoutMs = 4000 // keep the top-bar actions (tags, info…) reachable longer
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
@@ -1596,6 +1649,8 @@ private fun VideoPlayer(
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
                 pv.controllerShowTimeoutMs = controlsTimeoutMs
+                // Keep the screen on only while the video actually plays (not paused/ended/buffering).
+                pv.keepScreenOn = playing
                 // Keep the controls (time, buttons) clear of a side camera; the video stays full-bleed.
                 pv.findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(cutPx.first, 0, cutPx.second, 0)
                 val scale = modes[modeIdx].third * userZoom

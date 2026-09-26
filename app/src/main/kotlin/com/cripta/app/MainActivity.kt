@@ -66,8 +66,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private var backgroundedAt = 0L
-
     /**
      * True while a screen of ours is waiting for a result from a system activity (file picker,
      * "save as" dialog, delete confirmation…). Returning from it is not "coming back to the app",
@@ -512,15 +510,19 @@ class MainActivity : FragmentActivity() {
             clearSystemLayer()
             authUi.value = authUi.value.copy(pin = pinStepFor(keyVault.unlockMode))
         }
-        if (session.isUnlocked) backgroundedAt = System.currentTimeMillis()
+        if (session.isUnlocked) session.backgroundedAt = android.os.SystemClock.elapsedRealtime()
     }
 
     override fun onStart() {
         super.onStart()
         val fromPicker = awaitingResult
         awaitingResult = false
+        val backgroundedAt = session.backgroundedAt
+        // Consumed here: a later start without a stop in between (a new activity in the
+        // foreground) must not count this absence again.
+        session.backgroundedAt = 0L
         if (session.isUnlocked && backgroundedAt > 0L) {
-            val elapsed = System.currentTimeMillis() - backgroundedAt
+            val elapsed = android.os.SystemClock.elapsedRealtime() - backgroundedAt
             // Coming back from a picker/dialog we opened ourselves is not leaving the app (within
             // a sane limit, so a picker left open for ages still locks).
             if (fromPicker && elapsed < PICKER_GRACE_MS) return

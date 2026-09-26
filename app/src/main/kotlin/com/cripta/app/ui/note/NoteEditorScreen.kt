@@ -67,7 +67,8 @@ fun NoteEditorScreen(
     val leave: () -> Unit = {
         when {
             vm.saving -> Unit
-            !vm.loaded || !vm.dirty -> onBack()
+            // A note that failed to load is read-only: leaving never saves over the original.
+            !vm.loaded || vm.loadFailed || !vm.dirty -> onBack()
             fileId == null && vm.name.isBlank() && vm.text.isBlank() -> onBack()
             else -> vm.save(fileId, folderId) { onBack() }
         }
@@ -85,7 +86,7 @@ fun NoteEditorScreen(
                             Icon(Icons.Filled.Delete, "Elimina nota")
                         }
                     }
-                    IconButton(onClick = { vm.save(fileId, folderId) { onBack() } }, enabled = vm.loaded && !vm.saving) {
+                    IconButton(onClick = { vm.save(fileId, folderId) { onBack() } }, enabled = vm.loaded && !vm.loadFailed && !vm.saving) {
                         Icon(Icons.Filled.Check, "Salva")
                     }
                 },
@@ -109,11 +110,14 @@ fun NoteEditorScreen(
                     OutlinedTextField(
                         value = vm.name, onValueChange = { vm.name = it },
                         label = { Text("Titolo") }, singleLine = true,
+                        // Not editable when the note couldn't be read (nothing typed could be saved).
+                        enabled = !vm.loadFailed,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = vm.text, onValueChange = { vm.text = it },
                         label = { Text("Contenuto") },
+                        enabled = !vm.loadFailed,
                         modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp),
                     )
                 }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -126,12 +127,15 @@ class AppUpdater @Inject constructor() {
                 out.outputStream().use { output ->
                     val buf = ByteArray(64 * 1024); var read: Int; var done = 0L
                     while (input.read(buf).also { read = it } >= 0) {
+                        // Annulla: the blocking read loop never looked at the cancellation, so the
+                        // whole APK kept downloading and "annullato" only came at the end.
+                        ensureActive()
                         output.write(buf, 0, read); md.update(buf, 0, read); done += read
                         if (total != null) onProgress((done * 100 / total).toInt().coerceIn(0, 100))
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             out.delete(); throw e
         } finally {
             conn.disconnect()

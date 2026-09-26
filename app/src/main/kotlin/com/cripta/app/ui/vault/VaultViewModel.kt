@@ -112,7 +112,29 @@ class VaultViewModel @Inject constructor(
     private val thumbs: ThumbnailLoader,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
     private val navigator: VaultNavigator,
+    private val session: com.cripta.app.security.SessionManager,
 ) : ViewModel() {
+
+    /**
+     * Run a bulk vault job (loops over many files). The session is held for its duration, as the
+     * foreground service does, so an auto-lock mid-way waits for it instead of pulling the keys
+     * out; and a failure (e.g. the vault locked anyway, repository throws "Vault locked") is
+     * logged and stops the loop instead of crashing the app from viewModelScope.
+     */
+    private fun launchBulk(what: String, block: suspend () -> Unit) = viewModelScope.launch {
+        val held = session.beginWork()
+        // Already locked: nothing can be read or written, don't even start.
+        if (!held) return@launch
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("VaultViewModel", "$what failed", e)
+        } finally {
+            session.endWork()
+        }
+    }
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
@@ -132,7 +154,7 @@ class VaultViewModel @Inject constructor(
      * Regenerate the cover of every selected video using [cover] (ignoring non-video files) and
      * publish each new bitmap as an override so the visible thumbnail updates right away.
      */
-    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = viewModelScope.launch {
+    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = launchBulk("regenerateCovers") {
         val ids = fileIds.toSet()
         val targets = files.value.map { it.file }
             .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
@@ -272,7 +294,7 @@ class VaultViewModel @Inject constructor(
     }
 
     /** Drop the just-imported copies of files that were already in the vault (identical bytes). */
-    fun removeImportDuplicates() = viewModelScope.launch {
+    fun removeImportDuplicates() = launchBulk("removeImportDuplicates") {
         val dups = importState.value.duplicates.map { it.first }
         dups.forEach { repo.secureDelete(it); thumbs.evict(it) }
         repo.clearImportDuplicates()
@@ -406,7 +428,7 @@ class VaultViewModel @Inject constructor(
     fun createFolder(name: String) = viewModelScope.launch {
         repo.createFolder(name, currentFolderId.value)    }
 
-    fun deleteFolder(folder: FolderEntity) = viewModelScope.launch {
+    fun deleteFolder(folder: FolderEntity) = launchBulk("deleteFolder") {
         repo.deleteFolderRecursive(folder.id).forEach { thumbs.evict(it) }    }
 
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
@@ -423,7 +445,7 @@ class VaultViewModel @Inject constructor(
     fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
         repo.toggleFavorite(fileId, fav)    }
 
-    fun setFavorite(fileIds: List<String>, fav: Boolean) = viewModelScope.launch {
+    fun setFavorite(fileIds: List<String>, fav: Boolean) = launchBulk("setFavorite") {
         fileIds.forEach { repo.toggleFavorite(it, fav) }    }
 
     /**
@@ -454,7 +476,7 @@ class VaultViewModel @Inject constructor(
         repo.setTags(fileId, tagNames)    }
 
     /** Add the given tags to every selected file without touching their other tags. */
-    fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>) = viewModelScope.launch {
+    fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>) = launchBulk("addTagsToFiles") {
         fileIds.forEach { repo.addTags(it, tagNames) }    }
 
     /** Create a tag (optionally with an emoji/acronym alias) up front. */
@@ -470,27 +492,27 @@ class VaultViewModel @Inject constructor(
     fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
         repo.setTagAlias(tagName, alias)    }
 
-    fun moveFiles(fileIds: List<String>, folderId: Long?) = viewModelScope.launch {
+    fun moveFiles(fileIds: List<String>, folderId: Long?) = launchBulk("moveFiles") {
         fileIds.forEach { repo.moveFile(it, folderId) }    }
 
     // --- Undo support (snackbar "Annulla") ---
     /** Put files back into the folders they were in before a move. */
-    fun restoreFolders(previous: Map<String, Long?>) = viewModelScope.launch {
+    fun restoreFolders(previous: Map<String, Long?>) = launchBulk("restoreFolders") {
         previous.forEach { (id, folder) -> repo.moveFile(id, folder) }
     }
 
     /** Restore each file's previous favorite flag. */
-    fun restoreFavorites(previous: Map<String, Boolean>) = viewModelScope.launch {
+    fun restoreFavorites(previous: Map<String, Boolean>) = launchBulk("restoreFavorites") {
         previous.forEach { (id, fav) -> repo.toggleFavorite(id, fav) }
     }
 
     /** Restore each file's previous tag names. */
-    fun restoreTags(previous: Map<String, List<String>>) = viewModelScope.launch {
+    fun restoreTags(previous: Map<String, List<String>>) = launchBulk("restoreTags") {
         previous.forEach { (id, names) -> repo.setTags(id, names) }
     }
 
     /** Take [tagNames] off every file in [fileIds] (other tags kept). Files must be in the current view. */
-    fun removeTagsFromFiles(fileIds: List<String>, tagNames: List<String>) = viewModelScope.launch {
+    fun removeTagsFromFiles(fileIds: List<String>, tagNames: List<String>) = launchBulk("removeTagsFromFiles") {
         val ids = fileIds.toSet()
         files.value.filter { it.file.id in ids }.forEach { fwt ->
             val kept = fwt.tags.map { it.name }.filterNot { n -> tagNames.any { it.equals(n, ignoreCase = true) } }
@@ -498,12 +520,17 @@ class VaultViewModel @Inject constructor(
         }
     }
 
-    fun deleteFiles(fileIds: List<String>) = viewModelScope.launch {
+    fun deleteFiles(fileIds: List<String>) = launchBulk("deleteFiles") {
         // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
         fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }    }
 
     /** Persist a user drag-reorder (Manual sort). */
-    fun reorder(orderedIds: List<String>) = viewModelScope.launch { repo.setSortWeights(orderedIds) }
+    fun reorder(orderedIds: List<String>) = launchBulk("reorder") {
+        // Filtered results span the whole vault: renumbering that subset 0..k-1 would scramble
+        // other folders' manual order (the screen also disables the drag while filtering).
+        if (filters.value.active) return@launchBulk
+        repo.setSortWeights(orderedIds)
+    }
 
     /** True when "Casuale" shuffles only what is on screen (a folder or filtered results). */
     val randomScopedToView: Boolean get() = filters.value.active || currentFolderId.value != null

@@ -305,6 +305,9 @@ fun VaultScreen(
     }
 
     var selection by remember { mutableStateOf(setOf<String>()) }
+    /** Ids of the files on screen now; selection actions only ever act on these. A derived state
+     *  (read through the delegate) so long-lived gesture handlers never see a stale set. */
+    val visibleIds by remember { derivedStateOf { files.mapTo(HashSet<String>()) { it.file.id } } }
     // Swipe/range multi-select (gallery-style) drag state.
     val gridState = rememberLazyGridState()
     var dragAnchor by remember { mutableStateOf<String?>(null) }
@@ -345,7 +348,10 @@ fun VaultScreen(
     }
     fun countLabel(n: Int) = if (n == 1) "1 elemento" else "$n elementi"
     fun folderLabel(id: Long?) = if (id == null) "Radice" else "\"${allFolders.firstOrNull { it.id == id }?.name ?: "cartella"}\""
-    fun moveWithUndo(ids: List<String>, target: Long?) {
+    fun moveWithUndo(requested: List<String>, target: Long?) {
+        // Only files still on screen: the undo snapshot below is taken from them, so a hidden id
+        // would be moved without any way back.
+        val ids = requested.filter { it in visibleIds }
         if (ids.isEmpty()) return
         val set = ids.toSet()
         val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.folderId }
@@ -354,7 +360,10 @@ fun VaultScreen(
             vm.restoreFolders(prev)
         }
     }
-    fun favoriteWithUndo(ids: List<String>, fav: Boolean) {
+    fun favoriteWithUndo(requested: List<String>, fav: Boolean) {
+        // Same as moveWithUndo: act only on shown files, which the undo snapshot covers.
+        val ids = requested.filter { it in visibleIds }
+        if (ids.isEmpty()) return
         val set = ids.toSet()
         val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.isFavorite }
         vm.setFavorite(ids, fav)
@@ -371,6 +380,12 @@ fun VaultScreen(
 
     // A selection belongs to the folder it was made in.
     LaunchedEffect(path) { selection = emptySet() }
+    // ...and to what is on screen: when a filter, search or stats chip hides selected files they
+    // leave the selection, otherwise Elimina/Sposta/Etichette would act on files the user can't see.
+    LaunchedEffect(visibleIds) {
+        val kept = selection intersect visibleIds
+        if (kept.size != selection.size) selection = kept
+    }
 
     // A clean import result disappears by itself; one with failures stays until dismissed.
     LaunchedEffect(importState.finished, importState.failed, importState.duplicates.size) {
@@ -533,7 +548,10 @@ fun VaultScreen(
                         .map { it.file.id }.toSet(),
                     selection, files,
                 ) { value = vm.convertibleIds(selection) }
-                val convertible = convertibleIds.size
+                // produceState keeps its previous result while recomputing for a new selection:
+                // only offer (and convert) ids that are still selected right now.
+                val convertibleSel = convertibleIds intersect selection
+                val convertible = convertibleSel.size
                 val actions = buildList {
                     add(SelAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito") {
                         favoriteWithUndo(selection.toList(), !allFav); selection = emptySet()
@@ -544,14 +562,17 @@ fun VaultScreen(
                     add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
                     add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
                     if (convertible > 0) add(SelAction(Icons.Filled.Autorenew, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
-                        val ids = convertibleIds.toList()
-                        if (!convertSettings.first) {
-                            convertAsk = ids
-                        } else {
-                            vm.convertToMp4(ids)
-                            notify("Conversione in coda: prosegue in background")
+                        // Re-read at tap time: both states may have moved on since this bar was built.
+                        val ids = (convertibleIds intersect selection).toList()
+                        if (ids.isNotEmpty()) {
+                            if (!convertSettings.first) {
+                                convertAsk = ids
+                            } else {
+                                vm.convertToMp4(ids)
+                                notify("Conversione in coda: prosegue in background")
+                            }
+                            selection = emptySet()
                         }
-                        selection = emptySet()
                     })
                     if (videoCount > 0) add(SelAction(Icons.Filled.Image, if (videoCount == 1) "Copertina" else "Copertine ($videoCount)") {
                         showRegenCover = true
@@ -690,6 +711,11 @@ fun VaultScreen(
             }
             val orderedIds = remember(grouped) { grouped.flatMap { it.second.map { f -> f.file.id } } }
             val idSet = remember(orderedIds) { orderedIds.toSet() }
+            // The grid's gesture handlers read these instead of being keyed on the list: an import
+            // changes it once per file, and restarting a handler cancelled a drag halfway through.
+            val currentOrderedIds by rememberUpdatedState(orderedIds)
+            val currentIdSet by rememberUpdatedState(idSet)
+            val currentInSelection by rememberUpdatedState(inSelection)
 
             fun toggleSel(id: String) {
                 selection = if (id in selection) selection - id else selection + id
@@ -814,9 +840,15 @@ fun VaultScreen(
                         coverOverrides = coverOverrides,
                         coverVersions = coverVersions,
                         thumb = { vm.thumb(it) },
-                        onOpen = { openFile(it) },
+                        // In selection mode a tap toggles, as in the normal grid (it used to open
+                        // the viewer even after "Seleziona tutto").
+                        onOpen = { if (inSelection) toggleSel(it) else openFile(it) },
                         onReorder = { vm.reorder(it) },
                         header = if (showFolders) folderRow else null,
+                        inSelection = inSelection,
+                        // A filter/search shows results from the whole vault: reordering that
+                        // subset would renumber it 0..k-1 and scramble other folders' manual order.
+                        reorderEnabled = !filters.active,
                     )
                 else -> Box(Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
@@ -826,11 +858,11 @@ fun VaultScreen(
                         .onGloballyPositioned { gridCoords = it }
                         // Tap: open a file (or toggle it in selection mode). A held finger marks the
                         // cell as pressed after 60ms, so starting a scroll doesn't flash it.
-                        .pointerInput(orderedIds, inSelection) {
+                        .pointerInput(Unit) {
                             detectTapGestures(
                                 onPress = { off ->
                                     val key = keyAt(off, gridState) as? String
-                                    if (key != null && key in idSet) {
+                                    if (key != null && key in currentIdSet) {
                                         val job = uiScope.launch { kotlinx.coroutines.delay(60); pressedKey = key }
                                         tryAwaitRelease()
                                         job.cancel()
@@ -839,20 +871,20 @@ fun VaultScreen(
                                 },
                                 onTap = { off ->
                                     val key = keyAt(off, gridState) as? String ?: return@detectTapGestures
-                                    if (key in idSet) {
-                                        if (inSelection) toggleSel(key) else openFile(key)
+                                    if (key in currentIdSet) {
+                                        if (currentInSelection) toggleSel(key) else openFile(key)
                                     }
                                 },
                             )
                         }
                         // Long-press a file then drag = gallery-style range select (or deselect if
                         // the anchor was already selected); release over a folder to move there.
-                        .pointerInput(orderedIds) {
+                        .pointerInput(Unit) {
                             val onStart: (Offset) -> Unit = { off ->
                                 selPointer = off
                                 hoverFolder = null
                                 val key = keyAt(off, gridState) as? String
-                                if (key != null && key in idSet) {
+                                if (key != null && key in currentIdSet) {
                                     dragAnchor = key
                                     dragDeselect = key in selection
                                     dragBase = selection
@@ -870,12 +902,12 @@ fun VaultScreen(
                                         hoverFolder = overFolder
                                     } else {
                                         hoverFolder = null
-                                        val cur = curKey?.takeIf { it in idSet }
+                                        val cur = curKey?.takeIf { it in currentIdSet }
                                         if (cur != null) {
-                                            val ai = orderedIds.indexOf(anchor)
-                                            val ci = orderedIds.indexOf(cur)
+                                            val ai = currentOrderedIds.indexOf(anchor)
+                                            val ci = currentOrderedIds.indexOf(cur)
                                             if (ai >= 0 && ci >= 0) {
-                                                val range = orderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
+                                                val range = currentOrderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
                                                 selection = if (dragDeselect) dragBase - range else dragBase + range
                                             }
                                         }
@@ -892,12 +924,18 @@ fun VaultScreen(
                                 dragAnchor = null; hoverFolder = null
                             }
                             // Long-press an item then drag to range-select; a plain long-press selects one.
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { off -> onStart(off) },
-                                onDrag = { _, amount -> onMove(amount) },
-                                onDragEnd = { onEnd() },
-                                onDragCancel = { dragAnchor = null; hoverFolder = null },
-                            )
+                            try {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { off -> onStart(off) },
+                                    onDrag = { _, amount -> onMove(amount) },
+                                    onDragEnd = { onEnd() },
+                                    onDragCancel = { dragAnchor = null; hoverFolder = null },
+                                )
+                            } finally {
+                                // If the handler is torn down mid-drag (no onDragCancel then), don't
+                                // leave a stale anchor / highlighted drop folder behind.
+                                dragAnchor = null; hoverFolder = null
+                            }
                         },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1022,13 +1060,14 @@ fun VaultScreen(
             count = selection.size,
             allTags = tags,
             onConfirm = { names ->
-                val ids = selection.toList()
+                // Shown files only (the undo snapshot from tagsOf covers exactly those).
+                val ids = selection.filter { it in visibleIds }
                 val before = tagsOf(ids)
                 vm.addTagsToFiles(ids, names); batchTag = false; selection = emptySet()
                 notify("Etichette aggiunte a ${countLabel(ids.size)}") { vm.restoreTags(before) }
             },
             onRemove = { names ->
-                val ids = selection.toList()
+                val ids = selection.filter { it in visibleIds }
                 val before = tagsOf(ids)
                 vm.removeTagsFromFiles(ids, names); batchTag = false; selection = emptySet()
                 notify("Etichette rimosse da ${countLabel(ids.size)}") { vm.restoreTags(before) }
@@ -1122,7 +1161,9 @@ fun VaultScreen(
     }
 
     if (confirmMultiDelete) {
-        val n = selection.size
+        // Never delete a file that isn't on screen (with the trash off it is irreversible).
+        val toDelete = selection.filter { it in visibleIds }
+        val n = toDelete.size
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmMultiDelete = false },
             title = { Text(if (n == 1) "Eliminare 1 file?" else "Eliminare $n file?") },
@@ -1132,7 +1173,7 @@ fun VaultScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    vm.deleteFiles(selection.toList()); selection = emptySet(); confirmMultiDelete = false
+                    vm.deleteFiles(toDelete); selection = emptySet(); confirmMultiDelete = false
                     notify(
                         if (trashEnabled) (if (n == 1) "1 file spostato nel cestino" else "$n file spostati nel cestino")
                         else (if (n == 1) "1 file eliminato" else "$n file eliminati"),
@@ -1856,6 +1897,8 @@ private fun FilterSortSheet(
 ) {
     // The shared sheet: opens at half height (drag up for the rest), one swipe down closes it.
     var naming by remember { mutableStateOf(false) }
+    // The chip's X used to delete a saved filter at once (easy to hit by mistake): ask first.
+    var savedToDelete by remember { mutableStateOf<com.cripta.app.data.db.SavedFilterEntity?>(null) }
     val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
         (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
@@ -1899,7 +1942,7 @@ private fun FilterSortSheet(
                                 label = { Text(sf.name, maxLines = 1) },
                                 trailingIcon = {
                                     Icon(Icons.Filled.Close, "Elimina filtro salvato ${sf.name}",
-                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { onDeleteSaved(sf.id) })
+                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { savedToDelete = sf })
                                 },
                             )
                         }
@@ -2075,6 +2118,19 @@ private fun FilterSortSheet(
             onConfirm = { onSave(it); naming = false },
             onDismiss = { naming = false })
     }
+    savedToDelete?.let { sf ->
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { savedToDelete = null },
+            title = { Text("Eliminare il filtro salvato?") },
+            text = { Text("\"${sf.name}\" verrà rimosso dai filtri salvati. I file non vengono toccati.") },
+            confirmButton = {
+                TextButton(onClick = { onDeleteSaved(sf.id); savedToDelete = null }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { savedToDelete = null }) { Text("Annulla") } },
+        )
+    }
 }
 
 /** A titled group of the filter sheet (title row with an optional trailing element, then content). */
@@ -2114,7 +2170,14 @@ private fun ReorderableFileGrid(
     onOpen: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
     header: (@Composable () -> Unit)? = null,
+    /** Selection mode: [onOpen] toggles instead of opening (only changes the spoken label here). */
+    inSelection: Boolean = false,
+    /** False while filtering/searching: items are shown but can't be dragged. */
+    reorderEnabled: Boolean = true,
 ) {
+    // The per-item tap handler is keyed on the file id only: read the latest callback, or a tap
+    // would keep doing what it did when the cell first appeared (e.g. open while selecting).
+    val currentOnOpen by rememberUpdatedState(onOpen)
     val list = remember { mutableStateListOf<FileWithTags>() }
     var dragging by remember { mutableStateOf(false) }
     LaunchedEffect(items) { if (!dragging) { list.clear(); list.addAll(items) } }
@@ -2172,7 +2235,8 @@ private fun ReorderableFileGrid(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Text("Ordine manuale · tieni premuto un elemento e trascinalo per riordinarlo",
+        Text(if (reorderEnabled) "Ordine manuale · tieni premuto un elemento e trascinalo per riordinarlo"
+            else "Ordine manuale · togli filtri e ricerca per riordinare",
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
         LazyVerticalGrid(
@@ -2216,31 +2280,43 @@ private fun ReorderableFileGrid(
                             }
                         }
                         .semantics(mergeDescendants = true) {
-                            onClick(label = "Apri") { onOpen(fwt.file.id); true }
-                            this.customActions = listOf(
-                                CustomAccessibilityAction("Sposta prima") { moveBy(fwt.file.id, -1); true },
-                                CustomAccessibilityAction("Sposta dopo") { moveBy(fwt.file.id, 1); true },
-                            )
+                            val sel = fwt.file.id in selection
+                            if (inSelection) this.selected = sel
+                            onClick(label = if (inSelection) (if (sel) "Deseleziona" else "Seleziona") else "Apri") {
+                                currentOnOpen(fwt.file.id); true
+                            }
+                            if (reorderEnabled) {
+                                this.customActions = listOf(
+                                    CustomAccessibilityAction("Sposta prima") { moveBy(fwt.file.id, -1); true },
+                                    CustomAccessibilityAction("Sposta dopo") { moveBy(fwt.file.id, 1); true },
+                                )
+                            }
                         }
-                        .pointerInput(fwt.file.id) { detectTapGestures(onTap = { onOpen(fwt.file.id) }) }
-                        .pointerInput(fwt.file.id) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { local ->
-                                    draggedId = fwt.file.id
-                                    dragging = true
-                                    pressLocal = local
-                                    val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == fwt.file.id }
-                                    pointer = Offset((info?.offset?.x ?: 0) + local.x, (info?.offset?.y ?: 0) + local.y)
-                                },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    pointer += amount
-                                    retarget()
-                                },
-                                onDragEnd = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
-                                onDragCancel = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
-                            )
-                        },
+                        .pointerInput(fwt.file.id) { detectTapGestures(onTap = { currentOnOpen(fwt.file.id) }) }
+                        .then(if (!reorderEnabled) Modifier else Modifier.pointerInput(fwt.file.id) {
+                            try {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { local ->
+                                        draggedId = fwt.file.id
+                                        dragging = true
+                                        pressLocal = local
+                                        val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == fwt.file.id }
+                                        pointer = Offset((info?.offset?.x ?: 0) + local.x, (info?.offset?.y ?: 0) + local.y)
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        pointer += amount
+                                        retarget()
+                                    },
+                                    onDragEnd = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
+                                    onDragCancel = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
+                                )
+                            } finally {
+                                // Handler removed mid-drag (e.g. a filter turned reordering off): unfreeze
+                                // the list without persisting a half-done order.
+                                if (draggedId == fwt.file.id) { dragging = false; draggedId = null }
+                            }
+                        }),
                 )
             }
         }
