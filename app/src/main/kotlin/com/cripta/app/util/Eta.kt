@@ -104,8 +104,11 @@ private const val PER_FILE_BYTES = 4L shl 20
 /** "circa 3 min rimanenti": the screens' form, rounded so it reads as an estimate, not a countdown. */
 fun formatEta(ms: Long): String = etaAmount(ms)?.let { "circa $it rimanenti" } ?: "pochi secondi rimanenti"
 
-/** "resta circa 3 min": the shorter form of the notifications and the Hyper Island. */
-fun formatEtaShort(ms: Long): String = etaAmount(ms)?.let { "resta circa $it" } ?: "pochi secondi"
+/**
+ * "ancora 3 min": the short form of the notifications and the Hyper Island, whose line is cut
+ * when long ("resta circa 3 min" came out cut).
+ */
+fun formatEtaShort(ms: Long): String = etaAmount(ms)?.let { "ancora $it" } ?: "quasi finito"
 
 /** "45 s" (by 5 s), "3 min", "1 h 20 min", rounded up; null under 10 s. */
 internal fun etaAmount(ms: Long): String? {
