@@ -131,11 +131,10 @@ internal object HyperFocus {
             .put("enableFloat", float)
             .put("islandFirstFloat", float)
             .put("isShowNotification", true)
-            // Expanded: the template's own padding (without it text and buttons sat squeezed at
-            // the top edge) and the operation's icon on the left, which gives the text block a
-            // proper height; title first, then what happened / what is asked.
-            .put("padding", true)
-            .put("baseInfo", JSONObject().put("type", 1).put("title", title).put("content", text ?: "")
+            // Expanded: the chat template (the operation's icon on the left, title and text beside
+            // it, as HyperOS lays out its own ongoing items). The base template put the text above
+            // the title with the icon squeezed after it, and its padding flag didn't add margins.
+            .put("chatInfo", JSONObject().put("title", title).put("content", text ?: "")
                 .put("picFunction", picKey))
             .put("param_island", JSONObject()
                 .put("islandProperty", 1)
