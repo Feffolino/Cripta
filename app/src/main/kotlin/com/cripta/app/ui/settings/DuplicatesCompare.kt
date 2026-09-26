@@ -516,6 +516,15 @@ private fun PreviewVideo(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val player = remember(file.id) {
         androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
+            // As in the main viewer: route audio as media and handle audio focus (pause when another
+            // app takes it), which this preview did not do.
+            setAudioAttributes(
+                androidx.media3.common.AudioAttributes.Builder()
+                    .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                    .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                true,
+            )
             val factory = com.cripta.app.viewer.EncryptedDataSource.Factory(
                 channelProvider = { channelFor(file) },
                 plaintextLength = file.sizeBytes,
@@ -537,6 +546,16 @@ private fun PreviewVideo(
             onPosition(player.currentPosition)
             player.release()
         }
+    }
+    // Pause when the app goes to the background (Home, screen off) or the vault locks (the lock gate
+    // stops this lifecycle too): the preview kept playing with nothing on screen.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, player) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) player.pause()
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     androidx.compose.ui.viewinterop.AndroidView(
         factory = { androidx.media3.ui.PlayerView(it).apply { this.player = player; useController = true } },

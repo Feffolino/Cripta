@@ -17,6 +17,11 @@ class BlobStore @Inject constructor(
 
     fun blob(uuid: String): File = File(dir, uuid)
 
+    /** Remove leftovers of a note save interrupted before its rename (see VaultRepository.updateNote). */
+    fun sweepTemp() {
+        dir.listFiles { f -> f.name.endsWith(".tmp") }?.forEach { runCatching { it.delete() } }
+    }
+
     /** Delete every blob. Used when resetting a vault whose key was permanently invalidated. */
     fun wipeAll() {
         dir.listFiles()?.forEach { runCatching { it.delete() } }

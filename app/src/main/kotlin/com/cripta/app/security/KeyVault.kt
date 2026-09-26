@@ -136,11 +136,39 @@ class KeyVault @Inject constructor(
         data class Wait(val seconds: Long) : PinResult
     }
 
-    /** Seconds left before another PIN attempt is allowed (0 = now). */
+    /**
+     * Seconds left before another PIN attempt is allowed (0 = now). The pause runs on the
+     * monotonic clock (SystemClock.elapsedRealtime): with the wall clock, moving the phone's time
+     * forward skipped it (and back, locked the owner out). That clock restarts at every boot, so
+     * after a reboot the pause starts over in full.
+     */
     fun pinWaitSeconds(): Long {
-        val left = prefs.getLong(KEY_PIN_WAIT_UNTIL, 0L) - System.currentTimeMillis()
+        val until = prefs.getLong(KEY_PIN_WAIT_UNTIL, 0L)
+        if (until == 0L) return 0L
+        val len = prefs.getLong(KEY_PIN_WAIT_LEN, 0L)
+        val left = when {
+            // Set by an older version, on the wall clock.
+            len == 0L -> until - System.currentTimeMillis()
+            prefs.getInt(KEY_PIN_WAIT_BOOT, -1) == bootCount() -> (until - android.os.SystemClock.elapsedRealtime()).coerceAtMost(len)
+            else -> {
+                startPinWait(len)
+                len
+            }
+        }
         return if (left <= 0L) 0L else (left + 999L) / 1000L
     }
+
+    /** A pause of [ms] before the next PIN attempt, from now (see [pinWaitSeconds]). */
+    private fun startPinWait(ms: Long, edit: android.content.SharedPreferences.Editor = prefs.edit()) {
+        edit.putLong(KEY_PIN_WAIT_UNTIL, android.os.SystemClock.elapsedRealtime() + ms)
+            .putLong(KEY_PIN_WAIT_LEN, ms)
+            .putInt(KEY_PIN_WAIT_BOOT, bootCount())
+            .commit()
+    }
+
+    private fun bootCount(): Int =
+        runCatching { android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.BOOT_COUNT, -1) }
+            .getOrDefault(-1)
 
     /**
      * Unlocks with the app PIN. [systemLayer] is the blob from [unwrapSystemLayer] in
@@ -157,9 +185,12 @@ class KeyVault @Inject constructor(
         return PinResult.Ok
     }
 
-    /** Checks the current PIN (to confirm a settings change in PIN-only mode), counting failures. */
-    fun verifyPin(pin: CharArray): PinResult {
-        val sealed = loadBytes(KEY_WRAPPED_DEK_PIN) ?: error("No PIN set")
+    /**
+     * Checks the current PIN (to confirm a settings change), counting failures. [systemLayer]: in
+     * SYSTEM_AND_PIN mode, the blob from [unwrapSystemLayer] (the PIN is sealed inside it).
+     */
+    fun verifyPin(pin: CharArray, systemLayer: ByteArray? = null): PinResult {
+        val sealed = systemLayer ?: loadBytes(KEY_WRAPPED_DEK_PIN) ?: error("No PIN set")
         return when (val r = checkPin(pin, sealed)) {
             is PinCheck.Opened -> { r.bytes.fill(0); PinResult.Ok }
             is PinCheck.Refused -> r.result
@@ -186,12 +217,12 @@ class KeyVault @Inject constructor(
                 fails == 7 -> 5 * 60L
                 else -> 15 * 60L
             }
-            prefs.edit().putInt(KEY_PIN_FAILS, fails)
-                .putLong(KEY_PIN_WAIT_UNTIL, if (wait > 0) System.currentTimeMillis() + wait * 1000L else 0L)
-                .commit()
+            val edit = prefs.edit().putInt(KEY_PIN_FAILS, fails)
+            if (wait > 0) startPinWait(wait * 1000L, edit)
+            else edit.remove(KEY_PIN_WAIT_UNTIL).remove(KEY_PIN_WAIT_LEN).remove(KEY_PIN_WAIT_BOOT).commit()
             return PinCheck.Refused(PinResult.Wrong(wait))
         }
-        prefs.edit().remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL).commit()
+        prefs.edit().remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL).remove(KEY_PIN_WAIT_LEN).remove(KEY_PIN_WAIT_BOOT).commit()
         return PinCheck.Opened(opened)
     }
 
@@ -229,7 +260,7 @@ class KeyVault @Inject constructor(
             else e.remove(KEY_PIN_SALT).remove(KEY_SECRET_KIND)
             e.putString(KEY_UNLOCK_MODE, newMode.name)
                 .putString(KEY_KEK_ALIAS, activeAlias)
-                .remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL)
+                .remove(KEY_PIN_FAILS).remove(KEY_PIN_WAIT_UNTIL).remove(KEY_PIN_WAIT_LEN).remove(KEY_PIN_WAIT_BOOT)
             // One synchronous write: the old and new wrapping never end up mixed on disk.
             check(e.commit()) { "Could not save the unlock mode" }
         } finally {
@@ -293,6 +324,8 @@ class KeyVault @Inject constructor(
         private const val KEY_SECRET_KIND = "secret_kind"
         private const val KEY_PIN_FAILS = "pin_fails"
         private const val KEY_PIN_WAIT_UNTIL = "pin_wait_until"
+        private const val KEY_PIN_WAIT_LEN = "pin_wait_len"
+        private const val KEY_PIN_WAIT_BOOT = "pin_wait_boot"
         private val PIN_AAD = "cripta-dek-pin".toByteArray()
         private const val LEGACY_ALIAS = "cripta_kek"
         private const val ALIAS_V2 = "cripta_kek_v2"
