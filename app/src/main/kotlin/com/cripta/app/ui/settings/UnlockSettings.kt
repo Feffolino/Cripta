@@ -55,8 +55,10 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
     var target by remember { mutableStateOf<UnlockMode?>(null) }
     var askCurrentPin by remember { mutableStateOf(false) }
     var askNewPin by remember { mutableStateOf(false) }
+    /** SYSTEM_AND_PIN: what the system step opened, to check the current PIN against. */
+    var systemLayer by remember { mutableStateOf<ByteArray?>(null) }
 
-    fun reset() { target = null; askCurrentPin = false; askNewPin = false }
+    fun reset() { target = null; askCurrentPin = false; askNewPin = false; systemLayer?.fill(0); systemLayer = null }
     fun toast(msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 
     // Last step: the system prompt when either the old or the new mode involves it, then apply.
@@ -82,8 +84,31 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
     }
     fun start(m: UnlockMode) {
         target = m
-        // Without the system prompt in the current mode, the current PIN confirms the change.
-        if (!mode.usesSystem) askCurrentPin = true else afterCurrentCheck(m)
+        when {
+            // Without the system prompt in the current mode, the current PIN confirms the change.
+            !mode.usesSystem -> askCurrentPin = true
+            // Both factors: the system step, then the current app PIN. With the prompt alone, a
+            // finger enrolled on the phone could remove the app code (or change it) for good.
+            mode == UnlockMode.SYSTEM_AND_PIN -> {
+                val cipher = vm.cipherForSystemStep()
+                if (activity == null || cipher == null) {
+                    reset(); toast("Impossibile preparare la chiave di sicurezza. Riprova."); return
+                }
+                BiometricAuth.authenticate(
+                    activity = activity,
+                    cipher = cipher,
+                    title = "Conferma la modifica",
+                    subtitle = "Poi il codice attuale di Cripta",
+                    onSuccess = { c ->
+                        val layer = vm.unwrapSystemLayer(c)
+                        if (layer == null) { reset(); toast("Verifica non riuscita. Riprova.") }
+                        else { systemLayer = layer; askCurrentPin = true }
+                    },
+                    onError = { msg -> reset(); msg?.let(::toast) },
+                )
+            }
+            else -> afterCurrentCheck(m)
+        }
     }
 
     Column(Modifier.selectableGroup()) {
@@ -113,8 +138,11 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
             kind = vm.secretKind,
             onCheck = { pin, onWrong ->
                 scope.launch {
-                    when (val r = vm.verifyCurrentPin(pin)) {
-                        KeyVault.PinResult.Ok -> { askCurrentPin = false; afterCurrentCheck(t) }
+                    when (val r = vm.verifyCurrentPin(pin, systemLayer)) {
+                        KeyVault.PinResult.Ok -> {
+                            askCurrentPin = false; systemLayer?.fill(0); systemLayer = null
+                            afterCurrentCheck(t)
+                        }
                         is KeyVault.PinResult.Wrong -> {
                             val what = if (vm.secretKind == SecretKind.PIN) "PIN errato" else "Password errata"
                             onWrong(if (r.waitSeconds > 0) "$what. Riprova tra ${waitText(r.waitSeconds)}." else "$what.")

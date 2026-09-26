@@ -2,9 +2,11 @@ package com.cripta.app.viewer
 
 import android.net.Uri
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
@@ -25,24 +27,34 @@ class EncryptedDataSource(
     private var uri: Uri? = null
     private var channel: SeekableByteChannel? = null
     private var bytesRemaining: Long = 0
+    // Set once transferStarted() ran: close() must only report transferEnded() for a transfer that
+    // actually started (ExoPlayer calls close() after a failed open() too).
+    private var opened = false
 
     override fun open(dataSpec: DataSpec): Long {
         uri = dataSpec.uri
         transferInitializing(dataSpec)
         val ch = channelProvider()
+        // Stored right away so close() releases it even if positioning below throws (it leaked).
+        channel = ch
         // Use the channel's true decrypted plaintext length as the authoritative total. The
         // caller-supplied plaintextLength comes from OpenableColumns.SIZE at import time, which
         // some content providers report inaccurately. When it's too small, ExoPlayer can't reach
         // an MP4 whose moov (seek table) sits at the end of the file, so the video plays but is
         // not seekable. Deriving the length from the channel fixes seeking for those files.
         val total = runCatching { ch.size() }.getOrNull()?.takeIf { it > 0 } ?: plaintextLength
+        // A position past the end would leave bytesRemaining negative and read() would then pass a
+        // negative length on: fail the open the way Media3's own sources do.
+        if (dataSpec.position > total) {
+            throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+        }
         ch.position(dataSpec.position)
-        channel = ch
         bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
             dataSpec.length
         } else {
             total - dataSpec.position
         }
+        opened = true
         transferStarted(dataSpec)
         return bytesRemaining
     }
@@ -71,7 +83,10 @@ class EncryptedDataSource(
         uri = null
         runCatching { channel?.close() }
         channel = null
-        transferEnded()
+        if (opened) {
+            opened = false
+            transferEnded()
+        }
     }
 
     @UnstableApi

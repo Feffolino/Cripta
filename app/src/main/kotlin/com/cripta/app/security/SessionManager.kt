@@ -53,6 +53,15 @@ class SessionManager @Inject constructor() {
     /** True when a lock happened while work was running: release the keys when it ends. */
     private var releasePending = false
 
+    /**
+     * When the app last went to the background while unlocked (SystemClock.elapsedRealtime(), 0 =
+     * not since the last unlock). Kept here, for the whole process, not in the activity: a new
+     * activity (Cripta swiped away from the recents while a job kept the process alive, a
+     * configuration change in the background) started from 0 and skipped the auto-lock. And a
+     * monotonic clock, which moving the phone's clock back doesn't fool.
+     */
+    @Volatile var backgroundedAt: Long = 0L
+
     /** True when the vault is unlocked for the user (keys present AND not UI-locked). */
     val isUnlocked: Boolean get() = !_locked.value && dek != null && db != null
 
@@ -74,6 +83,7 @@ class SessionManager @Inject constructor() {
             }
             _database.value = this.db
             _locked.value = false
+            backgroundedAt = 0L
             drop
         }
         stale?.let { closeAsync(it) }

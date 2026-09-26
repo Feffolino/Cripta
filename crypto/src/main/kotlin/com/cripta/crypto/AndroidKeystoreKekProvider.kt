@@ -36,6 +36,15 @@ class AndroidKeystoreKekProvider(
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
             .setUserAuthenticationRequired(requireAuth)
+            .apply {
+                // Per use, by a strong biometric OR the device credential. Left out, the key took
+                // biometrics only: the phone PIN/pattern offered by the prompt (and its fallback
+                // after a biometric lockout) failed at the cipher, and phones without an enrolled
+                // finger could not create the key at all. Existing keys keep their parameters.
+                if (requireAuth) setUserAuthenticationParameters(
+                    0, KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
+                )
+            }
             // Do NOT invalidate the KEK when biometrics are added/changed. This KEK is the root
             // of the whole key hierarchy (KEK -> DEK -> DB key + per-file keys); invalidating it
             // makes every encrypted file permanently unrecoverable the moment the user enrols a

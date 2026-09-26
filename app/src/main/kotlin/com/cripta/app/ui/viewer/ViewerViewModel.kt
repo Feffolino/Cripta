@@ -45,9 +45,17 @@ class ViewerViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val settingsStore: com.cripta.app.data.SettingsStore,
+    session: com.cripta.app.security.SessionManager,
     queue: ViewerQueue,
     savedState: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
+
+    /**
+     * True while the vault is locked. The player pauses on it whatever "Metti in pausa uscendo dall'app" says: a video
+     * kept playing behind the lock screen (or in the background after a lock) otherwise. Collected as
+     * a flow, not via composition, since composition is paused while the activity is stopped.
+     */
+    val vaultLocked: StateFlow<Boolean> = session.locked
 
     /** Snapshot of the browse order taken when the viewer opened. */
     val ids: List<String> = queue.ids

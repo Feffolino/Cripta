@@ -275,7 +275,17 @@ class SettingsViewModel @Inject constructor(
     fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }
     fun setRecentTagsCount(v: Int) = viewModelScope.launch { store.setRecentTagsCount(v) }
     fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
-    fun renameTag(id: Long, name: String) = viewModelScope.launch { repo.renameTag(id, name) }
+    fun renameTag(id: Long, name: String) = editTagName(id, name)
+
+    private fun editTagName(id: Long, name: String) = viewModelScope.launch {
+        try {
+            repo.renameTag(id, name)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _message.value = "Esiste già un'etichetta chiamata \"${name.trim()}\"."
+        }
+    }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
@@ -283,7 +293,16 @@ class SettingsViewModel @Inject constructor(
     fun editTag(id: Long, newName: String, alias: String?) = viewModelScope.launch {
         val n = newName.trim()
         if (n.isEmpty()) return@launch
-        repo.renameTag(id, n)
+        // Tag names are unique: renaming onto an existing one threw out of the coroutine (crash).
+        try {
+            repo.renameTag(id, n)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // SQLCipher's own constraint exception, not android.database.sqlite's: caught broadly.
+            _message.value = "Esiste già un'etichetta chiamata \"$n\"."
+            return@launch
+        }
         repo.setTagAlias(n, alias)
     }
     fun setTagSortMode(m: com.cripta.app.data.TagSortMode) = viewModelScope.launch { store.setTagSortMode(m) }
@@ -312,11 +331,23 @@ class SettingsViewModel @Inject constructor(
             .onFailure { android.util.Log.e("SettingsVM", "mode-change cipher", it) }
             .getOrNull()
 
-    /** Confirms the current app PIN (PIN-only mode) before a change. */
-    suspend fun verifyCurrentPin(pin: CharArray): com.cripta.app.security.KeyVault.PinResult =
+    /** Confirms the current app PIN before a change; [systemLayer] in SYSTEM_AND_PIN mode (see [unwrapSystemLayer]). */
+    suspend fun verifyCurrentPin(pin: CharArray, systemLayer: ByteArray? = null): com.cripta.app.security.KeyVault.PinResult =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            try { keyVault.verifyPin(pin) } finally { pin.fill('0') }
+            try { keyVault.verifyPin(pin, systemLayer) } finally { pin.fill('0') }
         }
+
+    /** Decrypt cipher for the system step of confirming a change in SYSTEM_AND_PIN mode. */
+    fun cipherForSystemStep(): javax.crypto.Cipher? =
+        runCatching { keyVault.cipherForUnlock() }
+            .onFailure { android.util.Log.e("SettingsVM", "system-step cipher", it) }
+            .getOrNull()
+
+    /** The PIN-sealed layer the authorized [cipher] opens (SYSTEM_AND_PIN); wipe it after use. */
+    fun unwrapSystemLayer(cipher: javax.crypto.Cipher): ByteArray? =
+        runCatching { keyVault.unwrapSystemLayer(cipher) }
+            .onFailure { android.util.Log.e("SettingsVM", "system-step unwrap", it) }
+            .getOrNull()
 
     fun pinWaitSeconds(): Long = keyVault.pinWaitSeconds()
 
@@ -513,7 +544,7 @@ class SettingsViewModel @Inject constructor(
      */
     fun keepOnly(keepId: String) = viewModelScope.launch {
         val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launch
-        val remove = group.candidates.map { it.file.id }.filter { it != keepId }
+        val remove = unchangedSinceScan(group.candidates.filter { it.file.id != keepId })
         val moved = repo.mergeDuplicates(keepId, remove)
         // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
         val trash = trashOn()
@@ -548,6 +579,9 @@ class SettingsViewModel @Inject constructor(
      */
     fun deleteDuplicate(fileId: String) = viewModelScope.launch {
         val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == fileId } }
+        group?.candidates?.firstOrNull { it.file.id == fileId }?.let { c ->
+            if (unchangedSinceScan(listOf(c)).isEmpty()) { dropFromResults(setOf(fileId)); return@launch }
+        }
         val heir = group?.let { g ->
             if (g.bestId != fileId) g.bestId
             else rank(g.candidates.filter { it.file.id != fileId }).firstOrNull()?.file?.id
@@ -563,7 +597,23 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun trashOn(): Boolean = runCatching { store.settingsOnce().trashEnabled }.getOrDefault(false)
+    /**
+     * The ids of [candidates] still as the scan saw them. Results are kept and can be opened
+     * later (from the notification): a file edited (a note), deleted or moved to the trash since
+     * then is no longer a proven copy and is not deleted as one.
+     */
+    private suspend fun unchangedSinceScan(candidates: List<DupCandidate>): List<String> = candidates.mapNotNull { c ->
+        val now = runCatching { repo.fileById(c.file.id) }.getOrNull() ?: return@mapNotNull null
+        // A hash gained since is fine (hashes are computed lazily); one lost means the content
+        // was rewritten (a note saved again clears it).
+        c.file.id.takeIf {
+            now.deletedAt == null && now.sizeBytes == c.file.sizeBytes &&
+                (c.file.contentHash == null || now.contentHash == c.file.contentHash)
+        }
+    }
+
+    // Unreadable settings count as "trash on" (see VaultRepository.deleteOrTrash).
+    private suspend fun trashOn(): Boolean = runCatching { store.settingsOnce().trashEnabled }.getOrDefault(true)
 
     /** Remove deleted files from every result set, dropping groups left with a single file. */
     private suspend fun dropFromResults(ids: Set<String>) {

@@ -28,8 +28,14 @@ object CrashLog {
 
     fun clear(context: Context) { runCatching { File(context.filesDir, FILE).delete() } }
 
+    /** No names: quoted text, links / uris and file paths (a file's or a video's title) go. */
     private fun clean(msg: String?): String =
-        msg.orEmpty().replace(Regex("\"[^\"]*\"|'[^']*'"), "\"…\"").take(240)
+        msg.orEmpty()
+            .replace(Regex("\"[^\"]*\"|'[^']*'"), "\"…\"")
+            .replace(Regex("[a-zA-Z][a-zA-Z0-9+.-]*://\\S+"), "…")
+            // Up to the next colon: names may have spaces ("/…/Il mio video.mp4: open failed…").
+            .replace(Regex("(?<![\\w.])/[^:\\n]+"), "…")
+            .take(240)
 
     private fun format(context: Context, thread: Thread, error: Throwable): String = buildString {
         val version = runCatching {

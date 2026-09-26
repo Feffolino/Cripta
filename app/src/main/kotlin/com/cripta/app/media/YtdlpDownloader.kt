@@ -54,9 +54,14 @@ class YtdlpDownloader @Inject constructor(
         url: String,
         maxHeight: Int?,
         processId: String,
+        /** Annulla pressed: checked before starting and on every progress update. */
+        isCancelled: () -> Boolean = { false },
         onProgress: (Int, Long) -> Unit,
     ): File {
         ensureInit()
+        // Annulla during the first-use setup (payload extraction, self-update): there was no
+        // process to kill yet, so the download started anyway.
+        if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
         val dir = File(appContext.cacheDir, "ytdl-${UUID.randomUUID()}").apply { mkdirs() }
         val request = YoutubeDLRequest(url).apply {
             addOption("-o", File(dir, "%(title).80s.%(ext)s").absolutePath)
@@ -71,11 +76,36 @@ class YtdlpDownloader @Inject constructor(
             addOption("-f", fmt)
             addOption("--merge-output-format", "mp4")
         }
-        YoutubeDL.getInstance().execute(request, processId) { progress, etaInSeconds, _ ->
-            onProgress(progress.toInt().coerceIn(0, 100), etaInSeconds)
+        try {
+            YoutubeDL.getInstance().execute(request, processId) { progress, etaInSeconds, _ ->
+                // A cancel that came before the process was registered is honoured here.
+                if (isCancelled()) cancel(processId)
+                onProgress(progress.toInt().coerceIn(0, 100), etaInSeconds)
+            }
+            return dir.listFiles()?.filter { it.isFile }?.maxByOrNull { it.length() }
+                ?: throw IllegalStateException("yt-dlp non ha prodotto alcun file")
+        } catch (e: Throwable) {
+            // Failed or cancelled: the partial video (plaintext, named after the title) goes now.
+            wipe(dir)
+            throw e
         }
-        return dir.listFiles()?.filter { it.isFile }?.maxByOrNull { it.length() }
-            ?: throw IllegalStateException("yt-dlp non ha prodotto alcun file")
+    }
+
+    /** Overwrite then delete every file under [dir], then the folder. Best effort. */
+    private fun wipe(dir: File) {
+        dir.walkBottomUp().forEach { f ->
+            if (f.isFile) runCatching {
+                java.io.RandomAccessFile(f, "rw").use { raf ->
+                    val chunk = ByteArray(64 * 1024)
+                    var left = raf.length()
+                    while (left > 0) {
+                        val n = minOf(chunk.size.toLong(), left).toInt()
+                        raf.write(chunk, 0, n); left -= n
+                    }
+                }
+            }
+            runCatching { f.delete() }
+        }
     }
 
     /** Abort a running download started with [processId]. Safe to call after it has finished. */
