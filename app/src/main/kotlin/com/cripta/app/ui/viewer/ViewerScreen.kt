@@ -100,7 +100,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.SwitchVideo
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Description
@@ -2092,7 +2092,7 @@ private fun DetailsSheet(
                     )
                     a.onEditNote?.let { SheetActionButton(Icons.Filled.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
-                    a.onConvert?.let { SheetActionButton(Icons.Filled.SwitchVideo, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
+                    a.onConvert?.let { SheetActionButton(Icons.Filled.Autorenew, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Delete, "Elimina", leave(a.onDelete),
                         tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 }
