@@ -1375,11 +1375,17 @@ private fun IslandDebugSection() {
     var c by remember { mutableStateOf(com.cripta.app.work.IslandDebug.get(ctx)) }
     fun update(n: com.cripta.app.work.IslandDebug.Config) { c = n; com.cripta.app.work.IslandDebug.set(ctx, n) }
     Section("Debug isola HyperOS", "Solo telefoni Xiaomi con l'isola. Le modifiche valgono dalla prossima notifica: usa le prove qui sotto.") {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilledTonalButton(onClick = { com.cripta.app.work.ConversionService.debugProgress(ctx) },
-                modifier = Modifier.weight(1f)) { Text("Prova avanzamento") }
-            androidx.compose.material3.FilledTonalButton(onClick = { com.cripta.app.work.ConversionService.debugChoice(ctx) },
-                modifier = Modifier.weight(1f)) { Text("Prova scelta") }
+        // Each sample runs like the real operation, ending with its real outcome.
+        Text("Notifiche di prova", style = MaterialTheme.typography.labelLarge)
+        com.cripta.app.ui.components.ChipFlowRow {
+            listOf(
+                "convert" to "Conversione", "import" to "Importazione", "download" to "Download",
+                "download_fail" to "Download fallito", "export" to "Esportazione", "scan" to "Ricerca duplicati",
+                "update" to "Aggiornamento",
+            ).forEach { (k, l) ->
+                androidx.compose.material3.AssistChip(onClick = { com.cripta.app.work.ConversionService.debugProgress(ctx, k) }, label = { Text(l) })
+            }
+            androidx.compose.material3.AssistChip(onClick = { com.cripta.app.work.ConversionService.debugChoice(ctx) }, label = { Text("Solo scelta") })
         }
         ChoiceRow("Modello espanso", listOf("chat" to "Chat", "base" to "Base"), c.template) { update(c.copy(template = it)) }
         ChoiceRow("Tasti", listOf("icon" to "Icone rotonde", "pill" to "Testo accanto", "row" to "Riga sotto"), c.buttons) { update(c.copy(buttons = it)) }

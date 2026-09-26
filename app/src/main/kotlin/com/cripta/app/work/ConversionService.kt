@@ -237,16 +237,7 @@ class ConversionService : Service() {
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_UPDATE -> downloadUpdate(intent)
-                    MODE_DEBUG_PROGRESS -> {
-                        debugJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
-                        try {
-                            for (p in 0..100 step 2) {
-                                notify(build("Prova isola", p, sub = "Avanzamento di prova · $p%", cancelable = true,
-                                    cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert))
-                                kotlinx.coroutines.delay(400)
-                            }
-                        } finally { debugJob = null }
-                    }
+                    MODE_DEBUG_PROGRESS -> debugRun(intent.getStringExtra(EX_DEBUG_KIND) ?: "convert")
                     MODE_DUP_SCAN -> {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
@@ -277,6 +268,66 @@ class ConversionService : Service() {
     @Volatile private var scanJob: kotlinx.coroutines.Job? = null
     @Volatile private var updateJob: kotlinx.coroutines.Job? = null
     @Volatile private var debugJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Debug isola: a sample of one operation, with the same notifications as the real one (title,
+     * icon, text, island chip, Annulla) and its real ending: the keep/delete choice for a
+     * conversion or an import (with buttons that only close it), the result for the others, the
+     * "annullata" result when cancelled. Nothing in the vault is touched.
+     */
+    private suspend fun debugRun(kind: String) {
+        debugJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        val files = 5
+        fun step(p: Int) = when (kind) {
+            "download", "download_fail" -> build("Download", p, sub = "$p% · ${etaText(((100 - p) * 200).toLong())}",
+                header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+            "import" -> {
+                val n = (p * files / 100).coerceAtMost(files - 1)
+                build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
+                    header = etaText(((100 - p) * 200).toLong()), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
+            }
+            "export" -> {
+                val n = (p * files / 100).coerceAtMost(files - 1)
+                build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
+                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
+            }
+            "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
+                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
+            "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
+                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+            else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", header = "1 in coda",
+                cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
+        }
+        val closeOnly = { label: String, req: Int, icon: Int -> serviceAction(label, MODE_DEBUG_DISMISS, req, icon = icon) }
+        try {
+            notify(build(if (kind == "download" || kind == "download_fail") "Download" else "Preparazione…", 0,
+                sub = "Avvio della prova…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
+                icon = R.drawable.ic_notif_download.takeIf { kind.startsWith("download") } ?: R.drawable.ic_notification))
+            kotlinx.coroutines.delay(1200)
+            for (p in 0..100 step 2) {
+                if (kind == "download_fail" && p == 60) break
+                notify(step(p))
+                kotlinx.coroutines.delay(400)
+            }
+            when (kind) {
+                "import" -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "$files file cifrati nel vault", "Eliminare i $files originali?",
+                    closeOnly("Elimina originali", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
+                "export" -> notifyResult("Esportazione completata", "$files file salvati nella galleria", ResultKind.EXPORT)
+                "scan" -> notifyResult("Duplicati trovati", "3 gruppi su 200 elementi", ResultKind.SCAN, openDuplicates = true)
+                "update" -> notifyResult("Aggiornamento pronto", "Prova: nessun file da installare", ResultKind.UPDATE)
+                "download" -> notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
+                "download_fail" -> notifyResult("Download non riuscito", "Prova di errore: link non raggiungibile", ResultKind.DOWNLOAD,
+                    state = ResultState.FAILED, actions = listOf(closeOnly("Riprova", 22, 0)))
+                else -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
+                    closeOnly("Elimina originale", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            notifyResult("Prova annullata", null, ResultKind.CONVERT, state = ResultState.CANCELLED)
+            throw e
+        } finally {
+            debugJob = null
+        }
+    }
 
     /**
      * Download the app update in the background (the app can be closed meanwhile): progress and
@@ -1161,6 +1212,7 @@ class ConversionService : Service() {
         private const val MODE_DEBUG_DISMISS = "debug_dismiss"
         private const val MODE_CANCEL_DEBUG = "cancel_debug"
         private const val DEBUG_NOTIF_ID = 4230
+        private const val EX_DEBUG_KIND = "debug_kind"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         /**
@@ -1260,8 +1312,10 @@ class ConversionService : Service() {
         }
 
         /** Debug isola: a 20-second sample operation with Annulla, or a sample two-button choice. */
-        fun debugProgress(ctx: Context) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_PROGRESS))
+        /** [kind]: convert, download, download_fail, import, export, scan, update. */
+        fun debugProgress(ctx: Context, kind: String = "convert") {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+                .putExtra(EX_MODE, MODE_DEBUG_PROGRESS).putExtra(EX_DEBUG_KIND, kind))
         }
         fun debugChoice(ctx: Context) {
             runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE)) }
