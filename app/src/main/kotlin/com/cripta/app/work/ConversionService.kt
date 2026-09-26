@@ -827,7 +827,29 @@ class ConversionService : Service() {
             .setContentTitle(title)
             .build()
 
+    private var lastPostAt = 0L
+    private var lastPostKey: String? = null
+    private var lastPostTitle: String? = null
+
+    /**
+     * Update the ongoing notification, at most about once a second. Progress arrived far more often
+     * (yt-dlp several times a second, the transcoder every 500 ms even when unchanged) and every
+     * post re-laid out the notification and the Hyper Island: it looked laggy, and Android drops
+     * posts beyond a few per second anyway, so the bar jumped. An identical update is skipped;
+     * a new operation (another title) always goes through at once.
+     */
+    @Synchronized
     private fun notify(n: Notification) {
+        val e = n.extras
+        val title = e.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val key = listOf(
+            title, e.getCharSequence(Notification.EXTRA_TEXT), e.getCharSequence(Notification.EXTRA_SUB_TEXT),
+            e.getInt(Notification.EXTRA_PROGRESS), e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE),
+        ).joinToString("|")
+        if (key == lastPostKey) return
+        val now = SystemClock.elapsedRealtime()
+        if (title == lastPostTitle && now - lastPostAt < 1000L) return
+        lastPostAt = now; lastPostKey = key; lastPostTitle = title
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
     }
 
