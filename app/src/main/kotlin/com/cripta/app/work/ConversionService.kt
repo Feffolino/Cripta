@@ -753,6 +753,18 @@ class ConversionService : Service() {
                     NotificationChannel(CHANNEL, "Operazioni in corso", NotificationManager.IMPORTANCE_LOW)
                 )
             }
+            // HyperOS focus notifications (Hyper Island): the island skips low-importance channels,
+            // so in-progress operations there use this one; silent all the same (no sound, no
+            // vibration, no pop-up: those need high importance), and only on Xiaomi phones.
+            if (HyperFocus.isSupported(this) && mgr.getNotificationChannel(LIVE_CHANNEL) == null) {
+                mgr.createNotificationChannel(
+                    NotificationChannel(LIVE_CHANNEL, "Operazioni in corso (isola)", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                        setSound(null, null)
+                        enableVibration(false)
+                        setShowBadge(false)
+                    }
+                )
+            }
             // Outcomes get their own channel (normal importance) so they are noticed, while the
             // ongoing progress stays silent.
             if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
@@ -786,7 +798,7 @@ class ConversionService : Service() {
         chip: String? = null,
         header: String? = null,
     ): Notification {
-        val b = NotificationCompat.Builder(this, CHANNEL)
+        val b = NotificationCompat.Builder(this, ongoingChannel())
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -822,6 +834,9 @@ class ConversionService : Service() {
         ))
         return b.build()
     }
+
+    /** Channel of the ongoing notification and the choices: the island's own on HyperOS (see ensureChannel). */
+    private fun ongoingChannel() = if (HyperFocus.isSupported(this)) LIVE_CHANNEL else CHANNEL
 
     /** Extras asking for a Live Update (promoted ongoing) with [chip] as its short text. */
     private fun liveUpdate(chip: String) = android.os.Bundle().apply {
@@ -944,7 +959,7 @@ class ConversionService : Service() {
      * Buttons and details are hidden on the lock screen.
      */
     private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
-        val b = NotificationCompat.Builder(this, CHANNEL)
+        val b = NotificationCompat.Builder(this, ongoingChannel())
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1033,6 +1048,7 @@ class ConversionService : Service() {
         /** How long the unanswered keep/delete choice stays in the notifications (10 min). */
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
         private const val RESULT_CHANNEL = "results"
+        private const val LIVE_CHANNEL = "progress_island"
         private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         /**
