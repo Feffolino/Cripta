@@ -76,6 +76,8 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
@@ -897,6 +899,8 @@ fun SettingsScreen(
             onRestoreFolder = { vm.restoreFolder(it) },
             onDeleteFolder = { vm.deleteFolderForever(it) },
             onEmpty = { vm.emptyTrash() },
+            onRestoreMany = { f, d -> vm.restoreMany(f, d) },
+            onDeleteMany = { f, d -> vm.deleteManyForever(f, d) },
             onDismiss = { showTrash = false },
         )
     }
@@ -1354,11 +1358,30 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
+/** Selection mark over a trash cell: a filled tick when selected, an empty ring while selecting. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.TrashSelectionMark(selecting: Boolean, selected: Boolean) {
+    if (!selecting) return
+    if (selected) {
+        Box(Modifier.matchParentSize().clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)))
+    }
+    Box(
+        Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(androidx.compose.foundation.shape.CircleShape)
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.35f))
+            .then(if (selected) Modifier else Modifier.border(2.dp, Color.White, androidx.compose.foundation.shape.CircleShape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+    }
+}
+
 /**
  * Trash as a full screen browsable like the vault: folder mosaics and file covers in a grid.
  * Deleted folders open to show what they held, so a single file can be restored, and it reappears
- * at its original path. A tap on a file (or a folder's ⋮ / long-press) opens its details with
- * "Ripristina" and "Elimina definitivamente"; "Svuota" empties everything.
+ * at its original path. A tap on a file (or a folder's ⋮) opens its details with "Ripristina" and
+ * "Elimina definitivamente"; a long-press starts selecting several, to restore or destroy just
+ * those; "Svuota" empties everything.
  */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -1372,9 +1395,15 @@ private fun TrashDialog(
     onRestoreFolder: (Long) -> Unit,
     onDeleteFolder: (Long) -> Unit,
     onEmpty: () -> Unit,
+    onRestoreMany: (List<String>, List<Long>) -> Unit,
+    onDeleteMany: (List<String>, List<Long>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var confirmEmpty by remember { mutableStateOf(false) }
+    // Selection (long-press to start, then taps add / remove), within the level being shown.
+    var selFiles by remember { mutableStateOf(emptySet<String>()) }
+    var selFolders by remember { mutableStateOf(emptySet<Long>()) }
+    var confirmDeleteSel by remember { mutableStateOf(false) }
     var confirmFolder by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
     var fileSheet by remember { mutableStateOf<com.cripta.app.data.db.FileEntity?>(null) }
     var folderSheet by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
@@ -1399,12 +1428,29 @@ private fun TrashDialog(
     fun filesUnder(id: Long): List<com.cripta.app.data.db.FileEntity> = subtree(id).let { ids -> items.filter { it.folderId in ids } }
     /** Elements inside a trashed folder: its files and its subfolders, at every depth. */
     fun elementsUnder(id: Long): Int = subtree(id).let { ids -> items.count { it.folderId in ids } + ids.size - 1 }
+    // Only what is still here and shown counts (restored / destroyed meanwhile, or another level).
+    val shownFileIds = shownFiles.map { it.id }.toSet()
+    val shownFolderIds = shownFolders.map { it.id }.toSet()
+    val selF = selFiles intersect shownFileIds
+    val selD = selFolders intersect shownFolderIds
+    val inSel = selF.isNotEmpty() || selD.isNotEmpty()
+    fun clearSel() { selFiles = emptySet(); selFolders = emptySet() }
+    // Opening or leaving a folder starts over.
+    LaunchedEffect(openId) { clearSel() }
+    /** Elements a selection destroys: the selected files, the selected folders and all they hold. */
+    val selElements = selF.size + selD.sumOf { elementsUnder(it) + 1 }
 
     com.cripta.app.ui.components.CriptaDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        androidx.activity.compose.BackHandler { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }
+        androidx.activity.compose.BackHandler {
+            when {
+                inSel -> clearSel()
+                path.isNotEmpty() -> path.removeAt(path.lastIndex)
+                else -> onDismiss()
+            }
+        }
         // Its own full-screen window: the camera cutout (a side one in landscape) is not kept clear
         // by the app's usual insets here, and covered the back arrow, the title and the first
         // covers. safeDrawing = system bars + cutout (+ keyboard).
@@ -1418,12 +1464,19 @@ private fun TrashDialog(
                             androidx.compose.foundation.layout.WindowInsetsSides.Top
                     ),
                     navigationIcon = {
-                        IconButton(onClick = { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
+                        if (inSel) {
+                            IconButton(onClick = { clearSel() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
+                        } else {
+                            IconButton(onClick = { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
+                            }
                         }
                     },
                     title = {
-                        Column {
+                        if (inSel) {
+                            val n = selF.size + selD.size
+                            Text(if (n == 1) "1 selezionato" else "$n selezionati", maxLines = 1)
+                        } else Column {
                             Text(if (openId == null) "Cestino" else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val sub = if (openId == null) {
                                 // One count (files and folders are both elements), short enough for one line.
@@ -1436,13 +1489,38 @@ private fun TrashDialog(
                         }
                     },
                     actions = {
-                        if (openId != null) {
+                        if (inSel) {
+                            val all = selF.size == shownFileIds.size && selD.size == shownFolderIds.size
+                            TextButton(onClick = {
+                                if (all) clearSel() else { selFiles = shownFileIds; selFolders = shownFolderIds }
+                            }) { Text(if (all) "Nessuno" else "Tutti") }
+                        } else if (openId != null) {
                             TextButton(onClick = { onRestoreFolder(openId) }) { Text("Ripristina tutto") }
                         } else if (items.isNotEmpty() || folders.isNotEmpty()) {
                             TextButton(onClick = { confirmEmpty = true }) { Text("Svuota", color = MaterialTheme.colorScheme.error) }
                         }
                     },
                 )
+            },
+            bottomBar = {
+                if (inSel) {
+                    androidx.compose.material3.BottomAppBar(
+                        windowInsets = safe.only(
+                            androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
+                                androidx.compose.foundation.layout.WindowInsetsSides.Bottom
+                        ),
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { confirmDeleteSel = true }, modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            ) { Text("Elimina") }
+                            Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f)) {
+                                Text("Ripristina")
+                            }
+                        }
+                    }
+                }
             },
         ) { pad ->
             if (shownFolders.isEmpty() && shownFiles.isEmpty()) {
@@ -1465,18 +1543,24 @@ private fun TrashDialog(
                     items(shownFolders.size, key = { "d" + shownFolders[it].id }) { i ->
                         val fo = shownFolders[i]
                         val under = filesUnder(fo.id)
+                        val selected = fo.id in selD
+                        fun toggle() { selFolders = if (selected) selFolders - fo.id else selFolders + fo.id }
                         Column {
-                            com.cripta.app.ui.vault.FolderMosaic(
-                                folder = fo,
-                                stat = com.cripta.app.data.FolderStat(elementsUnder(fo.id), under.sumOf { it.sizeBytes }),
-                                previews = under.sortedByDescending { it.importedAt }.take(4),
-                                thumb = thumb,
-                                onMore = { folderSheet = fo },
-                                modifier = Modifier.combinedClickable(
-                                    onClickLabel = "Apri", onLongClickLabel = "Dettagli",
-                                    onClick = { path.add(fo.id) }, onLongClick = { folderSheet = fo },
-                                ),
-                            )
+                            Box {
+                                com.cripta.app.ui.vault.FolderMosaic(
+                                    folder = fo,
+                                    stat = com.cripta.app.data.FolderStat(elementsUnder(fo.id), under.sumOf { it.sizeBytes }),
+                                    previews = under.sortedByDescending { it.importedAt }.take(4),
+                                    thumb = thumb,
+                                    onMore = { if (inSel) toggle() else folderSheet = fo },
+                                    modifier = Modifier.combinedClickable(
+                                        onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Apri",
+                                        onLongClickLabel = "Seleziona",
+                                        onClick = { if (inSel) toggle() else path.add(fo.id) }, onLongClick = { toggle() },
+                                    ),
+                                )
+                                TrashSelectionMark(inSel, selected)
+                            }
                             Text(leftText(fo.deletedAt), style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
                         }
@@ -1485,7 +1569,14 @@ private fun TrashDialog(
                         val f = shownFiles[i]
                         // The rounded clip bounds the touch ripple; the bottom padding keeps the two text
                         // lines out of its lower corners, which used to shave off their first/last letters.
-                        Column(Modifier.clip(MaterialTheme.shapes.medium).clickable(onClickLabel = "Dettagli") { fileSheet = f }
+                        val selected = f.id in selF
+                        fun toggle() { selFiles = if (selected) selFiles - f.id else selFiles + f.id }
+                        Column(Modifier.clip(MaterialTheme.shapes.medium)
+                            .combinedClickable(
+                                onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Dettagli",
+                                onLongClickLabel = "Seleziona",
+                                onClick = { if (inSel) toggle() else fileSheet = f }, onLongClick = { toggle() },
+                            )
                             .padding(bottom = 8.dp)) {
                             Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium)
                                 .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
@@ -1504,6 +1595,7 @@ private fun TrashDialog(
                                         modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(MaterialTheme.shapes.extraSmall)
                                             .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp))
                                 }
+                                TrashSelectionMark(inSel, selected)
                             }
                             Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                                 modifier = Modifier.padding(top = 6.dp, start = 2.dp))
@@ -1586,6 +1678,22 @@ private fun TrashDialog(
                     TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = { TextButton(onClick = { confirmFolder = null }) { Text("Annulla") } },
+            )
+        }
+        if (confirmDeleteSel && inSel) {
+            com.cripta.app.ui.components.CriptaAlertDialog(
+                onDismissRequest = { confirmDeleteSel = false },
+                title = { Text("Eliminare definitivamente?") },
+                text = {
+                    Text(elementsLabel(selElements) + (if (selElements == 1) " verrà distrutto" else " verranno distrutti") +
+                        " in modo sicuro. Irreversibile.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDeleteMany(selF.toList(), selD.toList()); clearSel(); confirmDeleteSel = false
+                    }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { confirmDeleteSel = false }) { Text("Annulla") } },
             )
         }
         if (confirmEmpty) {

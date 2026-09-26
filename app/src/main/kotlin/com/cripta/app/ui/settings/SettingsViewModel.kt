@@ -159,6 +159,16 @@ class SettingsViewModel @Inject constructor(
     fun deleteForever(id: String) = viewModelScope.launch { repo.secureDelete(id); thumbs.evict(id) }
     fun deleteFolderForever(id: Long) = viewModelScope.launch { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
     fun emptyTrash() = viewModelScope.launch { repo.emptyTrash().forEach { thumbs.evict(it) } }
+    /** Selection in the trash: restore these, one after the other (folders first, files then). */
+    fun restoreMany(files: List<String>, folders: List<Long>) = viewModelScope.launch {
+        folders.forEach { repo.restoreFolder(it) }
+        files.forEach { repo.restore(it) }
+    }
+    /** Selection in the trash: destroy these for good, one after the other. */
+    fun deleteManyForever(files: List<String>, folders: List<Long>) = viewModelScope.launch {
+        folders.forEach { id -> repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
+        files.forEach { repo.secureDelete(it); thumbs.evict(it) }
+    }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
     fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }
     fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }
