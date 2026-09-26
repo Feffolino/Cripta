@@ -64,7 +64,9 @@ class ConversionService : Service() {
             main.removeCallbacks(flushProgress); pendingProgress = null
             hold?.let { endHold(it, moveOn = true) }
         }
-        // Nothing may outlive the service: cancel whatever is still attached to its scope.
+        // Nothing may outlive the service: cancel whatever is still attached to its scope. A
+        // yt-dlp process is native and blocking: cancelling its coroutine doesn't stop it.
+        ytdlpProcessId?.let { ytdlp.cancel(it) }
         scope.cancel()
         super.onDestroy()
     }
@@ -80,7 +82,7 @@ class ConversionService : Service() {
         }
         // Import / export: stop after the file being processed (never half a file).
         if (mode == MODE_CANCEL_BATCH) {
-            batchCancel = true
+            batchCancels.incrementAndGet()
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -90,8 +92,7 @@ class ConversionService : Service() {
             val uris = repo.pendingOriginals.value
             repo.clearPendingOriginals()
             if (mode == MODE_ORIGINALS_KEEP || uris.isEmpty()) { stopIfIdle(startId); return START_NOT_STICKY }
-            active.incrementAndGet()
-            lastStartId = startId
+            beginJob(startId)
             scope.launch {
                 try {
                     repo.deleteOriginals(uris)
@@ -163,14 +164,21 @@ class ConversionService : Service() {
         // Completion-notification actions: delete or keep the original video.
         if (mode == MODE_DELETE_ORIG) {
             val oid = intent.getStringExtra(EX_ID)
+            // Only with the vault open (as Riprova): locked, the delete failed while the app said
+            // "Originale eliminato" and the question was gone. The choice stays; a note says why.
+            if (oid != null && session.locked.value) {
+                notifyResult("Originale non eliminato", "Sblocca Cripta, poi scegli di nuovo", ResultKind.CONVERT,
+                    state = ResultState.FAILED, island = false)
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
             cancelOutcome(DONE_NOTIF_ID)
             // Answered (notification or the Cartelle banner): the banner stops asking.
             repo.updateConvertStatus {
                 if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale eliminato. Resta la copia MP4.") else it
             }
             if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
-            active.incrementAndGet()
-            lastStartId = startId
+            beginJob(startId)
             val held = session.beginWork()
             scope.launch {
                 try {
@@ -178,7 +186,7 @@ class ConversionService : Service() {
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    android.util.Log.e("ConversionService", "delete original failed: $oid", e)
+                    android.util.Log.e("ConversionService", "delete original failed", e)
                 } finally {
                     if (held) session.endWork()
                     if (active.decrementAndGet() == 0) stopWhenIdle()
@@ -196,10 +204,16 @@ class ConversionService : Service() {
             return START_NOT_STICKY
         }
         ensureChannel()
-        lastStartId = startId
-        // A new operation takes the island: an outcome still there moves to its own notification.
-        synchronized(lock) { hold?.let { endHold(it, moveOn = true, replaced = true) } }
-        startForeground(NOTIF_ID, build("Preparazione…", 0, indeterminate = true))
+        val running = synchronized(lock) {
+            val wasRunning = active.get() > 0
+            beginJob(startId)
+            // A new operation takes the island: an outcome still there moves to its own notification.
+            hold?.let { endHold(it, moveOn = true, replaced = true) }
+            wasRunning
+        }
+        // Already running: go foreground with the progress on show (a link added to the queue
+        // put "Preparazione…" over the running download, without its Annulla).
+        startForeground(NOTIF_ID, lastProgress.takeIf { running } ?: build("Preparazione…", 0, indeterminate = true))
         if (mode == MODE_DOWNLOAD_URL) {
             if (intent.getBooleanExtra(EX_RETRY, false)) getSystemService(NotificationManager::class.java).cancel(ResultKind.DOWNLOAD.id)
             val url = intent.getStringExtra(EX_URL)
@@ -221,9 +235,12 @@ class ConversionService : Service() {
             }
             // A worker already running picks the new link up from the queue.
             val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
-            if (!start) return START_NOT_STICKY
+            if (!start) {
+                // The running worker takes it: this command's count goes (see beginJob).
+                if (active.decrementAndGet() == 0) stopWhenIdle()
+                return START_NOT_STICKY
+            }
         }
-        active.incrementAndGet()
         // Keep the keys alive while this job runs, even if the vault gets locked meanwhile
         // (auto-lock on leaving the app, "Blocca ora"): the UI locks at once, the keys are wiped
         // as soon as the last job ends. Otherwise every remaining item failed silently.
@@ -413,8 +430,22 @@ class ConversionService : Service() {
      */
     private fun stopIfIdle(startId: Int) {
         synchronized(lock) {
-            if (hold != null) lastStartId = maxOf(lastStartId, startId)
-            else if (active.get() == 0) stopSelf(startId)
+            if (hold == null && active.get() == 0) stopSelf(startId)
+            // Remembered for the stop when the work ends: stopSelf with an older id doesn't stop
+            // the service, which then lingered started, with no notification.
+            else lastStartId = maxOf(lastStartId, startId)
+        }
+    }
+
+    /**
+     * A job of command [startId] begins: counted at once, under the lock [stopWhenIdle] checks,
+     * so a job ending right now can't stop the service under this new one (setting the id first
+     * and counting later let it, and onDestroy then cancelled the new job).
+     */
+    private fun beginJob(startId: Int) {
+        synchronized(lock) {
+            active.incrementAndGet()
+            lastStartId = maxOf(lastStartId, startId)
         }
     }
 
@@ -422,7 +453,7 @@ class ConversionService : Service() {
     private fun stopWhenIdle() {
         synchronized(lock) {
             if (active.get() != 0 || hold != null) return
-            main.removeCallbacks(flushProgress); pendingProgress = null
+            main.removeCallbacks(flushProgress); pendingProgress = null; lastProgress = null
             stopForeground(STOP_FOREGROUND_REMOVE)
             // The latest start id: stops only if no newer command arrived meanwhile.
             stopSelf(lastStartId)
@@ -434,8 +465,12 @@ class ConversionService : Service() {
     /** True when the user hit Cancel, so a resulting yt-dlp failure is reported as "annullato". */
     @Volatile private var cancelRequested = false
 
-    /** Set by the Annulla of an import / export: the batch stops after the current file. */
-    @Volatile private var batchCancel = false
+    /**
+     * Counts the Annulla of imports / exports: a batch stops (after the current file) once it
+     * differs from the value when the batch began. A single flag, reset by every new batch, lost
+     * a cancel when another batch started meanwhile.
+     */
+    private val batchCancels = java.util.concurrent.atomic.AtomicInteger()
 
     /**
      * Decrypt [ids] back to the gallery one by one ("Esporta"), with progress and a final result.
@@ -444,7 +479,7 @@ class ConversionService : Service() {
     private suspend fun exportBatch(ids: List<String>) {
         val total = ids.size
         if (total == 0) return
-        batchCancel = false
+        val cancelGen = batchCancels.get()
         val files = ids.map { id ->
             try { repo.fileById(id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
         }
@@ -457,7 +492,7 @@ class ConversionService : Service() {
         // Starts the measurement at 0, so the end of the first file already gives a speed.
         eta.left(0f)
         for (f in files) {
-            if (batchCancel) break
+            if (batchCancels.get() != cancelGen) break
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
                 if (f != null) { repo.restoreToGallery(f); saved++ } else failed++
@@ -497,17 +532,17 @@ class ConversionService : Service() {
         // Names and sizes up front: the progress (and the time left) goes by the files' size.
         val info = uris.map { repo.nameAndSize(it) }
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
-        batchCancel = false
+        val cancelGen = batchCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
         try {
             for ((i, uri) in uris.withIndex()) {
-                if (batchCancel) { cancelled = true; break }
+                if (batchCancels.get() != cancelGen) { cancelled = true; break }
                 val (name, size) = info[i]
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(importNote(st.done + 1, st.total, st.fraction, "cifratura in corso", eta))
+                notify(importNote(st.done + 1, st.total, st.fraction, "cifratura in corso", eta, cancelGen))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -518,7 +553,7 @@ class ConversionService : Service() {
                             lastNotify = now
                             val cur = repo.importState.value
                             val filePct = if (size > 0) "cifrato al ${(bytes * 100 / size).coerceAtMost(100)}%" else "cifratura in corso"
-                            notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta))
+                            notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta, cancelGen))
                         }
                     }
                     true
@@ -526,7 +561,7 @@ class ConversionService : Service() {
                     throw e
                 } catch (e: Throwable) {
                     // Throwable: an OutOfMemoryError on one odd file must not kill the whole batch.
-                    android.util.Log.e("ConversionService", "import failed: $name", e)
+                    android.util.Log.e("ConversionService", "import failed", e)   // never the name: logcat is readable
                     repo.importFailed(name, UserErrors.of(e))
                     false
                 }
@@ -537,10 +572,15 @@ class ConversionService : Service() {
                         repo.importDuplicate(f.id, existing.originalName)
                     }
                 }
-                repo.importItemDone(ok, if (ok) uri else null, batchWeight(size))
-                if (ok) done += uri
+                // Fewer bytes than the source said it had: kept in the vault, but its original is
+                // never offered for deletion (a provider cutting the stream short without an error
+                // would otherwise have the only complete copy deleted).
+                val complete = size <= 0 || (imported?.sizeBytes ?: 0L) >= size
+                if (ok && !complete) android.util.Log.w("ConversionService", "import shorter than reported: original kept")
+                repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size))
+                if (ok && complete) done += uri
                 val cur = repo.importState.value
-                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, "in coda", eta))
+                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, "in coda", eta, cancelGen))
             }
         } finally {
             withContext(NonCancellable) {
@@ -580,10 +620,10 @@ class ConversionService : Service() {
      * After Annulla it says the import stops after this file (a large one can take a while, and
      * the button seemed to do nothing), without the button.
      */
-    private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator): Notification {
+    private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator, cancelGen: Int): Notification {
         val done = n - 1
         val left = eta.left(fraction)
-        val stopping = batchCancel
+        val stopping = batchCancels.get() != cancelGen
         return build("Importazione", (fraction * 100).toInt(), sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
             chip = "$done/$total", eta = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
@@ -854,7 +894,7 @@ class ConversionService : Service() {
             // stream); the download screen shows the same one.
             val eta = EtaEstimator()
             produced = withContext(Dispatchers.IO) {
-                ytdlp.download(url, job.maxHeight, pid) { pct, _ ->
+                ytdlp.download(url, job.maxHeight, pid, isCancelled = { cancelRequested }) { pct, _ ->
                     repo.setConversionProgress(pct)
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
                     set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
@@ -886,7 +926,7 @@ class ConversionService : Service() {
                 set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
                 notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             } else {
-                android.util.Log.e("ConversionService", "download failed: $url", e)
+                android.util.Log.e("ConversionService", "download failed", e)   // never the link: logcat is readable
                 val msg = UserErrors.ofDownload(e)
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
@@ -1088,6 +1128,9 @@ class ConversionService : Service() {
     private val lock = Any()
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
+    /** The last progress posted, to go foreground with when a new command arrives mid-operation. */
+    @Volatile private var lastProgress: Notification? = null
+
     /** An update held back by the once-a-second limit, posted when the interval is up. */
     private var pendingProgress: Notification? = null
     private val flushProgress = Runnable {
@@ -1194,6 +1237,7 @@ class ConversionService : Service() {
             }
             main.removeCallbacks(flushProgress); pendingProgress = null
             lastPostAt = now; lastPostKey = key; lastPostTitle = title
+            lastProgress = n
             getSystemService(NotificationManager::class.java).notify(NOTIF_ID, n)
         }
     }
@@ -1232,6 +1276,8 @@ class ConversionService : Service() {
         actions: List<NotificationCompat.Action> = emptyList(),
         /** Tap target instead of opening the app (the update's installer). */
         contentIntent: android.app.PendingIntent? = null,
+        /** False: straight into the notifications (a note about a tap, not an operation's outcome). */
+        island: Boolean = true,
     ) {
         val icon = when (state) {
             ResultState.DONE -> R.drawable.ic_notif_done
@@ -1257,7 +1303,7 @@ class ConversionService : Service() {
             .setAutoCancel(true)
             .apply { actions.forEach { addAction(it) } }
         val mgr = getSystemService(NotificationManager::class.java)
-        if (!HyperFocus.isSupported(this)) { post(mgr, kind.id, base(RESULT_CHANNEL).build()); return }
+        if (!island || !HyperFocus.isSupported(this)) { post(mgr, kind.id, base(RESULT_CHANNEL).build()); return }
         // HyperOS: the result takes the progress's place in the island for a few seconds (chip
         // Fatto / Errore / Annullato, its buttons), then becomes the normal, dismissible result.
         val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }

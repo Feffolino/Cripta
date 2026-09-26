@@ -1004,7 +1004,13 @@ fun SettingsScreen(
     }
 }
 
+/** Restoring: what older versions accepted. */
 private const val MIN_PASSPHRASE = 6
+/**
+ * Creating: a backup copied off the phone can be attacked offline with no limit on attempts,
+ * where only the passphrase's length stands in the way (6 characters fell quickly).
+ */
+private const val MIN_NEW_PASSPHRASE = 10
 
 /**
  * Passphrase entry. Creating a backup asks for it twice (a typo would make the archive
@@ -1015,7 +1021,8 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
     var pass by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
-    val tooShort = pass.length < MIN_PASSPHRASE
+    val minLen = if (creating) MIN_NEW_PASSPHRASE else MIN_PASSPHRASE
+    val tooShort = pass.length < minLen
     val mismatch = creating && confirm.isNotEmpty() && confirm != pass
     val valid = !tooShort && (!creating || confirm == pass)
     val transformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation()
@@ -1044,7 +1051,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
                     visualTransformation = transformation,
                     trailingIcon = toggle,
                     supportingText = {
-                        Text(if (tooShort) "Almeno $MIN_PASSPHRASE caratteri (${pass.length}/$MIN_PASSPHRASE)" else "Lunghezza ok")
+                        Text(if (tooShort) "Almeno $minLen caratteri (${pass.length}/$minLen)" else "Lunghezza ok")
                     },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
@@ -1466,6 +1473,7 @@ private fun TrashDialog(
     var selFolders by remember { mutableStateOf(emptySet<Long>()) }
     var confirmDeleteSel by remember { mutableStateOf(false) }
     var confirmFolder by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
+    var confirmFile by remember { mutableStateOf<com.cripta.app.data.db.FileEntity?>(null) }
     var fileSheet by remember { mutableStateOf<com.cripta.app.data.db.FileEntity?>(null) }
     var folderSheet by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
     // Path of opened trashed folders (empty = top level of the trash).
@@ -1691,7 +1699,8 @@ private fun TrashDialog(
                     ).forEach { (k, v) -> InfoRow(k, v) }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.OutlinedButton(
-                            onClick = { afterSheet { onDelete(f.id) } }, modifier = Modifier.weight(1f),
+                            // Asked first, as for folders and several files: this destroys it for good.
+                            onClick = { afterSheet { confirmFile = f } }, modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) { Text("Elimina") }
                         Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
@@ -1725,6 +1734,17 @@ private fun TrashDialog(
                     TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { Text("Apri e scegli gli elementi") }
                 }
             }
+        }
+        confirmFile?.let { cf ->
+            com.cripta.app.ui.components.CriptaAlertDialog(
+                onDismissRequest = { confirmFile = null },
+                title = { Text("Eliminare definitivamente?") },
+                text = { Text("\"${cf.originalName}\" verrà distrutto in modo sicuro. Irreversibile.") },
+                confirmButton = {
+                    TextButton(onClick = { onDelete(cf.id); confirmFile = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { confirmFile = null }) { Text("Annulla") } },
+            )
         }
         confirmFolder?.let { fo ->
             val n = elementsUnder(fo.id)

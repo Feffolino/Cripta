@@ -72,13 +72,17 @@ class DownloadViewModel @Inject constructor(
     val existing: StateFlow<FileEntity?> = _existing
 
     private var estimateJob: Job? = null
+    private var existingJob: Job? = null
     private var estimatedUrl: String? = null
 
     /** Probe [url] and compute the size estimate for each of [heights]. No-op if already done for it. */
     fun estimate(url: String, heights: List<Int?>) {
         val u = url.trim()
         if (u.isBlank()) { resetEstimate(); return }
-        viewModelScope.launch { _existing.value = repo.fileBySourceUrl(u) }
+        // Tracked, so a lookup still running when the field is cleared or submitted can't bring
+        // "Già nel vault" back for an empty field.
+        existingJob?.cancel()
+        existingJob = viewModelScope.launch { _existing.value = repo.fileBySourceUrl(u) }
         if (u == estimatedUrl && _estimate.value is Estimate.Ready) return
         estimatedUrl = u
         estimateJob?.cancel()
@@ -98,14 +102,14 @@ class DownloadViewModel @Inject constructor(
             result.onSuccess { _estimate.value = it }
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) throw it
-                    android.util.Log.w("DownloadViewModel", "estimate failed: $u", it)
+                    android.util.Log.w("DownloadViewModel", "estimate failed", it)   // never the link: logcat is readable
                     _estimate.value = Estimate.Error(friendlyDownloadError(it.message))
                 }
         }
     }
 
     fun resetEstimate() {
-        estimateJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle; _existing.value = null
+        estimateJob?.cancel(); existingJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle; _existing.value = null
     }
 
     /** True when [url] is already waiting or running in the queue. */

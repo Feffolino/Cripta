@@ -196,32 +196,34 @@ class DuplicateScanner @Inject constructor(
                 null
             }
             onProgress(i + 1, total)
-            if (hashes != null && hashes.isNotEmpty()) fps += Fingerprint(f, hashes, video)
+            // A (nearly) flat picture has almost no gradient: its hash is ~all zeros, the same as
+            // every other flat picture (black frames, blank pages, plain screenshots). Such items
+            // say nothing about similarity and are left out, rather than grouped as "simili".
+            val informative = hashes?.count { java.lang.Long.bitCount(it) in MIN_BITS..(64 - MIN_BITS) } ?: 0
+            if (hashes != null && hashes.isNotEmpty() && informative * 2 > hashes.size) fps += Fingerprint(f, hashes, video)
         }
 
-        // Union-find clustering. Only same-modality fingerprints of equal length are comparable,
-        // so images never merge with videos.
+        // Complete-linkage grouping: an item joins a group only when it is within the threshold of
+        // EVERY member. Chaining (A~B and B~C put A with C, however far apart) grouped pictures
+        // that looked nothing alike, and "Tieni solo questa" then deleted all the others. Only
+        // same-modality fingerprints of equal length are comparable, so images never mix with videos.
         val n = fps.size
-        val parent = IntArray(n) { it }
-        fun find(x: Int): Int {
-            var root = x
-            while (parent[root] != root) root = parent[root]
-            var cur = x
-            while (parent[cur] != cur) { val next = parent[cur]; parent[cur] = root; cur = next }
-            return root
-        }
+        val assigned = BooleanArray(n)
+        val clusters = mutableListOf<MutableList<Int>>()
         for (a in 0 until n) {
             coroutineContext.ensureActive()
+            if (assigned[a]) continue
+            val limit = if (fps[a].isVideo) VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD else imageThreshold
+            val group = mutableListOf(a)
             for (b in a + 1 until n) {
-                val d = distance(fps[a], fps[b]) ?: continue
-                val limit = if (fps[a].isVideo) VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD else imageThreshold
-                if (d <= limit) parent[find(a)] = find(b)
+                if (assigned[b]) continue
+                if (group.all { m -> distance(fps[m], fps[b])?.let { it <= limit } == true }) group += b
             }
+            if (group.size > 1) group.forEach { assigned[it] = true }
+            clusters += group
         }
-        val clusters = HashMap<Int, MutableList<Int>>()
-        for (i in 0 until n) clusters.getOrPut(find(i)) { mutableListOf() }.add(i)
 
-        val groups = clusters.values.filter { it.size > 1 }.map { idxs ->
+        val groups = clusters.filter { it.size > 1 }.map { idxs ->
             var maxD = 0
             for (a in idxs.indices) for (b in a + 1 until idxs.size) {
                 (distance(fps[idxs[a]], fps[idxs[b]]) ?: 0).let { if (it > maxD) maxD = it }
@@ -336,5 +338,7 @@ class DuplicateScanner @Inject constructor(
         private const val VIDEO_FRAMES = 5
         /** Per-frame Hamming tolerance; a video pair matches within VIDEO_FRAMES * this bits total. */
         private const val VIDEO_PER_FRAME_THRESHOLD = 10
+        /** A hash with fewer set (or unset) bits than this comes from a nearly flat picture. */
+        private const val MIN_BITS = 4
     }
 }

@@ -41,6 +41,7 @@ import javax.inject.Singleton
 class ThumbnailLoader @Inject constructor(
     @ApplicationContext context: Context,
     private val repo: VaultRepository,
+    session: com.cripta.app.security.SessionManager,
 ) {
     private val maxKb = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
     private val cache = object : LruCache<String, Bitmap>(maxKb) {
@@ -71,11 +72,22 @@ class ThumbnailLoader @Inject constructor(
      */
     private val failed = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
+    init {
+        // Locked: the decrypted covers held in memory go (they are the vault's content), and so
+        // do the failures seen meanwhile (a load while locked fails for want of the key, and the
+        // file then kept a grey cover for the rest of the session).
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default).launch {
+            session.locked.collect { locked -> if (locked) { cache.evictAll(); failed.clear() } }
+        }
+    }
+
     /** How many covers to generate at once during a background [prewarm] pass. Kept at 1 so the
      *  background video decodes never pile up on the device's few hardware codec instances. */
     private val PREWARM_CONCURRENCY = 1
 
     suspend fun load(file: FileEntity): Bitmap? = withContext(Dispatchers.IO) {
+        // Nothing while locked: no key to decrypt with, and no cached plaintext to hand out.
+        if (!repo.hasKey) return@withContext null
         cache.get(file.id)?.let { return@withContext it }
         // A user-chosen cover always wins over the automatic one.
         readSealed(File(customDir, file.id))?.let { cache.put(file.id, it); return@withContext it }
@@ -93,7 +105,8 @@ class ThumbnailLoader @Inject constructor(
         if (bmp != null) {
             cache.put(file.id, bmp)
             runCatching { writeDisk(file.id, bmp) }
-        } else {
+        } else if (repo.hasKey) {
+            // Only a real failure: one caused by the vault locking meanwhile would stick.
             failed.add(file.id)
         }
         bmp
