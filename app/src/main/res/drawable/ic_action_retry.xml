@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round icon button of the Hyper Island (Riprova), drawn like the system Clock's: a dark grey
+     disc with a small white glyph in the middle. Glyph: Material Symbols Rounded, filled,
+     weight 700 ("refresh"), by Google, Apache License 2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FF2E2E30"
+        android:pathData="M480,0A480,480 0,1 1,480 960A480,480 0,1 1,480 0Z" />
+    <group
+        android:pivotX="480"
+        android:pivotY="480"
+        android:scaleX="0.46"
+        android:scaleY="0.46">
+        <group android:translateY="960">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M477-135q-143 0-244-101T132-480q0-143 101-244.5T477-826q91 0 160.5 36.5T757-687v-103q0-15 10-25.5t25.5-10.5q15.5 0 26 10.5T829-790v208q0 20-14 33.5T781-535H572q-15 0-25-10.5T537-571q0-15 10.5-25t25.5-10h128q-39-56-94-90.5T477-731q-105 0-178 73t-73 178q0 105 73 178t178 73q67 0 126-33.5t92-91.5q11-16 29-23t36 1q18 7 25 23.5t-1 32.5q-44 85-126.5 135T477-135Z" />
+        </group>
+    </group>
+</vector>
