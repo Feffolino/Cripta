@@ -302,6 +302,18 @@ class VaultRepository @Inject constructor(
         db.folderDao().setStyle(id, color, emoji?.trim()?.ifEmpty { null }); notifyChanged()
     }
 
+    suspend fun setFolderFavorite(id: Long, favorite: Boolean) = withContext(Dispatchers.IO) {
+        db.folderDao().setFavorite(id, favorite); notifyChanged()
+    }
+
+    suspend fun setFolderRandomExcluded(id: Long, excluded: Boolean) = withContext(Dispatchers.IO) {
+        db.folderDao().setRandomExcluded(id, excluded); notifyChanged()
+    }
+
+    suspend fun setFolderSort(id: Long, key: SortKey, ascending: Boolean) = withContext(Dispatchers.IO) {
+        db.folderDao().setSort(id, key.name, ascending); notifyChanged()
+    }
+
     suspend fun moveFile(fileId: String, folderId: Long?) = withContext(Dispatchers.IO) {
         db.fileDao().move(fileId, folderId); notifyChanged()
     }
@@ -691,6 +703,8 @@ class VaultRepository @Inject constructor(
 
     /** All file ids only (cheap) — for building a random queue over large libraries. */
     suspend fun allFileIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().allIds() }
+
+    suspend fun randomEligibleIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().randomEligibleIds() }
 
     /** One-shot snapshot of every file entity (no tags). Used by the duplicate scanner. */
     suspend fun allFilesSnapshot(): List<FileEntity> = withContext(Dispatchers.IO) {
@@ -1201,7 +1215,9 @@ class VaultRepository @Inject constructor(
                 folders.forEach {
                     put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL)
                         .put("createdAt", it.createdAt).put("color", it.color ?: org.json.JSONObject.NULL)
-                        .put("emoji", it.emoji ?: org.json.JSONObject.NULL))
+                        .put("emoji", it.emoji ?: org.json.JSONObject.NULL)
+                        .put("favorite", it.isFavorite).put("excludedFromRandom", it.excludedFromRandom)
+                        .put("sortKey", it.sortKey ?: org.json.JSONObject.NULL).put("sortAscending", it.sortAscending))
                 }
             })
             put("tags", org.json.JSONArray().apply {
@@ -1356,7 +1372,13 @@ class VaultRepository @Inject constructor(
                         val parentOld = if (o.isNull("parentId")) null else o.getLong("parentId")
                         val newParent = if (parentOld == null) null else idMap[parentOld]
                         if (parentOld != null && newParent == null) continue // parent not yet inserted
-                        val newId = db.folderDao().insert(FolderEntity(name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now())))
+                        val newId = db.folderDao().insert(FolderEntity(
+                            name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now()),
+                            isFavorite = o.optBoolean("favorite", false),
+                            excludedFromRandom = o.optBoolean("excludedFromRandom", false),
+                            sortKey = if (o.isNull("sortKey")) null else o.optString("sortKey").takeIf { key -> SortKey.entries.any { it.name == key } },
+                            sortAscending = o.optBoolean("sortAscending", false),
+                        ))
                         // v2: folder colour / emoji.
                         val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
                         val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null

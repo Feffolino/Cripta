@@ -422,6 +422,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             composable("favorites") {
                 FavoritesScreen(
                     onOpenFile = { nav.navigate("viewer/$it") },
+                    onOpenFolders = { onTab("folders") },
                     onBack = { nav.popBackStack() },
                 )
             }

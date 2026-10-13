@@ -18,10 +18,10 @@ interface FolderDao {
     @Delete suspend fun delete(folder: FolderEntity)
 
     /** Live folders only (trashed ones are listed by [trashed]). */
-    @Query("SELECT * FROM folders WHERE deletedAt IS NULL ORDER BY name COLLATE NOCASE")
+    @Query("SELECT * FROM folders WHERE deletedAt IS NULL ORDER BY isFavorite DESC, name COLLATE NOCASE")
     fun all(): Flow<List<FolderEntity>>
 
-    @Query("SELECT * FROM folders WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND deletedAt IS NULL ORDER BY name COLLATE NOCASE")
+    @Query("SELECT * FROM folders WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND deletedAt IS NULL ORDER BY isFavorite DESC, name COLLATE NOCASE")
     fun childrenOf(parentId: Long?): Flow<List<FolderEntity>>
 
     @Query("SELECT * FROM folders WHERE deletedAt IS NOT NULL ORDER BY name COLLATE NOCASE")
@@ -44,6 +44,15 @@ interface FolderDao {
 
     @Query("UPDATE folders SET color = :color, emoji = :emoji WHERE id = :id")
     suspend fun setStyle(id: Long, color: Int?, emoji: String?)
+
+    @Query("UPDATE folders SET isFavorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: Long, favorite: Boolean)
+
+    @Query("UPDATE folders SET excludedFromRandom = :excluded WHERE id = :id")
+    suspend fun setRandomExcluded(id: Long, excluded: Boolean)
+
+    @Query("UPDATE folders SET sortKey = :key, sortAscending = :ascending WHERE id = :id")
+    suspend fun setSort(id: Long, key: String, ascending: Boolean)
 }
 
 @Dao
@@ -164,6 +173,18 @@ interface FileDao {
 
     @Query("SELECT id FROM files WHERE deletedAt IS NULL")
     suspend fun allIds(): List<String>
+
+    /** UNION (not UNION ALL) also terminates safely if an old folder tree contains a cycle. */
+    @Query("""
+        WITH RECURSIVE excluded(id) AS (
+            SELECT id FROM folders WHERE excludedFromRandom = 1 OR deletedAt IS NOT NULL
+            UNION
+            SELECT f.id FROM folders f JOIN excluded e ON f.parentId = e.id
+        )
+        SELECT id FROM files WHERE deletedAt IS NULL
+        AND (folderId IS NULL OR folderId NOT IN (SELECT id FROM excluded))
+    """)
+    suspend fun randomEligibleIds(): List<String>
 
     /** Direct (non-recursive) file count + total size per folder. Root files (null folder) are excluded. */
     @Query("SELECT folderId AS folderId, COUNT(*) AS cnt, COALESCE(SUM(sizeBytes), 0) AS bytes FROM files WHERE folderId IS NOT NULL AND deletedAt IS NULL GROUP BY folderId")

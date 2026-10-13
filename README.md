@@ -14,6 +14,10 @@ e visibili solo dentro l'app, sbloccata con la biometria/credenziale del telefon
 - 📥 Import cifrato dalla galleria; condivisione di file/link verso l'app
 - ⬇️ Download in-app di video da link (yt-dlp) con scelta risoluzione e stima peso
 - 🗂️ Cartelle, etichette, preferiti, ricerca e filtri
+- ⭐ Cartelle preferite sempre in cima e nella schermata Preferiti
+- 🎲 Esclusione dal casuale per cartella (incluse le sottocartelle), dal menu della cartella
+- ↕️ Ordinamento ricordato per ogni cartella, per la radice e per Preferiti
+- 🔎 Impostazioni → Aspetto → Nel vault: "Filtri solo nella cartella corrente" esclude dai filtri i contenuti delle altre cartelle
 - 🎞️ Conversione video in MP4 scorribile
 - 💾 Backup cifrato esporta/importa con passphrase
 - 🌗 Tema chiaro/scuro + Material You

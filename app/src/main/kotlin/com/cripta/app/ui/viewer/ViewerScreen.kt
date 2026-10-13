@@ -1605,6 +1605,9 @@ private fun VideoPlayer(
                 // Inflated for its TextureView surface (see the layout): a SurfaceView ignored the
                 // close fade and vanished all at once at the end of it.
                 (android.view.LayoutInflater.from(it).inflate(com.cripta.app.R.layout.cripta_player_view, null) as PlayerView).apply {
+                    // Visibility is driven by explicit taps/chrome, never by buffering, seeking,
+                    // pause/resume or reattaching the player (including PiP).
+                    controllerAutoShow = false
                     this.player = player
                     resizeMode = modes[modeIdx].first
                     // Let the (zoomed) video surface overflow its content frame; the outer Box clips
@@ -1673,13 +1676,16 @@ private fun VideoPlayer(
         val seekBarClearance = 96.dp
         val stepMs = prefs.seekStepSec * 1000L
         val scope = rememberCoroutineScope()
+        var speedHoldPerformed by remember(file.id) { mutableStateOf(false) }
         // Hold on a side = 2x speed until release (the menu speed setting is restored after).
         suspend fun androidx.compose.foundation.gestures.PressGestureScope.holdForSpeed() {
-            if (!prefs.holdForSpeed) return
+            speedHoldPerformed = false
+            if (!latestPrefs.holdForSpeed) return
             val job = scope.launch {
                 delay(450)
+                speedHoldPerformed = true
                 val before = player.playbackParameters.speed
-                val sp = prefs.holdSpeed
+                val sp = latestPrefs.holdSpeed
                 player.setPlaybackSpeed(sp)
                 gestureLabel = GestureHud(Icons.Filled.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "×", null)
                 try { kotlinx.coroutines.awaitCancellation() } finally {
@@ -1731,7 +1737,9 @@ private fun VideoPlayer(
                 .pointerInput(stepMs) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(-stepMs); seekTick++; seekLabel = "-${prefs.seekStepSec}s" },
-                        onTap = { toggleController() },
+                        onTap = { if (!speedHoldPerformed) toggleController() },
+                        // A completed speed hold must not become a single tap on release.
+                        onLongPress = {},
                         onPress = { holdForSpeed() },
                     )
                 }
@@ -1743,7 +1751,8 @@ private fun VideoPlayer(
                 .pointerInput(stepMs) {
                     detectTapGestures(
                         onDoubleTap = { seekBy(stepMs); seekTick++; seekLabel = "+${prefs.seekStepSec}s" },
-                        onTap = { toggleController() },
+                        onTap = { if (!speedHoldPerformed) toggleController() },
+                        onLongPress = {},
                         onPress = { holdForSpeed() },
                     )
                 }

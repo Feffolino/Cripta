@@ -279,6 +279,9 @@ fun SettingsScreen(
                         }
                         item {
                             Section("Nel vault") {
+                                ToggleRow("Filtri solo nella cartella corrente", s.filterCurrentFolderOnly) { vm.setFilterCurrentFolderOnly(it) }
+                                Text("Nella sezione Cartelle, alla radice i filtri escludono i file contenuti nelle cartelle. Dentro una cartella cercano solo tra i suoi file.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 ToggleRow("Riepilogo conteggi sopra la griglia", s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
                                 ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
                                 Text("Vista, colonne e ordinamento si cambiano direttamente dal vault (icone in alto e pannello filtri).",
@@ -1150,6 +1153,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO),
     Triple("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO),
     Triple("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO),
+    Triple("Filtri solo nella cartella corrente", "filtri ricerca cartelle contenuto escludere cartella corrente", SettingsPage.ASPETTO),
     Triple("Etichette sulla copertina", "tag copertina badge", SettingsPage.COPERTINE),
     Triple("Righe di etichette", "righe tag copertina", SettingsPage.COPERTINE),
     Triple("Colore delle etichette", "colori tag", SettingsPage.COPERTINE),
