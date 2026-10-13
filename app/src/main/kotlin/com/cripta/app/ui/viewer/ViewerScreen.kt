@@ -253,8 +253,7 @@ fun ViewerScreen(
     // not while the actions overflow menu is open, otherwise the menu closes itself under the user.
     // Bumped on quick-tag taps so the chrome stays up while tagging.
     var chromeTouch by remember { mutableIntStateOf(0) }
-    // A paused (or finished) video keeps its controls up, as ExoPlayer itself does. Auto-hiding the
-    // chrome anyway made the player re-show its controller right after: an endless hide/show blink.
+    // Keep already-visible controls up while paused/ended; never reveal hidden controls here.
     var videoPaused by remember { mutableStateOf(false) }
     val onMediaPage = currentFile?.let {
         com.cripta.app.data.VaultRepository.isImage(it.mimeType) || com.cripta.app.data.VaultRepository.isPlayable(it.mimeType)
@@ -1373,8 +1372,12 @@ private fun VideoPlayer(
     val latestPaused by androidx.compose.runtime.rememberUpdatedState(onPausedChanged)
     // Drives the PlayerView's keepScreenOn: the display may time out on a paused or finished video.
     var playing by remember(file.id) { mutableStateOf(false) }
+    var paused by remember(file.id) { mutableStateOf(false) }
     DisposableEffect(file.id) {
-        fun reportPaused() = latestPaused(!player.playWhenReady || player.playbackState == Player.STATE_ENDED)
+        fun reportPaused() {
+            paused = !player.playWhenReady || player.playbackState == Player.STATE_ENDED
+            latestPaused(paused)
+        }
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 buffering = state == Player.STATE_BUFFERING
@@ -1480,9 +1483,7 @@ private fun VideoPlayer(
     LaunchedEffect(controlsVisible, playerViewRef, inPip, selfManagedControls, controlsHeld) {
         val pv = playerViewRef ?: return@LaunchedEffect
         if (inPip || selfManagedControls || controlsHeld) return@LaunchedEffect
-        if (controlsVisible && !pv.isControllerFullyVisible) pv.showController()
-        // Not only when fully visible: a controller still fading in must be hidden too.
-        else if (!controlsVisible) pv.hideController()
+        pv.syncControllerVisibility(controlsVisible)
     }
     // Details panel closed: back to the bare video (the swipe that opens it no longer toggles the
     // controls, see the PlayerView touch filter, so there is nothing left to catch afterwards).
@@ -1605,9 +1606,9 @@ private fun VideoPlayer(
                 // Inflated for its TextureView surface (see the layout): a SurfaceView ignored the
                 // close fade and vanished all at once at the end of it.
                 (android.view.LayoutInflater.from(it).inflate(com.cripta.app.R.layout.cripta_player_view, null) as PlayerView).apply {
-                    // Visibility is driven by explicit taps/chrome, never by buffering, seeking,
-                    // pause/resume or reattaching the player (including PiP).
-                    controllerAutoShow = false
+                    // XML disables auto-show and native controller animations. Media3 reports
+                    // VISIBLE even as its animated hide begins; echoing that back to Compose
+                    // reopened the controls during the hide, causing an endless feedback loop.
                     this.player = player
                     resizeMode = modes[modeIdx].first
                     // Let the (zoomed) video surface overflow its content frame; the outer Box clips
@@ -1616,7 +1617,7 @@ private fun VideoPlayer(
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     // keepScreenOn follows actual playback (see update below), not always on.
-                    controllerShowTimeoutMs = 4000 // keep the top-bar actions (tags, info…) reachable longer
+                    // The viewer owns the timer; only split view uses Media3's timer (see update).
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
                     // (top bar with the name + the aspect toggle) so a tap reveals both.
                     setControllerVisibilityListener(
@@ -1651,7 +1652,7 @@ private fun VideoPlayer(
             // to the video surface (scaleX/scaleY), which the surrounding Box clips.
             update = { pv ->
                 pv.resizeMode = modes[modeIdx].first
-                pv.controllerShowTimeoutMs = controlsTimeoutMs
+                pv.updateControllerTimeout(selfManagedControls, paused, controlsTimeoutMs)
                 // Keep the screen on only while the video actually plays (not paused/ended/buffering).
                 pv.keepScreenOn = playing
                 // Keep the controls (time, buttons) clear of a side camera; the video stays full-bleed.

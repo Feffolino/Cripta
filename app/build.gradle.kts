@@ -74,6 +74,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    testOptions { unitTests.isIncludeAndroidResources = true }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         // youtubedl-android must be able to extract its Python .so payloads at runtime.
@@ -132,6 +133,7 @@ dependencies {
     implementation(libs.youtubedl.ffmpeg)
 
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.13")
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.espresso.core)
