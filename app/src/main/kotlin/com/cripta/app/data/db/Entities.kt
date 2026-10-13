@@ -17,6 +17,12 @@ data class FolderEntity(
     val emoji: String? = null,
     /** Set when the folder is in the trash (with its content); null = live. */
     val deletedAt: Long? = null,
+    val isFavorite: Boolean = false,
+    /** Also excludes descendants from every random queue. */
+    val excludedFromRandom: Boolean = false,
+    /** Null preserves the default until a sort is chosen for this folder. */
+    val sortKey: String? = null,
+    val sortAscending: Boolean = false,
 )
 
 /**

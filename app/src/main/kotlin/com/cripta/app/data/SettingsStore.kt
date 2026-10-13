@@ -80,6 +80,8 @@ data class Settings(
     val gridColumnsLandscape: Int = 5,
     val sortKey: SortKey = SortKey.DATE,
     val sortAscending: Boolean = false,
+    /** Filter the current folder (root files at the root), rather than the whole vault. */
+    val filterCurrentFolderOnly: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DARK,
     val dynamicColor: Boolean = false,
     /** When false (default) the window keeps FLAG_SECURE: screenshots blocked, hidden in recents. */
@@ -150,6 +152,7 @@ class SettingsStore @Inject constructor(
     private val gridColsLandKey = intPreferencesKey("grid_columns_landscape")
     private val sortKeyKey = intPreferencesKey("sort_key")
     private val sortAscKey = booleanPreferencesKey("sort_asc")
+    private val filterCurrentFolderOnlyKey = booleanPreferencesKey("filter_current_folder_only")
     private val themeKey = intPreferencesKey("theme_mode")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
     private val allowShotsKey = booleanPreferencesKey("allow_screenshots")
@@ -211,6 +214,7 @@ class SettingsStore @Inject constructor(
             gridColumnsLandscape = (p[gridColsLandKey] ?: 5).coerceIn(3, 8),
             sortKey = SortKey.entries.getOrElse(p[sortKeyKey] ?: 0) { SortKey.DATE },
             sortAscending = p[sortAscKey] ?: false,
+            filterCurrentFolderOnly = p[filterCurrentFolderOnlyKey] ?: false,
             themeMode = ThemeMode.entries.getOrElse(p[themeKey] ?: ThemeMode.DARK.ordinal) { ThemeMode.DARK },
             dynamicColor = p[dynamicKey] ?: false,
             allowScreenshots = p[allowShotsKey] ?: false,
@@ -337,6 +341,23 @@ class SettingsStore @Inject constructor(
         context.dataStore.edit { it[sortKeyKey] = key.ordinal; it[sortAscKey] = ascending }
     }
 
+    suspend fun setFilterCurrentFolderOnly(enabled: Boolean) {
+        context.dataStore.edit { it[filterCurrentFolderOnlyKey] = enabled }
+    }
+
+    /** Independent sort for screens without an open folder. The vault root keeps its legacy keys. */
+    fun screenSort(screen: String): Flow<Pair<SortKey, Boolean>> = context.dataStore.data.map { p ->
+        SortKey.entries.getOrElse(p[intPreferencesKey("sort_${screen}_key")] ?: 0) { SortKey.DATE } to
+            (p[booleanPreferencesKey("sort_${screen}_asc")] ?: false)
+    }
+
+    suspend fun setScreenSort(screen: String, key: SortKey, ascending: Boolean) {
+        context.dataStore.edit {
+            it[intPreferencesKey("sort_${screen}_key")] = key.ordinal
+            it[booleanPreferencesKey("sort_${screen}_asc")] = ascending
+        }
+    }
+
     suspend fun setTagSortMode(mode: TagSortMode) {
         context.dataStore.edit { it[tagSortModeKey] = mode.ordinal }
     }
@@ -360,7 +381,7 @@ class SettingsStore @Inject constructor(
     suspend fun resetPage(page: String) {
         val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
-                showFolderInfoKey, showNoteFabKey, showRandomFabKey)
+                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey)
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,

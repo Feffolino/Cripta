@@ -142,6 +142,7 @@ class SettingsViewModel @Inject constructor(
     fun setViewMode(m: com.cripta.app.data.ViewMode) = viewModelScope.launch { store.setViewMode(m) }
     fun setGridColumns(n: Int) = viewModelScope.launch { store.setGridColumns(n) }
     fun setSort(k: com.cripta.app.data.SortKey, asc: Boolean) = viewModelScope.launch { store.setSort(k, asc) }
+    fun setFilterCurrentFolderOnly(v: Boolean) = viewModelScope.launch { store.setFilterCurrentFolderOnly(v) }
     fun setAllowScreenshots(b: Boolean) = viewModelScope.launch { store.setAllowScreenshots(b) }
     fun setShowFileInfo(v: Boolean) = viewModelScope.launch { store.setShowFileInfo(v) }
     fun setShowTagsOnCover(v: Boolean) = viewModelScope.launch { store.setShowTagsOnCover(v) }

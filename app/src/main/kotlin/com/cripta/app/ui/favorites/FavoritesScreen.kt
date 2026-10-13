@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -18,6 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,12 +40,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cripta.app.ui.components.MediaThumbCell
+import com.cripta.app.data.SortKey
+import com.cripta.app.ui.vault.FolderMosaic
 import com.cripta.app.ui.theme.Motion
 import com.cripta.app.ui.viewer.DelayedSpinner
 import kotlinx.coroutines.launch
@@ -53,11 +62,16 @@ private enum class FavPhase { Loading, Empty, Content }
 @Composable
 fun FavoritesScreen(
     onOpenFile: (String) -> Unit,
+    onOpenFolders: () -> Unit = {},
     onBack: () -> Unit = {},
     vm: FavoritesViewModel = hiltViewModel(),
 ) {
     val favoritesOrNull by vm.favorites.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
+    val foldersOrNull by vm.folders.collectAsState()
+    val folderPreviews by vm.folderPreviews.collectAsState()
+    val sort by vm.sort.collectAsState()
+    var sortMenu by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -70,13 +84,28 @@ fun FavoritesScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
                     }
                 },
+                actions = {
+                    Box {
+                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.Filled.Sort, "Ordinamento preferiti") }
+                        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                            listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale").forEach { (key, label) ->
+                                DropdownMenuItem(text = { Text((if (sort.first == key) "✓ " else "") + label) },
+                                    onClick = { vm.setSort(key, sort.second); sortMenu = false })
+                            }
+                            if (sort.first != SortKey.MANUAL) DropdownMenuItem(
+                                text = { Text(if (sort.second) "Ordine decrescente" else "Ordine crescente") },
+                                onClick = { vm.setSort(sort.first, !sort.second); sortMenu = false },
+                            )
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         val phase = when {
-            favoritesOrNull == null -> FavPhase.Loading
-            favoritesOrNull.isNullOrEmpty() -> FavPhase.Empty
+            favoritesOrNull == null || foldersOrNull == null -> FavPhase.Loading
+            favoritesOrNull.isNullOrEmpty() && foldersOrNull.isNullOrEmpty() -> FavPhase.Empty
             else -> FavPhase.Content
         }
         AnimatedContent(
@@ -93,7 +122,7 @@ fun FavoritesScreen(
                     androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Filled.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
                         Text("Nessun preferito", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                        Text("Segna i file con la stella per trovarli qui.", style = MaterialTheme.typography.bodyMedium,
+                        Text("Segna i file o le cartelle con la stella per trovarli qui.", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -106,6 +135,26 @@ fun FavoritesScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        items(foldersOrNull.orEmpty(), key = { "folder-${it.id}" }) { folder ->
+                            FolderMosaic(
+                                folder = folder, stat = null,
+                                previews = folderPreviews[folder.id].orEmpty(), thumb = vm::thumb,
+                                showInfo = false,
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    vm.openFolder(folder.id); onOpenFolders()
+                                },
+                                onRemoveFavorite = {
+                                    vm.setFolderFavorite(folder.id, false)
+                                    scope.launch {
+                                        snackbar.currentSnackbarData?.dismiss()
+                                        if (snackbar.showSnackbar("Cartella rimossa dai preferiti", "Annulla",
+                                                duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+                                            vm.setFolderFavorite(folder.id, true)
+                                        }
+                                    }
+                                },
+                            )
+                        }
                         items(favorites, key = { it.id }) { file ->
                             Box(
                                 Modifier.animateItem(

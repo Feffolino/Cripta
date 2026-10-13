@@ -219,25 +219,44 @@ class VaultViewModel @Inject constructor(
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    private val sortFlow = settings.settings.map { it.sortKey to it.sortAscending }
+    // Read the live folder, not the breadcrumb snapshot, so changes survive navigation/restarts.
+    private val sortFlow = combine(currentFolderId, repo.allFolders(), settings.settings) { id, folders, s ->
+        if (id == null) s.sortKey to s.sortAscending
+        else folders.firstOrNull { it.id == id }?.let { folder ->
+            (com.cripta.app.data.SortKey.entries.firstOrNull { it.name == folder.sortKey }
+                ?: com.cripta.app.data.SortKey.DATE) to folder.sortAscending
+        } ?: (com.cripta.app.data.SortKey.DATE to false)
+    }
 
     val sortKey: StateFlow<com.cripta.app.data.SortKey> =
-        settings.settings.map { it.sortKey }
+        sortFlow.map { it.first }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.cripta.app.data.SortKey.DATE)
     val sortAscending: StateFlow<Boolean> =
-        settings.settings.map { it.sortAscending }
+        sortFlow.map { it.second }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    fun setSort(key: com.cripta.app.data.SortKey, ascending: Boolean) =
-        viewModelScope.launch { settings.setSort(key, ascending) }
+    fun setSort(key: com.cripta.app.data.SortKey, ascending: Boolean) {
+        val folderId = currentFolderId.value
+        viewModelScope.launch {
+            if (folderId == null) settings.setSort(key, ascending)
+            else repo.setFolderSort(folderId, key, ascending)
+        }
+    }
 
-    /** Unfiltered scope (current folder, or the whole vault while filtering) + the shown result. */
+    fun setFolderFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { repo.setFolderFavorite(id, favorite) }
+    fun setFolderRandomExcluded(id: Long, excluded: Boolean) = viewModelScope.launch { repo.setFolderRandomExcluded(id, excluded) }
+
+    /** Current folder, or the whole vault while filtering when allowed by Settings. */
     private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>)
 
     private val scoped =
-        combine(currentFolderId, filters, sortFlow, refresh) { folder, f, sort, _ -> Triple(folder, f, sort) }
-            .flatMapLatest { (folder, f, sort) ->
-                val source = if (f.active) repo.allFiles() else repo.files(folder)
+        combine(currentFolderId, filters, sortFlow,
+            settings.settings.map { it.filterCurrentFolderOnly }, refresh) { folder, f, sort, localOnly, _ ->
+            Triple(folder, f, sort) to localOnly
+        }
+            .flatMapLatest { (request, localOnly) ->
+                val (folder, f, sort) = request
+                val source = if (f.active && !localOnly) repo.allFiles() else repo.files(folder)
                 source.map { list -> Scoped(list, applySort(applyFilters(list, f), sort.first, sort.second)) }
                     .flowOn(Dispatchers.Default)
             }
@@ -537,13 +556,21 @@ class VaultViewModel @Inject constructor(
 
     /**
      * Build a shuffled queue and open its first item. Scope follows what the user is looking at:
-     * the filtered results, or the open folder; at the root, the whole library (ids only, cheap
-     * for big libraries). Falls back to the current view if the id query yields nothing.
+     * the filtered results, or the open folder; at the root, the whole library (ids only).
+     * Exclusions always apply, including when the folder itself is open. Never fall back to
+     * excluded files when every candidate was excluded.
      */
     fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
-        val ids = if (randomScopedToView) files.value.map { it.file.id } else repo.allFileIds()
-        val order = if (ids.isNotEmpty()) ids.shuffled() else files.value.map { it.file.id }.shuffled()
-        if (order.isEmpty()) return@launch
+        val eligible = repo.randomEligibleIds()
+        val ids = if (randomScopedToView) {
+            val allowed = eligible.toHashSet()
+            files.value.map { it.file.id }.filter { it in allowed }
+        } else eligible
+        val order = ids.shuffled()
+        if (order.isEmpty()) {
+            android.widget.Toast.makeText(appContext, "Nessun file disponibile per il casuale. Verifica i filtri e le cartelle escluse.", android.widget.Toast.LENGTH_SHORT).show()
+            return@launch
+        }
         viewerQueue.set(order)
         open(order.first())
     }

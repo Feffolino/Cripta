@@ -1095,6 +1095,15 @@ fun VaultScreen(
                     if (inSelection) notify("Esci dalla selezione per aprire una cartella") else vm.enterFolder(folder)
                 }
                 SheetAction(Icons.Filled.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
+                SheetAction(if (folder.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    if (folder.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti") {
+                    vm.setFolderFavorite(folder.id, !folder.isFavorite); folderMenu = null
+                }
+                SheetAction(Icons.Filled.Casino,
+                    if (folder.excludedFromRandom) "Includi nel casuale" else "Escludi dal casuale (anche sottocartelle)") {
+                    vm.setFolderRandomExcluded(folder.id, !folder.excludedFromRandom); folderMenu = null
+                    notify(if (folder.excludedFromRandom) "Cartella inclusa nel casuale" else "Cartella e sottocartelle escluse dal casuale")
+                }
                 SheetAction(Icons.Filled.Palette, "Personalizza") { folderToStyle = folder; folderMenu = null }
                 SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
             }
@@ -3051,6 +3060,8 @@ fun FolderMosaic(
     highlighted: Boolean = false,
     /** When set, a "more" button opens the folder's actions (so they aren't long-press only). */
     onMore: (() -> Unit)? = null,
+    /** A star action on the Favorites screen; regular cards keep their actions menu. */
+    onRemoveFavorite: (() -> Unit)? = null,
 ) {
     val accent = folder.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
     val lift by animateFloatAsState(if (highlighted) 1.05f else 1f, Motion.enter(Motion.SHORT), label = "folderLift")
@@ -3104,6 +3115,13 @@ fun FolderMosaic(
             }
             // Colour band on top.
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(4.dp).background(accent))
+            if (folder.isFavorite) {
+                Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(26.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Star, "Cartella preferita", tint = com.cripta.app.ui.theme.Favorite,
+                        modifier = Modifier.size(18.dp))
+                }
+            }
         }
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
@@ -3116,7 +3134,12 @@ fun FolderMosaic(
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
                 }
             }
-            if (onMore != null) {
+            if (onRemoveFavorite != null) {
+                IconButton(onClick = onRemoveFavorite, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Filled.Star, "Rimuovi cartella dai preferiti", tint = com.cripta.app.ui.theme.Favorite,
+                        modifier = Modifier.size(20.dp))
+                }
+            } else if (onMore != null) {
                 IconButton(onClick = onMore, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Filled.MoreVert, "Azioni per ${folder.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp))
