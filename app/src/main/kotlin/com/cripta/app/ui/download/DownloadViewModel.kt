@@ -139,7 +139,7 @@ class DownloadViewModel @Inject constructor(
 
 /** The first http(s) link inside shared/pasted text (apps often share "Title https://..."), else the text. */
 fun extractUrl(text: String): String =
-    Regex("https?://\\S+", RegexOption.IGNORE_CASE).find(text)?.value?.trimEnd('.', ',', ')', ']', '"', '\'') ?: text.trim()
+    Regex("https?://[^\\s<>\"\']+", RegexOption.IGNORE_CASE).find(text)?.value?.trimEnd('.', ',', ')', ']', '"', '\'') ?: text.trim()
 
 /** True for something that looks like a web link (what yt-dlp can fetch). */
 fun looksLikeUrl(text: String): Boolean {

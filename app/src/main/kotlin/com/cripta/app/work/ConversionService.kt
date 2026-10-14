@@ -30,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 /**
@@ -55,6 +56,7 @@ class ConversionService : Service() {
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
      *  so a short task (e.g. import) can't stop the service while a long transcode is still running. */
     private val active = java.util.concurrent.atomic.AtomicInteger(0)
+    private val originalChoiceMutex = kotlinx.coroutines.sync.Mutex()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -161,46 +163,44 @@ class ConversionService : Service() {
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
-        // Completion-notification actions: delete or keep the original video.
-        if (mode == MODE_DELETE_ORIG) {
+        // Resolve each queued original independently; only acknowledge a deletion after it succeeds.
+        if (mode == MODE_DELETE_ORIG || mode == MODE_DISMISS) {
             val oid = intent.getStringExtra(EX_ID)
-            // Only with the vault open (as Riprova): locked, the delete failed while the app said
-            // "Originale eliminato" and the question was gone. The choice stays; a note says why.
-            if (oid != null && session.locked.value) {
-                notifyResult("Originale non eliminato", "Sblocca Cripta, poi scegli di nuovo", ResultKind.CONVERT,
+            if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
+            if (session.locked.value) {
+                notifyResult("Originale non modificato", "Sblocca Cripta, poi scegli di nuovo", ResultKind.CONVERT,
                     state = ResultState.FAILED, island = false)
                 stopIfIdle(startId)
                 return START_NOT_STICKY
             }
-            cancelOutcome(DONE_NOTIF_ID)
-            // Answered (notification or the Cartelle banner): the banner stops asking.
-            repo.updateConvertStatus {
-                if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale eliminato. Resta la copia MP4.") else it
-            }
-            if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
             beginJob(startId)
             val held = session.beginWork()
             scope.launch {
                 try {
-                    repo.deleteOrTrash(oid)
+                    if (!held) return@launch
+                    originalChoiceMutex.withLock {
+                        // Ignore a stale/double notification action after this original was kept.
+                        val choice = repo.convertStatus.value.pendingOriginals.firstOrNull { it.id == oid } ?: return@withLock
+                        val delete = mode == MODE_DELETE_ORIG
+                        if (delete) {
+                            val copy = choice.copyId.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
+                            check(copy != null && copy.deletedAt == null) { "Copia MP4 non disponibile: originale conservato" }
+                        }
+                        if (delete) repo.deleteOrTrash(oid)
+                        repo.resolveConvertedOriginal(oid, deleted = delete)
+                        cancelOutcome(DONE_NOTIF_ID)
+                        postConvertDone()
+                    }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    android.util.Log.e("ConversionService", "delete original failed", e)
+                    repo.updateConvertStatus { it.copy(lastOk = false, lastResult = "Impossibile completare la scelta. L'originale resta da gestire.") }
+                    android.util.Log.e("ConversionService", "Resolving original failed (${e.javaClass.simpleName})")
                 } finally {
                     if (held) session.endWork()
                     if (active.decrementAndGet() == 0) stopWhenIdle()
                 }
             }
-            return START_NOT_STICKY
-        }
-        if (mode == MODE_DISMISS) {
-            cancelOutcome(DONE_NOTIF_ID)
-            val oid = intent.getStringExtra(EX_ID)
-            repo.updateConvertStatus {
-                if (it.askOriginalId == oid) it.copy(askOriginalId = null, lastResult = "Originale mantenuto accanto alla copia MP4.") else it
-            }
-            stopIfIdle(startId)
             return START_NOT_STICKY
         }
         ensureChannel()
@@ -690,13 +690,10 @@ class ConversionService : Service() {
             val replace = mode == com.cripta.app.data.ConvertAfter.REPLACE
             val newFile = repo.importConvertedMp4(file, out!!, replace = replace)
             thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
-            repo.emitConvertResult(
-                VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
-            )
             when (mode) {
                 com.cripta.app.data.ConvertAfter.ASK -> {
-                    postConvertDone(id)
-                    repo.updateConvertStatus { it.copy(askOriginalId = id) }
+                    repo.awaitConvertedOriginal(id, file.originalName, newFile.id)
+                    postConvertDone()
                 }
                 com.cripta.app.data.ConvertAfter.REPLACE -> {
                     val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
@@ -704,6 +701,9 @@ class ConversionService : Service() {
                 }
                 com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Conversione completata", "Copia MP4 aggiunta accanto all'originale")
             }
+            repo.emitConvertResult(
+                VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
+            )
             result = true to when {
                 replace -> "Convertito: ${newFile.originalName} (originale nel cestino)"
                 mode == com.cripta.app.data.ConvertAfter.ASK -> "Convertito: ${newFile.originalName}. Eliminare l'originale?"
@@ -1424,18 +1424,23 @@ class ConversionService : Service() {
         icon, label,
         android.app.PendingIntent.getService(
             this, req,
-            Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).apply { originalId?.let { putExtra(EX_ID, it) } },
+            Intent(this, ConversionService::class.java).putExtra(EX_MODE, mode).apply { originalId?.let { putExtra(EX_ID, it); data = Uri.parse("cripta://conversion-choice/$mode/$it") } },
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         ),
     )
 
     /** An ASK conversion finished: delete (to the trash) or keep the original video. */
-    private fun postConvertDone(originalId: String) = postChoice(
-        // Short lines: the island's template shows one line each.
-        DONE_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
-        serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, originalId, R.drawable.ic_action_delete),
-        serviceAction("Mantieni", MODE_DISMISS, 3, originalId, R.drawable.ic_action_keep),
-    )
+    private fun postConvertDone() {
+        val pending = repo.convertStatus.value.pendingOriginals
+        val original = pending.firstOrNull() ?: return
+        postChoice(
+            DONE_NOTIF_ID, R.drawable.ic_notif_done,
+            if (pending.size == 1) "Copia MP4 creata" else "${pending.size} originali da gestire",
+            "Eliminare l'originale?",
+            serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, original.id, R.drawable.ic_action_delete),
+            serviceAction("Mantieni", MODE_DISMISS, 3, original.id, R.drawable.ic_action_keep),
+        )
+    }
 
     /** An import with the "Chiedi" policy finished: delete the originals from the device, or keep them. */
     private fun postOriginalsChoice(n: Int) {

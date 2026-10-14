@@ -71,6 +71,13 @@ class HomeViewModel @Inject constructor(
         for (job in repo.pendingJobs()) {
             val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
             when (job.kind) {
+                "conversion_original" -> {
+                    val id = o.optString("id")
+                    val original = id.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
+                    if (original != null && original.deletedAt == null) {
+                        repo.restoreConvertedOriginal(id, o.optString("name"), o.optString("copyId"))
+                    } else repo.deletePendingJob(job.id)
+                }
                 "download" -> {
                     val url = o.optString("url")
                     // Blank, or already queued in this process (the service keeps its own record).

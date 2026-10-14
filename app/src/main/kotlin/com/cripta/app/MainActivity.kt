@@ -102,59 +102,31 @@ class MainActivity : FragmentActivity() {
      * the download needs an unlocked vault, but there is no reason to make the user re-share it.
      */
     private fun handleShare(intent: Intent?) {
-        val action = intent?.action ?: return
-        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
-        val streams = sharedStreams(intent)
-        if (streams.isNotEmpty()) {
-            sharedFiles.add(streams)
-            // Consume the share: a later onNewIntent / recreation must not import it twice.
-            intent.removeExtra(Intent.EXTRA_STREAM)
-            intent.action = null
-            val n = streams.size
-            val what = if (n == 1) "il file" else "i $n file"
-            if (session.locked.value) {
-                Toast.makeText(this, "Sblocca Cripta per cifrare $what nel vault", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this, if (n == 1) "Importazione di 1 file nel vault…" else "Importazione di $n file nel vault…", Toast.LENGTH_SHORT).show()
+        if (intent?.action != Intent.ACTION_SEND && intent?.action != Intent.ACTION_SEND_MULTIPLE) return
+        val shared = Intent(intent)
+        // Consume once before async work: recreation must not import the browser preview twice.
+        intent?.action = null
+        intent?.removeExtra(Intent.EXTRA_STREAM)
+        lifecycleScope.launch {
+            val payload = withContext(Dispatchers.IO) {
+                com.cripta.app.data.classifySharedContent(shared, contentResolver)
             }
-            return
-        }
-        if (action != Intent.ACTION_SEND) return
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim() ?: return
-        val url = text.split(Regex("\\s+")).firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
-            ?: return
-        sharedLinks.set(url)
-        intent.action = null
-        if (session.locked.value) {
-            Toast.makeText(this, "Sblocca Cripta per preparare il download", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    /** The content uris of a SEND / SEND_MULTIPLE intent (EXTRA_STREAM, falling back to ClipData). */
-    private fun sharedStreams(intent: Intent): List<Uri> {
-        val out = ArrayList<Uri>()
-        if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
-            val list: List<Uri>? = if (Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION") intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-            }
-            list?.let { out += it }
-        } else {
-            val one: Uri? = if (Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION") intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-            }
-            one?.let { out += it }
-        }
-        if (out.isEmpty()) {
-            intent.clipData?.let { clip ->
-                for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let { out += it }
+            when (payload) {
+                is com.cripta.app.data.SharedContent.WebLink -> {
+                    sharedLinks.set(payload.url)
+                    if (session.locked.value) Toast.makeText(this@MainActivity,
+                        "Sblocca Cripta per preparare il download", Toast.LENGTH_LONG).show()
+                }
+                is com.cripta.app.data.SharedContent.Files -> {
+                    sharedFiles.add(payload.uris)
+                    val n = payload.uris.size
+                    val message = if (session.locked.value) "Sblocca Cripta per importare i file condivisi"
+                        else if (n == 1) "Importazione di 1 file nel vault…" else "Importazione di $n file nel vault…"
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                }
+                com.cripta.app.data.SharedContent.None -> Unit
             }
         }
-        // Only content:// uris: a file:// uri would bypass the sender's permissions.
-        return out.filter { it.scheme == "content" }.distinct()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

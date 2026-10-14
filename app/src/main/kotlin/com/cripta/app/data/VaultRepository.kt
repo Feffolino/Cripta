@@ -67,6 +67,7 @@ class VaultRepository @Inject constructor(
         _convertingIds.update { if (active) it + id else it - id }
     }
     /** Conversion queue status for the in-app banner. */
+    data class ConvertedOriginal(val id: String, val name: String, val copyId: String = "")
     data class ConvertStatus(
         val currentName: String? = null,
         val pct: Int = 0,
@@ -75,15 +76,34 @@ class VaultRepository @Inject constructor(
         /** Outcome of the last finished conversion, shown until dismissed. */
         val lastResult: String? = null,
         val lastOk: Boolean = true,
-        /** Original of the last conversion done with "Chiedimi alla fine": delete or keep it? */
-        val askOriginalId: String? = null,
+        /** Every successfully converted original still awaiting a keep/delete decision. */
+        val pendingOriginals: List<ConvertedOriginal> = emptyList(),
     ) {
         val active: Boolean get() = currentName != null
+        fun awaiting(original: ConvertedOriginal) = copy(
+            pendingOriginals = if (pendingOriginals.any { it.id == original.id }) pendingOriginals else pendingOriginals + original,
+        )
+        fun resolved(id: String) = copy(pendingOriginals = pendingOriginals.filterNot { it.id == id })
     }
     private val _convertStatus = MutableStateFlow(ConvertStatus())
     val convertStatus: StateFlow<ConvertStatus> = _convertStatus
     fun updateConvertStatus(f: (ConvertStatus) -> ConvertStatus) = _convertStatus.update(f)
-    fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null, askOriginalId = null) }
+    fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null) }
+
+    suspend fun awaitConvertedOriginal(id: String, name: String, copyId: String) {
+        putPendingJob("original-$id", "conversion_original", org.json.JSONObject().put("id", id).put("name", name).put("copyId", copyId).toString())
+        _convertStatus.update { it.awaiting(ConvertedOriginal(id, name, copyId)) }
+    }
+
+    fun restoreConvertedOriginal(id: String, name: String, copyId: String) {
+        _convertStatus.update { it.awaiting(ConvertedOriginal(id, name, copyId)) }
+    }
+
+    suspend fun resolveConvertedOriginal(id: String, deleted: Boolean) {
+        deletePendingJob("original-$id")
+        _convertStatus.update { it.resolved(id).copy(lastOk = true, lastResult = if (deleted)
+            "Originale eliminato. Resta la copia MP4." else "Originale mantenuto accanto alla copia MP4.") }
+    }
 
     private val _conversionProgress = MutableStateFlow(0)
     /** 0-100 progress of the current transcode; drives the in-app progress popup. */
