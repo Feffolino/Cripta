@@ -307,11 +307,6 @@ fun ViewerScreen(
     var confirmDownload by remember { mutableStateOf<FileEntity?>(null) }
     var confirmConvert by remember { mutableStateOf<FileEntity?>(null) }
     val convertedId by vm.convertedId.collectAsState()
-    val converting by vm.converting.collectAsState()
-    val convertProgress by vm.convertingProgress.collectAsState()
-    // When true the user chose to let the conversion run in the background (notification only).
-    var convertInBackground by remember { mutableStateOf(false) }
-    LaunchedEffect(converting) { if (converting) convertInBackground = false }
     val pagerScope = rememberCoroutineScope()
     // Swipe-to-close can be seen by more than one gesture layer: pop the viewer only once.
     var closing by remember { mutableStateOf(false) }
@@ -752,46 +747,6 @@ fun ViewerScreen(
             confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { Text("Converti") } },
             dismissButton = { TextButton(onClick = { confirmConvert = null }) { Text("Annulla") } },
         )
-    }
-    // Non-blocking progress pill: the conversion runs in the service (queued, one at a time);
-    // the viewer stays fully usable and the pill can be hidden.
-    // Its own window too: not over the lock screen.
-    if (converting && !convertInBackground && com.cripta.app.ui.components.vaultUnlocked()) {
-        androidx.compose.ui.window.Popup(
-            alignment = Alignment.BottomCenter,
-            // Above the seek bar (dp, not raw pixels, so it lands in the same place on every screen).
-            offset = with(androidx.compose.ui.platform.LocalDensity.current) {
-                val landscapeNow = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
-                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                androidx.compose.ui.unit.IntOffset(0, -(if (landscapeNow) 112.dp else 180.dp).roundToPx())
-            },
-        ) {
-            // Smooth the ring between the service's progress steps.
-            val shownProgress by animateFloatAsState(
-                targetValue = convertProgress / 100f,
-                animationSpec = tween(Motion.LONG, easing = Motion.EaseOutQuart),
-                label = "convertProgress",
-            )
-            Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large) {
-                Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(progress = { shownProgress }, color = Color.White,
-                        strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(10.dp))
-                    val eta = com.cripta.app.ui.components.rememberEta(convertProgress / 100f, converting)
-                    Column {
-                        Text("Conversione MP4 · $convertProgress%", color = Color.White,
-                            style = MaterialTheme.typography.labelLarge)
-                        if (eta != null) Text(eta, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
-                    }
-                    // Not "Annulla": this stops the running transcode (the original stays as it is).
-                    TextButton(onClick = { vm.cancelConversion() }) { Text("Interrompi", color = Color(0xFFFF8A80)) }
-                    IconButton(onClick = { convertInBackground = true }) {
-                        Icon(Icons.Filled.Close, "Nascondi", tint = Color.White)
-                    }
-                }
-            }
-        }
     }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsState()

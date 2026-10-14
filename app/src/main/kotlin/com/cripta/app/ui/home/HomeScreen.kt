@@ -174,7 +174,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            if (convertStatus.active || convertStatus.lastResult != null) {
+            if (convertStatus.active || convertStatus.lastResult != null || convertStatus.pendingOriginals.isNotEmpty()) {
                 item {
                     com.cripta.app.ui.vault.ConvertBanner(convertStatus, onCancel = vm::cancelConversion,
                         onDismiss = vm::dismissConvertResult, onResolveOriginal = vm::resolveOriginal)

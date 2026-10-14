@@ -20,6 +20,8 @@ e visibili solo dentro l'app, sbloccata con la biometria/credenziale del telefon
 - 🔎 Impostazioni → Aspetto → Nel vault: "Filtri solo nella cartella corrente" esclude dai filtri i contenuti delle altre cartelle
 - 🗂️ Anteprime delle cartelle basate sui file direttamente contenuti, aggiornate dopo importazioni e spostamenti
 - ⬇️ Download con tentativi di rete, estrattori aggiornati ogni giorno e conservazione del formato originale quando MP4 non è disponibile
+- 📤 Condivisioni web inoltrate al downloader usando il link, senza importare l'anteprima del browser
+- 🎞️ Conversioni multiple: scelta sugli originali per singolo file o per tutti, conservata anche alla riapertura dell'app; avanzamento fuori dal player
 - 🎞️ Conversione video in MP4 scorribile
 - 💾 Backup cifrato esporta/importa con passphrase
 - 🌗 Tema chiaro/scuro + Material You

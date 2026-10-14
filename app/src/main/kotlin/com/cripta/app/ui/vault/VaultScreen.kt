@@ -2959,7 +2959,7 @@ fun ConvertBanner(
     onResolveOriginal: (originalId: String, delete: Boolean) -> Unit = { _, _ -> },
 ) {
     AnimatedVisibility(
-        visible = state.active || state.lastResult != null,
+        visible = state.active || state.lastResult != null || state.pendingOriginals.isNotEmpty(),
         enter = androidx.compose.animation.expandVertically() + fadeIn(),
         exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
     ) {
@@ -2986,21 +2986,38 @@ fun ConvertBanner(
                             Text(state.currentName.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         } else {
-                            Text(state.lastResult.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on)
+                            val pending = state.pendingOriginals
+                            if (pending.isNotEmpty()) {
+                                Text("${pending.size} ${if (pending.size == 1) "originale da gestire" else "originali da gestire"}",
+                                    style = MaterialTheme.typography.titleSmall, color = on)
+                                Text(pending.first().name, style = MaterialTheme.typography.bodySmall, color = on,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            } else Text(state.lastResult.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on)
                         }
                     }
                     if (state.active) TextButton(onClick = onCancel) { Text("Annulla", color = on) }
-                    else IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Close, "Chiudi", tint = on, modifier = Modifier.size(18.dp))
+                    else IconButton(onClick = {
+                        state.pendingOriginals.firstOrNull()?.let { onResolveOriginal(it.id, false) } ?: onDismiss()
+                    }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Close, if (state.pendingOriginals.isEmpty()) "Chiudi" else "Chiudi e mantieni questo originale", tint = on, modifier = Modifier.size(18.dp))
                     }
                 }
+                if (!state.lastOk && state.lastResult != null && state.pendingOriginals.isNotEmpty()) {
+                    Text(state.lastResult, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
                 // "Chiedimi alla fine": the same choice as the completion notification, here too.
-                val ask = state.askOriginalId
+                val ask = state.pendingOriginals.firstOrNull()?.id
                 if (!state.active && ask != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                         TextButton(onClick = { onResolveOriginal(ask, false) }) { Text("Mantieni", color = on) }
                         androidx.compose.material3.FilledTonalButton(onClick = { onResolveOriginal(ask, true) }) {
                             Text("Elimina originale")
+                        }
+                    }
+                    if (state.pendingOriginals.size > 1) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, false) } }) { Text("Mantieni tutti", color = on) }
+                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, true) } }) { Text("Elimina tutti", color = MaterialTheme.colorScheme.error) }
                         }
                     }
                 }
