@@ -3,12 +3,12 @@ package com.cripta.app.media
 import android.content.Context
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
-import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import com.yausername.youtubedl_android.mapper.VideoInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +16,7 @@ import javax.inject.Singleton
  * Downloads videos from a page/stream URL with yt-dlp (via youtubedl-android). Unlike media3
  * Transformer — which needs a direct media URL — yt-dlp extracts the real stream from ~1000 sites
  * (YouTube, Vimeo, HLS, ...) and, together with the bundled FFmpeg, merges video+audio into a single
- * MP4. The caller then encrypts that file into the vault.
+ * video. The caller then encrypts that file into the vault, preserving its real container.
  *
  * The native Python/yt-dlp payload is extracted on first use, so [ensureInit] is lazy and cheap on
  * later calls. All methods here block; call them off the main thread.
@@ -26,21 +26,25 @@ class YtdlpDownloader @Inject constructor(
     @ApplicationContext private val appContext: Context,
 ) {
     @Volatile private var initialized = false
-    private val initLock = Any()
+    private val engineLock = ReentrantReadWriteLock()
+    private val updater = YtdlpUpdater(appContext)
 
-    /** Extract and initialize yt-dlp + FFmpeg once per process, then pull the latest yt-dlp so
-     *  extractors keep up with site changes (YouTube breaks the bundled binary within weeks).
-     *  Blocking; call on IO. The update is best-effort — offline just keeps the bundled version. */
+    /** Initialize once and check for extractor updates daily, with bounded network timeouts.
+     * Offline/failed updates retain the installed engine and are retried after five minutes.
+     * Blocking; call on IO. */
     fun ensureInit() {
-        if (initialized) return
-        synchronized(initLock) {
-            if (initialized) return
-            YoutubeDL.getInstance().init(appContext)
-            FFmpeg.getInstance().init(appContext)
-            runCatching { YoutubeDL.getInstance().updateYoutubeDL(appContext) }
-                .onFailure { android.util.Log.w("YtdlpDownloader", "yt-dlp self-update failed", it) }
-            initialized = true
-        }
+        if (initialized && !updater.isDue()) return
+        val lock = engineLock.writeLock()
+        lock.lockInterruptibly()
+        try {
+            if (!initialized) {
+                YoutubeDL.getInstance().init(appContext)
+                FFmpeg.getInstance().init(appContext)
+                initialized = true
+            }
+            runCatching { updater.updateIfDue() }
+                .onFailure { android.util.Log.w("YtdlpDownloader", "Engine update failed (${it.javaClass.simpleName}); keeping installed version") }
+        } finally { lock.unlock() }
     }
 
     /**
@@ -63,27 +67,18 @@ class YtdlpDownloader @Inject constructor(
         // process to kill yet, so the download started anyway.
         if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
         val dir = File(appContext.cacheDir, "ytdl-${UUID.randomUUID()}").apply { mkdirs() }
-        val request = YoutubeDLRequest(url).apply {
-            addOption("-o", File(dir, "%(title).80s.%(ext)s").absolutePath)
-            addOption("--no-playlist")
-            addOption("--no-mtime")
-            // Prefer the best video+audio within the height cap, then merge to a single MP4.
-            val fmt = if (maxHeight != null) {
-                "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]/bv*+ba/b"
-            } else {
-                "bv*+ba/b"
-            }
-            addOption("-f", fmt)
-            addOption("--merge-output-format", "mp4")
-        }
+        val request = DownloadRequests.download(url, maxHeight, dir)
         try {
-            YoutubeDL.getInstance().execute(request, processId) { progress, etaInSeconds, _ ->
-                // A cancel that came before the process was registered is honoured here.
-                if (isCancelled()) cancel(processId)
-                onProgress(progress.toInt().coerceIn(0, 100), etaInSeconds)
+            withEngine {
+                if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
+                YoutubeDL.getInstance().execute(request, processId) { progress, etaInSeconds, _ ->
+                    // A cancel that came before the process was registered is honoured here.
+                    if (isCancelled()) cancel(processId)
+                    onProgress(progress.toInt().coerceIn(0, 100), etaInSeconds)
+                }
             }
-            return dir.listFiles()?.filter { it.isFile }?.maxByOrNull { it.length() }
-                ?: throw IllegalStateException("yt-dlp non ha prodotto alcun file")
+            if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
+            return DownloadRequests.completedFile(dir)
         } catch (e: Throwable) {
             // Failed or cancelled: the partial video (plaintext, named after the title) goes now.
             wipe(dir)
@@ -116,7 +111,13 @@ class YtdlpDownloader @Inject constructor(
     /** Probe [url] for its available formats (no download). Blocking; call on IO. */
     fun info(url: String): VideoInfo {
         ensureInit()
-        return YoutubeDL.getInstance().getInfo(YoutubeDLRequest(url).apply { addOption("--no-playlist") })
+        return withEngine { YoutubeDL.getInstance().getInfo(DownloadRequests.common(url)) }
+    }
+
+    private inline fun <T> withEngine(block: () -> T): T {
+        val lock = engineLock.readLock()
+        lock.lockInterruptibly()
+        return try { block() } finally { lock.unlock() }
     }
 
     /**

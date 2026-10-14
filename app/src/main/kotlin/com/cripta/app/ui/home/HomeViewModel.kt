@@ -141,7 +141,8 @@ class HomeViewModel @Inject constructor(
 
     /** Newest covers of each root folder, for the folder mosaics. */
     val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> =
-        folders.mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
+        combine(folders, repo.changes) { list, _ -> list }
+            .mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     /** False until the vault content has been read once, so the empty state doesn't flash on the

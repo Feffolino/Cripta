@@ -184,7 +184,8 @@ class VaultViewModel @Inject constructor(
 
     /** Newest covers of each visible folder, for the folder mosaics. */
     val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> =
-        folders.mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
+        combine(folders, refresh) { list, _ -> list }
+            .mapLatest { list -> repo.folderPreviews(list.map { it.id }) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val tags: StateFlow<List<TagEntity>> =

@@ -800,6 +800,23 @@ class ConversionService : Service() {
         }
     }
 
+    /** Use the same container parsers as the player, not the narrower platform retriever. A
+     * valid downloaded stream may lack a declared duration; that does not make it invalid. */
+    private fun isDownloadedVideo(file: java.io.File): Boolean {
+        if (!file.isFile || file.length() == 0L) return false
+        val metadata = androidx.media3.exoplayer.MetadataRetriever.retrieveMetadata(
+            this, androidx.media3.common.MediaItem.fromUri(Uri.fromFile(file)),
+        )
+        return try {
+            val tracks = metadata.get(20, java.util.concurrent.TimeUnit.SECONDS)
+            (0 until tracks.length).any { tracks[it].type == androidx.media3.common.C.TRACK_TYPE_VIDEO }
+        } catch (e: java.util.concurrent.ExecutionException) {
+            false
+        } catch (e: java.util.concurrent.TimeoutException) {
+            throw IllegalStateException("Impossibile analizzare il video scaricato", e)
+        } finally { metadata.cancel(true) }
+    }
+
     /**
      * Duplicate scan (exact or similar) in the service, so it continues in the background with a
      * progress notification; results go to [DupScanStore] and a "finished" notification that
@@ -869,7 +886,7 @@ class ConversionService : Service() {
     }
 
     /**
-     * Download a remote video (direct link or HLS) to MP4 and encrypt it into the vault, in the
+     * Download a remote video (direct link or HLS) and encrypt its actual container into the vault, in the
      * folder and with the tags chosen for [job]. Progress and a Cancel action live in the
      * notification; the source link is stored on the new file. Cancelling stops only this link:
      * the rest of the queue continues.
@@ -903,15 +920,16 @@ class ConversionService : Service() {
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
-            if (!isPlayableVideo(produced, null)) {
-                val msg = "Nessun video valido (link errato o DRM)"
+            if (!isDownloadedVideo(produced)) {
+                val msg = "Formato del video non leggibile dal player"
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
                     actions = listOf(retryAction(job)))
                 return
             }
+            if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
-            val file = repo.importDownloadedMp4(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
+            val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
             set { it.copy(phase = VaultRepository.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             // The title stays inside the app (queue, vault): the notification only says it is done.
             notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
@@ -926,7 +944,7 @@ class ConversionService : Service() {
                 set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
                 notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             } else {
-                android.util.Log.e("ConversionService", "download failed", e)   // never the link: logcat is readable
+                android.util.Log.e("ConversionService", "Download failed (${e.javaClass.simpleName})")
                 val msg = UserErrors.ofDownload(e)
                 set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
@@ -1555,7 +1573,7 @@ class ConversionService : Service() {
         }
 
         /**
-         * Queue an in-app download of [url] to MP4, capped at [maxHeight]px (null = source quality),
+         * Queue an in-app video download of [url], capped at [maxHeight]px (null = source quality),
          * saved into [folderId] (null = root) with [tagIds]. Links queue up and run one at a time.
          */
         fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList()) {

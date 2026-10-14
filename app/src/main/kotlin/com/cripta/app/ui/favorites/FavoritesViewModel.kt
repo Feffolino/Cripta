@@ -59,7 +59,7 @@ class FavoritesViewModel @Inject constructor(
     val folders: StateFlow<List<FolderEntity>?> = repo.changes.flatMapLatest { repo.allFolders() }
         .map { list -> list.filter { it.isFavorite } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-    val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> = folders
+    val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> = combine(folders, repo.changes) { list, _ -> list }
         .mapLatest { repo.folderPreviews(it.orEmpty().map { f -> f.id }) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
     fun openFolder(id: Long) = navigator.openFolder(id)

@@ -33,9 +33,15 @@ object UserErrors {
 
     /** yt-dlp / network failures of the in-app downloader. */
     fun ofDownload(e: Throwable): String {
+        if (e.message in downloadMessages) return e.message!!
         val text = generateSequence(e) { it.cause }.take(6)
             .joinToString(" ") { it.message ?: "" }.lowercase()
         return when {
+            "no space" in text || "enospc" in text -> "Spazio di archiviazione esaurito"
+            "ssl" in text || "certificate verify failed" in text -> "Impossibile verificare il certificato del sito"
+            "requested format" in text || "no video formats" in text -> "Nessun formato video disponibile alla qualità scelta"
+            "no supported javascript runtime" in text || "javascript challenge" in text || "nsig extraction failed" in text ->
+                "Il sito richiede un estrattore aggiornato. Riprova tra qualche minuto"
             "unsupported url" in text -> "Link non supportato"
             "drm" in text -> "Video protetto da DRM: non scaricabile"
             "private video" in text || "sign in" in text || "login" in text || "members-only" in text ->
@@ -49,11 +55,22 @@ object UserErrors {
             "unable to download webpage" in text || "name or service not known" in text ||
                 "failed to resolve" in text || "network is unreachable" in text ||
                 "timed out" in text || "connection" in text -> "Connessione assente o sito non raggiungibile"
-            "no video formats" in text || "requested format" in text -> "Nessun formato video disponibile"
-            "non ha prodotto" in text -> "Nessun file scaricato (link errato?)"
+            "non ha prodotto" in text || "nessun file completo" in text || "nessun video completo" in text ->
+                "Nessun file completo scaricato. Riprova"
             else -> of(e).let { if (it == "Si è verificato un errore imprevisto") "Download non riuscito" else it }
         }
     }
+
+    // Error text goes through this mapper both in the service and again in the queue UI.
+    // Keep canonical messages intact instead of replacing useful errors with "Download failed".
+    private val downloadMessages = setOf(
+        "Link non supportato", "Video protetto da DRM: non scaricabile", "Video privato o che richiede l'accesso",
+        "Video non disponibile", "Video non disponibile nel tuo paese", "Troppe richieste al sito, riprova più tardi",
+        "Accesso negato dal sito", "Pagina o video non trovato", "Connessione assente o sito non raggiungibile",
+        "Nessun formato video disponibile alla qualità scelta", "Nessun file completo scaricato. Riprova",
+        "Il sito richiede un estrattore aggiornato. Riprova tra qualche minuto",
+        "Spazio di archiviazione esaurito", "Impossibile verificare il certificato del sito", "Download non riuscito",
+    )
 
     private fun looksItalian(msg: String): Boolean {
         val m = msg.lowercase()
