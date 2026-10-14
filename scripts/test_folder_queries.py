@@ -77,6 +77,13 @@ class FolderQueriesTest(unittest.TestCase):
         self.assertEqual({r[0] for r in self.db.execute(sql, {"folderId": None})}, {"root"})
         self.assertEqual({r[0] for r in self.db.execute(sql, {"folderId": 1})}, {"parent"})
 
+    def test_folder_preview_contains_direct_files_only(self):
+        sql = query_for("latestInFolder")
+        self.assertEqual({r[0] for r in self.db.execute(sql, {"folderId": 1, "limit": 4})}, {"parent"})
+        self.db.execute("DELETE FROM files WHERE id='parent'")
+        # The child and grandchild still have files; the parent must use its folder icon.
+        self.assertEqual(list(self.db.execute(sql, {"folderId": 1, "limit": 4})), [])
+
     def test_sort_is_saved_per_folder_without_reverting_other_properties(self):
         self.db.execute(query_for("setFavorite"), {"id": 1, "favorite": True})
         self.db.execute(query_for("setSort"), {"id": 1, "key": "NAME", "ascending": True})

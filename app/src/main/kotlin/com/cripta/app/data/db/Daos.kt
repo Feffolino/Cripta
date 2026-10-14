@@ -136,10 +136,6 @@ interface FileDao {
     @Query("UPDATE files SET playbackPosMs = :pos, lastPlayedAt = :at WHERE id = :id")
     suspend fun setPlaybackPos(id: String, pos: Long?, at: Long?)
 
-    /** Newest covers across a set of folders (a folder and its subfolders, for the mosaic). */
-    @Query("SELECT * FROM files WHERE folderId IN (:folderIds) AND deletedAt IS NULL ORDER BY importedAt DESC LIMIT :limit")
-    suspend fun latestInFolders(folderIds: List<Long>, limit: Int): List<FileEntity>
-
     @Query("UPDATE files SET contentHash = :hash WHERE id = :id")
     suspend fun setContentHash(id: String, hash: String)
 

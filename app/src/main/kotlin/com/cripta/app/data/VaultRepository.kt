@@ -563,16 +563,16 @@ class VaultRepository @Inject constructor(
         entity
     }
 
-    /** Encrypt a freshly downloaded plaintext MP4 into the vault as a new file. */
-    suspend fun importDownloadedMp4(
-        mp4: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
+    /** Preserve the actual container of a completed download (MP4, WebM, Matroska, ...). */
+    suspend fun importDownloadedVideo(
+        video: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
     ): FileEntity =
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
             val md = java.security.MessageDigest.getInstance("SHA-256")
             val written = try {
-                java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
+                java.security.DigestInputStream(video.inputStream(), md).use { input ->
                     blobs.blob(uuid).outputStream().use { out ->
                         FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
                     }
@@ -584,17 +584,18 @@ class VaultRepository @Inject constructor(
             val duration = runCatching {
                 val r = android.media.MediaMetadataRetriever()
                 try {
-                    r.setDataSource(mp4.absolutePath)
+                    r.setDataSource(video.absolutePath)
                     r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
                         ?.toLongOrNull()?.takeIf { it > 0 }
                 } finally { runCatching { r.release() } }
             }.getOrNull()
-            val downloadedRes = videoResolutionOf(mp4)
-            val name = displayName.ifBlank { "download" }.let { if (it.endsWith(".mp4")) it else "$it.mp4" }
+            val downloadedRes = videoResolutionOf(video)
+            val extension = video.extension.lowercase()
+            val name = displayName.ifBlank { "download" } + "." + extension
             val entity = FileEntity(
                 id = uuid,
                 originalName = name,
-                mimeType = "video/mp4",
+                mimeType = com.cripta.app.media.downloadedVideoMime(video),
                 sizeBytes = written,
                 folderId = folderId,
                 createdAt = now(),
@@ -1067,23 +1068,16 @@ class VaultRepository @Inject constructor(
     // --- Folders / tags helpers ---
 
     /**
-     * Up to [limit] newest files of each folder INCLUDING its subfolders, for the folder mosaics
-     * (a folder holding only subfolders still shows covers).
+     * Up to [limit] newest direct files of each folder. A folder containing only subfolders uses
+     * its folder icon instead of borrowing a descendant's cover.
      */
     suspend fun folderPreviews(folderIds: List<Long>, limit: Int = 4): Map<Long, List<FileEntity>> = withContext(Dispatchers.IO) {
         // Re-run by the Home/Vault view models whenever they resubscribe, which can happen after
         // the vault locked (their folder list keeps its last value): no covers then, not a crash.
         val d = session.database.value ?: return@withContext emptyMap()
         try {
-            val children = snapshotChildren(d)
             folderIds.associateWith { root ->
-                val subtree = ArrayList<Long>()
-                val todo = ArrayDeque<Long>().apply { add(root) }
-                while (todo.isNotEmpty() && subtree.size < 500) {
-                    val id = todo.removeFirst(); subtree += id
-                    children[id]?.let { todo.addAll(it) }
-                }
-                d.fileDao().latestInFolders(subtree, limit)
+                d.fileDao().latestInFolder(root, limit)
             }
         } catch (e: IllegalStateException) {
             emptyMap() // the database closed under the query (vault locked meanwhile)

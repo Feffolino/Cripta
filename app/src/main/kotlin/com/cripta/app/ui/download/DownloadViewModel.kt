@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import javax.inject.Inject
 
 @HiltViewModel
@@ -88,7 +88,7 @@ class DownloadViewModel @Inject constructor(
         estimateJob?.cancel()
         estimateJob = viewModelScope.launch {
             _estimate.value = Estimate.Loading
-            val result = withContext(Dispatchers.IO) {
+            val result = runInterruptible(Dispatchers.IO) {
                 runCatching {
                     val info = ytdlp.info(u)
                     Estimate.Ready(
@@ -102,7 +102,7 @@ class DownloadViewModel @Inject constructor(
             result.onSuccess { _estimate.value = it }
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) throw it
-                    android.util.Log.w("DownloadViewModel", "estimate failed", it)   // never the link: logcat is readable
+                    android.util.Log.w("DownloadViewModel", "Estimate failed (${it.javaClass.simpleName})")
                     _estimate.value = Estimate.Error(friendlyDownloadError(it.message))
                 }
         }
@@ -153,28 +153,5 @@ fun looksLikeUrl(text: String): Boolean {
  * Plain Italian message for a download/estimate failure. yt-dlp and the network stack report in
  * English (often with stack-like detail), which must not reach the user as is.
  */
-fun friendlyDownloadError(raw: String?): String {
-    val m = raw.orEmpty()
-    val l = m.lowercase()
-    return when {
-        m.isBlank() -> "Download non riuscito. Controlla il link e riprova."
-        // Messages already written for the user (in Italian) by the app itself.
-        m.startsWith("Nessun") || m.startsWith("Impossibile") || m.startsWith("Link") -> m
-        "unsupported url" in l || "no video formats" in l || "not a valid url" in l ->
-            "Questo link non contiene un video scaricabile."
-        "drm" in l -> "Il video è protetto da DRM e non si può scaricare."
-        "private video" in l || "sign in" in l || "login" in l || "members-only" in l || "age" in l && "confirm" in l ->
-            "Il video è privato o richiede l'accesso a un account."
-        "not available in your country" in l || "geo" in l && "restrict" in l ->
-            "Il video non è disponibile nel tuo Paese."
-        "video unavailable" in l || "has been removed" in l || "404" in l || "not found" in l ->
-            "Il video non è disponibile o è stato rimosso."
-        "403" in l || "forbidden" in l -> "Il sito ha rifiutato il download. Riprova più tardi."
-        "429" in l || "too many requests" in l -> "Troppe richieste al sito. Riprova tra qualche minuto."
-        "unable to resolve host" in l || "unknownhost" in l || "failed to connect" in l || "network is unreachable" in l ||
-            "connection" in l && ("refused" in l || "reset" in l) -> "Nessuna connessione a Internet. Controlla la rete e riprova."
-        "timed out" in l || "timeout" in l -> "Il sito non risponde. Riprova più tardi."
-        "no space" in l || "enospc" in l -> "Spazio di archiviazione esaurito."
-        else -> "Download non riuscito. Controlla il link e riprova."
-    }
-}
+fun friendlyDownloadError(raw: String?): String =
+    com.cripta.app.work.UserErrors.ofDownload(IllegalStateException(raw.orEmpty()))
