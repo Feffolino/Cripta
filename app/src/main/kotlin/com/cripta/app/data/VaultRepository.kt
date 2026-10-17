@@ -904,6 +904,33 @@ class VaultRepository @Inject constructor(
         uri
     }
 
+    /**
+     * Decrypt the file into a folder the user picked (an ACTION_OPEN_DOCUMENT_TREE uri), under its
+     * original name (the provider adds " (1)" etc. on a name clash). A half-written copy is removed.
+     * Note: like [restoreToGallery] this intentionally writes plaintext outside the vault.
+     */
+    suspend fun exportToTree(file: FileEntity, tree: Uri): Uri = withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val parent = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+            tree, android.provider.DocumentsContract.getTreeDocumentId(tree),
+        )
+        val doc = android.provider.DocumentsContract.createDocument(resolver, parent, file.mimeType, file.originalName)
+            ?: throw java.io.IOException("Impossibile creare il file nella cartella scelta")
+        try {
+            val sink = resolver.openOutputStream(doc)
+                ?: throw java.io.IOException("Impossibile scrivere nella cartella scelta")
+            sink.use { out ->
+                FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
+                    it.copyTo(out)
+                }
+            }
+        } catch (e: Exception) {
+            runCatching { android.provider.DocumentsContract.deleteDocument(resolver, doc) }
+            throw e
+        }
+        doc
+    }
+
     // --- Secure delete (crypto-shred) ---
     suspend fun secureDelete(fileId: String) = withContext(Dispatchers.IO) {
         val f = db.fileDao().byId(fileId) ?: return@withContext

@@ -305,6 +305,21 @@ class VaultViewModel @Inject constructor(
             .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id, after) }
     }
 
+    /**
+     * "Scarica" on a selection: decrypt the files into [tree], a folder picked by the user, in the
+     * background service (same pipeline as the viewer's "Esporta"). The grant is persisted so it
+     * outlives the picker while the service writes; picking the same folder again reuses it.
+     */
+    fun downloadToFolder(fileIds: List<String>, tree: android.net.Uri) {
+        runCatching {
+            appContext.contentResolver.takePersistableUriPermission(
+                tree,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        com.cripta.app.work.ConversionService.startDownload(appContext, fileIds, tree)
+    }
+
     /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()

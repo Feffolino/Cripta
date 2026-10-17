@@ -259,7 +259,7 @@ class ConversionService : Service() {
                     }
                     MODE_DOWNLOAD -> {
                         val ids = intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
-                        exportBatch(ids)
+                        exportBatch(ids, intent.getStringExtra(EX_TREE)?.let(Uri::parse))
                     }
                     MODE_CONVERT -> {
                         val after = intent.getIntExtra(EX_CONVERT_AFTER, -1)
@@ -473,10 +473,11 @@ class ConversionService : Service() {
     private val batchCancels = java.util.concurrent.atomic.AtomicInteger()
 
     /**
-     * Decrypt [ids] back to the gallery one by one ("Esporta"), with progress and a final result.
+     * Decrypt [ids] back to the gallery one by one ("Esporta"), or into the user-picked folder
+     * [tree] when given ("Scarica" on a selection), with progress and a final result.
      * Progress and time left go by the files' size ([batchWeight]), not their count.
      */
-    private suspend fun exportBatch(ids: List<String>) {
+    private suspend fun exportBatch(ids: List<String>, tree: Uri? = null) {
         val total = ids.size
         if (total == 0) return
         val cancelGen = batchCancels.get()
@@ -487,7 +488,8 @@ class ConversionService : Service() {
         var weightDone = 0L
         val eta = EtaEstimator()
         var saved = 0; var failed = 0; var done = 0
-        notify(build("Esportazione in galleria", 0, sub = "File 1 di $total", chip = "0/$total",
+        val title = if (tree != null) "Esportazione nella cartella" else "Esportazione in galleria"
+        notify(build(title, 0, sub = "File 1 di $total", chip = "0/$total",
             cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
         // Starts the measurement at 0, so the end of the first file already gives a speed.
         eta.left(0f)
@@ -495,7 +497,8 @@ class ConversionService : Service() {
             if (batchCancels.get() != cancelGen) break
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
-                if (f != null) { repo.restoreToGallery(f); saved++ } else failed++
+                if (f == null) failed++
+                else { if (tree != null) repo.exportToTree(f, tree) else repo.restoreToGallery(f); saved++ }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -506,12 +509,13 @@ class ConversionService : Service() {
             weightDone += batchWeight(f?.sizeBytes ?: 0L)
             val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
             val left = if (done < total) eta.left(fraction) else null
-            notify(build("Esportazione in galleria", (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
+            notify(build(title, (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
                 chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
         }
         val cancelled = done < total
         val text = buildString {
-            append(if (saved == 1) "1 file salvato nella galleria" else "$saved file salvati nella galleria")
+            val where = if (tree != null) "nella cartella scelta" else "nella galleria"
+            append(if (saved == 1) "1 file salvato $where" else "$saved file salvati $where")
             if (failed > 0) append(" · $failed non esportati")
         }
         when {
@@ -1471,6 +1475,7 @@ class ConversionService : Service() {
         private const val EX_FROM_SHARE = "from_share"
         private const val MODE_IMPORT = "import"
         private const val MODE_DOWNLOAD = "download"
+        private const val EX_TREE = "tree"
         private const val MODE_CONVERT = "convert"
         private const val MODE_CANCEL = "cancel"
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
@@ -1534,10 +1539,12 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, i)
         }
 
-        fun startDownload(ctx: Context, ids: List<String>) {
+        /** Decrypt [ids] to the gallery, or into [tree] (a folder picked with ACTION_OPEN_DOCUMENT_TREE). */
+        fun startDownload(ctx: Context, ids: List<String>, tree: Uri? = null) {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DOWNLOAD)
                 putStringArrayListExtra(EX_IDS, ArrayList(ids))
+                tree?.let { putExtra(EX_TREE, it.toString()) }
             }
             ContextCompat.startForegroundService(ctx, i)
         }

@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Add
@@ -430,6 +431,21 @@ fun VaultScreen(
     // background job starts, so importing just opens the picker.
     fun startImport() { importLauncher.launch(arrayOf("*/*")) }
 
+    // "Scarica": confirm (a plaintext copy leaves the vault), then pick the destination folder.
+    var downloadAsk by remember { mutableStateOf<List<String>?>(null) }
+    var downloadIds by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    val downloadTreeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { tree ->
+        val ids = downloadIds
+        downloadIds = arrayListOf()
+        if (tree != null && ids.isNotEmpty()) {
+            vm.downloadToFolder(ids, tree)
+            selection = emptySet()
+            notify("Esportazione di ${countLabel(ids.size)} avviata: prosegue in background")
+        }
+    }
+
     val inSelection = selection.isNotEmpty()
 
     // Landscape: let the top bar scroll away (down hides, up reveals) to reclaim the short height.
@@ -561,6 +577,7 @@ fun VaultScreen(
                     })
                     add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
                     add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
+                    add(SelAction(Icons.Filled.Download, "Scarica") { downloadAsk = selection.toList() })
                     if (convertible > 0) add(SelAction(Icons.Filled.Autorenew, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
                         // Re-read at tap time: both states may have moved on since this bar was built.
                         val ids = (convertibleIds intersect selection).toList()
@@ -1167,6 +1184,27 @@ fun VaultScreen(
 
     if (showStats) {
         StatsSheet(stats, filters.active, path.lastOrNull()?.name, subtree = path.lastOrNull()?.let { folderStats[it.id] }, onDismiss = { showStats = false })
+    }
+
+    downloadAsk?.let { ids ->
+        val n = ids.size
+        AlertDialog(
+            onDismissRequest = { downloadAsk = null },
+            title = { Text(if (n == 1) "Scaricare 1 file?" else "Scaricare $n file?") },
+            text = {
+                Text("Una copia NON cifrata " + (if (n == 1) "del file" else "dei file") +
+                    " verrà salvata nella cartella che sceglierai, visibile alle altre app. " +
+                    "I file restano anche nel vault.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    downloadAsk = null
+                    downloadIds = ArrayList(ids)
+                    downloadTreeLauncher.launch(null)
+                }) { Text("Scegli cartella") }
+            },
+            dismissButton = { TextButton(onClick = { downloadAsk = null }) { Text("Annulla") } },
+        )
     }
 
     if (confirmMultiDelete) {
