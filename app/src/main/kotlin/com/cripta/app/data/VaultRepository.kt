@@ -171,6 +171,8 @@ class VaultRepository @Inject constructor(
         val duplicates: List<Pair<String, String>> = emptyList(),
         /** Items that could not be imported: (file name, short Italian reason). */
         val failures: List<Pair<String, String>> = emptyList(),
+        /** Imports recognised as a new version of a vault file (same name): they took its tags. */
+        val inherited: List<Inherited> = emptyList(),
         /** Source uris imported successfully in the current run (all batches since the banner reset). */
         val importedUris: List<Uri> = emptyList(),
         /** Weight ([com.cripta.app.util.batchWeight]) of every file of the running batches, and of the finished ones. */
@@ -238,6 +240,8 @@ class VaultRepository @Inject constructor(
 
     fun importDuplicate(newId: String, existingName: String) =
         _importState.update { it.copy(duplicates = it.duplicates + (newId to existingName)) }
+
+    fun importInherited(i: Inherited) = _importState.update { it.copy(inherited = it.inherited + i) }
 
     /** Remove the given duplicates from the banner state (after the user resolved them). */
     fun clearImportDuplicates() = _importState.update { it.copy(duplicates = emptyList()) }
@@ -478,6 +482,60 @@ class VaultRepository @Inject constructor(
             runCatching { blob.delete() }
             throw e
         }
+    }
+
+    /**
+     * Outcome of [inheritFromPrevious]: the previous version's name, how many vault files matched
+     * (more than one = ambiguous: tags only), and whether the previous version went to the trash.
+     */
+    data class Inherited(val previousName: String, val matches: Int, val trashed: Boolean)
+
+    /**
+     * Same file name up to case and the " (1)" suffix Android adds on a name clash: the key that
+     * links a re-imported (edited) file to its previous version in the vault.
+     */
+    private fun versionKey(name: String): String {
+        val dot = name.lastIndexOf('.')
+        val stem = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        return (stem.replace(VERSION_SUFFIX, "") + ext).lowercase()
+    }
+
+    /**
+     * A just-imported [file] whose name matches a live vault file imported before [importedSince]
+     * (so not one of the same import) is taken as its new, edited version. With exactly one match
+     * the new file takes its tags, folder, favorite, link and place in the manual order, and the
+     * old version goes to the trash (only when the trash is on: it is never shredded here). With
+     * several matches it only takes the union of their tags. Byte-identical copies are skipped:
+     * those are duplicates, handled on their own. Returns null when nothing matched.
+     */
+    suspend fun inheritFromPrevious(file: FileEntity, importedSince: Long): Inherited? = withContext(Dispatchers.IO) {
+        val key = versionKey(file.originalName)
+        // Candidates by name prefix in SQL (LIKE: case-insensitive, '_' and '%' escaped), exact key in Kotlin.
+        val stem = key.substringBeforeLast('.')
+        val pattern = stem.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        val previous = db.fileDao().nameLike(pattern, file.id).filter {
+            it.importedAt < importedSince && versionKey(it.originalName) == key &&
+                (it.contentHash == null || it.contentHash != file.contentHash)
+        }
+        if (previous.isEmpty()) return@withContext null
+        val tags = previous.flatMap { p -> db.fileDao().withTagsById(p.id)?.tags?.map { it.name }.orEmpty() }.distinct()
+        if (previous.size > 1) {
+            if (tags.isNotEmpty()) addTags(file.id, tags)
+            return@withContext Inherited(previous.first().originalName, previous.size, trashed = false)
+        }
+        val old = previous.single()
+        val useTrash = runCatching { settings.settingsOnce().trashEnabled }.getOrDefault(false)
+        db.withTransaction {
+            if (tags.isNotEmpty()) addTags(file.id, tags)
+            if (old.folderId != file.folderId) db.fileDao().move(file.id, old.folderId)
+            if (old.isFavorite) db.fileDao().setFavorite(file.id, true)
+            if (file.sourceUrl == null && old.sourceUrl != null) db.fileDao().setSourceUrl(file.id, old.sourceUrl)
+            db.fileDao().setWeight(file.id, old.sortWeight)
+            if (useTrash) db.fileDao().setDeletedAt(old.id, now())
+        }
+        notifyChanged()
+        Inherited(old.originalName, 1, trashed = useTrash)
     }
 
     /**
@@ -1545,6 +1603,9 @@ class VaultRepository @Inject constructor(
     }
 
     private fun now() = System.currentTimeMillis()
+
+    /** " (1)", " (12)"… at the end of a file name stem. */
+    private val VERSION_SUFFIX = Regex("""\s*\(\d+\)$""")
 
     // --- Notes ---
     suspend fun createNote(folderId: Long?, name: String, text: String): FileEntity = withContext(Dispatchers.IO) {

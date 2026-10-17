@@ -536,6 +536,8 @@ class ConversionService : Service() {
         // Names and sizes up front: the progress (and the time left) goes by the files' size.
         val info = uris.map { repo.nameAndSize(it) }
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
+        // Vault files imported from now on belong to this run: never taken as a "previous version".
+        val batchStart = System.currentTimeMillis()
         val cancelGen = batchCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
@@ -572,8 +574,18 @@ class ConversionService : Service() {
                 // Already in the vault? (byte-identical; only same-size files are even checked)
                 imported?.let { f ->
                     val copies = try { dupScanner.copiesOf(f) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
-                    copies?.firstOrNull()?.let { existing ->
+                    val existing = copies?.firstOrNull()
+                    if (existing != null) {
                         repo.importDuplicate(f.id, existing.originalName)
+                    } else {
+                        // Same name as a vault file: an edited version, it takes the old one's tags.
+                        try {
+                            repo.inheritFromPrevious(f, batchStart)?.let { repo.importInherited(it) }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            android.util.Log.e("ConversionService", "tag inheritance failed", e)
+                        }
                     }
                 }
                 // Fewer bytes than the source said it had: kept in the vault, but its original is
@@ -609,11 +621,13 @@ class ConversionService : Service() {
         return done
     }
 
-    /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti". */
+    /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti · 1 con tag ereditati". */
     private fun importSummary(fin: VaultRepository.ImportState) = buildString {
         append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
         if (fin.failed > 0) append(" · ${fin.failed} non importati")
         if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
+        // Short: the same text is the Hyper Island's line.
+        if (fin.inherited.isNotEmpty()) append(" · ${fin.inherited.size} con tag ereditati")
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
     @Volatile private var lastImportSummary: String? = null
