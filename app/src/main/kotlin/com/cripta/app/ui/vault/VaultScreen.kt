@@ -389,8 +389,10 @@ fun VaultScreen(
     }
 
     // A clean import result disappears by itself; one with failures stays until dismissed.
-    LaunchedEffect(importState.finished, importState.failed, importState.duplicates.size) {
-        if (importState.finished && importState.failed == 0 && importState.duplicates.isEmpty()) {
+    LaunchedEffect(importState.finished, importState.failed, importState.duplicates.size, importState.inherited.size) {
+        // A result that moved old versions to the trash stays until dismissed, so it can be read.
+        if (importState.finished && importState.failed == 0 && importState.duplicates.isEmpty() &&
+            importState.inherited.none { it.trashed }) {
             kotlinx.coroutines.delay(6000)
             vm.dismissImportResult()
         }
@@ -2739,6 +2741,7 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                         } else buildString {
                             append(if (state.succeeded == 1) "1 file cifrato nel vault" else "${state.succeeded} file cifrati nel vault")
                             if (state.failed > 0) append(" · ${state.failed} non importati")
+                            if (state.inherited.isNotEmpty()) append(" · ${state.inherited.size} con tag ereditati")
                         }
                         Text(sub, style = MaterialTheme.typography.bodySmall, color = onContainer,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2763,6 +2766,22 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                     Text((eta?.replaceFirstChar { it.uppercase() }?.let { "$it. " } ?: "") +
                         "Puoi uscire dall'app: l'importazione continua in background.",
                         style = MaterialTheme.typography.labelSmall, color = onContainer.copy(alpha = 0.8f))
+                }
+                // New versions of vault files (same name): they took the old one's tags.
+                if (state.inherited.isNotEmpty()) {
+                    val n = state.inherited.size
+                    val trashed = state.inherited.count { it.trashed }
+                    Text(
+                        (if (n == 1) "\"${state.inherited.first().previousName}\": la nuova versione ha preso i tag della precedente."
+                        else "$n nuove versioni hanno preso i tag delle precedenti.") +
+                            when {
+                                trashed == 0 -> ""
+                                trashed == 1 && n == 1 -> " La vecchia è nel cestino."
+                                trashed == 1 -> " 1 vecchia versione è nel cestino."
+                                else -> " $trashed vecchie versioni sono nel cestino."
+                            },
+                        style = MaterialTheme.typography.bodySmall, color = onContainer,
+                    )
                 }
                 // Byte-identical copies of files already in the vault: offer to drop the new copies.
                 if (state.duplicates.isNotEmpty()) {

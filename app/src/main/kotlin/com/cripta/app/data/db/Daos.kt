@@ -149,6 +149,10 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE sizeBytes = :size AND id != :exceptId AND deletedAt IS NULL")
     suspend fun sameSize(size: Long, exceptId: String): List<FileEntity>
 
+    /** Live files whose name matches the LIKE [pattern] (escape char '\'), [exceptId] excluded. */
+    @Query("SELECT * FROM files WHERE originalName LIKE :pattern ESCAPE '\\' AND id != :exceptId AND deletedAt IS NULL")
+    suspend fun nameLike(pattern: String, exceptId: String): List<FileEntity>
+
     @Transaction
     @Query("SELECT * FROM files WHERE ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId) AND deletedAt IS NULL ORDER BY importedAt DESC")
     fun inFolderWithTags(folderId: Long?): Flow<List<FileWithTags>>
