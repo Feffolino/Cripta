@@ -271,6 +271,7 @@ fun VaultScreen(
     val filters by vm.filters.collectAsState()
     val path by vm.path.collectAsState()
     val pendingOriginals by vm.pendingOriginals.collectAsState()
+    val pendingVersions by vm.pendingVersions.collectAsState()
     val viewMode by vm.viewMode.collectAsState()
     val portraitColumns by vm.gridColumns.collectAsState()
     val landscapeColumns by vm.gridColumnsLandscape.collectAsState()
@@ -1299,6 +1300,47 @@ fun VaultScreen(
             },
             confirmButton = { TextButton(onClick = { vm.deleteOriginals(pendingOriginals) }) { Text(if (n == 1) "Elimina originale" else "Elimina originali") } },
             dismissButton = { TextButton(onClick = { vm.clearPendingOriginals() }) { Text("Mantieni") } },
+        )
+    }
+
+    // Imports named like a vault file ("Sostituisci senza chiedere" off in Impostazioni → Import):
+    // asked one at a time once the import is over, after the originals question; "tutti" answers
+    // the rest the same way. Dismissed, nothing changes for that file.
+    val versionAsk = pendingVersions.firstOrNull()
+    if (versionAsk != null && !importState.active && pendingOriginals.isEmpty()) {
+        val more = pendingVersions.size - 1
+        val single = versionAsk.previousIds.size == 1
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { vm.keepVersionsSeparate(listOf(versionAsk)) },
+            title = { Text("Nuova versione?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (single) "\"${versionAsk.newName}\" ha lo stesso nome di \"${versionAsk.previousName}\", già nel vault, " +
+                            "ma un contenuto diverso. Se ne è la nuova versione, ne prende etichette, cartella, preferito e posizione; " +
+                            (if (trashEnabled) "la vecchia va nel cestino." else "la vecchia resta nel vault.")
+                        else "\"${versionAsk.newName}\" ha lo stesso nome di ${versionAsk.previousIds.size} file del vault, " +
+                            "con contenuti diversi. Se ne è una nuova versione, ne prende le etichette.",
+                    )
+                    if (more > 0) {
+                        Text(
+                            if (more == 1) "Dopo questo c'è un altro file con lo stesso nome di uno del vault."
+                            else "Dopo questo ci sono altri $more file con lo stesso nome di file del vault.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { vm.keepVersionsSeparate(pendingVersions) }) { Text("Tieni tutti") }
+                            TextButton(onClick = { vm.replaceVersions(pendingVersions) }) { Text("Sostituisci tutti") }
+                        }
+                    }
+                    Text("Per sostituire sempre senza chiedere: Impostazioni → Import.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.replaceVersions(listOf(versionAsk)) }) { Text(if (single) "Sostituisci" else "Prendi le etichette") }
+            },
+            dismissButton = { TextButton(onClick = { vm.keepVersionsSeparate(listOf(versionAsk)) }) { Text("Tieni entrambi") } },
         )
     }
 }

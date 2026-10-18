@@ -539,6 +539,8 @@ class ConversionService : Service() {
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         // Vault files imported from now on belong to this run: never taken as a "previous version".
         val batchStart = runStart ?: System.currentTimeMillis()
+        // Same-name files: replaced at once, or (the default) asked once the import ends.
+        val autoReplace = runCatching { settings.settingsOnce().autoReplaceVersions }.getOrDefault(false)
         val cancelGen = batchCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
@@ -579,9 +581,17 @@ class ConversionService : Service() {
                     if (existing != null) {
                         repo.importDuplicate(f.id, existing.originalName)
                     } else {
-                        // Same name as a vault file: an edited version, it takes the old one's tags.
+                        // Same name as a vault file: maybe an edited version, which takes the old
+                        // one's place and tags. At once with "Sostituisci senza chiedere", otherwise
+                        // the user is asked when the import ends.
                         try {
-                            repo.inheritFromPrevious(f, batchStart)?.let { repo.importInherited(it) }
+                            if (autoReplace) {
+                                repo.inheritFromPrevious(f, batchStart)?.let { repo.importInherited(it) }
+                            } else {
+                                val previous = repo.previousVersionsOf(f, batchStart)
+                                if (previous.isNotEmpty()) repo.askNewVersion(VaultRepository.VersionMatch(
+                                    f.id, f.originalName, previous.map { it.id }, previous.first().originalName))
+                            }
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -629,6 +639,7 @@ class ConversionService : Service() {
         if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
         // Short: the same text is the Hyper Island's line.
         if (fin.inherited.isNotEmpty()) append(" · ${fin.inherited.size} con tag ereditati")
+        if (fin.versionAsks > 0) append(" · ${fin.versionAsks} omonimi da confermare")
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
     @Volatile private var lastImportSummary: String? = null
