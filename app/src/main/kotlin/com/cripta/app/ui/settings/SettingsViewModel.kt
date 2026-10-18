@@ -177,22 +177,50 @@ class SettingsViewModel @Inject constructor(
     val trashedFolders: StateFlow<List<com.cripta.app.data.db.FolderEntity>> =
         repo.changes.flatMapLatest { repo.trashedFolders() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun restore(id: String) = viewModelScope.launch { repo.restore(id) }
+    /**
+     * Runs [block] holding the session (an auto-lock waits for it instead of pulling the keys out
+     * mid-way) and to the end even if Settings closes. Stopped halfway, a backup left a truncated
+     * archive, a restore a half-merged vault, and an emptied trash files the user took for gone.
+     */
+    private suspend fun <T> heldToEnd(block: suspend () -> T): T {
+        check(session.beginWork()) { "Vault locked" }
+        try {
+            return kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block() }
+        } finally {
+            session.endWork()
+        }
+    }
+
+    /**
+     * [heldToEnd] from the view model scope. A failure (the vault locked before the start: the
+     * repository throws "Vault locked") is logged instead of crashing the app.
+     */
+    private fun launchHeld(what: String, block: suspend () -> Unit) = viewModelScope.launch {
+        try {
+            heldToEnd(block)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsViewModel", "$what failed", e)
+        }
+    }
+
+    fun restore(id: String) = launchHeld("restore") { repo.restore(id) }
     /** Cover of a trashed file (its blob and key are kept until it is destroyed). */
     suspend fun thumbOf(f: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(f)
-    fun restoreFolder(id: Long) = viewModelScope.launch { repo.restoreFolder(id) }
-    fun deleteForever(id: String) = viewModelScope.launch { repo.secureDelete(id); thumbs.evict(id) }
-    fun deleteFolderForever(id: Long) = viewModelScope.launch { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
-    fun emptyTrash() = viewModelScope.launch { repo.emptyTrash().forEach { thumbs.evict(it) } }
+    fun restoreFolder(id: Long) = launchHeld("restoreFolder") { repo.restoreFolder(id) }
+    fun deleteForever(id: String) = launchHeld("deleteForever") { repo.secureDelete(id, onlyIfTrashed = true); thumbs.evict(id) }
+    fun deleteFolderForever(id: Long) = launchHeld("deleteFolderForever") { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
+    fun emptyTrash() = launchHeld("emptyTrash") { repo.emptyTrash().forEach { thumbs.evict(it) } }
     /** Selection in the trash: restore these, one after the other (folders first, files then). */
-    fun restoreMany(files: List<String>, folders: List<Long>) = viewModelScope.launch {
+    fun restoreMany(files: List<String>, folders: List<Long>) = launchHeld("restoreMany") {
         folders.forEach { repo.restoreFolder(it) }
         files.forEach { repo.restore(it) }
     }
     /** Selection in the trash: destroy these for good, one after the other. */
-    fun deleteManyForever(files: List<String>, folders: List<Long>) = viewModelScope.launch {
+    fun deleteManyForever(files: List<String>, folders: List<Long>) = launchHeld("deleteManyForever") {
         folders.forEach { id -> repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
-        files.forEach { repo.secureDelete(it); thumbs.evict(it) }
+        files.forEach { repo.secureDelete(it, onlyIfTrashed = true); thumbs.evict(it) }
     }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
     fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }
@@ -235,7 +263,7 @@ class SettingsViewModel @Inject constructor(
         val pass = passphrase.toCharArray()
         try {
             val compress = runCatching { store.settingsOnce().backupCompressDocs }.getOrDefault(false)
-            _message.value = runCatching { repo.exportBackup(uri, pass, compress) { _backupProgress.value = it } }
+            _message.value = runCatching { heldToEnd { repo.exportBackup(uri, pass, compress) { _backupProgress.value = it } } }
                 .fold(
                     { n -> if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" },
                     { if (it is kotlinx.coroutines.CancellationException) throw it
@@ -253,7 +281,7 @@ class SettingsViewModel @Inject constructor(
         _backupBusy.value = "Ripristino del backup…"
         val pass = passphrase.toCharArray()
         try {
-            _message.value = runCatching { repo.importBackup(uri, pass) { _backupProgress.value = it } }
+            _message.value = runCatching { heldToEnd { repo.importBackup(uri, pass) { _backupProgress.value = it } } }
                 .fold(
                     { n -> if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" },
                     { if (it is kotlinx.coroutines.CancellationException) throw it
@@ -543,8 +571,16 @@ class SettingsViewModel @Inject constructor(
      * Keep [keepId] and delete every other copy of its group, moving their tags (plus favorite and
      * source link) onto the kept file so no organisation is lost.
      */
-    fun keepOnly(keepId: String) = viewModelScope.launch {
-        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launch
+    fun keepOnly(keepId: String) = launchHeld("keepOnly") {
+        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launchHeld
+        // The kept copy deleted or trashed since the scan: removing the others too would leave
+        // no live copy at all (and the trash is purged after a while).
+        val kept = repo.fileById(keepId)
+        if (kept == null || kept.deletedAt != null) {
+            dropFromResults(setOf(keepId))
+            _dupNotice.value = "La copia da tenere non è più nel vault: nessuna copia eliminata"
+            return@launchHeld
+        }
         val remove = unchangedSinceScan(group.candidates.filter { it.file.id != keepId })
         val moved = repo.mergeDuplicates(keepId, remove)
         // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
@@ -566,9 +602,9 @@ class SettingsViewModel @Inject constructor(
     val dupUndo: StateFlow<List<String>> = _dupUndo
 
     /** Bring back the copies removed by the last resolution (only possible with the trash on). */
-    fun undoDuplicates() = viewModelScope.launch {
+    fun undoDuplicates() = launchHeld("undoDuplicates") {
         val ids = _dupUndo.value
-        if (ids.isEmpty()) return@launch
+        if (ids.isEmpty()) return@launchHeld
         _dupUndo.value = emptyList()
         ids.forEach { repo.restore(it) }
         _dupNotice.value = if (ids.size == 1) "Copia ripristinata" else "Ripristinate ${ids.size} copie"
@@ -578,10 +614,10 @@ class SettingsViewModel @Inject constructor(
      * Delete one copy. Its tags are not lost: they move to the copy that remains suggested in the
      * group (so deleting a tagged copy and keeping an untagged one keeps the tags).
      */
-    fun deleteDuplicate(fileId: String) = viewModelScope.launch {
+    fun deleteDuplicate(fileId: String) = launchHeld("deleteDuplicate") {
         val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == fileId } }
         group?.candidates?.firstOrNull { it.file.id == fileId }?.let { c ->
-            if (unchangedSinceScan(listOf(c)).isEmpty()) { dropFromResults(setOf(fileId)); return@launch }
+            if (unchangedSinceScan(listOf(c)).isEmpty()) { dropFromResults(setOf(fileId)); return@launchHeld }
         }
         val heir = group?.let { g ->
             if (g.bestId != fileId) g.bestId

@@ -119,14 +119,16 @@ class VaultViewModel @Inject constructor(
      * Run a bulk vault job (loops over many files). The session is held for its duration, as the
      * foreground service does, so an auto-lock mid-way waits for it instead of pulling the keys
      * out; and a failure (e.g. the vault locked anyway, repository throws "Vault locked") is
-     * logged and stops the loop instead of crashing the app from viewModelScope.
+     * logged and stops the loop instead of crashing the app from viewModelScope. It also runs to
+     * the end when the screen goes away: the UI reports it done at once ("30 file eliminati"), and
+     * Back during a slow shred used to stop it after a few files, leaving the rest in the vault.
      */
     private fun launchBulk(what: String, block: suspend () -> Unit) = viewModelScope.launch {
         val held = session.beginWork()
         // Already locked: nothing can be read or written, don't even start.
         if (!held) return@launch
         try {
-            block()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block() }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -331,7 +333,14 @@ class VaultViewModel @Inject constructor(
     /** Drop the just-imported copies of files that were already in the vault (identical bytes). */
     fun removeImportDuplicates() = launchBulk("removeImportDuplicates") {
         val dups = importState.value.duplicates.map { it.first }
-        dups.forEach { repo.secureDelete(it); thumbs.evict(it) }
+        dups.forEach { id ->
+            // The banner can stay up for a while: shred the new copy only while an identical live
+            // one still exists (the older copy may have been deleted since, leaving this the only one).
+            val f = repo.fileById(id) ?: return@forEach
+            val hash = f.contentHash ?: return@forEach
+            if (repo.sameSizeAs(f).none { it.contentHash == hash }) return@forEach
+            repo.secureDelete(id); thumbs.evict(id)
+        }
         repo.clearImportDuplicates()
         repo.dismissImportResult()
     }

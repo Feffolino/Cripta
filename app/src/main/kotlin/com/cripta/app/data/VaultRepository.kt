@@ -268,17 +268,26 @@ class VaultRepository @Inject constructor(
      * guarantees decrypted plaintext never lingers on disk across app restarts.
      */
     fun sweepConversionTemp() {
-        runCatching {
-            context.cacheDir.listFiles { f -> f.name.startsWith("conv-") }?.forEach { shredTempFile(it) }
-        }
+        // Listed now, shredded on an IO thread: overwriting a multi-GB leftover on the main thread
+        // froze the cold start for tens of seconds (an ANR, or a foreground service that missed
+        // its start deadline). Only these entries are touched: a job started meanwhile uses new
+        // random names, so its files are never swept.
+        val convs = runCatching {
+            context.cacheDir.listFiles { f -> f.name.startsWith("conv-") }?.toList()
+        }.getOrNull().orEmpty()
         // yt-dlp's working folders: a failed or cancelled download left its partial video there,
         // in plaintext and named after the title.
-        runCatching {
-            context.cacheDir.listFiles { f -> f.isDirectory && f.name.startsWith("ytdl-") }?.forEach { dir ->
-                dir.walkBottomUp().forEach { if (it.isFile) shredTempFile(it) else it.delete() }
+        val ytdl = runCatching {
+            context.cacheDir.listFiles { f -> f.isDirectory && f.name.startsWith("ytdl-") }?.toList()
+        }.getOrNull().orEmpty()
+        blobs.sweepTemp()
+        if (convs.isEmpty() && ytdl.isEmpty()) return
+        ioScope.launch {
+            convs.forEach { runCatching { shredTempFile(it) } }
+            ytdl.forEach { dir ->
+                runCatching { dir.walkBottomUp().forEach { if (it.isFile) shredTempFile(it) else it.delete() } }
             }
         }
-        blobs.sweepTemp()
     }
 
     // --- Flows ---
@@ -439,7 +448,7 @@ class VaultRepository @Inject constructor(
         // ciphertext behind, taking space for good: removed on every failure.
         try {
             val written = java.security.DigestInputStream(source, md).use { input ->
-                blob.outputStream().use { out ->
+                blobs.durableOutput(blob).use { out ->
                     FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
                         if (onBytes == null) input.copyTo(enc)
                         else {
@@ -479,9 +488,15 @@ class VaultRepository @Inject constructor(
             notifyChanged()
             entity
         } catch (e: Throwable) {
-            runCatching { blob.delete() }
+            // A cancellation can land after the insert committed: never strip a listed file of its blob.
+            if (!isListed(uuid)) runCatching { blob.delete() }
             throw e
         }
+    }
+
+    /** Whether a row references [id] (trashed included). Not cancellable: it decides a blob's fate. */
+    private suspend fun isListed(id: String): Boolean = withContext(kotlinx.coroutines.NonCancellable) {
+        runCatching { db.fileDao().byId(id) != null }.getOrDefault(false)
     }
 
     /**
@@ -597,48 +612,54 @@ class VaultRepository @Inject constructor(
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
         val md = java.security.MessageDigest.getInstance("SHA-256")
-        val written = java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
-            blobs.blob(uuid).outputStream().use { out ->
-                FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
+        // A full disk (likely: the conversion keeps the source and the output in cache) left the
+        // partial ciphertext behind for good: removed on every failure, as in [import].
+        try {
+            val written = java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
+                blobs.durableOutput(blobs.blob(uuid)).use { out ->
+                    FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
+                }
             }
-        }
-        // Never keep a short write: the vault copy must hold every byte of the verified MP4.
-        if (written != mp4.length()) {
-            blobs.shred(uuid)
-            throw java.io.IOException("Scrittura incompleta della copia convertita")
-        }
-        val baseName = original.originalName.substringBeforeLast('.', original.originalName)
-        val convertedRes = videoResolutionOf(mp4)
-        val entity = FileEntity(
-            id = uuid,
-            originalName = "$baseName.mp4",
-            mimeType = "video/mp4",
-            sizeBytes = written,
-            folderId = original.folderId,
-            isFavorite = original.isFavorite,
-            createdAt = original.createdAt,
-            // Replacing: take the original's place in date and manual order too.
-            importedAt = if (replace) original.importedAt else now(),
-            wrappedKeyset = wrapped,
-            durationMs = original.durationMs,
-            sortWeight = if (replace) original.sortWeight else now(),
-            sourceUrl = original.sourceUrl,
-            width = convertedRes?.first ?: original.width,
-            height = convertedRes?.second ?: original.height,
-            playbackPosMs = if (replace) original.playbackPosMs else null,
-            contentHash = md.digest().toHex(),
-        )
-        db.withTransaction {
-            db.fileDao().insert(entity)
-            // Carry over the original's tags.
-            db.fileDao().withTagsById(original.id)?.tags?.forEach {
-                db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
+            // Never keep a short write: the vault copy must hold every byte of the verified MP4.
+            if (written != mp4.length()) {
+                throw java.io.IOException("Scrittura incompleta della copia convertita")
             }
-            // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
-            if (replace) db.fileDao().setDeletedAt(original.id, now())
+            val baseName = original.originalName.substringBeforeLast('.', original.originalName)
+            val convertedRes = videoResolutionOf(mp4)
+            val entity = FileEntity(
+                id = uuid,
+                originalName = "$baseName.mp4",
+                mimeType = "video/mp4",
+                sizeBytes = written,
+                folderId = original.folderId,
+                isFavorite = original.isFavorite,
+                createdAt = original.createdAt,
+                // Replacing: take the original's place in date and manual order too.
+                importedAt = if (replace) original.importedAt else now(),
+                wrappedKeyset = wrapped,
+                durationMs = original.durationMs,
+                sortWeight = if (replace) original.sortWeight else now(),
+                sourceUrl = original.sourceUrl,
+                width = convertedRes?.first ?: original.width,
+                height = convertedRes?.second ?: original.height,
+                playbackPosMs = if (replace) original.playbackPosMs else null,
+                contentHash = md.digest().toHex(),
+            )
+            db.withTransaction {
+                db.fileDao().insert(entity)
+                // Carry over the original's tags.
+                db.fileDao().withTagsById(original.id)?.tags?.forEach {
+                    db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
+                }
+                // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
+                if (replace) db.fileDao().setDeletedAt(original.id, now())
+            }
+            notifyChanged()
+            entity
+        } catch (e: Throwable) {
+            if (!isListed(uuid)) runCatching { blobs.blob(uuid).delete() }
+            throw e
         }
-        notifyChanged()
-        entity
     }
 
     /** Preserve the actual container of a completed download (MP4, WebM, Matroska, ...). */
@@ -651,7 +672,7 @@ class VaultRepository @Inject constructor(
             val md = java.security.MessageDigest.getInstance("SHA-256")
             val written = try {
                 java.security.DigestInputStream(video.inputStream(), md).use { input ->
-                    blobs.blob(uuid).outputStream().use { out ->
+                    blobs.durableOutput(blobs.blob(uuid)).use { out ->
                         FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
                     }
                 }
@@ -688,8 +709,16 @@ class VaultRepository @Inject constructor(
             )
             // The chosen folder may have been deleted (or trashed) while downloading: the root then.
             val safeEntity = entity.copy(folderId = liveFolder(folderId))
-            db.fileDao().insert(safeEntity)
-            tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it)) }
+            try {
+                db.withTransaction {
+                    db.fileDao().insert(safeEntity)
+                    tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it)) }
+                }
+            } catch (e: Throwable) {
+                // Not listed (e.g. the vault locked): the blob would stay on disk with no key for good.
+                if (!isListed(uuid)) runCatching { blobs.blob(uuid).delete() }
+                throw e
+            }
             notifyChanged()
             safeEntity
         }
@@ -990,12 +1019,19 @@ class VaultRepository @Inject constructor(
     }
 
     // --- Secure delete (crypto-shred) ---
-    suspend fun secureDelete(fileId: String) = withContext(Dispatchers.IO) {
-        val f = db.fileDao().byId(fileId) ?: return@withContext
-        db.withTransaction {
+    /**
+     * [onlyIfTrashed]: for the trash's own deletes, which work through a list read earlier. A file
+     * restored meanwhile (the purge of a big trash takes minutes) is left alone instead of destroyed.
+     */
+    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false) = withContext(Dispatchers.IO) {
+        val deleted = db.withTransaction {
+            val f = db.fileDao().byId(fileId)
+            if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
             db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
+            true
         }
+        if (!deleted) return@withContext
         blobs.shred(fileId)         // best-effort overwrite + delete of the blob
         // Deleting a file must not remove its tags from the library: they stay available for
         // other files. Tags are only removed via an explicit deleteTag.
@@ -1072,7 +1108,7 @@ class VaultRepository @Inject constructor(
     suspend fun deleteFolderForever(folderId: Long): List<String> = withContext(Dispatchers.IO) {
         val subtree = subtreeOf(folderId)
         val ids = db.fileDao().trashedIdsInFolders(subtree)
-        ids.forEach { secureDelete(it) }
+        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
         removeEmptyTrashedFolders(subtree.reversed())
         notifyChanged()
         ids
@@ -1090,7 +1126,7 @@ class VaultRepository @Inject constructor(
     /** Empty the whole trash: every trashed file shredded, every trashed folder removed. */
     suspend fun emptyTrash(): List<String> = withContext(Dispatchers.IO) {
         val ids = db.fileDao().trashedBefore(Long.MAX_VALUE)
-        ids.forEach { secureDelete(it) }
+        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
         val folders = db.folderDao().trashedNow().map { it.id }
         removeEmptyTrashedFolders(folders.flatMap { subtreeOf(it) }.distinct().reversed())
         notifyChanged()
@@ -1130,7 +1166,7 @@ class VaultRepository @Inject constructor(
     suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
         val cutoff = now() - days * 86_400_000L
         val ids = db.fileDao().trashedBefore(cutoff)
-        ids.forEach { secureDelete(it) }
+        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
         // Expired trashed folders go once empty (their files, trashed at the same time, just went).
         val expired = db.folderDao().trashedNow().filter { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }.map { it.id }
         if (expired.isNotEmpty()) removeEmptyTrashedFolders(expired.flatMap { subtreeOf(it) }.distinct().reversed())
@@ -1275,7 +1311,14 @@ class VaultRepository @Inject constructor(
         compressDocs: Boolean = false,
         onProgress: (Float) -> Unit = {},
     ): Int = withContext(Dispatchers.IO) {
-        try { exportBackupInner(dest, passphrase, compressDocs, onProgress) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+        try {
+            exportBackupInner(dest, passphrase, compressDocs, onProgress)
+        } catch (e: Throwable) {
+            // Closed on the way out, a half-written archive ends like a whole one: removed, so it
+            // is never kept (or restored, failing halfway) as the backup.
+            runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, dest) }
+            throw e
+        } finally { java.util.Arrays.fill(passphrase, '\u0000') }
     }
 
     /**
@@ -1613,7 +1656,7 @@ class VaultRepository @Inject constructor(
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
         val bytes = text.toByteArray()
         try {
-            blobs.blob(uuid).outputStream().use { out ->
+            blobs.durableOutput(blobs.blob(uuid)).use { out ->
                 FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
             }
         } catch (e: Throwable) {
@@ -1638,7 +1681,8 @@ class VaultRepository @Inject constructor(
         val blob = blobs.blob(fileId)
         val tmp = java.io.File(blob.parentFile, "$fileId.tmp")
         try {
-            tmp.outputStream().use { out ->
+            // Synced before the rename: renamed unsynced, a power cut could leave the note empty.
+            blobs.durableOutput(tmp).use { out ->
                 FileCrypto.encryptingStream(f.wrappedKeyset, dek, fileId, out).use { it.write(bytes) }
             }
             if (!tmp.renameTo(blob)) throw java.io.IOException("Salvataggio della nota non riuscito")

@@ -245,9 +245,12 @@ fun ViewerScreen(
 
     var chromeVisible by remember { mutableStateOf(true) }
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
-    val currentFile by produceState<FileEntity?>(initialValue = null, currentId, refresh) {
+    val loadedFile by produceState<FileEntity?>(initialValue = null, currentId, refresh) {
         value = vm.fileById(currentId)
     }
+    // Until the swiped-to page's row is read, nothing: the previous file stayed current meanwhile,
+    // and a quick-tag or favorite tap went to it.
+    val currentFile = loadedFile?.takeIf { it.id == currentId }
     // Auto-hide the chrome a few seconds after it appears or the page changes — only over photos and
     // videos (on a PDF, note or error page it would just hide the actions), not with TalkBack, and
     // not while the actions overflow menu is open, otherwise the menu closes itself under the user.

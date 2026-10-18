@@ -252,7 +252,8 @@ class ConversionService : Service() {
                     MODE_IMPORT -> {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
-                        val imported = importBatch(uris, folderId)
+                        val runStart = intent.getLongExtra(EX_RUN_START, 0L).takeIf { it > 0L }
+                        val imported = importBatch(uris, folderId, runStart)
                         // Files shared from another app are that app's content, not documents we
                         // may delete: the "delete originals" policy only applies to picked files.
                         if (!intent.getBooleanExtra(EX_FROM_SHARE, false)) applyDeletePolicy(imported)
@@ -530,14 +531,14 @@ class ConversionService : Service() {
      * of the current file) to [VaultRepository.importState] for the in-app banner and to the
      * notification, then a final "completed" notification with the outcome.
      */
-    private suspend fun importBatch(uris: List<Uri>, folderId: Long?): List<Uri> {
+    private suspend fun importBatch(uris: List<Uri>, folderId: Long?, runStart: Long? = null): List<Uri> {
         if (uris.isEmpty()) return emptyList()
         val done = mutableListOf<Uri>()
         // Names and sizes up front: the progress (and the time left) goes by the files' size.
         val info = uris.map { repo.nameAndSize(it) }
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         // Vault files imported from now on belong to this run: never taken as a "previous version".
-        val batchStart = System.currentTimeMillis()
+        val batchStart = runStart ?: System.currentTimeMillis()
         val cancelGen = batchCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
@@ -663,7 +664,9 @@ class ConversionService : Service() {
     private suspend fun convertOne(id: String, afterOverride: com.cripta.app.data.ConvertAfter? = null) {
         val file = repo.fileById(id) ?: return
         repo.setConverting(id, true)
-        repo.updateConvertStatus { it.copy(waiting = convertWaiting.incrementAndGet() - 1) }
+        // Counted outside update(): its lambda re-runs on a contended write, counting this twice.
+        val ahead = convertWaiting.incrementAndGet() - 1
+        repo.updateConvertStatus { it.copy(waiting = ahead) }
         try {
             convertMutex.lock()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1487,6 +1490,10 @@ class ConversionService : Service() {
         private const val EX_ID = "id"
         private const val EX_FOLDER = "folder"
         private const val EX_FROM_SHARE = "from_share"
+        /** When the import run began (all its chunks): see [startImport]. */
+        private const val EX_RUN_START = "run_start"
+        /** Uris per start intent, well under the binder transaction limit. */
+        private const val IMPORT_CHUNK = 500
         private const val MODE_IMPORT = "import"
         private const val MODE_DOWNLOAD = "download"
         private const val EX_TREE = "tree"
@@ -1538,19 +1545,27 @@ class ConversionService : Service() {
          */
         fun startImport(ctx: Context, uris: List<Uri>, folderId: Long?, fromShare: Boolean = false) {
             if (uris.isEmpty()) return
-            val i = Intent(ctx, ConversionService::class.java).apply {
-                putExtra(EX_MODE, MODE_IMPORT)
-                putParcelableArrayListExtra(EX_URIS, ArrayList(uris))
-                folderId?.let { putExtra(EX_FOLDER, it) }
-                if (fromShare) putExtra(EX_FROM_SHARE, true)
-                // Carry the read grant along (shared content uris are granted to the receiving
-                // activity; this keeps them readable by the service too).
-                clipData = android.content.ClipData.newRawUri(null, uris.first()).also { clip ->
-                    uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+            // One start per chunk: every uri travels twice (extra + ClipData), and a "select all"
+            // of a few thousand files went over the binder limit and crashed the app (nothing
+            // imported). The chunks share the run's start, so they never take each other's
+            // files for previous versions.
+            val runStart = System.currentTimeMillis()
+            uris.chunked(IMPORT_CHUNK).forEach { chunk ->
+                val i = Intent(ctx, ConversionService::class.java).apply {
+                    putExtra(EX_MODE, MODE_IMPORT)
+                    putParcelableArrayListExtra(EX_URIS, ArrayList(chunk))
+                    folderId?.let { putExtra(EX_FOLDER, it) }
+                    if (fromShare) putExtra(EX_FROM_SHARE, true)
+                    putExtra(EX_RUN_START, runStart)
+                    // Carry the read grant along (shared content uris are granted to the receiving
+                    // activity; this keeps them readable by the service too).
+                    clipData = android.content.ClipData.newRawUri(null, chunk.first()).also { clip ->
+                        chunk.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+                    }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                ContextCompat.startForegroundService(ctx, i)
             }
-            ContextCompat.startForegroundService(ctx, i)
         }
 
         /** Decrypt [ids] to the gallery, or into [tree] (a folder picked with ACTION_OPEN_DOCUMENT_TREE). */

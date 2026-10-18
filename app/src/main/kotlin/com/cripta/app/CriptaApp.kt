@@ -30,7 +30,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
         TinkInit.ensureInitialized()
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
         // At cold start no conversion can be in flight, so any leftover decrypted conversion
-        // temp files are orphans from a killed process: shred them before anything else runs.
+        // temp files are orphans from a killed process: listed now, shredded in the background.
         runCatching {
             EntryPointAccessors.fromApplication(this, AppEntryPoint::class.java)
                 .vaultRepository().sweepConversionTemp()

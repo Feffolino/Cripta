@@ -74,14 +74,20 @@ jobs:
 
       # Reconstruct the signing keystore from a secret (kept out of the repo).
       - name: Decode keystore
+        id: keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > app/cripta-release.keystore
             echo "Keystore restored."
+            echo "signed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No KEYSTORE_BASE64 secret set — building with the default debug key."
+            # Not published below: the in-app updater would offer an APK that can't install over
+            # the shared-key one, and uninstalling to get it in wipes the vault's keys.
+            echo "::warning::No signing secrets — building with the default debug key; the release is NOT published."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build debug APK
@@ -115,6 +121,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
+        if: steps.keystore.outputs.signed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
