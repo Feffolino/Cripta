@@ -273,6 +273,10 @@ class ViewerViewModel @Inject constructor(
                     _convertedOriginalId.value = event.originalId
                 } else {
                     _message.value = "Convertito in MP4"
+                    // Replaced: the original is in the trash now (a missing page), its copy takes
+                    // its place, so the viewer shows the MP4 instead of moving on or closing.
+                    val i = liveIds.indexOf(event.originalId)
+                    if (i >= 0 && event.newId !in liveIds) liveIds[i] = event.newId
                 }
                 _refresh.value++
             }
