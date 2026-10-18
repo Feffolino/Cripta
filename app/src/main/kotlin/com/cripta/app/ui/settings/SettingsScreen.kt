@@ -642,6 +642,16 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
+                        item {
+                            Section("File con lo stesso nome", "Un file importato con lo stesso nome di uno già nel vault, ma un contenuto diverso, può esserne la nuova versione.") {
+                                ToggleRow(
+                                    "Sostituisci senza chiedere", s.autoReplaceVersions,
+                                    desc = if (s.autoReplaceVersions) "La nuova versione prende etichette, cartella, preferito e posizione della vecchia; " +
+                                        (if (s.trashEnabled) "la vecchia va nel cestino." else "la vecchia resta nel vault.")
+                                    else "A fine import ti viene chiesto, file per file, se sostituire o tenere entrambi.",
+                                ) { vm.setAutoReplaceVersions(it) }
+                            }
+                        }
                     }
 
                     SettingsPage.STRUMENTI -> {
@@ -1134,7 +1144,7 @@ private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCou
         if (s.allowScreenshots) " · screenshot consentiti" else " · screenshot bloccati"
     SettingsPage.IMPORT -> "Originale: " + when (s.deleteOriginalPolicy) {
         DeleteOriginalPolicy.ASK -> "chiedi"; DeleteOriginalPolicy.ALWAYS -> "elimina"; DeleteOriginalPolicy.NEVER -> "mantieni"
-    }
+    } + if (s.autoReplaceVersions) " · omonimi: sostituisci" else " · omonimi: chiedi"
     SettingsPage.STRUMENTI -> listOfNotNull(
         "Duplicati",
         if (trashCount > 0) "cestino ($trashCount)" else "cestino",
@@ -1182,6 +1192,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Blocco automatico", "blocco lock timeout", SettingsPage.SICUREZZA),
     Triple("Screenshot", "screenshot recenti privacy", SettingsPage.SICUREZZA),
     Triple("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT),
+    Triple("File con lo stesso nome", "stesso nome omonimi versione nuova sostituisci import", SettingsPage.IMPORT),
     Triple("File duplicati / media simili", "duplicati simili doppioni", SettingsPage.STRUMENTI),
     Triple("Cestino", "cestino eliminati ripristina", SettingsPage.STRUMENTI),
     Triple("Modalità di sblocco", "sblocco pin codice impronta biometria due fattori password accesso", SettingsPage.SICUREZZA),

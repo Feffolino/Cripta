@@ -122,13 +122,14 @@ class VaultViewModel @Inject constructor(
      * logged and stops the loop instead of crashing the app from viewModelScope. It also runs to
      * the end when the screen goes away: the UI reports it done at once ("30 file eliminati"), and
      * Back during a slow shred used to stop it after a few files, leaving the rest in the vault.
+     * [toEnd] = false for read-only work (covers), which may as well stop with the screen.
      */
-    private fun launchBulk(what: String, block: suspend () -> Unit) = viewModelScope.launch {
+    private fun launchBulk(what: String, toEnd: Boolean = true, block: suspend () -> Unit) = viewModelScope.launch {
         val held = session.beginWork()
         // Already locked: nothing can be read or written, don't even start.
         if (!held) return@launch
         try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block() }
+            if (toEnd) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block() } else block()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -156,7 +157,7 @@ class VaultViewModel @Inject constructor(
      * Regenerate the cover of every selected video using [cover] (ignoring non-video files) and
      * publish each new bitmap as an override so the visible thumbnail updates right away.
      */
-    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = launchBulk("regenerateCovers") {
+    fun regenerateCovers(fileIds: List<String>, cover: ThumbnailLoader.VideoCover) = launchBulk("regenerateCovers", toEnd = false) {
         val ids = fileIds.toSet()
         val targets = files.value.map { it.file }
             .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
@@ -503,6 +504,20 @@ class VaultViewModel @Inject constructor(
 
     /** Originals of a finished import waiting for "Elimina originali / Mantieni" (policy "Chiedi"). */
     val pendingOriginals: StateFlow<List<android.net.Uri>> = repo.pendingOriginals
+
+    /** Imports named like a vault file, waiting for "Sostituisci / Tieni entrambi". */
+    val pendingVersions: StateFlow<List<VaultRepository.VersionMatch>> = repo.pendingVersions
+
+    /** "Sostituisci": each of [matches] becomes the new version of its same-name vault files. */
+    fun replaceVersions(matches: List<VaultRepository.VersionMatch>) {
+        // Answered at once: the dialog goes before a second tap can apply it again.
+        repo.resolveNewVersions(matches.map { it.newId })
+        launchBulk("replaceVersions") { matches.forEach { repo.applyNewVersion(it.newId, it.previousIds) } }
+    }
+
+    /** "Tieni entrambi": nothing changes, the new files stay where they were imported. */
+    fun keepVersionsSeparate(matches: List<VaultRepository.VersionMatch>) =
+        repo.resolveNewVersions(matches.map { it.newId })
 
     // Answered here: the same choice in the notifications (Hyper Island) goes away too.
     fun clearPendingOriginals() {

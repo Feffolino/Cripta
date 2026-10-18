@@ -167,6 +167,7 @@ class SettingsViewModel @Inject constructor(
     fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = viewModelScope.launch { store.setConvertAfter(v) }
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
     fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
+    fun setAutoReplaceVersions(v: Boolean) = viewModelScope.launch { store.setAutoReplaceVersions(v) }
     fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
 
     /** Files in the trash, newest first. */
@@ -209,7 +210,7 @@ class SettingsViewModel @Inject constructor(
     /** Cover of a trashed file (its blob and key are kept until it is destroyed). */
     suspend fun thumbOf(f: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(f)
     fun restoreFolder(id: Long) = launchHeld("restoreFolder") { repo.restoreFolder(id) }
-    fun deleteForever(id: String) = launchHeld("deleteForever") { repo.secureDelete(id, onlyIfTrashed = true); thumbs.evict(id) }
+    fun deleteForever(id: String) = launchHeld("deleteForever") { if (repo.secureDelete(id, onlyIfTrashed = true)) thumbs.evict(id) }
     fun deleteFolderForever(id: Long) = launchHeld("deleteFolderForever") { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
     fun emptyTrash() = launchHeld("emptyTrash") { repo.emptyTrash().forEach { thumbs.evict(it) } }
     /** Selection in the trash: restore these, one after the other (folders first, files then). */
@@ -220,7 +221,7 @@ class SettingsViewModel @Inject constructor(
     /** Selection in the trash: destroy these for good, one after the other. */
     fun deleteManyForever(files: List<String>, folders: List<Long>) = launchHeld("deleteManyForever") {
         folders.forEach { id -> repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
-        files.forEach { repo.secureDelete(it, onlyIfTrashed = true); thumbs.evict(it) }
+        files.forEach { if (repo.secureDelete(it, onlyIfTrashed = true)) thumbs.evict(it) }
     }
     fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
     fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }

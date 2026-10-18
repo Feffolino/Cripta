@@ -131,6 +131,12 @@ data class Settings(
     val controlsTimeoutSec: Int = 4,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
+    /**
+     * Import: a file named like a vault file (other content) is taken as its new version at once:
+     * it gets the old one's tags, folder, favorite and place, and the old one goes to the trash.
+     * Off = the user is asked every time, once the import ends.
+     */
+    val autoReplaceVersions: Boolean = false,
     /** Backup: deflate documents (notes, PDF, text) losslessly; media is always stored as is. */
     val backupCompressDocs: Boolean = false,
     /** Days a trashed file is kept before being crypto-shredded. */
@@ -174,6 +180,7 @@ class SettingsStore @Inject constructor(
     private val videoMutedKey = booleanPreferencesKey("video_start_muted")
     private val resumeKey = booleanPreferencesKey("resume_playback")
     private val trashKey = booleanPreferencesKey("trash_enabled")
+    private val autoVersionsKey = booleanPreferencesKey("auto_replace_versions")
     private val trashDaysKey = intPreferencesKey("trash_days")
     private val dlFolderKey = androidx.datastore.preferences.core.longPreferencesKey("dl_folder")
     private val dlTagsKey = androidx.datastore.preferences.core.stringPreferencesKey("dl_tag_ids")
@@ -239,6 +246,7 @@ class SettingsStore @Inject constructor(
                 viewerQuickTags = p[quickTagsKey] ?: true,
             ),
             trashEnabled = p[trashKey] ?: false,
+            autoReplaceVersions = p[autoVersionsKey] ?: false,
             backupCompressDocs = p[backupCompressKey] ?: false,
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
             convertAfter = ConvertAfter.entries.getOrElse(p[convertAfterKey] ?: 0) { ConvertAfter.REPLACE },
@@ -318,6 +326,7 @@ class SettingsStore @Inject constructor(
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }
     suspend fun setResumePlayback(v: Boolean) { context.dataStore.edit { it[resumeKey] = v } }
     suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }
+    suspend fun setAutoReplaceVersions(v: Boolean) { context.dataStore.edit { it[autoVersionsKey] = v } }
     suspend fun setTrashDays(v: Int) { context.dataStore.edit { it[trashDaysKey] = v.coerceIn(1, 90) } }
     suspend fun setDownloadDefaults(d: DownloadDefaults) {
         context.dataStore.edit {
@@ -388,7 +397,7 @@ class SettingsStore @Inject constructor(
                 swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
-            "IMPORT" -> listOf(delPolicy)
+            "IMPORT" -> listOf(delPolicy, autoVersionsKey)
             else -> emptyList()
         }
         if (keys.isNotEmpty()) context.dataStore.edit { p -> keys.forEach { p.remove(it) } }

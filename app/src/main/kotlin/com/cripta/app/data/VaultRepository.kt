@@ -173,6 +173,8 @@ class VaultRepository @Inject constructor(
         val failures: List<Pair<String, String>> = emptyList(),
         /** Imports recognised as a new version of a vault file (same name): they took its tags. */
         val inherited: List<Inherited> = emptyList(),
+        /** Imports named like a vault file, waiting for the user's choice ([pendingVersions]). */
+        val versionAsks: Int = 0,
         /** Source uris imported successfully in the current run (all batches since the banner reset). */
         val importedUris: List<Uri> = emptyList(),
         /** Weight ([com.cripta.app.util.batchWeight]) of every file of the running batches, and of the finished ones. */
@@ -242,6 +244,26 @@ class VaultRepository @Inject constructor(
         _importState.update { it.copy(duplicates = it.duplicates + (newId to existingName)) }
 
     fun importInherited(i: Inherited) = _importState.update { it.copy(inherited = it.inherited + i) }
+
+    /** A same-name import waiting for "Sostituisci / Tieni entrambi": the new file and the vault files it would replace. */
+    data class VersionMatch(val newId: String, val newName: String, val previousIds: List<String>, val previousName: String)
+
+    private val _pendingVersions = MutableStateFlow<List<VersionMatch>>(emptyList())
+    /**
+     * Same-name imports waiting for the user's choice (when not replaced automatically, see
+     * Settings.autoReplaceVersions). Memory only: left unanswered, both files stay as they are.
+     */
+    val pendingVersions: StateFlow<List<VersionMatch>> = _pendingVersions
+
+    /** [match] waits for the user's choice; counted in the import result too. */
+    fun askNewVersion(match: VersionMatch) {
+        _pendingVersions.update { it + match }
+        _importState.update { it.copy(versionAsks = it.versionAsks + 1) }
+    }
+
+    /** The user answered for these new files (see [applyNewVersion]). */
+    fun resolveNewVersions(newIds: Collection<String>) =
+        _pendingVersions.update { list -> list.filterNot { it.newId in newIds } }
 
     /** Remove the given duplicates from the banner state (after the user resolved them). */
     fun clearImportDuplicates() = _importState.update { it.copy(duplicates = emptyList()) }
@@ -517,22 +539,42 @@ class VaultRepository @Inject constructor(
     }
 
     /**
-     * A just-imported [file] whose name matches a live vault file imported before [importedSince]
-     * (so not one of the same import) is taken as its new, edited version. With exactly one match
-     * the new file takes its tags, folder, favorite, link and place in the manual order, and the
-     * old version goes to the trash (only when the trash is on: it is never shredded here). With
-     * several matches it only takes the union of their tags. Byte-identical copies are skipped:
-     * those are duplicates, handled on their own. Returns null when nothing matched.
+     * Live vault files a just-imported [file] would be the new, edited version of: same name (see
+     * [versionKey]), imported before [importedSince] (so not one of the same import), other
+     * content. Byte-identical copies are skipped: those are duplicates, handled on their own.
      */
-    suspend fun inheritFromPrevious(file: FileEntity, importedSince: Long): Inherited? = withContext(Dispatchers.IO) {
+    suspend fun previousVersionsOf(file: FileEntity, importedSince: Long): List<FileEntity> = withContext(Dispatchers.IO) {
         val key = versionKey(file.originalName)
         // Candidates by name prefix in SQL (LIKE: case-insensitive, '_' and '%' escaped), exact key in Kotlin.
         val stem = key.substringBeforeLast('.')
         val pattern = stem.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-        val previous = db.fileDao().nameLike(pattern, file.id).filter {
+        db.fileDao().nameLike(pattern, file.id).filter {
             it.importedAt < importedSince && versionKey(it.originalName) == key &&
                 (it.contentHash == null || it.contentHash != file.contentHash)
         }
+    }
+
+    /**
+     * [file] taken at once as the new version of its same-name vault files ([previousVersionsOf]),
+     * as [applyNewVersion] does. Used when Settings.autoReplaceVersions is on. Null when nothing
+     * matched.
+     */
+    suspend fun inheritFromPrevious(file: FileEntity, importedSince: Long): Inherited? {
+        val previous = previousVersionsOf(file, importedSince)
+        return if (previous.isEmpty()) null else applyNewVersion(file.id, previous.map { it.id })
+    }
+
+    /**
+     * Make [newId] the new version of [previousIds]. With exactly one, the new file takes its
+     * tags, folder, favorite, link and place in the manual order, and the old version goes to the
+     * trash (only when the trash is on: it is never shredded here). With several, it only takes
+     * the union of their tags. Both sides are read again (the user may answer a while after the
+     * import): a file deleted or trashed since is left out. Null when nothing is left to apply.
+     */
+    suspend fun applyNewVersion(newId: String, previousIds: List<String>): Inherited? = withContext(Dispatchers.IO) {
+        val file = db.fileDao().byId(newId)?.takeIf { it.deletedAt == null } ?: return@withContext null
+        val previous = previousIds.filter { it != newId }.distinct()
+            .mapNotNull { db.fileDao().byId(it) }.filter { it.deletedAt == null }
         if (previous.isEmpty()) return@withContext null
         val tags = previous.flatMap { p -> db.fileDao().withTagsById(p.id)?.tags?.map { it.name }.orEmpty() }.distinct()
         if (previous.size > 1) {
@@ -1022,8 +1064,9 @@ class VaultRepository @Inject constructor(
     /**
      * [onlyIfTrashed]: for the trash's own deletes, which work through a list read earlier. A file
      * restored meanwhile (the purge of a big trash takes minutes) is left alone instead of destroyed.
+     * Returns whether the file was destroyed.
      */
-    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false) = withContext(Dispatchers.IO) {
+    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         val deleted = db.withTransaction {
             val f = db.fileDao().byId(fileId)
             if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
@@ -1031,11 +1074,12 @@ class VaultRepository @Inject constructor(
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
             true
         }
-        if (!deleted) return@withContext
+        if (!deleted) return@withContext false
         blobs.shred(fileId)         // best-effort overwrite + delete of the blob
         // Deleting a file must not remove its tags from the library: they stay available for
         // other files. Tags are only removed via an explicit deleteTag.
         notifyChanged()
+        true
     }
 
     /**
@@ -1107,8 +1151,8 @@ class VaultRepository @Inject constructor(
     /** Destroy a trashed folder for good: its trashed files are shredded, its folders removed. */
     suspend fun deleteFolderForever(folderId: Long): List<String> = withContext(Dispatchers.IO) {
         val subtree = subtreeOf(folderId)
-        val ids = db.fileDao().trashedIdsInFolders(subtree)
-        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
+        // Only the ids really destroyed: a file restored meanwhile keeps its cover.
+        val ids = db.fileDao().trashedIdsInFolders(subtree).filter { secureDelete(it, onlyIfTrashed = true) }
         removeEmptyTrashedFolders(subtree.reversed())
         notifyChanged()
         ids
@@ -1125,8 +1169,7 @@ class VaultRepository @Inject constructor(
 
     /** Empty the whole trash: every trashed file shredded, every trashed folder removed. */
     suspend fun emptyTrash(): List<String> = withContext(Dispatchers.IO) {
-        val ids = db.fileDao().trashedBefore(Long.MAX_VALUE)
-        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
+        val ids = db.fileDao().trashedBefore(Long.MAX_VALUE).filter { secureDelete(it, onlyIfTrashed = true) }
         val folders = db.folderDao().trashedNow().map { it.id }
         removeEmptyTrashedFolders(folders.flatMap { subtreeOf(it) }.distinct().reversed())
         notifyChanged()
@@ -1165,8 +1208,7 @@ class VaultRepository @Inject constructor(
     /** Crypto-shred trashed files older than [days]; returns their ids (for cover eviction). */
     suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
         val cutoff = now() - days * 86_400_000L
-        val ids = db.fileDao().trashedBefore(cutoff)
-        ids.forEach { secureDelete(it, onlyIfTrashed = true) }
+        val ids = db.fileDao().trashedBefore(cutoff).filter { secureDelete(it, onlyIfTrashed = true) }
         // Expired trashed folders go once empty (their files, trashed at the same time, just went).
         val expired = db.folderDao().trashedNow().filter { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }.map { it.id }
         if (expired.isNotEmpty()) removeEmptyTrashedFolders(expired.flatMap { subtreeOf(it) }.distinct().reversed())
