@@ -84,7 +84,8 @@ class ViewerViewModel @Inject constructor(
     suspend fun stateFor(id: String): ViewerState = try {
         val file = repo.fileById(id)
         when {
-            file == null -> ViewerState.Error("Questo file non è più nel vault.", missing = true)
+            // Trashed counts as gone (a note deleted from its editor stayed open here, editable).
+            file == null || file.deletedAt != null -> ViewerState.Error("Questo file non è più nel vault.", missing = true)
             VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, repo.decryptBytes(file))
             VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
             VaultRepository.isNote(file.mimeType) -> ViewerState.Note(file, repo.noteText(file))

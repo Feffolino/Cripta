@@ -935,7 +935,9 @@ fun VaultScreen(
                             }
                             val onEnd: () -> Unit = {
                                 val target = hoverFolder
-                                if (target != null && selection.isNotEmpty()) {
+                                // A deselecting drag never moves: ending it over a folder moved
+                                // whatever was still selected there.
+                                if (target != null && !dragDeselect && selection.isNotEmpty()) {
                                     val ids = selection.toList()
                                     selection = emptySet()
                                     moveWithUndo(ids, target)

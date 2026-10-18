@@ -73,6 +73,16 @@ class MainActivity : FragmentActivity() {
      */
     @Volatile private var awaitingResult = false
 
+    /**
+     * The auto-lock setting, kept current from onCreate so [onStart] can lock before the first
+     * frame. Read from DataStore there, the lock came a few frames late: the vault showed briefly
+     * to whoever reopened the app after the timeout. Null until loaded.
+     */
+    @Volatile private var autoLockMinutes: Int? = null
+
+    /** When this activity last stopped (SystemClock.elapsedRealtime(), 0 = never), locked or not. */
+    private var stoppedAt = 0L
+
     /** Set when the Keystore key is permanently invalidated; drives the reset-vault dialog. */
     private val keyInvalidated = MutableStateFlow(false)
 
@@ -136,6 +146,7 @@ class MainActivity : FragmentActivity() {
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
         )
+        lifecycleScope.launch { runCatching { settings.settings.collect { autoLockMinutes = it.autoLockMinutes } } }
         // Edge-to-edge with transparent system bars (Compose Scaffolds handle the insets).
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
@@ -314,6 +325,12 @@ class MainActivity : FragmentActivity() {
             r.onSuccess { res ->
                 when (res) {
                     KeyVault.PinResult.Ok -> {
+                        // Left (Home, screen off) while the PIN was being checked: onStop saw a
+                        // locked vault and recorded nothing, so the vault stayed open for good.
+                        // The absence counts from that stop, as for any other.
+                        if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) && stoppedAt > 0L) {
+                            session.backgroundedAt = stoppedAt
+                        }
                         clearSystemLayer()
                         authUi.value = authUi.value.copy(pinBusy = false, error = null, firstRun = false,
                             pin = pinStepFor(keyVault.unlockMode))
@@ -482,7 +499,8 @@ class MainActivity : FragmentActivity() {
             clearSystemLayer()
             authUi.value = authUi.value.copy(pin = pinStepFor(keyVault.unlockMode))
         }
-        if (session.isUnlocked) session.backgroundedAt = android.os.SystemClock.elapsedRealtime()
+        stoppedAt = android.os.SystemClock.elapsedRealtime()
+        if (session.isUnlocked) session.backgroundedAt = stoppedAt
     }
 
     override fun onStart() {
@@ -498,11 +516,16 @@ class MainActivity : FragmentActivity() {
             // Coming back from a picker/dialog we opened ourselves is not leaving the app (within
             // a sane limit, so a picker left open for ages still locks).
             if (fromPicker && elapsed < PICKER_GRACE_MS) return
-            lifecycleScope.launch {
-                val minutes = settings.settings.first().autoLockMinutes
-                // minutes < 0 means "Mai" (never auto-lock). Background work keeps running: the
-                // session keeps its keys until it ends (see SessionManager.lock).
-                if (minutes >= 0 && elapsed >= minutes * 60_000L) session.lock()
+            // minutes < 0 means "Mai" (never auto-lock). Background work keeps running: the
+            // session keeps its keys until it ends (see SessionManager.lock).
+            fun expired(minutes: Int) = minutes >= 0 && elapsed >= minutes * 60_000L
+            val known = autoLockMinutes
+            // Locked right here, before anything is drawn. Only a brand-new activity, whose
+            // setting is not loaded yet, has to wait for it.
+            if (known != null) {
+                if (expired(known)) session.lock()
+            } else lifecycleScope.launch {
+                if (expired(settings.settings.first().autoLockMinutes)) session.lock()
             }
         }
     }
