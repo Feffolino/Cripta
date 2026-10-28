@@ -331,25 +331,6 @@ class VaultViewModel @Inject constructor(
             .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id) }
     }
 
-    /**
-     * Drop the just-imported copies [ids] of files that were already in the vault (identical
-     * bytes): exactly the ones the banner counted, not whatever the import state holds by the time
-     * the tap is handled. They go where any deletion goes (the trash when it is on), so a wrong
-     * call can be undone.
-     */
-    fun removeImportDuplicates(ids: List<String>) = launchBulk("removeImportDuplicates") {
-        ids.forEach { id ->
-            // The banner can stay up for a while: remove the new copy only while an identical live
-            // one still exists (the older copy may have been deleted since, leaving this the only one).
-            val f = repo.fileById(id)?.takeIf { it.deletedAt == null } ?: return@forEach
-            val hash = f.contentHash ?: return@forEach
-            if (repo.sameSizeAs(f).none { it.contentHash == hash }) return@forEach
-            // A trashed copy keeps its cover: restoring it must not lose it.
-            if (!repo.deleteOrTrash(id)) thumbs.evict(id)
-        }
-        repo.clearImportDuplicates(ids)
-        if (importState.value.duplicates.isEmpty()) repo.dismissImportResult()
-    }
 
     /**
      * Proactively generate covers for [items] so thumbnails are ready as cells scroll in instead
@@ -513,11 +494,30 @@ class VaultViewModel @Inject constructor(
     /** Imports named like a vault file, waiting for "Sostituisci / Tieni entrambi". */
     val pendingVersions: StateFlow<List<VaultRepository.VersionMatch>> = repo.pendingVersions
 
-    /** "Sostituisci": each of [matches] becomes the new version of its same-name vault files. */
+    /**
+     * "Sostituisci" / "Rimuovi la copia": each of [matches] becomes the new version of its same-name
+     * vault files, or (identical bytes) is dropped as a copy of the file already there.
+     */
     fun replaceVersions(matches: List<VaultRepository.VersionMatch>) {
         // Answered at once: the dialog goes before a second tap can apply it again.
         repo.resolveNewVersions(matches.map { it.newId })
-        launchBulk("replaceVersions") { matches.forEach { repo.applyNewVersion(it.newId, it.previousIds) } }
+        launchBulk("replaceVersions") {
+            matches.forEach { if (it.identical) removeCopy(it) else repo.applyNewVersion(it.newId, it.previousIds) }
+        }
+    }
+
+    /**
+     * Drop the new copy only while an identical live file still exists (the older one may have been
+     * deleted or replaced since, leaving this the only one). It goes where any deletion goes (the
+     * trash when it is on), so a wrong answer can be undone.
+     */
+    private suspend fun removeCopy(match: VaultRepository.VersionMatch) {
+        val f = repo.fileById(match.newId)?.takeIf { it.deletedAt == null } ?: return
+        val hash = f.contentHash ?: return
+        if (repo.sameSizeAs(f).none { it.contentHash == hash }) return
+        // A trashed copy keeps its cover: restoring it must not lose it.
+        if (!repo.deleteOrTrash(f.id)) thumbs.evict(f.id)
+        repo.clearImportDuplicates(listOf(f.id))
     }
 
     /** "Tieni entrambi": nothing changes, the new files stay where they were imported. */

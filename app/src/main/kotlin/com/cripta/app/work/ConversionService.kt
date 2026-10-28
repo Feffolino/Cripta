@@ -539,8 +539,6 @@ class ConversionService : Service() {
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         // Vault files imported from now on belong to this run: never taken as a "previous version".
         val batchStart = runStart ?: System.currentTimeMillis()
-        // Same-name files: replaced at once, or (the default) asked once the import ends.
-        val autoReplace = runCatching { settings.settingsOnce().autoReplaceVersions }.getOrDefault(false)
         val cancelGen = batchCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
@@ -579,19 +577,18 @@ class ConversionService : Service() {
                     val copies = try { dupScanner.copiesOf(f) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
                     val existing = copies?.firstOrNull()
                     if (existing != null) {
+                        // The new copy stays until the user answers, once the import ends.
                         repo.importDuplicate(f.id, existing.originalName)
+                        repo.askNewVersion(VaultRepository.VersionMatch(
+                            f.id, f.originalName, copies.orEmpty().map { it.id }, existing.originalName, identical = true))
                     } else {
-                        // Same name as a vault file: maybe an edited version, which takes the old
-                        // one's place and tags. At once with "Sostituisci senza chiedere", otherwise
-                        // the user is asked when the import ends.
+                        // Same name as a vault file: maybe an edited version, which would take the
+                        // old one's place and tags. Never decided here: the user is asked when the
+                        // import ends.
                         try {
-                            if (autoReplace) {
-                                repo.inheritFromPrevious(f, batchStart)?.let { repo.importInherited(it) }
-                            } else {
-                                val previous = repo.previousVersionsOf(f, batchStart)
-                                if (previous.isNotEmpty()) repo.askNewVersion(VaultRepository.VersionMatch(
-                                    f.id, f.originalName, previous.map { it.id }, previous.first().originalName))
-                            }
+                            val previous = repo.previousVersionsOf(f, batchStart)
+                            if (previous.isNotEmpty()) repo.askNewVersion(VaultRepository.VersionMatch(
+                                f.id, f.originalName, previous.map { it.id }, previous.first().originalName))
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -632,13 +629,12 @@ class ConversionService : Service() {
         return done
     }
 
-    /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti · 1 con tag ereditati". */
+    /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti · 1 omonimi da confermare". */
     private fun importSummary(fin: VaultRepository.ImportState) = buildString {
         append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
         if (fin.failed > 0) append(" · ${fin.failed} non importati")
         if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
         // Short: the same text is the Hyper Island's line.
-        if (fin.inherited.isNotEmpty()) append(" · ${fin.inherited.size} con tag ereditati")
         if (fin.versionAsks > 0) append(" · ${fin.versionAsks} omonimi da confermare")
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
