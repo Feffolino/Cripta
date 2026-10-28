@@ -331,19 +331,24 @@ class VaultViewModel @Inject constructor(
             .forEach { com.cripta.app.work.ConversionService.startConvert(appContext, it.id) }
     }
 
-    /** Drop the just-imported copies of files that were already in the vault (identical bytes). */
-    fun removeImportDuplicates() = launchBulk("removeImportDuplicates") {
-        val dups = importState.value.duplicates.map { it.first }
-        dups.forEach { id ->
-            // The banner can stay up for a while: shred the new copy only while an identical live
+    /**
+     * Drop the just-imported copies [ids] of files that were already in the vault (identical
+     * bytes): exactly the ones the banner counted, not whatever the import state holds by the time
+     * the tap is handled. They go where any deletion goes (the trash when it is on), so a wrong
+     * call can be undone.
+     */
+    fun removeImportDuplicates(ids: List<String>) = launchBulk("removeImportDuplicates") {
+        ids.forEach { id ->
+            // The banner can stay up for a while: remove the new copy only while an identical live
             // one still exists (the older copy may have been deleted since, leaving this the only one).
-            val f = repo.fileById(id) ?: return@forEach
+            val f = repo.fileById(id)?.takeIf { it.deletedAt == null } ?: return@forEach
             val hash = f.contentHash ?: return@forEach
             if (repo.sameSizeAs(f).none { it.contentHash == hash }) return@forEach
-            repo.secureDelete(id); thumbs.evict(id)
+            // A trashed copy keeps its cover: restoring it must not lose it.
+            if (!repo.deleteOrTrash(id)) thumbs.evict(id)
         }
-        repo.clearImportDuplicates()
-        repo.dismissImportResult()
+        repo.clearImportDuplicates(ids)
+        if (importState.value.duplicates.isEmpty()) repo.dismissImportResult()
     }
 
     /**
