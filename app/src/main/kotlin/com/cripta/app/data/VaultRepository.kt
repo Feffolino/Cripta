@@ -171,8 +171,6 @@ class VaultRepository @Inject constructor(
         val duplicates: List<Pair<String, String>> = emptyList(),
         /** Items that could not be imported: (file name, short Italian reason). */
         val failures: List<Pair<String, String>> = emptyList(),
-        /** Imports recognised as a new version of a vault file (same name): they took its tags. */
-        val inherited: List<Inherited> = emptyList(),
         /** Imports named like a vault file, waiting for the user's choice ([pendingVersions]). */
         val versionAsks: Int = 0,
         /** Source uris imported successfully in the current run (all batches since the banner reset). */
@@ -243,22 +241,27 @@ class VaultRepository @Inject constructor(
     fun importDuplicate(newId: String, existingName: String) =
         _importState.update { it.copy(duplicates = it.duplicates + (newId to existingName)) }
 
-    fun importInherited(i: Inherited) = _importState.update { it.copy(inherited = it.inherited + i) }
-
-    /** A same-name import waiting for "Sostituisci / Tieni entrambi": the new file and the vault files it would replace. */
-    data class VersionMatch(val newId: String, val newName: String, val previousIds: List<String>, val previousName: String)
+    /**
+     * An import waiting for "Sostituisci / Tieni entrambi": the new file and the vault files it
+     * would replace. [identical]: same bytes as them (a copy), so the choice is to remove the new
+     * file or keep both, nothing is inherited.
+     */
+    data class VersionMatch(
+        val newId: String, val newName: String, val previousIds: List<String>, val previousName: String,
+        val identical: Boolean = false,
+    )
 
     private val _pendingVersions = MutableStateFlow<List<VersionMatch>>(emptyList())
     /**
-     * Same-name imports waiting for the user's choice (when not replaced automatically, see
-     * Settings.autoReplaceVersions). Memory only: left unanswered, both files stay as they are.
+     * Imports named like a vault file, or identical to one, waiting for the user's choice. Never
+     * decided for them. Memory only: left unanswered, both files stay as they are.
      */
     val pendingVersions: StateFlow<List<VersionMatch>> = _pendingVersions
 
-    /** [match] waits for the user's choice; counted in the import result too. */
+    /** [match] waits for the user's choice; a same-name one is counted in the import result too. */
     fun askNewVersion(match: VersionMatch) {
         _pendingVersions.update { it + match }
-        _importState.update { it.copy(versionAsks = it.versionAsks + 1) }
+        if (!match.identical) _importState.update { it.copy(versionAsks = it.versionAsks + 1) }
     }
 
     /** The user answered for these new files (see [applyNewVersion]). */
@@ -523,7 +526,7 @@ class VaultRepository @Inject constructor(
     }
 
     /**
-     * Outcome of [inheritFromPrevious]: the previous version's name, how many vault files matched
+     * Outcome of [applyNewVersion]: the previous version's name, how many vault files matched
      * (more than one = ambiguous: tags only), and whether the previous version went to the trash.
      */
     data class Inherited(val previousName: String, val matches: Int, val trashed: Boolean)
@@ -553,16 +556,6 @@ class VaultRepository @Inject constructor(
             it.importedAt < importedSince && versionKey(it.originalName) == key &&
                 (it.contentHash == null || it.contentHash != file.contentHash)
         }
-    }
-
-    /**
-     * [file] taken at once as the new version of its same-name vault files ([previousVersionsOf]),
-     * as [applyNewVersion] does. Used when Settings.autoReplaceVersions is on. Null when nothing
-     * matched.
-     */
-    suspend fun inheritFromPrevious(file: FileEntity, importedSince: Long): Inherited? {
-        val previous = previousVersionsOf(file, importedSince)
-        return if (previous.isEmpty()) null else applyNewVersion(file.id, previous.map { it.id })
     }
 
     /**

@@ -12,7 +12,7 @@ e visibili solo dentro l'app, sbloccata con la biometria/credenziale del telefon
 - 🔒 Vault cifrato (Tink + SQLCipher), sblocco biometrico, blocco automatico
 - 🖼️ Visualizzatore integrato per immagini, video (ExoPlayer), note e PDF
 - 📥 Import cifrato dalla galleria; condivisione di file/link verso l'app
-- 🏷️ File re-importato con lo stesso nome di uno nel vault: come nuova versione prende etichette e cartella della precedente; chiesto ogni volta, oppure in automatico con Impostazioni → Import → "Sostituisci senza chiedere"
+- 🏷️ File re-importato con lo stesso nome di uno nel vault, o identico a uno già presente: a fine import una schermata chiede sempre cosa fare (sostituire, e la nuova versione prende etichette e cartella della precedente; rimuovere la copia; tenere entrambi)
 - ⬇️ Download in-app di video da link (yt-dlp) con scelta risoluzione e stima peso
 - 🗂️ Cartelle, etichette, preferiti, ricerca e filtri
 - ⭐ Cartelle preferite sempre in cima e nella schermata Preferiti

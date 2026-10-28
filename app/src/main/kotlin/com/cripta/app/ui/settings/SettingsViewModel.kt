@@ -167,7 +167,6 @@ class SettingsViewModel @Inject constructor(
     fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = viewModelScope.launch { store.setConvertAfter(v) }
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
     fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
-    fun setAutoReplaceVersions(v: Boolean) = viewModelScope.launch { store.setAutoReplaceVersions(v) }
     fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
 
     /** Files in the trash, newest first. */
