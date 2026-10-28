@@ -707,7 +707,7 @@ fun VaultScreen(
                 Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
             }
             ImportBanner(importState, onDismiss = vm::dismissImportResult,
-                onRemoveDuplicates = { vm.removeImportDuplicates() })
+                onRemoveDuplicates = { ids -> vm.removeImportDuplicates(ids) })
             ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult,
                 onResolveOriginal = vm::resolveOriginal)
             if (stats.scope.total > 0 && display.showStatsStrip) {
@@ -2739,7 +2739,7 @@ private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vect
  * processed and its progress; when done it confirms how many files made it (and how many failed).
  */
 @Composable
-private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Unit, onRemoveDuplicates: () -> Unit) {
+private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Unit, onRemoveDuplicates: (List<String>) -> Unit) {
     AnimatedVisibility(
         visible = state.active || state.finished,
         enter = androidx.compose.animation.expandVertically() + fadeIn(),
@@ -2837,7 +2837,7 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                     )
                     if (!state.active) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            androidx.compose.material3.FilledTonalButton(onClick = onRemoveDuplicates) {
+                            androidx.compose.material3.FilledTonalButton(onClick = { onRemoveDuplicates(state.duplicates.map { it.first }) }) {
                                 Text(if (n == 1) "Rimuovi il doppione" else "Rimuovi i $n doppioni")
                             }
                             TextButton(onClick = onDismiss) { Text("Tienili", color = onContainer) }

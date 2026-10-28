@@ -265,8 +265,9 @@ class VaultRepository @Inject constructor(
     fun resolveNewVersions(newIds: Collection<String>) =
         _pendingVersions.update { list -> list.filterNot { it.newId in newIds } }
 
-    /** Remove the given duplicates from the banner state (after the user resolved them). */
-    fun clearImportDuplicates() = _importState.update { it.copy(duplicates = emptyList()) }
+    /** Remove the given duplicates ([ids] of the new copies) from the banner state, once handled. */
+    fun clearImportDuplicates(ids: Collection<String>) =
+        _importState.update { s -> s.copy(duplicates = s.duplicates.filterNot { it.first in ids }) }
 
     /** A batch ended; returns the final state when it was the last one running, else null. */
     fun importEnd(): ImportState? = synchronized(importLock) {
