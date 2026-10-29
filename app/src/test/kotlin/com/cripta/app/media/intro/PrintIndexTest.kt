@@ -40,7 +40,7 @@ class PrintIndexTest {
         listOf(a, b).forEach { index.add(it.fileId, it.hashes) }
         val cands = index.candidates(a.hashes).filterKeys { it != "a" }.map { (id, offs) -> (if (id == "b") b else a) to offs }
 
-        val viaIndex = IntroDetector.detectAt(SegmentKind.INTRO, a, cands, emptyList())
+        val viaIndex = IntroDetector.detectAt(SegmentKind.INTRO, a, cands, emptyList()).found
         val direct = IntroDetector.detect(SegmentKind.INTRO, a, listOf(b), emptyList())
         assertEquals(2, viaIndex.size)
         for (f in direct) {
