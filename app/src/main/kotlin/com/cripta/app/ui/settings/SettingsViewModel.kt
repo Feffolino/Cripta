@@ -32,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     private val updater: com.cripta.app.update.AppUpdater,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val keyVault: com.cripta.app.security.KeyVault,
+    private val intro: com.cripta.app.data.intro.IntroRepository,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -230,6 +231,13 @@ class SettingsViewModel @Inject constructor(
     fun setGestureVolume(v: Boolean) = viewModelScope.launch { store.setGestureVolume(v) }
     fun setAutoNext(v: Boolean) = viewModelScope.launch { store.setAutoNext(v) }
     fun setAutoNextSec(v: Int) = viewModelScope.launch { store.setAutoNextSec(v) }
+    fun setIntroAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setIntroAnalyzeNew(v) }
+    fun setIntroAutoSkip(v: Boolean) = viewModelScope.launch { store.setIntroAutoSkip(v) }
+    fun setOutroAutoSkip(v: Boolean) = viewModelScope.launch { store.setOutroAutoSkip(v) }
+    fun startIntroScan() = com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true)
+    val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
+        intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun restoreRejected(id: Long) = viewModelScope.launch { intro.restoreRejected(id) }
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
     fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
     fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }
