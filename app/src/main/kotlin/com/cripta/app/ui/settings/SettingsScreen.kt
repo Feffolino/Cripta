@@ -395,6 +395,46 @@ fun SettingsScreen(
                                 androidx.compose.material3.FilledTonalButton(onClick = { vm.startIntroScan() }, modifier = Modifier.fillMaxWidth()) {
                                     Text("Analizza i video esistenti")
                                 }
+                                androidx.compose.material3.OutlinedButton(onClick = { vm.loadIntroOverview() }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Risultati dell'analisi")
+                                }
+                                val overview by vm.introOverview.collectAsState()
+                                overview?.let { o ->
+                                    fun span(sg: com.cripta.app.data.db.MediaSegmentEntity) =
+                                        (com.cripta.app.ui.components.formatDuration(sg.startMs) ?: "0:00") + "–" +
+                                            (com.cripta.app.ui.components.formatDuration(sg.endMs) ?: "0:00") +
+                                            if (sg.source == "auto") "" else " (a mano)"
+                                    androidx.compose.material3.AlertDialog(
+                                        onDismissRequest = { vm.closeIntroOverview() },
+                                        confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.closeIntroOverview() }) { Text("Chiudi") } },
+                                        title = { Text("Risultati dell'analisi") },
+                                        text = {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                Text("Video analizzati: ${o.analysed} di ${o.videos}" +
+                                                    (if (o.skipped > 0) " · non analizzabili: ${o.skipped}" else "") +
+                                                    "\nCon intro: ${o.withIntro} · con finale: ${o.withOutro}",
+                                                    style = MaterialTheme.typography.bodyMedium)
+                                                if (o.items.isEmpty()) Text(
+                                                    "Nessun video con intro o finale. Servono almeno due video con lo stesso audio " +
+                                                        "(la stessa sigla); con l'analisi rapida la sigla deve iniziare nel primo minuto.",
+                                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 360.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    items(o.items.size) { i ->
+                                                        val it = o.items[i]
+                                                        Column {
+                                                            Text(it.name, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                                                style = MaterialTheme.typography.bodyMedium)
+                                                            Text(listOfNotNull(it.intro?.let { s -> "Intro " + span(s) }, it.outro?.let { s -> "Finale " + span(s) })
+                                                                .joinToString(" · "),
+                                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
                                 val rejected by vm.rejectedSegments.collectAsState()
                                 var showRejected by remember { mutableStateOf(false) }
                                 if (rejected.isNotEmpty()) {

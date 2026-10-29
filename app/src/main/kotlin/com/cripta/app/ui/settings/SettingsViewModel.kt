@@ -239,6 +239,10 @@ class SettingsViewModel @Inject constructor(
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
         intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restoreRejected(id: Long) = viewModelScope.launch { intro.restoreRejected(id) }
+    /** "Risultati dell'analisi": null while closed or loading. */
+    val introOverview = kotlinx.coroutines.flow.MutableStateFlow<com.cripta.app.data.intro.IntroRepository.Overview?>(null)
+    fun loadIntroOverview() = viewModelScope.launch { introOverview.value = runCatching { intro.overview() }.getOrNull() }
+    fun closeIntroOverview() { introOverview.value = null }
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
     fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
     fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }

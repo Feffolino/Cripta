@@ -285,7 +285,7 @@ class ConversionService : Service() {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
                     }
-                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringExtra(EX_ID))
+                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -913,18 +913,18 @@ class ConversionService : Service() {
     @Volatile private var introManual = false
     private val introMutex = kotlinx.coroutines.sync.Mutex()
     private val introNoteLock = Any()
-    /** Videos asked for one by one (from the player): analysed again, ahead of the rest. */
+    /** Videos asked for by the user (selection bar): analysed again, ahead of the rest. */
     private val introAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
     @Volatile private var introScanAll = false
 
     /**
-     * Fingerprint every video not analysed yet ([onlyId]: just that one, again), then match them
-     * against the whole vault. A request arriving while a scan runs is folded into it: a single video
-     * is taken next, a full request makes the running scan go round once more.
+     * Fingerprint every video not analysed yet ([onlyIds]: just those, again), then match them
+     * against the whole vault. A request arriving while a scan runs is folded into it: chosen videos
+     * are taken next, a full request makes the running scan go round once more.
      * [manual]: asked by the user, so it always reports; an automatic one only when it found something.
      */
-    private suspend fun introScan(manual: Boolean, onlyId: String? = null) {
-        if (onlyId == null) introScanAll = true else introAsked += onlyId
+    private suspend fun introScan(manual: Boolean, onlyIds: List<String>? = null) {
+        if (onlyIds == null) introScanAll = true else introAsked += onlyIds
         introManual = introManual || manual
         if (!introMutex.tryLock()) { introRerun = true; return }
         introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
@@ -1726,12 +1726,12 @@ class ConversionService : Service() {
 
         /**
          * Analyse the videos not analysed yet for intros and outros ([manual]: asked by the user), or
-         * only [fileId], again even if analysed before.
+         * only [fileIds], again even if analysed before.
          */
-        fun startIntroScan(ctx: Context, manual: Boolean, fileId: String? = null) {
+        fun startIntroScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
-                .apply { if (fileId != null) putExtra(EX_ID, fileId) })
+                .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)) })
         }
 
         fun cancelIntroScan(ctx: Context) {

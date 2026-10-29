@@ -61,6 +61,23 @@ class IntroRepository @Inject constructor(
         }
     }
 
+    /** What the analysis found so far, for Settings: counts and the videos with an intro or outro. */
+    class Overview(val videos: Int, val analysed: Int, val skipped: Int, val items: List<Item>) {
+        val withIntro get() = items.count { it.intro != null }
+        val withOutro get() = items.count { it.outro != null }
+    }
+    class Item(val name: String, val intro: MediaSegmentEntity?, val outro: MediaSegmentEntity?)
+
+    suspend fun overview(): Overview {
+        val live = repo.allFilesSnapshot().filter { VaultRepository.isVideo(it.mimeType) }
+        val byId = live.associateBy { it.id }
+        val sizes = dao.headSizes().filter { it.fileId in byId }
+        val items = dao.allSegments().filter { it.fileId in byId }.groupBy { it.fileId }.map { (id, segs) ->
+            Item(byId.getValue(id).originalName, segs.firstOrNull { it.kind == SegmentKind.INTRO.id }, segs.firstOrNull { it.kind == SegmentKind.OUTRO.id })
+        }.sortedBy { it.name.lowercase() }
+        return Overview(live.size, sizes.count { it.status == "ok" }, sizes.count { it.status != "ok" }, items)
+    }
+
     /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */
     suspend fun forget(fileId: String): FileEntity? {
         val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) } ?: return null
