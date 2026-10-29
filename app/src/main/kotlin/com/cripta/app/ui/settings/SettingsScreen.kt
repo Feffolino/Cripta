@@ -126,6 +126,8 @@ import com.cripta.app.ui.vault.tagAlias
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    /** Opens a file in the viewer (intro results). */
+    onOpenFile: (String) -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val s by vm.settings.collectAsState()
@@ -374,137 +376,7 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                        item {
-                            Section("Intro e finale", "Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
-                                "Nel video, l'icona ⏭ in alto permette di segnarli a mano o di scartarli.") {
-                                ToggleRow("Analizza i nuovi video", s.introAnalyzeNew,
-                                    desc = "Dopo ogni importazione, download o conversione, in background.",
-                                    icon = Icons.Filled.GraphicEq) { vm.setIntroAnalyzeNew(it) }
-                                ToggleRow("Analisi rapida", s.introQuickScan,
-                                    desc = if (s.introQuickScan) "Solo il primo e l'ultimo minuto di ogni video: molto più veloce, " +
-                                        "ma non trova le sigle che iniziano dopo il primo minuto."
-                                        else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta. " +
-                                            "«Analizza i video esistenti» completa anche quelli già analizzati in modo rapido.",
-                                    icon = Icons.Filled.Speed) { vm.setIntroQuickScan(it) }
-                                ToggleRow("Salta l'intro in automatico", s.introAutoSkip,
-                                    desc = if (s.introAutoSkip) "Il video salta da solo; «Annulla» torna indietro." else "Compare il pulsante «Salta intro».",
-                                    icon = Icons.Filled.SkipNext) { vm.setIntroAutoSkip(it) }
-                                ToggleRow("Salta il finale in automatico", s.outroAutoSkip,
-                                    desc = "Passa al file successivo, se c'è, altrimenti va alla fine del video.",
-                                    icon = Icons.Filled.SkipNext) { vm.setOutroAutoSkip(it) }
-                                androidx.compose.material3.FilledTonalButton(onClick = { vm.startIntroScan() }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Analizza i video esistenti")
-                                }
-                                androidx.compose.material3.OutlinedButton(onClick = { vm.loadIntroOverview() }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Risultati dell'analisi")
-                                }
-                                var askRestart by remember { mutableStateOf(false) }
-                                var restartAll by remember { mutableStateOf(false) }
-                                androidx.compose.material3.OutlinedButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
-                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                                    Text("Ricomincia l'analisi da capo")
-                                }
-                                if (askRestart) androidx.compose.material3.AlertDialog(
-                                    onDismissRequest = { askRestart = false },
-                                    title = { Text("Ricominciare da capo?") },
-                                    text = {
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("Ferma l'analisi in corso, cancella tutte le impronte audio e tutte le intro e i finali trovati, " +
-                                                "poi analizza di nuovo ogni video. Con molti video richiede tempo.")
-                                            Row(verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.fillMaxWidth().clickable { restartAll = !restartAll }) {
-                                                androidx.compose.material3.Checkbox(checked = restartAll, onCheckedChange = { restartAll = it })
-                                                Text("Cancella anche i segni fatti a mano e i segmenti scartati")
-                                            }
-                                        }
-                                    },
-                                    confirmButton = {
-                                        androidx.compose.material3.TextButton(onClick = { vm.restartIntroScan(restartAll); askRestart = false }) {
-                                            Text("Ricomincia", color = MaterialTheme.colorScheme.error)
-                                        }
-                                    },
-                                    dismissButton = { androidx.compose.material3.TextButton(onClick = { askRestart = false }) { Text("Annulla") } },
-                                )
-                                val overview by vm.introOverview.collectAsState()
-                                overview?.let { o ->
-                                    fun span(sg: com.cripta.app.data.db.MediaSegmentEntity) =
-                                        (com.cripta.app.ui.components.formatDuration(sg.startMs) ?: "0:00") + "–" +
-                                            (com.cripta.app.ui.components.formatDuration(sg.endMs) ?: "0:00") +
-                                            if (sg.source == "auto") "" else " (a mano)"
-                                    androidx.compose.material3.AlertDialog(
-                                        onDismissRequest = { vm.closeIntroOverview() },
-                                        confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.closeIntroOverview() }) { Text("Chiudi") } },
-                                        title = { Text("Risultati dell'analisi") },
-                                        text = {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                Text("Video analizzati: ${o.analysed} di ${o.videos}" +
-                                                    (if (o.skipped > 0) " · non analizzabili: ${o.skipped}" else "") +
-                                                    "\nCon intro: ${o.withIntro} · con finale: ${o.withOutro}",
-                                                    style = MaterialTheme.typography.bodyMedium)
-                                                if (o.items.isEmpty()) Text(
-                                                    "Nessun video con intro o finale. Servono almeno due video con lo stesso audio " +
-                                                        "(la stessa sigla); con l'analisi rapida la sigla deve iniziare nel primo minuto.",
-                                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 360.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                    items(o.items.size) { i ->
-                                                        val it = o.items[i]
-                                                        Column {
-                                                            Text(it.name, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                                style = MaterialTheme.typography.bodyMedium)
-                                                            Text(listOfNotNull(it.intro?.let { s -> "Intro " + span(s) }, it.outro?.let { s -> "Finale " + span(s) })
-                                                                .joinToString(" · "),
-                                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                        }
-                                                    }
-                                                    if (o.skippedItems.isNotEmpty()) item {
-                                                        Text("Non analizzabili", style = MaterialTheme.typography.titleSmall,
-                                                            modifier = Modifier.padding(top = 8.dp))
-                                                    }
-                                                    items(o.skippedItems.size) { i ->
-                                                        val (name, why) = o.skippedItems[i]
-                                                        Column {
-                                                            Text(name, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                                style = MaterialTheme.typography.bodyMedium)
-                                                            Text(why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
-                                val rejected by vm.rejectedSegments.collectAsState()
-                                var showRejected by remember { mutableStateOf(false) }
-                                if (rejected.isNotEmpty()) {
-                                    androidx.compose.material3.OutlinedButton(onClick = { showRejected = true }, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Segmenti scartati (${rejected.size})")
-                                    }
-                                }
-                                if (showRejected) androidx.compose.material3.AlertDialog(
-                                    onDismissRequest = { showRejected = false },
-                                    confirmButton = { androidx.compose.material3.TextButton(onClick = { showRejected = false }) { Text("Chiudi") } },
-                                    title = { Text("Segmenti scartati") },
-                                    text = {
-                                        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("Questi tratti audio non diventano mai intro o finali. Togline uno per rimettere subito i segmenti che bloccava.",
-                                                style = MaterialTheme.typography.bodySmall)
-                                            rejected.forEach { r ->
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Column(Modifier.weight(1f)) {
-                                                        Text(r.originName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                                        Text((if (r.kind == "intro") "Intro" else "Finale") + " · ${(r.endMs - r.startMs) / 1000} s",
-                                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                    }
-                                                    androidx.compose.material3.TextButton(onClick = { vm.restoreRejected(r.id) }) { Text("Togli") }
-                                                }
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
+                        item { IntroSettings(s, vm, onOpenFile) }
                         item {
                             Section("Pannello info", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
                                 ToggleRow("Video sopra il pannello", s.splitDetails,
@@ -1428,7 +1300,7 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
 
 /** "Mostra altre opzioni" toggle that reveals a page's less-used settings. */
 @Composable
-private fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
+internal fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
     // Grouped, elevated card: binds each group's controls together.
     androidx.compose.material3.Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -1448,7 +1320,7 @@ private fun Section(title: String, description: String? = null, content: @Compos
 }
 
 @Composable
-private fun ToggleRow(
+internal fun ToggleRow(
     label: String,
     checked: Boolean,
     desc: String? = null,

@@ -152,17 +152,36 @@ class ViewerViewModel @Inject constructor(
 
     fun segments(fileId: String) = intro.segments(fileId)
 
-    /**
-     * "Inizio qui": a segment with its end still after [posMs] takes the new start at once; otherwise
-     * the start waits for "Fine qui" (returns true).
-     */
-    fun markStart(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, posMs: Long,
-                  current: com.cripta.app.data.db.MediaSegmentEntity?): Boolean {
-        if (current != null && current.source != "none" && current.endMs > posMs + MIN_MARK_MS) {
-            viewModelScope.launch { intro.setManual(file.id, kind, posMs, current.endMs) }
-            return false
-        }
-        return true
+    /** A player's place, for the details panel's intro section (which has no player of its own). */
+    data class PlayerSpot(val positionMs: Long, val durationMs: Long, val playing: Boolean)
+
+    /** Each open player's spot by file id (neighbouring pages may hold players too). */
+    val playerSpots = MutableStateFlow<Map<String, PlayerSpot>>(emptyMap())
+
+    /** A seek asked by the details panel for the player of [fileId]; [play] starts playback too. */
+    data class SeekRequest(val fileId: String, val positionMs: Long, val play: Boolean)
+    val seekRequests = kotlinx.coroutines.flow.MutableSharedFlow<SeekRequest>(extraBufferCapacity = 4)
+    fun seekPlayer(fileId: String, positionMs: Long, play: Boolean = false) {
+        seekRequests.tryEmit(SeekRequest(fileId, positionMs, play))
+    }
+
+    /** "ok", the reason a video could not be analysed, or null when it was never analysed. */
+    suspend fun introStatus(fileId: String): String? = runCatching { intro.printStatus(fileId) }.getOrNull()
+
+    /** "Analizza ora" from the details panel. */
+    fun analyzeIntro(file: FileEntity) {
+        com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true, fileIds = listOf(file.id))
+        _message.value = "Analisi avviata: l'esito arriva in una notifica"
+    }
+
+    /** Ritocco: move a segment's bounds by [startDelta] / [endDelta] ms, kept inside the video and apart. */
+    fun nudgeSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind,
+                     seg: com.cripta.app.data.db.MediaSegmentEntity, startDelta: Long, endDelta: Long, durationMs: Long) {
+        val max = if (durationMs > 0) durationMs else Long.MAX_VALUE
+        val start = (seg.startMs + startDelta).coerceIn(0L, max)
+        val end = (seg.endMs + endDelta).coerceIn(0L, max)
+        if (end < start + MIN_MARK_MS) return
+        viewModelScope.launch { intro.setManual(file.id, kind, start, end) }
     }
 
     /** "Fine qui". False when the end would not come after the start. */
