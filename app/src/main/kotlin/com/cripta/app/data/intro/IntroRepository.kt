@@ -12,6 +12,7 @@ import com.cripta.app.media.intro.Found
 import com.cripta.app.media.intro.IntroDetector
 import com.cripta.app.media.intro.Print
 import com.cripta.app.media.intro.PrintCodec
+import com.cripta.app.media.intro.PrintIndex
 import com.cripta.app.media.intro.SegmentKind
 import com.cripta.app.security.SessionManager
 import kotlinx.coroutines.CancellationException
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 /**
  * Intros and outros: fingerprints the videos, matches them across the whole vault, stores the
@@ -53,9 +55,15 @@ class IntroRepository @Inject constructor(
     /** Fingerprint [file]'s head and tail; a video that cannot be analysed gets a "skip" row. True when analysed. */
     suspend fun fingerprint(file: FileEntity): Boolean {
         val dur = file.durationMs ?: 0L
+        val started = android.os.SystemClock.elapsedRealtime()
+        // Each part is hashed as soon as it is decoded, so only one part's audio is held at a time.
+        suspend fun part(fromMs: Long, toMs: Long): Pair<Long, IntArray>? {
+            val pcm = decoder.decode(file, fromMs, toMs) ?: return null
+            return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) }
+        }
         val parts = if (dur < MIN_DURATION_MS) null else try {
-            val head = decoder.decode(file, 0, minOf(dur, HEAD_MS))
-            val tail = decoder.decode(file, maxOf(0L, dur - TAIL_MS), dur)
+            val head = part(0, minOf(dur, HEAD_MS))
+            val tail = head?.let { part(maxOf(0L, dur - TAIL_MS), dur) }
             if (head == null || tail == null) null else head to tail
         } catch (e: CancellationException) {
             throw e
@@ -68,12 +76,11 @@ class IntroRepository @Inject constructor(
             return false
         }
         val (head, tail) = parts
-        val headHashes = withContext(Dispatchers.Default) { Fingerprint.hashes(head.samples) }
-        val tailHashes = withContext(Dispatchers.Default) { Fingerprint.hashes(tail.samples) }
         db.withTransaction {
-            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, head.startMs, PrintCodec.encode(headHashes), "ok"))
-            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.OUTRO.part, tail.startMs, PrintCodec.encode(tailHashes), "ok"))
+            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, head.first, PrintCodec.encode(head.second), "ok"))
+            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.OUTRO.part, tail.first, PrintCodec.encode(tail.second), "ok"))
         }
+        android.util.Log.i("IntroRepository", "fingerprint ${android.os.SystemClock.elapsedRealtime() - started} ms (${dur / 1000} s video)")
         return true
     }
 
@@ -81,17 +88,16 @@ class IntroRepository @Inject constructor(
     suspend fun matchNew(ids: Collection<String>): Int = withContext(Dispatchers.Default) {
         val touched = HashSet<String>()
         for (kind in SegmentKind.entries) {
-            val prints = livePrints(kind)
-            val byId = prints.associateBy { it.fileId }
+            val index = indexFor(kind)
             val rejected = dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }
             val done = HashSet<String>()
             for (id in ids) {
                 ensureActive()
-                val target = byId[id] ?: continue
-                // A pair of two new videos is compared once: detect() reports both sides.
-                val others = prints.filter { it.fileId != id && it.fileId !in done }
+                val target = printOf(id, kind) ?: continue
+                // A pair of two new videos is compared once: detectAt() reports both sides.
                 done += id
-                for (f in IntroDetector.detect(kind, target, others, rejected)) if (store(kind, f)) touched += f.fileId
+                val candidates = candidatesFor(index, target.hashes, kind) { it in done }
+                for (f in IntroDetector.detectAt(kind, target, candidates, rejected)) if (store(kind, f)) touched += f.fileId
             }
         }
         touched.size
@@ -108,7 +114,7 @@ class IntroRepository @Inject constructor(
     suspend fun searchOthers(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long): Int? = withContext(Dispatchers.Default) {
         val sample = printOf(fileId, kind)?.slice(startMs, endMs) ?: return@withContext null
         if (sample.size < SegmentKind.OUTRO.minHashes / 2) return@withContext null
-        IntroDetector.search(sample, livePrints(kind).filter { it.fileId != fileId }).count { store(kind, it) }
+        IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == fileId }).count { store(kind, it) }
     }
 
     /** "Non è un'intro · In tutti i video". Returns how many other videos lost the segment. */
@@ -135,7 +141,8 @@ class IntroRepository @Inject constructor(
         val origin = repo.fileById(r.originFileId)
         if (origin != null && origin.deletedAt == null && store(kind, Found(origin.id, r.startMs, r.endMs))) restored++
         val sample = PrintCodec.decode(r.hashes)
-        restored + IntroDetector.search(sample, livePrints(kind).filter { it.fileId != r.originFileId }).count { store(kind, it) }
+        restored + IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == r.originFileId })
+            .count { store(kind, it) }
     }
 
     private suspend fun store(kind: SegmentKind, f: Found): Boolean {
@@ -149,10 +156,24 @@ class IntroRepository @Inject constructor(
         dao.printsOf(fileId).firstOrNull { it.part == kind.part && it.status == "ok" }
             ?.let { Print(it.fileId, it.startMs, PrintCodec.decode(it.hashes)) }
 
-    private suspend fun livePrints(kind: SegmentKind): List<Print> {
+    /** Landmark index of every live video's print of [kind], read one print at a time. */
+    private suspend fun indexFor(kind: SegmentKind): PrintIndex {
         val live = repo.allFilesSnapshot().mapTo(HashSet()) { it.id }
-        return dao.allPrints(kind.part).filter { it.fileId in live }.map { Print(it.fileId, it.startMs, PrintCodec.decode(it.hashes)) }
+        val ids = dao.printIds(kind.part).filter { it in live }
+        // About 16 hashes a second over the part's minutes, a quarter of them landmarks.
+        val perVideo = ((if (kind == SegmentKind.INTRO) HEAD_MS else TAIL_MS) / Fingerprint.HOP_MS / PrintIndex.SAMPLE).toInt()
+        val index = PrintIndex(ids.size * perVideo + 1024)
+        for (id in ids) {
+            coroutineContext.ensureActive()
+            printOf(id, kind)?.let { index.add(it.fileId, it.hashes) }
+        }
+        return index
     }
+
+    /** The videos the index proposes for [hashes], read from the database, minus [skip]. */
+    private suspend fun candidatesFor(index: PrintIndex, hashes: IntArray, kind: SegmentKind,
+                                      skip: (String) -> Boolean): List<Pair<Print, List<Int>>> =
+        index.candidates(hashes).mapNotNull { (id, offsets) -> if (skip(id)) null else printOf(id, kind)?.let { it to offsets } }
 
     private companion object {
         const val MIN_DURATION_MS = 120_000L

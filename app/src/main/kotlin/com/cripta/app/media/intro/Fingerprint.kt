@@ -33,9 +33,10 @@ object Fingerprint {
         (hz * FRAME / MonoResampler.OUT_RATE).roundToInt()
     }
 
-    fun hashes(pcm: FloatArray): IntArray {
-        if (pcm.size < FRAME) return IntArray(0)
-        val frames = (pcm.size - FRAME) / HOP + 1
+    /** Hashes of the first [size] samples of [pcm]. */
+    fun hashes(pcm: FloatArray, size: Int = pcm.size): IntArray {
+        if (size < FRAME) return IntArray(0)
+        val frames = (size - FRAME) / HOP + 1
         val out = IntArray(frames - 1)
         val re = DoubleArray(FRAME)
         val im = DoubleArray(FRAME)
