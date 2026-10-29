@@ -1066,6 +1066,8 @@ class VaultRepository @Inject constructor(
             if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
             db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
+            db.introDao().clearPrints(fileId)
+            db.introDao().clearSegments(fileId)
             true
         }
         if (!deleted) return@withContext false

@@ -10,8 +10,9 @@ import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
 @Database(
-    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class],
-    version = 15,
+    entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class,
+        AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class],
+    version = 16,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -26,6 +27,7 @@ abstract class CriptaDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun savedFilterDao(): SavedFilterDao
     abstract fun pendingJobDao(): PendingJobDao
+    abstract fun introDao(): IntroDao
 
     companion object {
         private const val NAME = "cripta.db"
@@ -135,6 +137,25 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** Intro/outro detection: fingerprints, segments, rejected samples. */
+        internal val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `audio_prints` (`fileId` TEXT NOT NULL, `part` TEXT NOT NULL, " +
+                        "`startMs` INTEGER NOT NULL, `hashes` BLOB NOT NULL, `status` TEXT NOT NULL, PRIMARY KEY(`fileId`, `part`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `media_segments` (`fileId` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, `source` TEXT NOT NULL, PRIMARY KEY(`fileId`, `kind`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `rejected_prints` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` TEXT NOT NULL, `originFileId` TEXT NOT NULL, `originName` TEXT NOT NULL, `startMs` INTEGER NOT NULL, " +
+                        "`endMs` INTEGER NOT NULL, `hashes` BLOB NOT NULL, `createdAt` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -152,7 +173,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }
