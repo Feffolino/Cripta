@@ -231,3 +231,54 @@ interface PendingJobDao {
     @Query("DELETE FROM pending_jobs WHERE id = :id")
     suspend fun delete(id: String)
 }
+
+@Dao
+interface IntroDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putPrint(p: AudioPrintEntity)
+
+    @Query("SELECT * FROM audio_prints WHERE fileId = :fileId")
+    suspend fun printsOf(fileId: String): List<AudioPrintEntity>
+
+    @Query("SELECT * FROM audio_prints WHERE status = 'ok' AND part = :part")
+    suspend fun allPrints(part: String): List<AudioPrintEntity>
+
+    @Query("SELECT DISTINCT fileId FROM audio_prints")
+    suspend fun printedIds(): List<String>
+
+    @Query("DELETE FROM audio_prints WHERE fileId = :fileId")
+    suspend fun clearPrints(fileId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putSegment(s: MediaSegmentEntity)
+
+    @Query("SELECT * FROM media_segments WHERE fileId = :fileId")
+    suspend fun segmentsOf(fileId: String): List<MediaSegmentEntity>
+
+    @Query("SELECT * FROM media_segments WHERE fileId = :fileId")
+    fun observeSegments(fileId: String): Flow<List<MediaSegmentEntity>>
+
+    @Query("SELECT * FROM media_segments WHERE kind = :kind")
+    suspend fun segmentsOfKind(kind: String): List<MediaSegmentEntity>
+
+    @Query("DELETE FROM media_segments WHERE fileId = :fileId AND kind = :kind")
+    suspend fun deleteSegment(fileId: String, kind: String)
+
+    @Query("DELETE FROM media_segments WHERE fileId = :fileId")
+    suspend fun clearSegments(fileId: String)
+
+    @Insert
+    suspend fun addRejected(r: RejectedPrintEntity): Long
+
+    @Query("SELECT * FROM rejected_prints ORDER BY createdAt DESC")
+    fun observeRejected(): Flow<List<RejectedPrintEntity>>
+
+    @Query("SELECT * FROM rejected_prints WHERE kind = :kind")
+    suspend fun rejectedOfKind(kind: String): List<RejectedPrintEntity>
+
+    @Query("SELECT * FROM rejected_prints WHERE id = :id")
+    suspend fun rejectedById(id: Long): RejectedPrintEntity?
+
+    @Query("DELETE FROM rejected_prints WHERE id = :id")
+    suspend fun deleteRejected(id: Long)
+}

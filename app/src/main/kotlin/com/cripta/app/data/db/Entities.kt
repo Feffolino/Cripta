@@ -153,3 +153,43 @@ data class PendingJobEntity(
     val payload: String,
     val createdAt: Long,
 )
+
+/** Audio fingerprint of a video's first minutes ("head") or last minutes ("tail"), for intros and outros. */
+@Entity(tableName = "audio_prints", primaryKeys = ["fileId", "part"])
+data class AudioPrintEntity(
+    val fileId: String,
+    /** "head" or "tail". A video that cannot be analysed has one "head" row with status "skip". */
+    val part: String,
+    /** Time of the first hash in the video (ms). */
+    val startMs: Long,
+    /** Hashes encoded by [com.cripta.app.media.intro.PrintCodec]. */
+    val hashes: ByteArray,
+    /** "ok" or "skip" (too short, no audio track, undecodable). */
+    val status: String,
+)
+
+/** A video's intro or outro. */
+@Entity(tableName = "media_segments", primaryKeys = ["fileId", "kind"])
+data class MediaSegmentEntity(
+    val fileId: String,
+    /** "intro" or "outro". */
+    val kind: String,
+    val startMs: Long,
+    val endMs: Long,
+    /** "auto" (detected), "manual" (marked by the user) or "none" (the user said there is none). */
+    val source: String,
+)
+
+/** Audio the user said is no intro/outro in any video: stretches matching it never become segments. */
+@Entity(tableName = "rejected_prints")
+data class RejectedPrintEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String,
+    /** The video it was rejected on (it may be gone since) and where in it. */
+    val originFileId: String,
+    val originName: String,
+    val startMs: Long,
+    val endMs: Long,
+    val hashes: ByteArray,
+    val createdAt: Long,
+)
