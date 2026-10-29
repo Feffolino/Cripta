@@ -1687,31 +1687,37 @@ private fun VideoPlayer(
                 },
             )
         }
+        // After a double tap, each further tap on the same side seeks one more step at once and
+        // never toggles the controls (a third tap used to become a single tap and show them).
+        val seekSeries = remember(file.id) { SeekTapSeries() }
+        fun seekStep(side: SeekTapSeries.Side) {
+            val back = side == SeekTapSeries.Side.Back
+            seekBy(if (back) -stepMs else stepMs)
+            seekTick++
+            seekLabel = (if (back) "-" else "+") + "${seekSeries.steps * prefs.seekStepSec}s"
+        }
+        fun Modifier.seekZone(side: SeekTapSeries.Side): Modifier = pointerInput(stepMs) {
+            detectTapGestures(
+                onDoubleTap = { if (seekSeries.onDoubleTap(side, android.os.SystemClock.uptimeMillis())) seekStep(side) },
+                onTap = { if (!speedHoldPerformed && !seekSeries.lastPressSeeked) toggleController() },
+                // A completed speed hold must not become a single tap on release.
+                onLongPress = {},
+                onPress = {
+                    if (seekSeries.onPress(side, android.os.SystemClock.uptimeMillis())) seekStep(side)
+                    else holdForSpeed()
+                },
+            )
+        }
         Box(
             Modifier.align(Alignment.TopStart).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
-                .pointerInput(stepMs) {
-                    detectTapGestures(
-                        onDoubleTap = { seekBy(-stepMs); seekTick++; seekLabel = "-${prefs.seekStepSec}s" },
-                        onTap = { if (!speedHoldPerformed) toggleController() },
-                        // A completed speed hold must not become a single tap on release.
-                        onLongPress = {},
-                        onPress = { holdForSpeed() },
-                    )
-                }
+                .seekZone(SeekTapSeries.Side.Back)
                 .sideDrag(brightness = true)
         )
         Box(
             Modifier.align(Alignment.TopEnd).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
-                .pointerInput(stepMs) {
-                    detectTapGestures(
-                        onDoubleTap = { seekBy(stepMs); seekTick++; seekLabel = "+${prefs.seekStepSec}s" },
-                        onTap = { if (!speedHoldPerformed) toggleController() },
-                        onLongPress = {},
-                        onPress = { holdForSpeed() },
-                    )
-                }
+                .seekZone(SeekTapSeries.Side.Forward)
                 .sideDrag(brightness = false)
         )
         // "Prossimo" card, bottom-right above the seek bar.
