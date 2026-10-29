@@ -931,15 +931,19 @@ class ConversionService : Service() {
         try {
             do {
                 introRerun = false
-                val todo = intro.pending()
+                val quick = runCatching { settings.settingsOnce().introQuickScan }.getOrDefault(true)
+                val todo = intro.pending(quick)
                 if (todo.isEmpty()) break
+                // Time of the last video analysed, shown so a slow phone or format can be told apart.
+                val lastSec = java.util.concurrent.atomic.AtomicLong(-1L)
                 val eta = EtaEstimator()
                 val newIds = java.util.Collections.synchronizedList(mutableListOf<String>())
                 val next = java.util.concurrent.atomic.AtomicInteger(0)
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
                 fun progress() = synchronized(introNoteLock) {
                     val d = finished.get()
-                    notify(build(label, d * 100 / todo.size, sub = "$d di ${todo.size} video analizzati",
+                    val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
+                    notify(build(label, d * 100 / todo.size, sub = "$d di ${todo.size} video analizzati$last",
                         eta = if (d > 0) eta.left(d.toFloat() / todo.size) else null,
                         cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
                 }
@@ -950,7 +954,9 @@ class ConversionService : Service() {
                         launch {
                             while (true) {
                                 val f = todo.getOrNull(next.getAndIncrement()) ?: break
-                                if (intro.fingerprint(f)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
+                                val t0 = SystemClock.elapsedRealtime()
+                                if (intro.fingerprint(f, quick)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
+                                lastSec.set((SystemClock.elapsedRealtime() - t0) / 1000)
                                 finished.incrementAndGet()
                                 progress()
                             }

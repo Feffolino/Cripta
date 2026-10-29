@@ -232,6 +232,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoNext(v: Boolean) = viewModelScope.launch { store.setAutoNext(v) }
     fun setAutoNextSec(v: Int) = viewModelScope.launch { store.setAutoNextSec(v) }
     fun setIntroAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setIntroAnalyzeNew(v) }
+    fun setIntroQuickScan(v: Boolean) = viewModelScope.launch { store.setIntroQuickScan(v) }
     fun setIntroAutoSkip(v: Boolean) = viewModelScope.launch { store.setIntroAutoSkip(v) }
     fun setOutroAutoSkip(v: Boolean) = viewModelScope.launch { store.setOutroAutoSkip(v) }
     fun startIntroScan() = com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true)

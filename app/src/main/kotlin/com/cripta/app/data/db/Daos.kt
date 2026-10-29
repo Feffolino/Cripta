@@ -232,6 +232,8 @@ interface PendingJobDao {
     suspend fun delete(id: String)
 }
 
+data class PrintSize(val fileId: String, val status: String, val bytes: Int)
+
 @Dao
 interface IntroDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -244,8 +246,9 @@ interface IntroDao {
     @Query("SELECT fileId FROM audio_prints WHERE status = 'ok' AND part = :part")
     suspend fun printIds(part: String): List<String>
 
-    @Query("SELECT DISTINCT fileId FROM audio_prints")
-    suspend fun printedIds(): List<String>
+    /** How much of each video's start was fingerprinted (bytes of hashes), without loading them. */
+    @Query("SELECT fileId, status, length(hashes) AS bytes FROM audio_prints WHERE part = 'head'")
+    suspend fun headSizes(): List<PrintSize>
 
     @Query("DELETE FROM audio_prints WHERE fileId = :fileId")
     suspend fun clearPrints(fileId: String)

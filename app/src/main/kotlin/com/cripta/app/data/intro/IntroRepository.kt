@@ -46,15 +46,29 @@ class IntroRepository @Inject constructor(
     fun rejected(): Flow<List<RejectedPrintEntity>> =
         session.database.flatMapLatest { d -> if (d == null) emptyFlow() else d.introDao().observeRejected() }
 
-    /** Live videos never analysed. */
-    suspend fun pending(): List<FileEntity> {
-        val done = dao.printedIds().toHashSet()
-        return repo.allFilesSnapshot().filter { VaultRepository.isVideo(it.mimeType) && it.id !in done }
+    /**
+     * Live videos to analyse: never analysed, and in the complete mode ([quick] off) also those a
+     * quick scan covered only partly.
+     */
+    suspend fun pending(quick: Boolean): List<FileEntity> {
+        val sizes = dao.headSizes().associateBy { it.fileId }
+        return repo.allFilesSnapshot().filter { f ->
+            if (!VaultRepository.isVideo(f.mimeType)) return@filter false
+            val s = sizes[f.id] ?: return@filter true
+            if (quick || s.status != "ok") return@filter false
+            val covered = s.bytes / 4 * Fingerprint.HOP_MS
+            covered < minOf(f.durationMs ?: 0L, HEAD_MS) - 30_000
+        }
     }
 
-    /** Fingerprint [file]'s head and tail; a video that cannot be analysed gets a "skip" row. True when analysed. */
-    suspend fun fingerprint(file: FileEntity): Boolean {
+    /**
+     * Fingerprint [file]'s head and tail ([quick]: only its first and last minute); a video that
+     * cannot be analysed gets a "skip" row. True when analysed.
+     */
+    suspend fun fingerprint(file: FileEntity, quick: Boolean): Boolean {
         val dur = file.durationMs ?: 0L
+        val headMs = if (quick) QUICK_MS else HEAD_MS
+        val tailMs = if (quick) QUICK_MS else TAIL_MS
         val started = android.os.SystemClock.elapsedRealtime()
         // Each part is hashed as soon as it is decoded, so only one part's audio is held at a time.
         suspend fun part(fromMs: Long, toMs: Long): Pair<Long, IntArray>? {
@@ -62,8 +76,8 @@ class IntroRepository @Inject constructor(
             return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) }
         }
         val parts = if (dur < MIN_DURATION_MS) null else try {
-            val head = part(0, minOf(dur, HEAD_MS))
-            val tail = head?.let { part(maxOf(0L, dur - TAIL_MS), dur) }
+            val head = part(0, minOf(dur, headMs))
+            val tail = head?.let { part(maxOf(0L, dur - tailMs), dur) }
             if (head == null || tail == null) null else head to tail
         } catch (e: CancellationException) {
             throw e
@@ -160,8 +174,8 @@ class IntroRepository @Inject constructor(
     private suspend fun indexFor(kind: SegmentKind): PrintIndex {
         val live = repo.allFilesSnapshot().mapTo(HashSet()) { it.id }
         val ids = dao.printIds(kind.part).filter { it in live }
-        // About 16 hashes a second over the part's minutes, a quarter of them landmarks.
-        val perVideo = ((if (kind == SegmentKind.INTRO) HEAD_MS else TAIL_MS) / Fingerprint.HOP_MS / PrintIndex.SAMPLE).toInt()
+        // About 16 hashes a second, a quarter of them landmarks; sized for quick prints, grows for complete ones.
+        val perVideo = (QUICK_MS / Fingerprint.HOP_MS / PrintIndex.SAMPLE).toInt()
         val index = PrintIndex(ids.size * perVideo + 1024)
         for (id in ids) {
             coroutineContext.ensureActive()
@@ -179,5 +193,7 @@ class IntroRepository @Inject constructor(
         const val MIN_DURATION_MS = 120_000L
         const val HEAD_MS = 600_000L
         const val TAIL_MS = 300_000L
+        /** Quick scan: the first and the last minute only. */
+        const val QUICK_MS = 60_000L
     }
 }

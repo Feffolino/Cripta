@@ -131,6 +131,8 @@ data class Settings(
     val controlsTimeoutSec: Int = 4,
     /** Intro/outro: analyse each new video's audio in the background. */
     val introAnalyzeNew: Boolean = true,
+    /** Intro/outro: fingerprint only the first and last minute of each video (much faster). */
+    val introQuickScan: Boolean = true,
     /** Player: skip a known intro / outro by itself instead of offering the button. */
     val introAutoSkip: Boolean = false,
     val outroAutoSkip: Boolean = false,
@@ -209,6 +211,7 @@ class SettingsStore @Inject constructor(
     private val backupCompressKey = booleanPreferencesKey("backup_compress_docs")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
     private val introAnalyzeKey = booleanPreferencesKey("intro_analyze_new")
+    private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
     private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
     private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
 
@@ -279,6 +282,7 @@ class SettingsStore @Inject constructor(
             holdSpeedX10 = (p[holdSpeedKey] ?: 20).let { if (it in listOf(15, 20, 30)) it else 20 },
             controlsTimeoutSec = (p[controlsTimeoutKey] ?: 4).let { if (it in listOf(2, 4, 8)) it else 4 },
             introAnalyzeNew = p[introAnalyzeKey] ?: true,
+            introQuickScan = p[introQuickKey] ?: true,
             introAutoSkip = p[introAutoKey] ?: false,
             outroAutoSkip = p[outroAutoKey] ?: false,
         )
@@ -316,6 +320,7 @@ class SettingsStore @Inject constructor(
     suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
     suspend fun setIntroAnalyzeNew(v: Boolean) { context.dataStore.edit { it[introAnalyzeKey] = v } }
+    suspend fun setIntroQuickScan(v: Boolean) { context.dataStore.edit { it[introQuickKey] = v } }
     suspend fun setIntroAutoSkip(v: Boolean) { context.dataStore.edit { it[introAutoKey] = v } }
     suspend fun setOutroAutoSkip(v: Boolean) { context.dataStore.edit { it[outroAutoKey] = v } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
@@ -400,7 +405,7 @@ class SettingsStore @Inject constructor(
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey,
-                introAnalyzeKey, introAutoKey, outroAutoKey)
+                introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)
