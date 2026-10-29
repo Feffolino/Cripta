@@ -583,6 +583,7 @@ class VaultRepository @Inject constructor(
             if (old.isFavorite) db.fileDao().setFavorite(file.id, true)
             if (file.sourceUrl == null && old.sourceUrl != null) db.fileDao().setSourceUrl(file.id, old.sourceUrl)
             db.fileDao().setWeight(file.id, old.sortWeight)
+            carryManualSegments(old, file)
             if (useTrash) db.fileDao().setDeletedAt(old.id, now())
         }
         notifyChanged()
@@ -596,6 +597,13 @@ class VaultRepository @Inject constructor(
      */
     private suspend fun liveFolder(folderId: Long?): Long? =
         folderId?.let { id -> db.folderDao().byId(id)?.takeIf { it.deletedAt == null }?.id }
+
+    /** A new version of a video takes the old one's own intro/outro marks while the timing still fits. */
+    private suspend fun carryManualSegments(from: FileEntity, to: FileEntity) {
+        if (!com.cripta.app.media.intro.IntroDetector.carriesManual(from.durationMs, to.durationMs)) return
+        db.introDao().segmentsOf(from.id).filter { it.source != "auto" }
+            .forEach { db.introDao().putSegment(it.copy(fileId = to.id)) }
+    }
 
     /** Decrypting input stream for a file's plaintext (no full-file buffer in RAM). */
     fun decryptingStream(file: FileEntity): java.io.InputStream =
@@ -687,6 +695,7 @@ class VaultRepository @Inject constructor(
                 db.fileDao().withTagsById(original.id)?.tags?.forEach {
                     db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
                 }
+                carryManualSegments(original, entity)
                 // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
                 if (replace) db.fileDao().setDeletedAt(original.id, now())
             }
@@ -1420,7 +1429,12 @@ class VaultRepository @Inject constructor(
                         .put("width", fwt.file.width ?: org.json.JSONObject.NULL)
                         .put("height", fwt.file.height ?: org.json.JSONObject.NULL)
                         .put("contentHash", fwt.file.contentHash ?: org.json.JSONObject.NULL)
-                        .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } }))
+                        .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } })
+                        .put("segments", org.json.JSONArray().apply {
+                            db.introDao().segmentsOf(fwt.file.id).forEach {
+                                put(org.json.JSONObject().put("kind", it.kind).put("start", it.startMs).put("end", it.endMs).put("source", it.source))
+                            }
+                        }))
                 }
             })
             // Saved filters reference tags by id, which change on restore: store names instead.
@@ -1632,6 +1646,14 @@ class VaultRepository @Inject constructor(
                     for (n in names.distinct()) {
                         val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
                         db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
+                    }
+                    // v3: intro/outro segments (absent in older backups).
+                    o.optJSONArray("segments")?.let { arr ->
+                        for (k in 0 until arr.length()) {
+                            val s = arr.getJSONObject(k)
+                            db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
+                                uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source")))
+                        }
                     }
                 }
                 // v2: saved filters, tag names mapped back to the restored tag ids.
