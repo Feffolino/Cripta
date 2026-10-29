@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material.icons.automirrored.filled.LabelOff
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.StarBorder
@@ -594,6 +595,15 @@ fun VaultScreen(
                     })
                     if (videoCount > 0) add(SelAction(Icons.Filled.Image, if (videoCount == 1) "Copertina" else "Copertine ($videoCount)") {
                         showRegenCover = true
+                    })
+                    // Intro and outro of the selected videos now, again even if analysed before.
+                    if (videoCount > 0) add(SelAction(Icons.Filled.GraphicEq, if (videoCount == 1) "Analizza intro" else "Analizza ($videoCount)") {
+                        val ids = files.filter { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }.map { it.file.id }
+                        if (ids.isNotEmpty()) {
+                            com.cripta.app.work.ConversionService.startIntroScan(ctx, manual = true, fileIds = ids)
+                            notify("Analisi di intro e finale avviata")
+                            selection = emptySet()
+                        }
                     })
                     if (selection.size == 1) add(SelAction(Icons.Filled.Edit, "Rinomina") { renameTargetId = selection.first() })
                 }

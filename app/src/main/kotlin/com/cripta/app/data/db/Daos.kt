@@ -265,6 +265,9 @@ interface IntroDao {
     @Query("SELECT * FROM media_segments WHERE kind = :kind")
     suspend fun segmentsOfKind(kind: String): List<MediaSegmentEntity>
 
+    @Query("SELECT * FROM media_segments WHERE source != 'none'")
+    suspend fun allSegments(): List<MediaSegmentEntity>
+
     @Query("DELETE FROM media_segments WHERE fileId = :fileId AND kind = :kind")
     suspend fun deleteSegment(fileId: String, kind: String)
 
