@@ -92,6 +92,7 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -374,6 +375,7 @@ fun ViewerScreen(
                 onEditNote = if (com.cripta.app.data.VaultRepository.isNote(file.mimeType)) ({ onEditNote(file.id) }) else null,
                 onExport = { confirmDownload = file },
                 onConvert = if (convertible) ({ confirmConvert = file }) else null,
+                onAnalyze = if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType)) ({ vm.analyzeIntro(file) }) else null,
                 onDelete = { confirmDelete = file },
             ),
         )
@@ -2209,6 +2211,7 @@ private fun DetailsSheet(
                     a.onEditNote?.let { SheetActionButton(Icons.Filled.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
                     a.onConvert?.let { SheetActionButton(Icons.Filled.Autorenew, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
+                    a.onAnalyze?.let { SheetActionButton(Icons.Filled.GraphicEq, "Analizza intro", leave(it), modifier = Modifier.weight(1f)) }
                     SheetActionButton(Icons.Filled.Delete, "Elimina", leave(a.onDelete),
                         tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 }
@@ -2344,6 +2347,8 @@ private class SheetActions(
     val onEditNote: (() -> Unit)?,
     val onExport: () -> Unit,
     val onConvert: (() -> Unit)?,
+    /** Videos only: analyse this video's intro and outro now. */
+    val onAnalyze: (() -> Unit)?,
     val onDelete: () -> Unit,
 )
 

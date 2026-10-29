@@ -61,6 +61,16 @@ class IntroRepository @Inject constructor(
         }
     }
 
+    /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */
+    suspend fun forget(fileId: String): FileEntity? {
+        val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) } ?: return null
+        db.withTransaction {
+            dao.clearPrints(fileId)
+            dao.segmentsOf(fileId).filter { it.source == "auto" }.forEach { dao.deleteSegment(fileId, it.kind) }
+        }
+        return f
+    }
+
     /**
      * Fingerprint [file]'s head and tail ([quick]: only its first and last minute); a video that
      * cannot be analysed gets a "skip" row. True when analysed.
