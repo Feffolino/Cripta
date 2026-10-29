@@ -9,7 +9,6 @@ import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.Image
 import android.media.MediaCodec
-import android.media.MediaDataSource
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
@@ -734,25 +733,5 @@ class ThumbnailLoader @Inject constructor(
         var halfH = h / 2
         while (halfW / sample >= target && halfH / sample >= target) sample *= 2
         return sample.coerceAtLeast(1)
-    }
-
-    private class ChannelMediaDataSource(
-        private val channel: SeekableByteChannel,
-        private val length: Long,
-    ) : MediaDataSource() {
-        override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
-            if (position >= length) return -1
-            channel.position(position)
-            val bb = ByteBuffer.wrap(buffer, offset, size)
-            var read = 0
-            while (bb.hasRemaining()) {
-                val n = channel.read(bb)
-                if (n <= 0) break
-                read += n
-            }
-            return if (read == 0) -1 else read
-        }
-        override fun getSize(): Long = length
-        override fun close() { runCatching { channel.close() } }
     }
 }
