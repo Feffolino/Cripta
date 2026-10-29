@@ -285,7 +285,7 @@ class ConversionService : Service() {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
                     }
-                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false))
+                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringExtra(EX_ID))
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -913,13 +913,18 @@ class ConversionService : Service() {
     @Volatile private var introManual = false
     private val introMutex = kotlinx.coroutines.sync.Mutex()
     private val introNoteLock = Any()
+    /** Videos asked for one by one (from the player): analysed again, ahead of the rest. */
+    private val introAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    @Volatile private var introScanAll = false
 
     /**
-     * Fingerprint every video not analysed yet, then match them against the whole vault. A request
-     * arriving while a scan runs is folded into it: the running scan goes round once more.
-     * [manual]: started from Settings, so it always reports; an automatic one only when it found something.
+     * Fingerprint every video not analysed yet ([onlyId]: just that one, again), then match them
+     * against the whole vault. A request arriving while a scan runs is folded into it: a single video
+     * is taken next, a full request makes the running scan go round once more.
+     * [manual]: asked by the user, so it always reports; an automatic one only when it found something.
      */
-    private suspend fun introScan(manual: Boolean) {
+    private suspend fun introScan(manual: Boolean, onlyId: String? = null) {
+        if (onlyId == null) introScanAll = true else introAsked += onlyId
         introManual = introManual || manual
         if (!introMutex.tryLock()) { introRerun = true; return }
         introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
@@ -932,8 +937,11 @@ class ConversionService : Service() {
             do {
                 introRerun = false
                 val quick = runCatching { settings.settingsOnce().introQuickScan }.getOrDefault(true)
-                val todo = intro.pending(quick)
-                if (todo.isEmpty()) break
+                val all = introScanAll
+                introScanAll = false
+                val todo = if (all) intro.pending(quick) else emptyList()
+                if (todo.isEmpty() && introAsked.isEmpty()) break
+                val askedIds = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
                 // Time of the last video analysed, shown so a slow phone or format can be told apart.
                 val lastSec = java.util.concurrent.atomic.AtomicLong(-1L)
                 val eta = EtaEstimator()
@@ -942,9 +950,10 @@ class ConversionService : Service() {
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
                 fun progress() = synchronized(introNoteLock) {
                     val d = finished.get()
+                    val total = maxOf(1, todo.size + askedIds.size)
                     val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
-                    notify(build(label, d * 100 / todo.size, sub = "$d di ${todo.size} video analizzati$last",
-                        eta = if (d > 0) eta.left(d.toFloat() / todo.size) else null,
+                    notify(build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
+                        eta = if (d > 0) eta.left(d.toFloat() / total) else null,
                         cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
                 }
                 progress()
@@ -953,7 +962,15 @@ class ConversionService : Service() {
                     repeat(INTRO_WORKERS) {
                         launch {
                             while (true) {
-                                val f = todo.getOrNull(next.getAndIncrement()) ?: break
+                                val asked = introAsked.poll()
+                                val f = if (asked != null) {
+                                    askedIds += asked
+                                    intro.forget(asked) ?: continue
+                                } else {
+                                    val t = todo.getOrNull(next.getAndIncrement()) ?: break
+                                    if (t.id in askedIds) continue
+                                    t
+                                }
                                 val t0 = SystemClock.elapsedRealtime()
                                 if (intro.fingerprint(f, quick)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
                                 lastSec.set((SystemClock.elapsedRealtime() - t0) / 1000)
@@ -1707,10 +1724,14 @@ class ConversionService : Service() {
             runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_SCAN)) }
         }
 
-        /** Analyse the videos not analysed yet for intros and outros ([manual]: from Settings). */
-        fun startIntroScan(ctx: Context, manual: Boolean) {
+        /**
+         * Analyse the videos not analysed yet for intros and outros ([manual]: asked by the user), or
+         * only [fileId], again even if analysed before.
+         */
+        fun startIntroScan(ctx: Context, manual: Boolean, fileId: String? = null) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
-                .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual))
+                .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
+                .apply { if (fileId != null) putExtra(EX_ID, fileId) })
         }
 
         fun cancelIntroScan(ctx: Context) {

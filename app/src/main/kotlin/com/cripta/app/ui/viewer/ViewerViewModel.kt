@@ -152,6 +152,12 @@ class ViewerViewModel @Inject constructor(
 
     fun segments(fileId: String) = intro.segments(fileId)
 
+    /** "Analizza": intro and outro of this video now, again even if analysed before. */
+    fun analyzeIntro(file: FileEntity) {
+        com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true, fileId = file.id)
+        _message.value = "Analisi di intro e finale avviata"
+    }
+
     /**
      * "Inizio qui": a segment with its end still after [posMs] takes the new start at once; otherwise
      * the start waits for "Fine qui" (returns true).
