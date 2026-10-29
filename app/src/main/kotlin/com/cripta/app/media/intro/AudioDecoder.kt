@@ -46,6 +46,7 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
             var startUs = -1L
             var inputDone = false
             var buf = FloatArray(0)
+            var shorts = ShortArray(0)
             val endUs = toMs * 1000
             // Sized for the whole stretch up front: growing it by doubling meant copies of minutes of audio.
             val capacity = ((toMs - fromMs) / 1000.0 * MonoResampler.OUT_RATE).toInt() + MonoResampler.OUT_RATE
@@ -91,7 +92,12 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
                         val n = if (floatPcm) info.size / 4 else info.size / 2
                         if (buf.size < n) buf = FloatArray(n)
                         if (floatPcm) out.asFloatBuffer().get(buf, 0, n)
-                        else { val sb = out.asShortBuffer(); for (k in 0 until n) buf[k] = sb.get(k) / 32768f }
+                        else {
+                            // One bulk copy, then a plain array loop (a ShortBuffer.get per sample is slow).
+                            if (shorts.size < n) shorts = ShortArray(n)
+                            out.asShortBuffer().get(shorts, 0, n)
+                            for (k in 0 until n) buf[k] = shorts[k] / 32768f
+                        }
                         r.push(buf, n)
                     }
                     c.releaseOutputBuffer(o, false)

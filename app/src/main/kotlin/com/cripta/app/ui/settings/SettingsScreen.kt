@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -379,6 +380,12 @@ fun SettingsScreen(
                                 ToggleRow("Analizza i nuovi video", s.introAnalyzeNew,
                                     desc = "Dopo ogni importazione, download o conversione, in background.",
                                     icon = Icons.Filled.GraphicEq) { vm.setIntroAnalyzeNew(it) }
+                                ToggleRow("Analisi rapida", s.introQuickScan,
+                                    desc = if (s.introQuickScan) "Solo il primo e l'ultimo minuto di ogni video: molto più veloce, " +
+                                        "ma non trova le sigle che iniziano dopo il primo minuto."
+                                        else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta. " +
+                                            "«Analizza i video esistenti» completa anche quelli già analizzati in modo rapido.",
+                                    icon = Icons.Filled.Speed) { vm.setIntroQuickScan(it) }
                                 ToggleRow("Salta l'intro in automatico", s.introAutoSkip,
                                     desc = if (s.introAutoSkip) "Il video salta da solo; «Annulla» torna indietro." else "Compare il pulsante «Salta intro».",
                                     icon = Icons.Filled.SkipNext) { vm.setIntroAutoSkip(it) }
