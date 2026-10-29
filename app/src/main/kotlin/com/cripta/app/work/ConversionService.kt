@@ -912,6 +912,7 @@ class ConversionService : Service() {
     @Volatile private var introRerun = false
     @Volatile private var introManual = false
     private val introMutex = kotlinx.coroutines.sync.Mutex()
+    private val introNoteLock = Any()
 
     /**
      * Fingerprint every video not analysed yet, then match them against the whole vault. A request
@@ -923,27 +924,46 @@ class ConversionService : Service() {
         if (!introMutex.tryLock()) { introRerun = true; return }
         introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         val label = "Analisi intro e finali"
-        var analysed = 0; var skipped = 0; var found = 0
+        val analysedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        var found = 0
+        fun summary() = introSummary(analysedCount.get(), skippedCount.get(), found)
         try {
             do {
                 introRerun = false
                 val todo = intro.pending()
                 if (todo.isEmpty()) break
                 val eta = EtaEstimator()
-                val newIds = mutableListOf<String>()
-                todo.forEachIndexed { i, f ->
-                    notify(build(label, i * 100 / todo.size, sub = "Video ${i + 1} di ${todo.size}",
-                        eta = if (i > 0) eta.left(i.toFloat() / todo.size) else null,
+                val newIds = java.util.Collections.synchronizedList(mutableListOf<String>())
+                val next = java.util.concurrent.atomic.AtomicInteger(0)
+                val finished = java.util.concurrent.atomic.AtomicInteger(0)
+                fun progress() = synchronized(introNoteLock) {
+                    val d = finished.get()
+                    notify(build(label, d * 100 / todo.size, sub = "$d di ${todo.size} video analizzati",
+                        eta = if (d > 0) eta.left(d.toFloat() / todo.size) else null,
                         cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
-                    if (intro.fingerprint(f)) { analysed++; newIds += f.id } else skipped++
+                }
+                progress()
+                // A few videos at once: each decoder runs on one core, and the phone has several.
+                kotlinx.coroutines.coroutineScope {
+                    repeat(INTRO_WORKERS) {
+                        launch {
+                            while (true) {
+                                val f = todo.getOrNull(next.getAndIncrement()) ?: break
+                                if (intro.fingerprint(f)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
+                                finished.incrementAndGet()
+                                progress()
+                            }
+                        }
+                    }
                 }
                 notify(build(label, 100, sub = "Confronto con gli altri video…", indeterminate = true,
                     cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
                 found += intro.matchNew(newIds)
             } while (introRerun)
-            if (introManual || found > 0) notifyResult("Analisi completata", introSummary(analysed, skipped, found), ResultKind.INTRO)
+            if (introManual || found > 0) notifyResult("Analisi completata", summary(), ResultKind.INTRO)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult("$label annullata", introSummary(analysed, skipped, found), ResultKind.INTRO, state = ResultState.CANCELLED)
+            notifyResult("$label annullata", summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "intro scan failed", e)
@@ -1575,6 +1595,8 @@ class ConversionService : Service() {
         private const val MODE_INTRO_SCAN = "intro_scan"
         private const val MODE_CANCEL_INTRO = "cancel_intro"
         private const val EX_MANUAL = "manual"
+        /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
+        private const val INTRO_WORKERS = 3
         private const val EX_SIMILAR = "similar"
         private const val EX_CONVERT_AFTER = "convert_after"
         private const val MODE_DELETE_ORIG = "delete_orig"

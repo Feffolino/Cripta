@@ -33,6 +33,9 @@ object SegmentMatcher {
             .maxByOrNull { it.length }
     }
 
+    /** Longest shared stretch at an alignment already known (from a [PrintIndex]). */
+    fun at(a: IntArray, b: IntArray, offset: Int, minLength: Int): Match? = runAt(a, b, offset, minLength)
+
     /** Longest run of [a] against [b] shifted by [offset] (b index = a index + offset). */
     private fun runAt(a: IntArray, b: IntArray, offset: Int, minLength: Int): Match? {
         val from = maxOf(0, -offset)

@@ -5,7 +5,7 @@ package com.cripta.app.media.intro
  * the mean of the input samples in its interval: a crude low-pass, but the same for every video,
  * which is all the fingerprint comparison needs.
  */
-class MonoResampler(srcRate: Int, private val channels: Int) {
+class MonoResampler(srcRate: Int, private val channels: Int, capacity: Int = 1 shl 16) {
     private val step = srcRate.toDouble() / OUT_RATE
     private var next = step
     private var pos = 0L
@@ -13,7 +13,7 @@ class MonoResampler(srcRate: Int, private val channels: Int) {
     private var cnt = 0
     private var ch = 0
     private var frame = 0.0
-    private var out = FloatArray(1 shl 16)
+    private var out = FloatArray(capacity.coerceAtLeast(16))
 
     /** Output samples so far. */
     var size = 0
@@ -37,6 +37,9 @@ class MonoResampler(srcRate: Int, private val channels: Int) {
     }
 
     fun result(): FloatArray = out.copyOf(size)
+
+    /** The output buffer itself, valid up to [size]: no copy of minutes of audio. */
+    fun buffer(): FloatArray = out
 
     companion object {
         const val OUT_RATE = 5512

@@ -240,8 +240,9 @@ interface IntroDao {
     @Query("SELECT * FROM audio_prints WHERE fileId = :fileId")
     suspend fun printsOf(fileId: String): List<AudioPrintEntity>
 
-    @Query("SELECT * FROM audio_prints WHERE status = 'ok' AND part = :part")
-    suspend fun allPrints(part: String): List<AudioPrintEntity>
+    /** Ids only: loading every print at once would hold all of them in memory. */
+    @Query("SELECT fileId FROM audio_prints WHERE status = 'ok' AND part = :part")
+    suspend fun printIds(part: String): List<String>
 
     @Query("SELECT DISTINCT fileId FROM audio_prints")
     suspend fun printedIds(): List<String>

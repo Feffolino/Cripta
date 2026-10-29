@@ -33,12 +33,19 @@ object IntroDetector {
      * Stretches [target] shares with each of [others]: for the target the longest, for each other
      * video the stretch that matched it. Stretches covered by a [rejected] sample are dropped.
      */
-    fun detect(kind: SegmentKind, target: Print, others: List<Print>, rejected: List<IntArray>): List<Found> {
+    fun detect(kind: SegmentKind, target: Print, others: List<Print>, rejected: List<IntArray>): List<Found> =
+        collect(target, others.filter { it.fileId != target.fileId }
+            .mapNotNull { o -> SegmentMatcher.best(target.hashes, o.hashes, kind.minHashes)?.let { o to it } }, rejected)
+
+    /** [detect] only at the alignments a [PrintIndex] proposed for each candidate video. */
+    fun detectAt(kind: SegmentKind, target: Print, candidates: List<Pair<Print, List<Int>>>, rejected: List<IntArray>): List<Found> =
+        collect(target, candidates.filter { it.first.fileId != target.fileId }
+            .mapNotNull { (o, offsets) -> bestAt(target.hashes, o.hashes, offsets, kind.minHashes)?.let { o to it } }, rejected)
+
+    private fun collect(target: Print, matches: List<Pair<Print, Match>>, rejected: List<IntArray>): List<Found> {
         var best: Found? = null
         val found = mutableListOf<Found>()
-        for (o in others) {
-            if (o.fileId == target.fileId) continue
-            val m = SegmentMatcher.best(target.hashes, o.hashes, kind.minHashes) ?: continue
+        for ((o, m) in matches) {
             if (isRejected(target.hashes.copyOfRange(m.aStart, m.aEnd), rejected)) continue
             val t = Found(target.fileId, target.timeOf(m.aStart), target.timeOf(m.aEnd))
             if (best == null || t.endMs - t.startMs > best.endMs - best.startMs) best = t
@@ -48,12 +55,19 @@ object IntroDetector {
     }
 
     /** Where a stretch the user marked ([sample]) appears in each of [others]. */
-    fun search(sample: IntArray, others: List<Print>): List<Found> {
-        val min = maxOf((sample.size * 0.8).toInt(), SegmentKind.OUTRO.minHashes / 2)
-        return others.mapNotNull { o ->
-            SegmentMatcher.best(sample, o.hashes, min)?.let { Found(o.fileId, o.timeOf(it.bStart), o.timeOf(it.bEnd)) }
-        }
+    fun search(sample: IntArray, others: List<Print>): List<Found> = others.mapNotNull { o ->
+        SegmentMatcher.best(sample, o.hashes, searchMin(sample))?.let { Found(o.fileId, o.timeOf(it.bStart), o.timeOf(it.bEnd)) }
     }
+
+    /** [search] only at the alignments a [PrintIndex] proposed. */
+    fun searchAt(sample: IntArray, candidates: List<Pair<Print, List<Int>>>): List<Found> = candidates.mapNotNull { (o, offsets) ->
+        bestAt(sample, o.hashes, offsets, searchMin(sample))?.let { Found(o.fileId, o.timeOf(it.bStart), o.timeOf(it.bEnd)) }
+    }
+
+    private fun searchMin(sample: IntArray) = maxOf((sample.size * 0.8).toInt(), SegmentKind.OUTRO.minHashes / 2)
+
+    private fun bestAt(a: IntArray, b: IntArray, offsets: List<Int>, minLength: Int): Match? =
+        offsets.mapNotNull { SegmentMatcher.at(a, b, it, minLength) }.maxByOrNull { it.length }
 
     /** Whether at least half of [stretch] is audio of one of the [rejected] samples. */
     fun isRejected(stretch: IntArray, rejected: List<IntArray>): Boolean = rejected.any { r ->
