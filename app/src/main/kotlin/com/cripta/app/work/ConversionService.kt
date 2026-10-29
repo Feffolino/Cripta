@@ -285,7 +285,14 @@ class ConversionService : Service() {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
                     }
-                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
+                    MODE_INTRO_SCAN -> if (holdsSession) {
+                        intent.getStringExtra(EX_RESET)?.let { what ->
+                            // Start over: stop a running scan first, so it writes nothing after the wipe.
+                            introJob?.let { it.cancel(); it.join() }
+                            intro.resetAll(everything = what == "all")
+                        }
+                        introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
+                    }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1648,6 +1655,7 @@ class ConversionService : Service() {
         private const val MODE_INTRO_SCAN = "intro_scan"
         private const val MODE_CANCEL_INTRO = "cancel_intro"
         private const val EX_MANUAL = "manual"
+        private const val EX_RESET = "reset"
         /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
         private const val INTRO_WORKERS = 3
         /** Videos fingerprinted before each matching round. */
@@ -1764,6 +1772,13 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)) })
+        }
+
+        /** Throw the analysis away ([everything]: also manual marks and rejections) and analyse every video anew. */
+        fun restartIntroScan(ctx: Context, everything: Boolean) {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+                .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, true)
+                .putExtra(EX_RESET, if (everything) "all" else "auto"))
         }
 
         fun cancelIntroScan(ctx: Context) {

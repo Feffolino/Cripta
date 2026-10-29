@@ -236,6 +236,7 @@ class SettingsViewModel @Inject constructor(
     fun setIntroAutoSkip(v: Boolean) = viewModelScope.launch { store.setIntroAutoSkip(v) }
     fun setOutroAutoSkip(v: Boolean) = viewModelScope.launch { store.setOutroAutoSkip(v) }
     fun startIntroScan() = com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true)
+    fun restartIntroScan(everything: Boolean) = com.cripta.app.work.ConversionService.restartIntroScan(appContext, everything)
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
         intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restoreRejected(id: Long) = viewModelScope.launch { intro.restoreRejected(id) }

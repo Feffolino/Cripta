@@ -398,6 +398,33 @@ fun SettingsScreen(
                                 androidx.compose.material3.OutlinedButton(onClick = { vm.loadIntroOverview() }, modifier = Modifier.fillMaxWidth()) {
                                     Text("Risultati dell'analisi")
                                 }
+                                var askRestart by remember { mutableStateOf(false) }
+                                var restartAll by remember { mutableStateOf(false) }
+                                androidx.compose.material3.OutlinedButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                                    Text("Ricomincia l'analisi da capo")
+                                }
+                                if (askRestart) androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { askRestart = false },
+                                    title = { Text("Ricominciare da capo?") },
+                                    text = {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text("Ferma l'analisi in corso, cancella tutte le impronte audio e tutte le intro e i finali trovati, " +
+                                                "poi analizza di nuovo ogni video. Con molti video richiede tempo.")
+                                            Row(verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth().clickable { restartAll = !restartAll }) {
+                                                androidx.compose.material3.Checkbox(checked = restartAll, onCheckedChange = { restartAll = it })
+                                                Text("Cancella anche i segni fatti a mano e i segmenti scartati")
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        androidx.compose.material3.TextButton(onClick = { vm.restartIntroScan(restartAll); askRestart = false }) {
+                                            Text("Ricomincia", color = MaterialTheme.colorScheme.error)
+                                        }
+                                    },
+                                    dismissButton = { androidx.compose.material3.TextButton(onClick = { askRestart = false }) { Text("Annulla") } },
+                                )
                                 val overview by vm.introOverview.collectAsState()
                                 overview?.let { o ->
                                     fun span(sg: com.cripta.app.data.db.MediaSegmentEntity) =

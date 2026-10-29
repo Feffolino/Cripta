@@ -253,6 +253,18 @@ interface IntroDao {
     @Query("DELETE FROM audio_prints WHERE fileId = :fileId")
     suspend fun clearPrints(fileId: String)
 
+    @Query("DELETE FROM audio_prints")
+    suspend fun deleteAllPrints()
+
+    @Query("DELETE FROM media_segments WHERE source = 'auto'")
+    suspend fun deleteAutoSegments()
+
+    @Query("DELETE FROM media_segments")
+    suspend fun deleteAllSegments()
+
+    @Query("DELETE FROM rejected_prints")
+    suspend fun deleteAllRejected()
+
     @Query("SELECT DISTINCT fileId FROM audio_prints WHERE status = 'ok' AND matched = 0")
     suspend fun unmatchedIds(): List<String>
 
