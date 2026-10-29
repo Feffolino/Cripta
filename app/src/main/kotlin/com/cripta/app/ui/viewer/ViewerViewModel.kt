@@ -45,6 +45,7 @@ class ViewerViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val settingsStore: com.cripta.app.data.SettingsStore,
+    private val intro: com.cripta.app.data.intro.IntroRepository,
     session: com.cripta.app.security.SessionManager,
     queue: ViewerQueue,
     savedState: androidx.lifecycle.SavedStateHandle,
@@ -122,6 +123,8 @@ class ViewerViewModel @Inject constructor(
         val stripTrueAspect: Boolean = true,
         val pauseOnLeave: Boolean = true,
         val splitDetails: Boolean = false,
+        val introAutoSkip: Boolean = false,
+        val outroAutoSkip: Boolean = false,
     )
 
     private fun com.cripta.app.data.Settings.toPlayback() = PlaybackPrefs(
@@ -130,6 +133,7 @@ class ViewerViewModel @Inject constructor(
         autoNextSec, swipeToClose, holdForSpeed, holdSpeedX10 / 10f, controlsTimeoutSec,
         stripShape = filmstripShape, stripSpan = filmstripSpan, stripSize = filmstripSize,
         stripTrueAspect = filmstripTrueAspect, pauseOnLeave = pauseOnLeave, splitDetails = splitDetails,
+        introAutoSkip = introAutoSkip, outroAutoSkip = outroAutoSkip,
     )
 
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
@@ -145,6 +149,49 @@ class ViewerViewModel @Inject constructor(
     suspend fun playbackPrefs(): PlaybackPrefs =
         runCatching { settingsStore.settingsOnce() }.getOrNull()
             ?.toPlayback() ?: PlaybackPrefs()
+
+    fun segments(fileId: String) = intro.segments(fileId)
+
+    /**
+     * "Inizio qui": a segment with its end still after [posMs] takes the new start at once; otherwise
+     * the start waits for "Fine qui" (returns true).
+     */
+    fun markStart(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, posMs: Long,
+                  current: com.cripta.app.data.db.MediaSegmentEntity?): Boolean {
+        if (current != null && current.source != "none" && current.endMs > posMs + MIN_MARK_MS) {
+            viewModelScope.launch { intro.setManual(file.id, kind, posMs, current.endMs) }
+            return false
+        }
+        return true
+    }
+
+    /** "Fine qui". False when the end would not come after the start. */
+    fun markEnd(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, startMs: Long, posMs: Long): Boolean {
+        if (posMs < startMs + MIN_MARK_MS) { _message.value = "La fine deve venire dopo l'inizio"; return false }
+        viewModelScope.launch { intro.setManual(file.id, kind, startMs, posMs) }
+        return true
+    }
+
+    fun removeSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) =
+        viewModelScope.launch { intro.setNone(file.id, kind) }
+
+    fun searchSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, seg: com.cripta.app.data.db.MediaSegmentEntity) =
+        viewModelScope.launch {
+            val n = intro.searchOthers(file.id, kind, seg.startMs, seg.endMs)
+            _message.value = when {
+                n == null -> "Tratto troppo corto, o video non ancora analizzato"
+                n == 0 -> "Non trovato in altri video"
+                else -> "Trovato in $n video"
+            }
+        }
+
+    fun rejectSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind,
+                      seg: com.cripta.app.data.db.MediaSegmentEntity, everywhere: Boolean) =
+        viewModelScope.launch {
+            if (!everywhere) { intro.setNone(file.id, kind); return@launch }
+            val n = intro.rejectEverywhere(file, kind, seg.startMs, seg.endMs)
+            _message.value = if (n > 0) "Scartato qui e in altri $n video" else "Scartato in tutti i video"
+        }
 
     /**
      * Remember where playback stopped. Near the end counts as finished (next time starts over).
@@ -218,6 +265,9 @@ class ViewerViewModel @Inject constructor(
     }
 
     companion object {
+        /** Shortest intro/outro a mark can make. */
+        private const val MIN_MARK_MS = 1_000L
+
         /** Where an export lands on the device (mirrors VaultRepository.restoreToGallery). */
         fun exportFolder(mimeType: String): String = when {
             VaultRepository.isImage(mimeType) -> "Immagini › Cripta (Pictures/Cripta)"

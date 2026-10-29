@@ -91,6 +91,7 @@ import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -1290,6 +1291,33 @@ private fun VideoPlayer(
     }
     val nextFile by produceState<FileEntity?>(null, nextId) { value = nextId?.let { vm.fileById(it) } }
     val nextThumb by produceState<Bitmap?>(null, nextId) { value = nextId?.let { vm.thumbOf(it) } }
+    // Intro / outro: "Salta intro" / "Salta finale", or the automatic skip with its "Annulla".
+    val segmentRows by remember(file.id) { vm.segments(file.id) }.collectAsState(initial = emptyList())
+    val skipSegments = remember(segmentRows) {
+        segmentRows.filter { it.source != "none" && it.endMs > it.startMs }.map {
+            SegmentSkipper.Segment(if (it.kind == "intro") SegmentSkipper.Kind.INTRO else SegmentSkipper.Kind.OUTRO, it.startMs, it.endMs)
+        }
+    }
+    val skipper = remember(file.id) { SegmentSkipper() }
+    var skipAction by remember(file.id) { mutableStateOf<SegmentSkipper.Action>(SegmentSkipper.Action.None) }
+    var skippedChip by remember(file.id) { mutableStateOf<SegmentSkipper.Segment?>(null) }
+    var scrubbing by remember { mutableStateOf(false) }
+    var introSheet by remember { mutableStateOf(false) }
+    val introPending = remember(file.id) { androidx.compose.runtime.mutableStateMapOf<com.cripta.app.media.intro.SegmentKind, Long>() }
+    fun skipSegment(s: SegmentSkipper.Segment) {
+        if (s.kind == SegmentSkipper.Kind.OUTRO && nextId != null && !prefs.loop) latestOnNext()
+        else player.seekTo(if (s.kind == SegmentSkipper.Kind.OUTRO && player.duration > 0) player.duration else s.endMs)
+    }
+    LaunchedEffect(file.id, skipSegments, prefs.introAutoSkip, prefs.outroAutoSkip, inPip) {
+        while (true) {
+            val a = if (inPip) SegmentSkipper.Action.None
+                else skipper.at(player.currentPosition, skipSegments, scrubbing, prefs.introAutoSkip, prefs.outroAutoSkip)
+            if (a is SegmentSkipper.Action.AutoSkip) { skipSegment(a.segment); skippedChip = a.segment }
+            skipAction = a
+            delay(250)
+        }
+    }
+    LaunchedEffect(skippedChip) { if (skippedChip != null) { delay(3_000); skippedChip = null } }
     val rotationLocked by vm.rotationLocked.collectAsState()
     val activity = LocalContext.current as? android.app.Activity
     val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
@@ -1600,6 +1628,13 @@ private fun VideoPlayer(
                         }
                         e.actionMasked == android.view.MotionEvent.ACTION_UP && moved
                     }
+                    // Dragging the seek bar is never an intro/outro skip moment (see SegmentSkipper).
+                    (findViewById<View>(androidx.media3.ui.R.id.exo_progress) as? androidx.media3.ui.TimeBar)
+                        ?.addListener(object : androidx.media3.ui.TimeBar.OnScrubListener {
+                            override fun onScrubStart(timeBar: androidx.media3.ui.TimeBar, position: Long) { scrubbing = true }
+                            override fun onScrubMove(timeBar: androidx.media3.ui.TimeBar, position: Long) {}
+                            override fun onScrubStop(timeBar: androidx.media3.ui.TimeBar, position: Long, canceled: Boolean) { scrubbing = false }
+                        })
                     playerViewRef = this
                 }
             },
@@ -1723,16 +1758,18 @@ private fun VideoPlayer(
         // "Prossimo" card, bottom-right above the seek bar.
         val rem = remainingMs
         val window = minOf(prefs.autoNextSec * 1000L, totalMs / 3)
-        if (autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window) {
+        val nextCardShown = autoNextOn && !nextCancelled && rem != null && window > 0 && rem <= window
+        // Bottom-right cards ("Prossimo", "Salta intro"): right above the filmstrip while the controls show in portrait.
+        val cardBottom = if (controlsVisible && !vLandscape && bottomInset > 0.dp) seekClearHere + 6.dp + bottomInset + 8.dp
+            else maxOf(seekBarClearance, seekClearHere) + 8.dp
+        if (nextCardShown) {
             // Tap = play the next file now. In portrait, while the controls show, it sits right above
             // the filmstrip (and handle) instead of overlapping them.
             Surface(
                 onClick = onNext,
                 color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.align(Alignment.BottomEnd).then(holdStill)
-                    .padding(end = 12.dp + sideCut.end,
-                        bottom = if (controlsVisible && !vLandscape && bottomInset > 0.dp) seekClearHere + 6.dp + bottomInset + 8.dp
-                            else maxOf(seekBarClearance, seekClearHere) + 8.dp)
+                    .padding(end = 12.dp + sideCut.end, bottom = cardBottom)
                     .widthIn(max = 300.dp),
             ) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1751,6 +1788,36 @@ private fun VideoPlayer(
                     }
                     IconButton(onClick = { nextCancelled = true }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Filled.Close, "Annulla prossimo", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+        // "Salta intro" / "Salta finale"; the outro button gives way to the "Prossimo" card.
+        val skipSeg = (skipAction as? SegmentSkipper.Action.Show)?.segment
+        if (skipSeg != null && skippedChip == null && !(nextCardShown && skipSeg.kind == SegmentSkipper.Kind.OUTRO)) {
+            Surface(
+                onClick = { skipSegment(skipSeg) },
+                color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.align(Alignment.BottomEnd).then(holdStill).padding(end = 12.dp + sideCut.end, bottom = cardBottom),
+            ) {
+                Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.SkipNext, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Text(if (skipSeg.kind == SegmentSkipper.Kind.INTRO) "Salta intro" else "Salta finale",
+                        color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
+                    IconButton(onClick = { skipper.dismiss(skipSeg.kind); skipAction = SegmentSkipper.Action.None }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Close, "Nascondi", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+        skippedChip?.let { s ->
+            Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.align(Alignment.BottomEnd).then(holdStill).padding(end = 12.dp + sideCut.end, bottom = cardBottom)) {
+                Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (s.kind == SegmentSkipper.Kind.INTRO) "Intro saltata" else "Finale saltato",
+                        color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    androidx.compose.material3.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
+                        Text("Annulla")
                     }
                 }
             }
@@ -1787,6 +1854,23 @@ private fun VideoPlayer(
         ) {
             CircularProgressIndicator(color = Color.White)
         }
+        if (introSheet) IntroOutroSheet(
+            segments = segmentRows,
+            pendingStart = introPending,
+            onStartHere = { kind, seg ->
+                val pos = player.currentPosition
+                if (vm.markStart(file, kind, pos, seg)) introPending[kind] = pos else introPending.remove(kind)
+            },
+            onEndHere = { kind, seg ->
+                val start = introPending[kind] ?: seg?.takeIf { it.source != "none" }?.startMs
+                if (start == null) { modeTick++; modeLabel = "Segna prima l'inizio" }
+                else if (vm.markEnd(file, kind, start, player.currentPosition)) introPending.remove(kind)
+            },
+            onRemove = { kind -> vm.removeSegment(file, kind) },
+            onSearch = { kind, seg -> vm.searchSegment(file, kind, seg) },
+            onReject = { kind, seg, everywhere -> vm.rejectSegment(file, kind, seg, everywhere) },
+            onDismiss = { introSheet = false },
+        )
 
         // "+10s" / "-10s" hint on the tapped side; pops in, fades out a little slower.
         val seekText = seekLabel ?: lastSeekLabel
@@ -1872,6 +1956,12 @@ private fun VideoPlayer(
                     }) {
                         Icon(if (rotationLocked) Icons.Filled.ScreenLockRotation else Icons.Filled.ScreenRotation,
                             if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione", tint = Color.White)
+                    }
+                }
+                // Intro and outro: marks, search in other videos, rejection.
+                Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                    IconButton(onClick = { introSheet = true }) {
+                        Icon(Icons.Filled.SkipNext, "Intro e finale", tint = Color.White)
                     }
                 }
                 // Picture-in-Picture on demand (the automatic one on leaving the app is a setting).
