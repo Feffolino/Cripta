@@ -110,6 +110,7 @@ class VaultViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val settings: SettingsStore,
     private val thumbs: ThumbnailLoader,
+    private val intro: com.cripta.app.data.intro.IntroRepository,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
     private val navigator: VaultNavigator,
     private val session: com.cripta.app.security.SessionManager,
@@ -324,6 +325,11 @@ class VaultViewModel @Inject constructor(
     }
 
     /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
+    /** "Confronta audio": what the starts of two analysed videos share, for [onResult]. */
+    fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
+        onResult(runCatching { intro.compare(idA, idB) }.getOrElse { "Confronto non riuscito" })
+    }
+
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()
         files.value.map { it.file }

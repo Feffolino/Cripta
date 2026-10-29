@@ -7,8 +7,9 @@ import kotlin.math.roundToLong
 
 /** Intro or outro, the print part it is searched in and its minimum length (in hashes). */
 enum class SegmentKind(val id: String, val part: String, val minHashes: Int) {
-    INTRO("intro", "head", (15_000 / Fingerprint.HOP_MS).toInt()),
-    OUTRO("outro", "tail", (10_000 / Fingerprint.HOP_MS).toInt());
+    // 5 s: short intros (a few seconds of jingle before the video) were missed with 15 s.
+    INTRO("intro", "head", (5_000 / Fingerprint.HOP_MS).toInt()),
+    OUTRO("outro", "tail", (5_000 / Fingerprint.HOP_MS).toInt());
 
     companion object {
         fun of(id: String): SegmentKind = entries.first { it.id == id }
@@ -68,7 +69,7 @@ object IntroDetector {
      * (an original and its MP4 copy, a file imported twice), not an intro: as the longest match it won,
      * and skipping to the window's edge jumped a whole minute.
      */
-    private fun isCut(kind: SegmentKind, a: Print, b: Print, m: Match): Boolean = when (kind) {
+    fun isCut(kind: SegmentKind, a: Print, b: Print, m: Match): Boolean = when (kind) {
         SegmentKind.INTRO -> m.aEnd >= a.hashes.size - EDGE || m.bEnd >= b.hashes.size - EDGE
         SegmentKind.OUTRO -> m.aStart <= EDGE || m.bStart <= EDGE
     }

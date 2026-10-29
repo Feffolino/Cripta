@@ -14,6 +14,7 @@ import com.cripta.app.media.intro.Print
 import com.cripta.app.media.intro.PrintCodec
 import com.cripta.app.media.intro.PrintIndex
 import com.cripta.app.media.intro.SegmentKind
+import com.cripta.app.media.intro.SegmentMatcher
 import com.cripta.app.security.SessionManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -95,24 +96,68 @@ class IntroRepository @Inject constructor(
         return Overview(live.size, sizes.count { it.status == "ok" }, skippedItems.size, items, skippedItems)
     }
 
-    /** One line on what [ids] have now, the answer to "Analizza". */
-    suspend fun describe(ids: List<String>): String {
-        fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
-        val segs = ids.associateWith { id -> dao.segmentsOf(id).filter { it.source != "none" } }
-        if (ids.size == 1) {
-            val id = ids.single()
-            val name = repo.fileById(id)?.originalName ?: "Video"
-            dao.printsOf(id).takeIf { p -> p.none { it.status == "ok" } }?.let { p ->
-                return "$name: non analizzabile (" + (p.firstOrNull()?.status?.removePrefix("skip")?.removePrefix(":")?.ifBlank { null } ?: "motivo sconosciuto") + ")"
+    private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
+
+    /**
+     * "Confronta audio" on two selected videos: how much audio their starts share and where, whatever
+     * the thresholds, to tell a recognition problem from videos that simply differ.
+     */
+    suspend fun compare(idA: String, idB: String): String = withContext(Dispatchers.Default) {
+        val a = printOf(idA, SegmentKind.INTRO) ?: return@withContext "Il primo video non è ancora analizzato (o non è analizzabile)."
+        val b = printOf(idB, SegmentKind.INTRO) ?: return@withContext "Il secondo video non è ancora analizzato (o non è analizzabile)."
+        fun secs(p: Print) = (p.hashes.size * Fingerprint.HOP_MS / 1000).toInt()
+        val m = SegmentMatcher.best(a.hashes, b.hashes, 1)
+            ?: return@withContext "Nessun audio in comune nei primi ${secs(a)} s e ${secs(b)} s analizzati."
+        val len = m.length * Fingerprint.HOP_MS / 1000
+        val bits = (m.aStart until m.aEnd).sumOf { Integer.bitCount(a.hashes[it] xor b.hashes[it + m.bStart - m.aStart]) } / m.length.toDouble()
+        "In comune %.1f s: %s–%s nel primo, %s–%s nel secondo. Somiglianza %d%% (analizzati %d s e %d s).".format(
+            len, clock(a.timeOf(m.aStart)), clock(a.timeOf(m.aEnd)), clock(b.timeOf(m.bStart)), clock(b.timeOf(m.bEnd)),
+            ((1 - bits / 32) * 100).toInt(), secs(a), secs(b))
+    }
+
+    /**
+     * The answer to "Analizza": for each video its intro, or the precise reason there is none (so a
+     * failure can be told apart from videos that simply share nothing).
+     */
+    suspend fun describe(ids: List<String>): String = withContext(Dispatchers.Default) {
+        val names = ids.associateWith { repo.fileById(it)?.originalName ?: "Video" }
+        val intros = ids.associateWith { id -> dao.segmentsOf(id).firstOrNull { it.kind == SegmentKind.INTRO.id } }
+        // Chosen together: compare with each other directly; alone: with the vault's candidates.
+        val chosen = ids.mapNotNull { printOf(it, SegmentKind.INTRO) }
+        val index = if (ids.size == 1) indexFor(SegmentKind.INTRO) else null
+        val lines = ids.map { id ->
+            val seg = intros[id]
+            val what = when {
+                seg != null && seg.source != "none" -> "intro ${clock(seg.startMs)}–${clock(seg.endMs)}"
+                else -> "nessuna intro: " + whyNoIntro(id, seg, chosen, index)
             }
-            val s = segs.getValue(id)
-            val intro = s.firstOrNull { it.kind == SegmentKind.INTRO.id }?.let { "intro ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "intro non trovata"
-            val outro = s.firstOrNull { it.kind == SegmentKind.OUTRO.id }?.let { "finale ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "finale non trovato"
-            return "$name: $intro, $outro" + if (s.isEmpty()) ". Serve almeno un altro video con la stessa sigla." else ""
+            "• ${names.getValue(id)}: $what"
         }
-        val withIntro = segs.count { (_, s) -> s.any { it.kind == SegmentKind.INTRO.id } }
-        val withOutro = segs.count { (_, s) -> s.any { it.kind == SegmentKind.OUTRO.id } }
-        return "Intro trovata in $withIntro, finale in $withOutro"
+        val found = intros.values.count { it != null && it.source != "none" }
+        (if (ids.size > 1) "Intro trovata in $found di ${ids.size}\n" else "") + lines.take(12).joinToString("\n")
+    }
+
+    /** Why [id] has no intro: the user's own choice, its audio, or what its best shared stretch lacks. */
+    private suspend fun whyNoIntro(id: String, seg: MediaSegmentEntity?, chosen: List<Print>, index: PrintIndex?): String {
+        if (seg?.source == "none") return "segnato da te come «nessuna intro» (riattivalo con «Inizio qui» / «Fine qui», o «Ricomincia da capo» cancellando anche i segni a mano)"
+        dao.printsOf(id).takeIf { p -> p.none { it.status == "ok" } }?.let { p ->
+            return "non analizzabile (" + (p.firstOrNull()?.status?.removePrefix("skip")?.removePrefix(":")?.ifBlank { null } ?: "motivo sconosciuto") + ")"
+        }
+        val kind = SegmentKind.INTRO
+        val p = printOf(id, kind) ?: return "non ancora analizzato"
+        val others = if (index != null) candidatesFor(index, p.hashes, kind) { it == id }.map { it.first } else chosen.filter { it.fileId != id }
+        val best = others.mapNotNull { o -> SegmentMatcher.best(p.hashes, o.hashes, 1)?.let { o to it } }.maxByOrNull { it.second.length }
+            ?: return if (index != null) "nessun altro video nel vault ha audio in comune" else "nessun audio in comune con gli altri video scelti"
+        val (o, m) = best
+        val secs = m.length * Fingerprint.HOP_MS / 1000
+        val other = repo.fileById(o.fileId)?.originalName ?: "un altro video"
+        return when {
+            m.length < kind.minHashes -> "in comune con «$other» solo %.1f s (ne servono almeno 5)".format(secs)
+            IntroDetector.isCut(kind, p, o, m) -> "in comune con «$other» %.0f s fino al bordo della parte analizzata: sembra una copia dello stesso video".format(secs)
+            IntroDetector.isRejected(p.hashes.copyOfRange(m.aStart, m.aEnd), dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }) ->
+                "il tratto in comune con «$other» è tra i segmenti scartati (Impostazioni › Segmenti scartati)"
+            else -> "in comune con «$other» %.0f s (%s–%s), ma non salvato: segnalamelo".format(secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
+        }
     }
 
     /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */
