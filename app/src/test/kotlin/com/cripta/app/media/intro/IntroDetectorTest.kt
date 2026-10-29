@@ -77,6 +77,21 @@ class IntroDetectorTest {
         assertFalse(IntroDetector.shouldStore(seg("auto", 30_000), f))
         assertFalse(IntroDetector.shouldStore(seg("manual", 5_000), f))
         assertFalse(IntroDetector.shouldStore(seg("none", 0), f))
+        // Extended by a rule to 40 s, but its own audio is 10 s: a longer match still replaces it.
+        val extended = MediaSegmentEntity("x", "intro", 0, 40_000, "auto", autoStartMs = 0, autoEndMs = 10_000)
+        assertTrue(IntroDetector.shouldStore(extended, f))
+    }
+
+    @Test
+    fun aRuleMovesTheBoundsAndKeepsTheSound() {
+        val s = IntroDetector.segmentFor(SegmentKind.INTRO, Found("x", 1_000, 4_000), -500, 12_000, 60_000)
+        assertEquals(500L, s.startMs)
+        assertEquals(16_000L, s.endMs)
+        assertEquals(1_000L, s.autoStartMs)
+        assertEquals(4_000L, s.autoEndMs)
+        // Inside the video, and without a rule nothing extra is stored.
+        assertEquals(0L, IntroDetector.segmentFor(SegmentKind.INTRO, Found("x", 200, 4_000), -1_000, 0, 60_000).startMs)
+        assertEquals(null, IntroDetector.segmentFor(SegmentKind.INTRO, Found("x", 1_000, 4_000), 0, 0, 60_000).autoStartMs)
     }
 
     @Test

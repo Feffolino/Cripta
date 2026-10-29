@@ -180,6 +180,28 @@ data class MediaSegmentEntity(
     val endMs: Long,
     /** "auto" (detected), "manual" (marked by the user) or "none" (the user said there is none). */
     val source: String,
+    /**
+     * The shared audio the detection found, when it differs from the bounds above or the user moved
+     * them: the intro's distinctive sound, which "Applica a tutti" searches in the other videos.
+     */
+    val autoStartMs: Long? = null,
+    val autoEndMs: Long? = null,
+)
+
+/**
+ * "Applica a tutti i video con la stessa sigla": wherever this audio is found, the segment's start and
+ * end move by these deltas (an intro whose distinctive sound covers only part of it).
+ */
+@Entity(tableName = "segment_rules")
+data class SegmentRuleEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String,
+    val originFileId: String,
+    val originName: String,
+    val hashes: ByteArray,
+    val startDeltaMs: Long,
+    val endDeltaMs: Long,
+    val createdAt: Long,
 )
 
 /** Audio the user said is no intro/outro in any video: stretches matching it never become segments. */

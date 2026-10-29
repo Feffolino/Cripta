@@ -11,8 +11,8 @@ import net.sqlcipher.database.SupportFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class,
-        AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class],
-    version = 19,
+        AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class, SegmentRuleEntity::class],
+    version = 20,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -181,6 +181,19 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** Segments remember the audio they were found on; rules extend a sound's segments everywhere. */
+        internal val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE media_segments ADD COLUMN autoStartMs INTEGER")
+                db.execSQL("ALTER TABLE media_segments ADD COLUMN autoEndMs INTEGER")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `segment_rules` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` TEXT NOT NULL, `originFileId` TEXT NOT NULL, `originName` TEXT NOT NULL, `hashes` BLOB NOT NULL, " +
+                        "`startDeltaMs` INTEGER NOT NULL, `endDeltaMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -198,7 +211,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }

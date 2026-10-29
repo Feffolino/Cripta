@@ -298,6 +298,16 @@ interface IntroDao {
     suspend fun clearSegments(fileId: String)
 
     @Insert
+    suspend fun addRule(r: SegmentRuleEntity): Long
+
+    @Query("DELETE FROM segment_rules")
+    suspend fun deleteAllRules()
+
+    /** Newest first: a later correction of the same sound wins. */
+    @Query("SELECT * FROM segment_rules WHERE kind = :kind ORDER BY createdAt DESC")
+    suspend fun rulesOfKind(kind: String): List<SegmentRuleEntity>
+
+    @Insert
     suspend fun addRejected(r: RejectedPrintEntity): Long
 
     @Query("SELECT * FROM rejected_prints ORDER BY createdAt DESC")

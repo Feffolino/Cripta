@@ -168,6 +168,16 @@ class ViewerViewModel @Inject constructor(
     /** "ok", the reason a video could not be analysed, or null when it was never analysed. */
     suspend fun introStatus(fileId: String): String? = runCatching { intro.printStatus(fileId) }.getOrNull()
 
+    /** "Applica a tutti i video con la stessa sigla". */
+    fun applySegmentToAll(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
+        val n = runCatching { intro.applyToAll(file, kind) }.getOrNull()
+        _message.value = when {
+            n == null -> "Questo segmento non ha un suono rilevato da cercare: parti da uno trovato dall'analisi"
+            n == 0 -> "Regola salvata: varrà per i video con questo suono analizzati in futuro"
+            else -> "Applicato ad altri $n video, e varrà anche per quelli futuri"
+        }
+    }
+
     /** "Analizza ora" from the details panel. */
     fun analyzeIntro(file: FileEntity) {
         com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true, fileIds = listOf(file.id))

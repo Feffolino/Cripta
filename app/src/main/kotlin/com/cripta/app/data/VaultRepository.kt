@@ -1432,7 +1432,8 @@ class VaultRepository @Inject constructor(
                         .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } })
                         .put("segments", org.json.JSONArray().apply {
                             db.introDao().segmentsOf(fwt.file.id).forEach {
-                                put(org.json.JSONObject().put("kind", it.kind).put("start", it.startMs).put("end", it.endMs).put("source", it.source))
+                                put(org.json.JSONObject().put("kind", it.kind).put("start", it.startMs).put("end", it.endMs).put("source", it.source)
+                                    .put("autoStart", it.autoStartMs ?: org.json.JSONObject.NULL).put("autoEnd", it.autoEndMs ?: org.json.JSONObject.NULL))
                             }
                         }))
                 }
@@ -1652,7 +1653,8 @@ class VaultRepository @Inject constructor(
                         for (k in 0 until arr.length()) {
                             val s = arr.getJSONObject(k)
                             db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
-                                uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source")))
+                                uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source"),
+                                s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
                         }
                     }
                 }
