@@ -35,6 +35,7 @@ class IntroMigrationTest {
         )
         val migrated = helper.writableDatabase
         CriptaDatabase.MIGRATION_15_16.migrate(migrated)
+        CriptaDatabase.MIGRATION_16_17.migrate(migrated)
         for (t in listOf("audio_prints", "media_segments", "rejected_prints")) {
             assertEquals(t, columns(expected, t), columns(migrated, t))
         }
