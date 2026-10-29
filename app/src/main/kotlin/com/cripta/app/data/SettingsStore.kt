@@ -129,6 +129,11 @@ data class Settings(
     val holdSpeedX10: Int = 20,
     /** Seconds the player controls stay visible after a tap (2 / 4 / 8). */
     val controlsTimeoutSec: Int = 4,
+    /** Intro/outro: analyse each new video's audio in the background. */
+    val introAnalyzeNew: Boolean = true,
+    /** Player: skip a known intro / outro by itself instead of offering the button. */
+    val introAutoSkip: Boolean = false,
+    val outroAutoSkip: Boolean = false,
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Backup: deflate documents (notes, PDF, text) losslessly; media is always stored as is. */
@@ -203,6 +208,9 @@ class SettingsStore @Inject constructor(
     private val recentTagsCountKey = intPreferencesKey("recent_tags_count")
     private val backupCompressKey = booleanPreferencesKey("backup_compress_docs")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
+    private val introAnalyzeKey = booleanPreferencesKey("intro_analyze_new")
+    private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
+    private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
@@ -270,6 +278,9 @@ class SettingsStore @Inject constructor(
             holdForSpeed = p[holdSpeedOnKey] ?: true,
             holdSpeedX10 = (p[holdSpeedKey] ?: 20).let { if (it in listOf(15, 20, 30)) it else 20 },
             controlsTimeoutSec = (p[controlsTimeoutKey] ?: 4).let { if (it in listOf(2, 4, 8)) it else 4 },
+            introAnalyzeNew = p[introAnalyzeKey] ?: true,
+            introAutoSkip = p[introAutoKey] ?: false,
+            outroAutoSkip = p[outroAutoKey] ?: false,
         )
     }
 
@@ -304,6 +315,9 @@ class SettingsStore @Inject constructor(
     suspend fun setHoldForSpeed(v: Boolean) { context.dataStore.edit { it[holdSpeedOnKey] = v } }
     suspend fun setHoldSpeed(x10: Int) { context.dataStore.edit { it[holdSpeedKey] = x10 } }
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
+    suspend fun setIntroAnalyzeNew(v: Boolean) { context.dataStore.edit { it[introAnalyzeKey] = v } }
+    suspend fun setIntroAutoSkip(v: Boolean) { context.dataStore.edit { it[introAutoKey] = v } }
+    suspend fun setOutroAutoSkip(v: Boolean) { context.dataStore.edit { it[outroAutoKey] = v } }
     suspend fun setViewerFilmstrip(v: Boolean) { context.dataStore.edit { it[filmstripKey] = v } }
     suspend fun setPauseOnLeave(v: Boolean) { context.dataStore.edit { it[pauseOnLeaveKey] = v } }
     suspend fun setFilmstripShape(v: StripShape) { context.dataStore.edit { it[stripShapeKey] = v.ordinal } }
@@ -385,7 +399,8 @@ class SettingsStore @Inject constructor(
             "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
-                swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
+                swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey,
+                introAnalyzeKey, introAutoKey, outroAutoKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

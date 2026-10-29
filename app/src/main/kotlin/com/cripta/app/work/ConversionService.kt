@@ -51,6 +51,7 @@ class ConversionService : Service() {
     @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
     @Inject lateinit var session: com.cripta.app.security.SessionManager
     @Inject lateinit var updater: com.cripta.app.update.AppUpdater
+    @Inject lateinit var intro: com.cripta.app.data.intro.IntroRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -79,6 +80,11 @@ class ConversionService : Service() {
         // Cancel request from the notification action: abort the running transcode/download and leave.
         if (mode == MODE_CANCEL_SCAN) {
             scanJob?.cancel()
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        if (mode == MODE_CANCEL_INTRO) {
+            introJob?.cancel()
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -279,6 +285,7 @@ class ConversionService : Service() {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
                     }
+                    MODE_INTRO_SCAN -> if (holdsSession) introScan(intent.getBooleanExtra(EX_MANUAL, false))
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -286,6 +293,10 @@ class ConversionService : Service() {
                 // best-effort; individual items already guarded below
                 android.util.Log.e("ConversionService", "job failed: $mode", e)
             } finally {
+                // New videos get their intro/outro analysis right after (when on in Settings).
+                if (mode == MODE_IMPORT || mode == MODE_DOWNLOAD_URL || mode == MODE_CONVERT) withContext(NonCancellable) {
+                    if (runCatching { settings.settingsOnce().introAnalyzeNew }.getOrDefault(false)) startIntroScan(this@ConversionService, manual = false)
+                }
                 if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) stopWhenIdle()
             }
@@ -897,6 +908,57 @@ class ConversionService : Service() {
         }
     }
 
+    @Volatile private var introJob: kotlinx.coroutines.Job? = null
+    @Volatile private var introRerun = false
+    @Volatile private var introManual = false
+    private val introMutex = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * Fingerprint every video not analysed yet, then match them against the whole vault. A request
+     * arriving while a scan runs is folded into it: the running scan goes round once more.
+     * [manual]: started from Settings, so it always reports; an automatic one only when it found something.
+     */
+    private suspend fun introScan(manual: Boolean) {
+        introManual = introManual || manual
+        if (!introMutex.tryLock()) { introRerun = true; return }
+        introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        val label = "Analisi intro e finali"
+        var analysed = 0; var skipped = 0; var found = 0
+        try {
+            do {
+                introRerun = false
+                val todo = intro.pending()
+                if (todo.isEmpty()) break
+                val eta = EtaEstimator()
+                val newIds = mutableListOf<String>()
+                todo.forEachIndexed { i, f ->
+                    notify(build(label, i * 100 / todo.size, sub = "Video ${i + 1} di ${todo.size}",
+                        eta = if (i > 0) eta.left(i.toFloat() / todo.size) else null,
+                        cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                    if (intro.fingerprint(f)) { analysed++; newIds += f.id } else skipped++
+                }
+                notify(build(label, 100, sub = "Confronto con gli altri video…", indeterminate = true,
+                    cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                found += intro.matchNew(newIds)
+            } while (introRerun)
+            if (introManual || found > 0) notifyResult("Analisi completata", introSummary(analysed, skipped, found), ResultKind.INTRO)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            notifyResult("$label annullata", introSummary(analysed, skipped, found), ResultKind.INTRO, state = ResultState.CANCELLED)
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("ConversionService", "intro scan failed", e)
+            notifyResult("$label non riuscita", UserErrors.of(e), ResultKind.INTRO, state = ResultState.FAILED)
+        } finally {
+            introJob = null
+            introManual = false
+            introMutex.unlock()
+        }
+    }
+
+    private fun introSummary(analysed: Int, skipped: Int, found: Int): String =
+        "$analysed analizzati" + (if (skipped > 0) ", $skipped saltati" else "") +
+            (if (found > 0) " · intro o finali in $found video" else "")
+
     /** Process the downloader queue one link at a time until it is empty. */
     private suspend fun downloadWorker() {
         var drained = false
@@ -1293,6 +1355,7 @@ class ConversionService : Service() {
         IMPORT(4220, R.drawable.ic_notif_import), DOWNLOAD(4221, R.drawable.ic_notif_download),
         CONVERT(4222, R.drawable.ic_notif_convert), SCAN(4223, R.drawable.ic_notif_scan),
         EXPORT(4224, R.drawable.ic_notif_export), UPDATE(4225, R.drawable.ic_notif_download),
+        INTRO(4226, R.drawable.ic_notif_scan),
     }
 
     /** How an operation ended; its icon is the shield with a tick, an exclamation mark, or (when
@@ -1509,6 +1572,9 @@ class ConversionService : Service() {
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
         private const val MODE_DUP_SCAN = "dup_scan"
         private const val MODE_CANCEL_SCAN = "cancel_scan"
+        private const val MODE_INTRO_SCAN = "intro_scan"
+        private const val MODE_CANCEL_INTRO = "cancel_intro"
+        private const val EX_MANUAL = "manual"
         private const val EX_SIMILAR = "similar"
         private const val EX_CONVERT_AFTER = "convert_after"
         private const val MODE_DELETE_ORIG = "delete_orig"
@@ -1611,6 +1677,16 @@ class ConversionService : Service() {
 
         fun cancelDupScan(ctx: Context) {
             runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_SCAN)) }
+        }
+
+        /** Analyse the videos not analysed yet for intros and outros ([manual]: from Settings). */
+        fun startIntroScan(ctx: Context, manual: Boolean) {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+                .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual))
+        }
+
+        fun cancelIntroScan(ctx: Context) {
+            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_INTRO)) }
         }
 
         /** Cancel the link being downloaded now (the rest of the queue continues). */
