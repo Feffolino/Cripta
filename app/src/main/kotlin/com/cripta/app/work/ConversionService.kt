@@ -933,7 +933,9 @@ class ConversionService : Service() {
         val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
         var found = 0
         var anyFull = false
-        fun summary() = introSummary(analysedCount.get(), skippedCount.get(), found)
+        var rematched = 0
+        fun summary() = introSummary(analysedCount.get(), skippedCount.get(), found) +
+            (if (rematched > 0) " · $rematched già analizzati confrontati di nuovo" else "")
         try {
             do {
                 introRerun = false
@@ -946,9 +948,17 @@ class ConversionService : Service() {
                 if (all) {
                     val backlog = intro.unmatched()
                     if (backlog.isNotEmpty()) {
-                        notify(build(label, 0, sub = "Confronto di ${backlog.size} video già analizzati…", indeterminate = true,
-                            cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
-                        backlog.chunked(200).forEach { found += intro.matchNew(it) }
+                        val eta = EtaEstimator()
+                        var done = 0
+                        for (part in backlog.chunked(50)) {
+                            notify(build(label, done * 100 / backlog.size,
+                                sub = "Confronto dei video già analizzati: $done di ${backlog.size}",
+                                eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null,
+                                cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                            found += intro.matchNew(part)
+                            done += part.size
+                        }
+                        rematched += done
                     }
                 }
                 val todo = if (all) intro.pending(quick) else emptyList()
