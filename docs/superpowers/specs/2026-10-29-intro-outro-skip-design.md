@@ -52,7 +52,7 @@ su tutto il vault: video in cartelle, in sottocartelle o nella radice.
     tratto in tutti i video, presenti e futuri. I segmenti automatici già creati da quel tratto
     vengono tolti. I segmenti manuali restano.
 - Impostazioni → Video → "Segmenti scartati" elenca i campioni negativi (video d'origine, tipo,
-  durata). Eliminarne uno lo riattiva alla scansione successiva.
+  durata). Eliminarne uno rimette subito i segmenti che bloccava (ricerca del tratto in tutti i video).
 
 ### Skip nel player
 

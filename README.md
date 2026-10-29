@@ -24,6 +24,7 @@ e visibili solo dentro l'app, sbloccata con la biometria/credenziale del telefon
 - 📤 Condivisioni web inoltrate al downloader usando il link, senza importare l'anteprima del browser
 - 🎞️ Conversioni multiple: scelta sugli originali per singolo file o per tutti, conservata anche alla riapertura dell'app; avanzamento fuori dal player
 - 🎞️ Conversione video in MP4 scorribile
+- ⏭️ Intro e finali riconosciuti confrontando l'audio dei video del vault (ovunque si trovino): pulsante «Salta intro» / «Salta finale» o skip automatico; segno manuale, ricerca negli altri video e scarto dei falsi positivi dal player
 - 💾 Backup cifrato esporta/importa con passphrase
 - 🌗 Tema chiaro/scuro + Material You
 
