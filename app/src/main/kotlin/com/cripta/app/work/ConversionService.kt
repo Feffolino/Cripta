@@ -932,6 +932,7 @@ class ConversionService : Service() {
         val analysedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
         var found = 0
+        var anyFull = false
         fun summary() = introSummary(analysedCount.get(), skippedCount.get(), found)
         try {
             do {
@@ -939,14 +940,13 @@ class ConversionService : Service() {
                 val quick = runCatching { settings.settingsOnce().introQuickScan }.getOrDefault(true)
                 val all = introScanAll
                 introScanAll = false
+                if (all) anyFull = true
                 val todo = if (all) intro.pending(quick) else emptyList()
                 if (todo.isEmpty() && introAsked.isEmpty()) break
-                val askedIds = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+                val askedIds = HashSet<String>()
                 // Time of the last video analysed, shown so a slow phone or format can be told apart.
                 val lastSec = java.util.concurrent.atomic.AtomicLong(-1L)
                 val eta = EtaEstimator()
-                val newIds = java.util.Collections.synchronizedList(mutableListOf<String>())
-                val next = java.util.concurrent.atomic.AtomicInteger(0)
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
                 fun progress() = synchronized(introNoteLock) {
                     val d = finished.get()
@@ -957,34 +957,44 @@ class ConversionService : Service() {
                         cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
                 }
                 progress()
-                // A few videos at once: each decoder runs on one core, and the phone has several.
-                kotlinx.coroutines.coroutineScope {
-                    repeat(INTRO_WORKERS) {
-                        launch {
-                            while (true) {
-                                val asked = introAsked.poll()
-                                val f = if (asked != null) {
-                                    askedIds += asked
-                                    intro.forget(asked) ?: continue
-                                } else {
-                                    val t = todo.getOrNull(next.getAndIncrement()) ?: break
-                                    if (t.id in askedIds) continue
-                                    t
+                var next = 0
+                // A chunk at a time, each matched as soon as it is fingerprinted: results show up during
+                // a long scan instead of only at its end. Videos the user asked for go first, on their own.
+                while (true) {
+                    kotlinx.coroutines.yield()   // a cancelled scan stops between chunks
+                    val askedNow = generateSequence { introAsked.poll() }.toList().distinct().filter { askedIds.add(it) }
+                    val chunk = askedNow.mapNotNull { intro.forget(it) }.toMutableList()
+                    if (askedNow.isEmpty()) while (chunk.size < INTRO_CHUNK && next < todo.size) {
+                        val t = todo[next++]
+                        if (t.id !in askedIds) chunk += t
+                    }
+                    if (chunk.isEmpty() && askedNow.isEmpty()) break
+                    val newIds = java.util.Collections.synchronizedList(mutableListOf<String>())
+                    val cursor = java.util.concurrent.atomic.AtomicInteger(0)
+                    // A few videos at once: each decoder runs on one core, and the phone has several.
+                    kotlinx.coroutines.coroutineScope {
+                        repeat(minOf(INTRO_WORKERS, chunk.size)) {
+                            launch {
+                                while (true) {
+                                    val f = chunk.getOrNull(cursor.getAndIncrement()) ?: break
+                                    val t0 = SystemClock.elapsedRealtime()
+                                    if (intro.fingerprint(f, quick)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
+                                    lastSec.set((SystemClock.elapsedRealtime() - t0) / 1000)
+                                    finished.incrementAndGet()
+                                    progress()
                                 }
-                                val t0 = SystemClock.elapsedRealtime()
-                                if (intro.fingerprint(f, quick)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
-                                lastSec.set((SystemClock.elapsedRealtime() - t0) / 1000)
-                                finished.incrementAndGet()
-                                progress()
                             }
                         }
                     }
+                    found += intro.matchNew(newIds)
+                    // The answer to "Analizza": what the chosen videos have now.
+                    if (askedNow.isNotEmpty()) {
+                        notifyResult(if (askedNow.size == 1) "Analisi del video completata" else "Analisi di ${askedNow.size} video completata",
+                            intro.describe(askedNow), ResultKind.INTRO)
+                    }
                 }
-                notify(build(label, 100, sub = "Confronto con gli altri video…", indeterminate = true,
-                    cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
-                found += intro.matchNew(newIds)
             } while (introRerun)
-            if (introManual || found > 0) notifyResult("Analisi completata", summary(), ResultKind.INTRO)
+            if (anyFull && (introManual || found > 0)) notifyResult("Analisi completata", summary(), ResultKind.INTRO)
         } catch (e: kotlinx.coroutines.CancellationException) {
             notifyResult("$label annullata", summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
             throw e
@@ -1620,6 +1630,8 @@ class ConversionService : Service() {
         private const val EX_MANUAL = "manual"
         /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
         private const val INTRO_WORKERS = 3
+        /** Videos fingerprinted before each matching round. */
+        private const val INTRO_CHUNK = 12
         private const val EX_SIMILAR = "similar"
         private const val EX_CONVERT_AFTER = "convert_after"
         private const val MODE_DELETE_ORIG = "delete_orig"

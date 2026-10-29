@@ -78,6 +78,24 @@ class IntroRepository @Inject constructor(
         return Overview(live.size, sizes.count { it.status == "ok" }, sizes.count { it.status != "ok" }, items)
     }
 
+    /** One line on what [ids] have now, the answer to "Analizza". */
+    suspend fun describe(ids: List<String>): String {
+        fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
+        val segs = ids.associateWith { id -> dao.segmentsOf(id).filter { it.source != "none" } }
+        if (ids.size == 1) {
+            val id = ids.single()
+            val name = repo.fileById(id)?.originalName ?: "Video"
+            if (dao.printsOf(id).none { it.status == "ok" }) return "$name: non analizzabile (audio non leggibile o video sotto i 2 minuti)"
+            val s = segs.getValue(id)
+            val intro = s.firstOrNull { it.kind == SegmentKind.INTRO.id }?.let { "intro ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "intro non trovata"
+            val outro = s.firstOrNull { it.kind == SegmentKind.OUTRO.id }?.let { "finale ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "finale non trovato"
+            return "$name: $intro, $outro" + if (s.isEmpty()) ". Serve almeno un altro video con la stessa sigla." else ""
+        }
+        val withIntro = segs.count { (_, s) -> s.any { it.kind == SegmentKind.INTRO.id } }
+        val withOutro = segs.count { (_, s) -> s.any { it.kind == SegmentKind.OUTRO.id } }
+        return "Intro trovata in $withIntro, finale in $withOutro"
+    }
+
     /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */
     suspend fun forget(fileId: String): FileEntity? {
         val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) } ?: return null
