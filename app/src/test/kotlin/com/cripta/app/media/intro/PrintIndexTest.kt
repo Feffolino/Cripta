@@ -26,10 +26,16 @@ class PrintIndexTest {
         (listOf(a, b) + others).forEach { index.add(it.fileId, it.hashes) }
 
         val c = index.candidates(a.hashes)
-        assertEquals(setOf("a", "b"), c.keys)
+        // The index may propose a few stray videos (they are checked afterwards), never miss b.
+        assertTrue("b" in c.keys)
         // b's intro starts 2.3 s later than a's.
         val expected = (2_300 / Fingerprint.HOP_MS)
         assertEquals(expected, c.getValue("b").first().toDouble(), 2.0)
+        // After the check only the real pair is left.
+        val all = listOf(a, b) + others
+        val found = IntroDetector.detectAt(SegmentKind.INTRO, a,
+            c.filterKeys { it != "a" }.map { (id, offs) -> all.first { it.fileId == id } to offs }, emptyList()).found
+        assertEquals(setOf("a", "b"), found.map { it.fileId }.toSet())
     }
 
     @Test

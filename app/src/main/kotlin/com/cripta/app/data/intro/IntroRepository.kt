@@ -152,7 +152,7 @@ class IntroRepository @Inject constructor(
         val secs = m.length * Fingerprint.HOP_MS / 1000
         val other = repo.fileById(o.fileId)?.originalName ?: "un altro video"
         return when {
-            m.length < kind.minHashes -> "in comune con «$other» solo %.1f s (ne servono almeno 5)".format(secs)
+            m.length < kind.minHashes -> "in comune con «$other» solo %.1f s (ne servono almeno 2)".format(secs)
             IntroDetector.isCut(kind, p, o, m) -> "in comune con «$other» %.0f s fino al bordo della parte analizzata: sembra una copia dello stesso video".format(secs)
             IntroDetector.isRejected(p.hashes.copyOfRange(m.aStart, m.aEnd), dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }) ->
                 "il tratto in comune con «$other» è tra i segmenti scartati (Impostazioni › Segmenti scartati)"
@@ -250,7 +250,7 @@ class IntroRepository @Inject constructor(
     /** Search [fileId]'s stretch in every other video; null when too short or the video has no fingerprint. */
     suspend fun searchOthers(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long): Int? = withContext(Dispatchers.Default) {
         val sample = printOf(fileId, kind)?.slice(startMs, endMs) ?: return@withContext null
-        if (sample.size < SegmentKind.OUTRO.minHashes / 2) return@withContext null
+        if (sample.size < SegmentKind.OUTRO.minHashes) return@withContext null
         IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == fileId }).count { store(kind, it) }
     }
 
@@ -297,9 +297,10 @@ class IntroRepository @Inject constructor(
     private suspend fun indexFor(kind: SegmentKind): PrintIndex {
         val live = repo.allFilesSnapshot().mapTo(HashSet()) { it.id }
         val ids = dao.printIds(kind.part).filter { it in live }
-        // About 16 hashes a second, a quarter of them landmarks; sized for quick prints, grows for complete ones.
-        val perVideo = (QUICK_MS / Fingerprint.HOP_MS / PrintIndex.SAMPLE).toInt()
-        val index = PrintIndex(ids.size * perVideo + 1024)
+        // Every hash while memory allows (quick prints), landmarks only beyond that.
+        val total = dao.printBytes(kind.part) / 4
+        val sample = PrintIndex.sampleFor(total)
+        val index = PrintIndex((total / sample).coerceAtMost(Int.MAX_VALUE.toLong()).toInt() + 1024, sample)
         for (id in ids) {
             coroutineContext.ensureActive()
             printOf(id, kind)?.let { index.add(it.fileId, it.hashes) }
