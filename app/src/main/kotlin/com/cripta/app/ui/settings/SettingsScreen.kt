@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -370,6 +371,52 @@ fun SettingsScreen(
                                     ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
                                         s.autoNextSec) { vm.setAutoNextSec(it) }
                                 }
+                            }
+                        }
+                        item {
+                            Section("Intro e finale", "Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
+                                "Nel video, l'icona ⏭ in alto permette di segnarli a mano o di scartarli.") {
+                                ToggleRow("Analizza i nuovi video", s.introAnalyzeNew,
+                                    desc = "Dopo ogni importazione, download o conversione, in background.",
+                                    icon = Icons.Filled.GraphicEq) { vm.setIntroAnalyzeNew(it) }
+                                ToggleRow("Salta l'intro in automatico", s.introAutoSkip,
+                                    desc = if (s.introAutoSkip) "Il video salta da solo; «Annulla» torna indietro." else "Compare il pulsante «Salta intro».",
+                                    icon = Icons.Filled.SkipNext) { vm.setIntroAutoSkip(it) }
+                                ToggleRow("Salta il finale in automatico", s.outroAutoSkip,
+                                    desc = "Passa al file successivo, se c'è, altrimenti va alla fine del video.",
+                                    icon = Icons.Filled.SkipNext) { vm.setOutroAutoSkip(it) }
+                                androidx.compose.material3.FilledTonalButton(onClick = { vm.startIntroScan() }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Analizza i video esistenti")
+                                }
+                                val rejected by vm.rejectedSegments.collectAsState()
+                                var showRejected by remember { mutableStateOf(false) }
+                                if (rejected.isNotEmpty()) {
+                                    androidx.compose.material3.OutlinedButton(onClick = { showRejected = true }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Segmenti scartati (${rejected.size})")
+                                    }
+                                }
+                                if (showRejected) androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showRejected = false },
+                                    confirmButton = { androidx.compose.material3.TextButton(onClick = { showRejected = false }) { Text("Chiudi") } },
+                                    title = { Text("Segmenti scartati") },
+                                    text = {
+                                        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text("Questi tratti audio non diventano mai intro o finali. Togline uno per rimettere subito i segmenti che bloccava.",
+                                                style = MaterialTheme.typography.bodySmall)
+                                            rejected.forEach { r ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Column(Modifier.weight(1f)) {
+                                                        Text(r.originName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                                        Text((if (r.kind == "intro") "Intro" else "Finale") + " · ${(r.endMs - r.startMs) / 1000} s",
+                                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                    androidx.compose.material3.TextButton(onClick = { vm.restoreRejected(r.id) }) { Text("Togli") }
+                                                }
+                                            }
+                                        }
+                                    },
+                                )
                             }
                         }
                         item {
@@ -1173,6 +1220,7 @@ private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
     Triple("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VIDEO),
     Triple("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VIDEO),
     Triple("Prossimo video a fine riproduzione", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VIDEO),
+    Triple("Intro e finale", "salta intro sigla finale titoli coda skip analizza scartati", SettingsPage.VIDEO),
     Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
     Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
     Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
