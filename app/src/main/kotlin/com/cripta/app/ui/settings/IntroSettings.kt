@@ -16,7 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GraphicEq
+import com.cripta.app.media.intro.SegmentKind
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
@@ -100,7 +103,9 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
         Maintenance(vm, onOpenFile)
     }
     if (resultsOpen) overview?.let { o ->
-        IntroResultsPage(o, thumb = { vm.thumbOf(it) }, onClose = { vm.introResultsOpen.value = false },
+        val groups by vm.introGroups.collectAsState()
+        IntroResultsPage(o, thumb = { vm.thumbOf(it) }, groups = groups, onLoadGroups = { vm.loadIntroGroups(it) },
+            onClose = { vm.introResultsOpen.value = false },
             onOpen = { ids, id -> vm.openFromResults(ids); onOpenFile(id) })
     }
 }
@@ -211,7 +216,11 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     )
 }
 
-private enum class ResultFilter(val label: String) { WITH("Con intro o finale"), WITHOUT("Senza"), SKIPPED("Non analizzabili") }
+private enum class ResultFilter(val label: String, val kind: SegmentKind? = null) {
+    WITH("Con intro o finale"), WITHOUT("Senza"), SKIPPED("Non analizzabili"),
+    // The signatures: videos grouped by the sound of their intro / outro.
+    BY_INTRO("Firme intro", SegmentKind.INTRO), BY_OUTRO("Firme finale", SegmentKind.OUTRO),
+}
 
 /**
  * Every analysed video with its cover and times, filtered and searchable; a tap opens it in the
@@ -222,24 +231,36 @@ private enum class ResultFilter(val label: String) { WITH("Con intro o finale"),
 private fun IntroResultsPage(
     o: IntroRepository.Overview,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+    groups: Pair<SegmentKind, List<IntroRepository.SoundGroup>>?,
+    onLoadGroups: (SegmentKind) -> Unit,
     onClose: () -> Unit,
     onOpen: (List<String>, String) -> Unit,
 ) {
     var filter by rememberSaveable { mutableStateOf(ResultFilter.WITH) }
     var query by rememberSaveable { mutableStateOf("") }
+    var expanded by rememberSaveable { mutableStateOf(setOf<Int>()) }
+    LaunchedEffect(filter) { filter.kind?.let(onLoadGroups); expanded = emptySet() }
+    fun matches(name: String) = query.isBlank() || name.contains(query.trim(), ignoreCase = true)
     val shown = remember(o, filter, query) {
         o.entries.filter { e ->
             when (filter) {
                 ResultFilter.WITH -> e.intro != null || e.outro != null
                 ResultFilter.WITHOUT -> e.skipReason == null && e.intro == null && e.outro == null
                 ResultFilter.SKIPPED -> e.skipReason != null
-            } && (query.isBlank() || e.file.originalName.contains(query.trim(), ignoreCase = true))
+                else -> false
+            } && matches(e.file.originalName)
         }
     }
-    val counts = remember(o) {
+    // Groups of the chosen kind, those holding a matching name when searching.
+    val shownGroups = remember(groups, filter, query) {
+        groups?.takeIf { it.first == filter.kind }?.second?.withIndex()?.filter { g -> g.value.entries.any { matches(it.first.originalName) } }
+    }
+    val counts = remember(o, groups) {
         mapOf(ResultFilter.WITH to o.entries.count { it.intro != null || it.outro != null },
             ResultFilter.WITHOUT to o.entries.count { it.skipReason == null && it.intro == null && it.outro == null },
-            ResultFilter.SKIPPED to o.skipped)
+            ResultFilter.SKIPPED to o.skipped,
+            ResultFilter.BY_INTRO to groups?.takeIf { it.first == SegmentKind.INTRO }?.second?.size,
+            ResultFilter.BY_OUTRO to groups?.takeIf { it.first == SegmentKind.OUTRO }?.second?.size)
     }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(
@@ -260,9 +281,40 @@ private fun IntroResultsPage(
                 item {
                     ChipFlowRow {
                         ResultFilter.entries.forEach { f ->
-                            FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · ${counts[f]}") })
+                            FilterChip(selected = filter == f, onClick = { filter = f },
+                                label = { Text(f.label + (counts[f]?.let { " · $it" } ?: "")) })
                         }
                     }
+                }
+                if (filter.kind != null) {
+                    item {
+                        Text("Ogni firma raggruppa i video con lo stesso suono di " +
+                            (if (filter.kind == SegmentKind.INTRO) "intro" else "finale") +
+                            ". Se gli episodi di una serie stanno in più firme, hanno ricevuto sigle diverse.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    when {
+                        shownGroups == null -> item {
+                            Text("Confronto dei suoni…", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
+                        }
+                        shownGroups.isEmpty() -> item {
+                            Text("Nessuna firma.", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
+                        }
+                    }
+                    shownGroups?.forEach { (i, g) ->
+                        item(key = "g$i") {
+                            GroupHeader(i + 1, g, thumb, open = i in expanded,
+                                onToggle = { expanded = if (i in expanded) expanded - i else expanded + i })
+                        }
+                        if (i in expanded) items(g.entries, key = { "g$i-${it.first.id}" }) { (file, seg) ->
+                            val e = IntroRepository.Entry(file, seg.takeIf { filter.kind == SegmentKind.INTRO },
+                                seg.takeIf { filter.kind == SegmentKind.OUTRO }, null)
+                            EntryRow(e, thumb, Modifier.padding(start = 12.dp)) { onOpen(g.entries.map { it.first.id }, file.id) }
+                        }
+                    }
+                    return@LazyColumn
                 }
                 if (shown.isEmpty()) item {
                     Text(
@@ -271,32 +323,63 @@ private fun IntroResultsPage(
                                 "con l'analisi rapida la sigla deve stare nel primo minuto."
                             ResultFilter.WITHOUT -> "Tutti i video analizzati hanno un'intro o un finale."
                             ResultFilter.SKIPPED -> "Nessun video non analizzabile."
+                            else -> ""
                         },
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 24.dp),
                     )
                 }
                 items(shown, key = { it.file.id }) { e ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onOpen(shown.map { it.file.id }, e.file.id) }.padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        MediaThumb(e.file, thumb, Modifier.size(width = 112.dp, height = 63.dp), showFavoriteBadge = false)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(e.file.originalName, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            when {
-                                e.skipReason != null -> Text(e.skipReason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                                e.intro == null && e.outro == null -> Text("Nessuna intro né finale", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                else -> {
-                                    e.intro?.let { SegLine("Intro", it, MaterialTheme.colorScheme.primary) }
-                                    e.outro?.let { SegLine("Finale", it, MaterialTheme.colorScheme.tertiary) }
-                                }
-                            }
-                        }
-                    }
+                    EntryRow(e, thumb) { onOpen(shown.map { it.file.id }, e.file.id) }
                 }
+            }
+        }
+    }
+}
+
+/** One video in the results: cover, name, its intro / outro times or why it could not be analysed. */
+@Composable
+private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+                     modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        MediaThumb(e.file, thumb, Modifier.size(width = 112.dp, height = 63.dp), showFavoriteBadge = false)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(e.file.originalName, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            when {
+                e.skipReason != null -> Text(e.skipReason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                e.intro == null && e.outro == null -> Text("Nessuna intro né finale", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> {
+                    e.intro?.let { SegLine("Intro", it, MaterialTheme.colorScheme.primary) }
+                    e.outro?.let { SegLine("Finale", it, MaterialTheme.colorScheme.tertiary) }
+                }
+            }
+        }
+    }
+}
+
+/** A signature: its number, how many videos, the sound's length, a few covers; a tap lists its videos. */
+@Composable
+private fun GroupHeader(n: Int, g: IntroRepository.SoundGroup, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+                        open: Boolean, onToggle: () -> Unit) {
+    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Firma $n · ${g.entries.size} video", style = MaterialTheme.typography.titleSmall)
+                    Text("Suono di circa %.1f s".format(g.soundMs / 1000.0), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (open) "Comprimi" else "Mostra i video")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                g.entries.take(4).forEach { (file, _) ->
+                    MediaThumb(file, thumb, Modifier.size(width = 72.dp, height = 40.dp), showFavoriteBadge = false)
+                }
+                if (g.entries.size > 4) Text("+${g.entries.size - 4}", style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp))
             }
         }
     }
