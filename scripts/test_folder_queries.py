@@ -37,7 +37,8 @@ class FolderQueriesTest(unittest.TestCase):
                 ('trashed', 2, 100);
         """)
         source = (DB_DIR / "CriptaDatabase.kt").read_text()
-        migration = source.split("private val MIGRATION_14_15 =", 1)[1].split("/** Delete", 1)[0]
+        # Only the 14 -> 15 migration: later ones touch tables this schema does not create.
+        migration = re.split(r"val MIGRATION_\d+_\d+ =", source.split("private val MIGRATION_14_15 =", 1)[1], maxsplit=1)[0]
         for sql in re.findall(r'db.execSQL\("([^"]+)"\)', migration):
             self.db.execute(sql)
 
