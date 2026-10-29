@@ -165,6 +165,10 @@ class ViewerViewModel @Inject constructor(
         seekRequests.tryEmit(SeekRequest(fileId, positionMs, play))
     }
 
+    /** The name of the saved signature this video's intro / outro belongs to, if any. */
+    suspend fun signatureName(fileId: String, kind: com.cripta.app.media.intro.SegmentKind): String? =
+        runCatching { intro.signatureName(fileId, kind) }.getOrNull()
+
     /** "ok", the reason a video could not be analysed, or null when it was never analysed. */
     suspend fun introStatus(fileId: String): String? = runCatching { intro.printStatus(fileId) }.getOrNull()
 

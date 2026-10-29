@@ -249,13 +249,36 @@ class SettingsViewModel @Inject constructor(
     fun cancelIntroScan() = com.cripta.app.work.ConversionService.cancelIntroScan(appContext)
     /** "Risultati dell'analisi" page open (it survives a trip to the viewer and back). */
     val introResultsOpen = kotlinx.coroutines.flow.MutableStateFlow(false)
-    /** "Per sigla": the sound groups of one kind, null while loading. */
+    /** "Firme": the signatures of one kind, null while loading. */
     val introGroups = kotlinx.coroutines.flow.MutableStateFlow<Pair<com.cripta.app.media.intro.SegmentKind,
-        List<com.cripta.app.data.intro.IntroRepository.SoundGroup>>?>(null)
+        List<com.cripta.app.data.intro.IntroRepository.Signature>>?>(null)
     fun loadIntroGroups(kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
         if (introGroups.value?.first != kind) introGroups.value = null
-        runCatching { intro.soundGroups(kind) }.getOrNull()?.let { introGroups.value = kind to it }
+        runCatching { intro.signatures(kind) }.getOrNull()?.let { introGroups.value = kind to it }
     }
+
+    /** Outcome of a signature change, shown on the results page (it covers the Settings snackbar). */
+    val introMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
+    /** Runs a signature change, then reloads the signatures and the counts. */
+    private fun signatureAction(kind: com.cripta.app.media.intro.SegmentKind, done: String, block: suspend () -> Unit) =
+        viewModelScope.launch {
+            val ok = runCatching { block() }.isSuccess
+            introMessage.value = if (ok) done else "Operazione non riuscita"
+            runCatching { intro.signatures(kind) }.getOrNull()?.let { introGroups.value = kind to it }
+            refreshIntro()
+        }
+    fun renameSignature(s: com.cripta.app.data.intro.IntroRepository.Signature, name: String) =
+        signatureAction(s.kind, "Firma rinominata") { intro.renameSignature(s, name) }
+    fun mergeSignatures(sigs: List<com.cripta.app.data.intro.IntroRepository.Signature>, name: String?) =
+        signatureAction(sigs.first().kind, "${sigs.size} firme unite") { intro.mergeSignatures(sigs, name) }
+    fun deleteSignatures(sigs: List<com.cripta.app.data.intro.IntroRepository.Signature>) =
+        signatureAction(sigs.first().kind, if (sigs.size == 1) "Firma eliminata: il suono è tra i segmenti scartati"
+            else "${sigs.size} firme eliminate: i suoni sono tra i segmenti scartati") { sigs.forEach { intro.deleteSignature(it) } }
+    fun setSignatureDuration(s: com.cripta.app.data.intro.IntroRepository.Signature, startDelta: Long, endDelta: Long) =
+        signatureAction(s.kind, "Durata applicata a ${s.entries.size} video") { intro.setSignatureDuration(s, startDelta, endDelta) }
+    fun removeFromSignature(s: com.cripta.app.data.intro.IntroRepository.Signature, fileId: String) =
+        signatureAction(s.kind, "Video tolto dalla firma") { intro.setNone(fileId, s.kind) }
     /** A video opened from the results: the viewer swipes through the same filtered list. */
     fun openFromResults(ids: List<String>) = viewerQueue.set(ids)
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }

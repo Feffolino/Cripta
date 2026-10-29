@@ -7,6 +7,8 @@ import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.MediaSegmentEntity
 import com.cripta.app.data.db.RejectedPrintEntity
 import com.cripta.app.data.db.SegmentRuleEntity
+import com.cripta.app.data.db.SignatureEntity
+import com.cripta.app.data.db.SignatureSoundEntity
 import com.cripta.app.media.intro.AudioDecoder
 import com.cripta.app.media.intro.Fingerprint
 import com.cripta.app.media.intro.Found
@@ -71,7 +73,10 @@ class IntroRepository @Inject constructor(
      */
     suspend fun resetAll(everything: Boolean) = db.withTransaction {
         dao.deleteAllPrints()
-        if (everything) { dao.deleteAllSegments(); dao.deleteAllRejected(); dao.deleteAllRules() } else dao.deleteAutoSegments()
+        if (everything) {
+            dao.deleteAllSegments(); dao.deleteAllRejected(); dao.deleteAllRules()
+            dao.deleteAllSignatureSounds(); dao.deleteAllSignatures()
+        } else dao.deleteAutoSegments()
     }
 
     /** What the analysis found so far: one [Entry] per video analysed or skipped, for Settings. */
@@ -161,43 +166,158 @@ class IntroRepository @Inject constructor(
         }
     }
 
-    /** Videos whose intro (or outro) has the same sound, with its typical length. */
-    class SoundGroup(val entries: List<Pair<FileEntity, MediaSegmentEntity>>, val soundMs: Long)
+    /**
+     * A signature: videos whose segment of [kind] has the same sound. [id] null = found by grouping,
+     * not saved yet (it gets saved the first time the user renames, merges or times it).
+     */
+    class Signature(
+        val id: Long?, val name: String?, val kind: SegmentKind,
+        val entries: List<Pair<FileEntity, MediaSegmentEntity>>,
+        val soundMs: Long, val startDeltaMs: Long, val endDeltaMs: Long,
+        /** The members' sounds, longest first: what saving it keeps as reference sounds. */
+        internal val cores: List<IntArray>,
+    )
+
+    /** A video's segment and the sound it was found on (its core, before any extension). */
+    private class Member(val seg: MediaSegmentEntity, val core: IntArray)
+
+    private suspend fun members(kind: SegmentKind, live: Set<String>): List<Member> =
+        dao.segmentsOfKind(kind.id).filter { it.source != "none" && it.endMs > it.startMs && it.fileId in live }.mapNotNull { s ->
+            val core = printOf(s.fileId, kind)?.slice(s.autoStartMs ?: s.startMs, s.autoEndMs ?: s.endMs) ?: return@mapNotNull null
+            if (core.size < kind.minHashes) null else Member(s, core)
+        }
+
+    /** Whether two sounds are the same: at least half of the shorter one in common, at [offsets]. */
+    private fun sameSound(kind: SegmentKind, a: IntArray, b: IntArray, offsets: List<Int>): Boolean {
+        val min = maxOf(kind.minHashes, minOf(a.size, b.size) / 2)
+        return offsets.any { SegmentMatcher.at(a, b, it, min) != null }
+    }
+
+    /** The saved signature (oldest first) one of whose sounds is [core], or null. */
+    private suspend fun savedSignatureOf(kind: SegmentKind, core: IntArray): SignatureEntity? {
+        val sounds = dao.signatureSoundsOfKind(kind.id)
+        if (sounds.isEmpty()) return null
+        val decoded = sounds.map { PrintCodec.decode(it.hashes) }
+        val index = PrintIndex(decoded.sumOf { it.size } + 1024).apply { decoded.forEachIndexed { i, h -> add("$i", h) } }
+        val hits = index.candidates(core).mapNotNull { (k, offs) -> k.toInt().takeIf { sameSound(kind, core, decoded[it], offs) } }
+            .map { sounds[it].signatureId }.toSet()
+        return dao.signaturesOfKind(kind.id).firstOrNull { it.id in hits }
+    }
 
     /**
-     * The "signatures" found: videos grouped by the sound of their segment of [kind] (two videos are
-     * together when those sounds match, directly or through others). One series in several groups means
-     * its videos got different intros; biggest groups first.
+     * Every signature of [kind]: the saved ones (each video goes to the oldest saved signature knowing
+     * its sound), then the rest grouped by sound as unsaved ones. Unnamed and small ones first: the
+     * likeliest false positives.
      */
-    suspend fun soundGroups(kind: SegmentKind): List<SoundGroup> = withContext(Dispatchers.Default) {
+    suspend fun signatures(kind: SegmentKind): List<Signature> = withContext(Dispatchers.Default) {
         val files = repo.allFilesSnapshot().associateBy { it.id }
-        val samples = dao.segmentsOfKind(kind.id)
-            .filter { it.source != "none" && it.endMs > it.startMs && it.fileId in files }
-            .mapNotNull { s ->
-                val core = printOf(s.fileId, kind)?.slice(s.autoStartMs ?: s.startMs, s.autoEndMs ?: s.endMs) ?: return@mapNotNull null
-                if (core.size < kind.minHashes) null else s to core
-            }
-        val index = PrintIndex(samples.sumOf { it.second.size } + 1024).apply { samples.forEach { add(it.first.fileId, it.second) } }
-        val at = samples.withIndex().associate { it.value.first.fileId to it.index }
-        val parent = IntArray(samples.size) { it }
-        fun root(x: Int): Int { var r = x; while (parent[r] != r) r = parent[r]; return r }
-        for ((i, s) in samples.withIndex()) {
+        val members = members(kind, files.keys)
+        val saved = dao.signaturesOfKind(kind.id)
+        val sounds = dao.signatureSoundsOfKind(kind.id)
+        val decoded = sounds.map { PrintCodec.decode(it.hashes) }
+        val soundIndex = PrintIndex(decoded.sumOf { it.size } + 1024).apply { decoded.forEachIndexed { i, h -> add("$i", h) } }
+        val order = saved.withIndex().associate { it.value.id to it.index }
+        val toSaved = HashMap<Long, MutableList<Member>>()
+        val loose = ArrayList<Member>()
+        for (m in members) {
             ensureActive()
-            for ((id, offsets) in index.candidates(s.second)) {
-                val j = at[id]?.takeIf { it != i } ?: continue
-                val other = samples[j].second
-                // Same sound: at least half of the shorter one in common.
-                val min = maxOf(kind.minHashes, minOf(s.second.size, other.size) / 2)
-                if (offsets.any { SegmentMatcher.at(s.second, other, it, min) != null }) parent[root(i)] = root(j)
+            val owner = soundIndex.candidates(m.core).mapNotNull { (k, offs) ->
+                k.toInt().takeIf { sameSound(kind, m.core, decoded[it], offs) }?.let { sounds[it].signatureId }
+            }.minByOrNull { order[it] ?: Int.MAX_VALUE }
+            if (owner != null) toSaved.getOrPut(owner) { ArrayList() } += m else loose += m
+        }
+        // The rest: grouped by sound, directly or through other videos.
+        val index = PrintIndex(loose.sumOf { it.core.size } + 1024).apply { loose.forEachIndexed { i, m -> add("$i", m.core) } }
+        val parent = IntArray(loose.size) { it }
+        fun root(x: Int): Int { var r = x; while (parent[r] != r) r = parent[r]; return r }
+        for ((i, m) in loose.withIndex()) {
+            ensureActive()
+            for ((k, offs) in index.candidates(m.core)) {
+                val j = k.toInt().takeIf { it != i } ?: continue
+                if (sameSound(kind, m.core, loose[j].core, offs)) parent[root(i)] = root(j)
             }
         }
-        samples.indices.groupBy { root(it) }.values.map { members ->
-            val lengths = members.map { samples[it].second.size }.sorted()
-            SoundGroup(
-                members.map { files.getValue(samples[it].first.fileId) to samples[it].first }.sortedBy { it.first.originalName.lowercase() },
-                (lengths[lengths.size / 2] * Fingerprint.HOP_MS).toLong(),
-            )
-        }.sortedByDescending { it.entries.size }
+        fun build(id: Long?, name: String?, ds: Long, de: Long, ms: List<Member>): Signature {
+            val lengths = ms.map { it.core.size }.sorted()
+            return Signature(id, name, kind,
+                ms.map { files.getValue(it.seg.fileId) to it.seg }.sortedBy { it.first.originalName.lowercase() },
+                (lengths[lengths.size / 2] * Fingerprint.HOP_MS).toLong(), ds, de,
+                ms.map { it.core }.sortedByDescending { it.size })
+        }
+        val named = saved.mapNotNull { s -> toSaved[s.id]?.let { build(s.id, s.name.ifBlank { null }, s.startDeltaMs, s.endDeltaMs, it) } }
+        val unnamed = loose.indices.groupBy { root(it) }.values.map { g -> build(null, null, 0, 0, g.map { loose[it] }) }
+        (named + unnamed).sortedWith(compareBy<Signature>({ it.name != null }, { it.entries.size }))
+    }
+
+    /** Save an unsaved signature (its longest sounds become its reference sounds); returns its id. */
+    private suspend fun persist(sig: Signature, name: String = ""): Long {
+        sig.id?.let { return it }
+        val id = dao.addSignature(SignatureEntity(kind = sig.kind.id, name = name, createdAt = System.currentTimeMillis()))
+        sig.cores.take(MAX_SIGNATURE_SOUNDS).forEach { dao.addSignatureSound(SignatureSoundEntity(signatureId = id, hashes = PrintCodec.encode(it))) }
+        return id
+    }
+
+    suspend fun renameSignature(sig: Signature, name: String) {
+        val id = persist(sig, name.trim())
+        dao.renameSignature(id, name.trim())
+    }
+
+    /** "Unisci": one signature knowing all their sounds; its name and duration are the first named one's. */
+    suspend fun mergeSignatures(sigs: List<Signature>, name: String?) = db.withTransaction {
+        if (sigs.size < 2) return@withTransaction
+        val target = sigs.firstOrNull { it.id != null && it.name != null } ?: sigs.firstOrNull { it.id != null } ?: sigs.first()
+        val targetId = persist(target)
+        for (s in sigs) {
+            if (s === target) continue
+            if (s.id != null) { dao.moveSignatureSounds(s.id, targetId); dao.deleteSignature(s.id) }
+            else s.cores.take(MAX_SIGNATURE_SOUNDS).forEach { dao.addSignatureSound(SignatureSoundEntity(signatureId = targetId, hashes = PrintCodec.encode(it))) }
+        }
+        name?.trim()?.takeIf { it.isNotEmpty() }?.let { dao.renameSignature(targetId, it) }
+        val deltas = dao.signaturesOfKind(target.kind.id).first { it.id == targetId }
+        if (deltas.startDeltaMs != 0L || deltas.endDeltaMs != 0L) {
+            for (s in sigs) applyDeltas(s, deltas.startDeltaMs, deltas.endDeltaMs)
+        }
+    }
+
+    /**
+     * "Non è una sigla": the signature's videos lose that segment (the user's own marks stay) and its
+     * sounds become rejected samples, so they are never detected again (undo in "Segmenti scartati").
+     */
+    suspend fun deleteSignature(sig: Signature) = db.withTransaction {
+        for ((_, seg) in sig.entries) if (seg.source == "auto") dao.deleteSegment(seg.fileId, sig.kind.id)
+        val origin = sig.entries.firstOrNull()
+        val sounds = if (sig.id != null) dao.signatureSoundsOfKind(sig.kind.id).filter { it.signatureId == sig.id }.map { PrintCodec.decode(it.hashes) }
+            else sig.cores.take(MAX_SIGNATURE_SOUNDS)
+        for (h in sounds) {
+            dao.addRejected(RejectedPrintEntity(kind = sig.kind.id, originFileId = origin?.first?.id.orEmpty(),
+                originName = sig.name ?: origin?.first?.originalName.orEmpty(), startMs = origin?.second?.startMs ?: 0,
+                endMs = (origin?.second?.startMs ?: 0) + (h.size * Fingerprint.HOP_MS).toLong(),
+                hashes = PrintCodec.encode(h), createdAt = System.currentTimeMillis()))
+        }
+        sig.id?.let { dao.deleteSignatureSounds(it); dao.deleteSignature(it) }
+    }
+
+    /** "Durata della sigla": move every detected segment of the signature by these deltas from its sound. */
+    suspend fun setSignatureDuration(sig: Signature, startDelta: Long, endDelta: Long) {
+        val id = persist(sig)
+        dao.setSignatureDeltas(id, startDelta, endDelta)
+        applyDeltas(sig, startDelta, endDelta)
+    }
+
+    private suspend fun applyDeltas(sig: Signature, startDelta: Long, endDelta: Long) {
+        for ((file, seg) in sig.entries) {
+            if (seg.source != "auto") continue   // the user's own marks stay
+            val core = Found(file.id, seg.autoStartMs ?: seg.startMs, seg.autoEndMs ?: seg.endMs)
+            dao.putSegment(IntroDetector.segmentFor(sig.kind, core, startDelta, endDelta, file.durationMs))
+        }
+    }
+
+    /** The name of the saved signature [fileId]'s segment of [kind] belongs to, if any. */
+    suspend fun signatureName(fileId: String, kind: SegmentKind): String? = withContext(Dispatchers.Default) {
+        val s = dao.segmentsOf(fileId).firstOrNull { it.kind == kind.id && it.source != "none" } ?: return@withContext null
+        val core = printOf(fileId, kind)?.slice(s.autoStartMs ?: s.startMs, s.autoEndMs ?: s.endMs)
+            ?.takeIf { it.size >= kind.minHashes } ?: return@withContext null
+        savedSignatureOf(kind, core)?.name?.ifBlank { null }
     }
 
     /** "ok", the reason [fileId] could not be analysed, or null when it was never analysed. */
@@ -363,13 +483,20 @@ class IntroRepository @Inject constructor(
     private suspend fun store(kind: SegmentKind, f: Found): Boolean {
         val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
         if (!IntroDetector.shouldStore(existing, f)) return false
-        // A sound the user extended with "Applica a tutti" gets the same move here.
+        // A sound with a duration of its own (its signature's, or "Applica a tutti") gets the same move here.
         val rules = dao.rulesOfKind(kind.id)
-        val rule = if (rules.isEmpty()) null else printOf(f.fileId, kind)?.slice(f.startMs, f.endMs)?.let { stretch ->
-            rules.firstOrNull { IntroDetector.isRejected(stretch, listOf(PrintCodec.decode(it.hashes))) }
+        val timed = dao.signaturesOfKind(kind.id).any { it.startDeltaMs != 0L || it.endDeltaMs != 0L }
+        var ds = 0L; var de = 0L
+        if (timed || rules.isNotEmpty()) printOf(f.fileId, kind)?.slice(f.startMs, f.endMs)?.let { stretch ->
+            val sig = if (timed && stretch.size >= kind.minHashes) savedSignatureOf(kind, stretch) else null
+            val rule = rules.firstOrNull { IntroDetector.isRejected(stretch, listOf(PrintCodec.decode(it.hashes))) }
+            when {
+                sig != null && (sig.startDeltaMs != 0L || sig.endDeltaMs != 0L) -> { ds = sig.startDeltaMs; de = sig.endDeltaMs }
+                rule != null -> { ds = rule.startDeltaMs; de = rule.endDeltaMs }
+            }
         }
-        val duration = if (rule == null) null else repo.fileById(f.fileId)?.durationMs
-        dao.putSegment(IntroDetector.segmentFor(kind, f, rule?.startDeltaMs ?: 0, rule?.endDeltaMs ?: 0, duration))
+        val duration = if (ds == 0L && de == 0L) null else repo.fileById(f.fileId)?.durationMs
+        dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, duration))
         return true
     }
 
@@ -404,5 +531,7 @@ class IntroRepository @Inject constructor(
         const val TAIL_MS = 300_000L
         /** Quick scan: the first and the last minute only. */
         const val QUICK_MS = 60_000L
+        /** Reference sounds kept when a signature is saved: a few versions are enough to recognise it. */
+        const val MAX_SIGNATURE_SOUNDS = 3
     }
 }

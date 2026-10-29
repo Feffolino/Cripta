@@ -189,6 +189,29 @@ data class MediaSegmentEntity(
 )
 
 /**
+ * A signature the user named, merged or gave a duration to: one intro (or outro) sound, known by one or
+ * more reference sounds ([SignatureSoundEntity]). Videos whose segment has one of those sounds belong
+ * to it; [startDeltaMs] / [endDeltaMs] move their segments' bounds (an intro longer than its sound).
+ */
+@Entity(tableName = "signatures")
+data class SignatureEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String,
+    val name: String,
+    val startDeltaMs: Long = 0,
+    val endDeltaMs: Long = 0,
+    val createdAt: Long,
+)
+
+/** One reference sound of a signature (merging adds the other signatures' sounds). */
+@Entity(tableName = "signature_sounds", indices = [Index("signatureId")])
+data class SignatureSoundEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val signatureId: Long,
+    val hashes: ByteArray,
+)
+
+/**
  * "Applica a tutti i video con la stessa sigla": wherever this audio is found, the segment's start and
  * end move by these deltas (an intro whose distinctive sound covers only part of it).
  */
