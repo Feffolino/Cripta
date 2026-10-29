@@ -33,6 +33,18 @@ class IntroDetectorTest {
     }
 
     @Test
+    fun aStretchCutByTheWindowIsNoIntro() {
+        // The same video twice (or an intro longer than the analysed minutes): shared up to the edge.
+        val a = episode("a", 5.0, 1, intro)
+        val copy = Print("copy", 0, a.hashes.copyOf())
+        assertTrue(IntroDetector.detect(SegmentKind.INTRO, a, listOf(copy), emptyList()).isEmpty())
+        val index = PrintIndex().apply { add(a.fileId, a.hashes); add(copy.fileId, copy.hashes) }
+        val d = IntroDetector.detectAt(SegmentKind.INTRO, a, listOf(copy to index.candidates(a.hashes).getValue("copy")), emptyList())
+        assertTrue(d.found.isEmpty())
+        assertEquals(setOf("a", "copy"), d.cut)
+    }
+
+    @Test
     fun nothingWithoutSharedAudio() {
         val a = episode("a", 5.0, 1, noise(20.0, 10))
         val b = episode("b", 5.0, 2, noise(20.0, 11))

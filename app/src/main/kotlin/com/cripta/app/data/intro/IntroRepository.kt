@@ -173,7 +173,7 @@ class IntroRepository @Inject constructor(
                 // A pair of two new videos is compared once: detectAt() reports both sides.
                 done += id
                 val candidates = candidatesFor(index, target.hashes, kind) { it in done }
-                for (f in IntroDetector.detectAt(kind, target, candidates, rejected)) if (store(kind, f)) touched += f.fileId
+                for (f in IntroDetector.detectAt(kind, target, candidates, rejected).found) if (store(kind, f)) touched += f.fileId
             }
         }
         ids.chunked(200).forEach { dao.markMatched(it) }
