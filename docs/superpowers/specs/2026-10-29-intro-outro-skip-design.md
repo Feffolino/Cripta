@@ -73,7 +73,7 @@ su tutto il vault: video in cartelle, in sottocartelle o nella radice.
 - Legge il file cifrato con `ChannelMediaDataSource` (già usato in `ThumbnailLoader.kt`) tramite
   `MediaExtractor` + `MediaCodec`. Nessun file in chiaro su disco.
 - Converte l'audio in mono a 5512 Hz.
-- Produce circa 8 hash da 32 bit al secondo, stile Chromaprint: ogni bit confronta l'energia di
+- Produce circa 16 hash da 32 bit al secondo, stile Chromaprint: ogni bit confronta l'energia di
   bande di frequenza adiacenti tra frame consecutivi.
 - Il passo PCM → hash è una funzione pura, separata dalla decodifica, e si testa senza Android.
 
@@ -89,7 +89,7 @@ su tutto il vault: video in cartelle, in sottocartelle o nella radice.
 ### Dati (DB v15 → v16, SQLCipher)
 
 - `audio_prints`: `fileId`, `part` (head/tail), `startMs`, `hashes` (BLOB), `status`
-  (ok / non analizzabile). Circa 30 KB a video. Chiave (`fileId`, `part`).
+  (ok / non analizzabile). Circa 60 KB a video. Chiave (`fileId`, `part`).
 - `media_segments`: `fileId`, `kind` (intro/outro), `startMs`, `endMs`, `source`
   (auto / manual / manual_none). Chiave (`fileId`, `kind`). `manual_none` = "nessun segmento" scelto
   dall'utente.
@@ -103,7 +103,7 @@ su tutto il vault: video in cartelle, in sottocartelle o nella radice.
 
 - Nuova modalità di `ConversionService`, come la scansione duplicati: notifica con avanzamento,
   annullabile.
-- Carica in memoria le impronte del vault (circa 30 MB ogni 1000 video) e confronta ogni video
+- Carica in memoria le impronte del vault (circa 60 MB ogni 1000 video) e confronta ogni video
   nuovo con tutti gli altri.
 - Annullata o interrotta, riprende dai video senza impronta: le impronte salvate restano.
 - Vault bloccato o app chiusa: stesso comportamento delle altre modalità del servizio.
