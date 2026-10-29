@@ -16,6 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GraphicEq
@@ -104,7 +108,15 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
     }
     if (resultsOpen) overview?.let { o ->
         val groups by vm.introGroups.collectAsState()
+        val introMessage by vm.introMessage.collectAsState()
+        val actions = remember(vm) {
+            SignatureActions(
+                rename = vm::renameSignature, merge = vm::mergeSignatures, delete = vm::deleteSignatures,
+                duration = vm::setSignatureDuration, removeVideo = vm::removeFromSignature,
+            )
+        }
         IntroResultsPage(o, thumb = { vm.thumbOf(it) }, groups = groups, onLoadGroups = { vm.loadIntroGroups(it) },
+            actions = actions, message = introMessage, onMessageShown = { vm.introMessage.value = null },
             onClose = { vm.introResultsOpen.value = false },
             onOpen = { ids, id -> vm.openFromResults(ids); onOpenFile(id) })
     }
@@ -231,15 +243,28 @@ private enum class ResultFilter(val label: String, val kind: SegmentKind? = null
 private fun IntroResultsPage(
     o: IntroRepository.Overview,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
-    groups: Pair<SegmentKind, List<IntroRepository.SoundGroup>>?,
+    groups: Pair<SegmentKind, List<IntroRepository.Signature>>?,
     onLoadGroups: (SegmentKind) -> Unit,
+    actions: SignatureActions,
+    message: String?,
+    onMessageShown: () -> Unit,
     onClose: () -> Unit,
     onOpen: (List<String>, String) -> Unit,
 ) {
     var filter by rememberSaveable { mutableStateOf(ResultFilter.WITH) }
     var query by rememberSaveable { mutableStateOf("") }
-    var expanded by rememberSaveable { mutableStateOf(setOf<Int>()) }
-    LaunchedEffect(filter) { filter.kind?.let(onLoadGroups); expanded = emptySet() }
+    var expanded by remember { mutableStateOf(setOf<Int>()) }
+    var selected by remember { mutableStateOf(setOf<String>()) }
+    var renaming by remember { mutableStateOf<IntroRepository.Signature?>(null) }
+    var timing by remember { mutableStateOf<IntroRepository.Signature?>(null) }
+    var deleting by remember { mutableStateOf<List<IntroRepository.Signature>?>(null) }
+    var merging by remember { mutableStateOf<List<IntroRepository.Signature>?>(null) }
+    LaunchedEffect(filter) { filter.kind?.let(onLoadGroups); expanded = emptySet(); selected = emptySet() }
+    // After a change the list is reloaded: its positions (unsaved keys) may have moved.
+    LaunchedEffect(groups) { selected = emptySet() }
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); onMessageShown() } }
+    val selectedSigs = groups?.second?.withIndex()?.filter { sigKey(it.index, it.value) in selected }?.map { it.value }.orEmpty()
     fun matches(name: String) = query.isBlank() || name.contains(query.trim(), ignoreCase = true)
     val shown = remember(o, filter, query) {
         o.entries.filter { e ->
@@ -265,11 +290,19 @@ private fun IntroResultsPage(
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(
             topBar = {
-                TopAppBar(
+                if (selected.isNotEmpty()) TopAppBar(
+                    title = { Text("${selected.size} selezionate") },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
+                    actions = {
+                        TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { Text("Unisci") }
+                        TextButton(onClick = { deleting = selectedSigs }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                    },
+                ) else TopAppBar(
                     title = { Text("Risultati dell'analisi") },
                     navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 )
             },
+            snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
         ) { pad ->
             LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -290,7 +323,8 @@ private fun IntroResultsPage(
                     item {
                         Text("Ogni firma raggruppa i video con lo stesso suono di " +
                             (if (filter.kind == SegmentKind.INTRO) "intro" else "finale") +
-                            ". Se gli episodi di una serie stanno in più firme, hanno ricevuto sigle diverse.",
+                            ". In cima quelle senza nome e con pochi video, i falsi positivi più probabili. " +
+                            "Dal menu ⋮ rinomina, unisci, dai una durata o elimina; tieni premuto per selezionarne più di una.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     when {
@@ -304,14 +338,22 @@ private fun IntroResultsPage(
                         }
                     }
                     shownGroups?.forEach { (i, g) ->
-                        item(key = "g$i") {
-                            GroupHeader(i + 1, g, thumb, open = i in expanded,
-                                onToggle = { expanded = if (i in expanded) expanded - i else expanded + i })
+                        val key = sigKey(i, g)
+                        item(key = key) {
+                            SignatureCard(i + 1, g, thumb, open = i in expanded, selecting = selected.isNotEmpty(), selected = key in selected,
+                                onToggleOpen = { expanded = if (i in expanded) expanded - i else expanded + i },
+                                onToggleSelect = { selected = if (key in selected) selected - key else selected + key },
+                                onRename = { renaming = g }, onMerge = { selected = setOf(key) }, onDuration = { timing = g },
+                                onDelete = { deleting = listOf(g) })
                         }
-                        if (i in expanded) items(g.entries, key = { "g$i-${it.first.id}" }) { (file, seg) ->
+                        if (i in expanded && selected.isEmpty()) items(g.entries, key = { "$key-${it.first.id}" }) { (file, seg) ->
                             val e = IntroRepository.Entry(file, seg.takeIf { filter.kind == SegmentKind.INTRO },
                                 seg.takeIf { filter.kind == SegmentKind.OUTRO }, null)
-                            EntryRow(e, thumb, Modifier.padding(start = 12.dp)) { onOpen(g.entries.map { it.first.id }, file.id) }
+                            EntryRow(e, thumb, Modifier.padding(start = 12.dp), trailing = {
+                                IconButton(onClick = { actions.removeVideo(g, file.id) }) {
+                                    Icon(Icons.Filled.RemoveCircleOutline, "Togli ${file.originalName} da questa firma")
+                                }
+                            }) { onOpen(g.entries.map { it.first.id }, file.id) }
                         }
                     }
                     return@LazyColumn
@@ -334,13 +376,108 @@ private fun IntroResultsPage(
                 }
             }
         }
+        renaming?.let { s ->
+            NameDialog("Rinomina la firma", s.name.orEmpty(), confirm = "Rinomina", onDismiss = { renaming = null }) {
+                actions.rename(s, it); renaming = null
+            }
+        }
+        merging?.let { sigs ->
+            NameDialog("Unire ${sigs.size} firme?", sigs.firstNotNullOfOrNull { it.name }.orEmpty(), confirm = "Unisci",
+                hint = "Diventano una sola firma che riconosce tutti i loro suoni (${sigs.sumOf { it.entries.size }} video). Nome:",
+                allowBlank = true, onDismiss = { merging = null }) {
+                actions.merge(sigs, it.ifBlank { null }); merging = null; selected = emptySet()
+            }
+        }
+        deleting?.let { sigs ->
+            AlertDialog(
+                onDismissRequest = { deleting = null },
+                title = { Text(if (sigs.size == 1) "Non è una sigla?" else "${sigs.size} firme non sono sigle?") },
+                text = {
+                    Text("${sigs.sumOf { it.entries.size }} video perdono questo segmento (quelli segnati a mano restano) e il suono " +
+                        "non verrà più rilevato. Si può annullare da Manutenzione › Segmenti scartati.")
+                },
+                confirmButton = {
+                    TextButton(onClick = { actions.delete(sigs); deleting = null; selected = emptySet() }) {
+                        Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Annulla") } },
+            )
+        }
+        timing?.let { s -> DurationDialog(s, onDismiss = { timing = null }) { ds, de -> actions.duration(s, ds, de); timing = null } }
     }
+}
+
+/** What the signatures page can do (the settings view model behind it). */
+internal class SignatureActions(
+    val rename: (IntroRepository.Signature, String) -> Unit,
+    val merge: (List<IntroRepository.Signature>, String?) -> Unit,
+    val delete: (List<IntroRepository.Signature>) -> Unit,
+    val duration: (IntroRepository.Signature, Long, Long) -> Unit,
+    val removeVideo: (IntroRepository.Signature, String) -> Unit,
+)
+
+@Composable
+private fun NameDialog(title: String, initial: String, confirm: String, hint: String? = null, allowBlank: Boolean = false,
+                       onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true,
+                    placeholder = { Text("Es. Sigla One Piece") }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = allowBlank || text.isNotBlank()) { Text(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
+}
+
+/**
+ * "Durata della sigla": how far before / after its sound every video's segment starts and ends (an
+ * intro that goes on past its distinctive sound); applied to the signature's videos, now and later.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, onConfirm: (Long, Long) -> Unit) {
+    var start by remember { mutableStateOf(s.startDeltaMs) }
+    var end by remember { mutableStateOf(s.endDeltaMs) }
+    @Composable
+    fun Stepper(label: String, value: Long, onChange: (Long) -> Unit) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("$label: ${if (value == 0L) "come il suono" else deltaText(value)}", style = MaterialTheme.typography.bodyMedium)
+            ChipFlowRow(gap = 4.dp) {
+                for ((d, t) in listOf(-5_000L to "−5 s", -1_000L to "−1 s", -500L to "−0,5", 500L to "+0,5", 1_000L to "+1 s", 5_000L to "+5 s")) {
+                    TextButton(onClick = { onChange(value + d) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) { Text(t) }
+                }
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Durata della sigla") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Il suono riconosciuto dura circa " + "%.1f s".format(s.soundMs / 1000.0).replace('.', ',') +
+                    ". Sposta inizio e fine rispetto al suono: vale per i ${s.entries.size} video della firma e per quelli futuri " +
+                    "(i segni fatti a mano restano).", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Stepper("Inizio", start) { start = it }
+                Stepper("Fine", end) { end = it }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(start, end) }) { Text("Applica") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+    )
 }
 
 /** One video in the results: cover, name, its intro / outro times or why it could not be analysed. */
 @Composable
 private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
-                     modifier: Modifier = Modifier, onClick: () -> Unit) {
+                     modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         MediaThumb(e.file, thumb, Modifier.size(width = 112.dp, height = 63.dp), showFavoriteBadge = false)
         Spacer(Modifier.width(12.dp))
@@ -356,23 +493,60 @@ private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.da
                 }
             }
         }
+        trailing?.invoke()
     }
 }
 
-/** A signature: its number, how many videos, the sound's length, a few covers; a tap lists its videos. */
+private fun sigKey(i: Int, g: IntroRepository.Signature) = g.id?.let { "s$it" } ?: "u$i"
+
+private fun deltaText(ms: Long) = (if (ms > 0) "+" else if (ms < 0) "−" else "") + "%.1f s".format(kotlin.math.abs(ms) / 1000.0).replace('.', ',')
+
+/**
+ * A signature: its name (or number), how many videos, the sound's length and its duration, a few
+ * covers. Tap: list its videos (or select, while selecting); long press: start selecting; ⋮: actions.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun GroupHeader(n: Int, g: IntroRepository.SoundGroup, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
-                        open: Boolean, onToggle: () -> Unit) {
-    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun SignatureCard(
+    n: Int, g: IntroRepository.Signature, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+    open: Boolean, selecting: Boolean, selected: Boolean,
+    onToggleOpen: () -> Unit, onToggleSelect: () -> Unit,
+    onRename: () -> Unit, onMerge: () -> Unit, onDuration: () -> Unit, onDelete: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    androidx.compose.material3.Surface(
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth().combinedClickable(
+            onClick = { if (selecting) onToggleSelect() else onToggleOpen() },
+            onLongClick = { if (!selecting) onToggleSelect() },
+            onLongClickLabel = "Seleziona",
+        ),
+    ) {
+        Column(Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Firma $n · ${g.entries.size} video", style = MaterialTheme.typography.titleSmall)
-                    Text("Suono di circa %.1f s".format(g.soundMs / 1000.0), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(g.name ?: "Firma senza nome ($n)", style = MaterialTheme.typography.titleSmall,
+                        color = if (g.name == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                    Text("${g.entries.size} video · suono di circa " + "%.1f s".format(g.soundMs / 1000.0).replace('.', ',') +
+                        (if (g.startDeltaMs != 0L || g.endDeltaMs != 0L) " · inizio ${deltaText(g.startDeltaMs)}, fine ${deltaText(g.endDeltaMs)}" else ""),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (open) "Comprimi" else "Mostra i video")
+                if (selecting) {
+                    Checkbox(checked = selected, onCheckedChange = { onToggleSelect() })
+                } else {
+                    Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
+                    androidx.compose.foundation.layout.Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Azioni per la firma") }
+                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Rinomina") }, onClick = { menu = false; onRename() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Unisci con altre…") }, onClick = { menu = false; onMerge() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Durata della sigla") }, onClick = { menu = false; onDuration() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Non è una sigla", color = MaterialTheme.colorScheme.error) },
+                                onClick = { menu = false; onDelete() })
+                        }
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 g.entries.take(4).forEach { (file, _) ->

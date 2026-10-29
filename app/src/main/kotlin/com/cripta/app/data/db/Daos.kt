@@ -303,6 +303,40 @@ interface IntroDao {
     @Query("DELETE FROM segment_rules")
     suspend fun deleteAllRules()
 
+    /** Oldest first: a video whose sound two signatures know belongs to the older one. */
+    @Query("SELECT * FROM signatures WHERE kind = :kind ORDER BY createdAt")
+    suspend fun signaturesOfKind(kind: String): List<SignatureEntity>
+
+    @Query("SELECT * FROM signature_sounds WHERE signatureId IN (SELECT id FROM signatures WHERE kind = :kind)")
+    suspend fun signatureSoundsOfKind(kind: String): List<SignatureSoundEntity>
+
+    @Insert
+    suspend fun addSignature(s: SignatureEntity): Long
+
+    @Insert
+    suspend fun addSignatureSound(s: SignatureSoundEntity): Long
+
+    @Query("UPDATE signatures SET name = :name WHERE id = :id")
+    suspend fun renameSignature(id: Long, name: String)
+
+    @Query("UPDATE signatures SET startDeltaMs = :start, endDeltaMs = :end WHERE id = :id")
+    suspend fun setSignatureDeltas(id: Long, start: Long, end: Long)
+
+    @Query("UPDATE signature_sounds SET signatureId = :to WHERE signatureId = :from")
+    suspend fun moveSignatureSounds(from: Long, to: Long)
+
+    @Query("DELETE FROM signature_sounds WHERE signatureId = :id")
+    suspend fun deleteSignatureSounds(id: Long)
+
+    @Query("DELETE FROM signatures WHERE id = :id")
+    suspend fun deleteSignature(id: Long)
+
+    @Query("DELETE FROM signatures")
+    suspend fun deleteAllSignatures()
+
+    @Query("DELETE FROM signature_sounds")
+    suspend fun deleteAllSignatureSounds()
+
     /** Newest first: a later correction of the same sound wins. */
     @Query("SELECT * FROM segment_rules WHERE kind = :kind ORDER BY createdAt DESC")
     suspend fun rulesOfKind(kind: String): List<SegmentRuleEntity>

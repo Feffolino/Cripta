@@ -88,8 +88,10 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
             onSeek = { vm.seekPlayer(file.id, it) },
         )
         for (kind in SegmentKind.entries) {
+            val signature by produceState<String?>(initialValue = null, file.id, segments, kind) { value = vm.signatureName(file.id, kind) }
             SegmentBlock(
                 kind = kind,
+                signature = signature,
                 seg = segments.firstOrNull { it.kind == kind.id },
                 pendingStart = pending[kind],
                 positionMs = position,
@@ -184,7 +186,7 @@ private fun Timeline(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SegmentBlock(
-    kind: SegmentKind, seg: MediaSegmentEntity?, pendingStart: Long?, positionMs: Long, color: Color,
+    kind: SegmentKind, signature: String?, seg: MediaSegmentEntity?, pendingStart: Long?, positionMs: Long, color: Color,
     onMarkStart: () -> Unit, onMarkEnd: (Long) -> Unit, onCancelMark: () -> Unit,
     onNudge: (MediaSegmentEntity, Long, Long) -> Unit, onTry: (MediaSegmentEntity) -> Unit,
     onSearch: (MediaSegmentEntity) -> Unit, onApplyToAll: () -> Unit,
@@ -213,6 +215,9 @@ private fun SegmentBlock(
                         },
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (active != null && signature != null) {
+                        Text("Firma: $signature", style = MaterialTheme.typography.labelMedium, color = color)
+                    }
                 }
                 if (active != null) {
                     Box {
