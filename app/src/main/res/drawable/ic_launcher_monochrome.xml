@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer (Android 13+): the same logo in one color, tinted by the system.
+     Artwork: the 753×753 artboard of the Cripta logo (keyhole cut out of a circle) laid over the
+     72dp visible part of the 108dp adaptive-icon canvas: viewport 753 × 108/72, offset by the
+     18dp margin (188.25). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1129.5"
+    android:viewportHeight="1129.5">
+    <group android:translateX="188.25" android:translateY="188.25">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="m376.5,139.24c-131.03,0-237.26,106.22-237.26,237.26s106.22,237.26,237.26,237.26,237.26-106.22,237.26-237.26-106.22-237.26-237.26-237.26Zm37,292.69v44.57c0,20.71-16.79,37.5-37.5,37.5s-37.5-16.79-37.5-37.5v-44.98c-36.38-14.96-62-50.75-62-92.52,0-55.23,44.77-100,100-100s100,44.77,100,100c0,42.16-26.09,78.22-63,92.93Z" />
+    </group>
+</vector>

@@ -8,6 +8,7 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import com.cripta.app.R
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -93,23 +94,10 @@ internal object HyperFocus {
     }
 
     /**
-     * The island has room for a word next to the icon ("Conversione in MP4" was cut to
-     * "Conversione co…"): a short name of the operation there, the full title when expanded.
-     */
-    private fun islandLabel(title: String): String = when {
-        title.startsWith("Conversione") || title.startsWith("Copia MP4") -> "MP4"
-        title.contains("cifrat") || title.contains("importat") -> "Importa"
-        title.startsWith("Duplicati") || title.startsWith("Media simili") -> "Ricerca"
-        title.startsWith("Aggiornamento") -> "Aggiorna"
-        title.startsWith("Importazione") -> "Importa"
-        title.startsWith("Esportazione") -> "Esporta"
-        title.startsWith("Download") -> "Download"
-        title.startsWith("Ricerca") -> "Ricerca"
-        else -> "Cripta"
-    }
-
-    /**
      * Extras for one focus notification, or an empty bundle where unsupported.
+     * @param label short name of the operation next to the icon in the island ("Download",
+     *   "Import"…): one short word, the island widens with every letter ("Conversione in MP4"
+     *   was cut to "Conversione co…"); the full title shows when expanded.
      * @param chip short text of the island ("42%", "3/10", "Fatto").
      * @param progress 0..100 for an operation in progress, null for a finished one (a choice) or
      *   one still starting (no percentage yet).
@@ -121,7 +109,7 @@ internal object HyperFocus {
         title: String,
         text: String?,
         chip: String,
-        icon: Int,
+        label: String,
         progress: Int?,
         buttons: List<Button>,
         float: Boolean,
@@ -130,6 +118,8 @@ internal object HyperFocus {
     ): Bundle {
         if (!isSupported(ctx)) return Bundle()
         val dbg = IslandDebug.get(ctx)
+        // Every operation shows the same icon: the Cripta keyhole, cut out as the status bar wants it.
+        val icon = R.drawable.ic_notification
         // Keys unique to this icon and this notification: HyperOS keeps the pictures and buttons
         // of all of an app's focus notifications by key, and with several at once (a download and
         // a conversion result…) the shared "icon" / "choice0" keys got mixed up (a square icon).
@@ -148,7 +138,7 @@ internal object HyperFocus {
             .put("textInfo", JSONObject().put("title", chip)))
         val big = JSONObject()
             .put("imageTextInfoLeft", JSONObject().put("type", 1).put("picInfo", pic)
-                .put("textInfo", JSONObject().put("title", if (dbg.shortLabel) islandLabel(title) else title)))
+                .put("textInfo", JSONObject().put("title", if (dbg.shortLabel) label else title)))
         right.keys().forEach { big.put(it, right.get(it)) }
         val param = JSONObject()
             .put("protocol", protocol(ctx).takeIf { it in 1..3 } ?: 3)

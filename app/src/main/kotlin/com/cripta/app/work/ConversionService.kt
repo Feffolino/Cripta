@@ -121,7 +121,7 @@ class ConversionService : Service() {
             // Started as a foreground service (the button's PendingIntent): it must go foreground
             // before leaving, even to do nothing.
             // On HyperOS the answer then shows in the island in its place.
-            startForeground(NOTIF_ID, build("Download", 0, indeterminate = true, icon = R.drawable.ic_notif_download))
+            startForeground(NOTIF_ID, build("Download", 0, indeterminate = true, kind = ResultKind.DOWNLOAD))
             notifyResult("Download non riuscito", "Sblocca Cripta, poi tocca Riprova", ResultKind.DOWNLOAD, state = ResultState.FAILED,
                 actions = listOf(retryAction(intent)))
             stopIfIdle(startId)
@@ -148,9 +148,9 @@ class ConversionService : Service() {
         if (mode == MODE_DEBUG_CHOICE) {
             ensureChannel()
             // Foreground, as a real choice: HyperOS only puts the service's own notification in the island.
-            startForeground(NOTIF_ID, build("Prova scelta", 0, indeterminate = true, icon = R.drawable.ic_notif_done))
+            startForeground(NOTIF_ID, build("Prova scelta", 0, indeterminate = true, kind = ResultKind.CONVERT))
             postChoice(
-                DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Prova scelta", "Due tasti di prova",
+                DEBUG_NOTIF_ID, ResultKind.CONVERT, "Prova scelta", "Due tasti di prova",
                 serviceAction("Elimina", MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
                 serviceAction("Mantieni", MODE_DEBUG_DISMISS, 21, icon = R.drawable.ic_action_keep),
             )
@@ -219,7 +219,17 @@ class ConversionService : Service() {
         }
         // Already running: go foreground with the progress on show (a link added to the queue
         // put "Preparazione…" over the running download, without its Annulla).
-        startForeground(NOTIF_ID, lastProgress.takeIf { running } ?: build("Preparazione…", 0, indeterminate = true))
+        startForeground(NOTIF_ID, lastProgress.takeIf { running } ?: build("Preparazione…", 0, indeterminate = true,
+            kind = when (mode) {
+                MODE_IMPORT -> ResultKind.IMPORT
+                MODE_DOWNLOAD -> ResultKind.EXPORT // "download" here is the export to the device
+                MODE_DOWNLOAD_URL -> ResultKind.DOWNLOAD
+                MODE_UPDATE -> ResultKind.UPDATE
+                MODE_DUP_SCAN -> ResultKind.SCAN
+                MODE_INTRO_SCAN -> ResultKind.INTRO
+                MODE_CONVERT -> ResultKind.CONVERT
+                else -> null
+            }))
         if (mode == MODE_DOWNLOAD_URL) {
             if (intent.getBooleanExtra(EX_RETRY, false)) getSystemService(NotificationManager::class.java).cancel(ResultKind.DOWNLOAD.id)
             val url = intent.getStringExtra(EX_URL)
@@ -336,23 +346,23 @@ class ConversionService : Service() {
             val left = eta.left(p / 100f)
             return when (kind) {
                 "download", "download_fail" -> build("Download", p, sub = "Scaricamento del video · $p%",
-                    eta = left, header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                    eta = left, header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.DOWNLOAD)
                 "import" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
                     build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
-                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_import)
+                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.IMPORT)
                 }
                 "export" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
                     build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
-                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_export)
+                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.EXPORT)
                 }
                 "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
-                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_scan)
+                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.SCAN)
                 "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
-                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_download)
+                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.UPDATE)
                 else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", eta = left, header = "1 in coda",
-                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, icon = R.drawable.ic_notif_convert)
+                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.CONVERT)
             }
         }
         val closeOnly = { label: String, req: Int, icon: Int -> serviceAction(label, MODE_DEBUG_DISMISS, req, icon = icon) }
@@ -361,7 +371,14 @@ class ConversionService : Service() {
         try {
             notify(build(if (kind == "download" || kind == "download_fail") "Download" else "Preparazione…", 0,
                 sub = "Avvio della prova…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
-                icon = R.drawable.ic_notif_download.takeIf { kind.startsWith("download") } ?: R.drawable.ic_notification))
+                kind = when (kind) {
+                    "download", "download_fail" -> ResultKind.DOWNLOAD
+                    "import" -> ResultKind.IMPORT
+                    "export" -> ResultKind.EXPORT
+                    "scan" -> ResultKind.SCAN
+                    "update" -> ResultKind.UPDATE
+                    else -> ResultKind.CONVERT
+                }))
             kotlinx.coroutines.delay(stepMs * 2)
             for (p in 0..100 step 4) {
                 if (kind == "download_fail" && p >= 60) break
@@ -369,7 +386,7 @@ class ConversionService : Service() {
                 kotlinx.coroutines.delay(stepMs)
             }
             when (kind) {
-                "import" -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "$files file importati", "Eliminare gli originali?",
+                "import" -> postChoice(DEBUG_NOTIF_ID, ResultKind.IMPORT, "$files file importati", "Eliminare gli originali?",
                     closeOnly("Elimina originali", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
                 "export" -> notifyResult("Esportazione completata", "$files file salvati nella galleria", ResultKind.EXPORT)
                 "scan" -> notifyResult("Duplicati trovati", "3 gruppi su 200 elementi", ResultKind.SCAN, openDuplicates = true,
@@ -379,7 +396,7 @@ class ConversionService : Service() {
                 "download" -> notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
                 "download_fail" -> notifyResult("Download non riuscito", "Prova di errore: link non raggiungibile", ResultKind.DOWNLOAD,
                     state = ResultState.FAILED, actions = listOf(closeOnly("Riprova", 22, R.drawable.ic_action_retry)))
-                else -> postChoice(DEBUG_NOTIF_ID, R.drawable.ic_notif_done, "Copia MP4 creata", "Eliminare l'originale?",
+                else -> postChoice(DEBUG_NOTIF_ID, ResultKind.CONVERT, "Copia MP4 creata", "Eliminare l'originale?",
                     closeOnly("Elimina originale", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -406,13 +423,13 @@ class ConversionService : Service() {
         val title = "Aggiornamento di Cripta"
         updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, 0))
         notify(build(title, 0, sub = "Versione ${rel.versionName}", indeterminate = true,
-            cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
+            cancelable = true, cancelMode = MODE_CANCEL_UPDATE, kind = ResultKind.UPDATE))
         val eta = EtaEstimator()
         try {
             val apk = updater.download(this, rel.apkUrl, rel.sha256Url) { pct ->
                 updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, pct))
                 notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%", eta = eta.left(pct / 100f),
-                    cancelable = true, cancelMode = MODE_CANCEL_UPDATE, icon = R.drawable.ic_notif_download))
+                    cancelable = true, cancelMode = MODE_CANCEL_UPDATE, kind = ResultKind.UPDATE))
             }
             updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
             // Through Cripta's own invisible activity: the installer handed straight to the
@@ -509,7 +526,7 @@ class ConversionService : Service() {
         var saved = 0; var failed = 0; var done = 0
         val title = if (tree != null) "Esportazione nella cartella" else "Esportazione in galleria"
         notify(build(title, 0, sub = "File 1 di $total", chip = "0/$total",
-            cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+            cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
         // Starts the measurement at 0, so the end of the first file already gives a speed.
         eta.left(0f)
         for (f in files) {
@@ -529,7 +546,7 @@ class ConversionService : Service() {
             val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
             val left = if (done < total) eta.left(fraction) else null
             notify(build(title, (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
-                chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_export))
+                chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
         }
         val cancelled = done < total
         val text = buildString {
@@ -670,7 +687,7 @@ class ConversionService : Service() {
         val stopping = batchCancels.get() != cancelGen
         return build("Importazione", (fraction * 100).toInt(), sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
             chip = "$done/$total", eta = left.takeUnless { stopping },
-            cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, icon = R.drawable.ic_notif_import)
+            cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.IMPORT)
     }
 
     /** Conversions run strictly one at a time: parallel transcodes fight over the hardware
@@ -704,7 +721,7 @@ class ConversionService : Service() {
         val queued = { convertWaiting.get().let { if (it > 0) "$it in coda" else null } }
         val eta = EtaEstimator()
         notify(build("Conversione in MP4", 0, sub = "Preparazione del video…", indeterminate = true, header = queued(),
-            cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
+            cancelable = true, cancelMode = MODE_CANCEL_CONVERT, kind = ResultKind.CONVERT))
         var src: java.io.File? = null
         var out: java.io.File? = null
         var result: Pair<Boolean, String>? = null
@@ -720,7 +737,7 @@ class ConversionService : Service() {
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
                     notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", eta = eta.left(pct / 100f), header = queued(),
-                        cancelable = true, cancelMode = MODE_CANCEL_CONVERT, icon = R.drawable.ic_notif_convert))
+                        cancelable = true, cancelMode = MODE_CANCEL_CONVERT, kind = ResultKind.CONVERT))
                 }
             }
             // Never import a broken transcode (a corrupt output that looked valid could lead to losing
@@ -872,7 +889,7 @@ class ConversionService : Service() {
         val mode = if (similar) com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR else com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
         val label = if (similar) "Ricerca media simili" else "Ricerca duplicati"
         dupStore.start(mode)
-        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
+        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
         var last = 0L
         val eta = EtaEstimator()
         val onProgress: (Int, Int) -> Unit = { done, total ->
@@ -883,7 +900,7 @@ class ConversionService : Service() {
                 val pct = if (total > 0) done * 100 / total else 0
                 notify(build(label, pct, sub = if (total > 0) "$done di $total elementi confrontati" else "Preparazione…",
                     eta = if (total > 0) eta.left(done.toFloat() / total) else null,
-                    indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, icon = R.drawable.ic_notif_scan))
+                    indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
             }
         }
         try {
@@ -963,7 +980,7 @@ class ConversionService : Service() {
                                     introProgress.value = IntroProgress(done, backlog.size, "Confronto dei video già analizzati")
                                 },
                                 eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null,
-                                cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                                cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO))
                             found += intro.matchNew(part)
                             done += part.size
                         }
@@ -984,7 +1001,7 @@ class ConversionService : Service() {
                     val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
                     notify(build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
                         eta = if (d > 0) eta.left(d.toFloat() / total) else null,
-                        cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                        cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO))
                 }
                 progress()
                 var next = 0
@@ -1080,7 +1097,7 @@ class ConversionService : Service() {
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
             val queued = { waiting().let { if (it > 0) "$it in coda" else null } }
-            notify(build("Download", 0, sub = "Analisi del link…", indeterminate = true, header = queued(), cancelable = true, icon = R.drawable.ic_notif_download))
+            notify(build("Download", 0, sub = "Analisi del link…", indeterminate = true, header = queued(), cancelable = true, kind = ResultKind.DOWNLOAD))
             // The time left by our own estimate, not yt-dlp's (it swings on every fragment of a
             // stream); the download screen shows the same one.
             val eta = EtaEstimator()
@@ -1090,7 +1107,7 @@ class ConversionService : Service() {
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
                     set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
                     notify(build("Download", pct, sub = "Scaricamento del video · $pct%", eta = leftMs?.let(::formatEtaShort), header = queued(),
-                        cancelable = true, icon = R.drawable.ic_notif_download))
+                        cancelable = true, kind = ResultKind.DOWNLOAD))
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
@@ -1217,8 +1234,8 @@ class ConversionService : Service() {
      *  - [header]: a short extra next to the app name (time left, how many are queued);
      *  - the progress bar and, with [cancelable], an Annulla button;
      *  - Android 16 Live Update (status chip, lock screen; HyperOS 3 shows it in the Hyper Island):
-     *    compact it shows the operation's [icon] (the Cripta shield with its symbol) and [chip]
-     *    (default: the percentage, "Avvio" while there is none yet).
+     *    compact it shows the Cripta icon and [chip] (default: the percentage, "Avvio" while
+     *    there is none yet); the Hyper Island adds the short name of the operation's [kind].
      * The Live Update keys are set by name: the constants are API 36 and the project compiles
      * against 34; older systems ignore them. The user can still turn it off per app.
      */
@@ -1229,12 +1246,13 @@ class ConversionService : Service() {
         indeterminate: Boolean = false,
         cancelable: Boolean = false,
         cancelMode: String = MODE_CANCEL,
-        icon: Int = R.drawable.ic_notification,
+        kind: ResultKind? = null,
         chip: String? = null,
         header: String? = null,
         /** Time left ("ancora 3 min"), shown before the [header]. */
         eta: String? = null,
     ): Notification {
+        val icon = R.drawable.ic_notification
         val b = NotificationCompat.Builder(this, ongoingChannel())
             // Each notification its own group: with four or more ungrouped ones Android folds
             // them into one automatic summary, whose icon HyperOS shows as a plain square.
@@ -1269,7 +1287,7 @@ class ConversionService : Service() {
         // Its expanded text also carries the time left and the [header], which the template has
         // no place for otherwise; the time left first, as the line is cut at the end when long.
         b.addExtras(HyperFocus.extras(
-            this, "cripta_progress", title, joinParts(eta, sub, header), chipText, icon,
+            this, "cripta_progress", title, joinParts(eta, sub, header), chipText, kind?.label ?: "Cripta",
             // Not started yet (no percentage): no ring or bar, which stood at 0 as if stuck.
             progress = if (indeterminate) null else pct,
             buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it, icon = R.drawable.ic_action_cancel) }),
@@ -1434,16 +1452,19 @@ class ConversionService : Service() {
         }
     }
 
-    /** Which kind of operation a result belongs to; each keeps its own notification. */
-    private enum class ResultKind(val id: Int, val icon: Int) {
-        IMPORT(4220, R.drawable.ic_notif_import), DOWNLOAD(4221, R.drawable.ic_notif_download),
-        CONVERT(4222, R.drawable.ic_notif_convert), SCAN(4223, R.drawable.ic_notif_scan),
-        EXPORT(4224, R.drawable.ic_notif_export), UPDATE(4225, R.drawable.ic_notif_download),
-        INTRO(4226, R.drawable.ic_notif_scan),
+    /**
+     * Which kind of operation a notification belongs to; each result keeps its own notification.
+     * [label]: its name next to the icon in the Hyper Island, one short word (the island widens
+     * with every letter).
+     */
+    private enum class ResultKind(val id: Int, val label: String) {
+        IMPORT(4220, "Import"), DOWNLOAD(4221, "Download"),
+        CONVERT(4222, "Converti"), SCAN(4223, "Duplicati"),
+        EXPORT(4224, "Export"), UPDATE(4225, "Aggiorna"),
+        INTRO(4226, "Analisi"),
     }
 
-    /** How an operation ended; its icon is the shield with a tick, an exclamation mark, or (when
-     *  cancelled) the operation's own symbol. */
+    /** How an operation ended (the island's chip: Fatto, Errore, Annullato). */
     private enum class ResultState { DONE, FAILED, CANCELLED }
 
     /** Tap on a notification: bring the app to the front (optionally straight to the duplicate results). */
@@ -1472,11 +1493,7 @@ class ConversionService : Service() {
         /** False: straight into the notifications (a note about a tap, not an operation's outcome). */
         island: Boolean = true,
     ) {
-        val icon = when (state) {
-            ResultState.DONE -> R.drawable.ic_notif_done
-            ResultState.FAILED -> R.drawable.ic_notif_error
-            ResultState.CANCELLED -> kind.icon
-        }
+        val icon = R.drawable.ic_notification
         val public = NotificationCompat.Builder(this, RESULT_CHANNEL)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
@@ -1506,7 +1523,7 @@ class ConversionService : Service() {
             .setOnlyAlertOnce(true)
             .addExtras(liveUpdate(chip))
             .addExtras(HyperFocus.extras(
-                this, "cripta_progress", title, text, chip, icon, progress = null,
+                this, "cripta_progress", title, text, chip, kind.label, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let { HyperFocus.Button("result$i", a.title.toString(), it,
                         icon = a.iconCompat?.resId?.takeIf { r -> r != 0 }) }
@@ -1551,7 +1568,8 @@ class ConversionService : Service() {
      * the buttons. After [DONE_TIMEOUT_MS] unanswered it goes away and the choice stays in the app.
      * Buttons and details are hidden on the lock screen.
      */
-    private fun postChoice(id: Int, icon: Int, title: String, text: String, vararg actions: NotificationCompat.Action) {
+    private fun postChoice(id: Int, kind: ResultKind, title: String, text: String, vararg actions: NotificationCompat.Action) {
+        val icon = R.drawable.ic_notification
         fun base(channel: String) = NotificationCompat.Builder(this, channel)
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
@@ -1580,7 +1598,7 @@ class ConversionService : Service() {
             .setGroup(GROUP_ONGOING)
             .addExtras(liveUpdate("Scegli"))
             .addExtras(HyperFocus.extras(
-                this, "cripta_progress", title, text, "Scegli", icon, progress = null,
+                this, "cripta_progress", title, text, "Scegli", kind.label, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let {
                         val res = a.iconCompat?.resId?.takeIf { r -> r != 0 }
@@ -1609,7 +1627,7 @@ class ConversionService : Service() {
         val pending = repo.convertStatus.value.pendingOriginals
         val original = pending.firstOrNull() ?: return
         postChoice(
-            DONE_NOTIF_ID, R.drawable.ic_notif_done,
+            DONE_NOTIF_ID, ResultKind.CONVERT,
             if (pending.size == 1) "Copia MP4 creata" else "${pending.size} originali da gestire",
             "Eliminare l'originale?",
             serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, original.id, R.drawable.ic_action_delete),
@@ -1623,7 +1641,7 @@ class ConversionService : Service() {
         // Short lines: the island's template shows one line each (the counts become the title).
         val title = lastImportCount?.let { if (it == 1) "1 file importato" else "$it file importati" } ?: "Importazione completata"
         postChoice(
-            ResultKind.IMPORT.id, R.drawable.ic_notif_done, title,
+            ResultKind.IMPORT.id, ResultKind.IMPORT, title,
             if (n == 1) "Eliminare l'originale?" else "Eliminare gli originali?",
             serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8, icon = R.drawable.ic_action_delete),
             serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9, icon = R.drawable.ic_action_keep),

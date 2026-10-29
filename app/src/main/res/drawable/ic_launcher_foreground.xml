@@ -1,17 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher foreground: the blue logo on the dark background (ic_launcher_background).
+     Artwork: the 753×753 artboard of the Cripta logo (keyhole cut out of a circle) laid over the
+     72dp visible part of the 108dp adaptive-icon canvas: viewport 753 × 108/72, offset by the
+     18dp margin (188.25). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <group android:scaleX="0.55" android:scaleY="0.55" android:pivotX="54" android:pivotY="54">
+    android:viewportWidth="1129.5"
+    android:viewportHeight="1129.5">
+    <group android:translateX="188.25" android:translateY="188.25">
         <path
             android:fillColor="#5B8DEF"
-            android:pathData="M54,18 L82,30 L82,52 C82,72 70,86 54,92 C38,86 26,72 26,52 L26,30 Z" />
-        <path
-            android:fillColor="#0E1116"
-            android:pathData="M54,44 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z" />
-        <path
-            android:fillColor="#0E1116"
-            android:pathData="M50,52 h8 v18 h-8 z" />
+            android:fillType="evenOdd"
+            android:pathData="m376.5,139.24c-131.03,0-237.26,106.22-237.26,237.26s106.22,237.26,237.26,237.26,237.26-106.22,237.26-237.26-106.22-237.26-237.26-237.26Zm37,292.69v44.57c0,20.71-16.79,37.5-37.5,37.5s-37.5-16.79-37.5-37.5v-44.98c-36.38-14.96-62-50.75-62-92.52,0-55.23,44.77-100,100-100s100,44.77,100,100c0,42.16-26.09,78.22-63,92.93Z" />
     </group>
 </vector>

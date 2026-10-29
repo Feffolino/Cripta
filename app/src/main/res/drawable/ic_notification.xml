@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar icon: Android draws only the alpha channel, so this is a flat white shield with the
-     keyhole cut out (evenOdd), sized to the 24dp notification grid. -->
+<!-- Status-bar icon of every notification: Android draws only the alpha channel, so this is the
+     Cripta logo without its background, a flat white circle with the keyhole cut out. The circle
+     (474.52 units across in the 753 artboard) is 20dp in the 24dp notification grid: viewport
+     474.52 × 24/20, centred. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M12,1.5 L20.5,5.2 L20.5,11.5 C20.5,17.2 16.9,21.4 12,22.8 C7.1,21.4 3.5,17.2 3.5,11.5 L3.5,5.2 Z M12,7.2 C10.62,7.2 9.5,8.32 9.5,9.7 C9.5,10.62 10,11.42 10.75,11.85 L10.75,16.2 L13.25,16.2 L13.25,11.85 C14,11.42 14.5,10.62 14.5,9.7 C14.5,8.32 13.38,7.2 12,7.2 Z" />
+    android:viewportWidth="569.424"
+    android:viewportHeight="569.424">
+    <group android:translateX="-91.788" android:translateY="-91.788">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="m376.5,139.24c-131.03,0-237.26,106.22-237.26,237.26s106.22,237.26,237.26,237.26,237.26-106.22,237.26-237.26-106.22-237.26-237.26-237.26Zm37,292.69v44.57c0,20.71-16.79,37.5-37.5,37.5s-37.5-16.79-37.5-37.5v-44.98c-36.38-14.96-62-50.75-62-92.52,0-55.23,44.77-100,100-100s100,44.77,100,100c0,42.16-26.09,78.22-63,92.93Z" />
+    </group>
 </vector>
