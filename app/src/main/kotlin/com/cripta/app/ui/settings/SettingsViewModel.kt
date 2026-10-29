@@ -33,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val keyVault: com.cripta.app.security.KeyVault,
     private val intro: com.cripta.app.data.intro.IntroRepository,
+    private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -240,10 +241,16 @@ class SettingsViewModel @Inject constructor(
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
         intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restoreRejected(id: Long) = viewModelScope.launch { intro.restoreRejected(id) }
-    /** "Risultati dell'analisi": null while closed or loading. */
+    /** The analysis so far (status card and results page); null until first loaded. */
     val introOverview = kotlinx.coroutines.flow.MutableStateFlow<com.cripta.app.data.intro.IntroRepository.Overview?>(null)
-    fun loadIntroOverview() = viewModelScope.launch { introOverview.value = runCatching { intro.overview() }.getOrNull() }
-    fun closeIntroOverview() { introOverview.value = null }
+    fun refreshIntro() = viewModelScope.launch { runCatching { intro.overview() }.getOrNull()?.let { introOverview.value = it } }
+    /** A running scan, for the live status card. */
+    val introProgress = com.cripta.app.work.ConversionService.introProgress
+    fun cancelIntroScan() = com.cripta.app.work.ConversionService.cancelIntroScan(appContext)
+    /** "Risultati dell'analisi" page open (it survives a trip to the viewer and back). */
+    val introResultsOpen = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** A video opened from the results: the viewer swipes through the same filtered list. */
+    fun openFromResults(ids: List<String>) = viewerQueue.set(ids)
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
     fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
     fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }

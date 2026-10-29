@@ -430,7 +430,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 com.cripta.app.ui.download.DownloadScreen(onOpenFile = { nav.navigate("viewer/$it") })
             }
             composable("settings") {
-                SettingsScreen(onBack = { nav.popBackStack() })
+                SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
             }
             composable("viewer/{fileId}") { entry ->
                 ViewerScreen(

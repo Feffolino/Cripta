@@ -74,26 +74,27 @@ class IntroRepository @Inject constructor(
     }
 
     /** What the analysis found so far, for Settings: counts and the videos with an intro or outro. */
-    class Overview(val videos: Int, val analysed: Int, val skipped: Int, val items: List<Item>,
-                   /** Videos that could not be analysed, with the reason. */
-                   val skippedItems: List<Pair<String, String>>) {
-        val withIntro get() = items.count { it.intro != null }
-        val withOutro get() = items.count { it.outro != null }
+    /** What the analysis found so far: one [Entry] per video analysed or skipped, for Settings. */
+    class Overview(val videos: Int, val entries: List<Entry>) {
+        val analysed get() = entries.count { it.skipReason == null }
+        val skipped get() = entries.count { it.skipReason != null }
+        val withIntro get() = entries.count { it.intro != null }
+        val withOutro get() = entries.count { it.outro != null }
     }
-    class Item(val name: String, val intro: MediaSegmentEntity?, val outro: MediaSegmentEntity?)
 
-    suspend fun overview(): Overview {
+    /** A video in the results; [skipReason] is set when it could not be analysed. */
+    class Entry(val file: FileEntity, val intro: MediaSegmentEntity?, val outro: MediaSegmentEntity?, val skipReason: String?)
+
+    suspend fun overview(): Overview = withContext(Dispatchers.Default) {
         val live = repo.allFilesSnapshot().filter { VaultRepository.isVideo(it.mimeType) }
         val byId = live.associateBy { it.id }
-        val sizes = dao.headSizes().filter { it.fileId in byId }
-        val items = dao.allSegments().filter { it.fileId in byId }.groupBy { it.fileId }.map { (id, segs) ->
-            Item(byId.getValue(id).originalName, segs.firstOrNull { it.kind == SegmentKind.INTRO.id }, segs.firstOrNull { it.kind == SegmentKind.OUTRO.id })
-        }.sortedBy { it.name.lowercase() }
-        val skippedItems = sizes.filter { it.status != "ok" }.map { s ->
-            byId.getValue(s.fileId).originalName to
-                (s.status.removePrefix("skip").removePrefix(":").ifBlank { null } ?: "versione precedente: verrà riprovato")
-        }.sortedBy { it.first.lowercase() }
-        return Overview(live.size, sizes.count { it.status == "ok" }, skippedItems.size, items, skippedItems)
+        val segs = dao.allSegments().filter { it.fileId in byId }.groupBy { it.fileId }
+        val entries = dao.headSizes().filter { it.fileId in byId }.map { s ->
+            val own = segs[s.fileId].orEmpty()
+            Entry(byId.getValue(s.fileId), own.firstOrNull { it.kind == SegmentKind.INTRO.id }, own.firstOrNull { it.kind == SegmentKind.OUTRO.id },
+                if (s.status == "ok") null else s.status.removePrefix("skip").removePrefix(":").ifBlank { null } ?: "versione precedente: verrà riprovato")
+        }.sortedBy { it.file.originalName.lowercase() }
+        Overview(live.size, entries)
     }
 
     private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
@@ -158,6 +159,14 @@ class IntroRepository @Inject constructor(
                 "il tratto in comune con «$other» è tra i segmenti scartati (Impostazioni › Segmenti scartati)"
             else -> "in comune con «$other» %.0f s (%s–%s), ma non salvato: segnalamelo".format(secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
         }
+    }
+
+    /** "ok", the reason [fileId] could not be analysed, or null when it was never analysed. */
+    suspend fun printStatus(fileId: String): String? {
+        val p = dao.printsOf(fileId)
+        if (p.isEmpty()) return null
+        if (p.any { it.status == "ok" }) return "ok"
+        return p.first().status.removePrefix("skip").removePrefix(":").ifBlank { "motivo sconosciuto" }
     }
 
     /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */

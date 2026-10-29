@@ -959,7 +959,9 @@ class ConversionService : Service() {
                         var done = 0
                         for (part in backlog.chunked(50)) {
                             notify(build(label, done * 100 / backlog.size,
-                                sub = "Confronto dei video già analizzati: $done di ${backlog.size}",
+                                sub = "Confronto dei video già analizzati: $done di ${backlog.size}".also {
+                                    introProgress.value = IntroProgress(done, backlog.size, "Confronto dei video già analizzati")
+                                },
                                 eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null,
                                 cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
                             found += intro.matchNew(part)
@@ -978,6 +980,7 @@ class ConversionService : Service() {
                 fun progress() = synchronized(introNoteLock) {
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
+                    introProgress.value = IntroProgress(d, total, "Analisi dei video")
                     val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
                     notify(build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
                         eta = if (d > 0) eta.left(d.toFloat() / total) else null,
@@ -1031,6 +1034,7 @@ class ConversionService : Service() {
         } finally {
             introJob = null
             introManual = false
+            introProgress.value = null
             introMutex.unlock()
         }
     }
@@ -1773,6 +1777,12 @@ class ConversionService : Service() {
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)) })
         }
+
+        /** A running intro/outro scan: [done] of [total] in its current [phase]; for Settings. */
+        data class IntroProgress(val done: Int, val total: Int, val phase: String)
+
+        /** Null while no intro/outro scan runs. */
+        val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
 
         /** Throw the analysis away ([everything]: also manual marks and rejections) and analyse every video anew. */
         fun restartIntroScan(ctx: Context, everything: Boolean) {

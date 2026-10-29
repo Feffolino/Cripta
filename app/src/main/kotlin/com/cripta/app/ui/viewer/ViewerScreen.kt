@@ -121,6 +121,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.flow.update
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -1302,8 +1303,23 @@ private fun VideoPlayer(
     var skipAction by remember(file.id) { mutableStateOf<SegmentSkipper.Action>(SegmentSkipper.Action.None) }
     var skippedChip by remember(file.id) { mutableStateOf<SegmentSkipper.Segment?>(null) }
     var scrubbing by remember { mutableStateOf(false) }
-    var introSheet by remember { mutableStateOf(false) }
-    val introPending = remember(file.id) { androidx.compose.runtime.mutableStateMapOf<com.cripta.app.media.intro.SegmentKind, Long>() }
+    // The details panel's intro section has no player: it reads this one's place and asks it to seek.
+    LaunchedEffect(file.id) {
+        while (true) {
+            val d = player.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: 0L
+            val spot = ViewerViewModel.PlayerSpot(player.currentPosition, d, player.isPlaying)
+            vm.playerSpots.update { it + (file.id to spot) }
+            delay(200)
+        }
+    }
+    DisposableEffect(file.id) { onDispose { vm.playerSpots.update { it - file.id } } }
+    LaunchedEffect(file.id) {
+        vm.seekRequests.collect { r ->
+            if (r.fileId != file.id) return@collect
+            player.seekTo(r.positionMs)
+            if (r.play) player.play()
+        }
+    }
     fun skipSegment(s: SegmentSkipper.Segment) {
         if (s.kind == SegmentSkipper.Kind.OUTRO && nextId != null && !prefs.loop) latestOnNext()
         else player.seekTo(if (s.kind == SegmentSkipper.Kind.OUTRO && player.duration > 0) player.duration else s.endMs)
@@ -1854,23 +1870,6 @@ private fun VideoPlayer(
         ) {
             CircularProgressIndicator(color = Color.White)
         }
-        if (introSheet) IntroOutroSheet(
-            segments = segmentRows,
-            pendingStart = introPending,
-            onStartHere = { kind, seg ->
-                val pos = player.currentPosition
-                if (vm.markStart(file, kind, pos, seg)) introPending[kind] = pos else introPending.remove(kind)
-            },
-            onEndHere = { kind, seg ->
-                val start = introPending[kind] ?: seg?.takeIf { it.source != "none" }?.startMs
-                if (start == null) { modeTick++; modeLabel = "Segna prima l'inizio" }
-                else if (vm.markEnd(file, kind, start, player.currentPosition)) introPending.remove(kind)
-            },
-            onRemove = { kind -> vm.removeSegment(file, kind) },
-            onSearch = { kind, seg -> vm.searchSegment(file, kind, seg) },
-            onReject = { kind, seg, everywhere -> vm.rejectSegment(file, kind, seg, everywhere) },
-            onDismiss = { introSheet = false },
-        )
 
         // "+10s" / "-10s" hint on the tapped side; pops in, fades out a little slower.
         val seekText = seekLabel ?: lastSeekLabel
@@ -1956,12 +1955,6 @@ private fun VideoPlayer(
                     }) {
                         Icon(if (rotationLocked) Icons.Filled.ScreenLockRotation else Icons.Filled.ScreenRotation,
                             if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione", tint = Color.White)
-                    }
-                }
-                // Intro and outro: marks, search in other videos, rejection.
-                Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
-                    IconButton(onClick = { introSheet = true }) {
-                        Icon(Icons.Filled.SkipNext, "Intro e finale", tint = Color.White)
                     }
                 }
                 // Picture-in-Picture on demand (the automatic one on leaving the app is a setting).
@@ -2276,7 +2269,9 @@ private fun DetailsSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
         ) {
-            header(); tiles(); tags(); HorizontalDividerCompat(); info()
+            header(); tiles(); tags()
+            if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
+            HorizontalDividerCompat(); info()
         }
     }
     if (inSplit) {
@@ -2303,8 +2298,10 @@ private fun DetailsSheet(
                     ) {
                         header(); tiles(); HorizontalDividerCompat(); info()
                     }
-                    Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+                    Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
                         tags()
+                        if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
                     }
                 }
             } else column()
