@@ -256,6 +256,10 @@ interface IntroDao {
     @Query("DELETE FROM audio_prints")
     suspend fun deleteAllPrints()
 
+    /** Bytes of all usable prints of [part] (4 per hash), to size the index. */
+    @Query("SELECT COALESCE(SUM(length(hashes)), 0) FROM audio_prints WHERE part = :part AND status = 'ok'")
+    suspend fun printBytes(part: String): Long
+
     @Query("DELETE FROM media_segments WHERE source = 'auto'")
     suspend fun deleteAutoSegments()
 

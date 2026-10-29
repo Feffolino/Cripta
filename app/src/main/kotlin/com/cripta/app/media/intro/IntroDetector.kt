@@ -7,9 +7,9 @@ import kotlin.math.roundToLong
 
 /** Intro or outro, the print part it is searched in and its minimum length (in hashes). */
 enum class SegmentKind(val id: String, val part: String, val minHashes: Int) {
-    // 5 s: short intros (a few seconds of jingle before the video) were missed with 15 s.
-    INTRO("intro", "head", (5_000 / Fingerprint.HOP_MS).toInt()),
-    OUTRO("outro", "tail", (5_000 / Fingerprint.HOP_MS).toInt());
+    // 2 s: the intros to skip can be a short jingle before the video (15 s missed them all).
+    INTRO("intro", "head", (2_000 / Fingerprint.HOP_MS).toInt()),
+    OUTRO("outro", "tail", (2_000 / Fingerprint.HOP_MS).toInt());
 
     companion object {
         fun of(id: String): SegmentKind = entries.first { it.id == id }
@@ -84,7 +84,7 @@ object IntroDetector {
         bestAt(sample, o.hashes, offsets, searchMin(sample))?.let { Found(o.fileId, o.timeOf(it.bStart), o.timeOf(it.bEnd)) }
     }
 
-    private fun searchMin(sample: IntArray) = maxOf((sample.size * 0.8).toInt(), SegmentKind.OUTRO.minHashes / 2)
+    private fun searchMin(sample: IntArray) = maxOf((sample.size * 0.8).toInt(), SegmentKind.OUTRO.minHashes)
 
     private fun bestAt(a: IntArray, b: IntArray, offsets: List<Int>, minLength: Int): Match? =
         offsets.mapNotNull { SegmentMatcher.at(a, b, it, minLength) }.maxByOrNull { it.length }

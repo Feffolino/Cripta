@@ -3,11 +3,13 @@ package com.cripta.app.media.intro
 /**
  * Inverted index over the fingerprints of many videos: which ones share audio with a given stretch,
  * and at which alignment, without comparing every pair (thousands of videos made that hours).
- * Only "landmark" hashes are indexed, a quarter of them chosen by value, so the same audio gives the
- * same landmarks in every video. Entries are packed in one sorted LongArray:
- * key (20 bits) · video number (24 bits) · position (16 bits).
+ * With very many hashes only "landmark" ones are indexed, one in [sample] chosen by value, so the
+ * same audio gives the same landmarks in every video; quick prints are all indexed (short intros
+ * need every hit). Entries are packed in one sorted LongArray:
+ * key (16 bits) · video number (24 bits) · position (16 bits).
  */
-class PrintIndex(expectedEntries: Int = 1 shl 16) {
+class PrintIndex(expectedEntries: Int = 1 shl 16, private val sample: Int = 1) {
+    init { require(sample > 0 && sample and (sample - 1) == 0) { "sample must be a power of two" } }
     private var entries = LongArray(expectedEntries.coerceAtLeast(16))
     private var size = 0
     private var sorted = true
@@ -59,14 +61,21 @@ class PrintIndex(expectedEntries: Int = 1 shl 16) {
         return lo
     }
 
-    private fun isLandmark(h: Int) = h != 0 && (h ushr KEY_SHIFT) and (SAMPLE - 1) == 0
+    private fun isLandmark(h: Int) = h != 0 && (h ushr KEY_SHIFT) and (sample - 1) == 0
 
     companion object {
-        /** Same key as [SegmentMatcher]: the top 20 bits. */
-        private const val KEY_SHIFT = 12
-        /** One hash in this many is a landmark. */
-        const val SAMPLE = 4
-        private const val MIN_VOTES = 3
+        /** Same key as [SegmentMatcher]. */
+        private const val KEY_SHIFT = SegmentMatcher.KEY_SHIFT
+        /** Above this many hashes in all, only landmarks are indexed (memory: 8 bytes each). */
+        const val MAX_ENTRIES = 4_000_000L
+        private const val MIN_VOTES = 2
         private const val MAX_OFFSETS = 3
+
+        /** The landmark rate for [totalHashes]: 1 (all) up to the memory cap, then powers of two. */
+        fun sampleFor(totalHashes: Long): Int {
+            var s = 1
+            while (totalHashes / s > MAX_ENTRIES) s *= 2
+            return s
+        }
     }
 }

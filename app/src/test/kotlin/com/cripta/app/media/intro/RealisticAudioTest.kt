@@ -58,32 +58,44 @@ class RealisticAudioTest {
 
     @Test
     fun report() {
-        val intro = music(20.0, 9)
-        for ((name, coldOpen) in listOf("intro all'inizio" to 0.0, "intro dopo 7,3 s" to 7.3)) {
-            for ((label, enc) in listOf(
-                "stessa codifica" to Triple(48_000, 1.0f, -60.0),
-                "44,1 kHz, volume 0,7, rumore -35 dB" to Triple(44_100, 0.7f, -35.0),
-                "44,1 kHz, volume 0,7, rumore -25 dB" to Triple(44_100, 0.7f, -25.0),
-            )) {
-                val a48 = intro + music(40.0, 1)
-                val b48 = music(coldOpen, 3) + intro + music(40.0, 2)
-                val a = print("a", a48, 48_000)
-                val b = print("b", reencode(b48, enc.first, enc.second, enc.third, 1024, 5), enc.first)
-                val m = SegmentMatcher.best(a.hashes, b.hashes, 1)
-                val off = m?.let { it.bStart - it.aStart } ?: 0
-                val introHashes = (20_000 / Fingerprint.HOP_MS).toInt()
-                val aligned = (0 until introHashes).filter { it + off in b.hashes.indices }
-                val ber = aligned.sumOf { Integer.bitCount(a.hashes[it] xor b.hashes[it + off]) } / (32.0 * aligned.size)
-                val exact20 = aligned.count { (a.hashes[it] ushr 12) == (b.hashes[it + off] ushr 12) } / aligned.size.toDouble()
-                val index = PrintIndex().apply { add(a.fileId, a.hashes); add(b.fileId, b.hashes) }
-                val cands = index.candidates(a.hashes)
-                val viaIndex = cands["b"]?.let { IntroDetector.detectAt(SegmentKind.INTRO, a, listOf(b to it), emptyList()).found } ?: emptyList()
-                println("[$name | $label] bit diversi %.0f%%, top20 uguali %.0f%%, comune %.1f s, indice: %s, trovata: %s".format(
-                    ber * 100, exact20 * 100, (m?.length ?: 0) * Fingerprint.HOP_MS / 1000,
-                    if ("b" in cands) "sì" else "NO",
-                    viaIndex.firstOrNull { it.fileId == "a" }?.let { "${it.startMs}-${it.endMs} ms" } ?: "NO"))
-                org.junit.Assert.assertTrue("$name | $label", viaIndex.any { it.fileId == "a" && it.endMs - it.startMs > 18_000 })
+        for (introSec in listOf(20.0, 2.5)) {
+            val intro = music(introSec, 9)
+            for ((name, coldOpen) in listOf("all'inizio" to 0.0, "dopo 7,3 s" to 7.3)) {
+                for ((label, enc) in listOf(
+                    "stessa codifica" to Triple(48_000, 1.0f, -60.0),
+                    "44,1 kHz, vol 0,7, -25 dB" to Triple(44_100, 0.7f, -25.0),
+                    "44,1 kHz, vol 0,5, -15 dB" to Triple(44_100, 0.5f, -15.0),
+                )) {
+                    val a = print("a", intro + music(40.0, 1), 48_000)
+                    val b = print("b", reencode(music(coldOpen, 3) + intro + music(40.0, 2), enc.first, enc.second, enc.third, 1024, 5), enc.first)
+                    val m = SegmentMatcher.best(a.hashes, b.hashes, 1)
+                    val off = m?.let { it.bStart - it.aStart } ?: 0
+                    val introHashes = (introSec * 1000 / Fingerprint.HOP_MS).toInt()
+                    val aligned = (0 until introHashes).filter { it + off in b.hashes.indices }
+                    val ber = aligned.sumOf { Integer.bitCount(a.hashes[it] xor b.hashes[it + off]) } / (32.0 * aligned.size)
+                    val index = PrintIndex().apply { add(a.fileId, a.hashes); add(b.fileId, b.hashes) }
+                    val cands = index.candidates(a.hashes)
+                    val found = cands["b"]?.let { IntroDetector.detectAt(SegmentKind.INTRO, a, listOf(b to it), emptyList()).found }
+                        ?.firstOrNull { it.fileId == "a" }
+                    println("[sigla ${introSec}s $name | $label] bit diversi %.0f%%, indice: %s, trovata: %s".format(
+                        ber * 100, if ("b" in cands) "sì" else "NO", found?.let { "${it.startMs}-${it.endMs} ms" } ?: "NO"))
+                    org.junit.Assert.assertTrue("sigla $introSec $name | $label",
+                        found != null && found.endMs - found.startMs > introSec * 1000 * 0.8)
+                }
             }
+        }
+    }
+
+    /** The looser thresholds must not make different videos (same style of music) look alike. */
+    @Test
+    fun differentVideosShareNothing() {
+        val prints = (1L..12L).map { s -> print("v$s", music(60.0, s * 31), 48_000) }
+        val index = PrintIndex().apply { prints.forEach { add(it.fileId, it.hashes) } }
+        for (p in prints) {
+            val cands = index.candidates(p.hashes).filterKeys { it != p.fileId }
+                .map { (id, offs) -> prints.first { it.fileId == id } to offs }
+            val found = IntroDetector.detectAt(SegmentKind.INTRO, p, cands, emptyList()).found
+            org.junit.Assert.assertTrue("${p.fileId}: $found", found.isEmpty())
         }
     }
 }

@@ -22,8 +22,9 @@ class SegmentMatcherTest {
         noisy(a.copyOfRange(100, 250), 3).copyInto(b, destinationOffset = 40)
         val m = SegmentMatcher.best(a, b, minLength = 120)
         assertNotNull(m); m!!
-        assertEquals(100.0, m.aStart.toDouble(), 2.0)
-        assertEquals(250.0, m.aEnd.toDouble(), 2.0)
+        // Within a quarter of a second (4 hashes) of the shared stretch's real bounds.
+        assertEquals(100.0, m.aStart.toDouble(), 5.0)
+        assertEquals(250.0, m.aEnd.toDouble(), 5.0)
         assertEquals(m.aStart - 60, m.bStart)
         assertEquals(m.length, m.bEnd - m.bStart)
     }

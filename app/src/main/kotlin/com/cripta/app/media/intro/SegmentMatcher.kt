@@ -10,13 +10,16 @@ data class Match(val aStart: Int, val aEnd: Int, val bStart: Int, val bEnd: Int)
  * alignment (b index − a index); the best few alignments are then walked hash by hash.
  */
 object SegmentMatcher {
-    /** Votes use the top 20 bits: the low bits flip most under re-encoding. */
-    private const val KEY_SHIFT = 12
-    /** Mean differing bits (of 32) over [WINDOW] hashes still taken as the same audio. */
-    private const val MAX_BITS = 10
+    /**
+     * Votes use the top 16 bits: the low ones flip most under re-encoding, and with 20 a short intro
+     * compressed differently kept too few exact hits to be proposed at all.
+     */
+    const val KEY_SHIFT = 16
+    /** Mean differing bits (of 32) over [WINDOW] hashes still taken as the same audio (random: 16). */
+    private const val MAX_BITS = 11
     private const val WINDOW = 8
     private const val MAX_OFFSETS = 5
-    private const val MIN_VOTES = 3
+    private const val MIN_VOTES = 2
 
     fun best(a: IntArray, b: IntArray, minLength: Int): Match? {
         if (a.isEmpty() || b.isEmpty()) return null
