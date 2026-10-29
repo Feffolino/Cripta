@@ -941,6 +941,16 @@ class ConversionService : Service() {
                 val all = introScanAll
                 introScanAll = false
                 if (all) anyFull = true
+                // Videos fingerprinted by a scan that stopped before matching them (older versions
+                // matched only at the very end): compared now, without decoding them again.
+                if (all) {
+                    val backlog = intro.unmatched()
+                    if (backlog.isNotEmpty()) {
+                        notify(build(label, 0, sub = "Confronto di ${backlog.size} video già analizzati…", indeterminate = true,
+                            cancelable = true, cancelMode = MODE_CANCEL_INTRO, icon = R.drawable.ic_notif_scan))
+                        backlog.chunked(200).forEach { found += intro.matchNew(it) }
+                    }
+                }
                 val todo = if (all) intro.pending(quick) else emptyList()
                 if (todo.isEmpty() && introAsked.isEmpty()) break
                 val askedIds = HashSet<String>()

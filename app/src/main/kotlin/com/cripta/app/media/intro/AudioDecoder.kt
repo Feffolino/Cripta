@@ -22,7 +22,31 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
     /** The first [size] of [samples] start at [startMs] in the video. */
     class Pcm(val startMs: Long, val samples: FloatArray, val size: Int)
 
-    /** Audio of [file] from [fromMs] to [toMs]; null when it has no audio track or nothing decoded. */
+    /** Why a video's audio cannot be fingerprinted, in Italian for the user. */
+    class Undecodable(reason: String) : Exception(reason)
+
+    /** The video's length from its container (for files whose length was never recorded). */
+    suspend fun durationMs(file: FileEntity): Long? = withContext(Dispatchers.IO) {
+        val extractor = MediaExtractor()
+        var channel: SeekableByteChannel? = null
+        try {
+            channel = repo.seekableChannel(file)
+            extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+            (0 until extractor.trackCount).map { extractor.getTrackFormat(it) }
+                .filter { it.containsKey(MediaFormat.KEY_DURATION) }
+                .maxOfOrNull { it.getLong(MediaFormat.KEY_DURATION) / 1000 }?.takeIf { it > 0 }
+        } catch (e: Exception) {
+            null
+        } finally {
+            extractor.release()
+            runCatching { channel?.close() }
+        }
+    }
+
+    /**
+     * Audio of [file] from [fromMs] to [toMs]; null when nothing could be decoded.
+     * Throws [Undecodable] without an audio track or a decoder for it.
+     */
     suspend fun decode(file: FileEntity, fromMs: Long, toMs: Long): Pcm? = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
@@ -32,13 +56,16 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
             extractor.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
             val track = (0 until extractor.trackCount).firstOrNull {
                 extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-            } ?: return@withContext null
+            } ?: throw Undecodable("nessuna traccia audio")
             val format = extractor.getTrackFormat(track)
             extractor.selectTrack(track)
             extractor.seekTo(fromMs * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-            val c = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME)!!)
-            codec = c
-            c.configure(format, null, null, 0)
+            val mime = format.getString(MediaFormat.KEY_MIME)!!
+            val c = try {
+                MediaCodec.createDecoderByType(mime).also { codec = it; it.configure(format, null, null, 0) }
+            } catch (e: Exception) {
+                throw Undecodable("audio ${mime.removePrefix("audio/")} non supportato dal telefono")
+            }
             c.start()
             val info = MediaCodec.BufferInfo()
             var resampler: MonoResampler? = null

@@ -55,6 +55,8 @@ class IntroRepository @Inject constructor(
         return repo.allFilesSnapshot().filter { f ->
             if (!VaultRepository.isVideo(f.mimeType)) return@filter false
             val s = sizes[f.id] ?: return@filter true
+            // Skipped by an older version (any video under 2 minutes, unknown length): try once more.
+            if (s.status == "skip") return@filter true
             if (quick || s.status != "ok") return@filter false
             val covered = s.bytes / 4 * Fingerprint.HOP_MS
             covered < minOf(f.durationMs ?: 0L, HEAD_MS) - 30_000
@@ -62,7 +64,9 @@ class IntroRepository @Inject constructor(
     }
 
     /** What the analysis found so far, for Settings: counts and the videos with an intro or outro. */
-    class Overview(val videos: Int, val analysed: Int, val skipped: Int, val items: List<Item>) {
+    class Overview(val videos: Int, val analysed: Int, val skipped: Int, val items: List<Item>,
+                   /** Videos that could not be analysed, with the reason. */
+                   val skippedItems: List<Pair<String, String>>) {
         val withIntro get() = items.count { it.intro != null }
         val withOutro get() = items.count { it.outro != null }
     }
@@ -75,7 +79,11 @@ class IntroRepository @Inject constructor(
         val items = dao.allSegments().filter { it.fileId in byId }.groupBy { it.fileId }.map { (id, segs) ->
             Item(byId.getValue(id).originalName, segs.firstOrNull { it.kind == SegmentKind.INTRO.id }, segs.firstOrNull { it.kind == SegmentKind.OUTRO.id })
         }.sortedBy { it.name.lowercase() }
-        return Overview(live.size, sizes.count { it.status == "ok" }, sizes.count { it.status != "ok" }, items)
+        val skippedItems = sizes.filter { it.status != "ok" }.map { s ->
+            byId.getValue(s.fileId).originalName to
+                (s.status.removePrefix("skip").removePrefix(":").ifBlank { null } ?: "versione precedente: verrà riprovato")
+        }.sortedBy { it.first.lowercase() }
+        return Overview(live.size, sizes.count { it.status == "ok" }, skippedItems.size, items, skippedItems)
     }
 
     /** One line on what [ids] have now, the answer to "Analizza". */
@@ -85,7 +93,9 @@ class IntroRepository @Inject constructor(
         if (ids.size == 1) {
             val id = ids.single()
             val name = repo.fileById(id)?.originalName ?: "Video"
-            if (dao.printsOf(id).none { it.status == "ok" }) return "$name: non analizzabile (audio non leggibile o video sotto i 2 minuti)"
+            dao.printsOf(id).takeIf { p -> p.none { it.status == "ok" } }?.let { p ->
+                return "$name: non analizzabile (" + (p.firstOrNull()?.status?.removePrefix("skip")?.removePrefix(":")?.ifBlank { null } ?: "motivo sconosciuto") + ")"
+            }
             val s = segs.getValue(id)
             val intro = s.firstOrNull { it.kind == SegmentKind.INTRO.id }?.let { "intro ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "intro non trovata"
             val outro = s.firstOrNull { it.kind == SegmentKind.OUTRO.id }?.let { "finale ${clock(it.startMs)}–${clock(it.endMs)}" } ?: "finale non trovato"
@@ -111,7 +121,7 @@ class IntroRepository @Inject constructor(
      * cannot be analysed gets a "skip" row. True when analysed.
      */
     suspend fun fingerprint(file: FileEntity, quick: Boolean): Boolean {
-        val dur = file.durationMs ?: 0L
+        val dur = file.durationMs?.takeIf { it > 0 } ?: decoder.durationMs(file) ?: 0L
         val headMs = if (quick) QUICK_MS else HEAD_MS
         val tailMs = if (quick) QUICK_MS else TAIL_MS
         val started = android.os.SystemClock.elapsedRealtime()
@@ -120,18 +130,25 @@ class IntroRepository @Inject constructor(
             val pcm = decoder.decode(file, fromMs, toMs) ?: return null
             return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) }
         }
-        val parts = if (dur < MIN_DURATION_MS) null else try {
-            val head = part(0, minOf(dur, headMs))
-            val tail = head?.let { part(maxOf(0L, dur - tailMs), dur) }
-            if (head == null || tail == null) null else head to tail
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.w("IntroRepository", "audio not decodable (${e.javaClass.simpleName})")
-            null
+        var reason = "audio non decodificabile"
+        val parts = when {
+            dur <= 0 -> { reason = "durata non leggibile"; null }
+            dur < MIN_DURATION_MS -> { reason = "video più corto di 20 secondi"; null }
+            else -> try {
+                val head = part(0, minOf(dur, headMs))
+                val tail = head?.let { part(maxOf(0L, dur - tailMs), dur) }
+                if (head == null || tail == null) null else head to tail
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: AudioDecoder.Undecodable) {
+                reason = e.message ?: reason; null
+            } catch (e: Exception) {
+                android.util.Log.w("IntroRepository", "audio not decodable (${e.javaClass.simpleName})")
+                reason = "errore di lettura (${e.javaClass.simpleName})"; null
+            }
         }
         if (parts == null) {
-            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, 0, ByteArray(0), "skip"))
+            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, 0, ByteArray(0), "skip:$reason"))
             return false
         }
         val (head, tail) = parts
@@ -159,7 +176,14 @@ class IntroRepository @Inject constructor(
                 for (f in IntroDetector.detectAt(kind, target, candidates, rejected)) if (store(kind, f)) touched += f.fileId
             }
         }
+        ids.chunked(200).forEach { dao.markMatched(it) }
         touched.size
+    }
+
+    /** Videos fingerprinted but never compared with the rest (a scan stopped before its matching). */
+    suspend fun unmatched(): List<String> {
+        val live = repo.allFilesSnapshot().mapTo(HashSet()) { it.id }
+        return dao.unmatchedIds().filter { it in live }
     }
 
     suspend fun setManual(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long) =
@@ -235,7 +259,8 @@ class IntroRepository @Inject constructor(
         index.candidates(hashes).mapNotNull { (id, offsets) -> if (skip(id)) null else printOf(id, kind)?.let { it to offsets } }
 
     private companion object {
-        const val MIN_DURATION_MS = 120_000L
+        /** Just over the shortest intro (15 s). */
+        const val MIN_DURATION_MS = 20_000L
         const val HEAD_MS = 600_000L
         const val TAIL_MS = 300_000L
         /** Quick scan: the first and the last minute only. */

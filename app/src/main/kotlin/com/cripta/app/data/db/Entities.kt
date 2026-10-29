@@ -164,8 +164,10 @@ data class AudioPrintEntity(
     val startMs: Long,
     /** Hashes encoded by [com.cripta.app.media.intro.PrintCodec]. */
     val hashes: ByteArray,
-    /** "ok" or "skip" (too short, no audio track, undecodable). */
+    /** "ok", or "skip:<reason>" (no audio track, undecodable…); a bare "skip" is from an older version. */
     val status: String,
+    /** Compared with the rest of the vault already. */
+    val matched: Boolean = false,
 )
 
 /** A video's intro or outro. */

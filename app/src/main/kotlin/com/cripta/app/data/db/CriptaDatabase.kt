@@ -12,7 +12,7 @@ import net.sqlcipher.database.SupportFactory
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class,
         AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class],
-    version = 16,
+    version = 17,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -156,6 +156,13 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** Which prints were matched already: older scans could stop before matching any. */
+        internal val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE audio_prints ADD COLUMN matched INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -173,7 +180,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }

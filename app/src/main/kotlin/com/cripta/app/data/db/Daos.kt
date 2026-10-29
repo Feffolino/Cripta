@@ -253,6 +253,13 @@ interface IntroDao {
     @Query("DELETE FROM audio_prints WHERE fileId = :fileId")
     suspend fun clearPrints(fileId: String)
 
+    @Query("SELECT DISTINCT fileId FROM audio_prints WHERE status = 'ok' AND matched = 0")
+    suspend fun unmatchedIds(): List<String>
+
+    /** At most a few hundred ids at a time (SQLite caps the parameters). */
+    @Query("UPDATE audio_prints SET matched = 1 WHERE fileId IN (:ids)")
+    suspend fun markMatched(ids: List<String>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putSegment(s: MediaSegmentEntity)
 
