@@ -6,6 +6,7 @@ import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.MediaSegmentEntity
 import com.cripta.app.data.db.RejectedPrintEntity
+import com.cripta.app.data.db.SegmentRuleEntity
 import com.cripta.app.media.intro.AudioDecoder
 import com.cripta.app.media.intro.Fingerprint
 import com.cripta.app.media.intro.Found
@@ -70,10 +71,9 @@ class IntroRepository @Inject constructor(
      */
     suspend fun resetAll(everything: Boolean) = db.withTransaction {
         dao.deleteAllPrints()
-        if (everything) { dao.deleteAllSegments(); dao.deleteAllRejected() } else dao.deleteAutoSegments()
+        if (everything) { dao.deleteAllSegments(); dao.deleteAllRejected(); dao.deleteAllRules() } else dao.deleteAutoSegments()
     }
 
-    /** What the analysis found so far, for Settings: counts and the videos with an intro or outro. */
     /** What the analysis found so far: one [Entry] per video analysed or skipped, for Settings. */
     class Overview(val videos: Int, val entries: List<Entry>) {
         val analysed get() = entries.count { it.skipReason == null }
@@ -249,8 +249,38 @@ class IntroRepository @Inject constructor(
         return dao.unmatchedIds().filter { it in live }
     }
 
-    suspend fun setManual(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long) =
-        dao.putSegment(MediaSegmentEntity(fileId, kind.id, startMs, endMs, "manual"))
+    /** A mark or a trim by the user; the detected sound stays remembered for "Applica a tutti". */
+    suspend fun setManual(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long) {
+        val old = dao.segmentsOf(fileId).firstOrNull { it.kind == kind.id }
+        val coreStart = old?.autoStartMs ?: old?.takeIf { it.source == "auto" }?.startMs
+        val coreEnd = old?.autoEndMs ?: old?.takeIf { it.source == "auto" }?.endMs
+        dao.putSegment(MediaSegmentEntity(fileId, kind.id, startMs, endMs, "manual", coreStart, coreEnd))
+    }
+
+    /**
+     * "Applica a tutti i video con la stessa sigla": the user moved this segment's bounds away from the
+     * detected sound; every video with that sound gets the same move, now and when analysed later.
+     * Returns how many videos changed, or null when the segment has no detected sound to search.
+     */
+    suspend fun applyToAll(file: FileEntity, kind: SegmentKind): Int? = withContext(Dispatchers.Default) {
+        val seg = dao.segmentsOf(file.id).firstOrNull { it.kind == kind.id } ?: return@withContext null
+        val coreStart = seg.autoStartMs ?: return@withContext null
+        val coreEnd = seg.autoEndMs ?: return@withContext null
+        val sample = printOf(file.id, kind)?.slice(coreStart, coreEnd)?.takeIf { it.size >= kind.minHashes } ?: return@withContext null
+        val ds = seg.startMs - coreStart
+        val de = seg.endMs - coreEnd
+        dao.addRule(SegmentRuleEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
+            hashes = PrintCodec.encode(sample), startDeltaMs = ds, endDeltaMs = de, createdAt = System.currentTimeMillis()))
+        val durations = repo.allFilesSnapshot().associate { it.id to it.durationMs }
+        var changed = 0
+        for (f in IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == file.id })) {
+            val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
+            if (existing != null && existing.source != "auto") continue   // the user's own marks stay
+            dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, durations[f.fileId]))
+            changed++
+        }
+        changed
+    }
 
     /** "Rimuovi" or "Non è un'intro · Solo qui": no segment of [kind] here, kept across scans. */
     suspend fun setNone(fileId: String, kind: SegmentKind) =
@@ -294,7 +324,13 @@ class IntroRepository @Inject constructor(
     private suspend fun store(kind: SegmentKind, f: Found): Boolean {
         val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
         if (!IntroDetector.shouldStore(existing, f)) return false
-        dao.putSegment(MediaSegmentEntity(f.fileId, kind.id, f.startMs, f.endMs, "auto"))
+        // A sound the user extended with "Applica a tutti" gets the same move here.
+        val rules = dao.rulesOfKind(kind.id)
+        val rule = if (rules.isEmpty()) null else printOf(f.fileId, kind)?.slice(f.startMs, f.endMs)?.let { stretch ->
+            rules.firstOrNull { IntroDetector.isRejected(stretch, listOf(PrintCodec.decode(it.hashes))) }
+        }
+        val duration = if (rule == null) null else repo.fileById(f.fileId)?.durationMs
+        dao.putSegment(IntroDetector.segmentFor(kind, f, rule?.startDeltaMs ?: 0, rule?.endDeltaMs ?: 0, duration))
         return true
     }
 

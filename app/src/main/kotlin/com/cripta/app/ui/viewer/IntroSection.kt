@@ -100,6 +100,7 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
                 onNudge = { seg, ds, de -> vm.nudgeSegment(file, kind, seg, ds, de, duration) },
                 onTry = { seg -> vm.seekPlayer(file.id, maxOf(seg.startMs, seg.endMs - TRY_LEAD_MS), play = true) },
                 onSearch = { seg -> vm.searchSegment(file, kind, seg) },
+                onApplyToAll = { vm.applySegmentToAll(file, kind) },
                 onReject = { seg -> rejecting = kind to seg },
                 onRemove = { vm.removeSegment(file, kind) },
             )
@@ -186,7 +187,8 @@ private fun SegmentBlock(
     kind: SegmentKind, seg: MediaSegmentEntity?, pendingStart: Long?, positionMs: Long, color: Color,
     onMarkStart: () -> Unit, onMarkEnd: (Long) -> Unit, onCancelMark: () -> Unit,
     onNudge: (MediaSegmentEntity, Long, Long) -> Unit, onTry: (MediaSegmentEntity) -> Unit,
-    onSearch: (MediaSegmentEntity) -> Unit, onReject: (MediaSegmentEntity) -> Unit, onRemove: () -> Unit,
+    onSearch: (MediaSegmentEntity) -> Unit, onApplyToAll: () -> Unit,
+    onReject: (MediaSegmentEntity) -> Unit, onRemove: () -> Unit,
 ) {
     val name = if (kind == SegmentKind.INTRO) "Intro" else "Finale"
     val active = seg?.takeIf { it.source != "none" && it.endMs > it.startMs }
@@ -200,8 +202,12 @@ private fun SegmentBlock(
                     Text(name, style = MaterialTheme.typography.titleSmall)
                     Text(
                         when {
-                            active != null -> "${clock(active.startMs)}–${clock(active.endMs)} · " +
-                                (if (active.source == "auto") "rilevata" else "segnata da te")
+                            active != null -> "${clock(active.startMs)}–${clock(active.endMs)} · " + when {
+                                active.source == "auto" && active.autoStartMs != null -> "rilevata, allungata da una regola"
+                                active.source == "auto" -> "rilevata"
+                                active.autoStartMs != null -> "corretta da te · suono ${clock(active.autoStartMs)}–${clock(active.autoEndMs ?: 0)}"
+                                else -> "segnata da te"
+                            }
                             seg?.source == "none" -> "Nessuna (scelta tua)"
                             else -> "Non rilevata"
                         },
@@ -212,6 +218,11 @@ private fun SegmentBlock(
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni per $name") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            // Bounds moved away from the detected sound: the same move for the whole series.
+                            if (active.source == "manual" && active.autoStartMs != null && active.autoEndMs != null &&
+                                (active.startMs != active.autoStartMs || active.endMs != active.autoEndMs)) DropdownMenuItem(
+                                text = { Text("Applica a tutti i video con la stessa sigla") },
+                                onClick = { menu = false; onApplyToAll() })
                             DropdownMenuItem(text = { Text("Cerca negli altri video") }, onClick = { menu = false; onSearch(active) })
                             if (active.source == "auto") DropdownMenuItem(
                                 text = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro…" else "Non è un finale…") },

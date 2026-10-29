@@ -95,11 +95,27 @@ object IntroDetector {
         m.length * 2 >= stretch.size
     }
 
-    /** Never over the user's own choice ("manual" or "none"); over an automatic one only when longer. */
+    /**
+     * Never over the user's own choice ("manual" or "none"); over an automatic one only when the shared
+     * audio is longer (its own, before any extension by a rule).
+     */
     fun shouldStore(existing: MediaSegmentEntity?, found: Found): Boolean = when (existing?.source) {
         null -> true
-        "auto" -> found.endMs - found.startMs > existing.endMs - existing.startMs
+        "auto" -> found.endMs - found.startMs > (existing.autoEndMs ?: existing.endMs) - (existing.autoStartMs ?: existing.startMs)
         else -> false
+    }
+
+    /**
+     * The segment for shared audio [found], moved by a rule's deltas (an intro that goes on past its
+     * distinctive sound), kept inside the video; the found audio is remembered as the segment's core.
+     */
+    fun segmentFor(kind: SegmentKind, found: Found, startDelta: Long, endDelta: Long, durationMs: Long?): MediaSegmentEntity {
+        val max = durationMs?.takeIf { it > 0 } ?: Long.MAX_VALUE
+        val start = (found.startMs + startDelta).coerceIn(0L, max)
+        val end = (found.endMs + endDelta).coerceIn(start, max)
+        return MediaSegmentEntity(found.fileId, kind.id, start, end, "auto",
+            autoStartMs = found.startMs.takeIf { startDelta != 0L || endDelta != 0L },
+            autoEndMs = found.endMs.takeIf { startDelta != 0L || endDelta != 0L })
     }
 
     fun carriesManual(fromDurationMs: Long?, toDurationMs: Long?): Boolean =
