@@ -63,6 +63,15 @@ class IntroRepository @Inject constructor(
         }
     }
 
+    /**
+     * "Ricomincia da capo": throw away every fingerprint and detected segment ([everything]: also the
+     * user's own marks and rejected samples), so the next scan analyses every video anew.
+     */
+    suspend fun resetAll(everything: Boolean) = db.withTransaction {
+        dao.deleteAllPrints()
+        if (everything) { dao.deleteAllSegments(); dao.deleteAllRejected() } else dao.deleteAutoSegments()
+    }
+
     /** What the analysis found so far, for Settings: counts and the videos with an intro or outro. */
     class Overview(val videos: Int, val analysed: Int, val skipped: Int, val items: List<Item>,
                    /** Videos that could not be analysed, with the reason. */
