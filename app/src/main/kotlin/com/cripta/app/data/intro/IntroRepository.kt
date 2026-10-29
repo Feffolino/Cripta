@@ -161,6 +161,45 @@ class IntroRepository @Inject constructor(
         }
     }
 
+    /** Videos whose intro (or outro) has the same sound, with its typical length. */
+    class SoundGroup(val entries: List<Pair<FileEntity, MediaSegmentEntity>>, val soundMs: Long)
+
+    /**
+     * The "signatures" found: videos grouped by the sound of their segment of [kind] (two videos are
+     * together when those sounds match, directly or through others). One series in several groups means
+     * its videos got different intros; biggest groups first.
+     */
+    suspend fun soundGroups(kind: SegmentKind): List<SoundGroup> = withContext(Dispatchers.Default) {
+        val files = repo.allFilesSnapshot().associateBy { it.id }
+        val samples = dao.segmentsOfKind(kind.id)
+            .filter { it.source != "none" && it.endMs > it.startMs && it.fileId in files }
+            .mapNotNull { s ->
+                val core = printOf(s.fileId, kind)?.slice(s.autoStartMs ?: s.startMs, s.autoEndMs ?: s.endMs) ?: return@mapNotNull null
+                if (core.size < kind.minHashes) null else s to core
+            }
+        val index = PrintIndex(samples.sumOf { it.second.size } + 1024).apply { samples.forEach { add(it.first.fileId, it.second) } }
+        val at = samples.withIndex().associate { it.value.first.fileId to it.index }
+        val parent = IntArray(samples.size) { it }
+        fun root(x: Int): Int { var r = x; while (parent[r] != r) r = parent[r]; return r }
+        for ((i, s) in samples.withIndex()) {
+            ensureActive()
+            for ((id, offsets) in index.candidates(s.second)) {
+                val j = at[id]?.takeIf { it != i } ?: continue
+                val other = samples[j].second
+                // Same sound: at least half of the shorter one in common.
+                val min = maxOf(kind.minHashes, minOf(s.second.size, other.size) / 2)
+                if (offsets.any { SegmentMatcher.at(s.second, other, it, min) != null }) parent[root(i)] = root(j)
+            }
+        }
+        samples.indices.groupBy { root(it) }.values.map { members ->
+            val lengths = members.map { samples[it].second.size }.sorted()
+            SoundGroup(
+                members.map { files.getValue(samples[it].first.fileId) to samples[it].first }.sortedBy { it.first.originalName.lowercase() },
+                (lengths[lengths.size / 2] * Fingerprint.HOP_MS).toLong(),
+            )
+        }.sortedByDescending { it.entries.size }
+    }
+
     /** "ok", the reason [fileId] could not be analysed, or null when it was never analysed. */
     suspend fun printStatus(fileId: String): String? {
         val p = dao.printsOf(fileId)

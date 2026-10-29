@@ -249,6 +249,13 @@ class SettingsViewModel @Inject constructor(
     fun cancelIntroScan() = com.cripta.app.work.ConversionService.cancelIntroScan(appContext)
     /** "Risultati dell'analisi" page open (it survives a trip to the viewer and back). */
     val introResultsOpen = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** "Per sigla": the sound groups of one kind, null while loading. */
+    val introGroups = kotlinx.coroutines.flow.MutableStateFlow<Pair<com.cripta.app.media.intro.SegmentKind,
+        List<com.cripta.app.data.intro.IntroRepository.SoundGroup>>?>(null)
+    fun loadIntroGroups(kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
+        if (introGroups.value?.first != kind) introGroups.value = null
+        runCatching { intro.soundGroups(kind) }.getOrNull()?.let { introGroups.value = kind to it }
+    }
     /** A video opened from the results: the viewer swipes through the same filtered list. */
     fun openFromResults(ids: List<String>) = viewerQueue.set(ids)
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
