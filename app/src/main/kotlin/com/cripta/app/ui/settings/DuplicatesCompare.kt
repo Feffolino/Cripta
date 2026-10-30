@@ -515,7 +515,8 @@ private fun PreviewVideo(
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val player = remember(file.id) {
-        androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
+        // A preview, scrubbed by hand: a bigger buffer than a clip's, still far below the default.
+        androidx.media3.exoplayer.ExoPlayer.Builder(ctx).setLoadControl(smallBuffer(maxMs = 15_000, bytes = 32 shl 20)).build().apply {
             // As in the main viewer: route audio as media and handle audio focus (pause when another
             // app takes it), which this preview did not do.
             setAudioAttributes(

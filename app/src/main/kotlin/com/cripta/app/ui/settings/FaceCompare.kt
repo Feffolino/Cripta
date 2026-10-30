@@ -73,6 +73,17 @@ import com.cripta.app.data.face.FaceRepository
 import com.cripta.app.ui.components.MediaThumb
 import com.cripta.app.viewer.EncryptedDataSource
 
+/**
+ * A small buffer for a preview player. The default one keeps up to ~130 MB of video in the Java
+ * heap per player (it reads on past a clip's end): two side by side ran the app out of memory.
+ */
+@OptIn(UnstableApi::class)
+internal fun smallBuffer(maxMs: Int = 4_000, bytes: Int = 8 shl 20) = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+    .setBufferDurationsMs(minOf(1_500, maxMs), maxMs, 500, minOf(1_000, maxMs))
+    .setTargetBufferBytes(bytes)
+    .setPrioritizeTimeOverSizeThresholds(false)
+    .build()
+
 /** The face's place in its picture (fractions: x, y, w, h), or null for older scans. */
 private fun TrackCard.boxOrNull(): FloatArray? =
     box.split(',').mapNotNull { it.toFloatOrNull() }.takeIf { it.size == 4 }?.toFloatArray()
@@ -96,7 +107,7 @@ internal fun MomentClip(file: FileEntity, card: TrackCard, zoom: Boolean, vm: Se
         val ctx = LocalContext.current
         var size by remember(file.id) { mutableStateOf<VideoSize?>(null) }
         val player = remember(file.id, card.id) {
-            ExoPlayer.Builder(ctx).build().apply {
+            ExoPlayer.Builder(ctx).setLoadControl(smallBuffer()).build().apply {
                 val source = ProgressiveMediaSource.Factory(
                     EncryptedDataSource.Factory(channelProvider = { vm.channelFor(file) }, plaintextLength = file.sizeBytes),
                     DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true),
