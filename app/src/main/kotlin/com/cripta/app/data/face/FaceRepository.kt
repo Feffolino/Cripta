@@ -350,7 +350,7 @@ class FaceRepository @Inject constructor(
     class Person(val entity: PersonEntity, val media: List<FileEntity>, val cover: TrackCard?, val faces: List<TrackCard>,
                  val suggestions: List<TrackCard>) {
         val id get() = entity.id
-        val title get() = entity.name.ifBlank { "Persona ${entity.id}" }
+        val title get() = entity.name.ifBlank { UNNAMED }
         /** Shown in the main lists: named, starred, or seen in two media at least. */
         val main get() = !entity.ignored && (entity.name.isNotBlank() || entity.favorite || media.size >= 2)
     }
@@ -591,7 +591,7 @@ class FaceRepository @Inject constructor(
         FaceReject.of(k)?.let { "$v ${it.label}" }
     }.joinToString(", ")
 
-    private fun nameOf(p: PersonEntity?) = p?.let { it.name.ifBlank { "Persona ${it.id}" } } ?: "nessuno"
+    private fun nameOf(p: PersonEntity?) = p?.let { it.name.ifBlank { "persona senza nome" } } ?: "nessuno"
 
     /** Why [fileId] has (no) faces: what was read, found and set aside, and where each face went. */
     suspend fun describe(fileId: String): String = withContext(Dispatchers.Default) {
@@ -699,6 +699,8 @@ class FaceRepository @Inject constructor(
     }
 
     companion object {
+        /** What an unnamed person is called on screen: faces found get no name, the user gives one. */
+        const val UNNAMED = "Senza nome"
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
         const val VERSION = 2
         /** Frames and photos are read at most this large; detection runs on half of it. */

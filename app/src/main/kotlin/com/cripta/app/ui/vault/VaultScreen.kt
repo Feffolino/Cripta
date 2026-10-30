@@ -624,6 +624,14 @@ fun VaultScreen(
                     })
                     // Two photos or videos: why their faces are (not) the same person.
                     val visual = files.count { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
+                    if (visual > 0) add(SelAction(Icons.Filled.Face, if (visual == 1) "Analizza volti" else "Analizza volti ($visual)") {
+                        val ids = files.filter { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
+                            .map { it.file.id }
+                        if (ids.isNotEmpty()) {
+                            com.cripta.app.work.ConversionService.startFaceScan(ctx, manual = true, fileIds = ids)
+                            selection = emptySet()
+                        }
+                    })
                     if (visual == 2 && selection.size == 2) add(SelAction(Icons.Filled.Face, "Confronta volti") {
                         val (a, b) = selection.toList()
                         vm.compareFaces(a, b) { compareTitle = "Confronto volti"; compareResult = it }
@@ -1929,7 +1937,7 @@ private fun ActiveFilterBar(
                 if (f.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
                 if (f.untaggedOnly) DismissChip("Senza etichette") { onClearUntagged() }
                 f.personIds.forEach { id ->
-                    val name = people.firstOrNull { it.id == id }?.title ?: "Persona $id"
+                    val name = people.firstOrNull { it.id == id }?.title ?: com.cripta.app.data.face.FaceRepository.UNNAMED
                     DismissChip(name, "persona $name") { onPerson(id) }
                 }
                 f.tagIds.forEach { id ->
