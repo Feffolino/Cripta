@@ -74,7 +74,6 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 Column(Modifier.weight(1f).clickable(onClickLabel = "Modifica") { editing = t }) {
                     Text(when {
                         p == null -> "Sconosciuto · tocca per dire chi è"
-                        t.state == "suggested" -> "Forse ${p.title}?"
                         else -> p.title
                     }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         color = if (p == null || p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
@@ -169,13 +168,8 @@ private fun FaceEditor(
                     Column(Modifier.weight(1f)) {
                         Text(when {
                             current == null -> "Non ancora assegnato"
-                            t.state == "suggested" -> "Forse ${current.title}? (%.2f)".format(t.similarity)
                             else -> current.title
                         }, style = MaterialTheme.typography.bodyMedium)
-                        if (current != null && t.state == "suggested") Row {
-                            TextButton(onClick = { vm.confirmFace(t.id, current.id); onDismiss() }) { Text("Sì") }
-                            TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("No") }
-                        }
                         if (placed) Row(verticalAlignment = Alignment.CenterVertically) {
                             FavoriteStar(current!!.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
                             TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
@@ -208,7 +202,6 @@ private fun FaceEditor(
                         }
                     }
                 }
-                if (t != null) OutlinedButton(onClick = { vm.explainFace(t.id); onDismiss() }) { Text("Confronta con le persone") }
             }
         },
         confirmButton = {

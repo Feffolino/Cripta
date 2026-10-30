@@ -39,62 +39,6 @@ class FaceClustersTest {
     }
 
     @Test
-    fun alikeJoinsUncertainIsSuggestedDifferentStartsNew() {
-        val idx = PeopleIndex()
-        val a = random()
-        idx.person(1); idx.add(1, track(1, "f1", a, near(a, 0.95f)))
-        assertEquals(1L, idx.place(track(2, "f2", near(a, 0.7f), near(a, 0.65f))).personId)
-        idx.place(track(3, "f3", near(a, 0.40f))).let { assertEquals(1L, it.personId); assertTrue(it.suggested) }
-        assertNull(idx.place(track(4, "f4", random())).personId)
-    }
-
-    @Test
-    fun sameFrameAndRejectionBlock() {
-        val idx = PeopleIndex()
-        val a = random()
-        idx.person(1); idx.add(1, track(1, "f1", a, frames = 0b011))
-        // Another face in the same frame of the same video: never the same person.
-        assertNull(idx.place(track(2, "f1", near(a, 0.9f), frames = 0b010)).personId)
-        assertEquals(1L, idx.place(track(3, "f1", near(a, 0.9f), frames = 0b100)).personId)
-        idx.rejected += 4L to 1L
-        assertNull(idx.place(track(4, "f2", near(a, 0.9f))).personId)
-        assertTrue(idx.explain(track(4, "f2", near(a, 0.9f))).first().reason.contains("rifiutato"))
-    }
-
-    @Test
-    fun ignoredPersonAbsorbsButNeverSuggests() {
-        val idx = PeopleIndex()
-        val a = random()
-        idx.person(1, ignored = true); idx.add(1, track(1, "f1", a))
-        assertEquals(1L, idx.place(track(2, "f2", near(a, 0.8f))).personId)
-        assertNull(idx.place(track(3, "f3", near(a, 0.40f))).personId)
-    }
-
-    @Test
-    fun oneLuckyPairIsNotEnough() {
-        val idx = PeopleIndex()
-        val a = random()
-        idx.person(1); idx.add(1, track(1, "f1", a, random()))
-        // One of its faces alike (0.6), its mean unrelated: the mean against the person's centre decides.
-        val p = idx.place(track(2, "f2", random(), near(a, 0.6f)))
-        assertTrue(p.personId == null || p.suggested)
-    }
-
-    @Test
-    fun unnamedDuplicatesMergeIntoTheOlderNamedOnesAreOnlyOffered() {
-        val idx = PeopleIndex()
-        val a = random()
-        idx.person(1); idx.add(1, track(1, "f1", a))
-        idx.person(2, named = true); idx.add(2, track(2, "f2", near(a, 0.8f)))
-        idx.person(3); idx.add(3, track(3, "f3", random()))
-        idx.person(4); idx.add(4, track(4, "f4", near(a, 0.8f)))
-        assertEquals(listOf(1L to 4L), idx.merges(listOf(4L)).map { it.first to it.second })
-        assertEquals(setOf(1L, 2L, 3L), idx.people.keys)
-        // The named one is not merged, but offered as alike.
-        assertEquals(2L, idx.similarTo(1).first().first)
-    }
-
-    @Test
     fun trackKeepsTheMeanOfItsFacesAndEveryMoment() {
         val a = random()
         val d = TrackDraft(listOf(Sighting(0, 1_000, near(a, 0.8f), 0.9f), Sighting(1, 11_000, near(a, 0.8f), 0.5f), Sighting(2, 21_000, near(a, 0.8f), 0.4f)))

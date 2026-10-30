@@ -285,7 +285,6 @@ class SettingsViewModel @Inject constructor(
 
     // ---- People ----
     val people = faces.people().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-    val faceMerges = faces.merges().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val faceProgress = com.cripta.app.work.ConversionService.faceProgress
     /** The answer to "Confronta" / "Perché?", shown in a dialog. */
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -314,7 +313,6 @@ class SettingsViewModel @Inject constructor(
     fun mergePeople(into: Long, others: Collection<Long>) =
         undoable(if (others.size == 1) "Persone unite" else "${others.size + 1} persone unite") { faces.merge(into, others) }
     fun keepApart(a: Long, b: Long) = faceAction { faces.keepApart(a, b) }
-    fun undoMerge(mergeId: Long) = faceAction { faces.undoMerge(mergeId) }
     fun ignorePerson(id: Long) = undoable("Persona nascosta") { faces.ignore(id) }
     fun restorePerson(id: Long) = faceAction { faces.restore(id) }
     fun removeFromPerson(personId: Long, fileIds: Collection<String>) =
@@ -324,9 +322,7 @@ class SettingsViewModel @Inject constructor(
     fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
-    fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
-    fun compareMediaFaces(a: String, b: String) = faceAction { faceMessage.value = faces.compareMedia(a, b) }
     /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
     fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {
         viewerQueue.set(ids)

@@ -23,10 +23,8 @@ import com.cripta.app.media.face.FaceEngine
 import com.cripta.app.media.face.FaceImage
 import com.cripta.app.media.face.FaceReject
 import com.cripta.app.media.face.FaceStats
-import com.cripta.app.media.face.FaceThresholds
 import com.cripta.app.media.face.FaceTracker
 import com.cripta.app.media.face.FramePlan
-import com.cripta.app.media.face.PeopleIndex
 import com.cripta.app.media.face.Sighting
 import com.cripta.app.media.face.TrackInfo
 import com.cripta.app.media.face.similarity
@@ -87,8 +85,6 @@ class FaceRepository @Inject constructor(
     /** Free the models after a scan. */
     fun release() = synchronized(engineLock) { engine?.close(); engine = null }
 
-    /** People as last placed; rebuilt from the database after any change by the user. */
-    @Volatile private var index: PeopleIndex? = null
     /** One writer at a time: placing new faces and the user's changes never interleave. */
     private val mutex = Mutex()
 
@@ -108,7 +104,6 @@ class FaceRepository @Inject constructor(
     /** Faces and links of media deleted for good (media in the trash keep theirs). */
     suspend fun purgeDeleted(): Int = mutex.withLock {
         db.withTransaction { dao.purgeScans() + dao.purgeTracks() + dao.purgeLinks().also { dao.deleteEmptyPersons() } }
-            .also { if (it > 0) index = null }
     }
 
     /** Forget [fileId]'s faces (the user's own links stay) before analysing it again. */
@@ -116,7 +111,6 @@ class FaceRepository @Inject constructor(
         val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null } ?: return null
         mutex.withLock {
             db.withTransaction { dao.deleteTracksOf(fileId); dao.deleteScan(fileId) }
-            index = null
         }
         return f
     }
@@ -137,7 +131,7 @@ class FaceRepository @Inject constructor(
                 faces++
                 f.sharpness?.let { sharp[FaceStats.band(it)]++ }
                 if (f.reject != null) rejects.merge(f.reject, 1, Int::plus)
-                else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f, f.det.w)
+                else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f)
             }
             return found.isNotEmpty()
         }
@@ -175,7 +169,7 @@ class FaceRepository @Inject constructor(
                 val box = face.box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()
                 TrackInfo(dao.addTrack(FaceTrackEntity(fileId = file.id, frames = t.frames, timeMs = best.timeMs, faceCount = t.sightings.size,
                     width = face.det.w.toInt(), quality = t.quality, embeddings = EmbeddingCodec.encode(t.embeddings),
-                    crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = box)), file.id, t.frames, t.embeddings, t.quality, t.width)
+                    crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = box)), file.id, t.frames, t.embeddings, t.quality)
             }
             if (old.isNotEmpty()) carry(old, added)
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
@@ -184,9 +178,6 @@ class FaceRepository @Inject constructor(
         }
         return status == "ok"
     }
-
-    /** Media analysed again since the index was loaded: the faces it had there are gone. */
-    private val staleFiles: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
      * The user's choices about [old] (the faces a media had before it was analysed again) move to
@@ -203,7 +194,6 @@ class FaceRepository @Inject constructor(
             for (r in rejections[o.id].orEmpty()) { dao.deleteRejection(o.id, r.personId); dao.addRejection(r.copy(trackId = match.id)) }
             dao.moveCover(o.id, match.id)
         }
-        staleFiles += old.first().fileId
     }
 
     private class FrameRun(val read: Int, val failed: Int, val duplicates: Int, val extra: Int, val why: String?)
@@ -288,56 +278,29 @@ class FaceRepository @Inject constructor(
         return ByteArrayOutputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it); bmp.recycle(); it.toByteArray() }
     }
 
-    // ---- Placing faces among the people ----------------------------------------------------
+    // ---- New faces --------------------------------------------------------------------------
 
-    private fun info(r: TrackRow) = TrackInfo(r.id, r.fileId, r.frames, EmbeddingCodec.decode(r.embeddings), r.quality,
-        r.width.takeIf { it > 0 }?.toFloat() ?: FaceThresholds.FULL_WIDTH)
+    private fun info(r: TrackRow) = TrackInfo(r.id, r.fileId, r.frames, EmbeddingCodec.decode(r.embeddings), r.quality)
 
-    /** Every person with their placed faces, the user's rejections included. */
-    private suspend fun loadIndex(): PeopleIndex {
-        val idx = PeopleIndex()
-        for (p in dao.persons()) idx.person(p.id, named = p.name.isNotBlank(), ignored = p.ignored)
-        for (r in dao.allTrackRows()) {
-            coroutineContext.ensureActive()
-            val pid = r.personId ?: continue
-            if (r.state == "suggested" || pid !in idx.people) continue
-            idx.add(pid, info(r))
-        }
-        dao.rejections().forEach { idx.rejected += it.trackId to it.personId }
-        return idx
-    }
-
-    private suspend fun currentIndex(): PeopleIndex = index ?: loadIndex().also { index = it }
-
-    /** Place the faces of the media analysed but not placed yet. Returns how many media they were. */
+    /**
+     * Mark the media analysed since last time as done. People are made by hand only: new faces wait,
+     * unassigned, for "Chi è?"; confirmed faces of media analysed again stay with their person (or
+     * wait unassigned when the person is gone). Returns how many media they were.
+     */
     suspend fun placeNew(): Int = mutex.withLock {
         withContext(Dispatchers.Default) {
             val ids = dao.unclusteredIds()
             if (ids.isEmpty()) return@withContext 0
-            val idx = currentIndex()
-            try {
-                staleFiles.toSet().takeIf { it.isNotEmpty() }?.let { idx.forget(it); staleFiles.removeAll(it) }
-                val rows = ids.chunked(500).flatMap { dao.trackRowsOf(it) }
-                db.withTransaction {
-                    // People are made by hand only: new faces wait, unassigned, for "Chi è?".
-                    settle(idx, rows.filter { it.state == "carried" })
-                    ids.chunked(500).forEach { dao.markClustered(it) }
+            val people = dao.persons().map { it.id }.toSet()
+            val carried = ids.chunked(500).flatMap { dao.trackRowsOf(it) }.filter { it.state == "carried" }
+            db.withTransaction {
+                for (r in carried) {
+                    val pid = r.personId?.takeIf { it in people }
+                    dao.place(r.id, pid, if (pid != null) "manual" else "auto", r.similarity)
                 }
-            } catch (e: Throwable) {
-                index = null   // the database and the index may differ now
-                throw e
+                ids.chunked(500).forEach { dao.markClustered(it) }
             }
             ids.size
-        }
-    }
-
-    /** Confirmed faces of media analysed again stay confirmed; those whose person is gone wait unassigned. */
-    private suspend fun settle(idx: PeopleIndex, carried: List<TrackRow>) {
-        for (r in carried) {
-            val t = info(r)
-            val p = r.personId?.let { idx.people[it] }
-            if (p == null) dao.place(t.id, null, "auto", 0f)
-            else { dao.place(t.id, p.id, "manual", r.similarity); idx.add(p.id, t) }
         }
     }
 
@@ -362,8 +325,7 @@ class FaceRepository @Inject constructor(
     // ---- What the screens show -------------------------------------------------------------
 
     /** A person for the lists: their media (live only), the face shown and the suggestions waiting. */
-    class Person(val entity: PersonEntity, val media: List<FileEntity>, val cover: TrackCard?, val faces: List<TrackCard>,
-                 val suggestions: List<TrackCard>) {
+    class Person(val entity: PersonEntity, val media: List<FileEntity>, val cover: TrackCard?, val faces: List<TrackCard>) {
         val id get() = entity.id
         val title get() = entity.name.ifBlank { UNNAMED }
         /** Shown in the main lists: named, starred, or seen in two media at least. */
@@ -371,7 +333,6 @@ class FaceRepository @Inject constructor(
     }
 
     class Overview(val scans: List<FaceScanEntity>, val media: Int, val people: List<Person>, val files: Map<String, FileEntity>) {
-        val suggestions get() = people.filter { !it.entity.ignored }.sumOf { it.suggestions.size }
     }
 
     private fun <T> live(block: (com.cripta.app.data.db.FaceDao) -> Flow<T>): Flow<T> =
@@ -405,8 +366,8 @@ class FaceRepository @Inject constructor(
                 linksBy[p.id].orEmpty().forEach { add(it.fileId) }
             }
             Person(p, mediaIds.mapNotNull { byId[it] }, placed.firstOrNull { it.id == p.coverTrackId } ?: placed.maxByOrNull { it.width },
-                placed, own.filter { it.state == "suggested" })
-        }.filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.entity.favorite || it.suggestions.isNotEmpty() }
+                placed)
+        }.filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.entity.favorite }
             .sortedWith(compareBy<Person>({ it.entity.ignored }, { !it.entity.favorite }, { !it.main }, { -it.media.size }, { it.title.lowercase() }))
         val media = i.files.count { VaultRepository.isVideo(it.mimeType) || VaultRepository.isImage(it.mimeType) }
         return Overview(i.scans.filter { it.fileId in byId }, media, people, byId)
@@ -420,8 +381,6 @@ class FaceRepository @Inject constructor(
     /** People linked to [fileId] by hand. */
     fun linksOf(fileId: String): Flow<List<Long>> = live { it.observePersonMedia() }.map { l -> l.filter { it.fileId == fileId }.map { it.personId } }
 
-    /** Merges, most recent first (automatic and the user's), for "Unioni". */
-    fun merges(): Flow<List<FaceMergeEntity>> = live { it.observeMerges() }
 
     suspend fun crop(trackId: Long): Bitmap? {
         crops.get(trackId)?.let { return it }
@@ -450,7 +409,7 @@ class FaceRepository @Inject constructor(
     // ---- The user's changes ----------------------------------------------------------------
 
     private suspend fun <T> change(block: suspend () -> T): T = mutex.withLock {
-        db.withTransaction { block() }.also { index = null }
+        db.withTransaction { block() }
     }
 
     /**
@@ -642,58 +601,16 @@ class FaceRepository @Inject constructor(
             (if (st.extra > 0) ", ${st.extra} aggiunti vicino ai volti" else "") + "."
         lines += "Volti trovati: ${s.faces}" + (if (s.rejects.isNotBlank()) ", scartati: ${rejectText(s.rejects)}" else "") + "."
         if (s.faces == 0) lines += "Nessun volto rilevato nei fotogrammi analizzati: prova «Rianalizza» se ne vedi uno."
-        if (!s.clustered) lines += "I volti non sono ancora stati confrontati con il resto del vault."
         if (s.ms > 0) lines += "Analisi: %.1f s.".format(s.ms / 1000.0)
         for (c in cards) {
             val who = c.personId?.let { names[it] }
             lines += "• " + when {
                 who == null -> "volto non assegnato"
-                c.state == "suggested" -> "forse è ${nameOf(who)} (somiglianza %.2f): in attesa di conferma".format(c.similarity)
                 c.state == "manual" -> "${nameOf(who)} (confermato)"
                 else -> "${nameOf(who)} (somiglianza %.2f)".format(c.similarity)
             }
         }
         lines.joinToString("\n")
-    }
-
-    /** "Confronta": the people [trackId] looks most like, with the similarity and the verdict. */
-    suspend fun explain(trackId: Long): String = withContext(Dispatchers.Default) {
-        val row = dao.trackRow(trackId) ?: return@withContext "Volto non trovato."
-        val idx = mutex.withLock { currentIndex() }
-        val names = dao.persons().associateBy { it.id }
-        val verdicts = idx.explain(info(row)).filter { it.personId != row.personId || row.state == "suggested" }
-        val head = "Soglie: unione da %.2f, suggerimento da %.2f.".format(FaceThresholds.AUTO, FaceThresholds.SUGGEST)
-        if (verdicts.isEmpty()) return@withContext "$head\nNessun'altra persona da confrontare."
-        head + "\n" + verdicts.joinToString("\n") { v ->
-            val p = names[v.personId]
-            "• ${nameOf(p)}${if (p?.ignored == true) " (ignorata)" else ""}: %.2f, %s".format(v.similarity, v.reason)
-        }
-    }
-
-    /** "Confronta volti" of two media: each pair of their faces, how alike, and why (not) together. */
-    suspend fun compareMedia(a: String, b: String): String = withContext(Dispatchers.Default) {
-        val ta = dao.trackRowsOf(listOf(a)); val tb = dao.trackRowsOf(listOf(b))
-        fun state(id: String, t: List<TrackRow>) = when {
-            t.isNotEmpty() -> null
-            else -> "Il ${if (id == a) "primo" else "secondo"} media non ha volti utilizzabili."
-        }
-        state(a, ta)?.let { return@withContext it + "\n" + describe(a) }
-        state(b, tb)?.let { return@withContext it + "\n" + describe(b) }
-        val names = dao.persons().associateBy { it.id }
-        val rejected = dao.rejections().map { it.trackId to it.personId }.toSet()
-        val pairs = ta.flatMap { x -> tb.map { y -> Triple(x, y, maxPair(info(x), info(y))) } }.sortedByDescending { it.third }
-        "Soglie: unione da %.2f, suggerimento da %.2f.\n".format(FaceThresholds.AUTO, FaceThresholds.SUGGEST) +
-            pairs.take(6).joinToString("\n") { (x, y, s) ->
-                val px = x.personId?.let { names[it] }; val py = y.personId?.let { names[it] }
-                val why = when {
-                    x.personId != null && x.personId == y.personId && x.state != "suggested" && y.state != "suggested" -> "stessa persona (${nameOf(px)})"
-                    x.id to y.personId in rejected || y.id to x.personId in rejected -> "separati da te"
-                    s >= FaceThresholds.AUTO -> "molto simili ma in persone diverse: usa «Unisci» o «Ricalcola i gruppi»"
-                    s >= FaceThresholds.SUGGEST -> "somiglianza incerta: diventa un suggerimento, non un'unione"
-                    else -> "troppo diversi"
-                }
-                "• ${nameOf(px)} ↔ ${nameOf(py)}: %.2f, %s".format(s, why)
-            }
     }
 
     private fun maxPair(a: TrackInfo, b: TrackInfo): Float {
@@ -706,7 +623,6 @@ class FaceRepository @Inject constructor(
     class Stats(
         val media: Int, val skipped: Int, val videoMs: Long, val videos: Int, val photoMs: Long, val photos: Int,
         val faces: Int, val rejects: Map<FaceReject, Int>, val sharp: IntArray, val duplicates: Int, val extra: Int,
-        val confirmed: List<Float>, val rejected: List<Float>, val autoMerges: Int,
     )
 
     suspend fun stats(): Stats = withContext(Dispatchers.Default) {
@@ -727,11 +643,7 @@ class FaceRepository @Inject constructor(
             if (s.ms <= 0) continue
             if (VaultRepository.isVideo(f.mimeType)) { vMs += s.ms; v++ } else { pMs += s.ms; p++ }
         }
-        val cards = dao.allTrackRows()
-        val merges = mutex.withLock { db.query("SELECT COUNT(*) FROM face_merges WHERE auto = 1", null).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 } }
-        Stats(scans.size, scans.count { it.status != "ok" }, vMs, v, pMs, p, scans.sumOf { it.faces }, rejects, sharp, dup, extra,
-            cards.filter { it.state == "manual" && it.similarity in 0.01f..0.999f }.map { it.similarity },
-            dao.rejections().map { it.similarity }.filter { it > 0f }, merges)
+        Stats(scans.size, scans.count { it.status != "ok" }, vMs, v, pMs, p, scans.sumOf { it.faces }, rejects, sharp, dup, extra)
     }
 
     companion object {

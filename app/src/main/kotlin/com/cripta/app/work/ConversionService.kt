@@ -1825,7 +1825,6 @@ class ConversionService : Service() {
         private const val MODE_CANCEL_INTRO = "cancel_intro"
         private const val MODE_FACE_SCAN = "face_scan"
         private const val MODE_CANCEL_FACES = "cancel_faces"
-        private const val EX_REGROUP = "regroup"
         /** Media analysed at the same time: each worker holds one frame (a few MB) and runs the models. */
         private const val FACE_WORKERS = 3
         /** Media analysed before each placing round. */
@@ -1965,12 +1964,12 @@ class ConversionService : Service() {
 
         /**
          * Find the faces of the photos and videos not analysed yet ([manual]: asked by the user), or of
-         * [fileIds] only, again; [regroup]: place every face again first ("Ricalcola gruppi");
+         * [fileIds] only, again;
          * [reset]: "auto" forgets the analysis, "all" the user's choices too.
          */
-        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, regroup: Boolean = false, reset: String? = null) {
+        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
-                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_REGROUP, regroup)
+                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)); if (reset != null) putExtra(EX_RESET, reset) })
         }
 
