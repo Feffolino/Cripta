@@ -446,6 +446,9 @@ interface FaceDao {
     @Query("UPDATE persons SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 
+    @Query("UPDATE persons SET favorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: Long, favorite: Boolean)
+
     @Query("UPDATE persons SET ignored = :ignored WHERE id = :id")
     suspend fun setIgnored(id: Long, ignored: Boolean)
 

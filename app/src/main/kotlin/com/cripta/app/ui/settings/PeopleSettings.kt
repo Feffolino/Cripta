@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -154,7 +156,7 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
     }
 }
 
-private enum class PeopleFilter(val label: String) { MAIN("Persone"), NAMED("Con nome"), SINGLE("Una volta"), SUGGESTED("Da confermare"), IGNORED("Ignorate"), NONE("Senza volti") }
+private enum class PeopleFilter(val label: String) { MAIN("Persone"), FAVORITE("Preferite"), NAMED("Con nome"), SINGLE("Una volta"), SUGGESTED("Da confermare"), IGNORED("Ignorate"), NONE("Senza volti") }
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -164,6 +166,7 @@ private fun PeoplePage(o: FaceRepository.Overview, vm: SettingsViewModel, onClos
     var openId by rememberSaveable { mutableStateOf<Long?>(null) }
     fun matches(p: FaceRepository.Person) = when (filter) {
         PeopleFilter.MAIN -> !p.entity.ignored && (p.media.size >= 2 || p.entity.name.isNotBlank())
+        PeopleFilter.FAVORITE -> !p.entity.ignored && p.entity.favorite
         PeopleFilter.NAMED -> !p.entity.ignored && p.entity.name.isNotBlank()
         PeopleFilter.SINGLE -> !p.entity.ignored && p.entity.name.isBlank() && p.media.size < 2
         PeopleFilter.SUGGESTED -> !p.entity.ignored && p.suggestions.isNotEmpty()
@@ -189,6 +192,7 @@ private fun PeoplePage(o: FaceRepository.Overview, vm: SettingsViewModel, onClos
                             val n = if (f == PeopleFilter.NONE) noFaces.size else o.people.count { p ->
                                 when (f) {
                                     PeopleFilter.MAIN -> !p.entity.ignored && (p.media.size >= 2 || p.entity.name.isNotBlank())
+                                    PeopleFilter.FAVORITE -> !p.entity.ignored && p.entity.favorite
                                     PeopleFilter.NAMED -> !p.entity.ignored && p.entity.name.isNotBlank()
                                     PeopleFilter.SINGLE -> !p.entity.ignored && p.entity.name.isBlank() && p.media.size < 2
                                     PeopleFilter.SUGGESTED -> !p.entity.ignored && p.suggestions.isNotEmpty()
@@ -219,8 +223,13 @@ private fun PeoplePage(o: FaceRepository.Overview, vm: SettingsViewModel, onClos
                     }
                     items(shown, key = { it.id }) { p ->
                         Column(Modifier.clickable { openId = p.id }, horizontalAlignment = Alignment.CenterHorizontally) {
-                            FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 96.dp,
-                                if (p.suggestions.isNotEmpty()) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                            Box {
+                                FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 96.dp,
+                                    if (p.suggestions.isNotEmpty()) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                                if (p.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.TopEnd).size(28.dp).clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface).padding(4.dp))
+                            }
                             Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("${p.media.size} media" + if (p.suggestions.isNotEmpty()) " · ${p.suggestions.size} da confermare" else "",
                                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -252,6 +261,11 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
             TopAppBar(title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
+                    IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
+                        Icon(if (p.entity.favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            if (p.entity.favorite) "Togli dai preferiti" else "Aggiungi ai preferiti",
+                            tint = if (p.entity.favorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     TextButton(onClick = { renaming = true }) { Text("Rinomina") }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }

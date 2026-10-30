@@ -294,6 +294,8 @@ data class PersonEntity(
     val ignored: Boolean = false,
     val coverTrackId: Long? = null,
     val createdAt: Long,
+    /** Starred: listed first everywhere and shown on Home. */
+    val favorite: Boolean = false,
 )
 
 /** A media the user added to a person by hand although none of its faces is theirs (or none was found). */

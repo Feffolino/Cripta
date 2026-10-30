@@ -309,6 +309,7 @@ class SettingsViewModel @Inject constructor(
     fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
+    fun setPersonFavorite(personId: Long, favorite: Boolean) = faceAction { faces.setFavorite(personId, favorite) }
     fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */

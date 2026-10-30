@@ -39,6 +39,7 @@ class HomeViewModel @Inject constructor(
     private val thumbs: ThumbnailLoader,
     private val viewerQueue: ViewerQueue,
     private val navigator: com.cripta.app.ui.vault.VaultNavigator,
+    private val faces: com.cripta.app.data.face.FaceRepository,
     private val settings: com.cripta.app.data.SettingsStore,
     private val settingsNav: com.cripta.app.ui.settings.SettingsNav,
 ) : ViewModel() {
@@ -174,6 +175,16 @@ class HomeViewModel @Inject constructor(
     fun openFolder(id: Long) = navigator.openFolder(id)
 
     /** Ask the Cartelle screen to apply a saved filter (the caller then switches tab). */
+    /** Starred people for the Home row. */
+    val favoritePeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
+        .map { o -> o.people.filter { it.entity.favorite && !it.entity.ignored } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
+
+    /** The vault, filtered on [personId]. */
+    fun openPerson(personId: Long) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId)))
+
     fun applySavedFilter(json: String) {
         filtersFromJson(json)?.let { navigator.applyFilters(it) }
     }
