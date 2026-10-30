@@ -182,6 +182,17 @@ class ViewerViewModel @Inject constructor(
     fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
         if (trackId != null) faces.assign(trackId, personId) else faces.link(personId, fileId)
     }
+    /** "Aggiungi un volto": the faces at the player's spot (null: none asked, empty: still looking or none). */
+    val foundFaces = MutableStateFlow<List<com.cripta.app.data.face.FaceRepository.FoundFace>?>(null)
+    val findingFaces = MutableStateFlow(false)
+    fun findFaces(file: com.cripta.app.data.db.FileEntity) = faceAction {
+        findingFaces.value = true; foundFaces.value = emptyList()
+        try { foundFaces.value = faces.facesAt(file, playerSpots.value[file.id]?.positionMs ?: 0L) } finally { findingFaces.value = false }
+    }
+    fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceAction {
+        faces.addFace(file, f, personId ?: faces.newPerson(newName))
+        foundFaces.value = null
+    }
     fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceAction {
         val id = faces.newPerson(name)
         if (trackId != null) faces.assign(trackId, id) else faces.link(id, fileId)

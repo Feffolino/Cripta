@@ -284,12 +284,12 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     val n = overview?.suggestions ?: 0
-                    if (n > 0) TextButton(onClick = { reviewing = true }) { Text("Rivedi · $n") }
+                    TextButton(onClick = { reviewing = true }) { Text(if (n > 0) "Da controllare · $n" else "Da controllare") }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
                         DropdownMenu(menu, { menu = false }) {
                             DropdownMenuItem(text = { Text("Unioni recenti") }, onClick = { menu = false; showMerges = true })
-                            DropdownMenuItem(text = { Text("Statistiche") }, onClick = { menu = false; showStats = true })
+                            DropdownMenuItem(text = { Text("Diagnostica") }, onClick = { menu = false; showStats = true })
                             DropdownMenuItem(text = { Text("Analizza i media mancanti") }, enabled = progress == null, onClick = { menu = false; vm.startFaceScan() })
                         }
                     }
@@ -362,7 +362,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             o.people.firstOrNull { it.id == id }?.let { p -> PersonPage(p, o, vm, onClose = { openId = null }, onOpenFile = onOpenFile, onOpenPerson = { openId = it }) }
                 ?: run { openId = null }
         }
-        if (reviewing) ReviewPage(o, vm, onClose = { reviewing = false }, onOpenFile = onOpenFile)
+        if (reviewing) CheckPage(o, vm, personId = null, onClose = { reviewing = false }, onOpenFile = onOpenFile)
         if (showMerges) MergesDialog(vm) { showMerges = false }
         if (showStats) StatsDialog(vm) { showStats = false }
     }
@@ -370,54 +370,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         AlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
-    }
-}
-
-/** "Rivedi": the suggestions one at a time, answered with a tap. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReviewPage(o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit, onOpenFile: (String) -> Unit) {
-    // A snapshot: answering removes the face from the live list, the queue keeps its order.
-    val queue = remember { o.people.filter { !it.entity.ignored }.flatMap { p -> p.suggestions.map { it to p } }.sortedByDescending { it.first.similarity } }
-    var at by rememberSaveable { mutableStateOf(0) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Scaffold(topBar = {
-            TopAppBar(title = { Text(if (at < queue.size) "Da confermare · ${at + 1} di ${queue.size}" else "Da confermare") },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Chiudi") } })
-        }) { pad ->
-            Column(Modifier.fillMaxSize().padding(pad).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (at >= queue.size) {
-                    Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
-                    Text("Tutto rivisto.", style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = onClose) { Text("Chiudi") }
-                    return@Column
-                }
-                val (t, p) = queue[at]
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    FaceAvatar(t.id, { vm.faceCrop(it) }, 140.dp)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box {
-                            FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 88.dp)
-                            FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) { vm.setPersonFavorite(p.id, !p.entity.favorite) }
-                        }
-                        Text(p.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                Text("È ${p.title}?", style = MaterialTheme.typography.headlineSmall)
-                Text("Somiglianza %.2f".format(t.similarity), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                o.files[t.fileId]?.let { f ->
-                    MediaThumb(f, { vm.thumbOf(it) }, Modifier.height(140.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.medium)
-                        .clickable(onClickLabel = "Apri il media") { vm.openPersonMedia(listOf(f.id), f.id, t.timeMs); onOpenFile(f.id) }, showFavoriteBadge = false)
-                }
-                Spacer(Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = { vm.rejectFace(t.id, p.id); at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("No") }
-                    TextButton(onClick = { at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Salta") }
-                    Button(onClick = { vm.confirmFace(t.id, p.id); at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Sì") }
-                }
-            }
-        }
     }
 }
 
@@ -459,8 +411,9 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
     var moving by remember { mutableStateOf(false) }
     var selMenu by remember { mutableStateOf(false) }
     val faceOf = remember(p) { p.faces.groupBy { it.fileId }.mapValues { (_, l) -> l.maxBy { it.width } } }
-    val similar by produceState(emptyList<Pair<Long, Float>>(), p.id, p.faces.size) { value = vm.similarPeople(p.id) }
-    val byId = remember(o) { o.people.associateBy { it.id } }
+    var checking by remember { mutableStateOf(false) }
+    var comparing by remember { mutableStateOf<Pair<com.cripta.app.data.db.TrackCard, com.cripta.app.data.db.TrackCard>?>(null) }
+    val doubts by produceState(0, p.id, p.faces.size, p.suggestions.size, checking) { if (!checking) value = vm.faceChecks(p.id).size }
     val ids = p.media.map { it.id }
     fun open(fileId: String, timeMs: Long?) { vm.openPersonMedia(ids, fileId, timeMs); onOpenFile(fileId) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
@@ -481,8 +434,9 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                                 DropdownMenuItem(text = { Text("Confronta con le altre persone") }, onClick = { selMenu = false; vm.explainFace(face.id) })
                             }
                             if (one != null) DropdownMenuItem(text = { Text("Volti di questo media") }, onClick = { selMenu = false; vm.describeMedia(one) })
-                            if (selected.size == 2) DropdownMenuItem(text = { Text("Confronta i volti dei due media") }, onClick = {
-                                selMenu = false; val (a, b) = selected.toList(); vm.compareMediaFaces(a, b)
+                            val two = selected.toList().takeIf { it.size == 2 }?.mapNotNull { faceOf[it] }?.takeIf { it.size == 2 }
+                            if (two != null) DropdownMenuItem(text = { Text("Confronta i due volti") }, onClick = {
+                                selMenu = false; comparing = two[0] to two[1]
                             })
                         }
                     }
@@ -513,41 +467,10 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                val alike = similar.mapNotNull { (id, s) -> byId[id]?.let { it to s } }
-                if (alike.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Persone simili", style = MaterialTheme.typography.titleSmall)
-                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                alike.forEach { (q, s) ->
-                                    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 64.dp, Modifier.clickable(onClickLabel = "Apri ${q.title}") { onOpenPerson(q.id) })
-                                        Text(q.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text("%.2f".format(s), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        TextButton(onClick = { vm.mergePeople(p.id, listOf(q.id)) }) { Text("Unisci") }
-                                        TextButton(onClick = { vm.keepApart(p.id, q.id) }) { Text("Diversi") }
-                                    }
-                                }
-                            }
-                        }
+                if (doubts > 0) item(span = { GridItemSpan(maxLineSpan) }) {
+                    FilledTonalButton(onClick = { checking = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (doubts == 1) "1 dubbio da controllare" else "$doubts dubbi da controllare")
                     }
-                }
-                if (p.suggestions.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { Text("Forse è ${p.title}?", style = MaterialTheme.typography.titleSmall) }
-                    items(p.suggestions, key = { "s${it.id}" }) { t ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(Modifier.clickable(onClickLabel = "Apri il media") { o.files[t.fileId]?.let { open(it.id, t.timeMs) } }) {
-                                o.files[t.fileId]?.let { MediaThumb(it, { f -> vm.thumbOf(f) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false) }
-                                FaceAvatar(t.id, { vm.faceCrop(it) }, 40.dp, Modifier.align(Alignment.BottomEnd).padding(4.dp))
-                            }
-                            Row {
-                                TextButton(onClick = { vm.confirmFace(t.id, p.id) }) { Text("Sì") }
-                                TextButton(onClick = { vm.rejectFace(t.id, p.id) }) { Text("No") }
-                            }
-                            Text("%.2f".format(t.similarity), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                    item(span = { GridItemSpan(maxLineSpan) }) { Text("Media", style = MaterialTheme.typography.titleSmall) }
                 }
                 items(p.media, key = { it.id }) { f ->
                     val face = faceOf[f.id]
@@ -570,7 +493,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         OutlinedTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         val twin = o.people.firstOrNull { it.id != p.id && name.isNotBlank() && it.entity.name.equals(name.trim(), ignoreCase = true) }
                         Text(if (twin != null) "Esiste già «${twin.title}»: dopo il salvataggio puoi unirle da «Unisci con…»."
-                            else "Con un nome, i volti attuali restano a questa persona anche quando ricalcoli i gruppi.",
+                            else "Il nome vale per tutti i suoi media. Un volto sbagliato si toglie tenendo premuto il media.",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (twin != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -578,6 +501,8 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                 confirmButton = { TextButton(onClick = { vm.renamePerson(p.id, name); renaming = false }) { Text("Salva") } },
                 dismissButton = { TextButton(onClick = { renaming = false }) { Text("Annulla") } })
         }
+        if (checking) CheckPage(o, vm, personId = p.id, onClose = { checking = false }, onOpenFile = onOpenFile)
+        comparing?.let { (a, b) -> CompareDialog(a, b, o, vm) { comparing = null } }
         if (merging) PeoplePicker("Unisci a ${p.title}", o, exclude = p.id, multi = true, vm = vm, onDismiss = { merging = false }) { picked, _ ->
             vm.mergePeople(p.id, picked); merging = false
         }

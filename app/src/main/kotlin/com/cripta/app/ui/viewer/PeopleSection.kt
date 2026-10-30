@@ -1,7 +1,11 @@
 package com.cripta.app.ui.viewer
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -91,7 +95,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { adding = true }) { Text("Aggiungi a una persona") }
+            TextButton(onClick = { vm.findFaces(file) }) { Text("Aggiungi un volto") }
             TextButton(onClick = { vm.describeFaces(file.id) }) { Text(if (shown.isEmpty()) "Perché?" else "Dettagli") }
             TextButton(onClick = { vm.analyseFaces(file.id) }) { Text("Rianalizza") }
         }
@@ -103,6 +107,39 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             onPick = { id -> if (t != null) vm.putInPerson(file.id, t.id, id) else vm.putInPerson(file.id, null, id) },
             onNew = { name -> vm.putInNewPerson(file.id, t?.id, name) },
             onDismiss = { editing = null; adding = false })
+    }
+    val found by vm.foundFaces.collectAsState()
+    val finding by vm.findingFaces.collectAsState()
+    var picked by remember(file.id) { mutableStateOf<FaceRepository.FoundFace?>(null) }
+    found?.let { list ->
+        if (picked == null) AlertDialog(onDismissRequest = { vm.foundFaces.value = null },
+            title = { Text(if (isVideo) "Volti in questo momento" else "Volti nella foto") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    when {
+                        finding -> Text("Ricerca dei volti…")
+                        list.isEmpty() -> Text("Nessun volto trovato" + (if (isVideo) " qui: metti in pausa dove il volto si vede bene e riprova." else ".") +
+                            " Puoi anche aggiungere il media a una persona senza volto.")
+                        else -> {
+                            Text("Tocca il volto da aggiungere. Insegna alla persona anche questo aspetto.", style = MaterialTheme.typography.bodySmall)
+                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                list.forEach { f ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { picked = f }) {
+                                        Image(f.picture.asImageBitmap(), null, Modifier.size(88.dp).clip(MaterialTheme.shapes.medium))
+                                        Text(f.why ?: "buono", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { vm.foundFaces.value = null }) { Text("Chiudi") } },
+            dismissButton = { TextButton(onClick = { vm.foundFaces.value = null; adding = true }) { Text("Senza volto") } })
+        else FaceEditor(null, null, people, vm,
+            onPick = { id -> vm.addFoundFace(file, picked!!, id, "") },
+            onNew = { name -> vm.addFoundFace(file, picked!!, null, name) },
+            onDismiss = { picked = null; vm.foundFaces.value = null })
     }
     message?.let { m ->
         AlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },

@@ -36,17 +36,23 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
     }.getOrElse { env.createSession(detector, options()) }
     private val rec = env.createSession(recognizer, options())
 
-    /** A face found in a picture: [embedding] and [aligned] are set when it passed the quality checks. */
-    class Face(val det: Detection, val reject: FaceReject?, val embedding: FloatArray?, val aligned: FaceImage?,
+    /** A face found in a picture: [embedding] and [preview] are set when it passed the quality checks. */
+    class Face(val det: Detection, val reject: FaceReject?, val embedding: FloatArray?, val preview: FaceImage?,
                /** Sharpness of the aligned face (null when it was set aside before aligning it). */
-               val sharpness: Double? = null) {
+               val sharpness: Double? = null,
+               /** Where it is in the picture, as fractions of it: x, y, w, h. */
+               val box: FloatArray? = null) {
         val yaw get() = FaceAligner.yaw(det.landmarks)
         /** How good an example of its person the face is: confident, large, frontal. */
         val quality get() = det.score * minOf(1f, det.w / FaceAligner.SIZE) * (1f - minOf(yaw, 0.9f))
     }
 
-    fun analyze(img: FaceImage): List<Face> {
-        val small = img.fit(DETECT_SIDE)
+    /**
+     * The faces of [img]. With [all] (a face added by hand) every face found gets its embedding and
+     * picture, its reason to be set aside kept for the user to see; detection then runs larger too.
+     */
+    fun analyze(img: FaceImage, all: Boolean = false): List<Face> {
+        val small = img.fit(if (all) 2 * DETECT_SIDE else DETECT_SIDE)
         val pw = YuNet.padded(small.width); val ph = YuNet.padded(small.height)
         val outputs = OnnxTensor.createTensor(env, FloatBuffer.wrap(YuNet.input(small)), longArrayOf(1, 3, ph.toLong(), pw.toLong())).use { t ->
             det.run(mapOf("input" to t)).use { r -> r.associate { it.key to floats(it.value as OnnxTensor) } }
@@ -60,11 +66,13 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
                 FaceAligner.yaw(d.landmarks) > MAX_YAW -> FaceReject.PROFILE
                 else -> null
             }
-            if (reject != null) return@map Face(d, reject, null, null)
+            if (reject != null && !all) return@map Face(d, reject, null, null)
             val aligned = FaceAligner.align(img, d.landmarks)
             val sharp = FaceAligner.sharpness(aligned)
-            if (sharp < MIN_SHARPNESS) Face(d, FaceReject.BLURRY, null, null, sharp)
-            else Face(d, null, embed(aligned), aligned, sharp)
+            val why = reject ?: FaceReject.BLURRY.takeIf { sharp < MIN_SHARPNESS }
+            if (why != null && !all) Face(d, why, null, null, sharp)
+            else Face(d, why, embed(aligned), FaceAligner.preview(img, d), sharp,
+                floatArrayOf(d.x / img.width, d.y / img.height, d.w / img.width, d.h / img.height))
         }
     }
 

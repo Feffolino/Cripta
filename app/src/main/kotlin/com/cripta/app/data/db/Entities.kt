@@ -293,6 +293,8 @@ data class FaceTrackEntity(
     val similarity: Float = 0f,
     /** Every moment it shows in (ms, comma separated): the viewer's "momenti". */
     val times: String = "",
+    /** Where the best face is in its picture, as fractions of it: "x,y,w,h" (empty for older scans). */
+    val box: String = "",
 )
 
 /** A person: named or not; [ignored] = "non è una persona" (its faces, and similar new ones, are hidden). */
