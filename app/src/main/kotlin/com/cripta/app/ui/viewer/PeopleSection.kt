@@ -190,10 +190,12 @@ private fun FaceEditor(
                 }
                 OutlinedTextField(query, { query = it }, singleLine = true,
                     label = { Text(if (placed) "Cerca o crea" else "Nome (cerca o crea)") }, modifier = Modifier.fillMaxWidth())
-                val list = people.filter { it.id != current?.id && it.main && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+                // Everyone (the user makes them all), starred first, then the newest.
+                val list = people.filter { it.id != current?.id && !it.entity.ignored && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+                    .sortedWith(compareBy({ !it.entity.favorite }, { -it.entity.createdAt }))
                 LazyColumn(Modifier.heightIn(max = 260.dp)) {
-                    if (query.isNotBlank() && people.none { it.entity.name.equals(query.trim(), ignoreCase = true) }) item {
-                        Text("+ Nuova persona «${query.trim()}»", color = MaterialTheme.colorScheme.primary,
+                    if (query.isBlank() || people.none { it.entity.name.equals(query.trim(), ignoreCase = true) }) item {
+                        Text(if (query.isBlank()) "+ Nuova persona senza nome (Volto…)" else "+ Nuova persona «${query.trim()}»", color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.fillMaxWidth().clickable { onNew(query); onDismiss() }.padding(vertical = 12.dp))
                     }
                     items(list, key = { it.id }) { q ->
