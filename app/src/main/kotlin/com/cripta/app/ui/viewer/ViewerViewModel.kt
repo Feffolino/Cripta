@@ -46,8 +46,9 @@ class ViewerViewModel @Inject constructor(
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val settingsStore: com.cripta.app.data.SettingsStore,
     private val intro: com.cripta.app.data.intro.IntroRepository,
+    private val faces: com.cripta.app.data.face.FaceRepository,
     session: com.cripta.app.security.SessionManager,
-    queue: ViewerQueue,
+    private val queue: ViewerQueue,
     savedState: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
@@ -146,6 +147,37 @@ class ViewerViewModel @Inject constructor(
     suspend fun thumbOf(id: String): android.graphics.Bitmap? = repo.fileById(id)?.let { thumbs.load(it) }
 
     /** Playback preferences read when a player is created. */
+    // ---- People (details panel) ----
+    fun facesOf(fileId: String) = faces.facesOf(fileId)
+    fun personLinksOf(fileId: String) = faces.linksOf(fileId)
+    /** Every person's display name, for the face labels and the "Chi è?" list. */
+    val peopleNames: kotlinx.coroutines.flow.StateFlow<Map<Long, String>> = faces.people()
+        .map { o -> o.people.filter { !it.entity.ignored }.associate { it.id to it.title } }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyMap())
+    val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
+    private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
+        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+        }
+    }
+    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
+    fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
+    fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
+    fun analyseFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId))
+    /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
+    fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
+        if (trackId != null) faces.assign(trackId, personId) else faces.link(personId, fileId)
+    }
+    fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceAction {
+        val id = faces.newPerson(name)
+        if (trackId != null) faces.assign(trackId, id) else faces.link(id, fileId)
+    }
+
+    /** A start position asked for by the page that opened [id] (People: the face's moment), once. */
+    fun takeSeek(id: String): Long? = queue.takeSeek(id)
+
     suspend fun playbackPrefs(): PlaybackPrefs =
         runCatching { settingsStore.settingsOnce() }.getOrNull()
             ?.toPlayback() ?: PlaybackPrefs()

@@ -41,6 +41,7 @@ fun Filters.toJson(): String = org.json.JSONObject().apply {
     put("fav", favoritesOnly)
     put("untagged", untaggedOnly)
     put("all", tagMatchAll)
+    put("people", org.json.JSONArray(personIds.toList()))
 }.toString()
 
 fun filtersFromJson(json: String): Filters? = runCatching {
@@ -57,5 +58,6 @@ fun filtersFromJson(json: String): Filters? = runCatching {
         favoritesOnly = o.optBoolean("fav", false),
         untaggedOnly = o.optBoolean("untagged", false),
         tagMatchAll = o.optBoolean("all", true),
+        personIds = ids("people"),
     )
 }.getOrNull()

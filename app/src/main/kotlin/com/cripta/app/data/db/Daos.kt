@@ -356,3 +356,155 @@ interface IntroDao {
     @Query("DELETE FROM rejected_prints WHERE id = :id")
     suspend fun deleteRejected(id: Long)
 }
+
+/** A track without its picture, for the clustering. */
+data class TrackRow(
+    val id: Long, val fileId: String, val frames: Long, val quality: Float, val embeddings: ByteArray,
+    val personId: Long?, val state: String, val similarity: Float,
+)
+
+/** A track for the lists: everything but its embeddings. */
+data class TrackCard(
+    val id: Long, val fileId: String, val timeMs: Long, val width: Int, val faceCount: Int,
+    val personId: Long?, val state: String, val similarity: Float,
+)
+
+@Dao
+interface FaceDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putScan(s: FaceScanEntity)
+
+    @Query("SELECT * FROM face_scans WHERE fileId = :fileId")
+    suspend fun scanOf(fileId: String): FaceScanEntity?
+
+    @Query("SELECT * FROM face_scans")
+    suspend fun allScans(): List<FaceScanEntity>
+
+    @Query("SELECT * FROM face_scans")
+    fun observeScans(): Flow<List<FaceScanEntity>>
+
+    @Query("SELECT fileId FROM face_scans WHERE clustered = 0 AND status = 'ok'")
+    suspend fun unclusteredIds(): List<String>
+
+    @Query("UPDATE face_scans SET clustered = 1 WHERE fileId IN (:ids)")
+    suspend fun markClustered(ids: List<String>)
+
+    @Query("UPDATE face_scans SET clustered = 0")
+    suspend fun markAllUnclustered()
+
+    @Query("DELETE FROM face_scans WHERE fileId = :fileId")
+    suspend fun deleteScan(fileId: String)
+
+    @Insert
+    suspend fun addTrack(t: FaceTrackEntity): Long
+
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks")
+    suspend fun allTrackRows(): List<TrackRow>
+
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks WHERE fileId IN (:ids)")
+    suspend fun trackRowsOf(ids: List<String>): List<TrackRow>
+
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks WHERE id = :id")
+    suspend fun trackRow(id: Long): TrackRow?
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks")
+    fun observeCards(): Flow<List<TrackCard>>
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks WHERE fileId = :fileId")
+    fun observeCardsOf(fileId: String): Flow<List<TrackCard>>
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks WHERE fileId = :fileId")
+    suspend fun cardsOf(fileId: String): List<TrackCard>
+
+    @Query("SELECT crop FROM face_tracks WHERE id = :id")
+    suspend fun crop(id: Long): ByteArray?
+
+    @Query("UPDATE face_tracks SET personId = :personId, state = :state, similarity = :similarity WHERE id = :id")
+    suspend fun place(id: Long, personId: Long?, state: String, similarity: Float)
+
+    @Query("UPDATE face_tracks SET personId = :to WHERE personId = :from")
+    suspend fun moveTracks(from: Long, to: Long)
+
+    @Query("UPDATE face_tracks SET state = 'manual' WHERE personId = :personId AND state = 'auto'")
+    suspend fun lockTracks(personId: Long)
+
+    @Query("UPDATE face_tracks SET personId = NULL, state = 'auto', similarity = 0 WHERE state != 'manual'")
+    suspend fun unplaceAuto()
+
+    @Query("DELETE FROM face_tracks WHERE fileId = :fileId")
+    suspend fun deleteTracksOf(fileId: String)
+
+    @Insert
+    suspend fun addPerson(p: PersonEntity): Long
+
+    @Query("SELECT * FROM persons")
+    suspend fun persons(): List<PersonEntity>
+
+    @Query("SELECT * FROM persons")
+    fun observePersons(): Flow<List<PersonEntity>>
+
+    @Query("UPDATE persons SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @Query("UPDATE persons SET ignored = :ignored WHERE id = :id")
+    suspend fun setIgnored(id: Long, ignored: Boolean)
+
+    @Query("UPDATE persons SET coverTrackId = :trackId WHERE id = :id")
+    suspend fun setCover(id: Long, trackId: Long?)
+
+    @Query("DELETE FROM persons WHERE id = :id")
+    suspend fun deletePerson(id: Long)
+
+    /** People left with no face and no media: unnamed ones go (a named one stays, the user may add to it). */
+    @Query("DELETE FROM persons WHERE name = '' AND ignored = 0 AND id NOT IN (SELECT personId FROM face_tracks WHERE personId IS NOT NULL AND state != 'suggested') AND id NOT IN (SELECT personId FROM person_media)")
+    suspend fun deleteEmptyPersons()
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addPersonMedia(m: PersonMediaEntity)
+
+    @Query("DELETE FROM person_media WHERE personId = :personId AND fileId = :fileId")
+    suspend fun removePersonMedia(personId: Long, fileId: String)
+
+    @Query("UPDATE OR IGNORE person_media SET personId = :to WHERE personId = :from")
+    suspend fun movePersonMedia(from: Long, to: Long)
+
+    @Query("DELETE FROM person_media WHERE personId = :personId")
+    suspend fun deletePersonMedia(personId: Long)
+
+    @Query("SELECT * FROM person_media")
+    fun observePersonMedia(): Flow<List<PersonMediaEntity>>
+
+    @Query("SELECT * FROM person_media")
+    suspend fun allPersonMedia(): List<PersonMediaEntity>
+
+    /** Media showing every one of [ids]... one person at a time: the caller intersects. */
+    @Query("SELECT fileId FROM face_tracks WHERE personId = :id AND state != 'suggested' UNION SELECT fileId FROM person_media WHERE personId = :id")
+    suspend fun mediaOf(id: Long): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addRejection(r: FaceRejectionEntity)
+
+    @Query("SELECT * FROM face_rejections")
+    suspend fun rejections(): List<FaceRejectionEntity>
+
+    @Query("UPDATE OR IGNORE face_rejections SET personId = :to WHERE personId = :from")
+    suspend fun moveRejections(from: Long, to: Long)
+
+    @Query("DELETE FROM face_rejections WHERE personId = :personId")
+    suspend fun deleteRejectionsOf(personId: Long)
+
+    @Query("DELETE FROM face_scans")
+    suspend fun deleteAllScans()
+
+    @Query("DELETE FROM face_tracks")
+    suspend fun deleteAllTracks()
+
+    @Query("DELETE FROM persons")
+    suspend fun deleteAllPersons()
+
+    @Query("DELETE FROM person_media")
+    suspend fun deleteAllPersonMedia()
+
+    @Query("DELETE FROM face_rejections")
+    suspend fun deleteAllRejections()
+}

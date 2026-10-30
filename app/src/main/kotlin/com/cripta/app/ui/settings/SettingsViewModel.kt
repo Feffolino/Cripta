@@ -33,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
     private val keyVault: com.cripta.app.security.KeyVault,
     private val intro: com.cripta.app.data.intro.IntroRepository,
+    private val faces: com.cripta.app.data.face.FaceRepository,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
 ) : ViewModel() {
 
@@ -281,6 +282,40 @@ class SettingsViewModel @Inject constructor(
         signatureAction(s.kind, "Video tolto dalla firma") { intro.setNone(fileId, s.kind) }
     /** A video opened from the results: the viewer swipes through the same filtered list. */
     fun openFromResults(ids: List<String>) = viewerQueue.set(ids)
+
+    // ---- People ----
+    val people = faces.people().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val faceProgress = com.cripta.app.work.ConversionService.faceProgress
+    val peopleOpen = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** The answer to "Confronta" / "Perché?", shown in a dialog. */
+    val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    fun setFacesAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setFacesAnalyzeNew(v) }
+    fun startFaceScan() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true)
+    fun regroupFaces() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, regroup = true)
+    fun restartFaces(everything: Boolean) =
+        com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, reset = if (everything) "all" else "auto")
+    fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
+    suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
+    private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
+        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+        }
+    }
+    fun renamePerson(id: Long, name: String) = faceAction { faces.rename(id, name) }
+    fun mergePeople(into: Long, others: Collection<Long>) = faceAction { faces.merge(into, others) }
+    fun ignorePerson(id: Long) = faceAction { faces.ignore(id) }
+    fun restorePerson(id: Long) = faceAction { faces.restore(id) }
+    fun removeFromPerson(personId: Long, fileId: String) = faceAction { faces.removeMedia(personId, fileId) }
+    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
+    fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
+    fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
+    fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
+    /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
+    fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {
+        viewerQueue.set(ids)
+        if (timeMs != null && timeMs > 0) viewerQueue.seekOnOpen(id, maxOf(0L, timeMs - 2_000))
+    }
     fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
     fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
     fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }

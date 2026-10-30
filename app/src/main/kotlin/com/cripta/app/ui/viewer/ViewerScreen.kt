@@ -1240,6 +1240,7 @@ private fun VideoPlayer(
         val pos = file.playbackPosMs ?: 0L
         val dur = file.durationMs ?: 0L
         if (prefs.resume && pos > 3_000 && (dur <= 0 || pos < dur - 5_000)) player.seekTo(pos)
+        vm.takeSeek(file.id)?.let { player.seekTo(it) }
         // After seekTo the player reports the target as its position even before it is ready.
         resumeSettled = true
     }
@@ -2271,6 +2272,7 @@ private fun DetailsSheet(
         ) {
             header(); tiles(); tags()
             if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
+            if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { HorizontalDividerCompat(); PeopleSection(file, vm) }
             HorizontalDividerCompat(); info()
         }
     }
@@ -2302,6 +2304,7 @@ private fun DetailsSheet(
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
                         tags()
                         if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
+                        if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { HorizontalDividerCompat(); PeopleSection(file, vm) }
                     }
                 }
             } else column()

@@ -98,3 +98,7 @@
 # --- Misc: JSON via org.json (platform), DataStore preferences (protobuf-lite) ------------------
 -keep class androidx.datastore.preferences.** { *; }
 -keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite { <fields>; }
+
+# ONNX Runtime (face recognition): JNI looks its classes and fields up by name.
+-keep class ai.onnxruntime.** { *; }
+

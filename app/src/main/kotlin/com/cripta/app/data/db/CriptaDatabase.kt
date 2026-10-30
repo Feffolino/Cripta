@@ -12,8 +12,9 @@ import net.sqlcipher.database.SupportFactory
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class,
         AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class, SegmentRuleEntity::class,
-        SignatureEntity::class, SignatureSoundEntity::class],
-    version = 21,
+        SignatureEntity::class, SignatureSoundEntity::class,
+        FaceScanEntity::class, FaceTrackEntity::class, PersonEntity::class, PersonMediaEntity::class, FaceRejectionEntity::class],
+    version = 22,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class CriptaDatabase : RoomDatabase() {
     abstract fun savedFilterDao(): SavedFilterDao
     abstract fun pendingJobDao(): PendingJobDao
     abstract fun introDao(): IntroDao
+    abstract fun faceDao(): FaceDao
 
     companion object {
         private const val NAME = "cripta.db"
@@ -210,6 +212,38 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** People: faces found in the media, the people they belong to, the user's own links and rejections. */
+        internal val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `face_scans` (`fileId` TEXT NOT NULL, `status` TEXT NOT NULL, `framesRead` INTEGER NOT NULL, " +
+                        "`framesFailed` INTEGER NOT NULL, `faces` INTEGER NOT NULL, `rejects` TEXT NOT NULL, `version` INTEGER NOT NULL, " +
+                        "`scannedAt` INTEGER NOT NULL, `clustered` INTEGER NOT NULL, PRIMARY KEY(`fileId`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `face_tracks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fileId` TEXT NOT NULL, " +
+                        "`frames` INTEGER NOT NULL, `timeMs` INTEGER NOT NULL, `faceCount` INTEGER NOT NULL, `width` INTEGER NOT NULL, " +
+                        "`quality` REAL NOT NULL, `embeddings` BLOB NOT NULL, `crop` BLOB NOT NULL, `personId` INTEGER, " +
+                        "`state` TEXT NOT NULL, `similarity` REAL NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_tracks_fileId` ON `face_tracks` (`fileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_tracks_personId` ON `face_tracks` (`personId`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `persons` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`ignored` INTEGER NOT NULL, `coverTrackId` INTEGER, `createdAt` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `person_media` (`personId` INTEGER NOT NULL, `fileId` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`personId`, `fileId`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_person_media_fileId` ON `person_media` (`fileId`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `face_rejections` (`trackId` INTEGER NOT NULL, `personId` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`trackId`, `personId`))"
+                )
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -227,7 +261,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }

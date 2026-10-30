@@ -240,3 +240,72 @@ data class RejectedPrintEntity(
     val hashes: ByteArray,
     val createdAt: Long,
 )
+
+/**
+ * Face analysis of one media: what was read and found, so the user can tell why a media has no
+ * faces. [status] is "ok" or "skip:<reason>"; [rejects] counts the faces set aside by reason
+ * ("SMALL=2,PROFILE=1", names of [com.cripta.app.media.face.FaceReject]).
+ */
+@Entity(tableName = "face_scans")
+data class FaceScanEntity(
+    @PrimaryKey val fileId: String,
+    val status: String,
+    val framesRead: Int,
+    val framesFailed: Int,
+    /** Faces detected, usable or not. */
+    val faces: Int,
+    val rejects: String,
+    /** Analyser version: media analysed by an older one are analysed again. */
+    val version: Int,
+    val scannedAt: Long,
+    /** Its faces were placed among the people already. */
+    val clustered: Boolean = false,
+)
+
+/** One person's face in one media (all the frames it shows in), with its best embeddings and picture. */
+@Entity(tableName = "face_tracks", indices = [Index("fileId"), Index("personId")])
+data class FaceTrackEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val fileId: String,
+    /** Bit n set: the face shows in sampled frame n (photos: frame 0). */
+    val frames: Long,
+    /** Where its best face is in the video (ms). */
+    val timeMs: Long,
+    val faceCount: Int,
+    /** Width of its best face in the frame (px). */
+    val width: Int,
+    val quality: Float,
+    /** Up to 3 normalised embeddings, 8-bit (see [com.cripta.app.media.face.EmbeddingCodec]). */
+    val embeddings: ByteArray,
+    /** The aligned face, JPEG. */
+    val crop: ByteArray,
+    val personId: Long? = null,
+    /** "auto" (placed by similarity), "suggested" (waiting for the user), "manual" (the user's choice). */
+    val state: String = "auto",
+    /** Similarity to its person when placed (or suggested). */
+    val similarity: Float = 0f,
+)
+
+/** A person: named or not; [ignored] = "non è una persona" (its faces, and similar new ones, are hidden). */
+@Entity(tableName = "persons")
+data class PersonEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String = "",
+    val ignored: Boolean = false,
+    val coverTrackId: Long? = null,
+    val createdAt: Long,
+)
+
+/** A media the user added to a person by hand although none of its faces is theirs (or none was found). */
+@Entity(tableName = "person_media", primaryKeys = ["personId", "fileId"], indices = [Index("fileId")])
+data class PersonMediaEntity(
+    val personId: Long,
+    val fileId: String,
+)
+
+/** "Non è lui/lei": the track never goes to that person again. */
+@Entity(tableName = "face_rejections", primaryKeys = ["trackId", "personId"])
+data class FaceRejectionEntity(
+    val trackId: Long,
+    val personId: Long,
+)
