@@ -100,6 +100,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     var askRestart by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
 
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Section("Persone", "Cripta riconosce i volti di foto e video, in qualunque cartella, e li raggruppa per persona. " +
         "Tutto avviene sul telefono; volti e persone restano nel database cifrato.") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -142,6 +143,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             "blur" -> "I volti in Home restano sfocati finché non tocchi la riga: utile in pubblico."
             else -> "I volti in Home sono subito visibili."
         }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     }
     if (askRestart) {
         var everything by remember { mutableStateOf(false) }
@@ -348,7 +350,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
-                        Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                         Text("${p.media.size} media" + if (p.suggestions.isNotEmpty()) " · ${p.suggestions.size} da confermare" else "",
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
@@ -430,7 +433,7 @@ private fun MergesDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 items(merges, key = { it.id }) { m ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("${m.mergedName.ifBlank { "Persona ${m.mergedId}" }} → ${names[m.keptId] ?: "Persona ${m.keptId}"}",
+                            Text("${m.mergedName.ifBlank { FaceRepository.UNNAMED }} → ${names[m.keptId] ?: FaceRepository.UNNAMED}",
                                 style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text((if (m.auto) "Automatica, somiglianza %.2f".format(m.similarity) else "Fatta da te") +
                                 " · " + android.text.format.DateUtils.getRelativeTimeSpanString(m.createdAt),

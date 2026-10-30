@@ -150,10 +150,11 @@ class ViewerViewModel @Inject constructor(
     // ---- People (details panel) ----
     fun facesOf(fileId: String) = faces.facesOf(fileId)
     fun personLinksOf(fileId: String) = faces.linksOf(fileId)
-    /** Every person's display name, for the face labels and the "Chi è?" list. */
-    val peopleNames: kotlinx.coroutines.flow.StateFlow<Map<Long, String>> = faces.people()
-        .map { o -> o.people.filter { !it.entity.ignored }.sortedWith(compareBy({ !it.entity.favorite }, { it.title.lowercase() })).associate { it.id to it.title } }
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyMap())
+    /** Everyone not hidden, starred first then named then by name: the face labels and the "Chi è?" list. */
+    val peopleList: kotlinx.coroutines.flow.StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
+        .map { o -> o.people.filter { !it.entity.ignored }.sortedWith(compareBy({ !it.entity.favorite }, { it.entity.name.isBlank() }, { it.title.lowercase() })) }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+    fun renamePerson(personId: Long, name: String) = faceAction { faces.rename(personId, name) }
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val favoritePeople: kotlinx.coroutines.flow.StateFlow<Set<Long>> = faces.people()
         .map { o -> o.people.filter { it.entity.favorite }.map { it.id }.toSet() }

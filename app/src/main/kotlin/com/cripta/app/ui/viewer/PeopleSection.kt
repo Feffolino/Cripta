@@ -3,7 +3,6 @@ package com.cripta.app.ui.viewer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,11 +12,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,25 +36,26 @@ import androidx.compose.ui.unit.dp
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.TrackCard
+import com.cripta.app.data.face.FaceRepository
 import com.cripta.app.ui.settings.FaceAvatar
 import com.cripta.app.ui.settings.FavoriteStar
 
 /**
  * Details panel › "Persone": every face that shows in this media, who it is and (videos) when it
- * shows, a tap jumping there; the corrections (someone else, not them, add to a person), the star,
- * and the reason when no face is there.
+ * shows, a tap on a moment jumping there. A tap on a face opens one editor for everything: its
+ * person's name, another person, not them, the star.
  */
 @Composable
 internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val faces by remember(file.id) { vm.facesOf(file.id) }.collectAsState(initial = emptyList())
     val links by remember(file.id) { vm.personLinksOf(file.id) }.collectAsState(initial = emptyList())
-    val people by vm.peopleNames.collectAsState()
-    val favorites by vm.favoritePeople.collectAsState()
+    val people by vm.peopleList.collectAsState()
     val message by vm.faceMessage.collectAsState()
+    val byId = remember(people) { people.associateBy { it.id } }
     val isVideo = VaultRepository.isVideo(file.mimeType)
-    /** The face being assigned (null track = the whole media, without a face). */
-    var picking by remember(file.id) { mutableStateOf<Pair<TrackCard?, Boolean>?>(null) }
-    var menuFor by remember(file.id) { mutableStateOf<Long?>(null) }
+    /** The face being edited; with [adding] the whole media is added to a person instead. */
+    var editing by remember(file.id) { mutableStateOf<TrackCard?>(null) }
+    var adding by remember(file.id) { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Persone", style = MaterialTheme.typography.titleSmall)
@@ -61,27 +64,16 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         for (t in shown) {
-            val name = t.personId?.let { people[it] }
+            val p = t.personId?.let { byId[it] }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box {
-                    FaceAvatar(t.id, { vm.faceCrop(it) }, 52.dp, Modifier.clickable(onClickLabel = "Opzioni del volto") { menuFor = t.id })
-                    DropdownMenu(menuFor == t.id, { menuFor = null }) {
-                        if (t.state == "suggested" && t.personId != null) {
-                            DropdownMenuItem(text = { Text("Sì, è $name") }, onClick = { menuFor = null; vm.confirmFace(t.id, t.personId) })
-                        }
-                        DropdownMenuItem(text = { Text("È un'altra persona…") }, onClick = { menuFor = null; picking = t to true })
-                        if (t.personId != null) {
-                            DropdownMenuItem(text = { Text("Non è $name") }, onClick = { menuFor = null; vm.rejectFace(t.id, t.personId) })
-                        }
-                        DropdownMenuItem(text = { Text("Confronta con le persone") }, onClick = { menuFor = null; vm.explainFace(t.id) })
-                    }
-                }
-                Column(Modifier.weight(1f)) {
+                FaceAvatar(t.id, { vm.faceCrop(it) }, 52.dp, Modifier.clickable(onClickLabel = "Modifica") { editing = t })
+                Column(Modifier.weight(1f).clickable(onClickLabel = "Modifica") { editing = t }) {
                     Text(when {
-                        name == null -> "Sconosciuto"
-                        t.state == "suggested" -> "Forse $name?"
-                        else -> name
-                    }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        p == null -> "Sconosciuto · tocca per dire chi è"
+                        t.state == "suggested" -> "Forse ${p.title}?"
+                        else -> p.title
+                    }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = if (p == null || p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                     if (isVideo) {
                         val moments = t.moments.ifEmpty { listOf(t.timeMs) }
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -91,47 +83,100 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                         }
                     }
                 }
-                if (t.personId != null && t.state != "suggested" && name != null) {
-                    FavoriteStar(t.personId in favorites, name) { vm.setPersonFavorite(t.personId, t.personId !in favorites) }
-                }
+                if (p != null && t.state != "suggested") FavoriteStar(p.entity.favorite, p.title) { vm.setPersonFavorite(p.id, !p.entity.favorite) }
             }
         }
         links.forEach { pid ->
-            Text("Aggiunto a mano a ${people[pid] ?: "Persona $pid"}", style = MaterialTheme.typography.bodySmall,
+            Text("Aggiunto a mano a ${byId[pid]?.title ?: FaceRepository.UNNAMED}", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { picking = null to false }) { Text("Aggiungi a una persona") }
+            TextButton(onClick = { adding = true }) { Text("Aggiungi a una persona") }
             TextButton(onClick = { vm.describeFaces(file.id) }) { Text(if (shown.isEmpty()) "Perché?" else "Dettagli") }
             TextButton(onClick = { vm.analyseFaces(file.id) }) { Text("Rianalizza") }
         }
     }
 
-    picking?.let { (track, _) ->
-        var newName by remember { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { picking = null },
-            title = { Text(if (track == null) "Aggiungi a una persona" else "Chi è?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(newName, { newName = it }, singleLine = true, label = { Text("Nuova persona") }, modifier = Modifier.fillMaxWidth())
-                    LazyColumn(Modifier.heightIn(max = 280.dp)) {
-                        items(people.entries.toList(), key = { it.key }) { (id, name) ->
-                            Text((if (id in favorites) "★ " else "") + name,
-                                Modifier.fillMaxWidth().clickable { vm.putInPerson(file.id, track?.id, id); picking = null }.padding(vertical = 12.dp))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(enabled = newName.isNotBlank(), onClick = { vm.putInNewPerson(file.id, track?.id, newName); picking = null }) { Text("Crea") }
-            },
-            dismissButton = { TextButton(onClick = { picking = null }) { Text("Annulla") } })
+    if (editing != null || adding) {
+        val t = editing
+        FaceEditor(t, t?.personId?.let { byId[it] }, people, vm,
+            onPick = { id -> if (t != null) vm.putInPerson(file.id, t.id, id) else vm.putInPerson(file.id, null, id) },
+            onNew = { name -> vm.putInNewPerson(file.id, t?.id, name) },
+            onDismiss = { editing = null; adding = false })
     }
     message?.let { m ->
         AlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
+}
+
+/**
+ * "Chi è?": the name of the face's person (renaming it renames them everywhere), or another person,
+ * or a new one; for a suggestion, yes or no; for a placed face, "not them" and the star.
+ */
+@Composable
+private fun FaceEditor(
+    t: TrackCard?, current: FaceRepository.Person?, people: List<FaceRepository.Person>, vm: ViewerViewModel,
+    onPick: (Long) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit,
+) {
+    val placed = t != null && current != null && t.state != "suggested"
+    var name by remember(t?.id) { mutableStateOf(if (placed) current!!.entity.name else "") }
+    var query by remember(t?.id) { mutableStateOf("") }
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { Text(if (t == null) "Aggiungi a una persona" else "Chi è?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (t != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(when {
+                            current == null -> "Non ancora assegnato"
+                            t.state == "suggested" -> "Forse ${current.title}? (%.2f)".format(t.similarity)
+                            else -> current.title
+                        }, style = MaterialTheme.typography.bodyMedium)
+                        if (current != null && t.state == "suggested") Row {
+                            TextButton(onClick = { vm.confirmFace(t.id, current.id); onDismiss() }) { Text("Sì") }
+                            TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("No") }
+                        }
+                        if (placed) Row(verticalAlignment = Alignment.CenterVertically) {
+                            FavoriteStar(current!!.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
+                            TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
+                        }
+                    }
+                }
+                if (placed) {
+                    OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Nome") },
+                        supportingText = { Text("Vale per tutti i suoi media.") }, modifier = Modifier.fillMaxWidth())
+                    HorizontalDivider()
+                    Text("Oppure è un'altra persona:", style = MaterialTheme.typography.labelLarge)
+                }
+                OutlinedTextField(query, { query = it }, singleLine = true,
+                    label = { Text(if (placed) "Cerca o crea" else "Nome (cerca o crea)") }, modifier = Modifier.fillMaxWidth())
+                val list = people.filter { it.id != current?.id && it.main && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+                LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                    if (query.isNotBlank() && people.none { it.entity.name.equals(query.trim(), ignoreCase = true) }) item {
+                        Text("+ Nuova persona «${query.trim()}»", color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().clickable { onNew(query); onDismiss() }.padding(vertical = 12.dp))
+                    }
+                    items(list, key = { it.id }) { q ->
+                        Row(Modifier.fillMaxWidth().clickable { onPick(q.id); onDismiss() }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 36.dp)
+                            Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                            if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+                if (t != null) OutlinedButton(onClick = { vm.explainFace(t.id); onDismiss() }) { Text("Confronta con le persone") }
+            }
+        },
+        confirmButton = {
+            if (placed) TextButton(enabled = name.trim() != current!!.entity.name, onClick = { vm.renamePerson(current.id, name); onDismiss() }) { Text("Salva nome") }
+            else TextButton(onClick = onDismiss) { Text("Chiudi") }
+        },
+        dismissButton = { if (placed) TextButton(onClick = onDismiss) { Text("Chiudi") } })
 }
 
 private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
