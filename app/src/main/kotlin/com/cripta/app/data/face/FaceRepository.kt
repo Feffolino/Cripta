@@ -319,8 +319,8 @@ class FaceRepository @Inject constructor(
                 staleFiles.toSet().takeIf { it.isNotEmpty() }?.let { idx.forget(it); staleFiles.removeAll(it) }
                 val rows = ids.chunked(500).flatMap { dao.trackRowsOf(it) }
                 db.withTransaction {
-                    val lost = settle(idx, rows.filter { it.state == "carried" })
-                    place(idx, rows.filter { it.personId == null }.map { info(it) } + lost)
+                    // People are made by hand only: new faces wait, unassigned, for "Chi è?".
+                    settle(idx, rows.filter { it.state == "carried" })
                     ids.chunked(500).forEach { dao.markClustered(it) }
                 }
             } catch (e: Throwable) {
@@ -331,45 +331,14 @@ class FaceRepository @Inject constructor(
         }
     }
 
-    /**
-     * Confirmed faces of media analysed again: they stay confirmed when they still look like their
-     * person, else they wait as a suggestion for them (a name used to confirm every face its person
-     * had, mistakes included). Returns those whose person is gone, to be placed like new ones.
-     */
-    private suspend fun settle(idx: PeopleIndex, carried: List<TrackRow>): List<TrackInfo> {
-        val lost = ArrayList<TrackInfo>()
+    /** Confirmed faces of media analysed again stay confirmed; those whose person is gone wait unassigned. */
+    private suspend fun settle(idx: PeopleIndex, carried: List<TrackRow>) {
         for (r in carried) {
             val t = info(r)
             val p = r.personId?.let { idx.people[it] }
-            if (p == null) { dao.place(t.id, null, "auto", 0f); lost += t; continue }
-            val s = if (p.exemplars.isEmpty()) 1f else idx.score(t, p)
-            if (s >= FaceThresholds.SUGGEST) { dao.place(t.id, p.id, "manual", r.similarity); idx.add(p.id, t) }
-            else dao.place(t.id, p.id, "suggested", s)
+            if (p == null) dao.place(t.id, null, "auto", 0f)
+            else { dao.place(t.id, p.id, "manual", r.similarity); idx.add(p.id, t) }
         }
-        return lost
-    }
-
-    /** Place [tracks] (best first), then merge the unnamed people that turned out to be the same. */
-    private suspend fun place(idx: PeopleIndex, tracks: List<TrackInfo>) {
-        val touched = HashSet<Long>()
-        for (t in tracks.sortedByDescending { it.quality }) {
-            coroutineContext.ensureActive()
-            val p = idx.place(t)
-            when {
-                p.personId != null && !p.suggested -> {
-                    dao.place(t.id, p.personId, "auto", p.similarity)
-                    idx.add(p.personId, t); touched += p.personId
-                }
-                // An uncertain likeness waits on the other one's page ("Forse è X?").
-                p.suggested -> dao.place(t.id, p.personId, "suggested", p.similarity)
-                else -> {
-                    val id = dao.addPerson(PersonEntity(createdAt = System.currentTimeMillis()))
-                    idx.person(id); idx.add(id, t); touched += id
-                    dao.place(t.id, id, "auto", p.similarity)
-                }
-            }
-        }
-        for ((keep, drop, score) in idx.merges(touched)) mergeRows(keep, drop, score, auto = true)
     }
 
     /** Move everything of [drop] into [keep], remembering it for "Annulla". Returns the merge's id. */
@@ -476,52 +445,6 @@ class FaceRepository @Inject constructor(
         val q = query.trim()
         if (q.isEmpty()) return emptySet()
         return dao.persons().filter { !it.ignored && it.name.contains(q, ignoreCase = true) }.flatMap { dao.mediaOf(it.id) }.toSet()
-    }
-
-    /**
-     * A doubt for "Da controllare": is the face [trackId] the person [personId]? Or are [otherId]
-     * and [personId] one person (the answer keeps [personId])? [a] and [b]: the two faces to show.
-     */
-    class Check(val a: TrackCard, val b: TrackCard, val similarity: Float, val personId: Long, val trackId: Long? = null, val otherId: Long? = null)
-
-    /** Every doubt (or those about [only]), the most likely first. */
-    suspend fun checks(only: Long? = null): List<Check> = mutex.withLock {
-        withContext(Dispatchers.Default) {
-            val idx = currentIndex()
-            val cards = dao.allCards().associateBy { it.id }
-            val out = ArrayList<Check>()
-            fun nearest(x: Collection<TrackInfo>, y: Collection<TrackInfo>): Pair<TrackCard, TrackCard>? {
-                var best: Pair<TrackInfo, TrackInfo>? = null; var s = -2f
-                for (a in x) for (b in y) maxPair(a, b).let { if (it > s) { s = it; best = a to b } }
-                return best?.let { (a, b) -> cards[a.id]?.let { ca -> cards[b.id]?.let { ca to it } } }
-            }
-            for (c in cards.values) {
-                if (c.state != "suggested") continue
-                val p = c.personId?.let { idx.people[it] }?.takeIf { !it.ignored && (only == null || it.id == only) } ?: continue
-                val t = dao.trackRow(c.id)?.let { info(it) } ?: continue
-                nearest(listOf(t), p.exemplars.map { it.first }.distinct())?.let { (a, b) -> out += Check(a, b, c.similarity, p.id, trackId = c.id) }
-            }
-            val seen = HashSet<Pair<Long, Long>>()
-            for (id in only?.let { listOf(it) } ?: idx.people.keys.toList()) {
-                coroutineContext.ensureActive()
-                val a = idx.people[id]?.takeIf { !it.ignored } ?: continue
-                for ((bid, s) in idx.similarTo(id)) {
-                    if (!seen.add(minOf(id, bid) to maxOf(id, bid))) continue
-                    val b = idx.people[bid] ?: continue
-                    // The one with a name, else the one with more faces, keeps the other.
-                    val (keep, drop) = if (b.named && !a.named || (a.named == b.named && b.members.size > a.members.size)) b to a else a to b
-                    nearest(drop.exemplars.map { it.first }.distinct(), keep.exemplars.map { it.first }.distinct())?.let { (x, y) ->
-                        out += Check(x, y, s, keep.id, otherId = drop.id)
-                    }
-                }
-            }
-            out.sortedByDescending { it.similarity }.take(MAX_CHECKS)
-        }
-    }
-
-    /** People who look like [personId] but were not merged: (id, similarity), most alike first. */
-    suspend fun similarPeople(personId: Long): List<Pair<Long, Float>> = mutex.withLock {
-        withContext(Dispatchers.Default) { currentIndex().similarTo(personId).take(6) }
     }
 
     // ---- The user's changes ----------------------------------------------------------------
@@ -677,33 +600,19 @@ class FaceRepository @Inject constructor(
     suspend fun link(personId: Long, fileId: String) = change { dao.addPersonMedia(PersonMediaEntity(personId, fileId)) }
 
     /** A new named person, for "Chi è? › Nuova persona". */
-    suspend fun newPerson(name: String): Long = change { dao.addPerson(PersonEntity(name = name.trim(), createdAt = System.currentTimeMillis())) }
+    suspend fun newPerson(name: String): Long = change {
+        // No name given: "Volto N", the next number free (the user can rename them later).
+        val named = name.trim().ifBlank {
+            val used = dao.persons().mapNotNull { VOLTO.matchEntire(it.name)?.groupValues?.get(1)?.toIntOrNull() }
+            "Volto ${(used.maxOrNull() ?: 0) + 1}"
+        }
+        dao.addPerson(PersonEntity(name = named, createdAt = System.currentTimeMillis()))
+    }
 
     suspend fun setCover(personId: Long, trackId: Long) = change { dao.setCover(personId, trackId) }
 
-    /** Place again tracks the user took away from someone. */
-    private suspend fun replace(ids: List<Long>) = mutex.withLock {
-        withContext(Dispatchers.Default) {
-            val idx = loadIndex()
-            val rows = ids.mapNotNull { dao.trackRow(it) }.filter { it.personId == null }
-            db.withTransaction { place(idx, rows.map { info(it) }); dao.deleteEmptyPersons() }
-            index = null
-        }
-    }
-
-    /** "Ricalcola gruppi": every face not confirmed by the user is placed again from scratch. */
-    suspend fun regroup() = mutex.withLock {
-        withContext(Dispatchers.Default) {
-            db.withTransaction {
-                dao.unplaceAuto()
-                dao.deleteEmptyPersons()
-                val idx = loadIndex()
-                place(idx, dao.allTrackRows().filter { it.personId == null }.map { info(it) })
-                dao.deleteEmptyPersons()
-            }
-            index = null
-        }
-    }
+    /** Faces the user took away from someone wait unassigned; people left with nothing go. */
+    private suspend fun replace(@Suppress("UNUSED_PARAMETER") ids: List<Long>) = change { dao.deleteEmptyPersons() }
 
     /** "Ricomincia da capo": every face and person is forgotten ([everything]: the user's choices too). */
     suspend fun resetAll(everything: Boolean) = change {
@@ -832,8 +741,7 @@ class FaceRepository @Inject constructor(
         const val VERSION = 3
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
         private const val CARRY = 0.6f
-        /** Doubts shown at once in "Da controllare" (the most likely). */
-        private const val MAX_CHECKS = 300
+        private val VOLTO = Regex("Volto (\\d+)")
         /** Frames and photos are read at most this large; detection runs on half of it. */
         const val FRAME_SIDE = 1280
         /** Where a sampled frame shows a face, the exact frame this much later is read too. */

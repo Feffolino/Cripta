@@ -101,13 +101,12 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     var showStats by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-    Section("Persone", "Cripta riconosce i volti di foto e video, in qualunque cartella, e li raggruppa per persona. " +
+    Section("Persone", "Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono. " +
         "Tutto avviene sul telefono; volti e persone restano nel database cifrato.") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
             FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth()) {
-                val n = overview?.suggestions ?: 0
-                Text(if (n > 0) "Vedi le persone · $n da confermare" else "Vedi le persone")
+                Text("Vedi le persone")
             }
         }
     }
@@ -117,10 +116,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             Text(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
-        OutlinedButton(onClick = { vm.regroupFaces() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
-            Text("Ricalcola i gruppi")
-        }
-        Text("Ricalcola rimette insieme i volti già trovati senza rianalizzare: le persone con un nome e le tue correzioni restano.",
+        Text("L'analisi trova i volti; sei tu a dire chi sono, dai dettagli di ogni media.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row {
             TextButton(onClick = { showStats = true }) { Text("Statistiche") }
@@ -237,9 +233,16 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
 internal fun FavoriteStar(on: Boolean, name: String, modifier: Modifier = Modifier, onToggle: () -> Unit) {
     IconButton(onClick = onToggle, modifier = modifier.size(36.dp)) {
         Icon(if (on) Icons.Filled.Star else Icons.Filled.StarBorder, if (on) "Togli $name dai preferiti" else "Aggiungi $name ai preferiti",
-            tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)).padding(3.dp))
+            tint = if (on) com.cripta.app.ui.theme.Favorite else androidx.compose.ui.graphics.Color.White,
+            modifier = Modifier.size(26.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
     }
+}
+
+/** The mark of a favourite person where it cannot be changed (Home): the same star as everywhere. */
+@Composable
+internal fun FavoriteBadge(modifier: Modifier = Modifier) {
+    Icon(Icons.Filled.Star, "Preferita", tint = com.cripta.app.ui.theme.Favorite,
+        modifier = modifier.size(24.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
 }
 
 private enum class PeopleFilter(val label: String) {
@@ -269,8 +272,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     var filter by rememberSaveable { mutableStateOf(PeopleFilter.MAIN) }
     var query by rememberSaveable { mutableStateOf("") }
     var openId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var reviewing by rememberSaveable { mutableStateOf(false) }
-    var showMerges by rememberSaveable { mutableStateOf(false) }
     var showStats by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     LaunchedEffect(undo) {
@@ -283,12 +284,9 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             TopAppBar(title = { Text("Persone") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
-                    val n = overview?.suggestions ?: 0
-                    TextButton(onClick = { reviewing = true }) { Text(if (n > 0) "Da controllare · $n" else "Da controllare") }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
                         DropdownMenu(menu, { menu = false }) {
-                            DropdownMenuItem(text = { Text("Unioni recenti") }, onClick = { menu = false; showMerges = true })
                             DropdownMenuItem(text = { Text("Diagnostica") }, onClick = { menu = false; showStats = true })
                             DropdownMenuItem(text = { Text("Analizza i media mancanti") }, enabled = progress == null, onClick = { menu = false; vm.startFaceScan() })
                         }
@@ -362,8 +360,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             o.people.firstOrNull { it.id == id }?.let { p -> PersonPage(p, o, vm, onClose = { openId = null }, onOpenFile = onOpenFile, onOpenPerson = { openId = it }) }
                 ?: run { openId = null }
         }
-        if (reviewing) CheckPage(o, vm, personId = null, onClose = { reviewing = false }, onOpenFile = onOpenFile)
-        if (showMerges) MergesDialog(vm) { showMerges = false }
         if (showStats) StatsDialog(vm) { showStats = false }
     }
     message?.let { m ->
@@ -371,32 +367,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
-}
-
-/** Recent merges, automatic and by the user, each with "Annulla". */
-@Composable
-private fun MergesDialog(vm: SettingsViewModel, onClose: () -> Unit) {
-    val merges by vm.faceMerges.collectAsState()
-    val names = vm.people.collectAsState().value?.people?.associate { it.id to it.title }.orEmpty()
-    AlertDialog(onDismissRequest = onClose, title = { Text("Unioni recenti") },
-        text = {
-            if (merges.isEmpty()) Text("Nessuna unione.")
-            else LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                items(merges, key = { it.id }) { m ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${m.mergedName.ifBlank { FaceRepository.UNNAMED }} → ${names[m.keptId] ?: FaceRepository.UNNAMED}",
-                                style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text((if (m.auto) "Automatica, somiglianza %.2f".format(m.similarity) else "Fatta da te") +
-                                " · " + android.text.format.DateUtils.getRelativeTimeSpanString(m.createdAt),
-                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        TextButton(onClick = { vm.undoMerge(m.id) }) { Text("Annulla") }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -411,9 +381,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
     var moving by remember { mutableStateOf(false) }
     var selMenu by remember { mutableStateOf(false) }
     val faceOf = remember(p) { p.faces.groupBy { it.fileId }.mapValues { (_, l) -> l.maxBy { it.width } } }
-    var checking by remember { mutableStateOf(false) }
     var comparing by remember { mutableStateOf<Pair<com.cripta.app.data.db.TrackCard, com.cripta.app.data.db.TrackCard>?>(null) }
-    val doubts by produceState(0, p.id, p.faces.size, p.suggestions.size, checking) { if (!checking) value = vm.faceChecks(p.id).size }
     val ids = p.media.map { it.id }
     fun open(fileId: String, timeMs: Long?) { vm.openPersonMedia(ids, fileId, timeMs); onOpenFile(fileId) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
@@ -467,11 +435,6 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (doubts > 0) item(span = { GridItemSpan(maxLineSpan) }) {
-                    FilledTonalButton(onClick = { checking = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (doubts == 1) "1 dubbio da controllare" else "$doubts dubbi da controllare")
-                    }
-                }
                 items(p.media, key = { it.id }) { f ->
                     val face = faceOf[f.id]
                     val on = f.id in selected
@@ -501,7 +464,6 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                 confirmButton = { TextButton(onClick = { vm.renamePerson(p.id, name); renaming = false }) { Text("Salva") } },
                 dismissButton = { TextButton(onClick = { renaming = false }) { Text("Annulla") } })
         }
-        if (checking) CheckPage(o, vm, personId = p.id, onClose = { checking = false }, onOpenFile = onOpenFile)
         comparing?.let { (a, b) -> CompareDialog(a, b, o, vm) { comparing = null } }
         if (merging) PeoplePicker("Unisci a ${p.title}", o, exclude = p.id, multi = true, vm = vm, onDismiss = { merging = false }) { picked, _ ->
             vm.mergePeople(p.id, picked); merging = false

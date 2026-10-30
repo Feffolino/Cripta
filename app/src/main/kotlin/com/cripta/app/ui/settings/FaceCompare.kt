@@ -189,56 +189,6 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
 
 private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(s / 60, s % 60) }
 
-/**
- * "Da controllare": one question at a time, every kind of doubt in one place (a face that may be
- * someone, two people that may be one), the most likely first, answered with a tap.
- */
-@kotlin.OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun CheckPage(o: FaceRepository.Overview, vm: SettingsViewModel, personId: Long?, onClose: () -> Unit, onOpenFile: (String) -> Unit) {
-    // A snapshot: answering changes the people, the queue keeps its order.
-    val queue by produceState<List<FaceRepository.Check>?>(null, personId) { value = vm.faceChecks(personId) }
-    var at by rememberSaveable { mutableStateOf(0) }
-    val byId = remember(o) { o.people.associateBy { it.id } }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Scaffold(topBar = {
-            val q = queue
-            TopAppBar(title = { Text(if (q != null && at < q.size) "Da controllare · ${at + 1} di ${q.size}" else "Da controllare") },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Chiudi") } })
-        }) { pad ->
-            Column(Modifier.fillMaxSize().padding(pad).padding(16.dp).verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                val q = queue
-                if (q == null) { Text("Ricerca dei dubbi…"); return@Column }
-                if (at >= q.size) {
-                    Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
-                    Text(if (q.isEmpty()) "Niente da controllare." else "Tutto controllato.", style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = onClose) { Text("Chiudi") }
-                    return@Column
-                }
-                val c = q[at]
-                val person = byId[c.personId]
-                val other = c.otherId?.let { byId[it] }
-                fun caption(t: TrackCard, who: String) =
-                    who + (o.files[t.fileId]?.takeIf { VaultRepository.isVideo(it.mimeType) }?.let { " · " + clockOf(t.timeMs) } ?: "")
-                Text(if (other != null) "Sono la stessa persona?" else "È ${person?.title ?: FaceRepository.UNNAMED}?",
-                    style = MaterialTheme.typography.headlineSmall)
-                FacePair(c.a, c.b, caption(c.a, other?.title ?: "Questo volto"), caption(c.b, person?.title ?: FaceRepository.UNNAMED), o, vm) { t ->
-                    vm.openPersonMedia(listOf(t.fileId), t.fileId, t.timeMs); onOpenFile(t.fileId)
-                }
-                Text("Somiglianza %.2f".format(c.similarity), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.heightIn(min = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = { vm.answerCheck(c, same = false); at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Diverse") }
-                    TextButton(onClick = { at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Non so") }
-                    Button(onClick = { vm.answerCheck(c, same = true); at++ }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { Text("Stessa") }
-                }
-            }
-        }
-    }
-}
-
 /** Two media chosen on a person's page, their faces side by side. */
 @Composable
 internal fun CompareDialog(a: TrackCard, b: TrackCard, o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit) {

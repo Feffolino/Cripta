@@ -242,8 +242,7 @@ fun HomeScreen(
                                 Box {
                                     com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp,
                                         if (hidden) Modifier.blur(12.dp) else Modifier)
-                                    if (p.entity.favorite) Icon(Icons.Filled.Star, null, tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
+                                    if (p.entity.favorite) com.cripta.app.ui.settings.FavoriteBadge(Modifier.align(Alignment.TopEnd))
                                 }
                                 Text(if (hidden) "•••" else p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))

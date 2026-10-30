@@ -308,7 +308,6 @@ class ConversionService : Service() {
                             faceJob?.let { it.cancel(); it.join() }
                             faces.resetAll(everything = what == "all")
                         }
-                        if (intent.getBooleanExtra(EX_REGROUP, false)) faces.regroup()
                         faceScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
                     }
                     MODE_INTRO_SCAN -> if (holdsSession) {
