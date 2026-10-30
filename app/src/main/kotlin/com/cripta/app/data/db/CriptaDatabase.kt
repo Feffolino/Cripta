@@ -14,7 +14,7 @@ import net.sqlcipher.database.SupportFactory
         AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class, SegmentRuleEntity::class,
         SignatureEntity::class, SignatureSoundEntity::class,
         FaceScanEntity::class, FaceTrackEntity::class, PersonEntity::class, PersonMediaEntity::class, FaceRejectionEntity::class],
-    version = 22,
+    version = 23,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -244,6 +244,13 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** Favourite people. */
+        internal val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE persons ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
         fun deleteDatabase(context: Context) {
             context.deleteDatabase(NAME)
@@ -261,7 +268,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }

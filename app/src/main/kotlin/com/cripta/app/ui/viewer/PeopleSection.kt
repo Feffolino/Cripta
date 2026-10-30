@@ -99,7 +99,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(newName, { newName = it }, singleLine = true, label = { Text("Nuova persona") }, modifier = Modifier.fillMaxWidth())
                     LazyColumn(Modifier.heightIn(max = 280.dp)) {
-                        items(people.entries.sortedBy { it.value.lowercase() }.toList(), key = { it.key }) { (id, name) ->
+                        items(people.entries.toList(), key = { it.key }) { (id, name) ->
                             Text(name, Modifier.fillMaxWidth().clickable { vm.putInPerson(file.id, track?.id, id); picking = null }.padding(vertical = 12.dp))
                         }
                     }

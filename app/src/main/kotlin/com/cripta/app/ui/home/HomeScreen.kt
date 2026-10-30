@@ -114,6 +114,7 @@ fun HomeScreen(
     val folderPreviews by vm.folderPreviews.collectAsState()
     val loaded by vm.loaded.collectAsState()
     val savedFilters by vm.savedFilters.collectAsState()
+    val favoritePeople by vm.favoritePeople.collectAsState()
     val summary by vm.summary.collectAsState()
     val display by vm.display.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
@@ -206,6 +207,25 @@ fun HomeScreen(
                                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp))
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+            if (favoritePeople.isNotEmpty()) {
+                item {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        items(favoritePeople.size) { i ->
+                            val p = favoritePeople[i]
+                            Column(
+                                Modifier.width(68.dp).clip(MaterialTheme.shapes.small)
+                                    .clickable(role = Role.Button, onClickLabel = "Mostra i media di ${p.title}") { vm.openPerson(p.id); onOpenFolders() }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp)
+                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                             }
                         }
                     }

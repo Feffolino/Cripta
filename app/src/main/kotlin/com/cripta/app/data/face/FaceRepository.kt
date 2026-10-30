@@ -317,7 +317,7 @@ class FaceRepository @Inject constructor(
             Person(p, mediaIds.mapNotNull { byId[it] }, placed.firstOrNull { it.id == p.coverTrackId } ?: placed.maxByOrNull { it.width },
                 placed, own.filter { it.state == "suggested" })
         }.filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.suggestions.isNotEmpty() }
-            .sortedWith(compareBy<Person>({ it.entity.ignored }, { it.entity.name.isBlank() && it.media.size < 2 }, { -it.media.size }, { it.title.lowercase() }))
+            .sortedWith(compareBy<Person>({ it.entity.ignored }, { !it.entity.favorite }, { it.entity.name.isBlank() && it.media.size < 2 }, { -it.media.size }, { it.title.lowercase() }))
         val media = files.count { VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType) }
         Overview(scans.filter { it.fileId in byId }, media, people, byId)
     }
@@ -403,6 +403,8 @@ class FaceRepository @Inject constructor(
     }
 
     suspend fun setCover(personId: Long, trackId: Long) = change { dao.setCover(personId, trackId) }
+
+    suspend fun setFavorite(personId: Long, favorite: Boolean) = change { dao.setFavorite(personId, favorite) }
 
     /** Place again tracks the user took away from someone. */
     private suspend fun replace(ids: List<Long>) = mutex.withLock {

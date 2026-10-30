@@ -152,7 +152,7 @@ class ViewerViewModel @Inject constructor(
     fun personLinksOf(fileId: String) = faces.linksOf(fileId)
     /** Every person's display name, for the face labels and the "Chi è?" list. */
     val peopleNames: kotlinx.coroutines.flow.StateFlow<Map<Long, String>> = faces.people()
-        .map { o -> o.people.filter { !it.entity.ignored }.associate { it.id to it.title } }
+        .map { o -> o.people.filter { !it.entity.ignored }.sortedWith(compareBy({ !it.entity.favorite }, { it.title.lowercase() })).associate { it.id to it.title } }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyMap())
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
