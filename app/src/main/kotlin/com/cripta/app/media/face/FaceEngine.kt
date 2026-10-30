@@ -27,11 +27,19 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
         setSessionLogLevel(ai.onnxruntime.OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR)
         setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
     }
-    private val det = env.createSession(detector, options())
+    /**
+     * The detector (float model) runs on XNNPACK where the runtime has it (Android), else on the
+     * default CPU provider; the recogniser is int8, which the default provider handles best.
+     */
+    private val det = runCatching {
+        env.createSession(detector, options().apply { addXnnpack(mapOf("intra_op_num_threads" to threads.toString())) })
+    }.getOrElse { env.createSession(detector, options()) }
     private val rec = env.createSession(recognizer, options())
 
     /** A face found in a picture: [embedding] and [aligned] are set when it passed the quality checks. */
-    class Face(val det: Detection, val reject: FaceReject?, val embedding: FloatArray?, val aligned: FaceImage?) {
+    class Face(val det: Detection, val reject: FaceReject?, val embedding: FloatArray?, val aligned: FaceImage?,
+               /** Sharpness of the aligned face (null when it was set aside before aligning it). */
+               val sharpness: Double? = null) {
         val yaw get() = FaceAligner.yaw(det.landmarks)
         /** How good an example of its person the face is: confident, large, frontal. */
         val quality get() = det.score * minOf(1f, det.w / FaceAligner.SIZE) * (1f - minOf(yaw, 0.9f))
@@ -54,8 +62,9 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
             }
             if (reject != null) return@map Face(d, reject, null, null)
             val aligned = FaceAligner.align(img, d.landmarks)
-            if (FaceAligner.sharpness(aligned) < MIN_SHARPNESS) Face(d, FaceReject.BLURRY, null, null)
-            else Face(d, null, embed(aligned), aligned)
+            val sharp = FaceAligner.sharpness(aligned)
+            if (sharp < MIN_SHARPNESS) Face(d, FaceReject.BLURRY, null, null, sharp)
+            else Face(d, null, embed(aligned), aligned, sharp)
         }
     }
 

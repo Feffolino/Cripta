@@ -285,33 +285,50 @@ class SettingsViewModel @Inject constructor(
 
     // ---- People ----
     val people = faces.people().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val faceMerges = faces.merges().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val faceProgress = com.cripta.app.work.ConversionService.faceProgress
-    val peopleOpen = kotlinx.coroutines.flow.MutableStateFlow(false)
     /** The answer to "Confronta" / "Perché?", shown in a dialog. */
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    /** The last change that can be taken back, with what the snackbar says. */
+    val faceUndo = kotlinx.coroutines.flow.MutableStateFlow<Pair<String, com.cripta.app.data.face.Undo>?>(null)
     fun setFacesAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setFacesAnalyzeNew(v) }
+    fun setFaceMoments(v: Boolean) = viewModelScope.launch { store.setFaceMoments(v) }
+    fun setPeopleOnHome(v: String) = viewModelScope.launch { store.setPeopleOnHome(v) }
+    fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
     fun startFaceScan() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true)
     fun regroupFaces() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, regroup = true)
     fun restartFaces(everything: Boolean) =
         com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, reset = if (everything) "all" else "auto")
     fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
+    suspend fun similarPeople(personId: Long) = runCatching { faces.similarPeople(personId) }.getOrDefault(emptyList())
+    suspend fun faceStats() = faces.stats()
     private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
         }
     }
+    /** Run [block] and offer its undo as "[message] · Annulla". */
+    private fun undoable(message: String, block: suspend () -> com.cripta.app.data.face.Undo) = faceAction { faceUndo.value = message to block() }
+    fun undoFaceChange() { val u = faceUndo.value ?: return; faceUndo.value = null; faceAction { u.second() } }
     fun renamePerson(id: Long, name: String) = faceAction { faces.rename(id, name) }
-    fun mergePeople(into: Long, others: Collection<Long>) = faceAction { faces.merge(into, others) }
-    fun ignorePerson(id: Long) = faceAction { faces.ignore(id) }
+    fun setPersonFavorite(id: Long, favorite: Boolean) = faceAction { faces.setFavorite(id, favorite) }
+    fun mergePeople(into: Long, others: Collection<Long>) =
+        undoable(if (others.size == 1) "Persone unite" else "${others.size + 1} persone unite") { faces.merge(into, others) }
+    fun keepApart(a: Long, b: Long) = faceAction { faces.keepApart(a, b) }
+    fun undoMerge(mergeId: Long) = faceAction { faces.undoMerge(mergeId) }
+    fun ignorePerson(id: Long) = undoable("Persona nascosta") { faces.ignore(id) }
     fun restorePerson(id: Long) = faceAction { faces.restore(id) }
-    fun removeFromPerson(personId: Long, fileId: String) = faceAction { faces.removeMedia(personId, fileId) }
-    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
-    fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    fun removeFromPerson(personId: Long, fileIds: Collection<String>) =
+        undoable(if (fileIds.size == 1) "Media tolto" else "${fileIds.size} media tolti") { faces.removeMedia(personId, fileIds) }
+    /** "Sposta a…" ([to] a person) or "Dividi" ([to] null: a new person named [newName]). */
+    fun moveToPerson(from: Long, fileIds: Collection<String>, to: Long?, newName: String = "") = faceAction { faces.moveMedia(from, fileIds, to, newName) }
+    fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId) }
+    fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
-    fun setPersonFavorite(personId: Long, favorite: Boolean) = faceAction { faces.setFavorite(personId, favorite) }
     fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
+    fun compareMediaFaces(a: String, b: String) = faceAction { faceMessage.value = faces.compareMedia(a, b) }
     /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
     fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {
         viewerQueue.set(ids)

@@ -78,6 +78,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.ui.draw.drawWithContent
@@ -324,11 +325,12 @@ fun VaultScreen(
     var renameTargetId by remember { mutableStateOf<String?>(null) }
     /** "Confronta audio" answer, shown in a dialog (too long for a snackbar). */
     var compareResult by remember { mutableStateOf<String?>(null) }
+    var compareTitle by remember { mutableStateOf("Confronto audio") }
     compareResult?.let { text ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { compareResult = null },
             confirmButton = { androidx.compose.material3.TextButton(onClick = { compareResult = null }) { Text("Chiudi") } },
-            title = { Text("Confronto audio") },
+            title = { Text(compareTitle) },
             text = { Text(text) },
         )
     }
@@ -618,7 +620,13 @@ fun VaultScreen(
                     // Two analysed videos: how much audio their starts share (to check the recognition).
                     if (videoCount == 2 && selection.size == 2) add(SelAction(Icons.Filled.GraphicEq, "Confronta audio") {
                         val (a, b) = selection.toList()
-                        vm.compareAudio(a, b) { compareResult = it }
+                        vm.compareAudio(a, b) { compareTitle = "Confronto audio"; compareResult = it }
+                    })
+                    // Two photos or videos: why their faces are (not) the same person.
+                    val visual = files.count { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
+                    if (visual == 2 && selection.size == 2) add(SelAction(Icons.Filled.Face, "Confronta volti") {
+                        val (a, b) = selection.toList()
+                        vm.compareFaces(a, b) { compareTitle = "Confronto volti"; compareResult = it }
                     })
                     if (selection.size == 1) add(SelAction(Icons.Filled.Edit, "Rinomina") { renameTargetId = selection.first() })
                 }

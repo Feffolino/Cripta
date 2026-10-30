@@ -23,7 +23,23 @@ class TrackDraft(val sightings: List<Sighting>) {
     val frames: Long = sightings.fold(0L) { m, s -> m or (1L shl s.frame.coerceIn(0, 63)) }
     /** Best first: the face shown and the embeddings kept. */
     val best: List<Sighting> = sightings.sortedByDescending { it.quality }
-    val embeddings: List<FloatArray> get() = best.take(FaceTracker.KEPT).map { it.embedding }
+    /**
+     * The mean of all its faces (steadier than any single frame) and its best ones; a single face
+     * is kept as it is.
+     */
+    val embeddings: List<FloatArray>
+        get() = if (sightings.size < 2) listOf(best.first().embedding)
+            else listOf(mean(sightings.map { it.embedding })) + best.take(FaceTracker.KEPT - 1).map { it.embedding }
+    /** Every moment it shows in (ms). */
+    val times: List<Long> get() = sightings.map { it.timeMs }.distinct().sorted()
+
+    private fun mean(list: List<FloatArray>): FloatArray {
+        val m = FloatArray(list.first().size)
+        for (e in list) for (i in m.indices) m[i] += e[i]
+        val n = kotlin.math.sqrt(m.sumOf { (it * it).toDouble() }).toFloat().coerceAtLeast(1e-6f)
+        for (i in m.indices) m[i] /= n
+        return m
+    }
     val quality get() = best.first().quality
 }
 
@@ -121,30 +137,48 @@ class PeopleIndex {
             Verdict(p.id, s, why)
         }
 
+    /** How much two people look alike: the mean of their two best face pairs. */
+    fun pairScore(a: Person, b: Person): Float {
+        var first = -1f; var second = -1f
+        for ((_, x) in a.exemplars) for ((_, y) in b.exemplars) {
+            val s = similarity(x, y)
+            if (s > first) { second = first; first = s } else if (s > second) second = s
+        }
+        return if (second < -0.5f) first else (first + second) / 2
+    }
+
+    /** Why [a] and [b] can never be one person, or null. */
+    fun pairBlocked(a: Person, b: Person): String? = when {
+        b.frames.any { (f, m) -> (a.frames[f] ?: 0L) and m != 0L } -> "compaiono insieme nello stesso fotogramma"
+        a.exemplars.any { (t, _) -> t.id to b.id in rejected } || b.exemplars.any { (t, _) -> t.id to a.id in rejected } -> "separati da te"
+        else -> null
+    }
+
+    /** People alike [id] (most alike first), each with its score, never blocked pairs. */
+    fun similarTo(id: Long, min: Float = FaceThresholds.SUGGEST): List<Pair<Long, Float>> {
+        val a = people[id]?.takeIf { it.exemplars.isNotEmpty() } ?: return emptyList()
+        return people.values.filter { it.id != id && !it.ignored && it.exemplars.isNotEmpty() && pairBlocked(a, it) == null }
+            .map { it.id to pairScore(a, it) }.filter { it.second >= min }.sortedByDescending { it.second }
+    }
+
     /**
-     * Unnamed people that turned out to be the same (two of their faces alike, no conflict): pairs
-     * (kept, merged), the older kept. Only [touched] people are compared with the rest.
+     * Unnamed people that turned out to be the same (two of their faces alike, no conflict):
+     * (kept, merged, similarity), the older kept. Only [touched] people are compared with the rest.
+     * People with a name are never merged automatically: they are offered as "Persone simili".
      */
-    fun merges(touched: Collection<Long>): List<Pair<Long, Long>> {
-        val out = ArrayList<Pair<Long, Long>>()
+    fun merges(touched: Collection<Long>): List<Triple<Long, Long, Float>> {
+        val out = ArrayList<Triple<Long, Long, Float>>()
         val gone = HashSet<Long>()
         for (id in touched.sorted()) {
             val a = people[id]?.takeIf { !it.named && !it.ignored && it.exemplars.isNotEmpty() } ?: continue
             if (a.id in gone) continue
             for (b in people.values.toList()) {
-                if (b.id == a.id || b.id in gone || b.ignored || b.exemplars.isEmpty()) continue
-                if (b.frames.any { (f, m) -> (a.frames[f] ?: 0L) and m != 0L }) continue
-                if (a.exemplars.any { (t, _) -> t.id to b.id in rejected } || b.exemplars.any { (t, _) -> t.id to a.id in rejected }) continue
-                var first = -1f; var second = -1f
-                for ((_, x) in a.exemplars) for ((_, y) in b.exemplars) {
-                    val s = similarity(x, y)
-                    if (s > first) { second = first; first = s } else if (s > second) second = s
-                }
-                val score = if (second < -0.5f) first else (first + second) / 2
+                if (b.id == a.id || b.id in gone || b.ignored || b.named || b.exemplars.isEmpty()) continue
+                if (pairBlocked(a, b) != null) continue
+                val score = pairScore(a, b)
                 if (score < FaceThresholds.AUTO) continue
-                // Into the named one, else into the older one.
-                val (keep, drop) = if (b.named || b.id < a.id) b to a else a to b
-                out += keep.id to drop.id
+                val (keep, drop) = if (b.id < a.id) b to a else a to b
+                out += Triple(keep.id, drop.id, score)
                 gone += drop.id
                 for ((t, e) in drop.exemplars) { if (keep.exemplars.size < MAX_EXEMPLARS) keep.exemplars += t to e }
                 drop.frames.forEach { (f, m) -> keep.frames.merge(f, m) { x, y -> x or y } }

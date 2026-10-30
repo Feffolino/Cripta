@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -133,6 +134,10 @@ data class Settings(
     val introAnalyzeNew: Boolean = true,
     /** People: analyse each new photo and video's faces in the background. */
     val facesAnalyzeNew: Boolean = true,
+    /** People: marks on the video's progress bar where the people show up. */
+    val faceMoments: Boolean = false,
+    /** People on Home: "off", "blur" (blurred until touched) or "on". */
+    val peopleOnHome: String = "blur",
     /** Intro/outro: fingerprint only the first and last minute of each video (much faster). */
     val introQuickScan: Boolean = true,
     /** Player: skip a known intro / outro by itself instead of offering the button. */
@@ -214,6 +219,8 @@ class SettingsStore @Inject constructor(
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
     private val introAnalyzeKey = booleanPreferencesKey("intro_analyze_new")
     private val facesAnalyzeKey = booleanPreferencesKey("faces_analyze_new")
+    private val faceMomentsKey = booleanPreferencesKey("face_moments")
+    private val peopleHomeKey = stringPreferencesKey("people_on_home")
     private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
     private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
     private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
@@ -286,6 +293,8 @@ class SettingsStore @Inject constructor(
             controlsTimeoutSec = (p[controlsTimeoutKey] ?: 4).let { if (it in listOf(2, 4, 8)) it else 4 },
             introAnalyzeNew = p[introAnalyzeKey] ?: true,
             facesAnalyzeNew = p[facesAnalyzeKey] ?: true,
+            faceMoments = p[faceMomentsKey] ?: false,
+            peopleOnHome = (p[peopleHomeKey] ?: "blur").let { if (it in listOf("off", "blur", "on")) it else "blur" },
             introQuickScan = p[introQuickKey] ?: true,
             introAutoSkip = p[introAutoKey] ?: false,
             outroAutoSkip = p[outroAutoKey] ?: false,
@@ -325,6 +334,8 @@ class SettingsStore @Inject constructor(
     suspend fun setControlsTimeout(sec: Int) { context.dataStore.edit { it[controlsTimeoutKey] = sec } }
     suspend fun setIntroAnalyzeNew(v: Boolean) { context.dataStore.edit { it[introAnalyzeKey] = v } }
     suspend fun setFacesAnalyzeNew(v: Boolean) { context.dataStore.edit { it[facesAnalyzeKey] = v } }
+    suspend fun setFaceMoments(v: Boolean) { context.dataStore.edit { it[faceMomentsKey] = v } }
+    suspend fun setPeopleOnHome(v: String) { context.dataStore.edit { it[peopleHomeKey] = v } }
     suspend fun setIntroQuickScan(v: Boolean) { context.dataStore.edit { it[introQuickKey] = v } }
     suspend fun setIntroAutoSkip(v: Boolean) { context.dataStore.edit { it[introAutoKey] = v } }
     suspend fun setOutroAutoSkip(v: Boolean) { context.dataStore.edit { it[outroAutoKey] = v } }
@@ -410,7 +421,7 @@ class SettingsStore @Inject constructor(
             "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey,
-                introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey)
+                introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey)
             "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy)

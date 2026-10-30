@@ -1098,7 +1098,8 @@ class ConversionService : Service() {
         val skipped = java.util.concurrent.atomic.AtomicInteger(0)
         fun summary() = "${analysed.get()} analizzati" + (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "")
         try {
-            // Media analysed by a scan that stopped before placing their faces.
+            // Faces of media deleted for good go; media analysed by a scan that stopped before placing them are placed.
+            faces.purgeDeleted()
             faces.placeNew()
             do {
                 faceRerun = false
@@ -1149,7 +1150,8 @@ class ConversionService : Service() {
                     }
                 }
             } while (faceRerun)
-            if (faceManual || analysed.get() > 0) notifyResult("Analisi dei volti completata", summary(), ResultKind.FACES)
+            if (faceManual || analysed.get() > 0) notifyResult("Analisi dei volti completata", summary(), ResultKind.FACES,
+                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_open, "Vedi persone", openAppIntent(openPeople = true))))
         } catch (e: kotlinx.coroutines.CancellationException) {
             notifyResult("$label annullata", summary(), ResultKind.FACES, state = ResultState.CANCELLED)
             throw e
@@ -1577,10 +1579,13 @@ class ConversionService : Service() {
     private enum class ResultState { DONE, FAILED, CANCELLED }
 
     /** Tap on a notification: bring the app to the front (optionally straight to the duplicate results). */
-    private fun openAppIntent(openDuplicates: Boolean = false): android.app.PendingIntent = android.app.PendingIntent.getActivity(
-        this, if (openDuplicates) 11 else 10,
+    private fun openAppIntent(openDuplicates: Boolean = false, openPeople: Boolean = false): android.app.PendingIntent = android.app.PendingIntent.getActivity(
+        this, if (openPeople) 12 else if (openDuplicates) 11 else 10,
         Intent(this, com.cripta.app.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            .apply { if (openDuplicates) putExtra(com.cripta.app.MainActivity.EXTRA_OPEN_DUPLICATES, true) },
+            .apply {
+                if (openDuplicates) putExtra(com.cripta.app.MainActivity.EXTRA_OPEN_DUPLICATES, true)
+                if (openPeople) putExtra(com.cripta.app.MainActivity.EXTRA_OPEN_PEOPLE, true)
+            },
         android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
     )
 

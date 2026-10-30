@@ -175,10 +175,19 @@ class HomeViewModel @Inject constructor(
     fun openFolder(id: Long) = navigator.openFolder(id)
 
     /** Ask the Cartelle screen to apply a saved filter (the caller then switches tab). */
-    /** Starred people for the Home row. */
-    val favoritePeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
-        .map { o -> o.people.filter { it.entity.favorite && !it.entity.ignored } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** The Home row of people: starred first, then the most seen; empty when Settings hides it. */
+    val homePeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> =
+        combine(faces.people(), settings.settings.map { it.peopleOnHome }) { o, mode ->
+            if (mode == "off") emptyList() else o.people.filter { it.main }.take(16)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** "blur": faces blurred until the row is touched. */
+    val peopleBlurred: StateFlow<Boolean> = settings.settings.map { it.peopleOnHome == "blur" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setPersonFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { runCatching { faces.setFavorite(id, favorite) } }
+
+    fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
 
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
 

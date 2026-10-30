@@ -155,6 +155,17 @@ class ViewerViewModel @Inject constructor(
         .map { o -> o.people.filter { !it.entity.ignored }.sortedWith(compareBy({ !it.entity.favorite }, { it.title.lowercase() })).associate { it.id to it.title } }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyMap())
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val favoritePeople: kotlinx.coroutines.flow.StateFlow<Set<Long>> = faces.people()
+        .map { o -> o.people.filter { it.entity.favorite }.map { it.id }.toSet() }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+    fun setPersonFavorite(personId: Long, favorite: Boolean) = faceAction { faces.setFavorite(personId, favorite) }
+    /** Where people show in [fileId] (ms), for the progress bar's marks; empty while "Momenti nel lettore" is off. */
+    fun moments(fileId: String): kotlinx.coroutines.flow.Flow<LongArray> =
+        kotlinx.coroutines.flow.combine(settingsStore.settings.map { it.faceMoments }, faces.facesOf(fileId)) { on, cards ->
+            if (!on) LongArray(0)
+            else cards.filter { it.personId != null && it.state != "suggested" }.flatMap { it.moments.ifEmpty { listOf(it.timeMs) } }
+                .distinct().sorted().toLongArray()
+        }
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
     private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
