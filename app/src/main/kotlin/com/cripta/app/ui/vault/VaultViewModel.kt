@@ -342,10 +342,6 @@ class VaultViewModel @Inject constructor(
         onResult(runCatching { intro.compare(idA, idB) }.getOrElse { "Confronto non riuscito" })
     }
 
-    /** "Confronta volti": the faces of two media, how alike and why (not) the same person. */
-    fun compareFaces(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
-        onResult(runCatching { faces.compareMedia(idA, idB) }.getOrElse { "Confronto non riuscito" })
-    }
 
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()

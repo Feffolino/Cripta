@@ -17,3 +17,4 @@ keystore.properties
 *.keystore
 *.jks
 __pycache__/
+.kotlin/

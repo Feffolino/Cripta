@@ -632,10 +632,6 @@ fun VaultScreen(
                             selection = emptySet()
                         }
                     })
-                    if (visual == 2 && selection.size == 2) add(SelAction(Icons.Filled.Face, "Confronta volti") {
-                        val (a, b) = selection.toList()
-                        vm.compareFaces(a, b) { compareTitle = "Confronto volti"; compareResult = it }
-                    })
                     if (selection.size == 1) add(SelAction(Icons.Filled.Edit, "Rinomina") { renameTargetId = selection.first() })
                 }
                 SelectionBar(actions)

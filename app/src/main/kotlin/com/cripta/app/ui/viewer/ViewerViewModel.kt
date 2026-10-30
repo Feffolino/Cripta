@@ -175,7 +175,6 @@ class ViewerViewModel @Inject constructor(
     }
     fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
-    fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
     fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     fun analyseFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId))
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */

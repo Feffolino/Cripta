@@ -207,11 +207,6 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 Text("Nitidezza dei volti allineati (sotto ${"%.0f".format(com.cripta.app.media.face.FaceEngine.MIN_SHARPNESS)} = sfocati):",
                     style = MaterialTheme.typography.labelLarge)
                 x.sharp.forEachIndexed { i, n -> Text("  ${FaceStats.bandLabel(i)}: $n") }
-                Text("Suggerimenti confermati: ${x.confirmed.size}" + (if (x.confirmed.isNotEmpty()) ", somiglianza da %.2f a %.2f".format(x.confirmed.min(), x.confirmed.max()) else ""))
-                Text("Rifiutati da te: ${x.rejected.size}" + (if (x.rejected.isNotEmpty()) ", somiglianza da %.2f a %.2f".format(x.rejected.min(), x.rejected.max()) else ""))
-                Text("Unioni automatiche: ${x.autoMerges}")
-                Text("Soglie attuali: unione da %.2f, suggerimento da %.2f.".format(com.cripta.app.media.face.FaceThresholds.AUTO,
-                    com.cripta.app.media.face.FaceThresholds.SUGGEST), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
@@ -246,14 +241,13 @@ internal fun FavoriteBadge(modifier: Modifier = Modifier) {
 }
 
 private enum class PeopleFilter(val label: String) {
-    MAIN("Persone"), FAVORITE("Preferite"), NAMED("Con nome"), SINGLE("Una volta"), SUGGESTED("Da confermare"), IGNORED("Ignorate"), NONE("Senza volti");
+    MAIN("Persone"), FAVORITE("Preferite"), NAMED("Con nome"), SINGLE("Una volta"), IGNORED("Ignorate"), NONE("Senza volti");
 
     fun matches(p: FaceRepository.Person) = when (this) {
         MAIN -> p.main
         FAVORITE -> !p.entity.ignored && p.entity.favorite
         NAMED -> !p.entity.ignored && p.entity.name.isNotBlank()
         SINGLE -> !p.entity.ignored && !p.main
-        SUGGESTED -> !p.entity.ignored && p.suggestions.isNotEmpty()
         IGNORED -> p.entity.ignored
         NONE -> false
     }
@@ -343,14 +337,14 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     Column(Modifier.clickable(onClickLabel = "Apri ${p.title}") { openId = p.id }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 96.dp,
-                                if (p.suggestions.isNotEmpty()) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                                Modifier)
                             if (!p.entity.ignored) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
                         Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                        Text("${p.media.size} media" + if (p.suggestions.isNotEmpty()) " · ${p.suggestions.size} da confermare" else "",
+                        Text("${p.media.size} media",
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
@@ -399,7 +393,6 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                             val face = one?.let { faceOf[it] }
                             if (face != null) {
                                 DropdownMenuItem(text = { Text("Usa come suo volto") }, onClick = { selMenu = false; vm.setPersonCover(p.id, face.id); selected = emptySet() })
-                                DropdownMenuItem(text = { Text("Confronta con le altre persone") }, onClick = { selMenu = false; vm.explainFace(face.id) })
                             }
                             if (one != null) DropdownMenuItem(text = { Text("Volti di questo media") }, onClick = { selMenu = false; vm.describeMedia(one) })
                             val two = selected.toList().takeIf { it.size == 2 }?.mapNotNull { faceOf[it] }?.takeIf { it.size == 2 }
