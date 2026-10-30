@@ -137,7 +137,7 @@ class FaceRepository @Inject constructor(
                 faces++
                 f.sharpness?.let { sharp[FaceStats.band(it)]++ }
                 if (f.reject != null) rejects.merge(f.reject, 1, Int::plus)
-                else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f)
+                else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f, f.det.w)
             }
             return found.isNotEmpty()
         }
@@ -166,19 +166,44 @@ class FaceRepository @Inject constructor(
         }
         val tracks = FaceTracker.build(sightings)
         db.withTransaction {
-            dao.deleteTracksOf(file.id)
-            for (t in tracks) {
+            // Faces added by hand (no sampled frame) are the user's: a new analysis keeps them.
+            val old = dao.trackRowsOf(listOf(file.id)).filter { it.frames != 0L }
+            dao.deleteScannedTracksOf(file.id)
+            val added = tracks.map { t ->
                 val best = t.best.first()
                 val face = best.payload as FaceEngine.Face
-                dao.addTrack(FaceTrackEntity(fileId = file.id, frames = t.frames, timeMs = best.timeMs, faceCount = t.sightings.size,
+                val box = face.box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()
+                TrackInfo(dao.addTrack(FaceTrackEntity(fileId = file.id, frames = t.frames, timeMs = best.timeMs, faceCount = t.sightings.size,
                     width = face.det.w.toInt(), quality = t.quality, embeddings = EmbeddingCodec.encode(t.embeddings),
-                    crop = jpeg(face.aligned!!), times = t.times.joinToString(",")))
+                    crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = box)), file.id, t.frames, t.embeddings, t.quality, t.width)
             }
+            if (old.isNotEmpty()) carry(old, added)
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
                 rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, VERSION, System.currentTimeMillis(),
                 ms = android.os.SystemClock.elapsedRealtime() - started, stats = FaceStats.encode(sharp, duplicates, extra)))
         }
         return status == "ok"
+    }
+
+    /** Media analysed again since the index was loaded: the faces it had there are gone. */
+    private val staleFiles: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * The user's choices about [old] (the faces a media had before it was analysed again) move to
+     * the new faces they match: same frames and alike. A confirmed face comes back "carried" and is
+     * checked against its person when placed ([settle]).
+     */
+    private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>) {
+        val rejections = dao.rejections().groupBy { it.trackId }
+        for (o in old) {
+            val before = info(o)
+            val match = added.filter { it.frames and o.frames != 0L }.map { it to maxPair(it, before) }
+                .filter { it.second >= CARRY }.maxByOrNull { it.second }?.first ?: continue
+            if (o.state == "manual" && o.personId != null) dao.place(match.id, o.personId, "carried", o.similarity)
+            for (r in rejections[o.id].orEmpty()) { dao.deleteRejection(o.id, r.personId); dao.addRejection(r.copy(trackId = match.id)) }
+            dao.moveCover(o.id, match.id)
+        }
+        staleFiles += old.first().fileId
     }
 
     private class FrameRun(val read: Int, val failed: Int, val duplicates: Int, val extra: Int, val why: String?)
@@ -229,11 +254,11 @@ class FaceRepository @Inject constructor(
     }
 
     /** A photo decoded already turned upright (EXIF) and downsampled. */
-    private suspend fun photo(file: FileEntity): FaceImage? {
+    private suspend fun photo(file: FileEntity, side: Int = FRAME_SIDE): FaceImage? {
         val bytes = repo.decryptBytes(file)
         val bmp = runCatching {
             ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { dec, info, _ ->
-                val k = minOf(1.0, FRAME_SIDE.toDouble() / maxOf(info.size.width, info.size.height))
+                val k = minOf(1.0, side.toDouble() / maxOf(info.size.width, info.size.height))
                 dec.setTargetSize(maxOf(1, (info.size.width * k).toInt()), maxOf(1, (info.size.height * k).toInt()))
                 dec.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
@@ -241,10 +266,10 @@ class FaceRepository @Inject constructor(
             val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, b)
             var s = 1
-            while (maxOf(b.outWidth, b.outHeight) / (s * 2) >= FRAME_SIDE) s *= 2
+            while (maxOf(b.outWidth, b.outHeight) / (s * 2) >= side) s *= 2
             inSampleSize = s
         }) ?: return null
-        return faceImage(bmp, FRAME_SIDE)
+        return faceImage(bmp, side)
     }
 
     private fun faceImage(src: Bitmap, side: Int): FaceImage {
@@ -265,7 +290,8 @@ class FaceRepository @Inject constructor(
 
     // ---- Placing faces among the people ----------------------------------------------------
 
-    private fun info(r: TrackRow) = TrackInfo(r.id, r.fileId, r.frames, EmbeddingCodec.decode(r.embeddings), r.quality)
+    private fun info(r: TrackRow) = TrackInfo(r.id, r.fileId, r.frames, EmbeddingCodec.decode(r.embeddings), r.quality,
+        r.width.takeIf { it > 0 }?.toFloat() ?: FaceThresholds.FULL_WIDTH)
 
     /** Every person with their placed faces, the user's rejections included. */
     private suspend fun loadIndex(): PeopleIndex {
@@ -290,9 +316,11 @@ class FaceRepository @Inject constructor(
             if (ids.isEmpty()) return@withContext 0
             val idx = currentIndex()
             try {
-                val rows = ids.chunked(500).flatMap { dao.trackRowsOf(it) }.filter { it.personId == null }
+                staleFiles.toSet().takeIf { it.isNotEmpty() }?.let { idx.forget(it); staleFiles.removeAll(it) }
+                val rows = ids.chunked(500).flatMap { dao.trackRowsOf(it) }
                 db.withTransaction {
-                    place(idx, rows.map { info(it) })
+                    val lost = settle(idx, rows.filter { it.state == "carried" })
+                    place(idx, rows.filter { it.personId == null }.map { info(it) } + lost)
                     ids.chunked(500).forEach { dao.markClustered(it) }
                 }
             } catch (e: Throwable) {
@@ -301,6 +329,24 @@ class FaceRepository @Inject constructor(
             }
             ids.size
         }
+    }
+
+    /**
+     * Confirmed faces of media analysed again: they stay confirmed when they still look like their
+     * person, else they wait as a suggestion for them (a name used to confirm every face its person
+     * had, mistakes included). Returns those whose person is gone, to be placed like new ones.
+     */
+    private suspend fun settle(idx: PeopleIndex, carried: List<TrackRow>): List<TrackInfo> {
+        val lost = ArrayList<TrackInfo>()
+        for (r in carried) {
+            val t = info(r)
+            val p = r.personId?.let { idx.people[it] }
+            if (p == null) { dao.place(t.id, null, "auto", 0f); lost += t; continue }
+            val s = if (p.exemplars.isEmpty()) 1f else idx.score(t, p)
+            if (s >= FaceThresholds.SUGGEST) { dao.place(t.id, p.id, "manual", r.similarity); idx.add(p.id, t) }
+            else dao.place(t.id, p.id, "suggested", s)
+        }
+        return lost
     }
 
     /** Place [tracks] (best first), then merge the unnamed people that turned out to be the same. */
@@ -432,6 +478,47 @@ class FaceRepository @Inject constructor(
         return dao.persons().filter { !it.ignored && it.name.contains(q, ignoreCase = true) }.flatMap { dao.mediaOf(it.id) }.toSet()
     }
 
+    /**
+     * A doubt for "Da controllare": is the face [trackId] the person [personId]? Or are [otherId]
+     * and [personId] one person (the answer keeps [personId])? [a] and [b]: the two faces to show.
+     */
+    class Check(val a: TrackCard, val b: TrackCard, val similarity: Float, val personId: Long, val trackId: Long? = null, val otherId: Long? = null)
+
+    /** Every doubt (or those about [only]), the most likely first. */
+    suspend fun checks(only: Long? = null): List<Check> = mutex.withLock {
+        withContext(Dispatchers.Default) {
+            val idx = currentIndex()
+            val cards = dao.allCards().associateBy { it.id }
+            val out = ArrayList<Check>()
+            fun nearest(x: Collection<TrackInfo>, y: Collection<TrackInfo>): Pair<TrackCard, TrackCard>? {
+                var best: Pair<TrackInfo, TrackInfo>? = null; var s = -2f
+                for (a in x) for (b in y) maxPair(a, b).let { if (it > s) { s = it; best = a to b } }
+                return best?.let { (a, b) -> cards[a.id]?.let { ca -> cards[b.id]?.let { ca to it } } }
+            }
+            for (c in cards.values) {
+                if (c.state != "suggested") continue
+                val p = c.personId?.let { idx.people[it] }?.takeIf { !it.ignored && (only == null || it.id == only) } ?: continue
+                val t = dao.trackRow(c.id)?.let { info(it) } ?: continue
+                nearest(listOf(t), p.exemplars.map { it.first }.distinct())?.let { (a, b) -> out += Check(a, b, c.similarity, p.id, trackId = c.id) }
+            }
+            val seen = HashSet<Pair<Long, Long>>()
+            for (id in only?.let { listOf(it) } ?: idx.people.keys.toList()) {
+                coroutineContext.ensureActive()
+                val a = idx.people[id]?.takeIf { !it.ignored } ?: continue
+                for ((bid, s) in idx.similarTo(id)) {
+                    if (!seen.add(minOf(id, bid) to maxOf(id, bid))) continue
+                    val b = idx.people[bid] ?: continue
+                    // The one with a name, else the one with more faces, keeps the other.
+                    val (keep, drop) = if (b.named && !a.named || (a.named == b.named && b.members.size > a.members.size)) b to a else a to b
+                    nearest(drop.exemplars.map { it.first }.distinct(), keep.exemplars.map { it.first }.distinct())?.let { (x, y) ->
+                        out += Check(x, y, s, keep.id, otherId = drop.id)
+                    }
+                }
+            }
+            out.sortedByDescending { it.similarity }.take(MAX_CHECKS)
+        }
+    }
+
     /** People who look like [personId] but were not merged: (id, similarity), most alike first. */
     suspend fun similarPeople(personId: Long): List<Pair<Long, Float>> = mutex.withLock {
         withContext(Dispatchers.Default) { currentIndex().similarTo(personId).take(6) }
@@ -443,11 +530,11 @@ class FaceRepository @Inject constructor(
         db.withTransaction { block() }.also { index = null }
     }
 
-    /** Naming someone confirms their faces: they stay with them whatever the next scans find. */
-    suspend fun rename(personId: Long, name: String) = change {
-        dao.rename(personId, name.trim())
-        if (name.isNotBlank()) dao.lockTracks(personId)
-    }
+    /**
+     * A name does not confirm the faces: a wrong one would stay with the person for good. Only the
+     * faces the user confirms one by one do.
+     */
+    suspend fun rename(personId: Long, name: String) = change { dao.rename(personId, name.trim()) }
 
     suspend fun setFavorite(personId: Long, favorite: Boolean) = change { dao.setFavorite(personId, favorite) }
 
@@ -544,6 +631,46 @@ class FaceRepository @Inject constructor(
         val before = dao.card(trackId)
         change { dao.confirm(trackId, personId); dao.deleteEmptyPersons() }
         return { change { if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() } }
+    }
+
+    /** A face the user can add by hand: shown even when the analysis would set it aside ([why]). */
+    class FoundFace(val face: FaceEngine.Face, val picture: Bitmap, val timeMs: Long) {
+        val why get() = face.reject?.label
+    }
+
+    /**
+     * Every face in [file] at [timeMs] (a photo: the photo), found on a larger picture than the
+     * analysis uses and none set aside: the user picks the one to add.
+     */
+    suspend fun facesAt(file: FileEntity, timeMs: Long): List<FoundFace> = withContext(Dispatchers.Default) {
+        val img = if (VaultRepository.isVideo(file.mimeType)) {
+            val r = MediaMetadataRetriever()
+            val channel = repo.seekableChannel(file)
+            try {
+                r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+                r.getFrameAtTime(timeMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)?.let { faceImage(it, 2 * FRAME_SIDE) }
+            } finally {
+                runCatching { r.release() }; runCatching { channel.close() }
+            }
+        } else photo(file, 2 * FRAME_SIDE)
+        img ?: return@withContext emptyList()
+        engine().analyze(img, all = true).filter { it.embedding != null }.sortedByDescending { it.det.w }.map { f ->
+            val p = f.preview!!
+            FoundFace(f, Bitmap.createBitmap(p.argb, p.width, p.height, Bitmap.Config.ARGB_8888), timeMs)
+        }
+    }
+
+    /**
+     * [f] added by hand to [personId]: a confirmed face of its own (no sampled frame, so a new
+     * analysis keeps it) that also teaches the person a new look.
+     */
+    suspend fun addFace(file: FileEntity, f: FoundFace, personId: Long) = change {
+        val face = f.face
+        val id = dao.addTrack(FaceTrackEntity(fileId = file.id, frames = 0L, timeMs = f.timeMs, faceCount = 1, width = face.det.w.toInt(),
+            quality = face.quality, embeddings = EmbeddingCodec.encode(listOf(face.embedding!!)), crop = jpeg(face.preview!!),
+            times = f.timeMs.toString(), box = face.box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()))
+        dao.confirm(id, personId)
+        dao.removePersonMedia(personId, file.id)
     }
 
     /** A media added to [personId] without one of its faces. */
@@ -702,7 +829,11 @@ class FaceRepository @Inject constructor(
         /** What an unnamed person is called on screen: faces found get no name, the user gives one. */
         const val UNNAMED = "Senza nome"
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
-        const val VERSION = 2
+        const val VERSION = 3
+        /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
+        private const val CARRY = 0.6f
+        /** Doubts shown at once in "Da controllare" (the most likely). */
+        private const val MAX_CHECKS = 300
         /** Frames and photos are read at most this large; detection runs on half of it. */
         const val FRAME_SIDE = 1280
         /** Where a sampled frame shows a face, the exact frame this much later is read too. */

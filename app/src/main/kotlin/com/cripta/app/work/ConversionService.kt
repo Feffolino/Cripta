@@ -993,12 +993,12 @@ class ConversionService : Service() {
                         val eta = EtaEstimator()
                         var done = 0
                         for (part in backlog.chunked(50)) {
-                            notifyScan(ResultKind.INTRO, build(label, done * 100 / backlog.size,
-                                sub = "Confronto dei video già analizzati: $done di ${backlog.size}".also {
-                                    introProgress.value = IntroProgress(done, backlog.size, "Confronto dei video già analizzati")
-                                },
-                                eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null,
-                                cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO))
+                            introProgress.value = IntroProgress(done, backlog.size, "Confronto dei video già analizzati")
+                            notifyScan(ResultKind.INTRO, done * 100 / backlog.size) { others ->
+                                build(label, done * 100 / backlog.size, sub = "Confronto dei video già analizzati: $done di ${backlog.size}",
+                                    eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null, header = others,
+                                    cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO)
+                            }
                             found += intro.matchNew(part)
                             done += part.size
                         }
@@ -1017,9 +1017,11 @@ class ConversionService : Service() {
                     val total = maxOf(1, todo.size + askedIds.size)
                     introProgress.value = IntroProgress(d, total, "Analisi dei video")
                     val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
-                    notifyScan(ResultKind.INTRO, build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
-                        eta = if (d > 0) eta.left(d.toFloat() / total) else null,
-                        cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO))
+                    notifyScan(ResultKind.INTRO, d * 100 / total) { others ->
+                        build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
+                            eta = if (d > 0) eta.left(d.toFloat() / total) else null, header = others,
+                            cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO)
+                    }
                 }
                 progress()
                 var next = 0
@@ -1115,9 +1117,11 @@ class ConversionService : Service() {
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
                     faceProgress.value = IntroProgress(d, total, "Analisi dei volti")
-                    notifyScan(ResultKind.FACES, build(label, d * 100 / total, sub = "$d di $total media analizzati",
-                        eta = if (d > 0) eta.left(d.toFloat() / total) else null,
-                        cancelable = true, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES))
+                    notifyScan(ResultKind.FACES, d * 100 / total) { others ->
+                        build(label, d * 100 / total, sub = "$d di $total media analizzati",
+                            eta = if (d > 0) eta.left(d.toFloat() / total) else null, header = others,
+                            cancelable = true, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
+                    }
                 }
                 progress()
                 var next = 0
@@ -1540,41 +1544,30 @@ class ConversionService : Service() {
      * dropped, so the island could stand at 60 % when the operation ended); a new operation
      * (another title) always goes through at once.
      */
-    /** The background scan (intro, faces) whose progress has the foreground notification, if any. */
-    private var scanOwner: ResultKind? = null
     /** When another operation (import, download, conversion…) last posted its progress. */
     private var otherAt = 0L
-    /** Scans showing their progress in a notification of their own, and when they last posted it. */
-    private val sideAt = HashMap<ResultKind, Long>()
-    private fun sideId(kind: ResultKind) = kind.id + 1000
+    private val scans = ScanNotices<ResultKind> { if (it == ResultKind.INTRO) "Intro" else it.label }
+    /** Each running scan's notification, given the line about the other scans. */
+    private val scanMakers = HashMap<ResultKind, (String?) -> Notification>()
 
     /**
-     * A background scan's progress. Two at once (intro and faces) used to overwrite each other in
-     * the one foreground notification: the first keeps it, the other gets a notification of its
-     * own, and takes the foreground one over when the first ends ([releaseScan]).
+     * A background scan's progress ([pct] %). Scans never get a notification of their own: the
+     * first one running shows the others in the foreground one ([ScanNotices]).
      */
-    private fun notifyScan(kind: ResultKind, n: Notification) {
+    private fun notifyScan(kind: ResultKind, pct: Int, make: (others: String?) -> Notification) {
         synchronized(lock) {
-            val now = SystemClock.elapsedRealtime()
-            val otherBusy = otherAt > 0 && now - otherAt < 10_000
-            if (!otherBusy && (scanOwner == null || scanOwner == kind)) {
-                scanOwner = kind
-                if (sideAt.remove(kind) != null) runCatching { getSystemService(NotificationManager::class.java).cancel(sideId(kind)) }
-                notify(n, scan = true)
-            } else {
-                val last = sideAt[kind] ?: 0L
-                if (now - last < IslandDebug.get(this).intervalMs) return
-                sideAt[kind] = now
-                runCatching { getSystemService(NotificationManager::class.java).notify(sideId(kind), n) }
-            }
+            scanMakers[kind] = make
+            val otherBusy = otherAt > 0 && SystemClock.elapsedRealtime() - otherAt < 10_000
+            val shown = scans.update(kind, pct, otherBusy) ?: return
+            scanMakers[shown]?.let { notify(it(scans.others(shown)), scan = true) }
         }
     }
 
-    /** [kind]'s scan ended: the foreground notification is free for the other one, its own goes. */
+    /** [kind]'s scan ended: the next scan to post takes the notification over. */
     private fun releaseScan(kind: ResultKind) {
         synchronized(lock) {
-            if (scanOwner == kind) scanOwner = null
-            if (sideAt.remove(kind) != null) runCatching { getSystemService(NotificationManager::class.java).cancel(sideId(kind)) }
+            scans.end(kind)
+            scanMakers.remove(kind)
         }
     }
 

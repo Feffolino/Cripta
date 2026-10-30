@@ -329,7 +329,15 @@ class SettingsViewModel @Inject constructor(
     fun explainFace(trackId: Long) = faceAction { faceMessage.value = faces.explain(trackId) }
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     fun compareMediaFaces(a: String, b: String) = faceAction { faceMessage.value = faces.compareMedia(a, b) }
-    /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
+    /** The doubts to check, all of them or about [personId]. */
+    suspend fun faceChecks(personId: Long?) = runCatching { faces.checks(personId) }.getOrDefault(emptyList())
+    fun answerCheck(c: com.cripta.app.data.face.FaceRepository.Check, same: Boolean) {
+        val track = c.trackId; val other = c.otherId
+        when {
+            track != null -> if (same) confirmFace(track, c.personId) else rejectFace(track, c.personId)
+            other != null -> if (same) mergePeople(c.personId, listOf(other)) else keepApart(c.personId, other)
+        }
+    }    /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
     fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {
         viewerQueue.set(ids)
         if (timeMs != null && timeMs > 0) viewerQueue.seekOnOpen(id, maxOf(0L, timeMs - 2_000))

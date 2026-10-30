@@ -360,13 +360,15 @@ interface IntroDao {
 /** A track without its picture, for the clustering. */
 data class TrackRow(
     val id: Long, val fileId: String, val frames: Long, val quality: Float, val embeddings: ByteArray,
-    val personId: Long?, val state: String, val similarity: Float,
+    val personId: Long?, val state: String, val similarity: Float, val width: Int = 0,
 )
 
 /** A track for the lists: everything but its embeddings and picture. */
 data class TrackCard(
     val id: Long, val fileId: String, val timeMs: Long, val width: Int, val faceCount: Int,
     val personId: Long?, val state: String, val similarity: Float, val times: String = "",
+    /** Where the face is in its picture: "x,y,w,h" as fractions (empty for older scans). */
+    val box: String = "",
 ) {
     /** Every moment it shows in (ms), sorted. */
     val moments: List<Long> get() = times.split(',').mapNotNull { it.toLongOrNull() }.sorted()
@@ -408,28 +410,31 @@ interface FaceDao {
     @Insert
     suspend fun addTrack(t: FaceTrackEntity): Long
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks")
     suspend fun allTrackRows(): List<TrackRow>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks WHERE fileId IN (:ids)")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks WHERE fileId IN (:ids)")
     suspend fun trackRowsOf(ids: List<String>): List<TrackRow>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks WHERE id = :id")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks WHERE id = :id")
     suspend fun trackRow(id: Long): TrackRow?
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks")
     fun observeCards(): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks")
+    suspend fun allCards(): List<TrackCard>
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE fileId = :fileId")
     fun observeCardsOf(fileId: String): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE fileId = :fileId")
     suspend fun cardsOf(fileId: String): List<TrackCard>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE id = :id")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE id = :id")
     suspend fun card(id: Long): TrackCard?
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE personId = :personId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE personId = :personId")
     suspend fun cardsOfPerson(personId: Long): List<TrackCard>
 
     @Query("SELECT crop FROM face_tracks WHERE id = :id")
@@ -451,11 +456,15 @@ interface FaceDao {
     @Query("UPDATE face_tracks SET state = 'manual' WHERE personId = :personId AND state = 'auto'")
     suspend fun lockTracks(personId: Long)
 
-    @Query("UPDATE face_tracks SET personId = NULL, state = 'auto', similarity = 0 WHERE state != 'manual'")
+    @Query("UPDATE face_tracks SET personId = NULL, state = 'auto', similarity = 0 WHERE state NOT IN ('manual', 'carried')")
     suspend fun unplaceAuto()
 
     @Query("DELETE FROM face_tracks WHERE fileId = :fileId")
     suspend fun deleteTracksOf(fileId: String)
+
+    /** The faces the analysis found in [fileId]; those added by hand (no frame) stay. */
+    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND frames != 0")
+    suspend fun deleteScannedTracksOf(fileId: String)
 
     @Insert
     suspend fun addPerson(p: PersonEntity): Long
@@ -481,6 +490,10 @@ interface FaceDao {
 
     @Query("UPDATE persons SET coverTrackId = :trackId WHERE id = :id")
     suspend fun setCover(id: Long, trackId: Long?)
+
+    /** A track analysed again: the people whose face it was keep it as their face. */
+    @Query("UPDATE persons SET coverTrackId = :to WHERE coverTrackId = :from")
+    suspend fun moveCover(from: Long, to: Long)
 
     @Query("DELETE FROM persons WHERE id = :id")
     suspend fun deletePerson(id: Long)

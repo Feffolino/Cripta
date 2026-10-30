@@ -75,8 +75,8 @@ class FaceClustersTest {
         val idx = PeopleIndex()
         val a = random()
         idx.person(1); idx.add(1, track(1, "f1", a, random()))
-        // A single pair alike (0.5), everything else unrelated: the mean of the two best pairs decides.
-        val p = idx.place(track(2, "f2", near(a, 0.5f), random()))
+        // One of its faces alike (0.6), its mean unrelated: the mean against the person's centre decides.
+        val p = idx.place(track(2, "f2", random(), near(a, 0.6f)))
         assertTrue(p.personId == null || p.suggested)
     }
 

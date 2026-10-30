@@ -42,6 +42,29 @@ object FaceAligner {
         return FaceImage(SIZE, SIZE, out)
     }
 
+    /** Side of the face picture shown in the app. */
+    const val PREVIEW = 144
+
+    /**
+     * The face as the app shows it: an upright square of 1.6 face sizes around the detection, moved
+     * inside the picture when the face is near an edge, so it never gets the aligned crop's black
+     * border. A picture narrower than the square gives a smaller one.
+     */
+    fun preview(img: FaceImage, d: Detection): FaceImage {
+        val side = minOf(maxOf(d.w, d.h) * 1.6f, img.width.toFloat(), img.height.toFloat()).toDouble()
+        val x0 = (d.x + d.w / 2 - side / 2).coerceIn(0.0, img.width - side)
+        val y0 = (d.y + d.h / 2 - side / 2).coerceIn(0.0, img.height - side)
+        val k = side / PREVIEW
+        val out = IntArray(PREVIEW * PREVIEW)
+        val rgb = FloatArray(3)
+        for (v in 0 until PREVIEW) for (u in 0 until PREVIEW) {
+            img.sample((x0 + (u + 0.5) * k - 0.5).coerceIn(0.0, img.width - 1.0), (y0 + (v + 0.5) * k - 0.5).coerceIn(0.0, img.height - 1.0), rgb)
+            out[v * PREVIEW + u] = (0xFF shl 24) or (rgb[0].toInt().coerceIn(0, 255) shl 16) or
+                (rgb[1].toInt().coerceIn(0, 255) shl 8) or rgb[2].toInt().coerceIn(0, 255)
+        }
+        return FaceImage(PREVIEW, PREVIEW, out)
+    }
+
     /** SFace's input: RGB, 0..255, planar (OpenCV blobFromImage with swapRB). */
     fun input(face: FaceImage): FloatArray {
         val plane = SIZE * SIZE
