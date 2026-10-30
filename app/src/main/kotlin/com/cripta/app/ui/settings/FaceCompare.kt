@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -111,7 +112,8 @@ internal fun MomentClip(file: FileEntity, card: TrackCard, zoom: Boolean, vm: Se
                 playWhenReady = true
             }
         }
-        DisposableEffect(player) { onDispose { player.release() } }
+        // The surface goes first: a player left without one decodes into Java buffers (out of memory).
+        DisposableEffect(player) { onDispose { player.clearVideoSurface(); player.release() } }
         val owner = LocalLifecycleOwner.current
         DisposableEffect(owner, player) {
             val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_STOP) player.pause() else if (e == Lifecycle.Event.ON_START) player.play() }
@@ -158,7 +160,11 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
             for ((card, caption) in listOf(a to captionA, b to captionB)) {
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     val f = o.files[card.fileId]
-                    if (f != null) MomentClip(f, card, zoom, vm, Modifier.fillMaxWidth().clickable(onClickLabel = "Apri il media") { onOpen(card) })
+                    // One clip per face: its player and its view come and go together (the view of
+                    // the first face kept showing it, and the next players had nowhere to draw).
+                    if (f != null) key(card.id) {
+                        MomentClip(f, card, zoom, vm, Modifier.fillMaxWidth().clickable(onClickLabel = "Apri il media") { onOpen(card) })
+                    }
                     Text(caption, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
