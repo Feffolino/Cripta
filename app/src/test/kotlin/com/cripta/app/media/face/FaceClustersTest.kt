@@ -81,14 +81,38 @@ class FaceClustersTest {
     }
 
     @Test
-    fun unnamedDuplicatesMergeIntoTheNamedOrOlder() {
+    fun unnamedDuplicatesMergeIntoTheOlderNamedOnesAreOnlyOffered() {
         val idx = PeopleIndex()
         val a = random()
         idx.person(1); idx.add(1, track(1, "f1", a))
         idx.person(2, named = true); idx.add(2, track(2, "f2", near(a, 0.8f)))
         idx.person(3); idx.add(3, track(3, "f3", random()))
-        assertEquals(listOf(2L to 1L), idx.merges(listOf(1L, 3L)))
-        assertEquals(setOf(2L, 3L), idx.people.keys)
+        idx.person(4); idx.add(4, track(4, "f4", near(a, 0.8f)))
+        assertEquals(listOf(1L to 4L), idx.merges(listOf(4L)).map { it.first to it.second })
+        assertEquals(setOf(1L, 2L, 3L), idx.people.keys)
+        // The named one is not merged, but offered as alike.
+        assertEquals(2L, idx.similarTo(1).first().first)
+    }
+
+    @Test
+    fun trackKeepsTheMeanOfItsFacesAndEveryMoment() {
+        val a = random()
+        val d = TrackDraft(listOf(Sighting(0, 1_000, near(a, 0.8f), 0.9f), Sighting(1, 11_000, near(a, 0.8f), 0.5f), Sighting(2, 21_000, near(a, 0.8f), 0.4f)))
+        assertEquals(listOf(1_000L, 11_000L, 21_000L), d.times)
+        assertEquals(3, d.embeddings.size)
+        // The mean is closer to the person than any single noisy face.
+        assertTrue(similarity(d.embeddings[0], a) > d.sightings.maxOf { similarity(it.embedding, a) })
+    }
+
+    @Test
+    fun repeatedKeyframesAreRecognised() {
+        val px = IntArray(64 * 48) { if (it % 7 == 0) 0xFFFFFFFF.toInt() else 0xFF202020.toInt() }
+        val img = FaceImage(64, 48, px)
+        val other = FaceImage(64, 48, IntArray(64 * 48) { if (it < 1500) 0xFFFFFFFF.toInt() else 0xFF000000.toInt() })
+        assertTrue(FaceStats.sameFrame(FaceStats.frameHash(img), FaceStats.frameHash(FaceImage(64, 48, px.copyOf()))))
+        assertTrue(!FaceStats.sameFrame(FaceStats.frameHash(img), FaceStats.frameHash(other)))
+        assertEquals(FaceStats.SHARP_BANDS.size, FaceStats.band(500.0))
+        assertEquals(1, FaceStats.parse(FaceStats.encode(intArrayOf(0, 1, 2, 3, 4, 5), 2, 3)).sharp[1])
     }
 
     @Test

@@ -8,6 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.blur
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -94,7 +99,7 @@ import com.cripta.app.ui.theme.pressScale
  * shelves (recent, favorites, folders). Every cover uses the vault's own renderer (tags, duration,
  * quality, watched progress) so thumbnails look the same everywhere.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onOpenFile: (String) -> Unit,
@@ -114,7 +119,10 @@ fun HomeScreen(
     val folderPreviews by vm.folderPreviews.collectAsState()
     val loaded by vm.loaded.collectAsState()
     val savedFilters by vm.savedFilters.collectAsState()
-    val favoritePeople by vm.favoritePeople.collectAsState()
+    val homePeople by vm.homePeople.collectAsState()
+    val peopleBlurred by vm.peopleBlurred.collectAsState()
+    // Blurred faces stay blurred until the row is touched once (per visit).
+    var peopleRevealed by remember { mutableStateOf(false) }
     val summary by vm.summary.collectAsState()
     val display by vm.display.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
@@ -212,19 +220,32 @@ fun HomeScreen(
                     }
                 }
             }
-            if (favoritePeople.isNotEmpty()) {
+            if (homePeople.isNotEmpty()) {
+                item { ShelfHeader("Persone", Icons.Filled.Face, Color(0xFF14B8A6), homePeople.size) { vm.openPeople() } }
                 item {
+                    val hidden = peopleBlurred && !peopleRevealed
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        items(favoritePeople.size) { i ->
-                            val p = favoritePeople[i]
+                        items(homePeople.size, key = { homePeople[it].id }) { i ->
+                            val p = homePeople[i]
                             Column(
                                 Modifier.width(68.dp).clip(MaterialTheme.shapes.small)
-                                    .clickable(role = Role.Button, onClickLabel = "Mostra i media di ${p.title}") { vm.openPerson(p.id); onOpenFolders() }
+                                    .combinedClickable(
+                                        role = Role.Button,
+                                        onClickLabel = if (hidden) "Mostra i volti" else "Mostra i media di ${p.title}",
+                                        onLongClickLabel = if (p.entity.favorite) "Togli dai preferiti" else "Aggiungi ai preferiti",
+                                        onClick = { if (hidden) peopleRevealed = true else { vm.openPerson(p.id); onOpenFolders() } },
+                                        onLongClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) },
+                                    )
                                     .padding(vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp)
-                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                Box {
+                                    com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp,
+                                        if (hidden) Modifier.blur(12.dp) else Modifier)
+                                    if (p.entity.favorite) Icon(Icons.Filled.Star, null, tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
+                                }
+                                Text(if (hidden) "•••" else p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                             }
                         }

@@ -377,7 +377,7 @@ fun SettingsScreen(
                             }
                         }
                         item { IntroSettings(s, vm, onOpenFile) }
-                        item { PeopleSettings(s, vm, onOpenFile) }
+                        item { PeopleSettings(s, vm) }
                         item {
                             Section("Pannello info", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
                                 ToggleRow("Video sopra il pannello", s.splitDetails,

@@ -267,8 +267,12 @@ class VaultViewModel @Inject constructor(
                 val source = if (f.active && !localOnly) repo.allFiles() else repo.files(folder)
                 // People come from the face index, not from the file rows: looked up once per filter change.
                 val people = if (f.personIds.isEmpty()) null else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())
+                // The search also finds the media of the people whose name matches.
+                val byName = if (f.query.isBlank()) emptySet() else runCatching { faces.mediaOfName(f.query) }.getOrDefault(emptySet())
+                val noQuery = f.copy(query = "")
                 source.map { list ->
-                    val shown = applyFilters(list, f).let { l -> if (people == null) l else l.filter { it.file.id in people } }
+                    val shown = list.filter { f.matches(it) || (it.file.id in byName && noQuery.matches(it)) }
+                        .let { l -> if (people == null) l else l.filter { it.file.id in people } }
                     Scoped(list, applySort(shown, sort.first, sort.second))
                 }
                     .flowOn(Dispatchers.Default)
@@ -336,6 +340,11 @@ class VaultViewModel @Inject constructor(
     /** "Confronta audio": what the starts of two analysed videos share, for [onResult]. */
     fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
         onResult(runCatching { intro.compare(idA, idB) }.getOrElse { "Confronto non riuscito" })
+    }
+
+    /** "Confronta volti": the faces of two media, how alike and why (not) the same person. */
+    fun compareFaces(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
+        onResult(runCatching { faces.compareMedia(idA, idB) }.getOrElse { "Confronto non riuscito" })
     }
 
     fun convertToMp4(fileIds: List<String>) {
@@ -469,9 +478,9 @@ class VaultViewModel @Inject constructor(
     }
     fun clearFilters() { filters.value = Filters() }
 
-    /** The people offered in the filter sheet: named ones, and unnamed ones seen in two media or more. */
+    /** The people offered in the filter sheet (starred first): named, starred, or seen in two media or more. */
     val filterPeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
-        .map { o -> o.people.filter { !it.entity.ignored && (it.entity.name.isNotBlank() || it.media.size >= 2) } }
+        .map { o -> o.people.filter { it.main } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun togglePerson(id: Long) {

@@ -260,6 +260,13 @@ data class FaceScanEntity(
     val scannedAt: Long,
     /** Its faces were placed among the people already. */
     val clustered: Boolean = false,
+    /** How long the analysis took (ms). */
+    val ms: Long = 0,
+    /**
+     * Numbers for "Statistiche": "sharp=a,b,c,d,e,f" (faces per sharpness band, see
+     * [com.cripta.app.media.face.FaceStats]), "dup=n" (repeated frames), "extra=n" (frames added near a face).
+     */
+    val stats: String = "",
 )
 
 /** One person's face in one media (all the frames it shows in), with its best embeddings and picture. */
@@ -284,6 +291,8 @@ data class FaceTrackEntity(
     val state: String = "auto",
     /** Similarity to its person when placed (or suggested). */
     val similarity: Float = 0f,
+    /** Every moment it shows in (ms, comma separated): the viewer's "momenti". */
+    val times: String = "",
 )
 
 /** A person: named or not; [ignored] = "non è una persona" (its faces, and similar new ones, are hidden). */
@@ -310,4 +319,25 @@ data class PersonMediaEntity(
 data class FaceRejectionEntity(
     val trackId: Long,
     val personId: Long,
+    /** How alike they looked when the user said no: shown in "Statistiche" to judge the thresholds. */
+    val similarity: Float = 0f,
+)
+
+/**
+ * A merge of two people (automatic or by the user), remembered so it can be undone: [mergedId]
+ * comes back with its name and the faces and media it brought.
+ */
+@Entity(tableName = "face_merges")
+data class FaceMergeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val keptId: Long,
+    val mergedId: Long,
+    val mergedName: String,
+    val mergedFavorite: Boolean,
+    /** Track ids and manually linked media ids it brought (comma separated). */
+    val trackIds: String,
+    val fileIds: String,
+    val similarity: Float,
+    val auto: Boolean,
+    val createdAt: Long,
 )

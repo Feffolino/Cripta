@@ -363,11 +363,14 @@ data class TrackRow(
     val personId: Long?, val state: String, val similarity: Float,
 )
 
-/** A track for the lists: everything but its embeddings. */
+/** A track for the lists: everything but its embeddings and picture. */
 data class TrackCard(
     val id: Long, val fileId: String, val timeMs: Long, val width: Int, val faceCount: Int,
-    val personId: Long?, val state: String, val similarity: Float,
-)
+    val personId: Long?, val state: String, val similarity: Float, val times: String = "",
+) {
+    /** Every moment it shows in (ms), sorted. */
+    val moments: List<Long> get() = times.split(',').mapNotNull { it.toLongOrNull() }.sorted()
+}
 
 @Dao
 interface FaceDao {
@@ -389,11 +392,18 @@ interface FaceDao {
     @Query("UPDATE face_scans SET clustered = 1 WHERE fileId IN (:ids)")
     suspend fun markClustered(ids: List<String>)
 
-    @Query("UPDATE face_scans SET clustered = 0")
-    suspend fun markAllUnclustered()
-
     @Query("DELETE FROM face_scans WHERE fileId = :fileId")
     suspend fun deleteScan(fileId: String)
+
+    /** Media deleted for good (not in the trash): their faces and links go too. */
+    @Query("DELETE FROM face_scans WHERE fileId NOT IN (SELECT id FROM files)")
+    suspend fun purgeScans(): Int
+
+    @Query("DELETE FROM face_tracks WHERE fileId NOT IN (SELECT id FROM files)")
+    suspend fun purgeTracks(): Int
+
+    @Query("DELETE FROM person_media WHERE fileId NOT IN (SELECT id FROM files)")
+    suspend fun purgeLinks(): Int
 
     @Insert
     suspend fun addTrack(t: FaceTrackEntity): Long
@@ -407,14 +417,20 @@ interface FaceDao {
     @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity FROM face_tracks WHERE id = :id")
     suspend fun trackRow(id: Long): TrackRow?
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks")
     fun observeCards(): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE fileId = :fileId")
     fun observeCardsOf(fileId: String): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE fileId = :fileId")
     suspend fun cardsOf(fileId: String): List<TrackCard>
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE id = :id")
+    suspend fun card(id: Long): TrackCard?
+
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times FROM face_tracks WHERE personId = :personId")
+    suspend fun cardsOfPerson(personId: Long): List<TrackCard>
 
     @Query("SELECT crop FROM face_tracks WHERE id = :id")
     suspend fun crop(id: Long): ByteArray?
@@ -422,8 +438,15 @@ interface FaceDao {
     @Query("UPDATE face_tracks SET personId = :personId, state = :state, similarity = :similarity WHERE id = :id")
     suspend fun place(id: Long, personId: Long?, state: String, similarity: Float)
 
+    /** The user's choice: kept with [personId] for good (the similarity it had stays, for the statistics). */
+    @Query("UPDATE face_tracks SET personId = :personId, state = 'manual' WHERE id = :id")
+    suspend fun confirm(id: Long, personId: Long)
+
     @Query("UPDATE face_tracks SET personId = :to WHERE personId = :from")
     suspend fun moveTracks(from: Long, to: Long)
+
+    @Query("UPDATE face_tracks SET personId = :to WHERE id IN (:ids) AND personId = :from")
+    suspend fun moveTrackIds(ids: List<Long>, from: Long, to: Long)
 
     @Query("UPDATE face_tracks SET state = 'manual' WHERE personId = :personId AND state = 'auto'")
     suspend fun lockTracks(personId: Long)
@@ -436,6 +459,10 @@ interface FaceDao {
 
     @Insert
     suspend fun addPerson(p: PersonEntity): Long
+
+    /** A person back with their old id (undoing a merge). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putPerson(p: PersonEntity)
 
     @Query("SELECT * FROM persons")
     suspend fun persons(): List<PersonEntity>
@@ -459,7 +486,7 @@ interface FaceDao {
     suspend fun deletePerson(id: Long)
 
     /** People left with no face and no media: unnamed ones go (a named one stays, the user may add to it). */
-    @Query("DELETE FROM persons WHERE name = '' AND ignored = 0 AND id NOT IN (SELECT personId FROM face_tracks WHERE personId IS NOT NULL AND state != 'suggested') AND id NOT IN (SELECT personId FROM person_media)")
+    @Query("DELETE FROM persons WHERE name = '' AND ignored = 0 AND favorite = 0 AND id NOT IN (SELECT personId FROM face_tracks WHERE personId IS NOT NULL AND state != 'suggested') AND id NOT IN (SELECT personId FROM person_media)")
     suspend fun deleteEmptyPersons()
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -474,18 +501,21 @@ interface FaceDao {
     @Query("DELETE FROM person_media WHERE personId = :personId")
     suspend fun deletePersonMedia(personId: Long)
 
+    @Query("SELECT fileId FROM person_media WHERE personId = :personId")
+    suspend fun linksOfPerson(personId: Long): List<String>
+
     @Query("SELECT * FROM person_media")
     fun observePersonMedia(): Flow<List<PersonMediaEntity>>
 
-    @Query("SELECT * FROM person_media")
-    suspend fun allPersonMedia(): List<PersonMediaEntity>
-
-    /** Media showing every one of [ids]... one person at a time: the caller intersects. */
+    /** Media showing [id] (faces placed, or added by hand); the caller intersects for several people. */
     @Query("SELECT fileId FROM face_tracks WHERE personId = :id AND state != 'suggested' UNION SELECT fileId FROM person_media WHERE personId = :id")
     suspend fun mediaOf(id: Long): List<String>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addRejection(r: FaceRejectionEntity)
+
+    @Query("DELETE FROM face_rejections WHERE trackId = :trackId AND personId = :personId")
+    suspend fun deleteRejection(trackId: Long, personId: Long)
 
     @Query("SELECT * FROM face_rejections")
     suspend fun rejections(): List<FaceRejectionEntity>
@@ -495,6 +525,18 @@ interface FaceDao {
 
     @Query("DELETE FROM face_rejections WHERE personId = :personId")
     suspend fun deleteRejectionsOf(personId: Long)
+
+    @Insert
+    suspend fun addMerge(m: FaceMergeEntity): Long
+
+    @Query("SELECT * FROM face_merges WHERE id = :id")
+    suspend fun mergeById(id: Long): FaceMergeEntity?
+
+    @Query("SELECT * FROM face_merges ORDER BY createdAt DESC LIMIT 200")
+    fun observeMerges(): Flow<List<FaceMergeEntity>>
+
+    @Query("DELETE FROM face_merges WHERE id = :id")
+    suspend fun deleteMerge(id: Long)
 
     @Query("DELETE FROM face_scans")
     suspend fun deleteAllScans()
@@ -510,4 +552,7 @@ interface FaceDao {
 
     @Query("DELETE FROM face_rejections")
     suspend fun deleteAllRejections()
+
+    @Query("DELETE FROM face_merges")
+    suspend fun deleteAllMerges()
 }

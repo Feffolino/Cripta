@@ -384,6 +384,11 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                     androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 }
             }
+            // "Persone" asked for from Settings, Home or the scan's notification.
+            val peopleAsked by com.cripta.app.ui.people.PeopleNav.open.collectAsState()
+            LaunchedEffect(peopleAsked) {
+                if (peopleAsked) { com.cripta.app.ui.people.PeopleNav.consume(); nav.navigate("people") { launchSingleTop = true } }
+            }
             NavHost(
                 navController = nav,
                 startDestination = "home",
@@ -431,6 +436,9 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             }
             composable("settings") {
                 SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
+            }
+            composable("people") {
+                com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
             }
             composable("viewer/{fileId}") { entry ->
                 ViewerScreen(

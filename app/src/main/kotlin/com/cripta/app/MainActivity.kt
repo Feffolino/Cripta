@@ -52,6 +52,7 @@ class MainActivity : FragmentActivity() {
     companion object {
         /** Intent extra from the "scan finished" notification: open the duplicate results. */
         const val EXTRA_OPEN_DUPLICATES = "open_duplicates"
+        const val EXTRA_OPEN_PEOPLE = "open_people"
         private const val REQ_NOTIFICATIONS = 42
         private const val UI_PREFS = "cripta_ui"
         private const val PREF_NOTIF_ASKED = "notif_permission_asked"
@@ -63,6 +64,10 @@ class MainActivity : FragmentActivity() {
         if (intent?.getBooleanExtra(EXTRA_OPEN_DUPLICATES, false) == true) {
             intent.removeExtra(EXTRA_OPEN_DUPLICATES)
             dupStore.requestOpen()
+        }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_PEOPLE, false) == true) {
+            intent.removeExtra(EXTRA_OPEN_PEOPLE)
+            com.cripta.app.ui.people.PeopleNav.request()
         }
     }
 

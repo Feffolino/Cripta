@@ -1314,6 +1314,11 @@ private fun VideoPlayer(
         }
     }
     DisposableEffect(file.id) { onDispose { vm.playerSpots.update { it - file.id } } }
+    // "Momenti nel lettore": marks on the progress bar where the people show up.
+    LaunchedEffect(playerViewRef, file.id) {
+        val view = playerViewRef ?: return@LaunchedEffect
+        vm.moments(file.id).collect { m -> view.setExtraAdGroupMarkers(m, BooleanArray(m.size)) }
+    }
     LaunchedEffect(file.id) {
         vm.seekRequests.collect { r ->
             if (r.fileId != file.id) return@collect
