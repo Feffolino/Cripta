@@ -132,7 +132,10 @@ dependencies {
     implementation(libs.youtubedl.android)
     implementation(libs.youtubedl.ffmpeg)
 
+    // Face recognition (YuNet + SFace); the JVM build runs the same models in the unit tests.
+    implementation(libs.onnxruntime.android)
     testImplementation(libs.junit)
+    testImplementation(libs.onnxruntime.jvm)
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)

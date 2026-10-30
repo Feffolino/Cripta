@@ -52,6 +52,7 @@ class ConversionService : Service() {
     @Inject lateinit var session: com.cripta.app.security.SessionManager
     @Inject lateinit var updater: com.cripta.app.update.AppUpdater
     @Inject lateinit var intro: com.cripta.app.data.intro.IntroRepository
+    @Inject lateinit var faces: com.cripta.app.data.face.FaceRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -80,6 +81,11 @@ class ConversionService : Service() {
         // Cancel request from the notification action: abort the running transcode/download and leave.
         if (mode == MODE_CANCEL_SCAN) {
             scanJob?.cancel()
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        if (mode == MODE_CANCEL_FACES) {
+            faceJob?.cancel()
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -227,6 +233,7 @@ class ConversionService : Service() {
                 MODE_UPDATE -> ResultKind.UPDATE
                 MODE_DUP_SCAN -> ResultKind.SCAN
                 MODE_INTRO_SCAN -> ResultKind.INTRO
+                MODE_FACE_SCAN -> ResultKind.FACES
                 MODE_CONVERT -> ResultKind.CONVERT
                 else -> null
             }))
@@ -295,6 +302,15 @@ class ConversionService : Service() {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
                     }
+                    MODE_FACE_SCAN -> if (holdsSession) {
+                        intent.getStringExtra(EX_RESET)?.let { what ->
+                            // Start over: stop a running scan first, so it writes nothing after the wipe.
+                            faceJob?.let { it.cancel(); it.join() }
+                            faces.resetAll(everything = what == "all")
+                        }
+                        if (intent.getBooleanExtra(EX_REGROUP, false)) faces.regroup()
+                        faceScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
+                    }
                     MODE_INTRO_SCAN -> if (holdsSession) {
                         intent.getStringExtra(EX_RESET)?.let { what ->
                             // Start over: stop a running scan first, so it writes nothing after the wipe.
@@ -312,7 +328,9 @@ class ConversionService : Service() {
             } finally {
                 // New videos get their intro/outro analysis right after (when on in Settings).
                 if (mode == MODE_IMPORT || mode == MODE_DOWNLOAD_URL || mode == MODE_CONVERT) withContext(NonCancellable) {
-                    if (runCatching { settings.settingsOnce().introAnalyzeNew }.getOrDefault(false)) startIntroScan(this@ConversionService, manual = false)
+                    val s = runCatching { settings.settingsOnce() }.getOrNull()
+                    if (s?.introAnalyzeNew == true) startIntroScan(this@ConversionService, manual = false)
+                    if (s?.facesAnalyzeNew == true) startFaceScan(this@ConversionService, manual = false)
                 }
                 if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) stopWhenIdle()
@@ -1056,6 +1074,97 @@ class ConversionService : Service() {
         }
     }
 
+    @Volatile private var faceJob: kotlinx.coroutines.Job? = null
+    @Volatile private var faceRerun = false
+    @Volatile private var faceManual = false
+    private val faceMutex = kotlinx.coroutines.sync.Mutex()
+    private val faceNoteLock = Any()
+    /** Media asked for by the user (selection bar, details panel): analysed again, ahead of the rest. */
+    private val faceAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    @Volatile private var faceScanAll = false
+
+    /**
+     * Find the faces of every photo and video not analysed yet ([onlyIds]: just those, again), a
+     * group at a time, each group placed among the people as soon as it is analysed: people show up
+     * during a long scan. Requests arriving meanwhile are folded in as in [introScan].
+     */
+    private suspend fun faceScan(manual: Boolean, onlyIds: List<String>? = null) {
+        if (onlyIds == null) faceScanAll = true else faceAsked += onlyIds
+        faceManual = faceManual || manual
+        if (!faceMutex.tryLock()) { faceRerun = true; return }
+        faceJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        val label = "Analisi dei volti"
+        val analysed = java.util.concurrent.atomic.AtomicInteger(0)
+        val skipped = java.util.concurrent.atomic.AtomicInteger(0)
+        fun summary() = "${analysed.get()} analizzati" + (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "")
+        try {
+            // Media analysed by a scan that stopped before placing their faces.
+            faces.placeNew()
+            do {
+                faceRerun = false
+                val all = faceScanAll
+                faceScanAll = false
+                val todo = if (all) faces.pending() else emptyList()
+                if (todo.isEmpty() && faceAsked.isEmpty()) break
+                val askedIds = HashSet<String>()
+                val eta = EtaEstimator()
+                val finished = java.util.concurrent.atomic.AtomicInteger(0)
+                fun progress() = synchronized(faceNoteLock) {
+                    val d = finished.get()
+                    val total = maxOf(1, todo.size + askedIds.size)
+                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti")
+                    notify(build(label, d * 100 / total, sub = "$d di $total media analizzati",
+                        eta = if (d > 0) eta.left(d.toFloat() / total) else null,
+                        cancelable = true, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES))
+                }
+                progress()
+                var next = 0
+                while (true) {
+                    kotlinx.coroutines.yield()   // a cancelled scan stops between groups
+                    val askedNow = generateSequence { faceAsked.poll() }.toList().distinct().filter { askedIds.add(it) }
+                    val chunk = askedNow.mapNotNull { faces.forget(it) }.toMutableList()
+                    if (askedNow.isEmpty()) while (chunk.size < FACE_CHUNK && next < todo.size) {
+                        val t = todo[next++]
+                        if (t.id !in askedIds) chunk += t
+                    }
+                    if (chunk.isEmpty() && askedNow.isEmpty()) break
+                    val cursor = java.util.concurrent.atomic.AtomicInteger(0)
+                    kotlinx.coroutines.coroutineScope {
+                        repeat(minOf(FACE_WORKERS, chunk.size)) {
+                            launch {
+                                while (true) {
+                                    val f = chunk.getOrNull(cursor.getAndIncrement()) ?: break
+                                    if (faces.analyse(f)) analysed.incrementAndGet() else skipped.incrementAndGet()
+                                    finished.incrementAndGet()
+                                    progress()
+                                }
+                            }
+                        }
+                    }
+                    faces.placeNew()
+                    // The answer to "Analizza volti": what the chosen media have now.
+                    if (askedNow.isNotEmpty()) {
+                        notifyResult(if (askedNow.size == 1) "Volti analizzati" else "Volti di ${askedNow.size} media analizzati",
+                            askedNow.take(3).map { faces.describe(it).lineSequence().first() }.joinToString("\n"), ResultKind.FACES)
+                    }
+                }
+            } while (faceRerun)
+            if (faceManual || analysed.get() > 0) notifyResult("Analisi dei volti completata", summary(), ResultKind.FACES)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            notifyResult("$label annullata", summary(), ResultKind.FACES, state = ResultState.CANCELLED)
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("ConversionService", "face scan failed", e)
+            notifyResult("$label non riuscita", UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
+        } finally {
+            faceJob = null
+            faceManual = false
+            faceProgress.value = null
+            faces.release()
+            faceMutex.unlock()
+        }
+    }
+
     private fun introSummary(analysed: Int, skipped: Int, found: Int): String =
         "$analysed analizzati" + (if (skipped > 0) ", $skipped saltati" else "") +
             (if (found > 0) " · intro o finali in $found video" else "")
@@ -1461,7 +1570,7 @@ class ConversionService : Service() {
         IMPORT(4220, "Import"), DOWNLOAD(4221, "Download"),
         CONVERT(4222, "Converti"), SCAN(4223, "Duplicati"),
         EXPORT(4224, "Export"), UPDATE(4225, "Aggiorna"),
-        INTRO(4226, "Analisi"),
+        INTRO(4226, "Analisi"), FACES(4227, "Volti"),
     }
 
     /** How an operation ended (the island's chip: Fatto, Errore, Annullato). */
@@ -1676,6 +1785,13 @@ class ConversionService : Service() {
         private const val MODE_CANCEL_SCAN = "cancel_scan"
         private const val MODE_INTRO_SCAN = "intro_scan"
         private const val MODE_CANCEL_INTRO = "cancel_intro"
+        private const val MODE_FACE_SCAN = "face_scan"
+        private const val MODE_CANCEL_FACES = "cancel_faces"
+        private const val EX_REGROUP = "regroup"
+        /** Media analysed at the same time: each worker holds one frame (a few MB) and runs the models. */
+        private const val FACE_WORKERS = 3
+        /** Media analysed before each placing round. */
+        private const val FACE_CHUNK = 12
         private const val EX_MANUAL = "manual"
         private const val EX_RESET = "reset"
         /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
@@ -1807,6 +1923,24 @@ class ConversionService : Service() {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, true)
                 .putExtra(EX_RESET, if (everything) "all" else "auto"))
+        }
+
+        /**
+         * Find the faces of the photos and videos not analysed yet ([manual]: asked by the user), or of
+         * [fileIds] only, again; [regroup]: place every face again first ("Ricalcola gruppi");
+         * [reset]: "auto" forgets the analysis, "all" the user's choices too.
+         */
+        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, regroup: Boolean = false, reset: String? = null) {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_REGROUP, regroup)
+                .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)); if (reset != null) putExtra(EX_RESET, reset) })
+        }
+
+        /** Null while no face scan runs. */
+        val faceProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
+
+        fun cancelFaceScan(ctx: Context) {
+            runCatching { ctx.startService(Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_CANCEL_FACES)) }
         }
 
         fun cancelIntroScan(ctx: Context) {

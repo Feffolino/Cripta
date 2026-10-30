@@ -42,10 +42,12 @@ data class Filters(
     val untaggedOnly: Boolean = false,
     /** Chosen tags: true = a file must have all of them, false = at least one. */
     val tagMatchAll: Boolean = true,
+    /** People who must all be in the file (faces found, or added by hand). */
+    val personIds: Set<Long> = emptySet(),
 ) {
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
-            type != TypeFilter.ALL || favoritesOnly || untaggedOnly
+            type != TypeFilter.ALL || favoritesOnly || untaggedOnly || personIds.isNotEmpty()
 }
 
 /** True when [fwt] passes these filters (shared by the vault grid and the Home saved-filter counts). */
@@ -111,6 +113,7 @@ class VaultViewModel @Inject constructor(
     private val settings: SettingsStore,
     private val thumbs: ThumbnailLoader,
     private val intro: com.cripta.app.data.intro.IntroRepository,
+    private val faces: com.cripta.app.data.face.FaceRepository,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
     private val navigator: VaultNavigator,
     private val session: com.cripta.app.security.SessionManager,
@@ -262,7 +265,12 @@ class VaultViewModel @Inject constructor(
             .flatMapLatest { (request, localOnly) ->
                 val (folder, f, sort) = request
                 val source = if (f.active && !localOnly) repo.allFiles() else repo.files(folder)
-                source.map { list -> Scoped(list, applySort(applyFilters(list, f), sort.first, sort.second)) }
+                // People come from the face index, not from the file rows: looked up once per filter change.
+                val people = if (f.personIds.isEmpty()) null else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())
+                source.map { list ->
+                    val shown = applyFilters(list, f).let { l -> if (people == null) l else l.filter { it.file.id in people } }
+                    Scoped(list, applySort(shown, sort.first, sort.second))
+                }
                     .flowOn(Dispatchers.Default)
             }
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
@@ -460,6 +468,18 @@ class VaultViewModel @Inject constructor(
         filters.value = filters.value.copy(untaggedOnly = b, tagIds = if (b) emptySet() else filters.value.tagIds)
     }
     fun clearFilters() { filters.value = Filters() }
+
+    /** The people offered in the filter sheet: named ones, and unnamed ones seen in two media or more. */
+    val filterPeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
+        .map { o -> o.people.filter { !it.entity.ignored && (it.entity.name.isNotBlank() || it.media.size >= 2) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun togglePerson(id: Long) {
+        val cur = filters.value.personIds
+        filters.value = filters.value.copy(personIds = if (id in cur) cur - id else cur + id)
+    }
+
+    suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
 
     // --- Actions ---
     fun createFolder(name: String) = viewModelScope.launch {

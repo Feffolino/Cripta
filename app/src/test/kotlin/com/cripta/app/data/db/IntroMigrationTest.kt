@@ -22,6 +22,9 @@ class IntroMigrationTest {
             }.sorted()
         }
 
+    private fun indices(db: SupportSQLiteDatabase, table: String): List<String> =
+        db.query("PRAGMA index_list(`$table`)").use { c -> buildList { while (c.moveToNext()) add(c.getString(1)) }.sorted() }
+
     @Test
     fun migration15to16CreatesTheTablesRoomExpects() {
         val app = RuntimeEnvironment.getApplication()
@@ -40,9 +43,12 @@ class IntroMigrationTest {
         CriptaDatabase.MIGRATION_18_19.migrate(migrated)
         CriptaDatabase.MIGRATION_19_20.migrate(migrated)
         CriptaDatabase.MIGRATION_20_21.migrate(migrated)
-        for (t in listOf("audio_prints", "media_segments", "rejected_prints", "segment_rules", "signatures", "signature_sounds")) {
+        CriptaDatabase.MIGRATION_21_22.migrate(migrated)
+        for (t in listOf("audio_prints", "media_segments", "rejected_prints", "segment_rules", "signatures", "signature_sounds",
+            "face_scans", "face_tracks", "persons", "person_media", "face_rejections")) {
             assertEquals(t, columns(expected, t), columns(migrated, t))
         }
+        for (t in listOf("face_tracks", "person_media")) assertEquals(t, indices(expected, t), indices(migrated, t))
         fresh.close(); helper.close()
     }
 }

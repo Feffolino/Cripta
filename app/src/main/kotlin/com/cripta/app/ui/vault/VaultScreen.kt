@@ -723,9 +723,11 @@ fun VaultScreen(
             // Landscape: the banners/strips above the grid get a capped, scrollable area so an
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
+            val filterPeople by vm.filterPeople.collectAsState()
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
-                { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") })
+                { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
+                people = filterPeople, onPerson = vm::togglePerson)
             if (path.isNotEmpty() && !filters.active) {
                 Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
             }
@@ -1173,6 +1175,7 @@ fun VaultScreen(
     }
 
     if (showFilterSheet) {
+        val sheetPeople by vm.filterPeople.collectAsState()
         FilterSortSheet(
             filters = filters,
             tags = tags,
@@ -1193,6 +1196,9 @@ fun VaultScreen(
             onDeleteSaved = { vm.deleteSavedFilter(it) },
             onSave = { vm.saveCurrentFilter(it) },
             resultCount = files.size,
+            people = sheetPeople,
+            onPerson = vm::togglePerson,
+            faceCrop = { vm.faceCrop(it) },
         )
     }
 
@@ -1889,6 +1895,8 @@ private fun ActiveFilterBar(
     onExcludeTag: (Long) -> Unit,
     onClearAll: () -> Unit,
     onClearQuery: () -> Unit,
+    people: List<com.cripta.app.data.face.FaceRepository.Person> = emptyList(),
+    onPerson: (Long) -> Unit = {},
 ) {
     // Keep drawing the last active filters while the bar collapses.
     val last = remember { mutableStateOf(filters) }
@@ -1912,6 +1920,10 @@ private fun ActiveFilterBar(
                 if (f.type != TypeFilter.ALL) DismissChip(typeLabel(f.type)) { onType(TypeFilter.ALL) }
                 if (f.favoritesOnly) DismissChip("Preferiti") { onClearFav() }
                 if (f.untaggedOnly) DismissChip("Senza etichette") { onClearUntagged() }
+                f.personIds.forEach { id ->
+                    val name = people.firstOrNull { it.id == id }?.title ?: "Persona $id"
+                    DismissChip(name, "persona $name") { onPerson(id) }
+                }
                 f.tagIds.forEach { id ->
                     val t = tagById[id] ?: return@forEach
                     DismissChip("#${t.name}", "etichetta ${t.name}") { onTag(id) }
@@ -2023,13 +2035,16 @@ private fun FilterSortSheet(
     onSave: (String) -> Unit = {},
     /** Files matching right now, shown in the header (-1 = unknown). */
     resultCount: Int = -1,
+    people: List<com.cripta.app.data.face.FaceRepository.Person> = emptyList(),
+    onPerson: (Long) -> Unit = {},
+    faceCrop: suspend (Long) -> android.graphics.Bitmap? = { null },
 ) {
     // The shared sheet: opens at half height (drag up for the rest), one swipe down closes it.
     var naming by remember { mutableStateOf(false) }
     // The chip's X used to delete a saved filter at once (easy to hit by mistake): ask first.
     var savedToDelete by remember { mutableStateOf<com.cripta.app.data.db.SavedFilterEntity?>(null) }
     val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
-        (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size
+        (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size + filters.personIds.size
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
         // ---- Header: what the filters give, and the way back.
         Row(
@@ -2163,6 +2178,35 @@ private fun FilterSortSheet(
                         label = { Text("Senza etichette") },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.LabelOff, null, Modifier.size(FilterChipDefaults.IconSize)) },
                     )
+                }
+            }
+
+            // ---- People: faces in a row, a tap adds or removes; a file must show everyone chosen.
+            if (people.isNotEmpty()) {
+                FilterGroup(
+                    "Persone",
+                    trailing = {
+                        val n = filters.personIds.size
+                        if (n > 0) Text(if (n == 1) "1 scelta" else "$n scelte", style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                    },
+                ) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        people.forEach { p ->
+                            val on = p.id in filters.personIds
+                            Column(
+                                Modifier.width(72.dp).clip(MaterialTheme.shapes.small)
+                                    .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, faceCrop, 56.dp,
+                                    if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
                 }
             }
 
