@@ -67,7 +67,7 @@ import com.cripta.app.ui.components.MediaThumb
 import kotlinx.coroutines.delay
 
 /**
- * Settings › Video › "Intro e finale": a live status card, then three groups (how skipping behaves,
+ * Settings › Persone e intro › "Intro e finale": a live status card, then three groups (how skipping behaves,
  * the analysis, maintenance at the bottom), and the full-page results with covers.
  */
 @Composable
@@ -80,7 +80,7 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
         while (true) { vm.refreshIntro(); delay(if (progress != null) 3_000 else 15_000) }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
         Section("Intro e finale", "Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
             "Per segnarli a mano apri un video e scorri su: la sezione è sotto le etichette.") {
             StatusCard(overview, progress, onStop = { vm.cancelIntroScan() }, onResults = { vm.introResultsOpen.value = true })

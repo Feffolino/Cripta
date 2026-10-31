@@ -45,7 +45,7 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     /** Ask Settings to open its Strumenti page (the caller then switches tab). */
-    fun openTools() = settingsNav.open(com.cripta.app.ui.settings.SettingsPage.STRUMENTI.name)
+    fun openTools() = settingsNav.open(com.cripta.app.ui.settings.SettingsPage.SPAZIO.name)
 
     /** MP4 conversion progress / outcome, the same banner as in Cartelle. */
     val convertStatus: kotlinx.coroutines.flow.StateFlow<VaultRepository.ConvertStatus> = repo.convertStatus

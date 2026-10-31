@@ -416,15 +416,15 @@ class SettingsStore @Inject constructor(
     suspend fun resetPage(page: String) {
         val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
-                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey)
-            "COPERTINE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey, durationBadgeKey, qualityBadgeKey)
-            "VIDEO" -> listOf(resumeKey, videoLoopKey, videoMutedKey, convertAfterKey, convertAfterChosenKey,
+                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, durationBadgeKey, qualityBadgeKey)
+            "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey,
+                recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
+            "VISUALIZZATORE" -> listOf(resumeKey, videoLoopKey, videoMutedKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
-                swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey,
-                introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey)
-            "ETICHETTE" -> listOf(recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
+                swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
+            "ANALISI" -> listOf(introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
-            "IMPORT" -> listOf(delPolicy)
+            "IMPORT" -> listOf(delPolicy, convertAfterKey, convertAfterChosenKey)
             else -> emptyList()
         }
         if (keys.isNotEmpty()) context.dataStore.edit { p -> keys.forEach { p.remove(it) } }

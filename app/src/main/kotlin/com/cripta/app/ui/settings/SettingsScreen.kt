@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.items as staggeredItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -87,6 +88,10 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.material.icons.filled.Face
 import kotlinx.coroutines.launch
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
@@ -175,11 +180,14 @@ fun SettingsScreen(
     // Two-level navigation: the category list, or one category page. Back returns to the list.
     var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
+    // Section a search result asked for (scrolled to once the page opens), and the one marked for a moment.
+    var anchor by remember { mutableStateOf<String?>(null) }
+    var highlighted by remember { mutableStateOf<String?>(null) }
     /** "Mostra altre opzioni" state of the page being shown (opened by a search hit). */
     var confirmReset by remember { mutableStateOf<SettingsPage?>(null) }
     val current = page?.let { p -> SettingsPage.entries.firstOrNull { it.name == p } }
     androidx.activity.compose.BackHandler(enabled = current != null) { page = null }
-    // Requests from elsewhere (Home "Strumenti", duplicate-scan notification).
+    // Requests from elsewhere (Home, duplicate-scan notification).
     val requestedPage by vm.requestedPage.collectAsState()
     LaunchedEffect(requestedPage) {
         requestedPage?.let { page = it; vm.consumeRequestedPage() }
@@ -235,12 +243,13 @@ fun SettingsScreen(
                 query = query,
                 onQuery = { query = it },
                 summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size + trashedFolders.size, dupWaiting?.groups?.size) },
-                onOpen = { p, _ -> page = p.name; query = "" },
+                // From a search result: land on its section and keep the query for the way back.
+                onOpen = { p, a -> page = p.name; anchor = a; if (a == null) query = "" },
                 onLock = { vm.lockNow(); onBack() },
             )
         } else {
           Column(Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = maxW).fillMaxWidth()) {
-            if (current == SettingsPage.COPERTINE) {
+            if (current == SettingsPage.ETICHETTE) {
                 // The live preview stays pinned on top while the options scroll under it.
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Bottom) {
@@ -250,642 +259,652 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            // Portrait: one column. Landscape: sections flow in two columns, so the width is used
-            // instead of stretching every row across the screen.
-            androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
-                columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(if (landscape) 2 else 1),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-                verticalItemSpacing = 12.dp,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                when (current) {
-                    SettingsPage.ASPETTO -> {
-                        item {
-                            Section("Tema", "Tema e colori dell'app.") {
-                                com.cripta.app.ui.components.ChipFlowRow {
-                                    com.cripta.app.data.ThemeMode.entries.forEach { m ->
-                                        FilterChip(
-                                            selected = s.themeMode == m,
-                                            onClick = { vm.setThemeMode(m) },
-                                            label = {
-                                                Text(when (m) {
-                                                    com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
-                                                    com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
-                                                    com.cripta.app.data.ThemeMode.DARK -> "Scuro"
-                                                })
-                                            },
-                                        )
-                                    }
-                                }
-                                ToggleRow("Colori dinamici (Material You)", s.dynamicColor) { vm.setDynamicColor(it) }
-                            }
-                        }
-                        item {
-                            Section("Nel vault") {
-                                ToggleRow("Filtri solo nella cartella corrente", s.filterCurrentFolderOnly) { vm.setFilterCurrentFolderOnly(it) }
-                                Text("Nella sezione Cartelle, alla radice i filtri escludono i file contenuti nelle cartelle. Dentro una cartella cercano solo tra i suoi file.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                ToggleRow("Riepilogo conteggi sopra la griglia", s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
-                                ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
-                                Text("Vista, colonne e ordinamento si cambiano direttamente dal vault (icone in alto e pannello filtri).",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        item {
-                            Section("Pulsanti e dettagli") {
-                                ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
-                                ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
-                                ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
-                                ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
-                            }
-                        }
-                    }
-
-                    SettingsPage.COPERTINE -> {
-                        item {
-                            Section("Etichette sulla copertina") {
-                                ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
-                                if (s.display.showTagsOnCover) {
-                                    Text("Righe di etichette", style = MaterialTheme.typography.labelLarge)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3").forEach { (v, l) ->
-                                            FilterChip(selected = s.display.coverTagRows == v, onClick = { vm.setCoverTagRows(v) }, label = { Text(l) })
-                                        }
-                                    }
-                                    Text("Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
-                                if (s.display.tagColors) {
-                                    Text("Colore predefinito", style = MaterialTheme.typography.labelLarge)
-                                    com.cripta.app.ui.vault.TagColorPicker(
-                                        selected = s.display.defaultTagColor,
-                                        autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
-                                        autoDescription = "Automatico: un colore diverso per ogni nome",
-                                        onPick = { vm.setDefaultTagColor(it) },
-                                    )
-                                    Text(
-                                        if (s.display.defaultTagColor == null) "A: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
-                                        else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                ToggleRow("Durata sui video (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
-                            }
-                        }
-                        item {
-                            Section("Testo e badge") {
-                                Text("Testo delle etichette", style = MaterialTheme.typography.labelLarge)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    FilterChip(selected = s.display.coverTagStyle == com.cripta.app.data.CoverTagStyle.ALIAS,
-                                        onClick = { vm.setCoverTagStyle(com.cripta.app.data.CoverTagStyle.ALIAS) },
-                                        label = { Text("Sigla / emoji") })
-                                    FilterChip(selected = s.display.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME,
-                                        onClick = { vm.setCoverTagStyle(com.cripta.app.data.CoverTagStyle.NAME) },
-                                        label = { Text("Nome intero") })
-                                }
-                                ToggleRow("Qualità sui video (4K / HD / SD)", s.display.showQualityBadge) { vm.setShowQualityBadge(it) }
-                            }
-                        }
-                    }
-
-                    SettingsPage.VIDEO -> {
-                        item {
-                            Section("Riproduzione", "Come parte e si comporta ogni video.") {
-                                ToggleRow("Riprendi da dove eri rimasto", s.display.resumePlayback,
-                                    desc = "Riapre il video al punto lasciato; la copertina mostra quanto hai visto.",
-                                    icon = Icons.Filled.History) { vm.setResumePlayback(it) }
-                                ToggleRow("Ripeti in loop", s.videoLoop,
-                                    desc = "Il video ricomincia da capo quando finisce.",
-                                    icon = Icons.Filled.Repeat) { vm.setVideoLoop(it) }
-                                ToggleRow("Avvia senza audio", s.videoStartMuted,
-                                    desc = "Ogni video parte muto; l'audio si riattiva dai comandi.",
-                                    icon = Icons.AutoMirrored.Filled.VolumeOff) { vm.setVideoStartMuted(it) }
-                            }
-                        }
-                        item {
-                            Section("Fine video") {
-                                ToggleRow("Passa al file successivo", s.autoNext,
-                                    desc = if (s.videoLoop) "Non si attiva finché la ripetizione in loop è accesa."
-                                        else "Negli ultimi secondi compare «Prossimo» con il conto alla rovescia.",
-                                    icon = Icons.Filled.SkipNext) { vm.setAutoNext(it) }
-                                if (s.autoNext) {
-                                    ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
-                                        s.autoNextSec) { vm.setAutoNextSec(it) }
-                                }
-                            }
-                        }
-                        item { IntroSettings(s, vm, onOpenFile) }
-                        item { PeopleSettings(s, vm) }
-                        item {
-                            Section("Pannello info", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
-                                ToggleRow("Video sopra il pannello", s.splitDetails,
-                                    desc = if (s.splitDetails) "In verticale lo schermo si divide: il video resta in alto e continua a " +
-                                        "riprodursi, con i suoi comandi, e il pannello sta sotto (come i commenti di Instagram). Per chiudere " +
-                                        "trascina giù il pannello, scorri giù sul video o premi Indietro. Mentre è aperto, la barra " +
-                                        "etichette del visualizzatore si nasconde: le etichette sono nel pannello."
-                                        else "Il pannello copre il video, che resta dietro oscurato.") { vm.setSplitDetails(it) }
-                            }
-                        }
-                        item {
-                            Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
-                                ToggleRow("Scorri giù per chiudere", s.swipeToClose,
-                                    desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
-                                    icon = Icons.Filled.KeyboardArrowDown) { vm.setSwipeToClose(it) }
-                                ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
-                                    desc = "Trascina in su o in giù sul lato sinistro del video.",
-                                    icon = Icons.Filled.LightMode) { vm.setGestureControls(it) }
-                                ToggleRow("Volume sul lato destro", s.gestureVolume,
-                                    desc = "Trascina in su o in giù sul lato destro del video.",
-                                    icon = Icons.AutoMirrored.Filled.VolumeUp) { vm.setGestureVolume(it) }
-                                ToggleRow("Tieni premuto per accelerare", s.holdForSpeed,
-                                    desc = "Tieni il dito su un lato: il video va più veloce finché non lo alzi.",
-                                    icon = Icons.Filled.FastForward) { vm.setHoldForSpeed(it) }
-                                if (s.holdForSpeed) {
-                                    ChoiceRow("Velocità tenendo premuto", listOf(15 to "1,5×", 20 to "2×", 30 to "3×"),
-                                        s.holdSpeedX10) { vm.setHoldSpeed(it) }
-                                }
-                                ChoiceRow("Doppio tocco sui lati: salta di", listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
-                                    s.seekStepSec, icon = Icons.Filled.FastRewind) { vm.setSeekStep(it) }
-                            }
-                        }
-                        item {
-                            Section("Schermo") {
-                                ToggleRow("Segui l'orientamento del video", s.autoRotate,
-                                    desc = if (s.autoRotate) "I video orizzontali si girano in orizzontale, quelli verticali in verticale."
-                                        else "Lo schermo ruota liberamente con il telefono.",
-                                    icon = Icons.Filled.ScreenRotation) { vm.setAutoRotate(it) }
-                                ChoiceRow("I comandi restano visibili per", listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
-                                    s.controlsTimeoutSec, icon = Icons.Filled.Timer) { vm.setControlsTimeout(it) }
-                                ToggleRow("Anteprime dei file vicini", s.viewerFilmstrip,
-                                    desc = "Piccole copertine dei file prima e dopo, insieme ai comandi.",
-                                    icon = Icons.Filled.ViewCarousel) { vm.setViewerFilmstrip(it) }
-                                if (s.viewerFilmstrip) {
-                                    ChoiceRow("Forma", listOf(
-                                        com.cripta.app.data.StripShape.RECT to "Rettangolo",
-                                        com.cripta.app.data.StripShape.SQUARE to "Quadrato",
-                                        com.cripta.app.data.StripShape.CIRCLE to "Cerchio",
-                                    ), s.filmstripShape) { vm.setFilmstripShape(it) }
-                                    // Stored per side; shown as the whole strip, current file included.
-                                    ChoiceRow("Copertine al massimo", listOf(1 to "3", 2 to "5", 3 to "7", 4 to "9"),
-                                        s.filmstripSpan) { vm.setFilmstripSpan(it) }
-                                    ChoiceRow("Dimensione", listOf(0 to "Piccola", 1 to "Media", 2 to "Grande"),
-                                        s.filmstripSize) { vm.setFilmstripSize(it) }
-                                    if (s.filmstripShape == com.cripta.app.data.StripShape.RECT) {
-                                        ToggleRow("Video verticali in verticale", s.filmstripTrueAspect,
-                                            desc = "Le copertine dei video e delle foto verticali restano verticali invece di essere ritagliate in 16:9.") {
-                                            vm.setFilmstripTrueAspect(it)
-                                        }
-                                    }
-                                }
-                                ToggleRow("Metti in pausa uscendo dall'app", s.pauseOnLeave,
-                                    desc = "Il video si ferma quando l'app va in background. Continua se è in Picture-in-Picture o a schermo diviso.",
-                                    icon = Icons.Filled.Pause) { vm.setPauseOnLeave(it) }
-                                ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
-                                    desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
-                                    icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }
-                            }
-                        }
-                        run {
-                            item {
-                                Section("Conversione in MP4", "La scelta viene chiesta alla prima conversione; qui puoi cambiarla.") {
-                                    com.cripta.app.ui.components.ChipFlowRow {
-                                        listOf(
-                                            com.cripta.app.data.ConvertAfter.REPLACE to "Sostituisci l'originale",
-                                            com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
-                                            com.cripta.app.data.ConvertAfter.KEEP_BOTH to "Tieni entrambi",
-                                        ).forEach { (v, l) ->
-                                            FilterChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
-                                        }
-                                    }
-                                    Text(
-                                        when (s.convertAfter) {
-                                            com.cripta.app.data.ConvertAfter.REPLACE ->
-                                                "L'MP4 prende il posto dell'originale (cartella, etichette, posizione, copertina); l'originale va nel cestino per ${s.trashDays} giorni."
-                                            com.cripta.app.data.ConvertAfter.ASK -> "A fine conversione ti viene chiesto se eliminare l'originale."
-                                            com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "Restano sia l'originale sia la copia MP4."
+            // Each page is a list of named sections: a search result scrolls to its section and marks it.
+            val sections: List<Pair<String, @Composable () -> Unit>> = when (current) {
+                SettingsPage.ASPETTO -> listOf(
+                    sec("Tema") {
+                        Section("Tema", "Tema e colori dell'app.") {
+                            com.cripta.app.ui.components.ChipFlowRow {
+                                com.cripta.app.data.ThemeMode.entries.forEach { m ->
+                                    FilterChip(
+                                        selected = s.themeMode == m,
+                                        onClick = { vm.setThemeMode(m) },
+                                        label = {
+                                            Text(when (m) {
+                                                com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
+                                                com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
+                                                com.cripta.app.data.ThemeMode.DARK -> "Scuro"
+                                            })
                                         },
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
+                            ToggleRow("Colori dinamici (Material You)", s.dynamicColor) { vm.setDynamicColor(it) }
                         }
-                    }
-
-                    SettingsPage.ETICHETTE -> {
-                        item {
-                            Section("Libreria etichette", "${tags.size} etichette · tocca il pallino per colore e 📌.") {
-                                if (tags.isEmpty()) {
-                                    Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                } else {
-                                    val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                                    // Long libraries are collapsed so the page stays short.
-                                    val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
-                                    visible.forEachIndexed { index, tag ->
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                            androidx.compose.foundation.layout.Box(
-                                                // 48dp touch target around the small colour dot.
-                                                Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                                    .clickable(onClickLabel = "Cambia colore", role = Role.Button) { editTag = tag }
-                                                    .semantics { contentDescription = "Colore di #${tag.name}" },
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                androidx.compose.foundation.layout.Box(
-                                                    Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                                        .background(com.cripta.app.ui.theme.tagColor(tag)))
-                                            }
-                                            Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 2.dp),
-                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            if (custom) {
-                                                IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                                    Icon(Icons.Filled.KeyboardArrowUp, "Su")
-                                                }
-                                                IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                                    Icon(Icons.Filled.KeyboardArrowDown, "Giù")
-                                                }
-                                            }
-                                            IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
-                                            IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
-                                        }
-                                    }
-                                    if (tags.size > 8) {
-                                        TextButton(onClick = { showAllTags = !showAllTags }) {
-                                            Text(if (showAllTags) "Mostra meno" else "Mostra tutte (${tags.size})")
-                                        }
-                                    }
-                                }
-                                androidx.compose.material3.FilledTonalButton(
-                                    onClick = { addTag = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Icon(Icons.Filled.Add, null, Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Aggiungi etichetta")
-                                }
+                    },
+                    sec("Cartelle") {
+                        Section("Cartelle", "Vista, colonne e ordinamento si cambiano direttamente dalle Cartelle (icone in alto e pannello filtri).") {
+                            ToggleRow("Filtri solo nella cartella corrente", s.filterCurrentFolderOnly,
+                                desc = "Alla radice i filtri escludono i file dentro le cartelle; dentro una cartella cercano solo tra i suoi file.") {
+                                vm.setFilterCurrentFolderOnly(it)
                             }
+                            ToggleRow("Riepilogo conteggi sopra la griglia", s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
+                            ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
+                            ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
+                            ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                         }
-                        item {
-                            Section("Assegnazione rapida", "La libreria resta sempre nello stesso ordine; cambiano solo le righe in alto.") {
-                                ToggleRow("Etichette recenti", s.display.showRecentTags,
-                                    desc = if (s.display.showRecentTags) "Una riga con le ultime ${s.display.recentTagsCount} usate, nelle " +
-                                        "etichette di un file (anche nel pannello info del visualizzatore) e nella barra del visualizzatore."
-                                        else "Spento: nessuna riga \"Recenti\"; la barra del visualizzatore mostra tutte le etichette.") {
-                                    vm.setShowRecentTags(it)
-                                }
-                                if (s.display.showRecentTags) {
-                                    // Also how many recent tags the viewer's bar adds after the pinned ones.
-                                    ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
-                                        s.display.recentTagsCount) { vm.setRecentTagsCount(it) }
-                                }
-                                ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
-                                    desc = when {
-                                        !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
-                                        s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
-                                        else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
-                                    }) { vm.setViewerQuickTags(it) }
-                            }
+                    },
+                    sec("Copertine dei video") {
+                        Section("Copertine dei video") {
+                            ToggleRow("Durata (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
+                            ToggleRow("Qualità (4K / HD / SD)", s.display.showQualityBadge) { vm.setShowQualityBadge(it) }
                         }
-                        item {
-                            Section("Ordine della libreria") {
+                    },
+                    sec("Pulsanti") {
+                        Section("Pulsanti") {
+                            ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
+                            ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
+                        }
+                    },
+                )
+                SettingsPage.ETICHETTE -> listOf(
+                    sec("Libreria etichette") {
+                        Section("Libreria etichette", "${tags.size} etichette · tocca il pallino per colore e 📌.") {
+                            if (tags.isEmpty()) {
+                                Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    FilterChip(selected = !custom,
-                                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                                        label = { Text("Alfabetico") })
-                                    FilterChip(selected = custom,
-                                        onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                                        label = { Text("Personalizzato") })
+                                // Long libraries are collapsed so the page stays short.
+                                val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
+                                visible.forEachIndexed { index, tag ->
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.foundation.layout.Box(
+                                            // 48dp touch target around the small colour dot.
+                                            Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                                .clickable(onClickLabel = "Cambia colore", role = Role.Button) { editTag = tag }
+                                                .semantics { contentDescription = "Colore di #${tag.name}" },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            androidx.compose.foundation.layout.Box(
+                                                Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                                    .background(com.cripta.app.ui.theme.tagColor(tag)))
+                                        }
+                                        Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 2.dp),
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        if (custom) {
+                                            IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
+                                                Icon(Icons.Filled.KeyboardArrowUp, "Su")
+                                            }
+                                            IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
+                                                Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                                            }
+                                        }
+                                        IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
+                                        IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
+                                    }
                                 }
-                                Text("Con \"Personalizzato\" compaiono le frecce per spostare le etichette.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    SettingsPage.SICUREZZA -> {
-                        item {
-                            Section("Sblocco", "Come si apre il vault. Il PIN dell'app è solo di Cripta e cifra la chiave del vault insieme alla sicurezza del telefono.") {
-                                UnlockModeOptions(vm)
-                            }
-                        }
-                        item {
-                            Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
-                                com.cripta.app.ui.components.ChipFlowRow {
-                                    listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
-                                        FilterChip(
-                                            selected = s.autoLockMinutes == m,
-                                            onClick = { vm.setAutoLock(m) },
-                                            label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
-                                        )
+                                if (tags.size > 8) {
+                                    TextButton(onClick = { showAllTags = !showAllTags }) {
+                                        Text(if (showAllTags) "Mostra meno" else "Mostra tutte (${tags.size})")
                                     }
                                 }
                             }
-                        }
-                        item {
-                            Section("Privacy") {
-                                ToggleRow("Consenti screenshot", s.allowScreenshots,
-                                    desc = "Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.") {
-                                    vm.setAllowScreenshots(it)
-                                }
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = { addTag = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Filled.Add, null, Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                Text("Aggiungi etichetta")
                             }
                         }
-                        item {
-                            Section("Limiti di sicurezza") {
+                    },
+                    sec("Sulle copertine") {
+                        Section("Sulle copertine") {
+                            ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
+                            if (s.display.showTagsOnCover) {
+                                ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows) { vm.setCoverTagRows(it) }
+                                Text("Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ChoiceRow("Testo", listOf(
+                                    com.cripta.app.data.CoverTagStyle.ALIAS to "Sigla / emoji",
+                                    com.cripta.app.data.CoverTagStyle.NAME to "Nome intero",
+                                ), s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
+                            }
+                        }
+                    },
+                    sec("Colori") {
+                        Section("Colori") {
+                            ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
+                            if (s.display.tagColors) {
+                                Text("Colore predefinito", style = MaterialTheme.typography.labelLarge)
+                                com.cripta.app.ui.vault.TagColorPicker(
+                                    selected = s.display.defaultTagColor,
+                                    autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
+                                    autoDescription = "Automatico: un colore diverso per ogni nome",
+                                    onPick = { vm.setDefaultTagColor(it) },
+                                )
                                 Text(
-                                    "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
-                                        "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
-                                        "la cancellazione fisica su memoria flash non è garantita dal sistema. Internet è usato solo per " +
-                                        "scaricare i video dai link e controllare gli aggiornamenti: i file del vault non lasciano mai il dispositivo.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    if (s.display.defaultTagColor == null) "A: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
+                                    else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
-                    }
-
-                    SettingsPage.IMPORT -> {
-                        item {
-                            Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
-                                com.cripta.app.ui.components.ChipFlowRow {
-                                    DeleteOriginalPolicy.entries.forEach { p ->
-                                        FilterChip(
-                                            selected = s.deleteOriginalPolicy == p,
-                                            onClick = { vm.setDeletePolicy(p) },
-                                            label = {
-                                                Text(when (p) {
-                                                    DeleteOriginalPolicy.ASK -> "Chiedi"
-                                                    DeleteOriginalPolicy.ALWAYS -> "Elimina"
-                                                    DeleteOriginalPolicy.NEVER -> "Mantieni"
-                                                })
-                                            },
-                                        )
+                    },
+                    sec("Assegnazione rapida") {
+                        Section("Assegnazione rapida", "La libreria resta sempre nello stesso ordine; cambiano solo le righe in alto.") {
+                            ToggleRow("Etichette recenti", s.display.showRecentTags,
+                                desc = if (s.display.showRecentTags) "Una riga con le ultime ${s.display.recentTagsCount} usate, nelle " +
+                                    "etichette di un file (anche nel pannello info del visualizzatore) e nella barra del visualizzatore."
+                                    else "Spento: nessuna riga \"Recenti\"; la barra del visualizzatore mostra tutte le etichette.") {
+                                vm.setShowRecentTags(it)
+                            }
+                            if (s.display.showRecentTags) {
+                                // Also how many recent tags the viewer's bar adds after the pinned ones.
+                                ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
+                                    s.display.recentTagsCount) { vm.setRecentTagsCount(it) }
+                            }
+                            ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
+                                desc = when {
+                                    !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
+                                    s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
+                                    else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
+                                }) { vm.setViewerQuickTags(it) }
+                        }
+                    },
+                    sec("Ordine della libreria") {
+                        Section("Ordine della libreria") {
+                            val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = !custom,
+                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
+                                    label = { Text("Alfabetico") })
+                                FilterChip(selected = custom,
+                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
+                                    label = { Text("Personalizzato") })
+                            }
+                            Text("Con \"Personalizzato\" compaiono le frecce per spostare le etichette.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                )
+                SettingsPage.VISUALIZZATORE -> listOf(
+                    sec("Riproduzione") {
+                        Section("Riproduzione", "Come parte e si comporta ogni video.") {
+                            ToggleRow("Riprendi da dove eri rimasto", s.display.resumePlayback,
+                                desc = "Riapre il video al punto lasciato; la copertina mostra quanto hai visto.",
+                                icon = Icons.Filled.History) { vm.setResumePlayback(it) }
+                            ToggleRow("Ripeti in loop", s.videoLoop,
+                                desc = "Il video ricomincia da capo quando finisce.",
+                                icon = Icons.Filled.Repeat) { vm.setVideoLoop(it) }
+                            ToggleRow("Avvia senza audio", s.videoStartMuted,
+                                desc = "Ogni video parte muto; l'audio si riattiva dai comandi.",
+                                icon = Icons.AutoMirrored.Filled.VolumeOff) { vm.setVideoStartMuted(it) }
+                        }
+                    },
+                    sec("Fine video") {
+                        Section("Fine video") {
+                            ToggleRow("Passa al file successivo", s.autoNext,
+                                desc = if (s.videoLoop) "Non si attiva finché la ripetizione in loop è accesa."
+                                    else "Negli ultimi secondi compare «Prossimo» con il conto alla rovescia.",
+                                icon = Icons.Filled.SkipNext) { vm.setAutoNext(it) }
+                            if (s.autoNext) {
+                                ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
+                                    s.autoNextSec) { vm.setAutoNextSec(it) }
+                            }
+                        }
+                    },
+                    sec("Gesti") {
+                        Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
+                            ToggleRow("Scorri giù per chiudere", s.swipeToClose,
+                                desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
+                                icon = Icons.Filled.KeyboardArrowDown) { vm.setSwipeToClose(it) }
+                            ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
+                                desc = "Trascina in su o in giù sul lato sinistro del video.",
+                                icon = Icons.Filled.LightMode) { vm.setGestureControls(it) }
+                            ToggleRow("Volume sul lato destro", s.gestureVolume,
+                                desc = "Trascina in su o in giù sul lato destro del video.",
+                                icon = Icons.AutoMirrored.Filled.VolumeUp) { vm.setGestureVolume(it) }
+                            ToggleRow("Tieni premuto per accelerare", s.holdForSpeed,
+                                desc = "Tieni il dito su un lato: il video va più veloce finché non lo alzi.",
+                                icon = Icons.Filled.FastForward) { vm.setHoldForSpeed(it) }
+                            if (s.holdForSpeed) {
+                                ChoiceRow("Velocità tenendo premuto", listOf(15 to "1,5×", 20 to "2×", 30 to "3×"),
+                                    s.holdSpeedX10) { vm.setHoldSpeed(it) }
+                            }
+                            ChoiceRow("Doppio tocco sui lati: salta di", listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
+                                s.seekStepSec, icon = Icons.Filled.FastRewind) { vm.setSeekStep(it) }
+                        }
+                    },
+                    sec("Schermo") {
+                        Section("Schermo") {
+                            ToggleRow("Segui l'orientamento del video", s.autoRotate,
+                                desc = if (s.autoRotate) "I video orizzontali si girano in orizzontale, quelli verticali in verticale."
+                                    else "Lo schermo ruota liberamente con il telefono.",
+                                icon = Icons.Filled.ScreenRotation) { vm.setAutoRotate(it) }
+                            ChoiceRow("I comandi restano visibili per", listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
+                                s.controlsTimeoutSec, icon = Icons.Filled.Timer) { vm.setControlsTimeout(it) }
+                        }
+                    },
+                    sec("Anteprime dei file vicini") {
+                        Section("Anteprime dei file vicini", "Piccole copertine dei file prima e dopo, insieme ai comandi del visualizzatore.") {
+                            ToggleRow("Mostra le anteprime", s.viewerFilmstrip, icon = Icons.Filled.ViewCarousel) { vm.setViewerFilmstrip(it) }
+                            if (s.viewerFilmstrip) {
+                                ChoiceRow("Forma", listOf(
+                                    com.cripta.app.data.StripShape.RECT to "Rettangolo",
+                                    com.cripta.app.data.StripShape.SQUARE to "Quadrato",
+                                    com.cripta.app.data.StripShape.CIRCLE to "Cerchio",
+                                ), s.filmstripShape) { vm.setFilmstripShape(it) }
+                                // Stored per side; shown as the whole strip, current file included.
+                                ChoiceRow("Copertine al massimo", listOf(1 to "3", 2 to "5", 3 to "7", 4 to "9"),
+                                    s.filmstripSpan) { vm.setFilmstripSpan(it) }
+                                ChoiceRow("Dimensione", listOf(0 to "Piccola", 1 to "Media", 2 to "Grande"),
+                                    s.filmstripSize) { vm.setFilmstripSize(it) }
+                                if (s.filmstripShape == com.cripta.app.data.StripShape.RECT) {
+                                    ToggleRow("Copertine verticali intere", s.filmstripTrueAspect,
+                                        desc = "Le anteprime di foto e video verticali restano verticali invece di essere ritagliate in 16:9.") {
+                                        vm.setFilmstripTrueAspect(it)
                                     }
                                 }
-                                // What the chosen option actually does; "Elimina" warns that it is not reversible.
-                                androidx.compose.animation.AnimatedContent(
-                                    targetState = s.deleteOriginalPolicy,
-                                    transitionSpec = {
-                                        androidx.compose.animation.fadeIn(Motion.enter()) togetherWith
-                                            androidx.compose.animation.fadeOut(Motion.exit()) using
-                                            androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.enter(Motion.MEDIUM) }
-                                    },
-                                    label = "deletePolicyDesc",
-                                ) { p ->
-                                    Text(
-                                        when (p) {
-                                            DeleteOriginalPolicy.ASK -> "A fine import ti viene chiesto se eliminare gli originali dal dispositivo."
-                                            DeleteOriginalPolicy.ALWAYS -> "Attenzione: gli originali vengono eliminati dal dispositivo dopo l'import e non si " +
-                                                "possono recuperare. Resta solo la copia cifrata nel vault."
-                                            DeleteOriginalPolicy.NEVER -> "Gli originali restano sul dispositivo: eliminali tu se non vuoi che siano visibili fuori dal vault."
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (p == DeleteOriginalPolicy.ALWAYS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            }
+                        }
+                    },
+                    sec("Pannello dettagli") {
+                        Section("Pannello dettagli", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
+                            ToggleRow("Schermo diviso con i dettagli", s.splitDetails,
+                                desc = if (s.splitDetails) "In verticale la foto o il video restano in alto (il video continua a riprodursi, con i suoi " +
+                                    "comandi) e il pannello sta sotto. Per chiudere trascina giù il pannello, scorri giù sul file o premi Indietro. " +
+                                    "Mentre è aperto, la barra etichette del visualizzatore si nasconde: le etichette sono nel pannello."
+                                    else "Il pannello copre il file, che resta dietro oscurato.") { vm.setSplitDetails(it) }
+                        }
+                    },
+                    sec("Uscendo dall'app") {
+                        Section("Uscendo dall'app") {
+                            ToggleRow("Metti in pausa il video", s.pauseOnLeave,
+                                desc = "Il video si ferma quando l'app va in background. Continua se è in Picture-in-Picture o a schermo diviso.",
+                                icon = Icons.Filled.Pause) { vm.setPauseOnLeave(it) }
+                            ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
+                                desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
+                                icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }
+                        }
+                    },
+                )
+                SettingsPage.ANALISI -> listOf(
+                    sec("Persone") {
+                        PeopleSettings(s, vm)
+                    },
+                    sec("Intro e finale") {
+                        IntroSettings(s, vm, onOpenFile)
+                    },
+                )
+                SettingsPage.SICUREZZA -> listOf(
+                    sec("Sblocco") {
+                        Section("Sblocco", "Come si apre il vault. Il PIN dell'app è solo di Cripta e cifra la chiave del vault insieme alla sicurezza del telefono.") {
+                            UnlockModeOptions(vm)
+                        }
+                    },
+                    sec("Blocco automatico") {
+                        Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
+                            com.cripta.app.ui.components.ChipFlowRow {
+                                listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
+                                    FilterChip(
+                                        selected = s.autoLockMinutes == m,
+                                        onClick = { vm.setAutoLock(m) },
+                                        label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
                                     )
                                 }
-                                Text("Vengono toccati solo gli originali dei file importati con successo.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                    }
-
-                    SettingsPage.STRUMENTI -> {
-                        item {
-                            Section("File duplicati", "Trova file identici o media simili, confrontali e libera spazio. Tutto sul dispositivo.") {
-                                androidx.compose.animation.AnimatedContent(
-                                    targetState = dupScanning,
-                                    transitionSpec = { calmSwap() },
-                                    label = "dupScan",
-                                ) { scanning ->
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                if (scanning) {
-                                    val (done, total) = dupProgress
-                                    val scanEta = com.cripta.app.ui.components.rememberEta(
-                                        if (total > 0) done.toFloat() / total else 0f, total > 0)
-                                    Text((if (total > 0) "Scansione… $done/$total" else "Scansione…") + (scanEta?.let { " · $it" } ?: ""),
-                                        style = MaterialTheme.typography.bodyMedium)
-                                    if (total > 0) {
-                                        val smooth by animateFloatAsState(
-                                            (done.toFloat() / total).coerceIn(0f, 1f),
-                                            tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "dupProgress",
-                                        )
-                                        androidx.compose.material3.LinearProgressIndicator(
-                                            progress = { smooth }, modifier = Modifier.fillMaxWidth())
-                                    } else {
-                                        androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
-                                    }
-                                    Text("Puoi uscire dall'app: la scansione continua in background e ti avvisa con una notifica.",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Interrompi scansione")
-                                    }
-                                } else {
-                                    dupWaiting?.let { r ->
-                                        Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
-                                            Text(
-                                                if (r.groups.isEmpty()) "Scansione completata: nessun risultato"
-                                                else "Risultati pronti: ${r.groups.size} gruppi · Apri"
-                                            )
-                                        }
-                                    }
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
-                                            Text("Esatti")
-                                        }
-                                        androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.weight(1f)) {
-                                            Text("Simili")
-                                        }
-                                    }
-                                    Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                }
-                                }
+                    },
+                    sec("Privacy") {
+                        Section("Privacy") {
+                            ToggleRow("Consenti screenshot", s.allowScreenshots,
+                                desc = "Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.") {
+                                vm.setAllowScreenshots(it)
                             }
                         }
-                        item {
-                            Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
-                                androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
-                                        else "Apri cestino (${trashed.size + trashedFolders.size})")
-                                }
-                                ToggleRow("Usa il cestino quando elimini", s.trashEnabled) { vm.setTrashEnabled(it) }
-                                Text("Conserva per", style = MaterialTheme.typography.labelLarge)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(3, 7, 30).forEach { d ->
-                                        FilterChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
-                                    }
-                                }
-                                Text("Il cestino accoglie anche gli originali sostituiti da una conversione in MP4.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                    },
+                    sec("Limiti di sicurezza") {
+                        Section("Limiti di sicurezza") {
+                            Text(
+                                "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
+                                    "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
+                                    "la cancellazione fisica su memoria flash non è garantita dal sistema. Internet è usato solo per " +
+                                    "scaricare i video dai link e controllare gli aggiornamenti: i file del vault non lasciano mai il dispositivo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        item {
-                            Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
-                                // Always visible: how big the archive would be if made now.
-                                backupEstimate?.let { (n, bytes) ->
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text("Dimensione stimata", style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(com.cripta.app.ui.components.formatBytes(bytes), style = MaterialTheme.typography.titleMedium)
-                                        }
-                                        Text(if (n == 1) "1 file" else "$n file", style = MaterialTheme.typography.bodyMedium,
+                    },
+                )
+                SettingsPage.IMPORT -> listOf(
+                    sec("Originale dopo import") {
+                        Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
+                            com.cripta.app.ui.components.ChipFlowRow {
+                                DeleteOriginalPolicy.entries.forEach { p ->
+                                    FilterChip(
+                                        selected = s.deleteOriginalPolicy == p,
+                                        onClick = { vm.setDeletePolicy(p) },
+                                        label = {
+                                            Text(when (p) {
+                                                DeleteOriginalPolicy.ASK -> "Chiedi"
+                                                DeleteOriginalPolicy.ALWAYS -> "Elimina"
+                                                DeleteOriginalPolicy.NEVER -> "Mantieni"
+                                            })
+                                        },
+                                    )
+                                }
+                            }
+                            // What the chosen option actually does; "Elimina" warns that it is not reversible.
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = s.deleteOriginalPolicy,
+                                transitionSpec = {
+                                    androidx.compose.animation.fadeIn(Motion.enter()) togetherWith
+                                        androidx.compose.animation.fadeOut(Motion.exit()) using
+                                        androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.enter(Motion.MEDIUM) }
+                                },
+                                label = "deletePolicyDesc",
+                            ) { p ->
+                                Text(
+                                    when (p) {
+                                        DeleteOriginalPolicy.ASK -> "A fine import ti viene chiesto se eliminare gli originali dal dispositivo."
+                                        DeleteOriginalPolicy.ALWAYS -> "Attenzione: gli originali vengono eliminati dal dispositivo dopo l'import e non si " +
+                                            "possono recuperare. Resta solo la copia cifrata nel vault."
+                                        DeleteOriginalPolicy.NEVER -> "Gli originali restano sul dispositivo: eliminali tu se non vuoi che siano visibili fuori dal vault."
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (p == DeleteOriginalPolicy.ALWAYS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text("Vengono toccati solo gli originali dei file importati con successo.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                    sec("Conversione in MP4") {
+                        Section("Conversione in MP4", "La scelta viene chiesta alla prima conversione; qui puoi cambiarla.") {
+                            com.cripta.app.ui.components.ChipFlowRow {
+                                listOf(
+                                    com.cripta.app.data.ConvertAfter.REPLACE to "Sostituisci l'originale",
+                                    com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
+                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH to "Tieni entrambi",
+                                ).forEach { (v, l) ->
+                                    FilterChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
+                                }
+                            }
+                            Text(
+                                when (s.convertAfter) {
+                                    com.cripta.app.data.ConvertAfter.REPLACE ->
+                                        "L'MP4 prende il posto dell'originale (cartella, etichette, posizione, copertina); l'originale va nel cestino per ${s.trashDays} giorni."
+                                    com.cripta.app.data.ConvertAfter.ASK -> "A fine conversione ti viene chiesto se eliminare l'originale."
+                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "Restano sia l'originale sia la copia MP4."
+                                },
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                )
+                SettingsPage.BACKUP -> listOf(
+                    sec("Backup cifrato") {
+                        Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
+                            // Always visible: how big the archive would be if made now.
+                            backupEstimate?.let { (n, bytes) ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Dimensione stimata", style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(com.cripta.app.ui.components.formatBytes(bytes), style = MaterialTheme.typography.titleMedium)
                                     }
-                                    Text(if (s.backupCompressDocs) "Stima approssimata: quanto rendono i documenti compressi si sa solo creando il backup."
-                                        else "Serve almeno questo spazio libero nella destinazione (i file multimediali non si comprimono).",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(if (n == 1) "1 file" else "$n file", style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                ToggleRow("Comprimi i documenti", s.backupCompressDocs,
-                                    desc = "Note, PDF e testi compressi senza perdita (identici al ripristino). Foto e video restano come sono: sono già compressi. Il ripristino richiede questa versione di Cripta o successive.") {
-                                    vm.setBackupCompressDocs(it)
-                                }
-                                androidx.compose.animation.AnimatedContent(
-                                    targetState = backupBusy,
-                                    transitionSpec = { calmSwap() },
-                                    label = "backupBusy",
-                                ) { busy ->
-                                    if (busy != null) {
-                                        // Runs on its own; the vault stays usable, the result arrives as a message.
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                                            val p = backupProgress
-                                            val eta = com.cripta.app.ui.components.rememberEta(p ?: 0f, p != null, key = busy)
-                                            Text(if (p != null) "$busy ${(p * 100).toInt()}%" else busy, style = MaterialTheme.typography.bodyMedium)
-                                            if (p != null) {
-                                                val smooth by animateFloatAsState(p, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "backupPct")
-                                                androidx.compose.material3.LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth())
-                                            } else {
-                                                androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
-                                            }
-                                            Text(eta?.replaceFirstChar { it.uppercase() }?.let { "$it. Tieni l'app aperta." }
-                                                    ?: "Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
-                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    } else {
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            androidx.compose.material3.FilledTonalButton(
-                                                onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
-                                                modifier = Modifier.weight(1f),
-                                            ) { Text("Esporta") }
-                                            androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
-                                                Text("Ripristina")
-                                            }
-                                        }
-                                    }
-                                }
-                                Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito.",
+                                Text(if (s.backupCompressDocs) "Stima approssimata: quanto rendono i documenti compressi si sa solo creando il backup."
+                                    else "Serve almeno questo spazio libero nella destinazione (i file multimediali non si comprimono).",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                        }
-                    }
-
-                    SettingsPage.INFO -> {
-                        item {
-                            Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
-                                // Phases swap in place (keyed by phase, so progress ticks don't re-animate).
-                                androidx.compose.animation.AnimatedContent(
-                                    targetState = updateState,
-                                    contentKey = { it::class },
-                                    transitionSpec = { calmSwap() },
-                                    label = "updateState",
-                                ) { u ->
-                                Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                when (u) {
-                                    SettingsViewModel.UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                        Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(start = 12.dp))
-                                    }
-                                    SettingsViewModel.UpdateState.UpToDate ->
-                                        Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
-                                    is SettingsViewModel.UpdateState.Available -> {
-                                        Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
-                                            style = MaterialTheme.typography.bodyMedium)
-                                        Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                                            Text("Installa aggiornamento")
-                                        }
-                                    }
-                                    is SettingsViewModel.UpdateState.Downloading -> {
-                                        // Read the live state (not the frozen target) so the bar keeps moving.
-                                        val pct = (updateState as? SettingsViewModel.UpdateState.Downloading)?.pct ?: u.pct
-                                        val smooth by animateFloatAsState(pct / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "updatePct")
-                                        val updEta = com.cripta.app.ui.components.rememberEta(pct / 100f)
-                                        Text("Download dell'aggiornamento: $pct%" + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
-                                        androidx.compose.material3.LinearProgressIndicator(
-                                            progress = { smooth }, modifier = Modifier.fillMaxWidth())
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Continua anche se chiudi l'app: ti avvisa una notifica.",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                            TextButton(onClick = { vm.cancelUpdateDownload(ctx) }) { Text("Annulla") }
-                                        }
-                                    }
-                                    is SettingsViewModel.UpdateState.ReadyToInstall -> {
-                                        Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
-                                            style = MaterialTheme.typography.bodyMedium)
-                                        Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                                            Text("Installa aggiornamento")
-                                        }
-                                    }
-                                    is SettingsViewModel.UpdateState.Error ->
-                                        Text(u.message, style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.error)
-                                    SettingsViewModel.UpdateState.Idle -> {}
-                                }
-                                }
-                                }
-                                ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
-                                if (updateState !is SettingsViewModel.UpdateState.Downloading) {
-                                    androidx.compose.material3.FilledTonalButton(
-                                        onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Controlla aggiornamenti")
-                                    }
-                                }
+                            ToggleRow("Comprimi i documenti", s.backupCompressDocs,
+                                desc = "Note, PDF e testi compressi senza perdita (identici al ripristino). Foto e video restano come sono: sono già compressi. Il ripristino richiede questa versione di Cripta o successive.") {
+                                vm.setBackupCompressDocs(it)
                             }
-                        }
-                        item {
-                            Section("Informazioni") {
-                                InfoRow("Versione", pkgInfo?.versionName ?: "—")
-                                InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
-                                InfoRow("Pacchetto", ctx.packageName)
-                                InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
-                            }
-                        }
-                        item {
-                            var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
-                            Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
-                                val c = crash
-                                if (c == null) {
-                                    Text("Nessun arresto registrato.", style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = backupBusy,
+                                transitionSpec = { calmSwap() },
+                                label = "backupBusy",
+                            ) { busy ->
+                                if (busy != null) {
+                                    // Runs on its own; the vault stays usable, the result arrives as a message.
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                                        val p = backupProgress
+                                        val eta = com.cripta.app.ui.components.rememberEta(p ?: 0f, p != null, key = busy)
+                                        Text(if (p != null) "$busy ${(p * 100).toInt()}%" else busy, style = MaterialTheme.typography.bodyMedium)
+                                        if (p != null) {
+                                            val smooth by animateFloatAsState(p, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "backupPct")
+                                            androidx.compose.material3.LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                        } else {
+                                            androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                                        }
+                                        Text(eta?.replaceFirstChar { it.uppercase() }?.let { "$it. Tieni l'app aperta." }
+                                                ?: "Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
+                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 } else {
-                                    val lines = c.lines()
-                                    Text(lines.firstOrNull().orEmpty(), style = MaterialTheme.typography.labelLarge)
-                                    Text(lines.firstOrNull { it.contains("Exception") || it.contains("Error") }.orEmpty(),
-                                        style = MaterialTheme.typography.bodySmall, maxLines = 4,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         androidx.compose.material3.FilledTonalButton(
-                                            onClick = {
-                                                clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
-                                                android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
-                                            },
+                                            onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
                                             modifier = Modifier.weight(1f),
-                                        ) { Text("Copia dettagli") }
-                                        androidx.compose.material3.OutlinedButton(
-                                            onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
-                                            modifier = Modifier.weight(1f),
-                                        ) { Text("Elimina") }
+                                        ) { Text("Crea backup") }
+                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
+                                            Text("Ripristina da backup")
+                                        }
                                     }
                                 }
                             }
+                            Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
+                    },
+                )
+                SettingsPage.SPAZIO -> listOf(
+                    sec("File duplicati") {
+                        Section("File duplicati", "Trova file identici o media simili, confrontali e libera spazio. Tutto sul dispositivo.") {
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = dupScanning,
+                                transitionSpec = { calmSwap() },
+                                label = "dupScan",
+                            ) { scanning ->
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (scanning) {
+                                val (done, total) = dupProgress
+                                val scanEta = com.cripta.app.ui.components.rememberEta(
+                                    if (total > 0) done.toFloat() / total else 0f, total > 0)
+                                Text((if (total > 0) "Scansione… $done/$total" else "Scansione…") + (scanEta?.let { " · $it" } ?: ""),
+                                    style = MaterialTheme.typography.bodyMedium)
+                                if (total > 0) {
+                                    val smooth by animateFloatAsState(
+                                        (done.toFloat() / total).coerceIn(0f, 1f),
+                                        tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "dupProgress",
+                                    )
+                                    androidx.compose.material3.LinearProgressIndicator(
+                                        progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                } else {
+                                    androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                                }
+                                Text("Puoi uscire dall'app: la scansione continua in background e ti avvisa con una notifica.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Interrompi scansione")
+                                }
+                            } else {
+                                dupWaiting?.let { r ->
+                                    Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            if (r.groups.isEmpty()) "Scansione completata: nessun risultato"
+                                            else "Risultati pronti: ${r.groups.size} gruppi · Apri"
+                                        )
+                                    }
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
+                                        Text("Esatti")
+                                    }
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.weight(1f)) {
+                                        Text("Simili")
+                                    }
+                                }
+                                Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            }
+                            }
+                        }
+                    },
+                    sec("Cestino") {
+                        Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
+                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
+                                    else "Apri cestino (${trashed.size + trashedFolders.size})")
+                            }
+                            ToggleRow("Usa il cestino quando elimini", s.trashEnabled) { vm.setTrashEnabled(it) }
+                            Text("Conserva per", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(3, 7, 30).forEach { d ->
+                                    FilterChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
+                                }
+                            }
+                            Text("Il cestino accoglie anche gli originali sostituiti da una conversione in MP4.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                )
+                SettingsPage.INFO -> listOf(
+                    sec("Aggiornamenti") {
+                        Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
+                            // Phases swap in place (keyed by phase, so progress ticks don't re-animate).
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = updateState,
+                                contentKey = { it::class },
+                                transitionSpec = { calmSwap() },
+                                label = "updateState",
+                            ) { u ->
+                            Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            when (u) {
+                                SettingsViewModel.UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                    androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(start = 12.dp))
+                                }
+                                SettingsViewModel.UpdateState.UpToDate ->
+                                    Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
+                                is SettingsViewModel.UpdateState.Available -> {
+                                    Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Installa aggiornamento")
+                                    }
+                                }
+                                is SettingsViewModel.UpdateState.Downloading -> {
+                                    // Read the live state (not the frozen target) so the bar keeps moving.
+                                    val pct = (updateState as? SettingsViewModel.UpdateState.Downloading)?.pct ?: u.pct
+                                    val smooth by animateFloatAsState(pct / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "updatePct")
+                                    val updEta = com.cripta.app.ui.components.rememberEta(pct / 100f)
+                                    Text("Download dell'aggiornamento: $pct%" + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
+                                    androidx.compose.material3.LinearProgressIndicator(
+                                        progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Continua anche se chiudi l'app: ti avvisa una notifica.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                        TextButton(onClick = { vm.cancelUpdateDownload(ctx) }) { Text("Annulla") }
+                                    }
+                                }
+                                is SettingsViewModel.UpdateState.ReadyToInstall -> {
+                                    Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Installa aggiornamento")
+                                    }
+                                }
+                                is SettingsViewModel.UpdateState.Error ->
+                                    Text(u.message, style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error)
+                                SettingsViewModel.UpdateState.Idle -> {}
+                            }
+                            }
+                            }
+                            ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
+                            if (updateState !is SettingsViewModel.UpdateState.Downloading) {
+                                androidx.compose.material3.FilledTonalButton(
+                                    onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Controlla aggiornamenti")
+                                }
+                            }
+                        }
+                    },
+                    sec("Informazioni") {
+                        Section("Informazioni") {
+                            InfoRow("Versione", pkgInfo?.versionName ?: "—")
+                            InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
+                            InfoRow("Pacchetto", ctx.packageName)
+                            InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
+                        }
+                    },
+                    sec("Ultimo arresto anomalo") {
+                        var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
+                        Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
+                            val c = crash
+                            if (c == null) {
+                                Text("Nessun arresto registrato.", style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                val lines = c.lines()
+                                Text(lines.firstOrNull().orEmpty(), style = MaterialTheme.typography.labelLarge)
+                                Text(lines.firstOrNull { it.contains("Exception") || it.contains("Error") }.orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall, maxLines = 4,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    androidx.compose.material3.FilledTonalButton(
+                                        onClick = {
+                                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
+                                            android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("Copia dettagli") }
+                                    androidx.compose.material3.OutlinedButton(
+                                        onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("Elimina") }
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+            val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
+            LaunchedEffect(current, anchor) {
+                val a = anchor ?: return@LaunchedEffect
+                val index = sections.indexOfFirst { it.first == a }
+                if (index >= 0) { gridState.scrollToItem(index); highlighted = a }
+                anchor = null
+            }
+            LaunchedEffect(highlighted) {
+                if (highlighted != null) { kotlinx.coroutines.delay(1800); highlighted = null }
+            }
+            // Portrait: one column. Landscape: sections flow in two columns, so the width is used
+            // instead of stretching every row across the screen. No frames: headings and space group.
+            androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
+                columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(if (landscape) 2 else 1),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 40.dp),
+                verticalItemSpacing = 32.dp,
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+            ) {
+                staggeredItems(sections, key = { it.first }) { (key, content) ->
+                    SectionMark(key == highlighted) { content() }
                 }
             }
           }
@@ -1092,106 +1111,110 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
     )
 }
 
-/** Settings pages, in list order; each has its own icon and accent (stats-screen style). */
+enum class SettingsGroup(val label: String) { PREFERENCES("Preferenze"), DATA("I tuoi dati"), APP("App") }
+
+/** Settings pages, in list order, grouped by what the user wants to do. */
 enum class SettingsPage(
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val tint: androidx.compose.ui.graphics.Color,
-    /** Tools are actions, not preferences: listed in their own group. */
-    val tool: Boolean = false,
+    val group: SettingsGroup,
     val resettable: Boolean = true,
 ) {
-    ASPETTO("Aspetto", Icons.Filled.Palette, androidx.compose.ui.graphics.Color(0xFF3B82F6)),
-    COPERTINE("Copertine", Icons.Filled.Image, androidx.compose.ui.graphics.Color(0xFF8B5CF6)),
-    VIDEO("Video", Icons.Filled.PlayCircle, androidx.compose.ui.graphics.Color(0xFFEC4899)),
-    ETICHETTE("Etichette", Icons.AutoMirrored.Filled.Label, androidx.compose.ui.graphics.Color(0xFFF59E0B)),
-    SICUREZZA("Sicurezza", Icons.Filled.Lock, androidx.compose.ui.graphics.Color(0xFFEF4444)),
-    IMPORT("Import", Icons.Filled.Download, androidx.compose.ui.graphics.Color(0xFF06B6D4)),
-    STRUMENTI("Strumenti", Icons.Filled.Build, androidx.compose.ui.graphics.Color(0xFF10B981), tool = true, resettable = false),
-    INFO("Info e aggiornamenti", Icons.Filled.Info, androidx.compose.ui.graphics.Color(0xFF64748B), resettable = false),
+    ASPETTO("Aspetto e cartelle", Icons.Filled.Palette, SettingsGroup.PREFERENCES),
+    ETICHETTE("Etichette", Icons.AutoMirrored.Filled.Label, SettingsGroup.PREFERENCES),
+    VISUALIZZATORE("Visualizzatore", Icons.Filled.PlayCircle, SettingsGroup.PREFERENCES),
+    ANALISI("Persone e intro", Icons.Filled.Face, SettingsGroup.PREFERENCES),
+    SICUREZZA("Sicurezza e privacy", Icons.Filled.Lock, SettingsGroup.DATA),
+    IMPORT("Import e conversione", Icons.Filled.Download, SettingsGroup.DATA),
+    BACKUP("Backup", Icons.Filled.Inventory2, SettingsGroup.DATA, resettable = false),
+    SPAZIO("Duplicati e cestino", Icons.Filled.Delete, SettingsGroup.DATA, resettable = false),
+    INFO("Info e aggiornamenti", Icons.Filled.Info, SettingsGroup.APP, resettable = false),
 }
 
-/** One-line summary of a page's current state, shown under its name in the list. */
 /** "1 elemento" / "N elementi": what the trash counts. Files and folders alike are elements. */
 private fun elementsLabel(n: Int): String = if (n == 1) "1 elemento" else "$n elementi"
 
+/** One-line summary of a page's current state, shown under its name in the list. */
 private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCount: Int, trashCount: Int, dupGroups: Int?): String = when (p) {
     SettingsPage.ASPETTO -> when (s.themeMode) {
         com.cripta.app.data.ThemeMode.SYSTEM -> "Tema di sistema"
         com.cripta.app.data.ThemeMode.LIGHT -> "Tema chiaro"
         com.cripta.app.data.ThemeMode.DARK -> "Tema scuro"
-    } + if (s.dynamicColor) " · colori dinamici" else ""
-    SettingsPage.COPERTINE -> if (!s.display.showTagsOnCover) "Etichette nascoste" else
-        (if (s.display.coverTagRows == 0) "Righe automatiche" else "${s.display.coverTagRows} righe") +
-            (if (s.display.tagColors) " · colori" else "") + (if (s.display.showDurationBadge) " · durata" else "")
-    SettingsPage.VIDEO -> listOfNotNull(
+    } + (if (s.dynamicColor) " · colori dinamici" else "") + (if (s.filterCurrentFolderOnly) " · filtri nella cartella" else "")
+    SettingsPage.ETICHETTE -> "$tagCount etichette" + (if (s.display.showTagsOnCover) " · sulle copertine" else "") +
+        if (s.display.showRecentTags) " · recenti" else ""
+    SettingsPage.VISUALIZZATORE -> listOfNotNull(
         if (s.display.resumePlayback) "Riprendi" else null,
         if (s.videoLoop) "loop" else null,
-        when (s.convertAfter) {
-            com.cripta.app.data.ConvertAfter.REPLACE -> "MP4 sostituisce"
-            com.cripta.app.data.ConvertAfter.ASK -> "MP4: chiedi"
-            com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "MP4: tieni entrambi"
-        },
-    ).joinToString(" · ")
-    SettingsPage.ETICHETTE -> "$tagCount etichette" + if (s.display.showRecentTags) " · recenti" else ""
+        if (s.autoNext) "prossimo file" else null,
+        if (s.splitDetails) "schermo diviso" else null,
+    ).joinToString(" · ").ifEmpty { "Riproduzione, gesti e schermo" }
+    SettingsPage.ANALISI -> "Volti: " + (if (s.facesAnalyzeNew) "analisi automatica" else "analisi a mano") +
+        " · intro: " + if (s.introAnalyzeNew) "automatica" else "a mano"
     SettingsPage.SICUREZZA -> when (s.autoLockMinutes) { -1 -> "Blocco mai"; 0 -> "Blocco subito"; else -> "Blocco dopo ${s.autoLockMinutes} min" } +
         if (s.allowScreenshots) " · screenshot consentiti" else " · screenshot bloccati"
     SettingsPage.IMPORT -> "Originale: " + when (s.deleteOriginalPolicy) {
         DeleteOriginalPolicy.ASK -> "chiedi"; DeleteOriginalPolicy.ALWAYS -> "elimina"; DeleteOriginalPolicy.NEVER -> "mantieni"
+    } + " · MP4: " + when (s.convertAfter) {
+        com.cripta.app.data.ConvertAfter.REPLACE -> "sostituisce"
+        com.cripta.app.data.ConvertAfter.ASK -> "chiedi"
+        com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "tieni entrambi"
     }
-    SettingsPage.STRUMENTI -> listOfNotNull(
+    SettingsPage.BACKUP -> "Archivio cifrato con passphrase, da creare o ripristinare"
+    SettingsPage.SPAZIO -> listOfNotNull(
         "Duplicati",
-        if (trashCount > 0) "cestino ($trashCount)" else "cestino",
-        "backup",
+        if (trashCount > 0) "cestino (${elementsLabel(trashCount)})" else if (s.trashEnabled) "cestino vuoto" else "cestino spento",
         dupGroups?.let { "risultati pronti ($it)" },
     ).joinToString(" · ")
     SettingsPage.INFO -> "Versione e aggiornamenti"
 }
 
-/** Searchable options: label + extra keywords -> page. */
-private val SEARCH_INDEX: List<Triple<String, String, SettingsPage>> = listOf(
-    Triple("Tema chiaro / scuro", "tema scuro chiaro dark light sistema", SettingsPage.ASPETTO),
-    Triple("Colori dinamici", "material you colori dinamici", SettingsPage.ASPETTO),
-    Triple("Riepilogo conteggi", "statistiche conteggi video riepilogo", SettingsPage.ASPETTO),
-    Triple("Intestazioni per data", "data oggi ieri gruppi", SettingsPage.ASPETTO),
-    Triple("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO),
-    Triple("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO),
-    Triple("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO),
-    Triple("Filtri solo nella cartella corrente", "filtri ricerca cartelle contenuto escludere cartella corrente", SettingsPage.ASPETTO),
-    Triple("Etichette sulla copertina", "tag copertina badge", SettingsPage.COPERTINE),
-    Triple("Righe di etichette", "righe tag copertina", SettingsPage.COPERTINE),
-    Triple("Colore delle etichette", "colori tag", SettingsPage.COPERTINE),
-    Triple("Durata sui video", "badge durata", SettingsPage.COPERTINE),
-    Triple("Qualità 4K / HD", "badge qualità risoluzione hd 4k", SettingsPage.COPERTINE),
-    Triple("Testo etichette (sigla o nome)", "sigla alias nome", SettingsPage.COPERTINE),
-    Triple("Riprendi da dove eri rimasto", "riprendi posizione resume", SettingsPage.VIDEO),
-    Triple("Ripeti in loop", "loop ripeti", SettingsPage.VIDEO),
-    Triple("Avvia senza audio", "muto audio", SettingsPage.VIDEO),
-    Triple("Salto con doppio tocco", "doppio tocco salta secondi avanti indietro", SettingsPage.VIDEO),
-    Triple("Luminosità con il gesto", "gesti luminosità trascina sinistra", SettingsPage.VIDEO),
-    Triple("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VIDEO),
-    Triple("Rotazione automatica", "rotazione orizzontale verticale", SettingsPage.VIDEO),
-    Triple("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VIDEO),
-    Triple("Video sopra il pannello", "pannello info diviso instagram commenti video in alto split", SettingsPage.VIDEO),
-    Triple("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VIDEO),
-    Triple("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VIDEO),
-    Triple("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VIDEO),
-    Triple("Prossimo video a fine riproduzione", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VIDEO),
-    Triple("Intro e finale", "salta intro sigla finale titoli coda skip analizza scartati", SettingsPage.VIDEO),
-    Triple("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti", SettingsPage.VIDEO),
-    Triple("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.VIDEO),
-    Triple("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE),
-    Triple("Etichette recenti", "recenti ultime usate riga", SettingsPage.ETICHETTE),
-    Triple("Barra etichette nel visualizzatore", "rapide visualizzatore quick barra player tutte", SettingsPage.ETICHETTE),
-    Triple("Ordine delle etichette", "ordine alfabetico personalizzato", SettingsPage.ETICHETTE),
-    Triple("Blocco automatico", "blocco lock timeout", SettingsPage.SICUREZZA),
-    Triple("Screenshot", "screenshot recenti privacy", SettingsPage.SICUREZZA),
-    Triple("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT),
-    Triple("File duplicati / media simili", "duplicati simili doppioni", SettingsPage.STRUMENTI),
-    Triple("Cestino", "cestino eliminati ripristina", SettingsPage.STRUMENTI),
-    Triple("Modalità di sblocco", "sblocco pin codice impronta biometria due fattori password accesso", SettingsPage.SICUREZZA),
-    Triple("Backup cifrato", "backup esporta ripristina passphrase", SettingsPage.STRUMENTI),
-    Triple("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO),
+/** A searchable option: what it is called, extra words people may type, where it lives (page + section). */
+private class SearchEntry(val label: String, val keywords: String, val page: SettingsPage, val section: String)
+
+private val SEARCH_INDEX: List<SearchEntry> = listOf(
+    SearchEntry("Tema chiaro / scuro", "tema scuro chiaro dark light sistema", SettingsPage.ASPETTO, "Tema"),
+    SearchEntry("Colori dinamici", "material you colori dinamici", SettingsPage.ASPETTO, "Tema"),
+    SearchEntry("Filtri solo nella cartella corrente", "filtri ricerca cartelle contenuto escludere cartella corrente", SettingsPage.ASPETTO, "Cartelle"),
+    SearchEntry("Riepilogo conteggi", "statistiche conteggi video riepilogo", SettingsPage.ASPETTO, "Cartelle"),
+    SearchEntry("Intestazioni per data", "data oggi ieri gruppi", SettingsPage.ASPETTO, "Cartelle"),
+    SearchEntry("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO, "Cartelle"),
+    SearchEntry("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO, "Cartelle"),
+    SearchEntry("Durata sui video", "badge durata copertina", SettingsPage.ASPETTO, "Copertine dei video"),
+    SearchEntry("Qualità 4K / HD", "badge qualità risoluzione hd 4k copertina", SettingsPage.ASPETTO, "Copertine dei video"),
+    SearchEntry("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO, "Pulsanti"),
+    SearchEntry("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE, "Libreria etichette"),
+    SearchEntry("Etichette sulla copertina", "tag copertina badge righe sigla alias nome", SettingsPage.ETICHETTE, "Sulle copertine"),
+    SearchEntry("Colore delle etichette", "colori tag predefinito", SettingsPage.ETICHETTE, "Colori"),
+    SearchEntry("Etichette recenti", "recenti ultime usate riga", SettingsPage.ETICHETTE, "Assegnazione rapida"),
+    SearchEntry("Barra etichette nel visualizzatore", "rapide visualizzatore quick barra player tutte", SettingsPage.ETICHETTE, "Assegnazione rapida"),
+    SearchEntry("Ordine delle etichette", "ordine alfabetico personalizzato", SettingsPage.ETICHETTE, "Ordine della libreria"),
+    SearchEntry("Riprendi da dove eri rimasto", "riprendi posizione resume", SettingsPage.VISUALIZZATORE, "Riproduzione"),
+    SearchEntry("Ripeti in loop", "loop ripeti", SettingsPage.VISUALIZZATORE, "Riproduzione"),
+    SearchEntry("Avvia senza audio", "muto audio", SettingsPage.VISUALIZZATORE, "Riproduzione"),
+    SearchEntry("Prossimo file a fine video", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VISUALIZZATORE, "Fine video"),
+    SearchEntry("Salto con doppio tocco", "doppio tocco salta secondi avanti indietro", SettingsPage.VISUALIZZATORE, "Gesti"),
+    SearchEntry("Luminosità con il gesto", "gesti luminosità trascina sinistra", SettingsPage.VISUALIZZATORE, "Gesti"),
+    SearchEntry("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VISUALIZZATORE, "Gesti"),
+    SearchEntry("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VISUALIZZATORE, "Gesti"),
+    SearchEntry("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VISUALIZZATORE, "Gesti"),
+    SearchEntry("Rotazione automatica", "rotazione orizzontale verticale orientamento", SettingsPage.VISUALIZZATORE, "Schermo"),
+    SearchEntry("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VISUALIZZATORE, "Schermo"),
+    SearchEntry("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti verticali", SettingsPage.VISUALIZZATORE, "Anteprime dei file vicini"),
+    SearchEntry("Schermo diviso con i dettagli", "pannello info dettagli diviso instagram commenti in alto split", SettingsPage.VISUALIZZATORE, "Pannello dettagli"),
+    SearchEntry("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VISUALIZZATORE, "Uscendo dall'app"),
+    SearchEntry("Pausa uscendo dall'app", "pausa background esci", SettingsPage.VISUALIZZATORE, "Uscendo dall'app"),
+    SearchEntry("Persone e volti", "persone volti facce riconoscimento analisi momenti home", SettingsPage.ANALISI, "Persone"),
+    SearchEntry("Intro e finale", "salta intro sigla finale titoli coda skip analizza scartati", SettingsPage.ANALISI, "Intro e finale"),
+    SearchEntry("Modalità di sblocco", "sblocco pin codice impronta biometria due fattori password accesso", SettingsPage.SICUREZZA, "Sblocco"),
+    SearchEntry("Blocco automatico", "blocco lock timeout", SettingsPage.SICUREZZA, "Blocco automatico"),
+    SearchEntry("Screenshot", "screenshot recenti privacy", SettingsPage.SICUREZZA, "Privacy"),
+    SearchEntry("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT, "Originale dopo import"),
+    SearchEntry("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.IMPORT, "Conversione in MP4"),
+    SearchEntry("Backup cifrato", "backup esporta ripristina passphrase archivio copia", SettingsPage.BACKUP, "Backup cifrato"),
+    SearchEntry("File duplicati / media simili", "duplicati simili doppioni spazio", SettingsPage.SPAZIO, "File duplicati"),
+    SearchEntry("Cestino", "cestino eliminati ripristina", SettingsPage.SPAZIO, "Cestino"),
+    SearchEntry("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO, "Aggiornamenti"),
 )
 
 /** First level: search + preference pages + tools, each with a live summary. */
@@ -1202,7 +1225,8 @@ private fun MainSettingsList(
     query: String,
     onQuery: (String) -> Unit,
     summaries: Map<SettingsPage, String>,
-    onOpen: (SettingsPage, Boolean) -> Unit,
+    /** Page, plus the section to land on when coming from a search result. */
+    onOpen: (SettingsPage, String?) -> Unit,
     onLock: () -> Unit,
 ) {
     // Two columns of page rows in landscape; search, group labels and the lock button span the width.
@@ -1212,41 +1236,48 @@ private fun MainSettingsList(
         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns),
         modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(span = full) {
-            OutlinedTextField(
+            // A filled search pill, not a boxed field.
+            androidx.compose.material3.TextField(
                 value = query, onValueChange = onQuery,
                 placeholder = { Text("Cerca un'impostazione") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "Cancella") } }) else null,
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
         val q = query.trim().lowercase()
         if (q.isNotEmpty()) {
-            val hits = SEARCH_INDEX.filter { (label, kw, _) -> label.lowercase().contains(q) || kw.contains(q) }
+            val hits = SEARCH_INDEX.filter { e -> e.label.lowercase().contains(q) || e.keywords.contains(q) }
             if (hits.isEmpty()) {
                 item(span = full) { Text("Nessuna impostazione trovata.", color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(8.dp)) }
             }
             items(hits.size) { i ->
-                val (label, _, p) = hits[i]
-                PageRow(p, label, "in ${p.label}") { onOpen(p, true) }
+                val e = hits[i]
+                PageRow(e.page, e.label, "${e.page.label} › ${e.section}") { onOpen(e.page, e.section) }
             }
         } else {
-            item(span = full) { GroupLabel("Preferenze") }
-            items(SettingsPage.entries.filter { !it.tool && it != SettingsPage.INFO }.size) { i ->
-                val p = SettingsPage.entries.filter { !it.tool && it != SettingsPage.INFO }[i]
-                PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, false) }
+            SettingsGroup.entries.forEach { g ->
+                item(span = full) { GroupLabel(g.label) }
+                val pages = SettingsPage.entries.filter { it.group == g }
+                items(pages.size) { i ->
+                    val p = pages[i]
+                    PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, null) }
+                }
             }
-            item(span = full) { GroupLabel("Strumenti") }
-            item { PageRow(SettingsPage.STRUMENTI, "Duplicati, cestino e backup", summaries[SettingsPage.STRUMENTI].orEmpty()) { onOpen(SettingsPage.STRUMENTI, false) } }
-            item { PageRow(SettingsPage.INFO, SettingsPage.INFO.label, summaries[SettingsPage.INFO].orEmpty()) { onOpen(SettingsPage.INFO, false) } }
             item(span = full) {
-                Button(onClick = onLock, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                androidx.compose.material3.OutlinedButton(onClick = onLock, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                     Icon(Icons.Filled.Lock, null, Modifier.size(ButtonDefaults.IconSize))
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text("Blocca ora")
@@ -1258,8 +1289,8 @@ private fun MainSettingsList(
 
 @Composable
 private fun GroupLabel(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 2.dp).semantics { heading() })
+    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 4.dp).semantics { heading() })
 }
 
 /** Calm swap between two states of a panel: crossfade while the height follows. */
@@ -1271,53 +1302,58 @@ private fun androidx.compose.animation.AnimatedContentTransitionScope<*>.calmSwa
 private fun backupStamp(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.ROOT).format(java.util.Date())
 
-/** A page entry: coloured icon badge, name, current-state summary, chevron. */
+/** A page entry: plain row with its icon, name and current-state summary. No frame around it. */
 @Composable
 private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: () -> Unit) {
-    androidx.compose.material3.Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).clickable(onClick = onClick),
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.material3.Surface(color = p.tint.copy(alpha = 0.16f), shape = androidx.compose.foundation.shape.CircleShape,
-                modifier = Modifier.size(40.dp)) {
-                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-                    Icon(p.icon, null, tint = p.tint, modifier = Modifier.size(22.dp))
-                }
+        Icon(p.icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f).padding(start = 20.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (summary.isNotBlank()) {
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                if (summary.isNotBlank()) {
-                    Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-/** "Mostra altre opzioni" toggle that reveals a page's less-used settings. */
+/**
+ * A group of options: heading, optional explanation, the options. No frame or card around it:
+ * the heading and the space before the next group do the grouping.
+ */
 @Composable
 internal fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
-    // Grouped, elevated card: binds each group's controls together.
-    androidx.compose.material3.Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-            if (description != null) {
-                Text(description, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            content()
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() })
+        if (description != null) {
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        content()
     }
+}
+
+/** Named section of a page, so a search result can find it. */
+private fun sec(key: String, content: @Composable () -> Unit): Pair<String, @Composable () -> Unit> = key to content
+
+/** Briefly marks the section a search result landed on: a soft tint behind it that fades out. */
+@Composable
+private fun SectionMark(on: Boolean, content: @Composable () -> Unit) {
+    val tint by androidx.compose.animation.animateColorAsState(
+        if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+        tween(if (on) Motion.MEDIUM else Motion.LONG * 3, 0, Motion.EaseOutQuart), label = "sectionMark",
+    )
+    val shape = MaterialTheme.shapes.medium
+    Box(Modifier.drawBehind {
+        val pad = 10.dp.toPx()
+        val outline = shape.createOutline(
+            androidx.compose.ui.geometry.Size(size.width + 2 * pad, size.height + 2 * pad), layoutDirection, this)
+        translate(-pad, -pad) { drawOutline(outline, tint) }
+    }) { content() }
 }
 
 @Composable
@@ -1336,7 +1372,7 @@ internal fun ToggleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 14.dp).size(22.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp).size(22.dp))
         }
         Column(Modifier.weight(1f).padding(end = 8.dp)) {
             Text(label)
@@ -1360,7 +1396,7 @@ private fun <T> ChoiceRow(
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
         if (icon != null) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 14.dp, top = 2.dp).size(22.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp, top = 2.dp).size(22.dp))
         } else {
             // Sub-option of the toggle above: indent it under that toggle's text.
             androidx.compose.foundation.layout.Spacer(Modifier.width(36.dp))

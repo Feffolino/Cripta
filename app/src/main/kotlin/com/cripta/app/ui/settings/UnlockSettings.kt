@@ -42,7 +42,7 @@ import com.cripta.app.security.UnlockMode
 import kotlinx.coroutines.launch
 
 /**
- * The unlock mode choice (Impostazioni › Sicurezza). A change is confirmed with the current way in
+ * The unlock mode choice (Impostazioni › Sicurezza e privacy). A change is confirmed with the current way in
  * (the system prompt, or the current app PIN in PIN-only mode) and asks for a new PIN whenever the
  * chosen mode uses one; the vault key is then re-wrapped for the new mode in one step.
  */

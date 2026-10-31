@@ -161,7 +161,7 @@ class IntroRepository @Inject constructor(
             m.length < kind.minHashes -> "in comune con «$other» solo %.1f s (ne servono almeno 2)".format(secs)
             IntroDetector.isCut(kind, p, o, m) -> "in comune con «$other» %.0f s fino al bordo della parte analizzata: sembra una copia dello stesso video".format(secs)
             IntroDetector.isRejected(p.hashes.copyOfRange(m.aStart, m.aEnd), dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }) ->
-                "il tratto in comune con «$other» è tra i segmenti scartati (Impostazioni › Segmenti scartati)"
+                "il tratto in comune con «$other» è tra i segmenti scartati (Impostazioni › Persone e intro › Intro e finale)"
             else -> "in comune con «$other» %.0f s (%s–%s), ma non salvato: segnalamelo".format(secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
         }
     }
