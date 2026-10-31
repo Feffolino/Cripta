@@ -73,6 +73,14 @@ object DefaultTagColor {
     var argb by mutableStateOf<Int?>(null)
 }
 
+/**
+ * "Etichette colorate" (Settings › Etichette). Off: every tag pill uses the app accent instead of
+ * its own colour, wherever it is drawn (read by TagPill, so no screen can forget it).
+ */
+object TagColorsEnabled {
+    var on by mutableStateOf(true)
+}
+
 /** How many recently used tags pickers show (Settings › Etichette). */
 object RecentTagsCount {
     var value by mutableStateOf(6)

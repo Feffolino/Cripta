@@ -90,6 +90,7 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.DropdownMenu
@@ -649,47 +650,55 @@ fun VaultScreen(
                     enter = fadeIn(Motion.enter()) + slideInVertically(Motion.enter()) { it / 2 },
                     exit = fadeOut(Motion.exit()) + slideOutVertically(Motion.exit()) { it / 2 },
                 ) {
-                    // Single expanding FAB: collapsed it shows just "+"; tapping it opens one menu panel
-                    // above it (each action with a line saying where it acts), not a stack of FABs.
+                    // "+" opens its actions in a row to its left (adding things); "Apri a caso" is a
+                    // separate small button above it, since it opens rather than adds.
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val here = path.lastOrNull()?.name
                         val actions = buildList {
-                            add(FabAction("Importa file", Icons.Filled.EnhancedEncryption,
-                                "Foto, video e documenti " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; startImport() })
-                            add(FabAction("Nuova cartella", Icons.Filled.CreateNewFolder,
-                                here?.let { "Dentro $it" } ?: "Nella radice del vault") { fabExpanded = false; showNewFolder = true })
-                            if (display.showNoteFab) add(FabAction("Nuova nota", Icons.Filled.Description,
-                                "Testo cifrato " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
-                            if (display.showRandomFab) {
-                                val caption = when {
-                                    filters.active -> "Tra i risultati del filtro"
-                                    path.isNotEmpty() -> "In questa cartella"
-                                    else -> "In tutto il vault"
-                                }
-                                add(FabAction("Apri a caso", Icons.Filled.Casino, caption) { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) })
+                            add(FabAction("Importa", Icons.Filled.EnhancedEncryption,
+                                "Importa file " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; startImport() })
+                            add(FabAction("Cartella", Icons.Filled.CreateNewFolder,
+                                "Nuova cartella " + (here?.let { "dentro $it" } ?: "nella radice")) { fabExpanded = false; showNewFolder = true })
+                            if (display.showNoteFab) add(FabAction("Nota", Icons.Filled.Description,
+                                "Nuova nota " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
+                        }
+                        if (display.showRandomFab) {
+                            val randomLabel = when {
+                                filters.active -> "Apri a caso tra i risultati"
+                                path.isNotEmpty() -> "Apri a caso in questa cartella"
+                                else -> "Apri a caso"
                             }
+                            androidx.compose.material3.SmallFloatingActionButton(
+                                onClick = { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) },
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                // Lines up with the centre of the "+" below it.
+                                modifier = Modifier.padding(end = 8.dp),
+                            ) { Icon(Icons.Filled.Shuffle, randomLabel) }
                         }
-                        val origin = TransformOrigin(1f, 1f)
-                        AnimatedVisibility(
-                            visible = fabExpanded,
-                            enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
-                                scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.92f, transformOrigin = origin),
-                            exit = fadeOut(Motion.exit(Motion.SHORT)) +
-                                scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.92f, transformOrigin = origin),
-                        ) {
-                            FabMenu(actions, if (landscape) Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()) else Modifier)
-                        }
-                        // "+" turns 45 degrees into an "x" while the actions are open.
-                        val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
-                        FloatingActionButton(
-                            onClick = { fabExpanded = !fabExpanded },
-                            modifier = Modifier.semantics { this.stateDescription = if (fabExpanded) "Aperto" else "Chiuso" },
-                        ) {
-                            Icon(
-                                Icons.Filled.Add,
-                                if (fabExpanded) "Chiudi azioni" else "Azioni",
-                                Modifier.graphicsLayer { rotationZ = fabRotation },
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val origin = TransformOrigin(1f, 0.5f)
+                            AnimatedVisibility(
+                                visible = fabExpanded,
+                                enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
+                                    scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.9f, transformOrigin = origin),
+                                exit = fadeOut(Motion.exit(Motion.SHORT)) +
+                                    scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
+                            ) {
+                                FabRow(actions, Modifier.padding(end = 12.dp))
+                            }
+                            // "+" turns 45 degrees into an "x" while the actions are open.
+                            val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
+                            FloatingActionButton(
+                                onClick = { fabExpanded = !fabExpanded },
+                                modifier = Modifier.semantics { this.stateDescription = if (fabExpanded) "Aperto" else "Chiuso" },
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    if (fabExpanded) "Chiudi azioni" else "Aggiungi",
+                                    Modifier.graphicsLayer { rotationZ = fabRotation },
+                                )
+                            }
                         }
                     }
                 }
@@ -863,15 +872,16 @@ fun VaultScreen(
                 // (root -> folder -> root on Back). Also without animations, where it just snaps.
                 levelAlpha.snapTo(0f)
                 val target = path.lastOrNull()?.id
-                withTimeoutOrNull(400) {
+                withTimeoutOrNull(250) {
                     snapshotFlow { filesLevelState.value == target && foldersLevelState.value == target }.first { it }
                 }
                 val restore = if (!deeper) scrollMemory[newKey] else null
                 gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
                 if (animOn) {
                     levelX.snapTo(with(density) { 32.dp.toPx() } * if (deeper) 1f else -1f)
-                    launch { levelX.animateTo(0f, Motion.enter(Motion.LONG)) }
-                    levelAlpha.animateTo(1f, Motion.enter(Motion.MEDIUM))
+                    // Quick: the new level is already loaded, it only needs to say "deeper" / "back".
+                    launch { levelX.animateTo(0f, Motion.enter(Motion.MEDIUM)) }
+                    levelAlpha.animateTo(1f, Motion.enter(Motion.SHORT))
                 } else {
                     levelX.snapTo(0f); levelAlpha.snapTo(1f)
                 }
@@ -2767,36 +2777,31 @@ private fun EmptyState(
 }
 
 /**
- * The "+" menu: one tonal panel (a single object, so a filled surface is allowed) listing the
- * actions as rows: icon in a soft accent circle, name, and a line saying where it acts.
+ * The "+" actions: one tonal pill (a single object, so a filled surface is allowed) opening to the
+ * left of the button, each action a round accent icon with its short name under it.
  */
 @Composable
-private fun FabMenu(actions: List<FabAction>, modifier: Modifier = Modifier) {
+private fun FabRow(actions: List<FabAction>, modifier: Modifier = Modifier) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
         shadowElevation = 6.dp,
-        modifier = Modifier.widthIn(min = 240.dp, max = 300.dp),
+        modifier = modifier,
     ) {
-        Column(modifier.padding(vertical = 8.dp)) {
+        Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp)) {
             actions.forEach { a ->
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                        .clickable(role = Role.Button, onClick = a.onClick)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    Modifier.widthIn(min = 68.dp).clip(MaterialTheme.shapes.large)
+                        .clickable(role = Role.Button, onClickLabel = a.caption, onClick = a.onClick)
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center) {
                         Icon(a.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     }
-                    Column(Modifier.padding(start = 14.dp)) {
-                        Text(a.label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
-                        if (a.caption != null) {
-                            Text(a.caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
-                        }
-                    }
+                    Text(a.label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                        modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -3238,6 +3243,10 @@ fun FolderMosaic(
                     bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
                 if (hl > 0f) Box(Modifier.matchParentSize().background(primary.copy(alpha = 0.18f * hl)))
+                // Favourite: the same star as on file covers, in the cover's corner.
+                if (folder.isFavorite && onRemoveFavorite == null) {
+                    com.cripta.app.ui.components.CoverStar(Modifier.align(Alignment.TopStart).padding(6.dp), description = "Cartella preferita")
+                }
             }
         }
         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -3246,10 +3255,6 @@ fun FolderMosaic(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.weight(1f, fill = false))
-                    if (folder.isFavorite && onRemoveFavorite == null) {
-                        Icon(Icons.Filled.Star, "Cartella preferita", tint = com.cripta.app.ui.theme.Favorite,
-                            modifier = Modifier.padding(start = 4.dp).size(14.dp))
-                    }
                 }
                 if (showInfo) {
                     val n = stat?.count ?: 0

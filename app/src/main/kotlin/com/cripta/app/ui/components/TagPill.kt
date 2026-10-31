@@ -89,8 +89,10 @@ fun TagPill(
     /** TalkBack text for the state; defaults to Italian names of [state]. */
     stateLabel: String? = null,
 ) {
+    // With tag colours off (Settings › Etichette) every tag takes the accent, here for every screen.
+    val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
     val on = state == TagPillState.On
-    val colored = state == TagPillState.On || state == TagPillState.Plain
+    val colored = on || state == TagPillState.Plain
     val neutral = if (onImage) OnImageGlass else MaterialTheme.colorScheme.surfaceContainerHigh
     val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
     // Over a picture the pill lets it through a little; the text is judged against the tag's own
