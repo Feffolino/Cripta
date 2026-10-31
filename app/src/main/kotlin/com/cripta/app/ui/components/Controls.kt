@@ -47,8 +47,11 @@ fun criptaTopBarColors(): androidx.compose.material3.TopAppBarColors =
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
     )
 
-/** Shape of every text field: a soft filled slab, no outline. */
+/** Shape of multi-line text fields: a soft filled slab, no outline. */
 val FieldShape = RoundedCornerShape(18.dp)
+
+/** Shape of every single-line field (search, link, name): a full pill, the same everywhere. */
+val PillFieldShape = RoundedCornerShape(28.dp)
 
 /**
  * Filled field colours: a tonal slab one tier above the page, no outline and no underline (the
@@ -95,7 +98,7 @@ fun CriptaTextField(
         trailingIcon = trailingIcon, supportingText = supportingText, isError = isError,
         visualTransformation = visualTransformation, keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions, singleLine = singleLine, maxLines = maxLines, minLines = minLines,
-        shape = FieldShape, colors = criptaFieldColors(),
+        shape = if (singleLine) PillFieldShape else FieldShape, colors = criptaFieldColors(),
     )
 }
 
@@ -121,7 +124,7 @@ fun CriptaTextField(
         label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
         supportingText = supportingText, isError = isError, keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions, singleLine = singleLine,
-        shape = FieldShape, colors = criptaFieldColors(),
+        shape = if (singleLine) PillFieldShape else FieldShape, colors = criptaFieldColors(),
     )
 }
 

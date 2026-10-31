@@ -45,6 +45,9 @@ interface FolderDao {
     @Query("UPDATE folders SET color = :color, emoji = :emoji WHERE id = :id")
     suspend fun setStyle(id: Long, color: Int?, emoji: String?)
 
+    @Query("UPDATE folders SET coverFileId = :fileId WHERE id = :id")
+    suspend fun setCover(id: Long, fileId: String?)
+
     @Query("UPDATE folders SET isFavorite = :favorite WHERE id = :id")
     suspend fun setFavorite(id: Long, favorite: Boolean)
 

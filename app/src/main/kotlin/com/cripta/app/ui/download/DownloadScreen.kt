@@ -455,8 +455,9 @@ private fun DestinationRow(
 }
 
 /**
- * Quality as one segmented control: every option side by side with its estimated size under it.
- * The chosen one is filled with the accent and carries a tick (never colour alone).
+ * Quality as a grid of roomy options, three per row (five side by side were too narrow): each
+ * with its estimated size under the name. The chosen one is filled with the accent and carries a
+ * tick (never colour alone).
  */
 @Composable
 private fun QualitySelector(
@@ -465,28 +466,30 @@ private fun QualitySelector(
     estimate: DownloadViewModel.Estimate,
     onSelect: (Int?) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        qualities.forEach { (h, label) ->
-            val on = selected == h
-            val fg = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-            Column(
-                Modifier.weight(1f).heightIn(min = 52.dp).clip(MaterialTheme.shapes.medium)
-                    .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable(role = Role.RadioButton, onClick = { onSelect(h) })
-                    .semantics { this.selected = on }
-                    .padding(vertical = 6.dp, horizontal = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (on) Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 2.dp).size(14.dp))
-                    Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        qualities.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (h, label) ->
+                    val on = selected == h
+                    val fg = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                    Column(
+                        Modifier.weight(1f).heightIn(min = 60.dp).clip(MaterialTheme.shapes.medium)
+                            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(role = Role.RadioButton, onClick = { onSelect(h) })
+                            .semantics { this.selected = on }
+                            .padding(vertical = 8.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (on) Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(16.dp))
+                            Text(label, style = MaterialTheme.typography.titleSmall, color = fg, maxLines = 1)
+                        }
+                        SizeHint(estimate, h, if (on) fg else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-                SizeHint(estimate, h, if (on) fg else MaterialTheme.colorScheme.onSurfaceVariant)
+                // Keep the last row's options the same width as the ones above.
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }

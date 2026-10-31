@@ -54,15 +54,18 @@ fun tagText(tag: TagEntity): String =
     if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name
 
 /**
- * The one tag component of the app: a round pill tinted with the tag's colour. Used on covers, in
- * list rows, filters, tag pickers, the viewer's quick bar, Home and the downloader, in three sizes.
+ * The one tag component of the app: a round pill in the tag's colour. Used on covers, in list
+ * rows, filters, tag pickers, the viewer's quick bar, Home and the downloader, in three sizes.
  *
- * - Plain / Off: the colour at 20% over [base], the name in the same hue pushed to >= 4.5:1.
- * - On: the full colour with a tick, the text white or black, whichever reads on it.
- * - Excluded: tinted, struck through, with a "no" sign.
+ * Colour means "this tag is on the file / in the filter"; neutral means "not":
+ * - Plain (a tag shown on a file) and On (assigned / filtered): the tag's colour, translucent
+ *   (35% over [base]; 78% over a picture), name in the same hue or white/black at >= 4.5:1. On
+ *   adds a tick.
+ * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's colour.
+ * - Excluded: neutral, struck through, with a "no" sign.
  *
- * [onImage] draws it over a picture (covers, viewer): the tint sits on a dark glass instead of
- * the page surface. [base] is the colour behind the pill, for the contrast maths.
+ * [onImage] draws it over a picture (covers, viewer). [base] is the colour behind the pill, for
+ * the contrast maths.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -86,10 +89,24 @@ fun TagPill(
     /** TalkBack text for the state; defaults to Italian names of [state]. */
     stateLabel: String? = null,
 ) {
-    val under = if (onImage) OnImageGlass else base
     val on = state == TagPillState.On
-    val bg = remember(color, under, on) { if (on) color else color.copy(alpha = 0.20f).compositeOver(under) }
-    val fg = remember(color, bg, on) { if (on) readableOn(Color.White, bg) else readableOn(color, bg, 4.8) }
+    val colored = state == TagPillState.On || state == TagPillState.Plain
+    val neutral = if (onImage) OnImageGlass else MaterialTheme.colorScheme.surfaceContainerHigh
+    val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+    // Over a picture the pill lets it through a little; the text is judged against the tag's own
+    // colour over a dark backdrop, the darkest tone that pill can take.
+    val bg = when {
+        !colored -> neutral
+        onImage -> color.copy(alpha = 0.78f)
+        else -> color.copy(alpha = 0.35f).compositeOver(base)
+    }
+    val fg = remember(color, bg, colored, onImage, muted) {
+        when {
+            !colored -> muted
+            onImage -> readableOn(Color.White, color.copy(alpha = 0.78f).compositeOver(OnImageGlass))
+            else -> readableOn(color, bg, 4.8)
+        }
+    }
     val style = when (size) {
         TagPillSize.Small -> MaterialTheme.typography.labelSmall
         else -> MaterialTheme.typography.labelLarge
@@ -133,8 +150,8 @@ fun TagPill(
         if (lead != null) {
             Icon(lead, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(iconSize))
         } else if (size != TagPillSize.Small) {
-            // The tag's colour at full strength, so every tag is recognisable even when unselected.
-            Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape).background(fg))
+            // The tag's own colour as a dot, so every tag is recognisable even when it is off.
+            Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape).background(if (colored) fg else color))
         }
         Text(
             text,
@@ -143,7 +160,8 @@ fun TagPill(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textDecoration = if (state == TagPillState.Excluded) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f, fill = false),
+            // No weight: inside a LazyRow (unbounded width) a weighted text was measured to 0 and
+            // the viewer's quick bar showed empty pills. [maxWidth] bounds it where needed.
         )
         if (trailingIcon != null) {
             Icon(trailingIcon, null, tint = fg, modifier = Modifier.padding(start = 4.dp).size(iconSize))

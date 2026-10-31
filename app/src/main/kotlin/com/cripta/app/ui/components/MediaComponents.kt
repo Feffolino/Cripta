@@ -2,6 +2,7 @@ package com.cripta.app.ui.components
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -180,7 +181,9 @@ fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
 }
 
 /** App logo + title, for the top bar of the main screens. Kept identical across every screen so
- *  the logo is the same size everywhere and the bar stays compact. */
+ *  the logo is the same size everywhere and the bar stays compact. A title too long for the bar
+ *  (a folder's name) glides sideways so it can be read whole; with animations off it is cut. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HeaderTitle(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,8 +192,13 @@ fun HeaderTitle(text: String) {
             contentDescription = null,
             modifier = Modifier.size(32.dp),
         )
-        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = 6.dp))
+        val glide = com.cripta.app.ui.theme.animationsEnabled()
+        Text(text, maxLines = 1, overflow = if (glide) TextOverflow.Clip else TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(start = 6.dp).then(
+                if (glide) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1200, repeatDelayMillis = 2000)
+                else Modifier,
+            ))
     }
 }
 

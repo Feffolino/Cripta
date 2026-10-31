@@ -1238,19 +1238,13 @@ private fun MainSettingsList(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(span = full) {
-            // A filled search pill, not a boxed field.
-            androidx.compose.material3.TextField(
+            // The app's single-line field: the same filled pill as every other search.
+            com.cripta.app.ui.components.CriptaTextField(
                 value = query, onValueChange = onQuery,
                 placeholder = { Text("Cerca un'impostazione") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "Cancella") } }) else null,
                 singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
-                ),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
@@ -1607,11 +1601,11 @@ private fun TrashDialog(
                                     stat = com.cripta.app.data.FolderStat(elementsUnder(fo.id), under.sumOf { it.sizeBytes }),
                                     previews = under.sortedByDescending { it.importedAt }.take(4),
                                     thumb = thumb,
-                                    onMore = { if (inSel) toggle() else folderSheet = fo },
+                                    // Tap: its details and actions (restore, delete, open), like a file here.
                                     modifier = Modifier.combinedClickable(
-                                        onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Apri",
+                                        onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Dettagli",
                                         onLongClickLabel = "Seleziona",
-                                        onClick = { if (inSel) toggle() else path.add(fo.id) }, onLongClick = { toggle() },
+                                        onClick = { if (inSel) toggle() else folderSheet = fo }, onLongClick = { toggle() },
                                     ),
                                 )
                                 TrashSelectionMark(inSel, selected)
