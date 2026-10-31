@@ -44,7 +44,12 @@ class HomeViewModel @Inject constructor(
     private val settingsNav: com.cripta.app.ui.settings.SettingsNav,
 ) : ViewModel() {
 
-    /** Ask Settings to open its Strumenti page (the caller then switches tab). */
+    /** Ask Settings to open its security page (the caller then switches tab). */
+    fun openSecurity() = settingsNav.open(com.cripta.app.ui.settings.SettingsPage.SICUREZZA.name)
+
+    /** Minutes before the vault locks itself (-1 never, 0 at once): shown in the first-run steps. */
+    val autoLockMinutes: StateFlow<Int> = settings.settings.map { it.autoLockMinutes }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
     /** MP4 conversion progress / outcome, the same banner as in Cartelle. */
     val convertStatus: kotlinx.coroutines.flow.StateFlow<VaultRepository.ConvertStatus> = repo.convertStatus

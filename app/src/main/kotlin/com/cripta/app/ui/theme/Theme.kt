@@ -59,7 +59,7 @@ private val DarkColors = darkColorScheme(
 private val LightColors = lightColorScheme(
     primary = LightPrimary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDBE7FF),
+    primaryContainer = Color(0xFFD6E4FF),
     onPrimaryContainer = Color(0xFF0B2A66),
     inversePrimary = Primary,
     secondary = Accent,
@@ -86,13 +86,16 @@ private val LightColors = lightColorScheme(
     outline = LightOutline,
     outlineVariant = LightOutlineVariant,
     scrim = Color.Black,
-    surfaceDim = Color(0xFFDDE2EA),
+    // Light container tiers step down from white in even, visible steps: on the near-white
+    // background a tier only a couple of points darker (the Home summary, the search pill, the
+    // selection bar) vanished.
+    surfaceDim = Color(0xFFD9DFE8),
     surfaceBright = LightSurface,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF2F5F9),
+    surfaceContainerLow = Color(0xFFEFF2F6),
     surfaceContainer = LightSurfaceVariant,
-    surfaceContainerHigh = Color(0xFFE7ECF4),
-    surfaceContainerHighest = Color(0xFFE1E6EF),
+    surfaceContainerHigh = Color(0xFFE2E7EF),
+    surfaceContainerHighest = Color(0xFFDBE1EA),
 )
 
 @Composable

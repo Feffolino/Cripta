@@ -14,9 +14,9 @@ changes, change only those two colours in the icon.
 
 | Role | Dark | Light |
 |---|---|---|
-| Background | `#0A0C10` | `#F6F8FB` |
+| Background | `#0A0C10` | `#F7F8FA` |
 | Surface | `#12151C` | `#FFFFFF` |
-| Surface container high | `#1E232E` | `#E7ECF4` |
+| Surface container high | `#1E232E` | `#E2E7EF` |
 | Accent (primary) | `#5AA9FF` | `#2563EB` |
 | Text | `#F2F5F9` | `#0F172A` |
 | Secondary text | `#98A2B3` | `#475467` |
