@@ -263,7 +263,7 @@ fun SettingsScreen(
             val sections: List<Pair<String, @Composable () -> Unit>> = when (current) {
                 SettingsPage.ASPETTO -> listOf(
                     sec("Tema") {
-                        Section("Tema", "Tema e colori dell'app.") {
+                        Section("Tema") {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 com.cripta.app.data.ThemeMode.entries.forEach { m ->
                                     com.cripta.app.ui.components.ChoiceChip(
@@ -292,11 +292,8 @@ fun SettingsScreen(
                             ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
                             ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
                             ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
-                        }
-                    },
-                    sec("Copertine dei video") {
-                        Section("Copertine dei video") {
-                            ToggleRow("Durata (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
+                            ToggleRow("Durata sulle copertine dei video", s.display.showDurationBadge,
+                                desc = "In alto a destra, es. 3:12.") { vm.setShowDurationBadge(it) }
                         }
                     },
                     sec("Pulsanti") {
@@ -363,13 +360,12 @@ fun SettingsScreen(
                         Section("Sulle copertine") {
                             ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
                             if (s.display.showTagsOnCover) {
-                                ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows) { vm.setCoverTagRows(it) }
-                                Text("Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                ChoiceRow("Testo", listOf(
+                                ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
+                                    indent = 16.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
+                                ChoiceRow("Testo", indent = 16.dp, options = listOf(
                                     com.cripta.app.data.CoverTagStyle.ALIAS to "Sigla / emoji",
                                     com.cripta.app.data.CoverTagStyle.NAME to "Nome intero",
-                                ), s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
+                                ), selected = s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
                             }
                         }
                     },
@@ -377,7 +373,8 @@ fun SettingsScreen(
                         Section("Colori") {
                             ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
                             if (s.display.tagColors) {
-                                Text("Colore predefinito", style = MaterialTheme.typography.labelLarge)
+                                Text("Colore predefinito", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                                    modifier = Modifier.padding(top = 4.dp))
                                 com.cripta.app.ui.vault.TagColorPicker(
                                     selected = s.display.defaultTagColor,
                                     autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
@@ -385,7 +382,7 @@ fun SettingsScreen(
                                     onPick = { vm.setDefaultTagColor(it) },
                                 )
                                 Text(
-                                    if (s.display.defaultTagColor == null) "A: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
+                                    if (s.display.defaultTagColor == null) "Automatico: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
                                     else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -403,7 +400,7 @@ fun SettingsScreen(
                             if (s.display.showRecentTags) {
                                 // Also how many recent tags the viewer's bar adds after the pinned ones.
                                 ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
-                                    s.display.recentTagsCount) { vm.setRecentTagsCount(it) }
+                                    s.display.recentTagsCount, indent = 16.dp) { vm.setRecentTagsCount(it) }
                             }
                             ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
                                 desc = when {
@@ -649,15 +646,9 @@ fun SettingsScreen(
                         Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
                             // Always visible: how big the archive would be if made now.
                             backupEstimate?.let { (n, bytes) ->
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Dimensione stimata", style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(com.cripta.app.ui.components.formatBytes(bytes), style = MaterialTheme.typography.titleMedium)
-                                    }
-                                    Text(if (n == 1) "1 file" else "$n file", style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                                com.cripta.app.ui.components.CountRow("Dimensione stimata",
+                                    com.cripta.app.ui.components.formatBytes(bytes) + " · " +
+                                        (if (n == 1) "1 file" else "${com.cripta.app.ui.components.formatCount(n)} file"))
                                 Text(if (s.backupCompressDocs) "Stima approssimata: quanto rendono i documenti compressi si sa solo creando il backup."
                                     else "Serve almeno questo spazio libero nella destinazione (i file multimediali non si comprimono).",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -689,13 +680,13 @@ fun SettingsScreen(
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 } else {
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        androidx.compose.material3.FilledTonalButton(
+                                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(
                                             onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.fillMaxWidth(),
                                         ) { Text("Crea backup") }
-                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f)) {
-                                            Text("Ripristina da backup")
+                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
+                                            Text("Ripristina da un backup")
                                         }
                                     }
                                 }
@@ -746,13 +737,13 @@ fun SettingsScreen(
                                 }
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
-                                        Text("Esatti")
+                                        Text("Cerca identici")
                                     }
                                     androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.weight(1f)) {
-                                        Text("Simili")
+                                        Text("Cerca simili")
                                     }
                                 }
-                                Text("Esatti: file byte-identici (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
+                                Text("Identici: file uguali byte per byte (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             }
@@ -761,19 +752,16 @@ fun SettingsScreen(
                     },
                     sec("Cestino") {
                         Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
-                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth()) {
+                            ToggleRow("Usa il cestino quando elimini", s.trashEnabled,
+                                desc = "Accoglie anche gli originali sostituiti da una conversione in MP4.") { vm.setTrashEnabled(it) }
+                            if (s.trashEnabled) {
+                                ChoiceRow("Conserva per", listOf(3 to "3 giorni", 7 to "7 giorni", 30 to "30 giorni"), s.trashDays,
+                                    indent = 16.dp) { vm.setTrashDays(it) }
+                            }
+                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                 Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
-                                    else "Apri cestino (${trashed.size + trashedFolders.size})")
+                                    else "Apri il cestino (${trashed.size + trashedFolders.size})")
                             }
-                            ToggleRow("Usa il cestino quando elimini", s.trashEnabled) { vm.setTrashEnabled(it) }
-                            Text("Conserva per", style = MaterialTheme.typography.labelLarge)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(3, 7, 30).forEach { d ->
-                                    com.cripta.app.ui.components.ChoiceChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
-                                }
-                            }
-                            Text("Il cestino accoglie anche gli originali sostituiti da una conversione in MP4.",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                 )
@@ -1179,7 +1167,7 @@ private val SEARCH_INDEX: List<SearchEntry> = listOf(
     SearchEntry("Intestazioni per data", "data oggi ieri gruppi", SettingsPage.ASPETTO, "Cartelle"),
     SearchEntry("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO, "Cartelle"),
     SearchEntry("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Durata sui video", "badge durata copertina", SettingsPage.ASPETTO, "Copertine dei video"),
+    SearchEntry("Durata sui video", "badge durata copertina", SettingsPage.ASPETTO, "Cartelle"),
     SearchEntry("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO, "Pulsanti"),
     SearchEntry("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE, "Libreria etichette"),
     SearchEntry("Etichette sulla copertina", "tag copertina badge righe sigla alias nome", SettingsPage.ETICHETTE, "Sulle copertine"),
@@ -1379,19 +1367,26 @@ private fun <T> ChoiceRow(
     options: List<Pair<T, String>>,
     selected: T,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    /** Sub-option of the toggle above: 36dp lines it up under a toggle with an icon, 16dp under one without. */
+    indent: androidx.compose.ui.unit.Dp = 36.dp,
+    /** What the choice does, under the chips (aligned with them). */
+    desc: String? = null,
     onPick: (T) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
         if (icon != null) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp, top = 2.dp).size(22.dp))
         } else {
-            // Sub-option of the toggle above: indent it under that toggle's text.
-            androidx.compose.foundation.layout.Spacer(Modifier.width(36.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(indent))
         }
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
             com.cripta.app.ui.components.ChipFlowRow {
                 options.forEach { (v, l) -> com.cripta.app.ui.components.ChoiceChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
+            }
+            if (desc != null) {
+                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp))
             }
         }
     }
