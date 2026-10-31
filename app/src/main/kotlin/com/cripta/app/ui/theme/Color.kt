@@ -47,22 +47,23 @@ val LightOutline = Color(0xFF7E889A)
 val LightOutlineVariant = Color(0xFFD9DFEA)
 
 /**
- * Tag palette: saturated mid-tones that keep white text readable (>= 4.5:1) in both themes.
- * A tag always maps to the same colour (hash of its name), so it is recognisable at a glance.
+ * Tag palette: sober, muted mid-tones (no neon), told apart by hue rather than by brightness. The
+ * quick presets of the tag editor, the automatic colour of a name and "Colori casuali" all use it.
+ * Text on them always goes through [readableOn], so it stays >= 4.5:1 in both themes.
  */
 val TagPalette = listOf(
-    Color(0xFF2563EB), // blue
-    Color(0xFF7C3AED), // violet
-    Color(0xFFDB2777), // pink
-    Color(0xFFDC2626), // red
-    Color(0xFFC2410C), // orange
-    Color(0xFFA16207), // amber
-    Color(0xFF15803D), // green
-    Color(0xFF0F766E), // teal
-    Color(0xFF0E7490), // cyan
-    Color(0xFF4F46E5), // indigo
-    Color(0xFF9333EA), // purple
-    Color(0xFFBE123C), // rose
+    Color(0xFF5B7DB1), // slate blue
+    Color(0xFF6B6FB5), // dusty indigo
+    Color(0xFF8A6FB0), // muted violet
+    Color(0xFFA86B95), // mauve
+    Color(0xFFB5677A), // dusty rose
+    Color(0xFFB8735A), // terracotta
+    Color(0xFFA88A4E), // ochre
+    Color(0xFF7F8F52), // olive
+    Color(0xFF5E9473), // sage
+    Color(0xFF4F8F8C), // teal grey
+    Color(0xFF4F8AA3), // steel cyan
+    Color(0xFF8A8580), // warm grey
 )
 
 /**

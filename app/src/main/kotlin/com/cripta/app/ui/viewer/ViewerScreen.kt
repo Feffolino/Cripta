@@ -215,7 +215,6 @@ fun ViewerScreen(
                 }
                 act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
-            vm.rotationLocked.value = false
         }
     }
 
@@ -1414,6 +1413,10 @@ private fun VideoPlayer(
     // - option on: follow the video's orientation (landscape video -> landscape, either way up);
     // - option off / square video: turn freely with the phone. FULL_SENSOR, not UNSPECIFIED: with
     //   the system rotation lock on, UNSPECIFIED never rotated, so a video couldn't be turned at all.
+    // A lock remembered from last time (or set now) holds its orientation.
+    LaunchedEffect(rotationLocked) {
+        if (activity != null && rotationLocked) activity.requestedOrientation = vm.lockedOrientation
+    }
     LaunchedEffect(videoAspect, prefs.autoRotate, rotationLocked) {
         if (activity == null || rotationLocked) return@LaunchedEffect
         val a = videoAspect
@@ -1951,8 +1954,13 @@ private fun VideoPlayer(
                 Surface(color = if (rotationLocked) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
                     IconButton(onClick = {
                         val lock = !rotationLocked
-                        vm.rotationLocked.value = lock
-                        activity?.requestedOrientation = if (lock) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+                        // Keeps the orientation on screen now (either way up) and remembers it as a preference.
+                        val landscapeNow = activity?.resources?.configuration?.orientation ==
+                            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        val orientation = if (landscapeNow) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                        vm.setRotationLock(if (lock) orientation else null)
+                        activity?.requestedOrientation = if (lock) orientation
                             else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                         modeTick++
                         modeLabel = if (lock) "Rotazione bloccata" else "Rotazione libera"

@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.ui.graphics.toArgb
+
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -397,6 +399,19 @@ class SettingsViewModel @Inject constructor(
         if (color != null) repo.setTagColorByName(name, color)
     }
     fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
+
+    /**
+     * Gives every tag a colour from the sober palette, at random but spread out (no two tags share
+     * one until the palette runs out). Replaces the colours chosen so far.
+     */
+    fun randomizeTagColors() = viewModelScope.launch {
+        var pool = emptyList<androidx.compose.ui.graphics.Color>()
+        tags.value.forEach { t ->
+            if (pool.isEmpty()) pool = com.cripta.app.ui.theme.TagPalette.shuffled()
+            val c = pool.first(); pool = pool.drop(1)
+            repo.setTagColor(t.id, c.toArgb())
+        }
+    }
     fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
     fun setShowRecentTags(v: Boolean) = viewModelScope.launch { store.setShowRecentTags(v) }
     fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }

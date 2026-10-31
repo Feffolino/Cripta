@@ -160,6 +160,7 @@ fun SettingsScreen(
     var editTag by remember { mutableStateOf<TagEntity?>(null) }
     var deleteTag by remember { mutableStateOf<TagEntity?>(null) }
     var addTag by remember { mutableStateOf(false) }
+    var confirmRandomColors by remember { mutableStateOf(false) }
 
     val dupMode by vm.dupMode.collectAsState()
     val dupScanning by vm.dupScanning.collectAsState()
@@ -386,6 +387,14 @@ fun SettingsScreen(
                                     else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                if (tags.isNotEmpty()) {
+                                    androidx.compose.material3.FilledTonalButton(onClick = { confirmRandomColors = true },
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                        Icon(Icons.Filled.Palette, null, Modifier.size(ButtonDefaults.IconSize))
+                                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                        Text("Colori casuali a tutte le etichette")
+                                    }
+                                }
                             }
                         }
                     },
@@ -1002,6 +1011,20 @@ fun SettingsScreen(
         )
         SettingsViewModel.DupMode.NONE -> Unit
     }
+    if (confirmRandomColors) {
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { confirmRandomColors = false },
+            title = { Text("Colori casuali?") },
+            text = {
+                Text("Ognuna delle ${tags.size} etichette riceve un colore sobrio a caso dalla tavolozza, " +
+                    "al posto di quello che ha ora (anche se l'avevi scelto tu). Non si può annullare: " +
+                    "i colori si possono poi cambiare una per una.")
+            },
+            confirmButton = { TextButton(onClick = { vm.randomizeTagColors(); confirmRandomColors = false }) { Text("Assegna") } },
+            dismissButton = { TextButton(onClick = { confirmRandomColors = false }) { Text("Annulla") } },
+        )
+    }
+
     deleteTag?.let { tag ->
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { deleteTag = null },

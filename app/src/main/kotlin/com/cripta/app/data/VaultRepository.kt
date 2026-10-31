@@ -1410,6 +1410,8 @@ class VaultRepository @Inject constructor(
 
         // Format v4 (BackupCrypto): authenticated 1 MB segments instead of one GCM message.
         val header = BackupCrypto.newHeader()
+        // File ids change on restore: a folder's cover is stored as its file's position in the archive.
+        val fileIndex = files.withIndex().associate { (i, fwt) -> fwt.file.id to i }
 
         val manifest = org.json.JSONObject().apply {
             // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
@@ -1420,14 +1422,16 @@ class VaultRepository @Inject constructor(
                         .put("createdAt", it.createdAt).put("color", it.color ?: org.json.JSONObject.NULL)
                         .put("emoji", it.emoji ?: org.json.JSONObject.NULL)
                         .put("favorite", it.isFavorite).put("excludedFromRandom", it.excludedFromRandom)
-                        .put("sortKey", it.sortKey ?: org.json.JSONObject.NULL).put("sortAscending", it.sortAscending))
+                        .put("sortKey", it.sortKey ?: org.json.JSONObject.NULL).put("sortAscending", it.sortAscending)
+                        .put("coverIdx", it.coverFileId?.let { id -> fileIndex[id] } ?: org.json.JSONObject.NULL))
                 }
             })
             put("tags", org.json.JSONArray().apply {
                 tags.forEach {
                     put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)
                         .put("color", it.color ?: org.json.JSONObject.NULL)
-                        .put("pinned", it.pinned).put("order", it.orderIndex))
+                        .put("pinned", it.pinned).put("order", it.orderIndex)
+                        .put("lastUsedAt", it.lastUsedAt ?: org.json.JSONObject.NULL))
                 }
             })
             put("files", org.json.JSONArray().apply {
@@ -1435,6 +1439,7 @@ class VaultRepository @Inject constructor(
                     put(org.json.JSONObject()
                         .put("name", fwt.file.originalName).put("mime", fwt.file.mimeType)
                         .put("favorite", fwt.file.isFavorite).put("createdAt", fwt.file.createdAt)
+                        .put("importedAt", fwt.file.importedAt).put("sortWeight", fwt.file.sortWeight)
                         .put("folderId", fwt.file.folderId ?: org.json.JSONObject.NULL)
                         .put("durationMs", fwt.file.durationMs ?: org.json.JSONObject.NULL)
                         .put("sourceUrl", fwt.file.sourceUrl ?: org.json.JSONObject.NULL)
@@ -1609,10 +1614,13 @@ class VaultRepository @Inject constructor(
                     if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
                     // Optional (older backups have no colour).
                     if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
+                    // Keeps the "Recenti" row as it was.
+                    o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
                 }
 
                 // Files: order matches the blob stream order.
                 val fileArr = manifest.getJSONArray("files")
+                val newIds = arrayOfNulls<String>(fileArr.length())
                 for (i in 0 until fileArr.length()) {
                     val o = fileArr.getJSONObject(i)
                     currentCoroutineContext().ensureActive()
@@ -1644,7 +1652,9 @@ class VaultRepository @Inject constructor(
                         id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
                         sizeBytes = len, folderId = folderOld?.let { idMap[it] },
                         isFavorite = o.optBoolean("favorite", false),
-                        createdAt = o.optLong("createdAt", now()), importedAt = now(), wrappedKeyset = wrapped,
+                        // Older backups have no import date / manual order: now, and no weight.
+                        createdAt = o.optLong("createdAt", now()), importedAt = o.optLongOrNull("importedAt") ?: now(), wrappedKeyset = wrapped,
+                        sortWeight = o.optLongOrNull("sortWeight") ?: 0L,
                         durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
                         // v2 extras (absent in older backups).
                         sourceUrl = o.optStr("sourceUrl"),
@@ -1655,6 +1665,7 @@ class VaultRepository @Inject constructor(
                         contentHash = o.optStr("contentHash"),
                     )
                     db.fileDao().insert(entity)
+                    newIds[i] = uuid
                     val tagNames = o.getJSONArray("tags")
                     val names = (0 until tagNames.length()).map { tagNames.getString(it) }
                     // Link directly (setTags would mark every tag as "recently used").
@@ -1671,6 +1682,13 @@ class VaultRepository @Inject constructor(
                                 s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
                         }
                     }
+                }
+                // Folder covers chosen by the user (by the file's position in the archive).
+                for (k in 0 until fArr.length()) {
+                    val o = fArr.getJSONObject(k)
+                    val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
+                    val folder = idMap[o.getLong("id")] ?: continue
+                    newIds.getOrNull(idx)?.let { db.folderDao().setCover(folder, it) }
                 }
                 // v2: saved filters, tag names mapped back to the restored tag ids.
                 manifest.optJSONArray("savedFilters")?.let { arr ->
