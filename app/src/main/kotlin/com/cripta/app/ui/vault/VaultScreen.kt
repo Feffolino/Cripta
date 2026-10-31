@@ -123,6 +123,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -1726,16 +1727,11 @@ private fun ThumbBox(
         selectedScale = if (compact) 0.9f else 0.92f,
         overlay = { CornerSelectionCheck(selected, selectionMode, size = if (compact) 20.dp else 24.dp) },
     ) {
-        // Without a cover, a tint per type (video blue / photo green / other amber) instead of flat grey.
-        val typeTint = when {
-            isVideo -> Color(0xFF3B82F6)
-            fallbackIcon == Icons.Filled.Image -> Color(0xFF22C55E)
-            else -> Color(0xFFF59E0B)
-        }
+        // Without a cover: the type's icon on a neutral tile (the shape tells the type; colour stays for state).
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
         ThumbCrossfade(bmp, contentDescription = name, modifier = Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(typeTint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-                Icon(fallbackIcon, null, tint = typeTint, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                Icon(fallbackIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
             }
         }
         // Play marker only when no duration badge already says "this is a video".
@@ -1801,15 +1797,18 @@ private fun TagBadge(tag: TagEntity?, text: String, display: DisplayPrefs?, maxW
 private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
     val colored = display.tagColors
     val c = com.cripta.app.ui.theme.tagColor(tag)
+    // Tinted background, and the name in the same hue pushed to >= 4.5:1 against it (any theme, any colour).
+    val bg = c.copy(alpha = 0.22f).compositeOver(MaterialTheme.colorScheme.surface)
+    val fg = remember(c, bg) { com.cripta.app.ui.theme.readableOn(c, bg) }
     Box(
         Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            .background(if (colored) c.copy(alpha = 0.22f) else MaterialTheme.colorScheme.secondaryContainer)
+            .background(if (colored) bg else MaterialTheme.colorScheme.secondaryContainer)
             .padding(horizontal = 6.dp, vertical = 1.dp),
     ) {
         Text(
             if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name,
             style = MaterialTheme.typography.labelSmall,
-            color = if (colored) c else MaterialTheme.colorScheme.onSecondaryContainer,
+            color = if (colored) fg else MaterialTheme.colorScheme.onSecondaryContainer,
             maxLines = 1,
         )
     }

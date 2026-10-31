@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -203,17 +204,14 @@ fun HomeScreen(
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(savedFilters.size) { i ->
                             val (sf, count) = savedFilters[i]
-                            val c = com.cripta.app.ui.theme.TagPalette[i % com.cripta.app.ui.theme.TagPalette.size]
-                            Surface(color = c.copy(alpha = 0.18f), shape = MaterialTheme.shapes.extraLarge,
+                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.extraLarge,
                                 modifier = Modifier.heightIn(min = 48.dp).clip(MaterialTheme.shapes.extraLarge)
                                     .clickable(role = Role.Button, onClickLabel = "Applica filtro") { vm.applySavedFilter(sf.json); onOpenFolders() }) {
                                 Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.FilterList, null, tint = c, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Filled.FilterList, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                     Text(sf.name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
-                                    Surface(color = c, shape = CircleShape, modifier = Modifier.padding(start = 8.dp)) {
-                                        Text("$count", color = Color.White, style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp))
-                                    }
+                                    Text("$count", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(start = 6.dp))
                                 }
                             }
                         }
@@ -221,7 +219,7 @@ fun HomeScreen(
                 }
             }
             if (homePeople.isNotEmpty()) {
-                item { ShelfHeader("Persone", Icons.Filled.Face, Color(0xFF14B8A6), homePeople.size) { vm.openPeople() } }
+                item { ShelfHeader("Persone", homePeople.size) { vm.openPeople() } }
                 item {
                     val hidden = peopleBlurred && !peopleRevealed
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -252,7 +250,7 @@ fun HomeScreen(
                 }
             }
             if (continueWatching.isNotEmpty()) {
-                item { ShelfHeader("Continua a guardare", Icons.Filled.History, Color(0xFFEC4899), continueWatching.size) }
+                item { ShelfHeader("Continua a guardare", continueWatching.size) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(continueWatching, key = { it.file.id }) { fwt ->
@@ -267,17 +265,17 @@ fun HomeScreen(
                     item { HeroCarousel(recents.take(5), vm::thumb, coverVersions) { id -> open(recents, id) } }
                 }
                 item {
-                    ShelfHeader("Aggiunti di recente", Icons.Filled.NewReleases, Color(0xFF3B82F6), summary.total,
+                    ShelfHeader("Aggiunti di recente", summary.total,
                         onSeeAll = onOpenFolders)
                 }
                 item { CoverShelf(if (landscape) recents else recents.drop(minOf(5, recents.size)).ifEmpty { recents }, display, coverVersions, vm::thumb) { id -> open(recents, id) } }
             }
             if (favorites.isNotEmpty()) {
-                item { ShelfHeader("Preferiti", Icons.Filled.Star, com.cripta.app.ui.theme.Favorite, favoriteCount, onSeeAll = onOpenFavorites) }
+                item { ShelfHeader("Preferiti", favoriteCount, onSeeAll = onOpenFavorites) }
                 item { CoverShelf(favorites, display, coverVersions, vm::thumb) { id -> open(favorites, id) } }
             }
             if (folders.isNotEmpty()) {
-                item { ShelfHeader("Cartelle", Icons.Filled.Folder, Color(0xFF10B981), folders.size, onSeeAll = onOpenFolders) }
+                item { ShelfHeader("Cartelle", folders.size, onSeeAll = onOpenFolders) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(folders, key = { it.id }) { folder ->
@@ -303,64 +301,64 @@ fun HomeScreen(
 
 private enum class HomePhase { LOADING, EMPTY, CONTENT }
 
-/** Stats-style header: videos, photos and space, each tappable. */
+/**
+ * What the vault holds, as one quiet strip: videos, photos and space, each a tappable segment.
+ * Numbers lead, labels follow; no per-type colours (the accent is kept for actions).
+ */
 @Composable
 private fun SummaryCard(videos: Int, photos: Int, bytes: Long, onVideos: () -> Unit, onPhotos: () -> Unit, onAll: () -> Unit, compact: Boolean = false) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SummaryTile(Icons.Filled.Movie, Color(0xFF3B82F6), "$videos", if (videos == 1) "video" else "video", Modifier.weight(1f), onVideos, compact)
-        SummaryTile(Icons.Filled.Image, Color(0xFF22C55E), "$photos", if (photos == 1) "foto" else "foto", Modifier.weight(1f), onPhotos, compact)
-        SummaryTile(Icons.Filled.SdStorage, Color(0xFF8B5CF6), formatBytes(bytes), "occupati", Modifier.weight(1f), onAll, compact)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    ) {
+        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+            SummaryTile(Icons.Filled.Movie, "$videos", "video", Modifier.weight(1f), onVideos, compact)
+            SummaryDivider()
+            SummaryTile(Icons.Filled.Image, "$photos", "foto", Modifier.weight(1f), onPhotos, compact)
+            SummaryDivider()
+            SummaryTile(Icons.Filled.SdStorage, formatBytes(bytes), "occupati", Modifier.weight(1f), onAll, compact)
+        }
     }
 }
 
 @Composable
-private fun SummaryTile(icon: ImageVector, tint: Color, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false) {
+private fun SummaryDivider() {
+    Box(Modifier.padding(vertical = 14.dp).width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+}
+
+@Composable
+private fun SummaryTile(icon: ImageVector, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false) {
     val source = remember { MutableInteractionSource() }
-    Surface(color = tint.copy(alpha = 0.12f), shape = MaterialTheme.shapes.large,
-        modifier = modifier.pressScale(source).clip(MaterialTheme.shapes.large)
-            .clickable(source, LocalIndication.current, role = Role.Button, onClick = onClick)) {
-        if (compact) {
-            // Landscape: icon beside the numbers, half the height of the stacked tile.
-            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = tint, shape = CircleShape, modifier = Modifier.size(30.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(17.dp)) }
-                }
-                Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                    modifier = Modifier.padding(start = 4.dp))
-            }
-            return@Surface
-        }
-        Column(Modifier.padding(12.dp)) {
-            Surface(color = tint, shape = CircleShape, modifier = Modifier.size(32.dp)) {
-                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
-            }
-            Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.padding(top = 8.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(
+        modifier.heightIn(min = 48.dp).clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = "Mostra", onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = if (compact) 8.dp else 14.dp),
+    ) {
+        Text(value, style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, modifier = Modifier.padding(start = 4.dp))
         }
     }
 }
 
-/** Section title with a coloured icon, a count and "Vedi tutti". */
+/** Section title, its count and "Vedi tutti": the type carries the hierarchy, the accent marks the action. */
 @Composable
-private fun ShelfHeader(title: String, icon: ImageVector, tint: Color, count: Int, onSeeAll: (() -> Unit)? = null) {
+private fun ShelfHeader(title: String, count: Int, onSeeAll: (() -> Unit)? = null) {
     // Whole row is the "Vedi tutti" button (48dp tall); the title is a heading for TalkBack.
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp)
             .then(if (onSeeAll != null) Modifier.clickable(role = Role.Button, onClickLabel = "Vedi tutti", onClick = onSeeAll) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(start = 20.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(color = tint.copy(alpha = 0.16f), shape = CircleShape, modifier = Modifier.size(30.dp)) {
-            Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp)) }
-        }
-        Text(title, style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = 10.dp).semantics { heading() })
-        Text("$count", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+        Text("$count", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f).padding(start = 8.dp))
         if (onSeeAll != null) {
-            Text("Vedi tutti", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
+            Text("Vedi tutti", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -484,14 +482,14 @@ private fun EmptyHome(modifier: Modifier, onImport: () -> Unit, onDownload: () -
         if (landscape) modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp) else modifier.padding(32.dp),
         verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(if (landscape) 56.dp else 96.dp)) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.size(if (landscape) 56.dp else 88.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(if (landscape) 28.dp else 44.dp))
+                Icon(Icons.Filled.EnhancedEncryption, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(if (landscape) 28.dp else 40.dp))
             }
         }
         Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(top = 20.dp).semantics { heading() })
-        Text("Importa foto e video o scaricali da un link: restano cifrati e visibili solo qui.",
+        Text("Importa foto, video e PDF, scarica da un link o scrivi una nota: tutto resta cifrato e visibile solo qui.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
