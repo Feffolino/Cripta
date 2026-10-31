@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Cripta logo alone (keyhole cut out of a circle), cropped to the circle: the same path as
+     ic_launcher_foreground, without the adaptive-icon margins. Tinted in code (theme accent). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="474.52"
+    android:viewportHeight="474.52">
+    <group android:translateX="-139.24" android:translateY="-139.24">
+        <path
+            android:fillColor="#5B8DEF"
+            android:fillType="evenOdd"
+            android:pathData="m376.5,139.24c-131.03,0-237.26,106.22-237.26,237.26s106.22,237.26,237.26,237.26,237.26-106.22,237.26-237.26-106.22-237.26-237.26-237.26Zm37,292.69v44.57c0,20.71-16.79,37.5-37.5,37.5s-37.5-16.79-37.5-37.5v-44.98c-36.38-14.96-62-50.75-62-92.52,0-55.23,44.77-100,100-100s100,44.77,100,100c0,42.16-26.09,78.22-63,92.93Z" />
+    </group>
+</vector>
