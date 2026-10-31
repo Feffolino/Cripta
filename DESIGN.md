@@ -87,8 +87,12 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   so the name keeps the whole width.
 - **Long titles** in the top bar (a folder's name) glide sideways (`basicMarquee`), cut when
   animations are off.
-- **"+" menu**: one tonal panel above the button, a row per action (accent icon circle, name,
-  where it acts), not a stack of small buttons.
+- **"+"**: adds things. Its actions (Importa, Cartella, Nota) open in one tonal pill to the left
+  of the button, each a round accent icon with its name under it. "Apri a caso" opens rather than
+  adds, so it is its own small button above the "+".
+- **Tag colours off** (Settings › Etichette): `TagPill` itself switches every tag to the accent,
+  so no screen can show tag colours the user turned off.
+- **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then
   slides in; the previous level never flashes.
 - **Fields**: `CriptaTextField`, filled with no outline or underline. Single-line fields (every
