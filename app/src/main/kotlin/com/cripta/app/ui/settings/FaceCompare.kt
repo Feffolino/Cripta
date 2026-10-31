@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.components.CriptaAlertDialog
 import android.graphics.Matrix
 import android.view.TextureView
 import androidx.annotation.OptIn
@@ -52,7 +53,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -192,7 +192,7 @@ private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(s / 60, 
 /** Two media chosen on a person's page, their faces side by side. */
 @Composable
 internal fun CompareDialog(a: TrackCard, b: TrackCard, o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit) {
-    androidx.compose.material3.AlertDialog(onDismissRequest = onClose, title = { Text("Confronto") },
+    CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Confronto") },
         text = { FacePair(a, b, clockOf(a.timeMs), clockOf(b.timeMs), o, vm) {} },
         confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
 }

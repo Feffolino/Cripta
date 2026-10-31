@@ -1,5 +1,9 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.components.CriptaAlertDialog
+import com.cripta.app.ui.components.CriptaDialog
+import androidx.compose.material3.DropdownMenu
+import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,7 +31,6 @@ import com.cripta.app.media.intro.SegmentKind
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,7 +58,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.cripta.app.data.Settings
 import com.cripta.app.data.db.MediaSegmentEntity
@@ -182,7 +184,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
             Text("Ricomincia l'analisi da capo")
         }
     }
-    if (showRejected) AlertDialog(
+    if (showRejected) CriptaAlertDialog(
         onDismissRequest = { showRejected = false },
         confirmButton = { TextButton(onClick = { showRejected = false }) { Text("Chiudi") } },
         title = { Text("Segmenti scartati") },
@@ -206,7 +208,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
             }
         },
     )
-    if (askRestart) AlertDialog(
+    if (askRestart) CriptaAlertDialog(
         onDismissRequest = { askRestart = false },
         title = { Text("Ricominciare da capo?") },
         text = {
@@ -287,7 +289,7 @@ private fun IntroResultsPage(
             ResultFilter.BY_INTRO to groups?.takeIf { it.first == SegmentKind.INTRO }?.second?.size,
             ResultFilter.BY_OUTRO to groups?.takeIf { it.first == SegmentKind.OUTRO }?.second?.size)
     }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(
             topBar = {
                 if (selected.isNotEmpty()) TopAppBar(
@@ -389,7 +391,7 @@ private fun IntroResultsPage(
             }
         }
         deleting?.let { sigs ->
-            AlertDialog(
+            CriptaAlertDialog(
                 onDismissRequest = { deleting = null },
                 title = { Text(if (sigs.size == 1) "Non è una sigla?" else "${sigs.size} firme non sono sigle?") },
                 text = {
@@ -421,7 +423,7 @@ internal class SignatureActions(
 private fun NameDialog(title: String, initial: String, confirm: String, hint: String? = null, allowBlank: Boolean = false,
                        onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
-    AlertDialog(
+    CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -456,7 +458,7 @@ private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, 
             }
         }
     }
-    AlertDialog(
+    CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Durata della sigla") },
         text = {
@@ -538,7 +540,7 @@ private fun SignatureCard(
                     Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
                     androidx.compose.foundation.layout.Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Azioni per la firma") }
-                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Rinomina") }, onClick = { menu = false; onRename() })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Unisci con altre…") }, onClick = { menu = false; onMerge() })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Durata della sigla") }, onClick = { menu = false; onDuration() })

@@ -1,5 +1,8 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.components.CriptaAlertDialog
+import com.cripta.app.ui.components.CriptaDialog
+import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,7 +44,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -80,7 +82,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cripta.app.data.Settings
@@ -143,7 +144,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     }
     if (askRestart) {
         var everything by remember { mutableStateOf(false) }
-        AlertDialog(onDismissRequest = { askRestart = false },
+        CriptaAlertDialog(onDismissRequest = { askRestart = false },
             title = { Text("Ricominciare da capo?") },
             text = {
                 Column {
@@ -192,12 +193,20 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
 
 @Composable
 private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
-    val st by produceState<FaceRepository.Stats?>(null) { value = runCatching { vm.faceStats() }.getOrNull() }
-    AlertDialog(onDismissRequest = onClose, title = { Text("Statistiche dei volti") },
+    // null = still computing; a failure is its own state, with a retry, never an endless "Calcolo…".
+    var attempt by remember { mutableStateOf(0) }
+    val st by produceState<Result<FaceRepository.Stats>?>(null, attempt) { value = null; value = runCatching { vm.faceStats() } }
+    CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Statistiche dei volti") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                val x = st
-                if (x == null) { Text("Calcolo…"); return@Column }
+                val r = st
+                if (r == null) { Text("Calcolo…"); return@Column }
+                val x = r.getOrNull()
+                if (x == null) {
+                    Text("Non è stato possibile leggere le statistiche.")
+                    TextButton(onClick = { attempt++ }) { Text("Riprova") }
+                    return@Column
+                }
                 Text("Media analizzati: ${x.media}" + if (x.skipped > 0) " (${x.skipped} non leggibili)" else "")
                 if (x.videos > 0) Text("Tempo medio per video: %.1f s".format(x.videoMs / 1000.0 / x.videos))
                 if (x.photos > 0) Text("Tempo medio per foto: %.2f s".format(x.photoMs / 1000.0 / x.photos))
@@ -280,7 +289,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 actions = {
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(menu, { menu = false }) {
+                        DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
                             DropdownMenuItem(text = { Text("Diagnostica") }, onClick = { menu = false; showStats = true })
                             DropdownMenuItem(text = { Text("Analizza i media mancanti") }, enabled = progress == null, onClick = { menu = false; vm.startFaceScan() })
                         }
@@ -324,14 +333,33 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     val file = o.files[scan.fileId]
                     Column(Modifier.clickable(onClickLabel = "Perché") { vm.describeMedia(scan.fileId) }) {
                         if (file != null) MediaThumb(file, { vm.thumbOf(it) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false)
+                        Text(file?.originalName ?: "File non trovato", style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(if (scan.status != "ok") "Non leggibile" else if (scan.faces == 0) "Nessun volto" else "Volti scartati",
-                            style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
             } else {
                 if (shown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(if (o.scans.isEmpty()) "Nessun media analizzato: avvia l'analisi dal menu in alto." else "Nessuna persona qui.",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val withFaces = o.scans.filter { it.status == "ok" && it.faces > 0 }
+                    Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        when {
+                            o.scans.isEmpty() -> Text("Nessun media analizzato: avvia l'analisi dal menu in alto.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            filter == PeopleFilter.MAIN && o.people.none { it.main } -> {
+                                Text(if (withFaces.isEmpty()) "Ancora nessuna persona" else "Volti trovati in ${withFaces.size} media, nessuna persona ancora",
+                                    style = MaterialTheme.typography.titleMedium)
+                                Text("Le persone le crei tu: apri una foto o un video, scorri su per i dettagli e in Persone tocca un volto, " +
+                                    "poi \"Nuova persona\". Il nome è facoltativo.",
+                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                withFaces.firstOrNull()?.let { first ->
+                                    FilledTonalButton(onClick = { onOpenFile(first.fileId) }) { Text("Apri un media con volti") }
+                                }
+                            }
+                            else -> Text("Nessuna persona con questo filtro.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
                 items(shown, key = { it.id }) { p ->
                     Column(Modifier.clickable(onClickLabel = "Apri ${p.title}") { openId = p.id }, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -357,7 +385,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         if (showStats) StatsDialog(vm) { showStats = false }
     }
     message?.let { m ->
-        AlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
+        CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
@@ -378,7 +406,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
     var comparing by remember { mutableStateOf<Pair<com.cripta.app.data.db.TrackCard, com.cripta.app.data.db.TrackCard>?>(null) }
     val ids = p.media.map { it.id }
     fun open(fileId: String, timeMs: Long?) { vm.openPersonMedia(ids, fileId, timeMs); onOpenFile(fileId) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             if (selected.isNotEmpty()) TopAppBar(
                 title = { Text("${selected.size} selezionati") },
@@ -388,7 +416,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                     TextButton(onClick = { moving = true }) { Text("Sposta") }
                     Box {
                         IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(selMenu, { selMenu = false }) {
+                        DropdownMenu(selMenu && vaultUnlocked(), { selMenu = false }) {
                             val one = selected.singleOrNull()
                             val face = one?.let { faceOf[it] }
                             if (face != null) {
@@ -413,7 +441,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                     TextButton(onClick = { renaming = true }) { Text("Rinomina") }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(menu, { menu = false }) {
+                        DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
                             DropdownMenuItem(text = { Text("Unisci con…") }, onClick = { menu = false; merging = true })
                             if (p.entity.ignored) DropdownMenuItem(text = { Text("Ripristina") }, onClick = { menu = false; vm.restorePerson(p.id) })
                             else DropdownMenuItem(text = { Text("Non è una persona") }, onClick = { menu = false; vm.ignorePerson(p.id); onClose() })
@@ -425,7 +453,9 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text((if (p.entity.ignored) "Ignorata: i volti simili vengono nascosti. " else "") +
-                        "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
+                        if (p.media.isEmpty()) "Nessun media collegato. Il nome resta finché non lo elimini: per aggiungere media, " +
+                            "apri una foto o un video, scorri su per i dettagli e in Persone scegli ${p.title}."
+                        else "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(p.media, key = { it.id }) { f ->
@@ -443,7 +473,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
         }
         if (renaming) {
             var name by remember { mutableStateOf(p.entity.name) }
-            AlertDialog(onDismissRequest = { renaming = false }, title = { Text("Nome della persona") },
+            CriptaAlertDialog(onDismissRequest = { renaming = false }, title = { Text("Nome della persona") },
                 text = {
                     Column {
                         OutlinedTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -475,7 +505,7 @@ private fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lon
     var picked by remember { mutableStateOf(emptyList<Long>()) }
     var newName by remember { mutableStateOf("") }
     val others = o.people.filter { it.id != exclude && !it.entity.ignored && (it.main || it.id in picked) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
+    CriptaAlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (allowNew) OutlinedTextField(newName, { newName = it; if (it.isNotBlank()) picked = emptyList() }, singleLine = true,

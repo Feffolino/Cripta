@@ -699,7 +699,7 @@ fun ViewerScreen(
             onDismissRequest = { confirmDelete = null },
             title = { Text("Eliminare il file?") },
             text = {
-                Text(if (trashOn) "\"${delTarget.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Archivio)."
+                Text(if (trashOn) "\"${delTarget.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Duplicati e cestino)."
                     else "\"${delTarget.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
             },
             confirmButton = {

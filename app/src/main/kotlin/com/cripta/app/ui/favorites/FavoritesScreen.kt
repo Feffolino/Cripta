@@ -87,7 +87,7 @@ fun FavoritesScreen(
                 actions = {
                     Box {
                         IconButton(onClick = { sortMenu = true }) { Icon(Icons.Filled.Sort, "Ordinamento preferiti") }
-                        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                        DropdownMenu(expanded = sortMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { sortMenu = false }) {
                             listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale").forEach { (key, label) ->
                                 DropdownMenuItem(text = { Text((if (sort.first == key) "✓ " else "") + label) },
                                     onClick = { vm.setSort(key, sort.second); sortMenu = false })

@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +23,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -36,6 +41,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cripta.app.ui.theme.Motion
@@ -86,8 +95,15 @@ fun NoteEditorScreen(
                             Icon(Icons.Filled.Delete, "Elimina nota")
                         }
                     }
-                    IconButton(onClick = { vm.save(fileId, folderId) { onBack() } }, enabled = vm.loaded && !vm.loadFailed && !vm.saving) {
-                        Icon(Icons.Filled.Check, "Salva")
+                    if (vm.saving) {
+                        // Saving: the check turns into progress, so the wait reads as work, not as a dead button.
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        IconButton(onClick = { vm.save(fileId, folderId) { onBack() } }, enabled = vm.loaded && !vm.loadFailed) {
+                            Icon(Icons.Filled.Check, "Salva")
+                        }
                     }
                 },
             )
@@ -106,20 +122,42 @@ fun NoteEditorScreen(
                 // imePadding: the window is edge-to-edge, so without it the keyboard (tall in landscape)
                 // would cover the text being typed. consumeWindowInsets first, so the navigation-bar
                 // inset already applied by the Scaffold isn't added a second time above the keyboard.
-                Column(Modifier.fillMaxSize().consumeWindowInsets(pad).imePadding().padding(16.dp)) {
-                    OutlinedTextField(
-                        value = vm.name, onValueChange = { vm.name = it },
-                        label = { Text("Titolo") }, singleLine = true,
-                        // Not editable when the note couldn't be read (nothing typed could be saved).
-                        enabled = !vm.loadFailed,
-                        modifier = Modifier.fillMaxWidth(),
+                // Borderless fields: the page is the note, no boxes around it. In a short window (landscape
+                // with the keyboard up) the title folds away while the content is being typed, so the
+                // text and its cursor keep the room left between the app bar and the keyboard.
+                BoxWithConstraints(Modifier.fillMaxSize().consumeWindowInsets(pad).imePadding()) {
+                    val compact = maxHeight < 240.dp
+                    var contentFocused by remember { mutableStateOf(false) }
+                    val plain = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
                     )
-                    OutlinedTextField(
-                        value = vm.text, onValueChange = { vm.text = it },
-                        label = { Text("Contenuto") },
-                        enabled = !vm.loadFailed,
-                        modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 12.dp),
-                    )
+                    Column(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
+                        if (!(compact && contentFocused)) {
+                            TextField(
+                                value = vm.name, onValueChange = { vm.name = it },
+                                placeholder = { Text("Titolo") }, singleLine = true,
+                                textStyle = MaterialTheme.typography.titleLarge,
+                                colors = plain,
+                                // Not editable when the note couldn't be read (nothing typed could be saved).
+                                enabled = !vm.loadFailed,
+                                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Titolo" },
+                            )
+                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                        TextField(
+                            value = vm.text, onValueChange = { vm.text = it },
+                            placeholder = { Text("Scrivi qui…") },
+                            textStyle = MaterialTheme.typography.bodyLarge,
+                            colors = plain,
+                            enabled = !vm.loadFailed,
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                                .onFocusChanged { contentFocused = it.isFocused }
+                                .semantics { contentDescription = "Contenuto" },
+                        )
+                    }
                 }
             }
         }

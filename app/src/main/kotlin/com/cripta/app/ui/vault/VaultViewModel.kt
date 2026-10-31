@@ -437,6 +437,11 @@ class VaultViewModel @Inject constructor(
     fun deleteSavedFilter(id: Long) = viewModelScope.launch { repo.deleteSavedFilter(id) }
 
     /** Whether deleting moves to the trash (for the confirmation wording). */
+    /** Settings › "Filtri solo nella cartella corrente": the empty state names the scope actually searched. */
+    val filterLocalOnly: StateFlow<Boolean> =
+        settings.settings.map { it.filterCurrentFolderOnly }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val trashEnabled: StateFlow<Boolean> =
         settings.settings.map { it.trashEnabled }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
