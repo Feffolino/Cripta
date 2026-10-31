@@ -44,7 +44,8 @@ fun CriptaAlertDialog(
         modifier = modifier,
         dismissButton = dismissButton,
         icon = icon,
-        title = title,
+        // Dialog titles in the app's title style (not Material's larger headline), like sheet titles.
+        title = title?.let { t -> { androidx.compose.material3.ProvideTextStyle(androidx.compose.material3.MaterialTheme.typography.titleLarge) { t() } } },
         text = text,
         shape = shape,
         containerColor = containerColor,

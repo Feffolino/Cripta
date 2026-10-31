@@ -1,5 +1,8 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.CriptaDialog
 import androidx.compose.material3.DropdownMenu
@@ -467,7 +470,8 @@ private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, 
 private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
                      modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        MediaThumb(e.file, thumb, Modifier.size(width = 112.dp, height = 63.dp), showFavoriteBadge = false)
+        MediaThumb(e.file, thumb, Modifier.size(width = 112.dp, height = 63.dp), showFavoriteBadge = false,
+            shape = com.cripta.app.ui.theme.CoverShapeSmall)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(e.file.originalName, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -502,14 +506,15 @@ private fun SignatureCard(
     onRename: () -> Unit, onMerge: () -> Unit, onDuration: () -> Unit, onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    androidx.compose.material3.Surface(
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth().combinedClickable(
-            onClick = { if (selecting) onToggleSelect() else onToggleOpen() },
-            onLongClick = { if (!selecting) onToggleSelect() },
-            onLongClickLabel = "Seleziona",
-        ),
+    // A plain entry, no frame: only a selected one gets a tonal slab (with its checkbox).
+    androidx.compose.foundation.layout.Box(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
+            .combinedClickable(
+                onClick = { if (selecting) onToggleSelect() else onToggleOpen() },
+                onLongClick = { if (!selecting) onToggleSelect() },
+                onLongClickLabel = "Seleziona",
+            ),
     ) {
         Column(Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -538,7 +543,8 @@ private fun SignatureCard(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 g.entries.take(4).forEach { (file, _) ->
-                    MediaThumb(file, thumb, Modifier.size(width = 72.dp, height = 40.dp), showFavoriteBadge = false)
+                    MediaThumb(file, thumb, Modifier.size(width = 72.dp, height = 40.dp), showFavoriteBadge = false,
+                        shape = com.cripta.app.ui.theme.CoverShapeSmall)
                 }
                 if (g.entries.size > 4) Text("+${g.entries.size - 4}", style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp))

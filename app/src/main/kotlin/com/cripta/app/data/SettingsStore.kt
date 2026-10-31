@@ -50,7 +50,6 @@ data class DisplayPrefs(
     /** Colour (ARGB) of every tag without its own colour; null = automatic, one per name. */
     val defaultTagColor: Int? = null,
     val showDurationBadge: Boolean = true, // "3:12" on video covers
-    val showQualityBadge: Boolean = true,  // "4K / HD / SD" on covers
     val showStatsStrip: Boolean = true,    // the counts strip above the grid
     /** Resume videos where they were left, with a progress bar on their cover. */
     val resumePlayback: Boolean = true,
@@ -182,6 +181,7 @@ class SettingsStore @Inject constructor(
     private val tagColorsKey = booleanPreferencesKey("tag_colors")
     private val defaultTagColorKey = intPreferencesKey("default_tag_color")
     private val durationBadgeKey = booleanPreferencesKey("duration_badge")
+    // The 4K/HD/SD cover badge is gone; the key stays only so a reset clears the old value.
     private val qualityBadgeKey = booleanPreferencesKey("quality_badge")
     private val statsStripKey = booleanPreferencesKey("stats_strip")
     private val videoLoopKey = booleanPreferencesKey("video_loop")
@@ -252,7 +252,6 @@ class SettingsStore @Inject constructor(
                 tagColors = p[tagColorsKey] ?: true,
                 defaultTagColor = p[defaultTagColorKey],
                 showDurationBadge = p[durationBadgeKey] ?: true,
-                showQualityBadge = p[qualityBadgeKey] ?: true,
                 showStatsStrip = p[statsStripKey] ?: true,
                 resumePlayback = p[resumeKey] ?: true,
                 showRecentTags = p[recentTagsKey] ?: true,
@@ -318,7 +317,6 @@ class SettingsStore @Inject constructor(
         context.dataStore.edit { if (argb == null) it.remove(defaultTagColorKey) else it[defaultTagColorKey] = argb }
     }
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
-    suspend fun setShowQualityBadge(v: Boolean) { context.dataStore.edit { it[qualityBadgeKey] = v } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
     suspend fun setSeekStep(v: Int) { context.dataStore.edit { it[seekStepKey] = v } }
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }

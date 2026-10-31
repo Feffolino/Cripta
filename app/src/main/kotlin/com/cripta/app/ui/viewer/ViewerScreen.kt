@@ -2020,16 +2020,19 @@ private fun Filmstrip(
 ) {
     val span = prefs.stripSpan.coerceIn(1, 4)
     // (other covers, current cover) height per size step; a bit smaller down the landscape edge.
+    // Each step is larger than it used to be (the smallest covers were hard to tell apart); the
+    // user's size, shape and count choices keep their meaning.
     val (thumbH, selH) = when (prefs.stripSize) {
-        0 -> if (vertical) 18.dp to 22.dp else 20.dp to 26.dp
-        2 -> if (vertical) 28.dp to 36.dp else 34.dp to 44.dp
-        else -> if (vertical) 22.dp to 28.dp else 26.dp to 34.dp
+        0 -> if (vertical) 24.dp to 30.dp else 26.dp to 34.dp
+        2 -> if (vertical) 36.dp to 46.dp else 42.dp to 54.dp
+        else -> if (vertical) 30.dp to 38.dp else 34.dp to 44.dp
     }
     val rect = prefs.stripShape == com.cripta.app.data.StripShape.RECT
     val baseAspect = if (rect) 16f / 9f else 1f
-    val shape = if (prefs.stripShape == com.cripta.app.data.StripShape.CIRCLE) CircleShape else MaterialTheme.shapes.extraSmall
+    val shape = if (prefs.stripShape == com.cripta.app.data.StripShape.CIRCLE) CircleShape
+        else androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
     // Enough air between covers that each reads as its own file.
-    val gap = 6.dp
+    val gap = 10.dp
     // Width/height of each file's cover, learnt as the cells load (portrait files: up to 9:16).
     val aspects = remember { androidx.compose.runtime.mutableStateMapOf<String, Float>() }
     fun aspectOf(id: String) = if (rect && prefs.stripTrueAspect) aspects[id] ?: baseAspect else baseAspect
@@ -2071,7 +2074,7 @@ private fun Filmstrip(
                 Modifier.height(h).aspectRatio(aspect)
                     .clip(shape)
                     .background(Color.White.copy(alpha = 0.12f))
-                    .border(1.5.dp, Color.White.copy(alpha = ring), shape)
+                    .border(2.dp, Color.White.copy(alpha = ring), shape)
                     .clickable(onClickLabel = "Apri") { onPick(i) }
                     .semantics {
                         this.contentDescription = "File ${i + 1} di ${ids.size}"
