@@ -36,9 +36,9 @@ val Favorite = Color(0xFFF5B041)
 val BadgeScrim = Color(0x66000000)
 
 // Light palette (v2) — designed, not inverted.
-val LightBg = Color(0xFFF6F8FB)
+val LightBg = Color(0xFFF7F8FA)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFEEF1F6)
+val LightSurfaceVariant = Color(0xFFE9EDF3)
 val LightPrimary = Color(0xFF2563EB)
 val LightOnBg = Color(0xFF0F172A)
 val LightMuted = Color(0xFF475467) // darkened for >=4.5:1 on light card captions

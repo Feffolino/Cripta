@@ -1,5 +1,7 @@
 package com.cripta.app.ui.home
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.verticalScroll
@@ -128,6 +130,7 @@ fun HomeScreen(
     val display by vm.display.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
     val convertStatus by vm.convertStatus.collectAsState()
+    val autoLockMinutes by vm.autoLockMinutes.collectAsState()
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -176,6 +179,9 @@ fun HomeScreen(
             Modifier.fillMaxSize().padding(pad),
             onImport = { importLauncher.launch(arrayOf("*/*")) },
             onDownload = onOpenDownload,
+            onOpenFolders = onOpenFolders,
+            onOpenSecurity = { vm.openSecurity(); onOpenSettings() },
+            autoLockMinutes = autoLockMinutes,
         )
         HomePhase.CONTENT -> LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -465,35 +471,72 @@ private fun HeroCarousel(
     }
 }
 
-/** Empty vault: an accent circle and quick actions instead of a bare message. */
+/**
+ * Empty vault (in practice the first run): three short steps instead of a bare message. Import is
+ * the main action; organising and the lock are one tap away, each with what it does in a line.
+ */
 @Composable
-private fun EmptyHome(modifier: Modifier, onImport: () -> Unit, onDownload: () -> Unit) {
-    // Landscape: smaller badge and padding + scroll, so both buttons stay reachable.
-    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
-        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+private fun EmptyHome(
+    modifier: Modifier,
+    onImport: () -> Unit,
+    onDownload: () -> Unit,
+    onOpenFolders: () -> Unit,
+    onOpenSecurity: () -> Unit,
+    autoLockMinutes: Int,
+) {
     Column(
-        if (landscape) modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp) else modifier.padding(32.dp),
-        verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally,
+        modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
+            .wrapContentWidth().widthIn(max = 560.dp).padding(horizontal = 24.dp, vertical = 24.dp),
     ) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.size(if (landscape) 56.dp else 88.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.EnhancedEncryption, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(if (landscape) 28.dp else 40.dp))
+        Text("Il tuo vault è pronto", style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() })
+        Text("Tre passi per iniziare. Tutto quello che aggiungi resta cifrato su questo telefono.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp))
+        StartStep(1, "Aggiungi i primi file",
+            "Foto, video e PDF dalla galleria o da altre app (anche da Condividi), oppure un video da un link.") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onImport) {
+                    Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Importa file")
+                }
+                androidx.compose.material3.TextButton(onClick = onDownload) {
+                    Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Da un link")
+                }
             }
         }
-        Text("Vault vuoto", style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(top = 20.dp).semantics { heading() })
-        Text("Importa foto, video e PDF, scarica da un link o scrivi una nota: tutto resta cifrato e visibile solo qui.",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-        Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
-            Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text("Importa file")
+        StartStep(2, "Mettili in ordine",
+            "Crea cartelle dal pulsante + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
+            OutlinedButton(onClick = onOpenFolders) { Text("Apri Cartelle") }
         }
-        OutlinedButton(onClick = onDownload, modifier = Modifier.padding(top = 8.dp)) {
-            Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text("Scarica da un link")
+        val lock = when (autoLockMinutes) {
+            -1 -> "Ora il vault non si blocca da solo."
+            0 -> "Ora si blocca appena esci dall'app."
+            else -> "Ora si blocca dopo $autoLockMinutes min che l'app è in background."
+        }
+        StartStep(3, "Scegli quando si blocca", "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
+            OutlinedButton(onClick = onOpenSecurity) { Text("Apri Sicurezza") }
+        }
+    }
+}
+
+/** One numbered step: the number (the order matters), what to do, why, and its action. */
+@Composable
+private fun StartStep(n: Int, title: String, text: String, action: @Composable () -> Unit) {
+    Row(Modifier.padding(top = 28.dp)) {
+        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(32.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text("$n", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            action()
         }
     }
 }
