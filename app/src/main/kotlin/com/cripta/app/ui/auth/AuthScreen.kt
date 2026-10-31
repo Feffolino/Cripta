@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.foundation.combinedClickable
@@ -111,31 +111,19 @@ fun AuthScreen(
     }
 
     Scaffold { pad ->
-        androidx.compose.foundation.layout.Box(
-            Modifier.fillMaxSize()
-                .background(
-                    androidx.compose.ui.graphics.Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                            MaterialTheme.colorScheme.background,
-                        ),
-                        radius = 900f,
-                    )
-                )
-                .padding(pad).padding(if (landscape) 16.dp else 32.dp),
-            contentAlignment = Alignment.Center,
+        // Flat background, no glow: the logo and the type carry the screen.
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+                .padding(pad).padding(horizontal = if (landscape) 24.dp else 28.dp, vertical = if (landscape) 12.dp else 24.dp),
         ) {
-            val badge: @Composable (Int) -> Unit = { sizeDp ->
-                androidx.compose.material3.Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    modifier = Modifier.size(sizeDp.dp).entrance({ badgeIn.value }, fromScale = 0.9f),
-                ) {
-                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Lock, contentDescription = null,
-                            modifier = Modifier.size((sizeDp * 0.46f).dp), tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
+            val screenH = maxHeight
+            // The app's own mark (keyhole in a circle) in the accent, instead of a padlock.
+            val logo: @Composable (Int) -> Unit = { sizeDp ->
+                Icon(
+                    androidx.compose.ui.res.painterResource(com.cripta.app.R.drawable.ic_cripta_logo), null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(sizeDp.dp).entrance({ badgeIn.value }, fromScale = 0.92f),
+                )
             }
             val pinOnly = !state.firstRun && (state.pin == PinStep.REQUIRED || state.pin == PinStep.SECOND)
             val hasCode = !state.firstRun && !state.noDeviceCredential && state.pin != PinStep.NONE
@@ -143,14 +131,14 @@ fun AuthScreen(
                 CodeEntry(kind = state.secretKind, busy = state.pinBusy, alternative = !pinOnly,
                     compact = compact, onSubmit = onSubmitPin)
             }
-            // withCode = false: the code entry is laid out elsewhere (its own pane in landscape).
-            val texts: @Composable (Boolean, Boolean) -> Unit = { compact, withCode ->
+            // Name and what is needed to get in.
+            val header: @Composable (Boolean) -> Unit = { compact ->
                 val align = if (compact) TextAlign.Start else TextAlign.Center
                 Text(
                     if (state.firstRun) "Crea il tuo vault" else "Cripta",
-                    style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineMedium,
                     textAlign = align,
-                    modifier = Modifier.semantics { heading() }.entrance({ textIn.value }),
+                    modifier = Modifier.padding(top = if (compact) 0.dp else 20.dp).semantics { heading() }.entrance({ textIn.value }),
                 )
                 Column(Modifier.entrance({ textIn.value })) {
                     when {
@@ -161,80 +149,69 @@ fun AuthScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = align,
-                            modifier = Modifier.padding(top = 8.dp, bottom = if (compact) 16.dp else 28.dp),
+                            modifier = Modifier.padding(top = 6.dp).widthIn(max = 420.dp),
                         )
                         state.firstRun -> FirstRunExplanation(compact)
                         else -> Text(
                             when (state.pin) {
-                                PinStep.REQUIRED -> "Vault cifrato. Inserisci il ${state.secretKind.noun} di Cripta."
+                                PinStep.REQUIRED -> "Bloccato. Inserisci il ${state.secretKind.noun} di Cripta."
                                 PinStep.SECOND -> "Identità confermata. Ora inserisci il ${state.secretKind.noun} di Cripta."
-                                PinStep.OPTIONAL -> "Vault cifrato. Usa l'impronta oppure il ${state.secretKind.noun} di Cripta."
-                                PinStep.NONE -> "Vault cifrato. Autenticati per accedere."
+                                PinStep.OPTIONAL -> "Bloccato. Usa l'impronta oppure il ${state.secretKind.noun} di Cripta."
+                                PinStep.NONE -> "Bloccato. Sblocca per accedere."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = align,
-                            modifier = Modifier.padding(top = 8.dp, bottom = if (compact) 16.dp else 28.dp),
+                            modifier = Modifier.padding(top = 6.dp),
                         )
                     }
                 }
+            }
+            // What the thumb reaches: the error (persistent, read out), then the way in.
+            val actions: @Composable (Boolean, Boolean) -> Unit = { compact, withCode ->
                 Column(
+                    Modifier.fillMaxWidth().entrance({ actionsIn.value }),
                     horizontalAlignment = if (compact) Alignment.Start else Alignment.CenterHorizontally,
-                    modifier = Modifier.entrance({ actionsIn.value }),
                 ) {
-                    if (state.noDeviceCredential) {
-                        Button(
-                            onClick = onOpenSecuritySettings,
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-                        ) {
-                            Icon(Icons.Filled.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text("Apri impostazioni di sicurezza")
-                        }
-                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) {
-                            Text("Riprova")
-                        }
-                    } else {
-                        if (!pinOnly) {
-                            Button(
-                                onClick = onAuthenticate,
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 32.dp, vertical = 12.dp),
-                            ) {
-                                Icon(Icons.Filled.Lock, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                                Text(if (state.firstRun) "Crea vault" else "Sblocca")
-                            }
-                        }
-                        if (withCode && hasCode) {
-                            if (!pinOnly) Spacer(Modifier.size(8.dp)) else Spacer(Modifier.size(4.dp))
-                            code(compact)
-                        }
-                    }
-                    // Persistent (not a Toast): stays until the next attempt, read out by TalkBack.
                     state.error?.let { msg ->
                         Text(
                             msg,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
-                            textAlign = align,
-                            modifier = Modifier
-                                .padding(top = 16.dp)
-                                .widthIn(max = 420.dp)
+                            textAlign = if (compact) TextAlign.Start else TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp).widthIn(max = 420.dp)
                                 .semantics { liveRegion = LiveRegionMode.Polite },
                         )
+                    }
+                    if (state.noDeviceCredential) {
+                        Button(onClick = onOpenSecuritySettings, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
+                            Icon(Icons.Filled.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text("Apri impostazioni di sicurezza")
+                        }
+                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { Text("Riprova") }
+                    } else {
+                        if (withCode && hasCode) {
+                            code(compact)
+                            if (!pinOnly) Spacer(Modifier.size(12.dp))
+                        }
+                        if (!pinOnly) {
+                            Button(onClick = onAuthenticate, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
+                                Text(if (state.firstRun) "Crea vault" else "Sblocca", style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
                     }
                 }
             }
             if (landscape && hasCode) {
-                // Short screen with the app code: text on the left, keypad / field on the right, so
-                // the keypad fits the height instead of scrolling under the title.
+                // Short screen with the app code: logo and text on the left, keypad / field on the right.
                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        badge(64)
-                        Column(Modifier.padding(start = 20.dp)) { texts(true, false) }
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(end = 24.dp)) {
+                        logo(56)
+                        Spacer(Modifier.size(16.dp))
+                        header(true)
+                        Spacer(Modifier.size(20.dp))
+                        actions(true, false)
                     }
                     androidx.compose.foundation.layout.Box(
                         Modifier.weight(1f).verticalScroll(rememberScrollState()).entrance({ actionsIn.value }),
@@ -244,23 +221,28 @@ fun AuthScreen(
                     }
                 }
             } else if (landscape) {
-                // Short screen: badge beside the text, so the unlock button is never cut off.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                ) {
-                    badge(88)
-                    Column(Modifier.padding(start = 28.dp)) { texts(true, true) }
+                Row(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    logo(80)
+                    Column(Modifier.padding(start = 32.dp)) {
+                        header(true)
+                        Spacer(Modifier.size(20.dp))
+                        actions(true, true)
+                    }
                 }
             } else {
+                // Portrait: the mark and the name in the upper part, the way in at the bottom, in
+                // reach of the thumb. Scrolls only when a tall keypad or text does not fit.
                 Column(
-                    verticalArrangement = Arrangement.Center,
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = screenH),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    badge(112)
-                    Spacer(Modifier.size(24.dp))
-                    texts(false, true)
+                    Column(Modifier.padding(top = screenH * 0.12f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        logo(72)
+                        header(false)
+                    }
+                    Spacer(Modifier.size(32.dp))
+                    actions(false, true)
                 }
             }
         }
@@ -429,13 +411,16 @@ private fun FirstRunExplanation(compact: Boolean) {
             "file su un altro telefono.",
     )
     Column(
-        Modifier.padding(top = 12.dp, bottom = if (compact) 16.dp else 28.dp).widthIn(max = 480.dp),
+        Modifier.padding(top = 12.dp).widthIn(max = 480.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         points.forEach { p ->
             Row {
-                Text("•", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.size(10.dp))
+                androidx.compose.foundation.layout.Box(
+                    Modifier.padding(top = 7.dp).size(6.dp)
+                        .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape),
+                )
+                Spacer(Modifier.size(12.dp))
                 Text(p, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

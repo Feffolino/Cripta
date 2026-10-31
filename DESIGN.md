@@ -7,8 +7,8 @@ How the app looks and why. Product context is in [PRODUCT.md](PRODUCT.md); token
 
 Calm, discreet, dark-first. A private safe for one owner, used in short sessions, often in public.
 The look stays close to the original Cripta: near-black layered surfaces, one calm blue accent.
-The app icon uses the same two colours (background `#0A0C10`, accent `#5AA9FF`): if either
-changes, change only those two colours in the icon.
+The app icon (keyhole cut out of a circle, `ic_cripta_logo`) is `#5B8DEF` on `#0E1116`; the lock
+screen shows the same mark tinted with the theme accent. If the palette changes, change only those two icon colours.
 
 ## Colour
 
