@@ -326,9 +326,9 @@ private fun CandidateCard(
     Box(Modifier.width(176.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // Tap the cover to watch the video / see the photo full size before choosing.
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium).clickable(onClick = onPreview)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(com.cripta.app.ui.theme.CoverShape).clickable(onClick = onPreview)) {
                 val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
+                com.cripta.app.ui.components.CoverPlaceholderBackground()
                 Crossfade(bmp, label = "dupthumb") { b ->
                     if (b != null) {
                         Image(b.asImageBitmap(), f.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -346,27 +346,25 @@ private fun CandidateCard(
                     }
                 }
                 if (best) {
-                    Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall,
-                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
-                        Text("Consigliato", style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape,
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp)) {
+                        Row(Modifier.padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.ThumbUp, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(12.dp))
+                            Text("Consigliato", style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(start = 4.dp))
+                        }
                     }
                 }
                 if (VaultRepository.isVideo(f.mimeType) || VaultRepository.isImage(f.mimeType)) {
                     Box(Modifier.align(Alignment.Center).size(40.dp).clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
                         Icon(
                             if (VaultRepository.isVideo(f.mimeType)) Icons.Filled.PlayArrow else Icons.Filled.ZoomIn,
                             "Anteprima", tint = Color.White, modifier = Modifier.size(26.dp),
                         )
                     }
                 }
-                if (f.isFavorite) {
-                    Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp).clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(16.dp))
-                    }
-                }
+                if (f.isFavorite) com.cripta.app.ui.components.CoverStar(Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
             Text(f.originalName, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             // Resolution is highlighted when it is lower than the suggested copy's.
@@ -399,12 +397,8 @@ private fun CandidateCard(
             } else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     c.tags.forEach { t ->
-                        Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.extraSmall) {
-                            Text("#$t", style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp))
-                        }
+                        com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t),
+                            base = MaterialTheme.colorScheme.background)
                     }
                 }
             }

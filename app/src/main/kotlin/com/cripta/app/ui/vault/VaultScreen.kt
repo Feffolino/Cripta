@@ -1651,17 +1651,6 @@ private fun FileCell(
     }
 }
 
-/** "4K" / "HD" / "SD" from a display resolution (short side), or null when unknown. */
-fun qualityLabel(width: Int?, height: Int?): String? {
-    if (width == null || height == null || width <= 0 || height <= 0) return null
-    val short = minOf(width, height)
-    return when {
-        short >= 2000 -> "4K"
-        short >= 720 -> "HD"
-        else -> "SD"
-    }
-}
-
 /** Size · date (the length is on the cover itself in list mode). */
 private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
     val parts = mutableListOf<String>()
@@ -1924,7 +1913,7 @@ private fun TagDismissChip(tag: TagEntity, excluded: Boolean, tagColors: Boolean
 /** Removable filter chip: 48dp touch target, announced as "Rimuovi filtro …". */
 @Composable
 private fun DismissChip(label: String, description: String = label, onClear: () -> Unit) {
-    Surface(onClick = onClear, color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
+    Surface(onClick = onClear, color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape) {
         Row(
             Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -2766,10 +2755,10 @@ private fun EmptyState(
 private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // The name pill is tappable too (bigger target); TalkBack gets a single node, the button.
-        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small,
+        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape,
             modifier = Modifier.clearAndSetSemantics { }) {
             Text(label, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
         }
         SmallFloatingActionButton(onClick = onClick) { Icon(icon, label) }
     }

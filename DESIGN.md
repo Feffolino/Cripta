@@ -84,6 +84,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **Fields**: `CriptaTextField`, a filled slab with no outline or underline.
 - **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
   no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
+- **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
+  the current one larger, full opacity and ringed.
+- **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (32dp).
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as one segmented control with the size under each option, destination as two plain rows
   opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti.
