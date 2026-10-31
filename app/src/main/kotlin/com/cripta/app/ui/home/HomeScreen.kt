@@ -152,8 +152,8 @@ fun HomeScreen(
                 colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surface),
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
                 actions = {
-                    // Tools (duplicates, trash, backup) one tap away from Home.
-                    IconButton(onClick = { vm.openTools(); onOpenSettings() }) { Icon(Icons.Filled.Build, "Strumenti") }
+                    // Duplicates and trash one tap away from Home.
+                    IconButton(onClick = { vm.openTools(); onOpenSettings() }) { Icon(Icons.Filled.Build, "Duplicati e cestino") }
                     IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") }
                 },
             )

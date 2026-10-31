@@ -465,7 +465,7 @@ class ConversionService : Service() {
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "update download failed", e)
             updater.publish(com.cripta.app.update.AppUpdater.Download.Failed(rel, e))
-            notifyResult("Aggiornamento non riuscito", "Riprova da Impostazioni › Versione e aggiornamenti",
+            notifyResult("Aggiornamento non riuscito", "Riprova da Impostazioni › Info e aggiornamenti",
                 ResultKind.UPDATE, state = ResultState.FAILED)
         } finally {
             updateJob = null

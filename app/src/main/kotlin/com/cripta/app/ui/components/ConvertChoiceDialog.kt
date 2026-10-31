@@ -28,7 +28,7 @@ import com.cripta.app.data.ConvertAfter
 /**
  * Asked at the first MP4 conversion (instead of hiding the choice in Settings): what to do with
  * the original once the verified MP4 is ready. "Ricorda la scelta" saves it; it can be changed
- * later in Impostazioni › Video.
+ * later in Impostazioni › Import e conversione.
  */
 @Composable
 fun ConvertChoiceDialog(
@@ -72,7 +72,7 @@ fun ConvertChoiceDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(checked = rememberIt, onCheckedChange = null, modifier = Modifier.padding(12.dp))
-                    Text("Ricorda la scelta (modificabile in Impostazioni › Video)", style = MaterialTheme.typography.bodyMedium)
+                    Text("Ricorda la scelta (modificabile in Impostazioni › Import e conversione)", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },

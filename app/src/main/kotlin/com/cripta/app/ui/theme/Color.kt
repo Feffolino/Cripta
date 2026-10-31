@@ -66,7 +66,7 @@ val TagPalette = listOf(
 )
 
 /**
- * Colour of every tag the user did not colour on its own (Settings › Copertine); null = automatic,
+ * Colour of every tag the user did not colour on its own (Settings › Etichette); null = automatic,
  * one palette colour per name. Snapshot state, so every tag on screen recolours as soon as it changes.
  */
 object DefaultTagColor {

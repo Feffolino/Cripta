@@ -658,7 +658,7 @@ class SettingsViewModel @Inject constructor(
             dupStore.openRequested.collect { req ->
                 if (req) {
                     dupStore.consumeOpen()
-                    nav.open(SettingsPage.STRUMENTI.name)
+                    nav.open(SettingsPage.SPAZIO.name)
                     if (dupStore.state.value.result != null) openScanResult()
                 }
             }

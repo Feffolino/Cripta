@@ -101,7 +101,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     var askRestart by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
     Section("Persone", "Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono. " +
         "Tutto avviene sul telefono; volti e persone restano nel database cifrato.") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

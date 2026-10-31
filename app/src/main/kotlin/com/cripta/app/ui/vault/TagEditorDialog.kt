@@ -259,7 +259,7 @@ fun LabelEditorDialog(
                 if (onColor != null) {
                     Text("Colore", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // "A" = the colour every uncoloured tag gets (Settings › Copertine, else one
+                    // "A" = the colour every uncoloured tag gets (Settings › Etichette, else one
                     // colour per name), then the palette.
                     val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
                     TagColorPicker(selected = color, autoColor = auto, autoDescription = "Colore predefinito") { color = it }

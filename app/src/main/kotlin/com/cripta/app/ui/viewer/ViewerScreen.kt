@@ -743,7 +743,7 @@ fun ViewerScreen(
                     "Crea una copia MP4 (H.264) scorribile, con le stesse etichette e cartella. Prosegue in " +
                         "background; la copia viene verificata prima di essere salvata e l'originale non viene " +
                         "mai distrutto (al massimo va nel cestino). Cosa fare dell'originale si sceglie in " +
-                        "Impostazioni › Video."
+                        "Impostazioni › Import e conversione."
                 )
             },
             confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { Text("Converti") } },
@@ -2007,7 +2007,7 @@ private data class GestureHud(val icon: ImageVector, val text: String, val level
  * centred on it; tap one to jump. When the file changes the strip glides to centre the new one while
  * it grows to full size and brightens and the previous one shrinks and dims, so the jump reads as
  * movement along the list. It can also be dragged to look further ahead. Shape, size and whether
- * portrait files keep a vertical cover come from Settings › Video.
+ * portrait files keep a vertical cover come from Settings › Visualizzatore.
  */
 @Composable
 private fun Filmstrip(
