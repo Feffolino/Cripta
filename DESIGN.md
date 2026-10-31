@@ -29,6 +29,8 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   stage and tag colours.
 - Tag colours ([TagPalette]) are the user's. Text on a tag tint goes through `readableOn()` so it
   reaches 4.5:1 in both themes and with custom colours.
+- Anything drawn over a picture (tags, length, star, play mark) sits on the dark glass
+  `OnImageGlass`, never on a gradient over the whole cover.
 
 ## Type
 
@@ -38,6 +40,8 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - Row title: `bodyLarge` medium weight. Its caption: `bodySmall` (12/15), secondary colour, 2dp
   under the title, so a title and its caption read as one item.
 - Figures that summarise (Home counts): `headlineMedium`.
+- Page titles of the tabs: `headlineSmall` next to the app mark (`HeaderTitle`).
+- Counts are written with thousands separators (`formatCount`: 1.234).
 
 ## Structure
 
@@ -50,6 +54,39 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   search pill, sheets, dialogs), never to frame a group of options.
 - Borders exist only as state markers: selection rings and checks on covers, the chosen colour in a
   picker, the folder highlighted while dragging onto it.
+- Top bars are the page itself (same background) and lift one tier only when content scrolls under
+  them (`criptaTopBarColors()`). The navigation bar is a flat tier with an accent pill on the
+  current tab.
+- Counted figures are lines, not tiles: `CountRow` (label left, "1.234 di 5.678" right, optional
+  bar). Side-by-side tiles cut 4-digit numbers.
+
+## Shape
+
+- Radii: 10 / 14 / 20 / 26 / 32 dp (`CriptaShapes`). Chips, pills, badges and the navigation
+  indicator are fully round.
+- Covers: `CoverShape` (18dp) in grids, shelves and pickers; `CoverShapeSmall` (12dp) in list rows
+  and small previews.
+
+## Components
+
+- **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
+  Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Off /
+  plain: the tag colour at 20% with the name in the same hue at 4.5:1. On: full colour plus a tick.
+  Excluded (filters): tint, strike-through and a "no" sign. Over a picture: `onImage = true`.
+  "+N" is `MoreTagsPill`.
+- **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
+  the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
+  favourite star, the video length (top right) or a play mark, the watched bar. No quality badge
+  (4K/HD/SD) and no shade over the image.
+- **Folders** (`FolderMosaic`): a stack — the newest cover in front, two sheets in the folder's
+  colour peeking above it. Emoji/glyph, star and count go with the name underneath, never on the
+  picture.
+- **Fields**: `CriptaTextField`, a filled slab with no outline or underline.
+- **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
+  no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
+- **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
+  quality as one segmented control with the size under each option, destination as two plain rows
+  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti.
 
 ## Touch and motion
 

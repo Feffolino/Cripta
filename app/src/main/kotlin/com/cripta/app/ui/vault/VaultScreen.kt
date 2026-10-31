@@ -483,9 +483,7 @@ fun VaultScreen(
                 scrollBehavior = scrollBehavior,
                 // Same colour when the content scrolls under it (M3 otherwise switches to a tinted
                 // surface-container colour, which looked light blue on this theme).
-                colors = TopAppBarDefaults.topAppBarColors(
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = {
                     AnimatedContent(
                         targetState = inSelection,
@@ -545,18 +543,19 @@ fun VaultScreen(
                                 onClick = { vm.setViewMode(ViewMode.LIST); viewMenu = false },
                             )
                             if (viewMode == ViewMode.GRID) {
-                                HorizontalDivider()
+                                // Groups in the menu are told apart by space and a small heading, not lines.
+                                Spacer(Modifier.height(8.dp))
                                 Text(if (landscape) "Colonne in orizzontale" else "Colonne in verticale", style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     columnChoices.forEach { n ->
-                                        FilterChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n, landscape) }, label = { Text("$n") },
+                                        com.cripta.app.ui.components.ChoiceChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n, landscape) }, label = { Text("$n") },
                                             modifier = Modifier.semantics { this.contentDescription = "$n colonne" })
                                     }
                                 }
                             }
-                            HorizontalDivider()
+                            Spacer(Modifier.height(8.dp))
                             // A way into selection mode besides long-press.
                             DropdownMenuItem(
                                 text = { Text("Seleziona tutto") },
@@ -718,7 +717,7 @@ fun VaultScreen(
                 enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
                 exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
             ) {
-                OutlinedTextField(
+                com.cripta.app.ui.components.CriptaTextField(
                     value = filters.query,
                     onValueChange = vm::setQuery,
                     label = if (landscape) null else ({ Text("Cerca nome o etichetta") }),
@@ -742,7 +741,7 @@ fun VaultScreen(
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
-                people = filterPeople, onPerson = vm::togglePerson)
+                people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors)
             if (path.isNotEmpty() && !filters.active) {
                 Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
             }
@@ -1006,7 +1005,8 @@ fun VaultScreen(
                         },
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    // Grid: a little more air between rows than between columns, the name sits under each cover.
+                    verticalArrangement = Arrangement.spacedBy(if (viewMode == ViewMode.GRID) 14.dp else 4.dp),
                 ) {
                     if (showFolders) {
                         // Folders in their own scrollable row, so the files below stay a uniform grid.
@@ -1612,23 +1612,24 @@ private fun FileCell(
 
     // Tap/long-press are handled by the grid container (unified gesture), not per cell.
     if (viewMode == ViewMode.LIST) {
-        Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium,
-            modifier = modifier.fillMaxWidth()) {
-            Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // List mode: no tag badges on the cover — every tag is shown as a chip beside it.
-                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
-                    emptyList(), Modifier.size(72.dp), file = item.file, display = display, compact = true,
-                    selectionMode = selectionMode)
-                Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    if (display.showFileInfo) {
-                        Text(listMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (item.tags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            item.tags.forEach { TagChip(it, display) }
-                        }
+        // A plain row on the page: no card around it, the cover and the text carry it.
+        Row(modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // List mode: no tag badges on the cover — every tag is shown as a pill beside it.
+            ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
+                emptyList(), Modifier.size(76.dp), file = item.file, display = display, compact = true,
+                selectionMode = selectionMode)
+            Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+                if (display.showFileInfo) {
+                    Text(listMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp))
+                }
+                if (item.tags.isNotEmpty()) {
+                    FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        item.tags.forEach { TagChip(it, display) }
                     }
                 }
             }
@@ -1641,11 +1642,11 @@ private fun FileCell(
             if (display.showTagsOnCover) item.tags else emptyList(),
             Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display, selectionMode = selectionMode)
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
         if (display.showFileInfo) {
             Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 2.dp))
+                modifier = Modifier.padding(start = 2.dp, top = 1.dp))
         }
     }
 }
@@ -1661,11 +1662,9 @@ fun qualityLabel(width: Int?, height: Int?): String? {
     }
 }
 
-/** Size · date (duration and quality are on the cover itself in list mode). */
+/** Size · date (the length is on the cover itself in list mode). */
 private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
     val parts = mutableListOf<String>()
-    com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { parts += "⏱ $it" }
-    if (VaultRepository.isVideo(f.mimeType)) qualityLabel(f.width, f.height)?.let { parts += it }
     parts += formatBytes(f.sizeBytes)
     parts += java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))
     return parts.joinToString(" · ")
@@ -1675,27 +1674,10 @@ private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
 private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String =
     if (display?.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME) tag.name else tagAlias(tag)
 
-/** Badge/chip colour of a tag: its own stable colour, or the app accent when tag colours are off. */
+/** A tag's colour on screen: its own, or the app accent for every tag when tag colours are off. */
 @Composable
-private fun tagBg(tag: TagEntity, display: DisplayPrefs?): Color =
+private fun tagHue(tag: TagEntity, display: DisplayPrefs?): Color =
     if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary
-
-@Composable
-private fun tagFg(display: DisplayPrefs?): Color =
-    if (display?.tagColors != false) Color.White else MaterialTheme.colorScheme.onPrimary
-
-/** Small rounded label on a dark scrim, for the duration/quality corner of a cover. */
-@Composable
-private fun CornerBadge(text: String, emphasis: Boolean = false) {
-    Box(
-        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .background(if (emphasis) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.62f))
-            .padding(horizontal = 4.dp, vertical = 1.dp),
-    ) {
-        Text(text, style = MaterialTheme.typography.labelSmall,
-            color = if (emphasis) MaterialTheme.colorScheme.onPrimary else Color.White, maxLines = 1)
-    }
-}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1718,104 +1700,71 @@ private fun ThumbBox(
 ) {
     val duration = if (isVideo && display?.showDurationBadge != false)
         com.cripta.app.ui.components.formatDuration(file?.durationMs) else null
-    val quality = if (isVideo && !compact && display?.showQualityBadge != false)
-        qualityLabel(file?.width, file?.height) else null
     SelectableThumbFrame(
         selected = selected,
-        shape = MaterialTheme.shapes.medium,
+        shape = if (compact) com.cripta.app.ui.theme.CoverShapeSmall else com.cripta.app.ui.theme.CoverShape,
         modifier = modifier,
         selectedScale = if (compact) 0.9f else 0.92f,
         overlay = { CornerSelectionCheck(selected, selectionMode, size = if (compact) 20.dp else 24.dp) },
     ) {
         // Without a cover: the type's icon on a neutral tile (the shape tells the type; colour stays for state).
-        Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
+        com.cripta.app.ui.components.CoverPlaceholderBackground()
         ThumbCrossfade(bmp, contentDescription = name, modifier = Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-                Icon(fallbackIcon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
-            }
+            com.cripta.app.ui.components.CoverPlaceholder(fallbackIcon, if (compact) 26.dp else 32.dp)
         }
-        // Play marker only when no duration badge already says "this is a video".
+        // Play marker only when no length badge already says "this is a video".
         if (isVideo && duration == null) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(30.dp))
-            }
-        }
-        if (tags.isNotEmpty()) {
-            TagBadges(
-                tags = tags,
-                display = display,
-                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
-            )
+            com.cripta.app.ui.components.CoverPlayMark(Modifier.align(Alignment.Center), if (compact) 28.dp else 34.dp)
         }
         // "Resume" progress: how much of the video has already been watched.
         val watched = if (isVideo && display?.resumePlayback != false) file?.let { f ->
             val p = f.playbackPosMs; val d = f.durationMs
             if (p != null && d != null && d > 0) (p.toFloat() / d).coerceIn(0f, 1f) else null
         } else null
-        if (watched != null && watched > 0.01f) {
+        val shownWatched = watched?.takeIf { it > 0.01f }
+        if (tags.isNotEmpty()) {
+            TagBadges(
+                tags = tags,
+                display = display,
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                    .padding(bottom = if (shownWatched != null) 4.dp else 0.dp),
+            )
+        }
+        if (shownWatched != null) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.28f))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(watched).background(MaterialTheme.colorScheme.primary))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(shownWatched).background(MaterialTheme.colorScheme.primary))
             }
         }
         if (favorite) {
-            Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(if (compact) 18.dp else 22.dp).clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite,
-                    modifier = Modifier.size(if (compact) 13.dp else 16.dp))
-            }
+            com.cripta.app.ui.components.CoverStar(
+                Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 6.dp),
+                size = if (compact) 18.dp else 22.dp,
+            )
         }
         if (compact) {
             if (duration != null) {
-                Box(Modifier.align(Alignment.BottomEnd).padding(3.dp)) { CornerBadge(duration) }
+                com.cripta.app.ui.components.CoverBadge(duration, Modifier.align(Alignment.BottomEnd).padding(4.dp))
             }
-        } else if (!selectionMode && !selected && (duration != null || quality != null)) {
+        } else if (!selectionMode && !selected && duration != null) {
             // Top-right (the selection check's corner in selection mode), so the bottom stays free for tags.
-            Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                quality?.let { CornerBadge(it, emphasis = it == "4K") }
-                duration?.let { CornerBadge(it) }
-            }
+            com.cripta.app.ui.components.CoverBadge(duration, Modifier.align(Alignment.TopEnd).padding(6.dp))
         }
     }
 }
 
-@Composable
-private fun TagBadge(tag: TagEntity?, text: String, display: DisplayPrefs?, maxWidth: androidx.compose.ui.unit.Dp) {
-    val bg = if (tag != null) tagBg(tag, display) else Color.Black.copy(alpha = 0.6f)
-    val fg = if (tag != null) tagFg(display) else Color.White
-    Box(
-        Modifier.widthIn(max = maxWidth)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .background(bg)
-            .padding(horizontal = 3.dp, vertical = 0.5.dp),
-    ) {
-        Text(text, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** Colored tag chip for the list view (full name, all tags visible). */
+/** A tag on the list row: the shared pill, small. */
 @Composable
 private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
-    val colored = display.tagColors
-    val c = com.cripta.app.ui.theme.tagColor(tag)
-    // Tinted background, and the name in the same hue pushed to >= 4.5:1 against it (any theme, any colour).
-    val bg = c.copy(alpha = 0.22f).compositeOver(MaterialTheme.colorScheme.surface)
-    val fg = remember(c, bg) { com.cripta.app.ui.theme.readableOn(c, bg) }
-    Box(
-        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            .background(if (colored) bg else MaterialTheme.colorScheme.secondaryContainer)
-            .padding(horizontal = 6.dp, vertical = 1.dp),
-    ) {
-        Text(
-            if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (colored) fg else MaterialTheme.colorScheme.onSecondaryContainer,
-            maxLines = 1,
-        )
-    }
+    com.cripta.app.ui.components.TagPill(
+        com.cripta.app.ui.components.tagText(tag), tagHue(tag, display),
+        size = com.cripta.app.ui.components.TagPillSize.Small,
+        base = MaterialTheme.colorScheme.background,
+    )
 }
 
 /**
- * Tag badges over the bottom of a cover, on a dark gradient so they stay legible on any image.
+ * Tag pills over the bottom of a cover. Each pill sits on its own dark glass, so they read on any
+ * image without a gradient darkening the rest of the picture.
  * Up to 3 rows (automatic: by cover width — bigger covers show more rows — or fixed by the user),
  * packed greedily by measured width; a "+N" badge appears only once every row is full.
  */
@@ -1827,11 +1776,11 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
-        val outerPad = 3.dp
+        val outerPad = 5.dp
         val availDp = maxWidth - outerPad * 2
         val availPx = with(density) { availDp.toPx() }
-        val hPadPx = with(density) { 6.dp.toPx() }   // 3dp padding on each side of a badge
-        val spacingPx = with(density) { 2.dp.toPx() }
+        val hPadPx = with(density) { 14.dp.toPx() }   // 7dp padding on each side of a pill
+        val spacingPx = with(density) { 3.dp.toPx() }
         val rowsWanted = when (val r = display?.coverTagRows ?: 0) {
             0 -> when {
                 maxWidth >= 150.dp -> 3
@@ -1873,26 +1822,20 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
             shown = rows.sumOf { it.size }
         }
         val extra = tags.size - shown
-        val badgeH = with(density) { (measurer.measure("Ag", style).size.height).toDp() } + 1.dp
-
-        Box(Modifier.fillMaxWidth()) {
-            // Scrim sized to the rows actually used.
-            Box(
-                Modifier.matchParentSize()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))),
-            )
-            Column(
-                Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad, top = badgeH),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                // Filled from the bottom: the full rows sit on the cover's edge and the shorter
-                // last row (plus the "+N" badge) goes on top, so it hides less of the image.
-                rows.asReversed().forEachIndexed { r, row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        row.forEach { i -> TagBadge(tags[i], texts[i], display, availDp) }
-                        if (r == 0 && extra > 0) TagBadge(null, "+$extra", display, availDp)
+        Column(
+            Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            // Filled from the bottom: the full rows sit on the cover's edge and the shorter
+            // last row (plus the "+N" pill) goes on top, so it hides less of the image.
+            rows.asReversed().forEachIndexed { r, row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    row.forEach { i ->
+                        com.cripta.app.ui.components.TagPill(
+                            texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp,
+                        )
                     }
+                    if (r == 0 && extra > 0) com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
                 }
             }
         }
@@ -1916,6 +1859,7 @@ private fun ActiveFilterBar(
     onClearQuery: () -> Unit,
     people: List<com.cripta.app.data.face.FaceRepository.Person> = emptyList(),
     onPerson: (Long) -> Unit = {},
+    tagColors: Boolean = true,
 ) {
     // Keep drawing the last active filters while the bar collapses.
     val last = remember { mutableStateOf(filters) }
@@ -1945,11 +1889,11 @@ private fun ActiveFilterBar(
                 }
                 f.tagIds.forEach { id ->
                     val t = tagById[id] ?: return@forEach
-                    DismissChip("#${t.name}", "etichetta ${t.name}") { onTag(id) }
+                    TagDismissChip(t, excluded = false, tagColors) { onTag(id) }
                 }
                 f.excludedTagIds.forEach { id ->
                     val t = tagById[id] ?: return@forEach
-                    DismissChip("⊘ #${t.name}", "esclusione etichetta ${t.name}") { onExcludeTag(id) }
+                    TagDismissChip(t, excluded = true, tagColors) { onExcludeTag(id) }
                 }
                 TextButton(onClick = onClearAll) { Text("Azzera") }
             }
@@ -1959,6 +1903,22 @@ private fun ActiveFilterBar(
                 modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp))
         }
     }
+}
+
+/** An active tag filter in the bar: the shared pill with a cross, announced as "Rimuovi filtro …". */
+@Composable
+private fun TagDismissChip(tag: TagEntity, excluded: Boolean, tagColors: Boolean, onClear: () -> Unit) {
+    com.cripta.app.ui.components.TagPill(
+        com.cripta.app.ui.components.tagText(tag),
+        if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
+        size = com.cripta.app.ui.components.TagPillSize.Medium,
+        state = if (excluded) com.cripta.app.ui.components.TagPillState.Excluded else com.cripta.app.ui.components.TagPillState.On,
+        base = MaterialTheme.colorScheme.background,
+        trailingIcon = Icons.Filled.Close,
+        onClick = onClear,
+        onClickLabel = "Rimuovi filtro",
+        stateLabel = if (excluded) "Esclusa" else "Inclusa",
+    )
 }
 
 /** Removable filter chip: 48dp touch target, announced as "Rimuovi filtro …". */
@@ -1979,50 +1939,29 @@ private fun DismissChip(label: String, description: String = label, onClear: () 
 
 private enum class TagFilterState { NEUTRAL, INCLUDE, EXCLUDE }
 
-/** Tri-state tag chip: neutral, include (primary), exclude (error + strike-through). */
+/**
+ * Tri-state tag filter: the shared [TagPill]. Neutral = tint, include = full colour + tick,
+ * exclude = tint + "no" sign + strike-through. The width barely changes between states (an icon
+ * takes the dot's place), so the rows don't reflow under the finger.
+ */
 @Composable
-private fun TagFilterChip(label: String, state: TagFilterState, dot: Color?, onClick: () -> Unit) {
-    val bg = when (state) {
-        TagFilterState.INCLUDE -> MaterialTheme.colorScheme.primary
-        TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.errorContainer
-        TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val fg = when (state) {
-        TagFilterState.INCLUDE -> MaterialTheme.colorScheme.onPrimary
-        TagFilterState.EXCLUDE -> MaterialTheme.colorScheme.onErrorContainer
-        TagFilterState.NEUTRAL -> MaterialTheme.colorScheme.onSurface
-    }
-    // Clickable Surface = 48dp touch target; the state is spoken, not only shown by colour.
-    Surface(
-        onClick = onClick,
-        color = bg,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.semantics {
-            this.stateDescription = when (state) {
-                TagFilterState.INCLUDE -> "Inclusa"
-                TagFilterState.EXCLUDE -> "Esclusa"
-                TagFilterState.NEUTRAL -> "Non filtrata"
-            }
+private fun TagFilterChip(label: String, state: TagFilterState, color: Color, onClick: () -> Unit) {
+    com.cripta.app.ui.components.TagPill(
+        label, color,
+        size = com.cripta.app.ui.components.TagPillSize.Medium,
+        state = when (state) {
+            TagFilterState.INCLUDE -> com.cripta.app.ui.components.TagPillState.On
+            TagFilterState.EXCLUDE -> com.cripta.app.ui.components.TagPillState.Excluded
+            TagFilterState.NEUTRAL -> com.cripta.app.ui.components.TagPillState.Off
         },
-    ) {
-        // An excluded (hidden) tag is struck through instead of getting a "⊘" prefix: the chip keeps
-        // exactly the same width in every state (a width change reflows the rows and makes the sheet
-        // jump) without the invisible leading space a reserved prefix would leave.
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            // The tag's own colour (same as on the covers), in every state so the width never changes.
-            if (dot != null) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
-                Box(Modifier.width(6.dp))
-            }
-            Text(
-                label,
-                textDecoration = if (state == TagFilterState.EXCLUDE)
-                    androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                style = MaterialTheme.typography.labelLarge,
-                color = fg,
-            )
-        }
-    }
+        base = MaterialTheme.colorScheme.surfaceContainerLow,
+        onClick = onClick,
+        stateLabel = when (state) {
+            TagFilterState.INCLUDE -> "Inclusa"
+            TagFilterState.EXCLUDE -> "Esclusa"
+            TagFilterState.NEUTRAL -> "Non filtrata"
+        },
+    )
 }
 
 /**
@@ -2081,7 +2020,6 @@ private fun FilterSortSheet(
             }
             TextButton(onClick = onClear, enabled = filters.active) { Text("Azzera") }
         }
-        HorizontalDivider()
 
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
@@ -2109,7 +2047,7 @@ private fun FilterSortSheet(
                                 },
                             )
                         }
-                        androidx.compose.material3.AssistChip(
+                        com.cripta.app.ui.components.ActionChip(
                             onClick = { naming = true },
                             enabled = filters.active,
                             label = { Text("Salva questi filtri") },
@@ -2184,7 +2122,7 @@ private fun FilterSortSheet(
                     }
                 }
                 com.cripta.app.ui.components.ChipFlowRow {
-                    FilterChip(
+                    com.cripta.app.ui.components.ChoiceChip(
                         selected = filters.favoritesOnly, onClick = onFav,
                         label = { Text("Solo preferiti") },
                         leadingIcon = {
@@ -2192,7 +2130,7 @@ private fun FilterSortSheet(
                                 Modifier.size(FilterChipDefaults.IconSize))
                         },
                     )
-                    FilterChip(
+                    com.cripta.app.ui.components.ChoiceChip(
                         selected = filters.untaggedOnly, onClick = onUntagged,
                         label = { Text("Senza etichette") },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.LabelOff, null, Modifier.size(FilterChipDefaults.IconSize)) },
@@ -2265,7 +2203,7 @@ private fun FilterSortSheet(
                     }
                     var query by remember { mutableStateOf("") }
                     if (tags.size > 12) {
-                        androidx.compose.material3.OutlinedTextField(
+                        com.cripta.app.ui.components.CriptaTextField(
                             value = query, onValueChange = { query = it },
                             singleLine = true,
                             placeholder = { Text("Cerca un'etichetta") },
@@ -2286,7 +2224,7 @@ private fun FilterSortSheet(
                     }
                     com.cripta.app.ui.components.ChipFlowRow {
                         shown.forEach { tag ->
-                            val label = if (!tag.alias.isNullOrBlank()) "${tag.alias} #${tag.name}" else "#${tag.name}"
+                            val label = com.cripta.app.ui.components.tagText(tag)
                             val state = when {
                                 tag.id in filters.tagIds -> TagFilterState.INCLUDE
                                 tag.id in filters.excludedTagIds -> TagFilterState.EXCLUDE
@@ -2295,7 +2233,7 @@ private fun FilterSortSheet(
                             TagFilterChip(
                                 label = label,
                                 state = state,
-                                dot = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else null,
+                                color = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
                                 // neutral -> include; include -> exclude; exclude -> neutral.
                                 onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
                             )
@@ -2534,21 +2472,24 @@ private fun ReorderCell(
         else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
     if (asList) {
+        // A plain row like the regular list; only the row being dragged lifts onto a tonal slab.
         Surface(
-            color = if (dragged) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+            color = if (dragged) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
             shape = MaterialTheme.shapes.medium,
-            tonalElevation = if (dragged) 8.dp else 0.dp,
+            tonalElevation = 0.dp,
             // Min height, not fixed: large fonts grow the row instead of clipping it.
             modifier = modifier.fillMaxWidth().heightIn(min = 72.dp),
         ) {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite, emptyList(), Modifier.size(52.dp),
+                ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite, emptyList(), Modifier.size(56.dp),
                     file = item.file, display = display, compact = true)
-                Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                    Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                    Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
                     if (display.showFileInfo) {
                         Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp))
                     }
                 }
                 Icon(Icons.Filled.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2562,18 +2503,18 @@ private fun ReorderCell(
                     if (display.showTagsOnCover) item.tags else emptyList(),
                     Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
                 if (dragged) {
-                    Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(24.dp).clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape)
+                        .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.DragHandle, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
             }
             Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
             if (display.showFileInfo) {
                 Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 2.dp))
+                    modifier = Modifier.padding(start = 2.dp, top = 1.dp))
             }
         }
     }
@@ -2807,7 +2748,7 @@ private fun EmptyState(
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         if (filtering) {
-            androidx.compose.material3.OutlinedButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp)) {
+            androidx.compose.material3.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp)) {
                 Text("Azzera filtri")
             }
         } else {
@@ -3033,83 +2974,46 @@ private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String
                 }
             }
 
-            // Hero: the video count, the number people care about most.
-            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large,
-                modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(56.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Movie, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(30.dp))
-                        }
-                    }
-                    Column(Modifier.padding(start = 16.dp).weight(1f)) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("${stats.shown.videos}", style = MaterialTheme.typography.displaySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            if (stats.filtered) {
-                                Text(" / ${stats.scope.videos}", style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(bottom = 4.dp))
-                            }
-                        }
-                        Text(
-                            when {
-                                stats.filtered -> "video mostrati su ${stats.scope.videos} caricati"
-                                stats.shown.videos == 1 -> "video caricato"
-                                else -> "video caricati"
-                            },
-                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        com.cripta.app.ui.components.formatDuration(stats.shown.videoDurationMs.takeIf { it > 0 })?.let {
-                            Text("Durata totale $it", style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
-                        }
-                    }
+            // The video count leads (the number people care about most), large; every other figure
+            // is one line, label left and number right, so 4-5 digit counts never get cut.
+            val fmt: (Number) -> String = { com.cripta.app.ui.components.formatCount(it) }
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Movie, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Text(fmt(stats.shown.videos), style = MaterialTheme.typography.displaySmall,
+                        modifier = Modifier.padding(start = 12.dp))
                 }
-            }
-            if (stats.filtered && stats.scope.videos > 0) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    progress = { stats.shown.videos.toFloat() / stats.scope.videos },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                Text(
+                    when {
+                        stats.filtered -> "video mostrati su ${fmt(stats.scope.videos)} caricati"
+                        stats.shown.videos == 1 -> "video caricato"
+                        else -> "video caricati"
+                    } + (com.cripta.app.ui.components.formatDuration(stats.shown.videoDurationMs.takeIf { it > 0 })
+                        ?.let { " · durata totale $it" } ?: ""),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                StatTile(Icons.Filled.Image, "Foto", stats.shown.images, stats.scope.images, stats.filtered, Modifier.weight(1f))
-                StatTile(Icons.AutoMirrored.Filled.InsertDriveFile, "Altri", stats.shown.others, stats.scope.others, stats.filtered, Modifier.weight(1f))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                StatTile(Icons.Filled.GridView, "Totale", stats.shown.total, stats.scope.total, stats.filtered, Modifier.weight(1f))
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f)) {
-                    Column(Modifier.padding(14.dp)) {
-                        Icon(Icons.Filled.EnhancedEncryption, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(formatBytes(stats.shown.bytes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 6.dp))
-                        Text(if (stats.filtered) "su ${formatBytes(stats.scope.bytes)}" else "Spazio occupato",
-                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                if (stats.filtered && stats.scope.videos > 0) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { stats.shown.videos.toFloat() / stats.scope.videos },
+                        modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(6.dp).clip(CircleShape),
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    )
                 }
+            }
+            Column {
+                val of: (Int) -> String? = { if (stats.filtered) fmt(it) else null }
+                com.cripta.app.ui.components.CountRow("Foto", fmt(stats.shown.images), of = of(stats.scope.images), icon = Icons.Filled.Image)
+                com.cripta.app.ui.components.CountRow("Altri file", fmt(stats.shown.others), of = of(stats.scope.others),
+                    icon = Icons.AutoMirrored.Filled.InsertDriveFile)
+                com.cripta.app.ui.components.CountRow("Totale", fmt(stats.shown.total), of = of(stats.scope.total), icon = Icons.Filled.GridView)
+                com.cripta.app.ui.components.CountRow("Spazio occupato", formatBytes(stats.shown.bytes),
+                    of = if (stats.filtered) formatBytes(stats.scope.bytes) else null, icon = Icons.Filled.EnhancedEncryption)
             }
             if (!filtering) {
                 Text("Conteggi degli elementi in questa cartella (le sottocartelle non sono incluse). Con un filtro attivo la ricerca copre tutto il vault.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-@Composable
-private fun StatTile(icon: ImageVector, label: String, shown: Int, scope: Int, filtered: Boolean, modifier: Modifier) {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = modifier) {
-        Column(Modifier.padding(14.dp)) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
-                Text("$shown", style = MaterialTheme.typography.titleLarge)
-                if (filtered) {
-                    Text(" / $scope", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 2.dp))
-                }
-            }
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -3224,7 +3128,7 @@ fun ConvertBanner(
 }
 
 /**
- * The vault's cover (tags on up to 3 rows, duration/quality badges, watched progress, favorite),
+ * The vault's cover (tags on up to 3 rows, length badge, watched progress, favorite),
  * for other screens such as Home, so every thumbnail in the app looks and reads the same.
  */
 @Composable
@@ -3247,8 +3151,9 @@ fun CoverThumb(
 }
 
 /**
- * Folder card with a 2x2 mosaic of its newest covers, a band in the folder's colour, its emoji or
- * glyph — recognisable at a glance instead of a flat grey tile. Count and size are in its menu.
+ * Folder card drawn as a stack: the newest cover in front, two sheets in the folder's colour
+ * peeking out above it, like an album. Nothing is drawn over the picture: the folder's emoji or
+ * glyph, its star and its count sit with the name underneath.
  */
 @Composable
 fun FolderMosaic(
@@ -3270,71 +3175,48 @@ fun FolderMosaic(
     val lift by animateFloatAsState(if (highlighted) 1.05f else 1f, Motion.enter(Motion.SHORT), label = "folderLift")
     val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
     val primary = MaterialTheme.colorScheme.primary
-    val shape = MaterialTheme.shapes.medium
+    val shape = com.cripta.app.ui.theme.CoverShape
+    val tile = MaterialTheme.colorScheme.surfaceContainerHigh
+    val farSheet = remember(accent, tile) { accent.copy(alpha = 0.30f).compositeOver(tile) }
+    val nearSheet = remember(accent, tile) { accent.copy(alpha = 0.55f).compositeOver(tile) }
     // Scale outermost, so the caller's clip/click area scales with the card.
     Column(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.then(modifier)) {
-        Box(
-            Modifier.fillMaxWidth().aspectRatio(1f).clip(shape)
-                .background(accent.copy(alpha = 0.16f))
-                .then(if (hl > 0f) Modifier.background(primary.copy(alpha = 0.18f * hl)).border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
-        ) {
-            if (previews.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            // The two sheets behind: narrower and higher the further back they are.
+            Box(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).clip(shape).background(farSheet))
+            Box(Modifier.fillMaxSize().padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp).clip(shape).background(nearSheet))
+            Box(
+                Modifier.fillMaxSize().padding(top = 12.dp).clip(shape)
+                    .background(accent.copy(alpha = 0.16f).compositeOver(tile))
+                    .then(if (hl > 0f) Modifier.border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                val f = previews.firstOrNull()
+                if (f == null) {
                     com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 44.dp)
+                } else {
+                    val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+                    bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
-            } else if (previews.size == 1) {
-                // A single file fills the tile (it used to be drawn twice, side by side).
-                val f = previews[0]
-                val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                Box(Modifier.align(Alignment.BottomStart).padding(6.dp).size(30.dp).clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 20.dp)
-                }
-            } else {
-                // 2x2 mosaic (2-3 previews leave tinted cells).
-                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    for (r in 0 until 2) {
-                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            for (c in 0 until 2) {
-                                val f = previews.getOrNull(r * 2 + c)
-                                Box(Modifier.weight(1f).fillMaxHeight().background(accent.copy(alpha = 0.10f))) {
-                                    if (f != null) {
-                                        val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-                                        bmp?.let {
-                                            Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                // Folder identity over the mosaic.
-                Box(Modifier.align(Alignment.BottomStart).padding(6.dp).size(30.dp).clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 20.dp)
-                }
-            }
-            // Colour band on top.
-            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(4.dp).background(accent))
-            if (folder.isFavorite) {
-                Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(26.dp).clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Star, "Cartella preferita", tint = com.cripta.app.ui.theme.Favorite,
-                        modifier = Modifier.size(18.dp))
-                }
+                if (hl > 0f) Box(Modifier.matchParentSize().background(primary.copy(alpha = 0.18f * hl)))
             }
         }
-        Row(verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f)) {
-                Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 22.dp)
+            Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.weight(1f, fill = false))
+                    if (folder.isFavorite && onRemoveFavorite == null) {
+                        Icon(Icons.Filled.Star, "Cartella preferita", tint = com.cripta.app.ui.theme.Favorite,
+                            modifier = Modifier.padding(start = 4.dp).size(14.dp))
+                    }
+                }
                 if (showInfo) {
                     val n = stat?.count ?: 0
                     Text(if (n == 0) "Vuota" else if (n == 1) "1 elemento" else "$n elementi",
                         maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp))
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (onRemoveFavorite != null) {

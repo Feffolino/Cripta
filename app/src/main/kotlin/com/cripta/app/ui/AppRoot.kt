@@ -329,14 +329,23 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                     shrinkVertically(Motion.exit(Motion.MEDIUM)) +
                     fadeOut(Motion.exit(Motion.MEDIUM)),
             ) {
-                NavigationBar {
+                // Flat bar one tier above the page, the current tab marked by an accent pill + accent
+                // label (shape and colour together, never colour alone).
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
                     tabs.forEach { tab ->
                         val selected = backStack?.destination?.hierarchy?.any { it.route == tab.route } == true
                         NavigationBarItem(
                             selected = selected,
                             onClick = { onTab(tab.route) },
                             icon = { Icon(tab.icon, tab.label) },
-                            label = { Text(tab.label) },
+                            label = { Text(tab.label, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else null) },
+                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         )
                     }
                 }
@@ -367,6 +376,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             ) {
                 // Inset the rail from the left edge / status bar so its labels don't touch it.
                 NavigationRail(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     // Top only (not the bottom gesture inset): 4 labelled items must fit a short screen.
                     windowInsets = WindowInsets.systemBars.only(
                         WindowInsetsSides.Start + WindowInsetsSides.Top,
@@ -380,7 +390,14 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                             selected = selected,
                             onClick = { onTab(tab.route) },
                             icon = { Icon(tab.icon, tab.label) },
-                            label = { Text(tab.label) },
+                            label = { Text(tab.label, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else null) },
+                            colors = androidx.compose.material3.NavigationRailItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         )
                     }
                     androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))

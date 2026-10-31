@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.material.icons.filled.PushPin
+
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.Box
@@ -204,9 +206,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 scrollBehavior = scrollBehavior,
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text(current?.label ?: "Impostazioni") },
                 // Impostazioni is a tab root: the back arrow only appears inside a category page.
                 navigationIcon = {
@@ -266,7 +266,7 @@ fun SettingsScreen(
                         Section("Tema", "Tema e colori dell'app.") {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 com.cripta.app.data.ThemeMode.entries.forEach { m ->
-                                    FilterChip(
+                                    com.cripta.app.ui.components.ChoiceChip(
                                         selected = s.themeMode == m,
                                         onClick = { vm.setThemeMode(m) },
                                         label = {
@@ -297,7 +297,6 @@ fun SettingsScreen(
                     sec("Copertine dei video") {
                         Section("Copertine dei video") {
                             ToggleRow("Durata (es. 3:12)", s.display.showDurationBadge) { vm.setShowDurationBadge(it) }
-                            ToggleRow("Qualità (4K / HD / SD)", s.display.showQualityBadge) { vm.setShowQualityBadge(it) }
                         }
                     },
                     sec("Pulsanti") {
@@ -309,7 +308,7 @@ fun SettingsScreen(
                 )
                 SettingsPage.ETICHETTE -> listOf(
                     sec("Libreria etichette") {
-                        Section("Libreria etichette", "${tags.size} etichette · tocca il pallino per colore e 📌.") {
+                        Section("Libreria etichette", "${tags.size} etichette · tocca un'etichetta per nome, alias, colore e per fissarla.") {
                             if (tags.isEmpty()) {
                                 Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -319,19 +318,19 @@ fun SettingsScreen(
                                 val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
                                 visible.forEachIndexed { index, tag ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.foundation.layout.Box(
-                                            // 48dp touch target around the small colour dot.
-                                            Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                                .clickable(onClickLabel = "Cambia colore", role = Role.Button) { editTag = tag }
-                                                .semantics { contentDescription = "Colore di #${tag.name}" },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            androidx.compose.foundation.layout.Box(
-                                                Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                                    .background(com.cripta.app.ui.theme.tagColor(tag)))
+                                        // The tag as it looks everywhere else (the shared pill); tap it to change
+                                        // name, alias, colour and pin.
+                                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
+                                            com.cripta.app.ui.components.TagPill(
+                                                com.cripta.app.ui.components.tagText(tag),
+                                                if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
+                                                size = com.cripta.app.ui.components.TagPillSize.Medium,
+                                                base = MaterialTheme.colorScheme.background,
+                                                leadingIcon = if (tag.pinned) androidx.compose.material.icons.Icons.Filled.PushPin else null,
+                                                onClick = { editTag = tag },
+                                                onClickLabel = "Modifica nome, alias e colore",
+                                            )
                                         }
-                                        Text((if (tag.pinned) "📌 " else "") + "${tagAlias(tag)}  #${tag.name}", Modifier.weight(1f).padding(start = 2.dp),
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         if (custom) {
                                             IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
                                                 Icon(Icons.Filled.KeyboardArrowUp, "Su")
@@ -418,10 +417,10 @@ fun SettingsScreen(
                         Section("Ordine della libreria") {
                             val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilterChip(selected = !custom,
+                                com.cripta.app.ui.components.ChoiceChip(selected = !custom,
                                     onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
                                     label = { Text("Alfabetico") })
-                                FilterChip(selected = custom,
+                                com.cripta.app.ui.components.ChoiceChip(selected = custom,
                                     onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
                                     label = { Text("Personalizzato") })
                             }
@@ -549,7 +548,7 @@ fun SettingsScreen(
                         Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
-                                    FilterChip(
+                                    com.cripta.app.ui.components.ChoiceChip(
                                         selected = s.autoLockMinutes == m,
                                         onClick = { vm.setAutoLock(m) },
                                         label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
@@ -584,7 +583,7 @@ fun SettingsScreen(
                         Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 DeleteOriginalPolicy.entries.forEach { p ->
-                                    FilterChip(
+                                    com.cripta.app.ui.components.ChoiceChip(
                                         selected = s.deleteOriginalPolicy == p,
                                         onClick = { vm.setDeletePolicy(p) },
                                         label = {
@@ -630,7 +629,7 @@ fun SettingsScreen(
                                     com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
                                     com.cripta.app.data.ConvertAfter.KEEP_BOTH to "Tieni entrambi",
                                 ).forEach { (v, l) ->
-                                    FilterChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
+                                    com.cripta.app.ui.components.ChoiceChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
                                 }
                             }
                             Text(
@@ -770,7 +769,7 @@ fun SettingsScreen(
                             Text("Conserva per", style = MaterialTheme.typography.labelLarge)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(3, 7, 30).forEach { d ->
-                                    FilterChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
+                                    com.cripta.app.ui.components.ChoiceChip(selected = s.trashDays == d, onClick = { vm.setTrashDays(d) }, label = { Text("$d giorni") })
                                 }
                             }
                             Text("Il cestino accoglie anche gli originali sostituiti da una conversione in MP4.",
@@ -873,7 +872,7 @@ fun SettingsScreen(
                                         },
                                         modifier = Modifier.weight(1f),
                                     ) { Text("Copia dettagli") }
-                                    androidx.compose.material3.OutlinedButton(
+                                    androidx.compose.material3.FilledTonalButton(
                                         onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
                                         modifier = Modifier.weight(1f),
                                     ) { Text("Elimina") }
@@ -1070,7 +1069,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
                     else "I file del backup vengono aggiunti a quelli già nel vault; nulla viene cancellato.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
+                com.cripta.app.ui.components.CriptaTextField(
                     value = pass, onValueChange = { pass = it },
                     label = { Text("Passphrase") },
                     singleLine = true,
@@ -1087,7 +1086,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (creating) {
-                    OutlinedTextField(
+                    com.cripta.app.ui.components.CriptaTextField(
                         value = confirm, onValueChange = { confirm = it },
                         label = { Text("Ripeti la passphrase") },
                         singleLine = true,
@@ -1181,7 +1180,6 @@ private val SEARCH_INDEX: List<SearchEntry> = listOf(
     SearchEntry("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO, "Cartelle"),
     SearchEntry("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO, "Cartelle"),
     SearchEntry("Durata sui video", "badge durata copertina", SettingsPage.ASPETTO, "Copertine dei video"),
-    SearchEntry("Qualità 4K / HD", "badge qualità risoluzione hd 4k copertina", SettingsPage.ASPETTO, "Copertine dei video"),
     SearchEntry("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO, "Pulsanti"),
     SearchEntry("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE, "Libreria etichette"),
     SearchEntry("Etichette sulla copertina", "tag copertina badge righe sigla alias nome", SettingsPage.ETICHETTE, "Sulle copertine"),
@@ -1399,7 +1397,7 @@ private fun <T> ChoiceRow(
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
             com.cripta.app.ui.components.ChipFlowRow {
-                options.forEach { (v, l) -> FilterChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
+                options.forEach { (v, l) -> com.cripta.app.ui.components.ChoiceChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
             }
         }
     }
@@ -1418,7 +1416,7 @@ private fun InfoRow(label: String, value: String) {
 private fun androidx.compose.foundation.layout.BoxScope.TrashSelectionMark(selecting: Boolean, selected: Boolean) {
     if (!selecting) return
     if (selected) {
-        Box(Modifier.matchParentSize().clip(MaterialTheme.shapes.medium)
+        Box(Modifier.matchParentSize().clip(com.cripta.app.ui.theme.CoverShape)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)))
     }
     Box(
@@ -1515,6 +1513,7 @@ private fun TrashDialog(
             contentWindowInsets = safe,
             topBar = {
                 androidx.compose.material3.TopAppBar(
+                    colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     windowInsets = safe.only(
                         androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
                             androidx.compose.foundation.layout.WindowInsetsSides.Top
@@ -1567,9 +1566,9 @@ private fun TrashDialog(
                         ),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            androidx.compose.material3.OutlinedButton(
+                            androidx.compose.material3.FilledTonalButton(
                                 onClick = { confirmDeleteSel = true }, modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             ) { Text("Elimina") }
                             Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f)) {
                                 Text("Ripristina")
@@ -1627,15 +1626,15 @@ private fun TrashDialog(
                         // lines out of its lower corners, which used to shave off their first/last letters.
                         val selected = f.id in selF
                         fun toggle() { selFiles = if (selected) selFiles - f.id else selFiles + f.id }
-                        Column(Modifier.clip(MaterialTheme.shapes.medium)
+                        Column(Modifier.clip(com.cripta.app.ui.theme.CoverShape)
                             .combinedClickable(
                                 onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Dettagli",
                                 onLongClickLabel = "Seleziona",
                                 onClick = { if (inSel) toggle() else fileSheet = f }, onLongClick = { toggle() },
                             )
                             .padding(bottom = 8.dp)) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium)
-                                .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(com.cripta.app.ui.theme.CoverShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
                                 val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                                 val b = bmp
                                 if (b != null) {
@@ -1646,10 +1645,8 @@ private fun TrashDialog(
                                         else Icons.AutoMirrored.Filled.InsertDriveFile, null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                                 }
-                                com.cripta.app.ui.components.formatDuration(f.durationMs)?.let {
-                                    Text(it, color = Color.White, style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(MaterialTheme.shapes.extraSmall)
-                                            .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp))
+                                if (!inSel) com.cripta.app.ui.components.formatDuration(f.durationMs)?.let {
+                                    com.cripta.app.ui.components.CoverBadge(it, Modifier.align(Alignment.TopEnd).padding(6.dp))
                                 }
                                 TrashSelectionMark(inSel, selected)
                             }
@@ -1685,10 +1682,10 @@ private fun TrashDialog(
                         "Distruzione" to leftText(f.deletedAt).replaceFirstChar { it.uppercase() },
                     ).forEach { (k, v) -> InfoRow(k, v) }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.OutlinedButton(
+                        androidx.compose.material3.FilledTonalButton(
                             // Asked first, as for folders and several files: this destroys it for good.
                             onClick = { afterSheet { confirmFile = f } }, modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) { Text("Elimina") }
                         Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
                     }
@@ -1712,9 +1709,9 @@ private fun TrashDialog(
                     InfoRow("Eliminata il", fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.OutlinedButton(
+                        androidx.compose.material3.FilledTonalButton(
                             onClick = { afterSheet { confirmFolder = fo } }, modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) { Text("Elimina") }
                         Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f)) { Text("Ripristina") }
                     }

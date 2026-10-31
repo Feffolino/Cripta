@@ -85,7 +85,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                         val moments = t.moments.ifEmpty { listOf(t.timeMs) }
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             moments.forEach { ms ->
-                                AssistChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { Text(clock(ms)) })
+                                com.cripta.app.ui.components.ActionChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { Text(clock(ms)) })
                             }
                         }
                     }
@@ -181,11 +181,11 @@ private fun FaceEditor(
                     }
                 }
                 if (placed) {
-                    OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Nome") },
+                    com.cripta.app.ui.components.CriptaTextField(name, { name = it }, singleLine = true, label = { Text("Nome") },
                         supportingText = { Text("Vale per tutti i suoi media.") }, modifier = Modifier.fillMaxWidth())
                     Text("Oppure è un'altra persona:", style = MaterialTheme.typography.labelLarge)
                 }
-                OutlinedTextField(query, { query = it }, singleLine = true,
+                com.cripta.app.ui.components.CriptaTextField(query, { query = it }, singleLine = true,
                     label = { Text(if (placed) "Cerca o crea" else "Nome (cerca o crea)") }, modifier = Modifier.fillMaxWidth())
                 // Everyone (the user makes them all), starred first, then the newest.
                 val list = people.filter { it.id != current?.id && !it.entity.ignored && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }

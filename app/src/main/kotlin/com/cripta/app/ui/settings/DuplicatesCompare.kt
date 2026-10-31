@@ -125,6 +125,7 @@ fun DuplicatesCompare(
         Scaffold(
             topBar = {
                 TopAppBar(
+                    colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text(title) },
                     navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Chiudi") } },
                 )
@@ -408,7 +409,7 @@ private fun CandidateCard(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                OutlinedButton(onClick = onKeep, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                androidx.compose.material3.FilledTonalButton(onClick = onKeep, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
                     Text("Tieni solo questo", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                 }
                 IconButton(onClick = onDelete) {

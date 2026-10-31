@@ -128,42 +128,26 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
 @Composable
 private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.work.ConversionService.Companion.IntroProgress?,
                        onStop: () -> Unit, onResults: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (o == null) {
             Text("Lettura dello stato…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Stat("Analizzati", "${o.analysed}", "di ${o.videos}", Modifier.weight(1f))
-            Stat("Con intro", "${o.withIntro}", null, Modifier.weight(1f))
-            Stat("Con finale", "${o.withOutro}", null, Modifier.weight(1f))
-        }
+        // One line per figure: any number fits ("Analizzati 1.234 di 5.678"), nothing is cut.
+        val fmt: (Number) -> String = { com.cripta.app.ui.components.formatCount(it) }
         if (progress != null) {
-            Text("${progress.phase}: ${progress.done} di ${progress.total}", style = MaterialTheme.typography.bodyMedium)
-            LinearProgressIndicator(progress = { if (progress.total > 0) progress.done.toFloat() / progress.total else 0f },
-                modifier = Modifier.fillMaxWidth())
-        } else if (o.videos > 0) {
-            LinearProgressIndicator(progress = { o.analysed.toFloat() / o.videos }, modifier = Modifier.fillMaxWidth())
-            if (o.skipped > 0) Text("${o.skipped} non analizzabili: il motivo è nei risultati.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            com.cripta.app.ui.components.CountRow(progress.phase, fmt(progress.done), of = fmt(progress.total),
+                progress = if (progress.total > 0) progress.done.toFloat() / progress.total else 0f)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onResults, modifier = Modifier.weight(1f)) { Text("Risultati") }
-            if (progress != null) OutlinedButton(onClick = onStop, modifier = Modifier.weight(1f)) { Text("Interrompi") }
-        }
-    }
-}
-
-@Composable
-private fun Stat(label: String, value: String, sub: String?, modifier: Modifier) {
-    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium, modifier = modifier) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, style = MaterialTheme.typography.titleLarge)
-                if (sub != null) { Spacer(Modifier.width(4.dp)); Text(sub, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp)) }
-            }
+        com.cripta.app.ui.components.CountRow("Analizzati", fmt(o.analysed), of = fmt(o.videos),
+            progress = if (progress == null && o.videos > 0) o.analysed.toFloat() / o.videos else null)
+        com.cripta.app.ui.components.CountRow("Con intro", fmt(o.withIntro))
+        com.cripta.app.ui.components.CountRow("Con finale", fmt(o.withOutro))
+        if (progress == null && o.skipped > 0) Text("${fmt(o.skipped)} non analizzabili: il motivo è nei risultati.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f)) { Text("Risultati") }
+            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f)) { Text("Interrompi") }
         }
     }
 }
@@ -176,11 +160,11 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }
     Section("Manutenzione") {
-        OutlinedButton(onClick = { showRejected = true }, enabled = rejected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+        androidx.compose.material3.FilledTonalButton(onClick = { showRejected = true }, enabled = rejected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
             Text(if (rejected.isEmpty()) "Nessun segmento scartato" else "Segmenti scartati (${rejected.size})")
         }
-        OutlinedButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+        androidx.compose.material3.FilledTonalButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
             Text("Ricomincia l'analisi da capo")
         }
     }
@@ -293,6 +277,7 @@ private fun IntroResultsPage(
         Scaffold(
             topBar = {
                 if (selected.isNotEmpty()) TopAppBar(
+                    colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("${selected.size} selezionate") },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
                     actions = {
@@ -300,6 +285,7 @@ private fun IntroResultsPage(
                         TextButton(onClick = { deleting = selectedSigs }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
                     },
                 ) else TopAppBar(
+                    colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("Risultati dell'analisi") },
                     navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 )
@@ -309,14 +295,14 @@ private fun IntroResultsPage(
             LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
-                    OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                    com.cripta.app.ui.components.CriptaTextField(value = query, onValueChange = { query = it }, singleLine = true,
                         leadingIcon = { Icon(Icons.Filled.Search, null) }, placeholder = { Text("Cerca per nome") },
                         modifier = Modifier.fillMaxWidth())
                 }
                 item {
                     ChipFlowRow {
                         ResultFilter.entries.forEach { f ->
-                            FilterChip(selected = filter == f, onClick = { filter = f },
+                            com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f },
                                 label = { Text(f.label + (counts[f]?.let { " · $it" } ?: "")) })
                         }
                     }
@@ -429,7 +415,7 @@ private fun NameDialog(title: String, initial: String, confirm: String, hint: St
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true,
+                com.cripta.app.ui.components.CriptaTextField(value = text, onValueChange = { text = it }, singleLine = true,
                     placeholder = { Text("Es. Sigla One Piece") }, modifier = Modifier.fillMaxWidth())
             }
         },

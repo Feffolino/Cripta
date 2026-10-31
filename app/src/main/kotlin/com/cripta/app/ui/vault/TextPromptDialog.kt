@@ -53,7 +53,7 @@ fun TextPromptDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
+            com.cripta.app.ui.components.CriptaTextField(
                 value = value,
                 onValueChange = { value = it },
                 label = { Text(label) },

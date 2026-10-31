@@ -661,29 +661,18 @@ fun ViewerScreen(
                         items(quick.size) { i ->
                             val t = quick[i]
                             val on = t.name in onFile
-                            val c = com.cripta.app.ui.theme.tagColor(t)
-                            // On: the tag's colour with a tick (state is not told by colour alone), text
-                            // white or black, whichever reads on that colour. Off: a quiet translucent pill.
-                            val fg = if (on) com.cripta.app.ui.theme.readableOn(Color.White, c) else Color.White
-                            Surface(
-                                color = if (on) c else Color.White.copy(alpha = 0.14f),
-                                shape = CircleShape,
-                                modifier = Modifier.heightIn(min = 36.dp).semantics { selected = on }
-                                    .clickable(role = androidx.compose.ui.semantics.Role.Checkbox) { chromeTouch++; vm.toggleTag(qf.id, t.id) },
-                            ) {
-                                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    if (on) {
-                                        Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(16.dp))
-                                    } else if (t.pinned) {
-                                        Icon(Icons.Filled.PushPin, "Fissata", tint = fg,
-                                            modifier = Modifier.padding(end = 4.dp).size(14.dp))
-                                    }
-                                    Text(
-                                        (t.alias?.takeIf { it.isNotBlank() }?.let { "$it " } ?: "") + t.name,
-                                        color = fg, style = MaterialTheme.typography.labelLarge,
-                                    )
-                                }
-                            }
+                            // The shared tag pill, large: on = full colour + tick, off = tint on the dark glass.
+                            com.cripta.app.ui.components.TagPill(
+                                com.cripta.app.ui.components.tagText(t),
+                                if (displayPrefs.tagColors) com.cripta.app.ui.theme.tagColor(t) else MaterialTheme.colorScheme.primary,
+                                size = com.cripta.app.ui.components.TagPillSize.Large,
+                                state = if (on) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
+                                onImage = true,
+                                leadingIcon = if (t.pinned) Icons.Filled.PushPin else null,
+                                onClick = { chromeTouch++; vm.toggleTag(qf.id, t.id) },
+                                onClickLabel = if (on) "Togli" else "Aggiungi",
+                                stateLabel = if (on) "Assegnata" else "Non assegnata",
+                            )
                         }
                     }
                 }
@@ -909,9 +898,9 @@ private fun MediaPage(
                 Text(s.message, color = Color.White, textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
                 if (!s.missing) {
-                    OutlinedButton(
+                    androidx.compose.material3.FilledTonalButton(
                         onClick = { retry++ },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        colors = ButtonDefaults.filledTonalButtonColors(contentColor = Color.White),
                         modifier = Modifier.padding(top = 20.dp),
                     ) {
                         Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
@@ -2165,7 +2154,7 @@ private fun DetailsSheet(
     val header: @Composable () -> Unit = {
         Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium,
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = com.cripta.app.ui.theme.CoverShapeSmall,
                     modifier = Modifier.size(width = 96.dp, height = 72.dp)) {
                     val b = thumb
                     if (b != null) {
@@ -2222,13 +2211,12 @@ private fun DetailsSheet(
     }
     // Size, duration, resolution: plain figures side by side, no tiles around them.
     val tiles: @Composable () -> Unit = {
-        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
-            DetailTile("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes), Modifier.weight(1f))
-            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailTile("Durata", it, Modifier.weight(1f)) }
+        // One line per detail (label left, value right): long values never squeeze or cut.
+        Column {
+            com.cripta.app.ui.components.CountRow("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
+            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { com.cripta.app.ui.components.CountRow("Durata", it) }
             if (file.width != null && file.height != null) {
-                DetailTile("Risoluzione", "${file.width}×${file.height}" +
-                    (com.cripta.app.ui.vault.qualityLabel(file.width, file.height)?.takeIf { isVid }?.let { " · $it" } ?: ""),
-                    Modifier.weight(1.3f))
+                com.cripta.app.ui.components.CountRow("Risoluzione", "${file.width} × ${file.height}")
             }
         }
     }
@@ -2379,15 +2367,6 @@ private fun SheetActionButton(
         Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 2,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-    }
-}
-
-@Composable
-private fun DetailTile(label: String, value: String, modifier: Modifier) {
-    Column(modifier) {
-        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

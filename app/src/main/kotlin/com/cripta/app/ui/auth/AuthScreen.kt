@@ -375,7 +375,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
         }
     }
     Column(horizontalAlignment = if (compact) Alignment.Start else Alignment.CenterHorizontally) {
-        androidx.compose.material3.OutlinedTextField(
+        com.cripta.app.ui.components.CriptaTextField(
             value = text,
             onValueChange = { v -> if (com.cripta.app.security.PinCrypto.accepts(v, kind)) text = v },
             label = { Text("Password di Cripta") },
