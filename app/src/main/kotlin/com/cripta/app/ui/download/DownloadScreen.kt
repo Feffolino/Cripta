@@ -533,10 +533,9 @@ private fun JobCard(
         else -> Icons.Filled.Download to MaterialTheme.colorScheme.primary
     }
     val group = phaseGroup(job.phase)
-    Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // No box around an entry: the queue is a plain list, entries separated by space.
+    Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // A finished job's icon settles in (scale up + fade) instead of popping.
                 androidx.compose.animation.AnimatedContent(

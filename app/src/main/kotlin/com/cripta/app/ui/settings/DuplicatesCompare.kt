@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -254,13 +255,9 @@ private fun GroupCard(
     onDelete: (SettingsViewModel.DupCandidate) -> Unit,
     onPreview: (SettingsViewModel.DupCandidate) -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // No frame and no lines: each group is a heading, its copies and its action; space separates groups.
+    Column(modifier.fillMaxWidth()) {
+        Column(Modifier.padding(top = 20.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val total = group.candidates.sumOf { it.file.sizeBytes }
             val reclaim = total - group.best.file.sizeBytes
             Text(
@@ -324,17 +321,11 @@ private fun CandidateCard(
     onPreview: () -> Unit,
 ) {
     val f = c.file
-    val border = if (best) BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    Surface(
-        color = if (best) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.medium,
-        border = border,
-        modifier = Modifier.width(188.dp),
-    ) {
-        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // No card around a copy: the suggested one is marked by the label on its cover.
+    Box(Modifier.width(176.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // Tap the cover to watch the video / see the photo full size before choosing.
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).clickable(onClick = onPreview)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium).clickable(onClick = onPreview)) {
                 val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                 Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
                 Crossfade(bmp, label = "dupthumb") { b ->
@@ -356,7 +347,7 @@ private fun CandidateCard(
                 if (best) {
                     Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall,
                         modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) {
-                        Text("CONSIGLIATO", style = MaterialTheme.typography.labelSmall,
+                        Text("Consigliato", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }

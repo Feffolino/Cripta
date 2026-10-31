@@ -314,6 +314,7 @@ class SettingsViewModel @Inject constructor(
         undoable(if (others.size == 1) "Persone unite" else "${others.size + 1} persone unite") { faces.merge(into, others) }
     fun keepApart(a: Long, b: Long) = faceAction { faces.keepApart(a, b) }
     fun ignorePerson(id: Long) = undoable("Persona nascosta") { faces.ignore(id) }
+    fun deleteEmptyPerson(id: Long) = faceAction { faces.deleteEmpty(id) }
     fun restorePerson(id: Long) = faceAction { faces.restore(id) }
     fun removeFromPerson(personId: Long, fileIds: Collection<String>) =
         undoable(if (fileIds.size == 1) "Media tolto" else "${fileIds.size} media tolti") { faces.removeMedia(personId, fileIds) }

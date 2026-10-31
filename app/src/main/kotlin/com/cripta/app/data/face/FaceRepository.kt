@@ -420,6 +420,11 @@ class FaceRepository @Inject constructor(
 
     suspend fun setFavorite(personId: Long, favorite: Boolean) = change { dao.setFavorite(personId, favorite) }
 
+    /** A person left with no media: clearing its name and star lets the usual cleanup remove it. */
+    suspend fun deleteEmpty(personId: Long) = change {
+        dao.rename(personId, ""); dao.setFavorite(personId, false); dao.deleteEmptyPersons()
+    }
+
     /** "Unisci": everything goes to [into]; each merge can be undone. */
     suspend fun merge(into: Long, others: Collection<Long>): Undo {
         val ids = change { others.filter { it != into }.map { mergeRows(into, it, 0f, auto = false) } }
