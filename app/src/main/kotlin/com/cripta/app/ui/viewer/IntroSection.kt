@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import androidx.compose.ui.semantics.heading
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.foundation.Canvas
@@ -76,7 +77,8 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     val outroColor = MaterialTheme.colorScheme.tertiary
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Intro e finale", style = MaterialTheme.typography.titleMedium)
+        Text("Intro e finale", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() })
         when (status) {
             null -> StatusLine("Non ancora analizzato.", "Analizza ora") { vm.analyzeIntro(file) }
             "ok" -> {}
@@ -196,8 +198,9 @@ private fun SegmentBlock(
     val name = if (kind == SegmentKind.INTRO) "Intro" else "Finale"
     val active = seg?.takeIf { it.source != "none" && it.endMs > it.startMs }
     var menu by remember { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // No tile around it: the coloured dot and the name head the block, like the panel's other sections.
+    Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(10.dp).background(color, CircleShape))
                 Spacer(Modifier.width(10.dp))
