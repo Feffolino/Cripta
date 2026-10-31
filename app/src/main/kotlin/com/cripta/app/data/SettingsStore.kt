@@ -100,6 +100,8 @@ data class Settings(
     val gestureVolume: Boolean = true,
     /** Viewer: rotate to landscape for landscape videos, portrait for portrait ones. */
     val autoRotate: Boolean = true,
+    /** Viewer: orientation kept by the player's rotation-lock button (an ActivityInfo value); -1 = free. */
+    val viewerRotationLock: Int = -1,
     /** Viewer: continue a video in a small window when leaving the app (off: privacy). */
     val pictureInPicture: Boolean = false,
     /** Updates: also offer pre-releases (every CI build is published as one). */
@@ -198,6 +200,7 @@ class SettingsStore @Inject constructor(
     private val gestureKey = booleanPreferencesKey("gesture_controls")
     private val gestureVolumeKey = booleanPreferencesKey("gesture_volume")
     private val autoRotateKey = booleanPreferencesKey("auto_rotate")
+    private val rotationLockKey = intPreferencesKey("viewer_rotation_lock")
     private val pipKey = booleanPreferencesKey("picture_in_picture")
     private val updatePreKey = booleanPreferencesKey("update_prerelease")
     private val filmstripKey = booleanPreferencesKey("viewer_filmstrip")
@@ -275,6 +278,7 @@ class SettingsStore @Inject constructor(
             // Until set on its own, volume follows the old combined brightness+volume switch.
             gestureVolume = p[gestureVolumeKey] ?: p[gestureKey] ?: true,
             autoRotate = p[autoRotateKey] ?: true,
+            viewerRotationLock = p[rotationLockKey] ?: -1,
             pictureInPicture = p[pipKey] ?: false,
             updatePrerelease = p[updatePreKey] ?: true,
             viewerFilmstrip = p[filmstripKey] ?: true,
@@ -322,6 +326,7 @@ class SettingsStore @Inject constructor(
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
     suspend fun setGestureVolume(v: Boolean) { context.dataStore.edit { it[gestureVolumeKey] = v } }
     suspend fun setAutoRotate(v: Boolean) { context.dataStore.edit { it[autoRotateKey] = v } }
+    suspend fun setViewerRotationLock(orientation: Int) { context.dataStore.edit { it[rotationLockKey] = orientation } }
     suspend fun setPictureInPicture(v: Boolean) { context.dataStore.edit { it[pipKey] = v } }
     suspend fun setAutoNext(v: Boolean) { context.dataStore.edit { it[autoNextKey] = v } }
     suspend fun setAutoNextSec(v: Int) { context.dataStore.edit { it[autoNextSecKey] = v } }
@@ -418,7 +423,7 @@ class SettingsStore @Inject constructor(
             "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey,
                 recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "VISUALIZZATORE" -> listOf(resumeKey, videoLoopKey, videoMutedKey,
-                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
+                seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, rotationLockKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
             "ANALISI" -> listOf(introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)

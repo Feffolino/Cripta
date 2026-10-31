@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -140,8 +141,27 @@ class ViewerViewModel @Inject constructor(
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
     val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map { it.toPlayback() }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
 
-    /** Orientation lock chosen in the player; kept while swiping between videos. */
+    /** Orientation lock chosen in the player; kept while swiping and remembered for next time. */
     val rotationLocked = MutableStateFlow(false)
+
+    /** The orientation the lock keeps (ActivityInfo value), valid while [rotationLocked]. */
+    var lockedOrientation: Int = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+        private set
+
+    init {
+        // The last choice of the lock button is a preference: the player opens locked again.
+        viewModelScope.launch {
+            val o = settingsStore.settings.first().viewerRotationLock
+            if (o >= 0) { lockedOrientation = o; rotationLocked.value = true }
+        }
+    }
+
+    /** Lock to [orientation] (ActivityInfo value) or free the rotation (null); remembered. */
+    fun setRotationLock(orientation: Int?) {
+        if (orientation != null) lockedOrientation = orientation
+        rotationLocked.value = orientation != null
+        viewModelScope.launch { settingsStore.setViewerRotationLock(orientation ?: -1) }
+    }
 
     /** Cover of any file of the browse list (filmstrip). */
     suspend fun thumbOf(id: String): android.graphics.Bitmap? = repo.fileById(id)?.let { thumbs.load(it) }
