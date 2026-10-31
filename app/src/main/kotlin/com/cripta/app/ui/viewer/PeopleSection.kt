@@ -1,5 +1,8 @@
 package com.cripta.app.ui.viewer
 
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.Box
 import com.cripta.app.ui.components.CriptaAlertDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -62,7 +65,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     var adding by remember(file.id) { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Persone", style = MaterialTheme.typography.titleSmall)
+        Text("Persone", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() })
         val shown = faces.sortedWith(compareBy<TrackCard>({ it.personId == null }, { it.moments.firstOrNull() ?: it.timeMs }))
         if (shown.isEmpty() && links.isEmpty()) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -179,7 +183,6 @@ private fun FaceEditor(
                 if (placed) {
                     OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Nome") },
                         supportingText = { Text("Vale per tutti i suoi media.") }, modifier = Modifier.fillMaxWidth())
-                    HorizontalDivider()
                     Text("Oppure è un'altra persona:", style = MaterialTheme.typography.labelLarge)
                 }
                 OutlinedTextField(query, { query = it }, singleLine = true,
