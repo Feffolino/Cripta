@@ -586,7 +586,7 @@ fun VaultScreen(
                 val convertibleSel = convertibleIds intersect selection
                 val convertible = convertibleSel.size
                 val actions = buildList {
-                    add(SelAction(Icons.Filled.Star, if (allFav) "Togli pref." else "Preferito") {
+                    add(SelAction(Icons.Filled.Star, if (allFav) "Togli preferito" else "Preferito") {
                         favoriteWithUndo(selection.toList(), !allFav); selection = emptySet()
                     })
                     add(SelAction(Icons.Filled.Label, "Etichette") {
@@ -594,7 +594,7 @@ fun VaultScreen(
                     })
                     add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
                     add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
-                    add(SelAction(Icons.Filled.Download, "Scarica") { downloadAsk = selection.toList() })
+                    add(SelAction(Icons.Filled.Download, "Esporta") { downloadAsk = selection.toList() })
                     if (convertible > 0) add(SelAction(Icons.Filled.Autorenew, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
                         // Re-read at tap time: both states may have moved on since this bar was built.
                         val ids = (convertibleIds intersect selection).toList()
@@ -3362,77 +3362,79 @@ private class SelAction(val icon: ImageVector, val label: String, val destructiv
  */
 @Composable
 private fun SelectionBar(actions: List<SelAction>) {
-    androidx.compose.material3.BottomAppBar(contentPadding = PaddingValues(0.dp)) {
+    // A tone above the navigation bar below it, so the two read as different layers: actions on the
+    // selection here, destinations there.
+    androidx.compose.material3.BottomAppBar(
+        contentPadding = PaddingValues(0.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val fit = maxWidth / actions.size >= 72.dp
+            // Every action keeps its whole name: few actions share the width, many scroll sideways.
+            val minW = maxOf(72.dp, maxWidth / actions.size)
             val scroll = rememberScrollState()
-            if (fit) {
-                Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    actions.forEach { SelectionAction(it.icon, it.label, Modifier.weight(1f), it.destructive, it.onClick) }
-                }
-            } else {
-                // 4.5 per screen width: the half action at the edge says there is more.
-                val itemW = maxWidth / 4.5f
-                val density = LocalDensity.current
-                // The nudge only the very first time: after that the half-cut action, the
-                // fade and the chevron are enough, and sliding on every selection was too much.
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                LaunchedEffect(Unit) {
-                    val prefs = ctx.getSharedPreferences("vault_hints", android.content.Context.MODE_PRIVATE)
-                    val shown = prefs.getInt("selection_bar_nudges", 0)
-                    if (shown >= 1) return@LaunchedEffect
-                    prefs.edit().putInt("selection_bar_nudges", shown + 1).apply()
-                    kotlinx.coroutines.delay(350)
-                    val px = with(density) { (itemW * 0.6f).roundToPx() }
-                    scroll.animateScrollTo(px, androidx.compose.animation.core.tween(320))
-                    scroll.animateScrollTo(0, androidx.compose.animation.core.tween(380))
-                }
-                val fadeW = with(density) { 28.dp.toPx() }
-                Row(
-                    Modifier.fillMaxSize()
-                        .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            val clear = androidx.compose.ui.graphics.Color.Transparent
-                            val solid = androidx.compose.ui.graphics.Color.Black
-                            if (scroll.canScrollBackward) drawRect(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(clear, solid), 0f, fadeW),
-                                size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
-                            )
-                            if (scroll.canScrollForward) drawRect(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(solid, clear), size.width - fadeW, size.width),
-                                topLeft = androidx.compose.ui.geometry.Offset(size.width - fadeW, 0f),
-                                size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
-                            )
-                        }
-                        .horizontalScroll(scroll),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    actions.forEach { SelectionAction(it.icon, it.label, Modifier.width(itemW), it.destructive, it.onClick) }
-                }
-                // Chevrons at the edges while there is more that way.
-                val fwd by animateFloatAsState(if (scroll.canScrollForward) 1f else 0f, label = "selFwd")
-                val back by animateFloatAsState(if (scroll.canScrollBackward) 1f else 0f, label = "selBack")
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (scroll.canScrollForward) "Altre azioni" else null,
-                    Modifier.align(Alignment.CenterEnd).size(20.dp).graphicsLayer { alpha = fwd },
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null,
-                    Modifier.align(Alignment.CenterStart).size(20.dp).graphicsLayer { alpha = back },
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            val density = LocalDensity.current
+            // The nudge only the very first time the actions overflow: after that the fade and the
+            // chevron are enough, and sliding on every selection was too much.
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            LaunchedEffect(scroll.maxValue > 0) {
+                if (scroll.maxValue == 0) return@LaunchedEffect
+                val prefs = ctx.getSharedPreferences("vault_hints", android.content.Context.MODE_PRIVATE)
+                val shown = prefs.getInt("selection_bar_nudges", 0)
+                if (shown >= 1) return@LaunchedEffect
+                prefs.edit().putInt("selection_bar_nudges", shown + 1).apply()
+                kotlinx.coroutines.delay(350)
+                val px = with(density) { 48.dp.roundToPx() }
+                scroll.animateScrollTo(px, androidx.compose.animation.core.tween(320))
+                scroll.animateScrollTo(0, androidx.compose.animation.core.tween(380))
             }
+            val fadeW = with(density) { 28.dp.toPx() }
+            Row(
+                Modifier.fillMaxSize()
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        val clear = androidx.compose.ui.graphics.Color.Transparent
+                        val solid = androidx.compose.ui.graphics.Color.Black
+                        if (scroll.canScrollBackward) drawRect(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(clear, solid), 0f, fadeW),
+                            size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                        if (scroll.canScrollForward) drawRect(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(solid, clear), size.width - fadeW, size.width),
+                            topLeft = androidx.compose.ui.geometry.Offset(size.width - fadeW, 0f),
+                            size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                    .horizontalScroll(scroll),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                actions.forEach { SelectionAction(it.icon, it.label, Modifier.widthIn(min = minW), it.destructive, it.onClick) }
+            }
+            // Chevrons at the edges while there is more that way.
+            val fwd by animateFloatAsState(if (scroll.canScrollForward) 1f else 0f, label = "selFwd")
+            val back by animateFloatAsState(if (scroll.canScrollBackward) 1f else 0f, label = "selBack")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (scroll.canScrollForward) "Altre azioni" else null,
+                Modifier.align(Alignment.CenterEnd).size(20.dp).graphicsLayer { alpha = fwd },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null,
+                Modifier.align(Alignment.CenterStart).size(20.dp).graphicsLayer { alpha = back },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-/** One labelled action of the bottom selection bar. */
+/** One labelled action of the bottom selection bar: icon over its full name, never cut. */
 @Composable
 private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier, destructive: Boolean = false, onClick: () -> Unit) {
     val tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     Column(
-        modifier.clip(MaterialTheme.shapes.medium).clickable(role = Role.Button, onClick = onClick).padding(vertical = 6.dp),
+        modifier.heightIn(min = 56.dp).clip(MaterialTheme.shapes.medium).clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(icon, null, tint = tint)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1, softWrap = false,
+            modifier = Modifier.padding(top = 4.dp))
     }
 }

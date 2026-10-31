@@ -182,7 +182,7 @@ fun DownloadScreen(
                 }
                 Column(Modifier.weight(1f)) {
                     Text("Scarica un video", style = MaterialTheme.typography.titleMedium)
-                    Text("YouTube, Vimeo, HLS, link diretti e altri. Cifrato nel vault.",
+                    Text("Incolla il link di una pagina o di un video (YouTube, Vimeo e molti altri). Il file finisce cifrato nel vault.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -383,8 +383,8 @@ fun DownloadScreen(
             }
 
             Text(
-                "I contenuti protetti da DRM non sono scaricabili. Il primo download prepara il motore " +
-                    "e può richiedere qualche secondo. Puoi aggiungere più link: vengono scaricati uno alla volta.",
+                "Puoi aggiungere più link: vengono scaricati uno alla volta. Il primo download può richiedere " +
+                    "qualche secondo in più. I video protetti (es. piattaforme a pagamento) non si possono scaricare.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
