@@ -2030,7 +2030,8 @@ private fun Filmstrip(
     val rect = prefs.stripShape == com.cripta.app.data.StripShape.RECT
     val baseAspect = if (rect) 16f / 9f else 1f
     val shape = if (prefs.stripShape == com.cripta.app.data.StripShape.CIRCLE) CircleShape else MaterialTheme.shapes.extraSmall
-    val gap = 4.dp
+    // Enough air between covers that each reads as its own file.
+    val gap = 6.dp
     // Width/height of each file's cover, learnt as the cells load (portrait files: up to 9:16).
     val aspects = remember { androidx.compose.runtime.mutableStateMapOf<String, Float>() }
     fun aspectOf(id: String) = if (rect && prefs.stripTrueAspect) aspects[id] ?: baseAspect else baseAspect
