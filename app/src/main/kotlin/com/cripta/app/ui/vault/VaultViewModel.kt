@@ -184,10 +184,24 @@ class VaultViewModel @Inject constructor(
     /** Re-query trigger driven by the repository's global change signal (reliable across VMs). */
     private val refresh get() = repo.changes
 
-    val folders: StateFlow<List<FolderEntity>> =
+    /** The folder list together with the level it belongs to (see [foldersLevel]). */
+    private val levelFolders: StateFlow<Pair<Long?, List<FolderEntity>>?> =
         combine(currentFolderId, refresh) { id, _ -> id }
-            .flatMapLatest { repo.folders(it) }
+            .flatMapLatest { id -> repo.folders(id).map { id to it } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val folders: StateFlow<List<FolderEntity>> =
+        levelFolders.map { it?.second.orEmpty() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * Which level (folder id, null = root) [folders] currently shows; [LEVEL_UNKNOWN] before the
+     * first load. The screen waits for this (and [filesLevel]) to match the new level before it
+     * shows it, so the previous level's content never flashes in during a folder change.
+     */
+    val foldersLevel: StateFlow<Long?> =
+        levelFolders.map { if (it == null) LEVEL_UNKNOWN else it.first }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LEVEL_UNKNOWN)
 
     /** Newest covers of each visible folder, for the folder mosaics. */
     val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> =
@@ -255,7 +269,7 @@ class VaultViewModel @Inject constructor(
     fun setFolderRandomExcluded(id: Long, excluded: Boolean) = viewModelScope.launch { repo.setFolderRandomExcluded(id, excluded) }
 
     /** Current folder, or the whole vault while filtering when allowed by Settings. */
-    private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>)
+    private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>, val folder: Long? = null)
 
     private val scoped =
         combine(currentFolderId, filters, sortFlow,
@@ -273,7 +287,7 @@ class VaultViewModel @Inject constructor(
                 source.map { list ->
                     val shown = list.filter { f.matches(it) || (it.file.id in byName && noQuery.matches(it)) }
                         .let { l -> if (people == null) l else l.filter { it.file.id in people } }
-                    Scoped(list, applySort(shown, sort.first, sort.second))
+                    Scoped(list, applySort(shown, sort.first, sort.second), folder)
                 }
                     .flowOn(Dispatchers.Default)
             }
@@ -282,6 +296,11 @@ class VaultViewModel @Inject constructor(
     val files: StateFlow<List<FileWithTags>> =
         scoped.map { it.shown }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Which level [files] belongs to (see [foldersLevel]). */
+    val filesLevel: StateFlow<Long?> =
+        scoped.map { it.folder }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LEVEL_UNKNOWN)
 
     /** Counts for the summary strip / sheet: what is shown vs. what the current scope holds. */
     val stats: StateFlow<VaultStats> =
@@ -505,6 +524,10 @@ class VaultViewModel @Inject constructor(
         repo.setFolderStyle(folderId, color, emoji)
     }
 
+    fun setFolderCover(folderId: Long, fileId: String?) = viewModelScope.launch { repo.setFolderCover(folderId, fileId) }
+
+    suspend fun filesInFolder(folderId: Long): List<FileEntity> = repo.filesInFolder(folderId)
+
     fun importUris(uris: List<android.net.Uri>) {
         com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
@@ -656,3 +679,6 @@ class VaultViewModel @Inject constructor(
         open(order.first())
     }
 }
+
+/** "Not loaded yet" for [VaultViewModel.foldersLevel] / [VaultViewModel.filesLevel]. */
+const val LEVEL_UNKNOWN = Long.MIN_VALUE

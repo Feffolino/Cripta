@@ -257,7 +257,7 @@ private const val ROOT_KEY = -1L
 private const val FOLDERS_KEY = "folders"
 
 /** One entry of the speed-dial FAB. */
-private class FabAction(val label: String, val icon: ImageVector, val onClick: () -> Unit)
+private class FabAction(val label: String, val icon: ImageVector, val caption: String? = null, val onClick: () -> Unit)
 
 fun tagAlias(tag: TagEntity): String =
     tag.alias?.takeIf { it.isNotBlank() } ?: tag.name.take(2).uppercase(Locale.getDefault())
@@ -285,6 +285,8 @@ fun VaultScreen(
     val folderStats by vm.folderStats.collectAsState()
     val folderPreviews by vm.folderPreviews.collectAsState()
     val display by vm.display.collectAsState()
+    val filesLevelState = vm.filesLevel.collectAsState()
+    val foldersLevelState = vm.foldersLevel.collectAsState()
     val coverOverrides by vm.coverOverrides.collectAsState()
     val coverVersions by vm.coverVersions.collectAsState()
     val stats by vm.stats.collectAsState()
@@ -341,6 +343,7 @@ fun VaultScreen(
     var folderToDelete by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
     var folderToStyle by remember { mutableStateOf<FolderEntity?>(null) }
+    var folderToCover by remember { mutableStateOf<FolderEntity?>(null) }
     var confirmMultiDelete by remember { mutableStateOf(false) }
     var showRegenCover by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
@@ -646,42 +649,35 @@ fun VaultScreen(
                     enter = fadeIn(Motion.enter()) + slideInVertically(Motion.enter()) { it / 2 },
                     exit = fadeOut(Motion.exit()) + slideOutVertically(Motion.exit()) { it / 2 },
                 ) {
-                    // Single expanding FAB (speed-dial): collapsed it shows just "+"; tapping it
-                    // reveals the labelled actions, so the screen isn't crowded by a stack of FABs.
+                    // Single expanding FAB: collapsed it shows just "+"; tapping it opens one menu panel
+                    // above it (each action with a line saying where it acts), not a stack of FABs.
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val here = path.lastOrNull()?.name
                         val actions = buildList {
-                            add(FabAction("Importa file", Icons.Filled.EnhancedEncryption) { fabExpanded = false; startImport() })
-                            add(FabAction("Nuova cartella", Icons.Filled.CreateNewFolder) { fabExpanded = false; showNewFolder = true })
-                            if (display.showNoteFab) add(FabAction("Nuova nota", Icons.Filled.Description) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
+                            add(FabAction("Importa file", Icons.Filled.EnhancedEncryption,
+                                "Foto, video e documenti " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; startImport() })
+                            add(FabAction("Nuova cartella", Icons.Filled.CreateNewFolder,
+                                here?.let { "Dentro $it" } ?: "Nella radice del vault") { fabExpanded = false; showNewFolder = true })
+                            if (display.showNoteFab) add(FabAction("Nuova nota", Icons.Filled.Description,
+                                "Testo cifrato " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
                             if (display.showRandomFab) {
-                                val label = when {
-                                    filters.active -> "Casuale tra i risultati"
-                                    path.isNotEmpty() -> "Casuale in questa cartella"
-                                    else -> "Casuale"
+                                val caption = when {
+                                    filters.active -> "Tra i risultati del filtro"
+                                    path.isNotEmpty() -> "In questa cartella"
+                                    else -> "In tutto il vault"
                                 }
-                                add(FabAction(label, Icons.Filled.Casino) { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) })
+                                add(FabAction("Apri a caso", Icons.Filled.Casino, caption) { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) })
                             }
                         }
-                        Column(
-                            // Landscape: capped + scrollable so the top action never slides under the bar.
-                            (if (landscape) Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState()) else Modifier),
-                            horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp),
+                        val origin = TransformOrigin(1f, 1f)
+                        AnimatedVisibility(
+                            visible = fabExpanded,
+                            enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
+                                scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.92f, transformOrigin = origin),
+                            exit = fadeOut(Motion.exit(Motion.SHORT)) +
+                                scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.92f, transformOrigin = origin),
                         ) {
-                            actions.forEachIndexed { i, a ->
-                                // Nearest to the FAB first, 30ms apart.
-                                val delay = (actions.size - 1 - i) * 30
-                                val origin = TransformOrigin(1f, 1f)
-                                AnimatedVisibility(
-                                    visible = fabExpanded,
-                                    enter = fadeIn(Motion.enter(Motion.MEDIUM, delay)) +
-                                        slideInVertically(Motion.enter(Motion.MEDIUM, delay)) { it / 3 } +
-                                        scaleIn(Motion.enter(Motion.MEDIUM, delay), initialScale = 0.9f, transformOrigin = origin),
-                                    exit = fadeOut(Motion.exit(Motion.SHORT)) +
-                                        scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
-                                ) {
-                                    MiniFabAction(a.label, a.icon, a.onClick)
-                                }
-                            }
+                            FabMenu(actions, if (landscape) Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()) else Modifier)
                         }
                         // "+" turns 45 degrees into an "x" while the actions are open.
                         val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
@@ -720,8 +716,7 @@ fun VaultScreen(
                 com.cripta.app.ui.components.CriptaTextField(
                     value = filters.query,
                     onValueChange = vm::setQuery,
-                    label = if (landscape) null else ({ Text("Cerca nome o etichetta") }),
-                    placeholder = if (landscape) ({ Text("Cerca nome o etichetta") }) else null,
+                    placeholder = { Text("Cerca nome o etichetta") },
                     leadingIcon = { Icon(Icons.Filled.Search, null) },
                     trailingIcon = if (filters.query.isNotEmpty()) ({
                         IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Filled.Close, "Cancella ricerca") }
@@ -821,7 +816,6 @@ fun VaultScreen(
                                 thumb = { vm.thumb(it) },
                                 showInfo = display.showFolderInfo,
                                 highlighted = hoverFolder == folder.id,
-                                onMore = { folderMenu = folder },
                                 modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
                                     .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
                                     .combinedClickable(
@@ -834,6 +828,7 @@ fun VaultScreen(
                                         this.customActions = listOf(
                                             CustomAccessibilityAction("Rinomina") { folderToRename = folder; true },
                                             CustomAccessibilityAction("Personalizza") { folderToStyle = folder; true },
+                                            CustomAccessibilityAction("Scegli la copertina") { folderToCover = folder; true },
                                             CustomAccessibilityAction("Elimina") { folderToDelete = folder; true },
                                         )
                                     },
@@ -863,9 +858,13 @@ fun VaultScreen(
                 shownDepth = path.size
                 val keep = path.map { it.id }.toSet() + ROOT_KEY
                 scrollMemory.keys.retainAll(keep)
-                if (animOn) {
-                    levelAlpha.snapTo(0f)
-                    withTimeoutOrNull(160) { snapshotFlow { files to folders }.drop(1).first() }
+                // Hidden until both the folders and the files on screen belong to the new level: the
+                // lists update one after the other, and showing in between flashed the old level
+                // (root -> folder -> root on Back). Also without animations, where it just snaps.
+                levelAlpha.snapTo(0f)
+                val target = path.lastOrNull()?.id
+                withTimeoutOrNull(400) {
+                    snapshotFlow { filesLevelState.value == target && foldersLevelState.value == target }.first { it }
                 }
                 val restore = if (!deeper) scrollMemory[newKey] else null
                 gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
@@ -878,9 +877,12 @@ fun VaultScreen(
                 }
             }
 
+            // Before the effect above runs (the first frame after a folder change) the level is
+            // already hidden, so the old content can't show for that frame either.
+            val levelPending = (path.lastOrNull()?.id ?: ROOT_KEY) != shownLevel
             Box(
                 Modifier.weight(1f).fillMaxWidth()
-                    .graphicsLayer { translationX = levelX.value; alpha = levelAlpha.value },
+                    .graphicsLayer { translationX = levelX.value; alpha = if (levelPending) 0f else levelAlpha.value },
             ) {
             when {
                 files.isEmpty() && !showFolders ->
@@ -1171,7 +1173,8 @@ fun VaultScreen(
                     vm.setFolderRandomExcluded(folder.id, !folder.excludedFromRandom); folderMenu = null
                     notify(if (folder.excludedFromRandom) "Cartella inclusa nel casuale" else "Cartella e sottocartelle escluse dal casuale")
                 }
-                SheetAction(Icons.Filled.Palette, "Personalizza") { folderToStyle = folder; folderMenu = null }
+                SheetAction(Icons.Filled.Palette, "Personalizza colore e icona") { folderToStyle = folder; folderMenu = null }
+                SheetAction(Icons.Filled.Image, "Scegli la copertina") { folderToCover = folder; folderMenu = null }
                 SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
             }
         }
@@ -1184,6 +1187,19 @@ fun VaultScreen(
                 if (name != folder.name) notify("Cartella rinominata") { vm.renameFolder(folder, folder.name) }
             },
             onDismiss = { folderToRename = null })
+    }
+
+    folderToCover?.let { folder ->
+        FolderCoverSheet(
+            folder = folder,
+            load = { vm.filesInFolder(folder.id) },
+            thumb = { vm.thumb(it) },
+            onPick = { id ->
+                vm.setFolderCover(folder.id, id); folderToCover = null
+                notify(if (id == null) "Copertina automatica" else "Copertina cambiata")
+            },
+            onDismiss = { folderToCover = null },
+        )
     }
 
     folderToStyle?.let { folder ->
@@ -2750,17 +2766,40 @@ private fun EmptyState(
     }
 }
 
-/** One labelled row in the speed-dial: a name pill next to a small FAB. */
+/**
+ * The "+" menu: one tonal panel (a single object, so a filled surface is allowed) listing the
+ * actions as rows: icon in a soft accent circle, name, and a line saying where it acts.
+ */
 @Composable
-private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        // The name pill is tappable too (bigger target); TalkBack gets a single node, the button.
-        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape,
-            modifier = Modifier.clearAndSetSemantics { }) {
-            Text(label, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+private fun FabMenu(actions: List<FabAction>, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        shadowElevation = 6.dp,
+        modifier = Modifier.widthIn(min = 240.dp, max = 300.dp),
+    ) {
+        Column(modifier.padding(vertical = 8.dp)) {
+            actions.forEach { a ->
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                        .clickable(role = Role.Button, onClick = a.onClick)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center) {
+                        Icon(a.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                    Column(Modifier.padding(start = 14.dp)) {
+                        Text(a.label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+                        if (a.caption != null) {
+                            Text(a.caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
+                }
+            }
         }
-        SmallFloatingActionButton(onClick = onClick) { Icon(icon, label) }
     }
 }
 
@@ -3140,9 +3179,10 @@ fun CoverThumb(
 }
 
 /**
- * Folder card drawn as a stack: the newest cover in front, two sheets in the folder's colour
- * peeking out above it, like an album. Nothing is drawn over the picture: the folder's emoji or
- * glyph, its star and its count sit with the name underneath.
+ * Folder card drawn as a stack: its cover in front (the chosen one, else the newest), the next two
+ * pictures peeking out above it, like an album. Nothing is drawn over the pictures: the folder's
+ * glyph (its colour and emoji), its star and its count sit with the name underneath, which keeps
+ * the whole width (the actions are on long-press).
  */
 @Composable
 fun FolderMosaic(
@@ -3155,8 +3195,6 @@ fun FolderMosaic(
     showInfo: Boolean = true,
     /** Drop target under a drag-selection: the card lifts, tints and gets a primary border. */
     highlighted: Boolean = false,
-    /** When set, a "more" button opens the folder's actions (so they aren't long-press only). */
-    onMore: (() -> Unit)? = null,
     /** A star action on the Favorites screen; regular cards keep their actions menu. */
     onRemoveFavorite: (() -> Unit)? = null,
 ) {
@@ -3166,14 +3204,26 @@ fun FolderMosaic(
     val primary = MaterialTheme.colorScheme.primary
     val shape = com.cripta.app.ui.theme.CoverShape
     val tile = MaterialTheme.colorScheme.surfaceContainerHigh
+    // Sheets without a picture of their own (folders with 1-2 files) take the folder's colour.
     val farSheet = remember(accent, tile) { accent.copy(alpha = 0.30f).compositeOver(tile) }
     val nearSheet = remember(accent, tile) { accent.copy(alpha = 0.55f).compositeOver(tile) }
+    @Composable
+    fun sheetPicture(f: com.cripta.app.data.db.FileEntity?, dim: Float) {
+        if (f == null) return
+        val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+        bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, alpha = dim, modifier = Modifier.fillMaxSize()) }
+    }
     // Scale outermost, so the caller's clip/click area scales with the card.
     Column(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.then(modifier)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             // The two sheets behind: narrower and higher the further back they are.
-            Box(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).clip(shape).background(farSheet))
-            Box(Modifier.fillMaxSize().padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp).clip(shape).background(nearSheet))
+            // The pictures behind are slightly dimmed, so the front cover reads as the folder's face.
+            Box(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).clip(shape).background(farSheet)) {
+                sheetPicture(previews.getOrNull(2), 0.55f)
+            }
+            Box(Modifier.fillMaxSize().padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp).clip(shape).background(nearSheet)) {
+                sheetPicture(previews.getOrNull(1), 0.75f)
+            }
             Box(
                 Modifier.fillMaxSize().padding(top = 12.dp).clip(shape)
                     .background(accent.copy(alpha = 0.16f).compositeOver(tile))
@@ -3213,10 +3263,61 @@ fun FolderMosaic(
                     Icon(Icons.Filled.Star, "Rimuovi cartella dai preferiti", tint = com.cripta.app.ui.theme.Favorite,
                         modifier = Modifier.size(20.dp))
                 }
-            } else if (onMore != null) {
-                IconButton(onClick = onMore, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Filled.MoreVert, "Azioni per ${folder.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Pick the picture in front of a folder's stack: "Automatica" (the newest file) or any of the
+ * folder's own files. The current choice carries the selection ring and tick.
+ */
+@Composable
+private fun FolderCoverSheet(
+    folder: FolderEntity,
+    load: suspend () -> List<com.cripta.app.data.db.FileEntity>,
+    thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
+    onPick: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val files by produceState<List<com.cripta.app.data.db.FileEntity>?>(null, folder.id) { value = load() }
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+        val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
+            Text("Copertina di ${folder.name}", style = MaterialTheme.typography.titleMedium,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+            Text("Tocca un file per metterlo davanti alla cartella.", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            com.cripta.app.ui.components.ChoiceChip(
+                selected = folder.coverFileId == null,
+                onClick = { afterSheet { onPick(null) } },
+                label = { Text("Automatica: la più recente") },
+            )
+            val list = files
+            when {
+                list == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+                list.isEmpty() -> Text("La cartella non contiene file.", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+                else -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = GridCells.Adaptive(96.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(list.size, key = { list[it].id }) { i ->
+                        val f = list[i]
+                        val chosen = f.id == folder.coverFileId
+                        com.cripta.app.ui.components.MediaThumb(
+                            f, thumb,
+                            Modifier.fillMaxWidth().aspectRatio(1f).clip(com.cripta.app.ui.theme.CoverShape)
+                                .clickable(onClickLabel = "Usa come copertina") { afterSheet { onPick(f.id) } }
+                                .semantics { contentDescription = f.originalName; selected = chosen },
+                            selected = chosen,
+                            showFavoriteBadge = false,
+                        )
+                    }
                 }
             }
         }

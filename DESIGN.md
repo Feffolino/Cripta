@@ -70,25 +70,36 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 ## Components
 
 - **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
-  Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Off /
-  plain: the tag colour at 20% with the name in the same hue at 4.5:1. On: full colour plus a tick.
-  Excluded (filters): tint, strike-through and a "no" sign. Over a picture: `onImage = true`.
-  "+N" is `MoreTagsPill`.
+  Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Colour means "on":
+  Plain (a tag shown on a file) and On (assigned, filtered) are the tag colour, translucent (35%
+  over the page, 78% over a picture), name at 4.5:1; On adds a tick. Off is neutral with muted
+  text and only a dot in the tag colour. Excluded: neutral, strike-through, "no" sign. Over a
+  picture: `onImage = true`. "+N" is `MoreTagsPill`. The text is never given a weight (it would
+  measure to nothing in a LazyRow).
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star, the video length (top right) or a play mark, the watched bar. No quality badge
   (4K/HD/SD) and no shade over the image.
-- **Folders** (`FolderMosaic`): a stack — the newest cover in front, two sheets in the folder's
-  colour peeking above it. Emoji/glyph, star and count go with the name underneath, never on the
-  picture.
-- **Fields**: `CriptaTextField`, a filled slab with no outline or underline.
+- **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
+  "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
+  (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
+  with the name underneath, never on the picture. No "more" button: actions are on long-press,
+  so the name keeps the whole width.
+- **Long titles** in the top bar (a folder's name) glide sideways (`basicMarquee`), cut when
+  animations are off.
+- **"+" menu**: one tonal panel above the button, a row per action (accent icon circle, name,
+  where it acts), not a stack of small buttons.
+- **Folder changes**: the level stays hidden until its folders and files have both loaded, then
+  slides in; the previous level never flashes.
+- **Fields**: `CriptaTextField`, filled with no outline or underline. Single-line fields (every
+  search, links, names) are full pills; multi-line ones a 18dp slab.
 - **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
   no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
 - **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
   the current one larger, full opacity and ringed.
 - **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (32dp).
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
-  quality as one segmented control with the size under each option, destination as two plain rows
+  quality as a grid of three options per row with the size under each, destination as two plain rows
   opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti.
 
 ## Touch and motion

@@ -23,6 +23,8 @@ data class FolderEntity(
     /** Null preserves the default until a sort is chosen for this folder. */
     val sortKey: String? = null,
     val sortAscending: Boolean = false,
+    /** File chosen as the folder's cover (front of its stack); null = the newest file. */
+    val coverFileId: String? = null,
 )
 
 /**

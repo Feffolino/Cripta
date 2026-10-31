@@ -361,6 +361,16 @@ class VaultRepository @Inject constructor(
         db.folderDao().setStyle(id, color, emoji?.trim()?.ifEmpty { null }); notifyChanged()
     }
 
+    /** The file shown in front of the folder's stack; null = the newest one. */
+    suspend fun setFolderCover(id: Long, fileId: String?) = withContext(Dispatchers.IO) {
+        db.folderDao().setCover(id, fileId); notifyChanged()
+    }
+
+    /** A folder's own files, newest first (the cover picker). */
+    suspend fun filesInFolder(folderId: Long, limit: Int = 500): List<FileEntity> = withContext(Dispatchers.IO) {
+        db.fileDao().latestInFolder(folderId, limit)
+    }
+
     suspend fun setFolderFavorite(id: Long, favorite: Boolean) = withContext(Dispatchers.IO) {
         db.folderDao().setFavorite(id, favorite); notifyChanged()
     }
@@ -1265,7 +1275,11 @@ class VaultRepository @Inject constructor(
         val d = session.database.value ?: return@withContext emptyMap()
         try {
             folderIds.associateWith { root ->
-                d.fileDao().latestInFolder(root, limit)
+                val latest = d.fileDao().latestInFolder(root, limit)
+                // The chosen cover goes in front (if it still exists and isn't in the trash).
+                val cover = d.folderDao().byId(root)?.coverFileId
+                    ?.let { id -> latest.firstOrNull { it.id == id } ?: d.fileDao().byId(id)?.takeIf { it.deletedAt == null } }
+                if (cover == null) latest else (listOf(cover) + latest.filter { it.id != cover.id }).take(limit)
             }
         } catch (e: IllegalStateException) {
             emptyMap() // the database closed under the query (vault locked meanwhile)
