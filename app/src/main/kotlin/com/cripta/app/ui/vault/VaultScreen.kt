@@ -1,5 +1,7 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.ui.layout.layout
+
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.material3.SegmentedButton
@@ -652,7 +654,8 @@ fun VaultScreen(
                 ) {
                     // "+" opens its actions in a row to its left (adding things); "Apri a caso" is a
                     // separate small button above it, since it opens rather than adds.
-                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Centred column: the small "a caso" button sits exactly over the middle of the "+".
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val here = path.lastOrNull()?.name
                         val actions = buildList {
                             add(FabAction("Importa", Icons.Filled.EnhancedEncryption,
@@ -672,20 +675,28 @@ fun VaultScreen(
                                 onClick = { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) },
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 contentColor = MaterialTheme.colorScheme.primary,
-                                // Lines up with the centre of the "+" below it.
-                                modifier = Modifier.padding(end = 8.dp),
                             ) { Icon(Icons.Filled.Shuffle, randomLabel) }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val origin = TransformOrigin(1f, 0.5f)
-                            AnimatedVisibility(
-                                visible = fabExpanded,
-                                enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
-                                    scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.9f, transformOrigin = origin),
-                                exit = fadeOut(Motion.exit(Motion.SHORT)) +
-                                    scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
-                            ) {
-                                FabRow(actions, Modifier.padding(end = 12.dp))
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            // The row is anchored to the left edge of the "+" and takes no room in the
+                            // layout: opening it never moves the "+" (it is taller than the button).
+                            val gap = with(LocalDensity.current) { 12.dp.roundToPx() }
+                            Box(Modifier.align(Alignment.CenterStart).layout { m, c ->
+                                val p = m.measure(c.copy(minWidth = 0, minHeight = 0,
+                                    maxWidth = androidx.compose.ui.unit.Constraints.Infinity,
+                                    maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                                layout(0, 0) { p.place(-p.width - gap, -p.height / 2) }
+                            }) {
+                                val origin = TransformOrigin(1f, 0.5f)
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = fabExpanded,
+                                    enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
+                                        scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.9f, transformOrigin = origin),
+                                    exit = fadeOut(Motion.exit(Motion.SHORT)) +
+                                        scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
+                                ) {
+                                    FabRow(actions)
+                                }
                             }
                             // "+" turns 45 degrees into an "x" while the actions are open.
                             val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
