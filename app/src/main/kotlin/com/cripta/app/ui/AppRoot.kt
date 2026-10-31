@@ -345,8 +345,10 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
     ) { pad ->
         // Content fills edge-to-edge (incl. the display cutout) so the system-bar / cutout strips
         // show whatever screen is behind them — the app surface on the tabs, black in the player.
+        // consumeWindowInsets: the bottom bar already took the navigation-bar inset, so the screens'
+        // own Scaffolds must not add it again (it left an empty band above the bar).
         Row(
-            Modifier.padding(pad).fillMaxSize().then(
+            Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().then(
                 // Keep the tab screens (rail + content) clear of the side camera cutout; the
                 // fullscreen player handles its own insets.
                 // (Every non-player route: favourites and notes have top bars under the camera too.)
