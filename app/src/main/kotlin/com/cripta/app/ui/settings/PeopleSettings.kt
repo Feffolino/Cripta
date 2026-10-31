@@ -444,6 +444,8 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
                             DropdownMenuItem(text = { Text("Unisci con…") }, onClick = { menu = false; merging = true })
                             if (p.entity.ignored) DropdownMenuItem(text = { Text("Ripristina") }, onClick = { menu = false; vm.restorePerson(p.id) })
+                            // With no media left, the useful choice is to remove the profile, not to call it "not a person".
+                            else if (p.media.isEmpty()) DropdownMenuItem(text = { Text("Elimina la persona") }, onClick = { menu = false; vm.deleteEmptyPerson(p.id); onClose() })
                             else DropdownMenuItem(text = { Text("Non è una persona") }, onClick = { menu = false; vm.ignorePerson(p.id); onClose() })
                         }
                     }
@@ -453,7 +455,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text((if (p.entity.ignored) "Ignorata: i volti simili vengono nascosti. " else "") +
-                        if (p.media.isEmpty()) "Nessun media collegato. Il nome resta finché non lo elimini: per aggiungere media, " +
+                        if (p.media.isEmpty()) "Nessun media collegato. Il nome resta finché non elimini la persona dal menu in alto. Per aggiungere media, " +
                             "apri una foto o un video, scorri su per i dettagli e in Persone scegli ${p.title}."
                         else "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

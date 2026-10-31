@@ -2825,8 +2825,7 @@ private fun EmptyState(
 private fun MiniFabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // The name pill is tappable too (bigger target); TalkBack gets a single node, the button.
-        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small,
             modifier = Modifier.clearAndSetSemantics { }) {
             Text(label, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
