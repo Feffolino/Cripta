@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // Premium secure dark palette (v2). Deep near-black with layered surfaces + calm blue accent.
 val Bg = Color(0xFF0A0C10)
@@ -83,6 +84,22 @@ fun autoTagColor(name: String): Color =
 
 /** Colour of a tag with no colour of its own: the global default if set, else the automatic one. */
 fun tagColor(name: String): Color = DefaultTagColor.argb?.let { Color(it) } ?: autoTagColor(name)
+
+/**
+ * [fg] moved towards white (on a dark [bg]) or black (on a light one) just enough to reach [min]
+ * contrast: tag names keep their hue while staying readable on their own tinted background.
+ */
+fun readableOn(fg: Color, bg: Color, min: Double = 4.5): Color {
+    fun contrast(a: Color, b: Color): Double {
+        val la = a.luminance() + 0.05; val lb = b.luminance() + 0.05
+        return if (la > lb) la / lb else lb / la
+    }
+    val target = if (bg.luminance() < 0.18f) Color.White else Color.Black
+    var c = fg
+    var t = 0f
+    while (contrast(c, bg) < min && t < 1f) { t += 0.05f; c = androidx.compose.ui.graphics.lerp(fg, target, t) }
+    return c
+}
 
 /** A tag's colour: the one the user picked, else the global default, else the automatic one. */
 fun tagColor(tag: com.cripta.app.data.db.TagEntity): Color = tag.color?.let { Color(it) } ?: tagColor(tag.name)
