@@ -1,5 +1,7 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.components.CriptaAlertDialog
+import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -109,7 +110,7 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
         }
     }
     rejecting?.let { (kind, seg) ->
-        AlertDialog(
+        CriptaAlertDialog(
             onDismissRequest = { rejecting = null },
             title = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro" else "Non è un finale") },
             text = { Text("Scartare questo tratto solo in questo video, o in tutti i video in cui compare (anche in quelli futuri)?") },
@@ -222,7 +223,7 @@ private fun SegmentBlock(
                 if (active != null) {
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni per $name") }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
                             // Bounds moved away from the detected sound: the same move for the whole series.
                             if (active.source == "manual" && active.autoStartMs != null && active.autoEndMs != null &&
                                 (active.startMs != active.autoStartMs || active.endMs != active.autoEndMs)) DropdownMenuItem(

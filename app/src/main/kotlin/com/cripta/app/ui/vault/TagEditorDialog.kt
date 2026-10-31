@@ -411,11 +411,12 @@ fun BatchTagDialog(
                 if (onRemove != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.FilterChip(
-                            selected = !removing, onClick = { removing = false; chosen.clear() },
+                            // Only a real switch of mode clears the choice: tapping the active one keeps it.
+                            selected = !removing, onClick = { if (removing) { removing = false; chosen.clear() } },
                             label = { Text("Aggiungi") },
                         )
                         androidx.compose.material3.FilterChip(
-                            selected = removing, onClick = { removing = true; chosen.clear() },
+                            selected = removing, onClick = { if (!removing) { removing = true; chosen.clear() } },
                             label = { Text("Rimuovi") },
                         )
                     }

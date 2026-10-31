@@ -1,5 +1,7 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.components.CriptaAlertDialog
+import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.material3.FilterChipDefaults
@@ -90,7 +92,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ViewModule
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -289,6 +290,7 @@ fun VaultScreen(
     val importState by vm.importState.collectAsState()
     val savedFilters by vm.savedFilters.collectAsState()
     val trashEnabled by vm.trashEnabled.collectAsState()
+    val filterLocalOnly by vm.filterLocalOnly.collectAsState()
     val convertStatus by vm.convertStatus.collectAsState()
     val convertSettings by vm.convertSettings.collectAsState()
     /** Ids waiting for the first-conversion choice dialog. */
@@ -327,7 +329,7 @@ fun VaultScreen(
     var compareResult by remember { mutableStateOf<String?>(null) }
     var compareTitle by remember { mutableStateOf("Confronto audio") }
     compareResult?.let { text ->
-        androidx.compose.material3.AlertDialog(
+        CriptaAlertDialog(
             onDismissRequest = { compareResult = null },
             confirmButton = { androidx.compose.material3.TextButton(onClick = { compareResult = null }) { Text("Chiudi") } },
             title = { Text(compareTitle) },
@@ -885,6 +887,12 @@ fun VaultScreen(
                     EmptyState(filters.active, Modifier.fillMaxSize(),
                         onImport = { startImport() },
                         folderName = path.lastOrNull()?.name,
+                        // Where the filters actually looked: the vault, this folder, or the root's own files.
+                        searchedWhere = when {
+                            !filterLocalOnly -> "in tutto il vault"
+                            path.isNotEmpty() -> "in questa cartella"
+                            else -> "tra i file fuori dalle cartelle"
+                        },
                         onClearFilters = { vm.clearFilters(); searchExpanded = false })
                 manual ->
                     ReorderableFileGrid(
@@ -1233,7 +1241,7 @@ fun VaultScreen(
 
     downloadAsk?.let { ids ->
         val n = ids.size
-        AlertDialog(
+        CriptaAlertDialog(
             onDismissRequest = { downloadAsk = null },
             title = { Text(if (n == 1) "Scaricare 1 file?" else "Scaricare $n file?") },
             text = {
@@ -1260,7 +1268,7 @@ fun VaultScreen(
             onDismissRequest = { confirmMultiDelete = false },
             title = { Text(if (n == 1) "Eliminare 1 file?" else "Eliminare $n file?") },
             text = {
-                Text(if (trashEnabled) "Verranno spostati nel cestino: potrai ripristinarli da Impostazioni › Archivio."
+                Text(if (trashEnabled) "Verranno spostati nel cestino: potrai ripristinarli da Impostazioni › Duplicati e cestino."
                     else "Eliminazione sicura (crypto-shredding). Irreversibile.")
             },
             confirmButton = {
@@ -1307,7 +1315,7 @@ fun VaultScreen(
                 Text(
                     when {
                         trashEnabled -> "\"${folder.name}\"" + (if (n == 0) "" else " e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, sottocartelle incluse)") +
-                            " andrà nel cestino. Da Impostazioni › Archivio puoi aprirla e ripristinarla tutta o solo alcuni file."
+                            " andrà nel cestino. Da Impostazioni › Duplicati e cestino puoi aprirla e ripristinarla tutta o solo alcuni file."
                         n == 0 -> "\"${folder.name}\" è vuota e verrà eliminata."
                         else -> "\"${folder.name}\" e tutto il suo contenuto (${if (n == 1) "1 file" else "$n file"}, " +
                             "sottocartelle incluse) verranno eliminati in modo sicuro. Irreversibile."
@@ -2751,6 +2759,7 @@ private fun EmptyState(
     modifier: Modifier,
     onImport: () -> Unit = {},
     folderName: String? = null,
+    searchedWhere: String = "in tutto il vault",
     onClearFilters: () -> Unit = {},
 ) {
     // Landscape: smaller badge and padding + scroll, so the import button is always reachable.
@@ -2794,7 +2803,8 @@ private fun EmptyState(
         }
         Text(if (filtering) "Nessun risultato" else "Vault vuoto",
             style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
-        Text(if (filtering) "Nessun file in tutto il vault corrisponde ai filtri attivi." else "Importa foto e video: restano cifrati e visibili solo qui.",
+        Text(if (filtering) "Nessun file $searchedWhere corrisponde ai filtri attivi."
+            else "Importa foto, video, PDF o crea una nota: restano cifrati e visibili solo qui.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         if (filtering) {
@@ -2901,6 +2911,16 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                     Text((eta?.replaceFirstChar { it.uppercase() }?.let { "$it. " } ?: "") +
                         "Puoi uscire dall'app: l'importazione continua in background.",
                         style = MaterialTheme.typography.labelSmall, color = onContainer.copy(alpha = 0.8f))
+                }
+                // Which files failed and why, so the user knows what to try again.
+                if (!state.active && state.failures.isNotEmpty()) {
+                    state.failures.take(5).forEach { (name, reason) ->
+                        Text("$name: $reason", style = MaterialTheme.typography.bodySmall, color = onContainer,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (state.failures.size > 5) {
+                        Text("e altri ${state.failures.size - 5}", style = MaterialTheme.typography.bodySmall, color = onContainer)
+                    }
                 }
                 // Byte-identical copies of files already in the vault: asked about once the import ends.
                 if (state.duplicates.isNotEmpty()) {

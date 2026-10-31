@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.components.CriptaAlertDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -18,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -111,7 +111,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val finding by vm.findingFaces.collectAsState()
     var picked by remember(file.id) { mutableStateOf<FaceRepository.FoundFace?>(null) }
     found?.let { list ->
-        if (picked == null) AlertDialog(onDismissRequest = { vm.foundFaces.value = null },
+        if (picked == null) CriptaAlertDialog(onDismissRequest = { vm.foundFaces.value = null },
             title = { Text(if (isVideo) "Volti in questo momento" else "Volti nella foto") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -141,7 +141,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             onDismiss = { picked = null; vm.foundFaces.value = null })
     }
     message?.let { m ->
-        AlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
+        CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
@@ -159,7 +159,7 @@ private fun FaceEditor(
     val placed = t != null && current != null && t.state != "suggested"
     var name by remember(t?.id) { mutableStateOf(if (placed) current!!.entity.name else "") }
     var query by remember(t?.id) { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss,
+    CriptaAlertDialog(onDismissRequest = onDismiss,
         title = { Text(if (t == null) "Aggiungi a una persona" else "Chi è?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
