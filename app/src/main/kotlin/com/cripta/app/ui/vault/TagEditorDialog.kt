@@ -59,47 +59,26 @@ private val QUICK_EMOJIS = listOf(
     "📷", "🔑", "💼", "🎨", "🎁", "✅", "🔥", "💡", "🧾", "🌍",
 )
 
-/** One reusable chip used by the tag dialogs. */
-@OptIn(ExperimentalFoundationApi::class)
+/** A tag in the pickers: the shared [TagPill], assigned (tick, full colour) or not (tint). */
 @Composable
 private fun TagChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
-    dot: androidx.compose.ui.graphics.Color? = null,
+    color: androidx.compose.ui.graphics.Color,
 ) {
-    val shape = MaterialTheme.shapes.small
-    Surface(
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        shape = shape,
-        // 48dp touch target around the compact chip; exposed as a checkbox with its state, and the
-        // long-press (alias / colour / pin) is announced and reachable as a TalkBack action.
-        modifier = Modifier.minimumInteractiveComponentSize().clip(shape)
-            .combinedClickable(
-                role = Role.Checkbox,
-                onClickLabel = if (selected) "Rimuovi" else "Assegna",
-                onLongClickLabel = if (onLongClick != null) "Modifica alias, colore e fissa" else null,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            .semantics {
-                this.selected = selected
-                stateDescription = if (selected) "Assegnata" else "Non assegnata"
-            },
-    ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            if (dot != null) {
-                androidx.compose.foundation.layout.Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(dot))
-                androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
-            }
-            Text(
-                label,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
+    com.cripta.app.ui.components.TagPill(
+        label, color,
+        size = com.cripta.app.ui.components.TagPillSize.Medium,
+        state = if (selected) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
+        base = MaterialTheme.colorScheme.surfaceContainerLow,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onClickLabel = if (selected) "Rimuovi" else "Assegna",
+        onLongClickLabel = if (onLongClick != null) "Modifica alias, colore e fissa" else null,
+        stateLabel = if (selected) "Assegnata" else "Non assegnata",
+    )
 }
 
 /**
@@ -150,7 +129,7 @@ internal fun TagSections(
                     selected = isSelected(name),
                     onClick = { onToggle(name) },
                     onLongClick = onLongPress?.let { f -> { f(name) } },
-                    dot = t?.let { com.cripta.app.ui.theme.tagColor(it) },
+                    color = t?.let { com.cripta.app.ui.theme.tagColor(it) } ?: com.cripta.app.ui.theme.tagColor(name),
                 )
             }
         }
@@ -172,7 +151,7 @@ internal fun TagSections(
 }
 
 private fun chipLabel(name: String, alias: String?): String =
-    if (!alias.isNullOrBlank()) "$alias #$name" else "#$name"
+    if (!alias.isNullOrBlank()) "$alias $name" else name
 
 /**
  * Create/edit a label choosing a name and, right away, an emoji/acronym alias.
@@ -209,7 +188,7 @@ fun LabelEditorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 if (nameEditable) {
-                    OutlinedTextField(
+                    com.cripta.app.ui.components.CriptaTextField(
                         value = name, onValueChange = { name = it },
                         label = { Text("Nome") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
@@ -218,7 +197,7 @@ fun LabelEditorDialog(
                     Text("Il nome si cambia da Impostazioni › Etichette.", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                OutlinedTextField(
+                com.cripta.app.ui.components.CriptaTextField(
                     // At most 6 visible characters, counted as graphemes so an emoji is never split.
                     value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
                     label = { Text("Emoji o acronimo (opzionale)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -410,12 +389,12 @@ fun BatchTagDialog(
             ) {
                 if (onRemove != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.FilterChip(
+                        com.cripta.app.ui.components.ChoiceChip(
                             // Only a real switch of mode clears the choice: tapping the active one keeps it.
                             selected = !removing, onClick = { if (removing) { removing = false; chosen.clear() } },
                             label = { Text("Aggiungi") },
                         )
-                        androidx.compose.material3.FilterChip(
+                        com.cripta.app.ui.components.ChoiceChip(
                             selected = removing, onClick = { if (!removing) { removing = true; chosen.clear() } },
                             label = { Text("Rimuovi") },
                         )
@@ -476,7 +455,7 @@ private const val SEARCH_THRESHOLD = 12
 
 @Composable
 private fun TagSearchField(query: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
+    com.cripta.app.ui.components.CriptaTextField(
         value = query,
         onValueChange = onChange,
         placeholder = { Text("Cerca etichetta") },

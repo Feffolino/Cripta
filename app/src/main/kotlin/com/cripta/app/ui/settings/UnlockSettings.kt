@@ -176,7 +176,7 @@ private tailrec fun android.content.Context.findFragmentActivity(): FragmentActi
 @Composable
 private fun PinField(value: String, onValue: (String) -> Unit, label: String, kind: SecretKind,
                      isError: Boolean = false, supporting: String? = null) {
-    OutlinedTextField(
+    com.cripta.app.ui.components.CriptaTextField(
         value = value,
         onValueChange = { v -> if (PinCrypto.accepts(v, kind)) onValue(v) },
         label = { Text(label) },
@@ -241,7 +241,7 @@ private fun NewPinDialog(
                 // PIN: a keypad on the lock screen. Password: letters, digits and symbols, keyboard.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SecretKind.entries.forEach { k ->
-                        androidx.compose.material3.FilterChip(
+                        com.cripta.app.ui.components.ChoiceChip(
                             selected = kind == k,
                             onClick = { if (kind != k) { kind = k; pin = ""; again = "" } },
                             label = { Text(if (k == SecretKind.PIN) "PIN numerico" else "Password") },

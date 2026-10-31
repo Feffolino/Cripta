@@ -78,6 +78,7 @@ fun FavoritesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -170,7 +171,7 @@ fun FavoritesScreen(
                                     showFavoriteBadge = false)
                                 // Unfavorite in place (with undo), instead of opening each file.
                                 Surface(
-                                    color = Color.Black.copy(alpha = 0.45f), shape = CircleShape,
+                                    color = com.cripta.app.ui.components.OnImageGlass, shape = CircleShape,
                                     modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
                                 ) {
                                     IconButton(

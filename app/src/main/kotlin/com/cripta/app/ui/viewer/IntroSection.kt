@@ -249,7 +249,7 @@ private fun SegmentBlock(
                     }
                     IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
                 } else {
-                    OutlinedButton(onClick = onMarkStart, modifier = Modifier.weight(1f)) {
+                    androidx.compose.material3.FilledTonalButton(onClick = onMarkStart, modifier = Modifier.weight(1f)) {
                         Text(if (active == null) "Segna inizio qui (${clock(positionMs)})" else "Segna di nuovo da ${clock(positionMs)}")
                     }
                     if (active != null) {

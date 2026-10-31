@@ -132,7 +132,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         Text("Persone in Home", style = MaterialTheme.typography.bodyLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("off" to "Nascoste", "blur" to "Sfocate", "on" to "Visibili").forEach { (k, label) ->
-                FilterChip(selected = s.peopleOnHome == k, onClick = { vm.setPeopleOnHome(k) }, label = { Text(label) })
+                com.cripta.app.ui.components.ChoiceChip(selected = s.peopleOnHome == k, onClick = { vm.setPeopleOnHome(k) }, label = { Text(label) })
             }
         }
         Text(when (s.peopleOnHome) {
@@ -295,7 +295,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     }
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Persone") },
+            TopAppBar(colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     Box {
@@ -324,14 +324,14 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 ScanStatus(o, progress, onStop = { vm.cancelFaceScan() })
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                com.cripta.app.ui.components.CriptaTextField(value = query, onValueChange = { query = it }, singleLine = true,
                     leadingIcon = { Icon(Icons.Filled.Search, null) }, placeholder = { Text("Cerca per nome") }, modifier = Modifier.fillMaxWidth())
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PeopleFilter.entries.forEach { f ->
                         val n = if (f == PeopleFilter.NONE) noFaces.size else o.people.count { f.matches(it) }
-                        if (n > 0 || f == PeopleFilter.MAIN || f == filter) FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
+                        if (n > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
                     }
                 }
             }
@@ -420,6 +420,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
     CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             if (selected.isNotEmpty()) TopAppBar(
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text("${selected.size} selezionati") },
                 navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
                 actions = {
@@ -441,7 +442,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         }
                     }
                 },
-            ) else TopAppBar(title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            ) else TopAppBar(colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
@@ -489,7 +490,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
             CriptaAlertDialog(onDismissRequest = { renaming = false }, title = { Text("Nome della persona") },
                 text = {
                     Column {
-                        OutlinedTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        com.cripta.app.ui.components.CriptaTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         val twin = o.people.firstOrNull { it.id != p.id && name.isNotBlank() && it.entity.name.equals(name.trim(), ignoreCase = true) }
                         Text(if (twin != null) "Esiste già «${twin.title}»: dopo il salvataggio puoi unirle da «Unisci con…»."
                             else "Il nome vale per tutti i suoi media. Un volto sbagliato si toglie tenendo premuto il media.",
@@ -521,7 +522,7 @@ private fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lon
     CriptaAlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (allowNew) OutlinedTextField(newName, { newName = it; if (it.isNotBlank()) picked = emptyList() }, singleLine = true,
+                if (allowNew) com.cripta.app.ui.components.CriptaTextField(newName, { newName = it; if (it.isNotBlank()) picked = emptyList() }, singleLine = true,
                     label = { Text("Nuova persona (dividi)") }, modifier = Modifier.fillMaxWidth())
                 LazyColumn(Modifier.heightIn(max = 340.dp)) {
                     items(others, key = { it.id }) { q ->

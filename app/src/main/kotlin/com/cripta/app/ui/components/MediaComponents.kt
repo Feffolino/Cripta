@@ -20,11 +20,10 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.ui.theme.CoverShape
 
 const val MIME_NOTE = "text/cripta-note"
 
@@ -83,7 +84,7 @@ fun typeIconFor(mime: String): ImageVector = when {
 }
 
 /**
- * Rounded thumbnail with type/favorite/selection overlays. Reusable across screens. The cover is
+ * Rounded cover with type/favorite/selection marks. Reusable across screens. The cover is
  * decorative (no content description): the cell around it carries the file name as text.
  */
 @Composable
@@ -96,33 +97,61 @@ fun MediaThumb(
     selectionMode: Boolean = false,
     /** false where the screen draws its own star (Preferiti's remove button). */
     showFavoriteBadge: Boolean = true,
+    shape: Shape = CoverShape,
 ) {
     val bmp by produceState<Bitmap?>(initialValue = null, file.id, coverVersion) { value = thumb(file) }
     val icon = typeIconFor(file.mimeType)
     val isVideo = VaultRepository.isVideo(file.mimeType)
     SelectableThumbFrame(
         selected = selected,
-        shape = MaterialTheme.shapes.medium,
+        shape = shape,
         modifier = modifier,
         overlay = { CornerSelectionCheck(selected, selectionMode, size = 22.dp) },
     ) {
-        Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxSize()) {}
+        CoverPlaceholderBackground()
         ThumbCrossfade(bmp, contentDescription = null, modifier = Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(30.dp))
-            }
+            CoverPlaceholder(icon, 28.dp)
         }
-        if (isVideo) {
-            Box(Modifier.size(32.dp).clip(CircleShape).background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.PlayCircle, "Video", tint = Color.White, modifier = Modifier.size(28.dp))
-            }
-        }
-        if (file.isFavorite && showFavoriteBadge) {
-            Box(Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp).clip(CircleShape)
-                .background(com.cripta.app.ui.theme.BadgeScrim), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Star, "Preferito", tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(16.dp))
-            }
-        }
+        if (isVideo) CoverPlayMark(Modifier.align(Alignment.Center))
+        if (file.isFavorite && showFavoriteBadge) CoverStar(Modifier.align(Alignment.TopStart).padding(6.dp))
+    }
+}
+
+/** Neutral tile behind a cover while it loads (and around images with transparency). */
+@Composable
+fun CoverPlaceholderBackground() {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
+}
+
+/** A cover without an image: the file type's icon on the neutral tile. */
+@Composable
+fun CoverPlaceholder(icon: ImageVector, size: Dp) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size))
+    }
+}
+
+/** Short text on a cover (a video's length): white on the dark glass, round. */
+@Composable
+fun CoverBadge(text: String, modifier: Modifier = Modifier) {
+    Box(modifier.clip(CircleShape).background(OnImageGlass).padding(horizontal = 7.dp, vertical = 2.dp)) {
+        Text(text, style = MaterialTheme.typography.labelSmall, color = Color.White, maxLines = 1)
+    }
+}
+
+/** The favourite star on a cover, on the dark glass so it reads on light pictures too. */
+@Composable
+fun CoverStar(modifier: Modifier = Modifier, size: Dp = 22.dp, description: String? = "Preferito") {
+    Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
+        Icon(Icons.Filled.Star, description, tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(size * 0.68f))
+    }
+}
+
+/** "This is a video" mark in the middle of a cover, when no length badge says it already. */
+@Composable
+fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
+    Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
+        Icon(Icons.Filled.PlayArrow, "Video", tint = Color.White, modifier = Modifier.size(size * 0.62f))
     }
 }
 
@@ -158,9 +187,10 @@ fun HeaderTitle(text: String) {
         Image(
             painterResource(com.cripta.app.R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(32.dp),
         )
-        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
+        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(start = 6.dp))
     }
 }
 
@@ -174,11 +204,11 @@ fun MediaThumbCell(
     coverVersion: Int = 0,
     showFavoriteBadge: Boolean = true,
 ) {
-    Column(modifier.clickable(onClickLabel = "Apri", onClick = onClick)) {
+    Column(modifier.clip(CoverShape).clickable(onClickLabel = "Apri", onClick = onClick).padding(bottom = 6.dp)) {
         MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion,
             showFavoriteBadge = showFavoriteBadge)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
         Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 2.dp))

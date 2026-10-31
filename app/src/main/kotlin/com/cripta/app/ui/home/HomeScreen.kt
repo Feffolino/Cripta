@@ -152,7 +152,7 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surface),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
                 actions = {
                     IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") }
@@ -208,8 +208,8 @@ fun HomeScreen(
                     LazyRow(Modifier.padding(top = 8.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(savedFilters.size) { i ->
                             val (sf, count) = savedFilters[i]
-                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.extraLarge,
-                                modifier = Modifier.heightIn(min = 48.dp).clip(MaterialTheme.shapes.extraLarge)
+                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape,
+                                modifier = Modifier.heightIn(min = 48.dp).clip(CircleShape)
                                     .clickable(role = Role.Button, onClickLabel = "Applica filtro") { vm.applySavedFilter(sf.json); onOpenFolders() }) {
                                 Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.FilterList, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -266,7 +266,7 @@ fun HomeScreen(
             if (recents.isNotEmpty()) {
                 if (!landscape) {
                     // Carousel of the latest additions (a 16:9 hero would fill a landscape screen).
-                    item { HeroCarousel(recents.take(5), vm::thumb, coverVersions) { id -> open(recents, id) } }
+                    item { HeroCarousel(recents.take(5), display, vm::thumb, coverVersions) { id -> open(recents, id) } }
                 }
                 item {
                     ShelfHeader("Aggiunti di recente", summary.total,
@@ -374,11 +374,12 @@ private fun CoverShelf(
         items(items, key = { it.file.id }) { fwt ->
             val bmp by produceState<android.graphics.Bitmap?>(null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
             val source = remember { MutableInteractionSource() }
-            Column(Modifier.width(124.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
-                .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(fwt.file.id) }) {
+            Column(Modifier.width(132.dp).pressScale(source).clip(com.cripta.app.ui.theme.CoverShape)
+                .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(fwt.file.id) }
+                .padding(bottom = 6.dp)) {
                 CoverThumb(fwt.file, fwt.tags, display, bmp, Modifier.fillMaxWidth().aspectRatio(1f))
                 Text(fwt.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp, start = 2.dp))
+                    style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
             }
         }
     }
@@ -396,14 +397,12 @@ private fun ContinueCard(
     val f = fwt.file
     val bmp by produceState<android.graphics.Bitmap?>(null, f.id, coverVersion) { value = thumb(f) }
     val source = remember { MutableInteractionSource() }
-    Column(Modifier.width(210.dp).pressScale(source).clip(MaterialTheme.shapes.medium)
-        .clickable(source, LocalIndication.current, onClickLabel = "Riprendi", onClick = onClick)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.medium)) {
-            CoverThumb(f, emptyList(), display.copy(resumePlayback = true), bmp, Modifier.fillMaxSize())
-            Box(Modifier.align(Alignment.Center).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.PlayArrow, "Riprendi", tint = Color.White)
-            }
+    Column(Modifier.width(220.dp).pressScale(source).clip(com.cripta.app.ui.theme.CoverShape)
+        .clickable(source, LocalIndication.current, onClickLabel = "Riprendi", onClick = onClick)
+        .padding(bottom = 6.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(com.cripta.app.ui.theme.CoverShape)) {
+            // The cover's own play mark (no length badge here: "Mancano …" is written underneath).
+            CoverThumb(f, emptyList(), display.copy(resumePlayback = true, showDurationBadge = false), bmp, Modifier.fillMaxSize())
         }
         Text(f.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
@@ -419,6 +418,7 @@ private fun ContinueCard(
 @Composable
 private fun HeroCarousel(
     items: List<FileWithTags>,
+    display: DisplayPrefs,
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
     coverVersions: Map<String, Int>,
     onOpen: (String) -> Unit,
@@ -436,25 +436,25 @@ private fun HeroCarousel(
                 .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(f.id) }) {
                 // The title is already read from the overlay text below.
                 bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(96.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))))
-                Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
-                    Text(f.originalName, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOfNotNull(
-                            formatDuration(f.durationMs),
-                            if (VaultRepository.isVideo(f.mimeType)) com.cripta.app.ui.vault.qualityLabel(f.width, f.height) else null,
-                            formatBytes(f.sizeBytes),
-                        ).joinToString(" · ").let {
-                            Text(it, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+                // A short shade only under the title: most of the picture stays clear.
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(80.dp)
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
+                Column(Modifier.align(Alignment.BottomStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(f.originalName, color = Color.White, style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        formatDuration(f.durationMs)?.let {
+                            Text(" · $it", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, maxLines = 1)
                         }
-                        fwt.tags.take(3).forEach { t ->
-                            Surface(color = com.cripta.app.ui.theme.tagColor(t), shape = MaterialTheme.shapes.extraSmall) {
-                                Text(t.alias?.takeIf { it.isNotBlank() } ?: t.name, color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall, maxLines = 1,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp))
+                    }
+                    if (fwt.tags.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            fwt.tags.take(3).forEach { t ->
+                                com.cripta.app.ui.components.TagPill(com.cripta.app.ui.components.tagText(t),
+                                    if (display.tagColors) com.cripta.app.ui.theme.tagColor(t) else MaterialTheme.colorScheme.primary,
+                                    onImage = true)
                             }
+                            if (fwt.tags.size > 3) com.cripta.app.ui.components.MoreTagsPill(fwt.tags.size - 3, onImage = true)
                         }
                     }
                 }
@@ -510,7 +510,7 @@ private fun EmptyHome(
         }
         StartStep(2, "Mettili in ordine",
             "Crea cartelle dal pulsante + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
-            OutlinedButton(onClick = onOpenFolders) { Text("Apri Cartelle") }
+            androidx.compose.material3.FilledTonalButton(onClick = onOpenFolders) { Text("Apri Cartelle") }
         }
         val lock = when (autoLockMinutes) {
             -1 -> "Ora il vault non si blocca da solo."
@@ -518,7 +518,7 @@ private fun EmptyHome(
             else -> "Ora si blocca dopo $autoLockMinutes min che l'app è in background."
         }
         StartStep(3, "Scegli quando si blocca", "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
-            OutlinedButton(onClick = onOpenSecurity) { Text("Apri Sicurezza") }
+            androidx.compose.material3.FilledTonalButton(onClick = onOpenSecurity) { Text("Apri Sicurezza") }
         }
     }
 }

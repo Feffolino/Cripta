@@ -87,6 +87,7 @@ fun NoteEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text(if (fileId == null) "Nuova nota" else "Modifica nota") },
                 navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Salva e chiudi") } },
                 actions = {
@@ -145,7 +146,6 @@ fun NoteEditorScreen(
                                 enabled = !vm.loadFailed,
                                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Titolo" },
                             )
-                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
                         }
                         TextField(
                             value = vm.text, onValueChange = { vm.text = it },
