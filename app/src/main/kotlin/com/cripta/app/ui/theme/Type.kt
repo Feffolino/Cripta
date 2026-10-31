@@ -24,7 +24,7 @@ val CriptaTypography = Typography(
     titleSmall = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, letterSpacing = 0.1.sp),
     bodyLarge = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
     bodyMedium = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+    bodySmall = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 15.sp),
     labelLarge = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Medium, fontSize = 14.sp),
     labelMedium = TextStyle(fontFamily = Sans, fontFeatureSettings = "tnum", fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.3.sp),
     // Previously undefined -> Material fallback; used for tiny captions on cards.

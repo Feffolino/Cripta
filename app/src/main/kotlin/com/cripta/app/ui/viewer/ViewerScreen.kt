@@ -13,6 +13,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.semantics.heading
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -659,19 +662,25 @@ fun ViewerScreen(
                             val t = quick[i]
                             val on = t.name in onFile
                             val c = com.cripta.app.ui.theme.tagColor(t)
+                            // On: the tag's colour with a tick (state is not told by colour alone), text
+                            // white or black, whichever reads on that colour. Off: a quiet translucent pill.
+                            val fg = if (on) com.cripta.app.ui.theme.readableOn(Color.White, c) else Color.White
                             Surface(
-                                color = if (on) c else Color.White.copy(alpha = 0.12f),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.clickable { chromeTouch++; vm.toggleTag(qf.id, t.id) },
+                                color = if (on) c else Color.White.copy(alpha = 0.14f),
+                                shape = CircleShape,
+                                modifier = Modifier.heightIn(min = 36.dp).semantics { selected = on }
+                                    .clickable(role = androidx.compose.ui.semantics.Role.Checkbox) { chromeTouch++; vm.toggleTag(qf.id, t.id) },
                             ) {
-                                Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    if (t.pinned) {
-                                        Icon(Icons.Filled.PushPin, "Fissata", tint = Color.White,
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (on) {
+                                        Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(16.dp))
+                                    } else if (t.pinned) {
+                                        Icon(Icons.Filled.PushPin, "Fissata", tint = fg,
                                             modifier = Modifier.padding(end = 4.dp).size(14.dp))
                                     }
                                     Text(
                                         (t.alias?.takeIf { it.isNotBlank() }?.let { "$it " } ?: "") + t.name,
-                                        color = Color.White, style = MaterialTheme.typography.labelLarge,
+                                        color = fg, style = MaterialTheme.typography.labelLarge,
                                     )
                                 }
                             }
@@ -2180,17 +2189,13 @@ private fun DetailsSheet(
                 Column(Modifier.weight(1f), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
                     Text(file.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    // Type and date on one quiet line: no chip around the type.
                     Text(
-                        java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                            .format(java.util.Date(file.createdAt)),
+                        kind + (ext?.let { " · $it" } ?: "") + " · " +
+                            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                                .format(java.util.Date(file.createdAt)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.padding(top = 2.dp)) {
-                        Text(kind + (ext?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                    }
                 }
             }
             actions?.let { a ->
@@ -2215,9 +2220,9 @@ private fun DetailsSheet(
             }
         }
     }
-    // Stats-style tiles.
+    // Size, duration, resolution: plain figures side by side, no tiles around them.
     val tiles: @Composable () -> Unit = {
-        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
             DetailTile("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes), Modifier.weight(1f))
             com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailTile("Durata", it, Modifier.weight(1f)) }
             if (file.width != null && file.height != null) {
@@ -2230,8 +2235,12 @@ private fun DetailsSheet(
     val tags: @Composable () -> Unit = {
         Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Etichette", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { creating = true }) { Text("+ Nuova") }
+                Text("Etichette", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+                TextButton(onClick = { creating = true }) {
+                    Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
+                    Text("Nuova", modifier = Modifier.padding(start = 6.dp))
+                }
             }
             Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e per fissarla.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2277,9 +2286,9 @@ private fun DetailsSheet(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
         ) {
             header(); tiles(); tags()
-            if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
-            if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { HorizontalDividerCompat(); PeopleSection(file, vm) }
-            HorizontalDividerCompat(); info()
+            if (isVid) { SectionGap(); IntroSection(file, vm) }
+            if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
+            SectionGap(); info()
         }
     }
     if (inSplit) {
@@ -2304,13 +2313,13 @@ private fun DetailsSheet(
                         Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
                     ) {
-                        header(); tiles(); HorizontalDividerCompat(); info()
+                        header(); tiles(); SectionGap(); info()
                     }
                     Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
                         tags()
-                        if (isVid) { HorizontalDividerCompat(); IntroSection(file, vm) }
-                        if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { HorizontalDividerCompat(); PeopleSection(file, vm) }
+                        if (isVid) { SectionGap(); IntroSection(file, vm) }
+                        if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
                     }
                 }
             } else column()
@@ -2375,14 +2384,13 @@ private fun SheetActionButton(
 
 @Composable
 private fun DetailTile(label: String, value: String, modifier: Modifier) {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium, modifier = modifier) {
-        Column(Modifier.padding(12.dp)) {
-            Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    Column(modifier) {
+        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
+/** Space between the panel's sections: they are told apart by their headings, not by lines. */
 @Composable
-private fun HorizontalDividerCompat() = androidx.compose.material3.HorizontalDivider()
+private fun SectionGap() = Spacer(Modifier.height(14.dp))

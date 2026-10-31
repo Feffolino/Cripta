@@ -195,6 +195,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
 private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
     // null = still computing; a failure is its own state, with a retry, never an endless "Calcolo…".
     var attempt by remember { mutableStateOf(0) }
+    var tech by remember { mutableStateOf(false) }
     val st by produceState<Result<FaceRepository.Stats>?>(null, attempt) { value = null; value = runCatching { vm.faceStats() } }
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Statistiche dei volti") },
         text = {
@@ -210,12 +211,22 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 Text("Media analizzati: ${x.media}" + if (x.skipped > 0) " (${x.skipped} non leggibili)" else "")
                 if (x.videos > 0) Text("Tempo medio per video: %.1f s".format(x.videoMs / 1000.0 / x.videos))
                 if (x.photos > 0) Text("Tempo medio per foto: %.2f s".format(x.photoMs / 1000.0 / x.photos))
-                Text("Fotogrammi uguali saltati: ${x.duplicates} · aggiunti vicino ai volti: ${x.extra}")
                 Text("Volti trovati: ${x.faces}")
                 if (x.rejects.isNotEmpty()) Text("Scartati: " + x.rejects.entries.joinToString(", ") { "${it.value} ${it.key.label}" })
-                Text("Nitidezza dei volti allineati (sotto ${"%.0f".format(com.cripta.app.media.face.FaceEngine.MIN_SHARPNESS)} = sfocati):",
-                    style = MaterialTheme.typography.labelLarge)
-                x.sharp.forEachIndexed { i, n -> Text("  ${FaceStats.bandLabel(i)}: $n") }
+                // The algorithm's numbers stay available, folded away under what a person needs to know.
+                TextButton(onClick = { tech = !tech }, contentPadding = PaddingValues(0.dp)) {
+                    Text(if (tech) "Nascondi i dettagli tecnici" else "Dettagli tecnici")
+                }
+                if (tech) {
+                    Text("Fotogrammi uguali saltati: ${x.duplicates} · aggiunti vicino ai volti: ${x.extra}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Nitidezza dei volti allineati (sotto ${"%.0f".format(com.cripta.app.media.face.FaceEngine.MIN_SHARPNESS)} = sfocati):",
+                        style = MaterialTheme.typography.labelLarge)
+                    x.sharp.forEachIndexed { i, n ->
+                        Text("  ${FaceStats.bandLabel(i)}: $n", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         },
         confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })

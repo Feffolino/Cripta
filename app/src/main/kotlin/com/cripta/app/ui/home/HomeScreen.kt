@@ -152,8 +152,6 @@ fun HomeScreen(
                 colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surface),
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },
                 actions = {
-                    // Duplicates and trash one tap away from Home.
-                    IconButton(onClick = { vm.openTools(); onOpenSettings() }) { Icon(Icons.Filled.Build, "Duplicati e cestino") }
                     IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "Blocca") }
                 },
             )
@@ -181,8 +179,8 @@ fun HomeScreen(
         )
         HomePhase.CONTENT -> LazyColumn(
             Modifier.fillMaxSize().padding(pad),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (convertStatus.active || convertStatus.lastResult != null || convertStatus.pendingOriginals.isNotEmpty()) {
                 item {
@@ -201,7 +199,7 @@ fun HomeScreen(
             }
             if (savedFilters.isNotEmpty()) {
                 item {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(Modifier.padding(top = 8.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(savedFilters.size) { i ->
                             val (sf, count) = savedFilters[i]
                             Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.extraLarge,
@@ -314,17 +312,10 @@ private fun SummaryCard(videos: Int, photos: Int, bytes: Long, onVideos: () -> U
     ) {
         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
             SummaryTile(Icons.Filled.Movie, "$videos", "video", Modifier.weight(1f), onVideos, compact)
-            SummaryDivider()
             SummaryTile(Icons.Filled.Image, "$photos", "foto", Modifier.weight(1f), onPhotos, compact)
-            SummaryDivider()
             SummaryTile(Icons.Filled.SdStorage, formatBytes(bytes), "occupati", Modifier.weight(1f), onAll, compact)
         }
     }
-}
-
-@Composable
-private fun SummaryDivider() {
-    Box(Modifier.padding(vertical = 14.dp).width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
 }
 
 @Composable
@@ -332,12 +323,12 @@ private fun SummaryTile(icon: ImageVector, value: String, label: String, modifie
     val source = remember { MutableInteractionSource() }
     Column(
         modifier.heightIn(min = 48.dp).clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = "Mostra", onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = if (compact) 8.dp else 14.dp),
+            .padding(horizontal = 16.dp, vertical = if (compact) 10.dp else 18.dp),
     ) {
-        Text(value, style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, maxLines = 1)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Text(value, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1, modifier = Modifier.padding(start = 4.dp))
         }
     }
@@ -350,7 +341,8 @@ private fun ShelfHeader(title: String, count: Int, onSeeAll: (() -> Unit)? = nul
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp)
             .then(if (onSeeAll != null) Modifier.clickable(role = Role.Button, onClickLabel = "Vedi tutti", onClick = onSeeAll) else Modifier)
-            .padding(start = 20.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+            // Space above the heading, little below: it belongs to the row under it.
+            .padding(start = 20.dp, end = 12.dp, top = 20.dp, bottom = 0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
@@ -426,7 +418,8 @@ private fun HeroCarousel(
     onOpen: (String) -> Unit,
 ) {
     val pager = rememberPagerState { items.size }
-    Column {
+    // No heading of its own: it takes the room a heading would.
+    Column(Modifier.padding(top = 20.dp)) {
         HorizontalPager(state = pager, contentPadding = PaddingValues(horizontal = 16.dp), pageSpacing = 10.dp) { page ->
             val fwt = items[page]
             val f = fwt.file

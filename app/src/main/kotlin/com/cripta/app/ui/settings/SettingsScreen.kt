@@ -1276,13 +1276,6 @@ private fun MainSettingsList(
                     PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, null) }
                 }
             }
-            item(span = full) {
-                androidx.compose.material3.OutlinedButton(onClick = onLock, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                    Icon(Icons.Filled.Lock, null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Blocca ora")
-                }
-            }
         }
     }
 }
@@ -1312,10 +1305,10 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
     ) {
         Icon(p.icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
         Column(Modifier.weight(1f).padding(start = 20.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
             if (summary.isNotBlank()) {
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             }
         }
     }
@@ -1327,9 +1320,9 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
  */
 @Composable
 internal fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.semantics { heading() })
+            modifier = Modifier.padding(bottom = 4.dp).semantics { heading() })
         if (description != null) {
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -1368,16 +1361,18 @@ internal fun ToggleRow(
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp).size(22.dp))
         }
         Column(Modifier.weight(1f).padding(end = 8.dp)) {
-            Text(label)
+            // Title in medium weight, its caption close under it: the pair reads as one item.
+            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
             if (desc != null) {
-                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp))
             }
         }
         Switch(checked = checked, onCheckedChange = null)
@@ -1402,7 +1397,7 @@ private fun <T> ChoiceRow(
             androidx.compose.foundation.layout.Spacer(Modifier.width(36.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
             com.cripta.app.ui.components.ChipFlowRow {
                 options.forEach { (v, l) -> FilterChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
             }
