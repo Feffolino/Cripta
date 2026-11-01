@@ -41,6 +41,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -103,24 +104,36 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     var showStats by remember { mutableStateOf(false) }
     var clearing by remember { mutableStateOf(false) }
 
+    // Same order as Intro e finale: what it does, its state and main action; the settings; then the
+    // rare and destructive actions apart at the bottom.
     Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
-    Section("Persone", "Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono. " +
-        "Tutto avviene sul telefono; volti e persone restano nel database cifrato.") {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
-            FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth()) {
-                com.cripta.app.ui.components.ButtonText("Vedi le persone")
-            }
+    PageIntro("Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono, dai dettagli di ogni media. " +
+        "Tutto avviene sul telefono: volti e persone restano nel database cifrato.") {
+        ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
+        FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth()) {
+            com.cripta.app.ui.components.ButtonText("Vedi le persone")
         }
     }
-    Section("Analisi dei volti") {
+    Section("Analisi") {
         ToggleRow("Analizza i nuovi media", s.facesAnalyzeNew, desc = "Dopo ogni importazione, download o conversione, in background.",
             icon = Icons.Filled.Face) { vm.setFacesAnalyzeNew(it) }
         FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
-        Text("L'analisi trova i volti; sei tu a dire chi sono, dai dettagli di ogni media.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Section("Visualizzazione") {
+        ToggleRow("Momenti nel lettore", s.faceMoments,
+            desc = "Segni sulla barra del video dove compaiono le persone; nei dettagli ogni volto elenca i suoi momenti.",
+            icon = Icons.Filled.Timeline) { vm.setFaceMoments(it) }
+        ChoiceRow("Persone in Home", listOf("off" to "Nascoste", "blur" to "Sfocate", "on" to "Visibili"), s.peopleOnHome,
+            icon = Icons.Filled.Home,
+            desc = when (s.peopleOnHome) {
+                "off" -> "La Home non mostra volti."
+                "blur" -> "Sfocati finché non tocchi la riga: utile in pubblico."
+                else -> "Subito visibili."
+            }) { vm.setPeopleOnHome(it) }
+    }
+    Section("Manutenzione") {
         FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             com.cripta.app.ui.components.ButtonText("Elimina volti trovati per errore…")
         }
@@ -135,22 +148,6 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             Spacer(Modifier.weight(1f))
             TextButton(onClick = { askRestart = true }, enabled = progress == null) { com.cripta.app.ui.components.ButtonText("Ricomincia da capo", color = MaterialTheme.colorScheme.error) }
         }
-    }
-    Section("Visualizzazione") {
-        ToggleRow("Momenti nel lettore", s.faceMoments,
-            desc = "Segni sulla barra del video dove compaiono le persone; nel pannello info ogni volto elenca i suoi momenti.",
-            icon = Icons.Filled.Timeline) { vm.setFaceMoments(it) }
-        Text("Persone in Home", style = MaterialTheme.typography.bodyLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("off" to "Nascoste", "blur" to "Sfocate", "on" to "Visibili").forEach { (k, label) ->
-                com.cripta.app.ui.components.ChoiceChip(selected = s.peopleOnHome == k, onClick = { vm.setPeopleOnHome(k) }, label = { Text(label) })
-            }
-        }
-        Text(when (s.peopleOnHome) {
-            "off" -> "La Home non mostra volti."
-            "blur" -> "I volti in Home restano sfocati finché non tocchi la riga: utile in pubblico."
-            else -> "I volti in Home sono subito visibili."
-        }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     }
     if (askRestart) {

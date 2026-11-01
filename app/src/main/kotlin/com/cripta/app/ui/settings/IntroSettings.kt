@@ -84,7 +84,7 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
-        Section("Intro e finale", "Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
+        PageIntro("Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
             "Per segnarli a mano apri un video e scorri su: la sezione è sotto le etichette.") {
             StatusCard(overview, progress, onStop = { vm.cancelIntroScan() }, onResults = { vm.introResultsOpen.value = true })
         }
@@ -162,13 +162,16 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     var showRejected by remember { mutableStateOf(false) }
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }
+    // Like the people page: the rare actions as text, the one that throws work away in the error colour.
     Section("Manutenzione") {
-        androidx.compose.material3.FilledTonalButton(onClick = { showRejected = true }, enabled = rejected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-            com.cripta.app.ui.components.ButtonText(if (rejected.isEmpty()) "Nessun segmento scartato" else "Segmenti scartati (${rejected.size})")
-        }
-        androidx.compose.material3.FilledTonalButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-            Text("Ricomincia l'analisi da capo")
+        Row {
+            if (rejected.isNotEmpty()) TextButton(onClick = { showRejected = true }) {
+                com.cripta.app.ui.components.ButtonText("Segmenti scartati (${rejected.size})")
+            }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { restartAll = false; askRestart = true }) {
+                com.cripta.app.ui.components.ButtonText("Ricomincia da capo", color = MaterialTheme.colorScheme.error)
+            }
         }
     }
     if (showRejected) CriptaAlertDialog(
