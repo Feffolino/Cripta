@@ -73,11 +73,21 @@ val PillFieldShape = RoundedCornerShape(28.dp)
  * and the message under the field.
  */
 @Composable
-fun criptaFieldColors(): TextFieldColors = TextFieldDefaults.colors(
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
-    errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+fun criptaFieldColors(): TextFieldColors = criptaFieldColors(LocalFieldContainer.current ?: MaterialTheme.colorScheme.surfaceContainerHigh)
+
+/**
+ * The fill of [CriptaTextField] where the surface behind it is not the page: a dialog is itself
+ * `surfaceContainerHigh`, so a field there took the dialog's colour and read as plain text.
+ * [CriptaAlertDialog] provides a well (`surface`) instead.
+ */
+val LocalFieldContainer = androidx.compose.runtime.compositionLocalOf<Color?> { null }
+
+@Composable
+private fun criptaFieldColors(container: Color): TextFieldColors = TextFieldDefaults.colors(
+    focusedContainerColor = container,
+    unfocusedContainerColor = container,
+    disabledContainerColor = container.copy(alpha = 0.6f),
+    errorContainerColor = container,
     focusedIndicatorColor = Color.Transparent,
     unfocusedIndicatorColor = Color.Transparent,
     disabledIndicatorColor = Color.Transparent,
