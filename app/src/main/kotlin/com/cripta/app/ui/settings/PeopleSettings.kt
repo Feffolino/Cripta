@@ -744,7 +744,10 @@ private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onO
             (if (all) g.cards else g.cards.take(SHOWN_IN_GROUP)).forEach { c ->
                 val on = c.id !in off
                 Box(Modifier.clip(CircleShape).combinedClickable(onClickLabel = if (on) "Togli dal gruppo" else "Rimetti nel gruppo",
-                    onLongClickLabel = "Apri il media", onLongClick = { onOpenFile(c.fileId) }) { off = if (on) off + c.id else off - c.id }) {
+                    onLongClickLabel = "Apri il media", onLongClick = {
+                        // Only this media, from just before the face shows.
+                        vm.openPersonMedia(listOf(c.fileId), c.fileId, c.timeMs); onOpenFile(c.fileId)
+                    }) { off = if (on) off + c.id else off - c.id }) {
                     FaceAvatar(c.id, { vm.faceCrop(it) }, 64.dp,
                         if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
                     if (on) Icon(Icons.Filled.CheckCircle, "Nel gruppo", tint = MaterialTheme.colorScheme.primary,

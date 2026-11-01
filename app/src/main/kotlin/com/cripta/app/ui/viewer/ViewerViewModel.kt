@@ -60,8 +60,14 @@ class ViewerViewModel @Inject constructor(
      */
     val vaultLocked: StateFlow<Boolean> = session.locked
 
-    /** Snapshot of the browse order taken when the viewer opened. */
-    val ids: List<String> = queue.ids
+    /**
+     * Snapshot of the browse order taken when the viewer opened. A file opened without a queue of
+     * its own (a face's media from Persone) is not in the last one left behind: it is shown alone,
+     * instead of the viewer landing on the first file of that old queue.
+     */
+    val ids: List<String> = savedState.get<String>("fileId").let { id ->
+        if (id.isNullOrEmpty() || id in queue.ids) queue.ids else listOf(id)
+    }
 
     /**
      * The pages the viewer shows: the browse order, minus files deleted from the viewer (so a delete
