@@ -162,15 +162,22 @@ val FOLDER_COLORS: List<Int> = listOf(
     0xFF9B6BCC, 0xFF3FB0B3, 0xFFC65B9B, 0xFF7A8794,
 ).map { it.toInt() }
 
-/** Folder icon tinted by [color], or an [emoji] shown in its place when set. */
+/**
+ * Folder symbol tinted by [color], or the folder's [icon] in its place; an [emoji] of an older vault
+ * (until it is turned into an icon) otherwise.
+ */
 @Composable
-fun FolderGlyph(color: Int?, emoji: String?, size: Dp) {
+fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp) {
     val c = color?.let { Color(it) }
+    val vector = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         if (c != null) {
             Box(Modifier.matchParentSize().clip(CircleShape).background(c.copy(alpha = 0.22f)))
         }
-        if (!emoji.isNullOrBlank()) {
+        if (!icon.isNullOrBlank()) {
+            // Blank for the frame it takes to build, rather than flashing the folder symbol.
+            if (vector != null) Icon(vector, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.6f))
+        } else if (!emoji.isNullOrBlank()) {
             // Sized in dp (not scaled by the user's font size) so the emoji always fits its box.
             val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)

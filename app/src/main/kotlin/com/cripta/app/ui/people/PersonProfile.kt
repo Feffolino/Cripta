@@ -1,5 +1,6 @@
 package com.cripta.app.ui.people
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.graphics.Bitmap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -55,7 +56,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -104,9 +104,9 @@ private enum class MediaOrder(val label: String) { NEWEST("Più recenti"), OLDES
 @Composable
 fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String) -> Unit, onShowInVault: () -> Unit) {
     val vm: SettingsViewModel = hiltViewModel()
-    val overview by vm.people.collectAsState()
-    val undo by vm.faceUndo.collectAsState()
-    val message by vm.faceMessage.collectAsState()
+    val overview by vm.people.collectAsStateWithLifecycle()
+    val undo by vm.faceUndo.collectAsStateWithLifecycle()
+    val message by vm.faceMessage.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect

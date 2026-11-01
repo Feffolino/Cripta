@@ -1,5 +1,6 @@
 package com.cripta.app.ui.download
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -68,7 +69,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,8 +92,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.cripta.app.data.VaultRepository.DownloadJob
-import com.cripta.app.data.VaultRepository.DownloadPhase
+import com.cripta.app.data.DownloadJob
+import com.cripta.app.data.DownloadPhase
 import com.cripta.app.data.db.FolderEntity
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.ui.components.TagPill
@@ -128,13 +128,13 @@ fun DownloadScreen(
     var url by remember { mutableStateOf(initialUrl.orEmpty()) }
     val qualities = listOf<Pair<Int?, String>>(null to "Auto", 1080 to "1080p", 720 to "720p", 480 to "480p", 360 to "360p")
     val heights = qualities.map { it.first }
-    val downloads by vm.downloads.collectAsState()
-    val estimate by vm.estimate.collectAsState()
-    val existing by vm.existing.collectAsState()
-    val pending by vm.pendingSharedLink.collectAsState()
-    val folders by vm.folders.collectAsState()
-    val tags by vm.tags.collectAsState()
-    val defaults by vm.defaults.collectAsState()
+    val downloads by vm.downloads.collectAsStateWithLifecycle()
+    val estimate by vm.estimate.collectAsStateWithLifecycle()
+    val existing by vm.existing.collectAsStateWithLifecycle()
+    val pending by vm.pendingSharedLink.collectAsStateWithLifecycle()
+    val folders by vm.folders.collectAsStateWithLifecycle()
+    val tags by vm.tags.collectAsStateWithLifecycle()
+    val defaults by vm.defaults.collectAsStateWithLifecycle()
 
     // Destination + quality start from the last used ones (loaded once), then follow the user.
     var quality by remember { mutableStateOf<Int?>(null) }
@@ -279,7 +279,7 @@ fun DownloadScreen(
         Column {
             val f = folders.firstOrNull { it.id == effectiveFolder }
             DestinationRow(
-                icon = { com.cripta.app.ui.components.FolderGlyph(f?.color, f?.emoji, 26.dp) },
+                icon = { com.cripta.app.ui.components.FolderGlyph(f?.color, f?.icon, f?.emoji, 26.dp) },
                 title = "Cartella",
                 onClick = { pickFolder = true },
                 onClickLabel = "Cambia cartella",
@@ -542,27 +542,27 @@ private fun FolderPickerSheet(folders: List<FolderEntity>, selected: Long?, onPi
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             Text("Salva in…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
-            FolderRow("Radice del vault", null, null, selected == null, 0) { afterSheet { onPick(null) } }
+            FolderRow("Radice del vault", null, null, null, selected == null, 0) { afterSheet { onPick(null) } }
             // Tree order: each folder under its parent, indented by depth.
             val children = folders.groupBy { it.parentId }
             fun walk(parent: Long?, depth: Int, out: MutableList<Pair<FolderEntity, Int>>) {
                 children[parent].orEmpty().forEach { out += it to depth; walk(it.id, depth + 1, out) }
             }
             val ordered = mutableListOf<Pair<FolderEntity, Int>>().also { walk(null, 0, it) }
-            ordered.forEach { (f, d) -> FolderRow(f.name, f.color, f.emoji, selected == f.id, d) { afterSheet { onPick(f.id) } } }
+            ordered.forEach { (f, d) -> FolderRow(f.name, f.color, f.icon, f.emoji, selected == f.id, d) { afterSheet { onPick(f.id) } } }
         }
     }
 }
 
 @Composable
-private fun FolderRow(name: String, color: Int?, emoji: String?, selected: Boolean, depth: Int, onClick: () -> Unit) {
+private fun FolderRow(name: String, color: Int?, icon: String?, emoji: String?, selected: Boolean, depth: Int, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp)
             .padding(start = (14 * depth).dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (color == null && emoji == null) Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-        else com.cripta.app.ui.components.FolderGlyph(color, emoji, 22.dp)
+        if (color == null && icon == null && emoji == null) Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        else com.cripta.app.ui.components.FolderGlyph(color, icon, emoji, 22.dp)
         Text(name, Modifier.weight(1f).padding(start = 14.dp))
         if (selected) Icon(Icons.Filled.CheckCircle, "Selezionata", tint = MaterialTheme.colorScheme.primary)
     }

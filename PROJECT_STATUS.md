@@ -21,12 +21,15 @@ viewed in an internal player that never writes plaintext to disk. Product contex
 
 ## What the app does today
 
-- **Vault (Cartelle):** nested folders with colour/emoji, cover and star; files in grid or list,
+- **Vault (Cartelle):** nested folders with colour/icon, cover and star; files in grid or list,
   sorts (date, name, size, manual), filters (type, tags included/excluded, people, favourites,
   untagged), saved filters, fast scroller, selection with bulk actions, trash with retention,
   duplicate finder (exact and similar media), random opening.
-- **Tags:** colours (own or palette, random assignment), alias/emoji, pin, recents, and an icon
-  from the Fluent Emoji high-contrast set (MIT) suggested from the tag's name.
+- **Tags:** colours (own or palette, random assignment), acronym ("sigla"), pin, recents, and an
+  icon from the Fluent Emoji high-contrast set (MIT) suggested from the tag's name. Icons replaced
+  the old emojis (tag aliases and folder emojis are turned into the matching icon at unlock). The
+  icon search takes Italian words: `assets/tagicons/it.txt`, built from Unicode CLDR by
+  `scripts/tagicons_it.py`.
 - **Viewer:** photos and videos (ExoPlayer over the encrypted file), filmstrip, quick-tag bar,
   details panel (info, tags, intro/outro, people), split view, PiP, gestures, resume, rotation lock
   remembered, MP4 conversion of unsupported videos.
@@ -51,8 +54,8 @@ viewed in an internal player that never writes plaintext to disk. Product contex
   versioned GitHub Release (`v0.1.0-bN`) with the APK attached.
 - Local build: JDK 17 (Gradle-managed in `~/.gradle/jdks`) and Gradle 8.9;
   `gradle :app:compileDebugKotlin`, `gradle :app:testDebugUnitTest`.
-- Database: Room on SQLCipher, schema version 28; every migration is explicit (no destructive
-  fallback). `IntroMigrationTest` checks the face/intro tables and tags against a fresh schema:
+- Database: Room on SQLCipher, schema version 29; every migration is explicit (no destructive
+  fallback). `IntroMigrationTest` checks the face/intro tables, tags, folders and files against a fresh schema:
   extend it with each new migration that touches them.
 
 ## Key hierarchy
@@ -66,6 +69,11 @@ viewed in an internal player that never writes plaintext to disk. Product contex
 - Blobs on disk: `filesDir/vault/<uuid>`, random names. The folder tree exists only in the DB.
 
 ## Open points
+
+- Analysis of 2026-11-01, not done yet: APK size (CI ships an unminified debug build of ~194 MB;
+  R8 on the `debug` build type, arm64 only and PdfRenderer instead of PdfBox would bring it to
+  ~80 MB with the same package id); splitting `VaultRepository` further (import and conversion
+  state) and the 2000+ line screens.
 
 - Everything since the start of November was verified by build and unit tests only, not yet on a
   device: people profile and suggestions (the similarity threshold `FaceRepository.SUGGEST` = 0.36

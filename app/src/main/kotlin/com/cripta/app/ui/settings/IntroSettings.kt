@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 
@@ -51,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,9 +75,9 @@ import kotlinx.coroutines.delay
  */
 @Composable
 internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
-    val overview by vm.introOverview.collectAsState()
-    val progress by vm.introProgress.collectAsState()
-    val resultsOpen by vm.introResultsOpen.collectAsState()
+    val overview by vm.introOverview.collectAsStateWithLifecycle()
+    val progress by vm.introProgress.collectAsStateWithLifecycle()
+    val resultsOpen by vm.introResultsOpen.collectAsStateWithLifecycle()
     // Live while the section is on screen: faster while a scan runs.
     LaunchedEffect(progress != null) {
         while (true) { vm.refreshIntro(); delay(if (progress != null) 3_000 else 15_000) }
@@ -112,8 +112,8 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
         Maintenance(vm, onOpenFile)
     }
     if (resultsOpen) overview?.let { o ->
-        val groups by vm.introGroups.collectAsState()
-        val introMessage by vm.introMessage.collectAsState()
+        val groups by vm.introGroups.collectAsStateWithLifecycle()
+        val introMessage by vm.introMessage.collectAsStateWithLifecycle()
         val actions = remember(vm) {
             SignatureActions(
                 rename = vm::renameSignature, merge = vm::mergeSignatures, delete = vm::deleteSignatures,
@@ -158,7 +158,7 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
 /** Rejected samples and the restart, apart at the bottom: rare, and the restart throws work away. */
 @Composable
 private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
-    val rejected by vm.rejectedSegments.collectAsState()
+    val rejected by vm.rejectedSegments.collectAsStateWithLifecycle()
     var showRejected by remember { mutableStateOf(false) }
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }

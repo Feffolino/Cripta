@@ -1,5 +1,6 @@
 package com.cripta.app.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.TopAppBarDefaults
@@ -58,7 +59,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -113,24 +113,24 @@ fun HomeScreen(
     onOpenDownload: () -> Unit = {},
     vm: HomeViewModel = hiltViewModel(),
 ) {
-    val recents by vm.recents.collectAsState()
-    val favorites by vm.favorites.collectAsState()
-    val favoriteCount by vm.favoriteCount.collectAsState()
-    val continueWatching by vm.continueWatching.collectAsState()
-    val folders by vm.folders.collectAsState()
-    val folderStats by vm.folderStats.collectAsState()
-    val folderPreviews by vm.folderPreviews.collectAsState()
-    val loaded by vm.loaded.collectAsState()
-    val savedFilters by vm.savedFilters.collectAsState()
-    val homePeople by vm.homePeople.collectAsState()
-    val peopleBlurred by vm.peopleBlurred.collectAsState()
+    val recents by vm.recents.collectAsStateWithLifecycle()
+    val favorites by vm.favorites.collectAsStateWithLifecycle()
+    val favoriteCount by vm.favoriteCount.collectAsStateWithLifecycle()
+    val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
+    val folders by vm.folders.collectAsStateWithLifecycle()
+    val folderStats by vm.folderStats.collectAsStateWithLifecycle()
+    val folderPreviews by vm.folderPreviews.collectAsStateWithLifecycle()
+    val loaded by vm.loaded.collectAsStateWithLifecycle()
+    val savedFilters by vm.savedFilters.collectAsStateWithLifecycle()
+    val homePeople by vm.homePeople.collectAsStateWithLifecycle()
+    val peopleBlurred by vm.peopleBlurred.collectAsStateWithLifecycle()
     // Blurred faces stay blurred until the row is touched once (per visit).
     var peopleRevealed by remember { mutableStateOf(false) }
-    val summary by vm.summary.collectAsState()
-    val display by vm.display.collectAsState()
-    val coverVersions by vm.coverVersions.collectAsState()
-    val convertStatus by vm.convertStatus.collectAsState()
-    val autoLockMinutes by vm.autoLockMinutes.collectAsState()
+    val summary by vm.summary.collectAsStateWithLifecycle()
+    val display by vm.display.collectAsStateWithLifecycle()
+    val coverVersions by vm.coverVersions.collectAsStateWithLifecycle()
+    val convertStatus by vm.convertStatus.collectAsStateWithLifecycle()
+    val autoLockMinutes by vm.autoLockMinutes.collectAsStateWithLifecycle()
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -148,7 +148,7 @@ fun HomeScreen(
     // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
     // Faces on the shelves' covers follow "Persone in Home": none when off, blurred until the row is touched.
-    val coverPeopleMap by vm.coverPeople.collectAsState()
+    val coverPeopleMap by vm.coverPeople.collectAsStateWithLifecycle()
     val coverPeople = remember(coverPeopleMap, peopleBlurred, peopleRevealed) {
         com.cripta.app.ui.vault.CoverPeople(coverPeopleMap, peopleBlurred && !peopleRevealed) { vm.faceCrop(it) }
     }

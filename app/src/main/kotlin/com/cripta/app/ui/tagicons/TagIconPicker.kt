@@ -42,8 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** An icon name as words, for TalkBack ("red-heart" -> "red heart"). */
-private fun spoken(name: String) = name.replace('-', ' ')
+/** An icon's name for TalkBack: Italian ("cuore rosso") once the names are loaded. */
+private fun spoken(name: String) = TagIcons.title(name)
 
 /** One icon in a picker: a round cell, ringed in the accent when chosen. */
 @Composable
@@ -108,7 +108,7 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
                 com.cripta.app.ui.components.CriptaTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
                     leadingIcon = { Icon(Icons.Filled.Search, null) },
-                    placeholder = { Text("Cerca: cuore, mare, gatto…") }, modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Cerca: cuore, mare, gatto, pizza…") }, modifier = Modifier.fillMaxWidth(),
                 )
                 LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(380.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -119,7 +119,7 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
                     val f = found
                     if (f != null) {
                         if (f.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                            Text("Nessuna icona per «${query.trim()}». Prova un'altra parola, anche in inglese.",
+                            Text("Nessuna icona per «${query.trim()}». Prova un'altra parola.",
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         items(f, key = { "s-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }

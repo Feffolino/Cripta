@@ -22,3 +22,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+it.txt (Italian names and keywords of the emojis) comes from the Unicode CLDR annotations
+(github.com/unicode-org/cldr-json), Copyright © 1991-2025 Unicode, Inc., Unicode License v3:
+https://www.unicode.org/license.txt

@@ -60,4 +60,34 @@ class IntroMigrationTest {
         for (t in listOf("face_tracks", "person_media")) assertEquals(t, indices(expected, t), indices(migrated, t))
         fresh.close(); helper.close()
     }
+
+    @Test
+    fun migration28to29AddsTheFolderIconAndTheFileIndexes() {
+        val app = RuntimeEnvironment.getApplication()
+        val fresh = Room.inMemoryDatabaseBuilder(app, CriptaDatabase::class.java).allowMainThreadQueries().build()
+        val expected = fresh.openHelper.writableDatabase
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(app).name(null).callback(object : SupportSQLiteOpenHelper.Callback(1) {
+                override fun onCreate(db: SupportSQLiteDatabase) {}
+                override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }).build()
+        )
+        val migrated = helper.writableDatabase
+        // Folders and files as they were at version 28.
+        migrated.execSQL("CREATE TABLE IF NOT EXISTS `folders` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+            "`parentId` INTEGER, `createdAt` INTEGER NOT NULL, `color` INTEGER, `emoji` TEXT, `deletedAt` INTEGER, `isFavorite` INTEGER NOT NULL, " +
+            "`excludedFromRandom` INTEGER NOT NULL, `sortKey` TEXT, `sortAscending` INTEGER NOT NULL, `coverFileId` TEXT)")
+        migrated.execSQL("CREATE TABLE IF NOT EXISTS `files` (`id` TEXT NOT NULL, `originalName` TEXT NOT NULL, `mimeType` TEXT NOT NULL, " +
+            "`sizeBytes` INTEGER NOT NULL, `folderId` INTEGER, `isFavorite` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `importedAt` INTEGER NOT NULL, " +
+            "`wrappedKeyset` BLOB NOT NULL, `durationMs` INTEGER, `sortWeight` INTEGER NOT NULL, `sourceUrl` TEXT, `width` INTEGER, `height` INTEGER, " +
+            "`playbackPosMs` INTEGER, `deletedAt` INTEGER, `lastPlayedAt` INTEGER, `contentHash` TEXT, PRIMARY KEY(`id`))")
+        migrated.execSQL("CREATE INDEX IF NOT EXISTS `index_files_folderId` ON `files` (`folderId`)")
+        migrated.execSQL("CREATE INDEX IF NOT EXISTS `index_files_isFavorite` ON `files` (`isFavorite`)")
+        CriptaDatabase.MIGRATION_28_29.migrate(migrated)
+        for (t in listOf("folders", "files")) {
+            assertEquals(t, columns(expected, t), columns(migrated, t))
+            assertEquals(t, indices(expected, t), indices(migrated, t))
+        }
+        fresh.close(); helper.close()
+    }
 }

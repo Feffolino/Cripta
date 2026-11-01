@@ -13,7 +13,7 @@ data class FolderEntity(
     val createdAt: Long,
     /** Optional ARGB tint for the folder icon. */
     val color: Int? = null,
-    /** Optional emoji shown in place of the folder icon. */
+    /** Emoji of older vaults, shown in place of the folder icon until turned into an [icon]. */
     val emoji: String? = null,
     /** Set when the folder is in the trash (with its content); null = live. */
     val deletedAt: Long? = null,
@@ -25,6 +25,8 @@ data class FolderEntity(
     val sortAscending: Boolean = false,
     /** File chosen as the folder's cover (front of its stack); null = the newest file. */
     val coverFileId: String? = null,
+    /** Icon drawn in place of the folder symbol (a [com.cripta.app.ui.tagicons.TagIcons] name). */
+    val icon: String? = null,
 )
 
 /**
@@ -34,7 +36,9 @@ data class FolderEntity(
  */
 @Entity(
     tableName = "files",
-    indices = [Index("folderId"), Index("isFavorite")]
+    // deletedAt+importedAt: every live list ("deletedAt IS NULL ORDER BY importedAt"); sizeBytes and
+    // sourceUrl: the "already in the vault" checks run on each import and download.
+    indices = [Index("folderId"), Index("isFavorite"), Index("deletedAt", "importedAt"), Index("sizeBytes"), Index("sourceUrl")]
 )
 data class FileEntity(
     @PrimaryKey val id: String,
@@ -111,7 +115,7 @@ data class FileEntity(
 data class TagEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    /** Short alias (emoji or acronym) shown as a badge on thumbnails. */
+    /** Short acronym shown as a badge on thumbnails (older vaults: also an emoji). */
     val alias: String? = null,
     /** User-defined position for the Custom tag order (ascending = first). */
     val orderIndex: Int = 0,

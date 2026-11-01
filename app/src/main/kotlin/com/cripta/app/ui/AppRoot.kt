@@ -1,5 +1,6 @@
 package com.cripta.app.ui
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -50,7 +51,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -156,7 +156,7 @@ fun AppRoot(
     onOpenSecuritySettings: () -> Unit = {},
     onSubmitPin: (CharArray) -> Unit = {},
 ) {
-    val locked by session.locked.collectAsState()
+    val locked by session.locked.collectAsStateWithLifecycle()
     // The vault UI is composed from the first unlock on and then KEPT across locks: a lock no
     // longer destroys the navigation graph (folder path, open note text, scroll positions).
     var everUnlocked by remember { mutableStateOf(!locked) }
@@ -309,10 +309,10 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
     // A link shared into the app: jump to the Download tab so the user can pick a resolution.
     // (DownloadScreen reads and clears the pending link.) Waits for the unlock.
     val sharedLinks = remember { entryPoints.sharedLinkStore() }
-    val pendingLink by sharedLinks.pending.collectAsState()
+    val pendingLink by sharedLinks.pending.collectAsStateWithLifecycle()
     // Tap on the "duplicate scan finished" notification: go to Settings, which opens the results.
     val dupStore = remember { entryPoints.dupScanStore() }
-    val openDup by dupStore.openRequested.collectAsState()
+    val openDup by dupStore.openRequested.collectAsStateWithLifecycle()
     LaunchedEffect(openDup, locked) {
         if (!locked && openDup && currentRoute != "settings") onTab("settings")
     }
@@ -322,7 +322,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
     // Files shared into the app (possibly while locked): encrypt them into the vault root as soon
     // as it is unlocked, and show Cartelle, whose banner reports progress and the outcome.
     val sharedFiles = remember { entryPoints.sharedFilesStore() }
-    val pendingFiles by sharedFiles.pending.collectAsState()
+    val pendingFiles by sharedFiles.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingFiles, locked) {
         if (!locked && pendingFiles.isNotEmpty()) {
             val uris = sharedFiles.take()
@@ -432,11 +432,11 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 }
             }
             // "Persone" asked for from Settings, Home or the scan's notification.
-            val peopleAsked by com.cripta.app.ui.people.PeopleNav.open.collectAsState()
+            val peopleAsked by com.cripta.app.ui.people.PeopleNav.open.collectAsStateWithLifecycle()
             LaunchedEffect(peopleAsked) {
                 if (peopleAsked) { com.cripta.app.ui.people.PeopleNav.consume(); nav.navigate("people") { launchSingleTop = true } }
             }
-            val personAsked by com.cripta.app.ui.people.PeopleNav.person.collectAsState()
+            val personAsked by com.cripta.app.ui.people.PeopleNav.person.collectAsStateWithLifecycle()
             LaunchedEffect(personAsked) {
                 personAsked?.let { id -> com.cripta.app.ui.people.PeopleNav.consumePerson(); nav.navigate("person/$id") }
             }

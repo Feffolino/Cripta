@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
@@ -31,7 +32,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,10 +55,10 @@ import com.cripta.app.ui.settings.FavoriteStar
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
-    val faces by remember(file.id) { vm.facesOf(file.id) }.collectAsState(initial = emptyList())
-    val links by remember(file.id) { vm.personLinksOf(file.id) }.collectAsState(initial = emptyList())
-    val people by vm.peopleList.collectAsState()
-    val message by vm.faceMessage.collectAsState()
+    val faces by remember(file.id) { vm.facesOf(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val links by remember(file.id) { vm.personLinksOf(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val people by vm.peopleList.collectAsStateWithLifecycle()
+    val message by vm.faceMessage.collectAsStateWithLifecycle()
     val byId = remember(people) { people.associateBy { it.id } }
     val isVideo = VaultRepository.isVideo(file.mimeType)
     /** The face being edited; with [adding] the whole media is added to a person instead. */
@@ -117,8 +117,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             onNew = { name -> vm.putInNewPerson(file.id, t?.id, name) },
             onDismiss = { editing = null; adding = false })
     }
-    val found by vm.foundFaces.collectAsState()
-    val finding by vm.findingFaces.collectAsState()
+    val found by vm.foundFaces.collectAsStateWithLifecycle()
+    val finding by vm.findingFaces.collectAsStateWithLifecycle()
     var picked by remember(file.id) { mutableStateOf<FaceRepository.FoundFace?>(null) }
     found?.let { list ->
         if (picked == null) CriptaAlertDialog(onDismissRequest = { vm.foundFaces.value = null },
@@ -147,10 +147,12 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             },
             confirmButton = { TextButton(onClick = { vm.foundFaces.value = null }) { Text("Chiudi") } },
             dismissButton = { TextButton(onClick = { vm.foundFaces.value = null; adding = true }) { Text("Senza volto") } })
-        else FaceEditor(null, null, people, vm,
-            onPick = { id -> vm.addFoundFace(file, picked!!, id, "") },
-            onNew = { name -> vm.addFoundFace(file, picked!!, null, name) },
-            onDismiss = { picked = null; vm.foundFaces.value = null })
+        else picked?.let { chosen ->
+            FaceEditor(null, null, people, vm,
+                onPick = { id -> vm.addFoundFace(file, chosen, id, "") },
+                onNew = { name -> vm.addFoundFace(file, chosen, null, name) },
+                onDismiss = { picked = null; vm.foundFaces.value = null })
+        }
     }
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
@@ -169,7 +171,7 @@ private fun FaceEditor(
     onPick: (Long) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit,
 ) {
     val placed = t != null && current != null && t.state != "suggested"
-    var name by remember(t?.id) { mutableStateOf(if (placed) current!!.entity.name else "") }
+    var name by remember(t?.id) { mutableStateOf(if (placed && current != null) current.entity.name else "") }
     var query by remember(t?.id) { mutableStateOf("") }
     CriptaAlertDialog(onDismissRequest = onDismiss,
         title = { Text(if (t == null) "Aggiungi a una persona" else "Chi è?") },
@@ -182,8 +184,8 @@ private fun FaceEditor(
                             current == null -> "Non ancora assegnato"
                             else -> current.title
                         }, style = MaterialTheme.typography.bodyMedium)
-                        if (placed) Row(verticalAlignment = Alignment.CenterVertically) {
-                            FavoriteStar(current!!.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
+                        if (placed && current != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                            FavoriteStar(current.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
                             TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
                         }
                     }
@@ -216,7 +218,7 @@ private fun FaceEditor(
             }
         },
         confirmButton = {
-            if (placed) TextButton(enabled = name.trim() != current!!.entity.name, onClick = { vm.renamePerson(current.id, name); onDismiss() }) { Text("Salva nome") }
+            if (placed && current != null) TextButton(enabled = name.trim() != current.entity.name, onClick = { vm.renamePerson(current.id, name); onDismiss() }) { Text("Salva nome") }
             else TextButton(onClick = onDismiss) { Text("Chiudi") }
         },
         dismissButton = { if (placed) TextButton(onClick = onDismiss) { Text("Chiudi") } })

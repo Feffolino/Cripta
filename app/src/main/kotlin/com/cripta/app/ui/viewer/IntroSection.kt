@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.semantics.heading
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.vaultUnlocked
@@ -35,7 +36,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +66,8 @@ import kotlinx.coroutines.flow.map
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
-    val segments by remember(file.id) { vm.segments(file.id) }.collectAsState(initial = emptyList())
-    val spot by remember(file.id) { vm.playerSpots.map { it[file.id] } }.collectAsState(initial = null)
+    val segments by remember(file.id) { vm.segments(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val spot by remember(file.id) { vm.playerSpots.map { it[file.id] } }.collectAsStateWithLifecycle(initialValue = null)
     val status by produceState<String?>(initialValue = "ok", file.id, segments) { value = vm.introStatus(file.id) }
     val pending = remember(file.id) { mutableStateMapOf<SegmentKind, Long>() }
     var rejecting by remember { mutableStateOf<Pair<SegmentKind, MediaSegmentEntity>?>(null) }

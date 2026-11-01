@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import android.graphics.Bitmap
@@ -126,7 +127,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import kotlinx.coroutines.flow.update
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -192,10 +192,10 @@ fun ViewerScreen(
     vm: ViewerViewModel = hiltViewModel(),
 ) {
     val ctx = LocalContext.current
-    val message by vm.message.collectAsState()
-    val refresh by vm.refresh.collectAsState()
-    val allTags by vm.allTags.collectAsState()
-    val displayPrefs by vm.display.collectAsState()
+    val message by vm.message.collectAsStateWithLifecycle()
+    val refresh by vm.refresh.collectAsStateWithLifecycle()
+    val allTags by vm.allTags.collectAsStateWithLifecycle()
+    val displayPrefs by vm.display.collectAsStateWithLifecycle()
 
     // Immersive: let media use the status- and navigation-bar areas; restore bars on exit.
     val view = LocalView.current
@@ -228,7 +228,7 @@ fun ViewerScreen(
     val ids: List<String> = vm.liveIds.ifEmpty { fallbackIds }
     val startIndex = remember { ids.indexOf(fileId).coerceAtLeast(0) }
     val pagerState = rememberPagerState(initialPage = startIndex) { ids.size }
-    val playback by vm.playback.collectAsState()
+    val playback by vm.playback.collectAsStateWithLifecycle()
 
     // TalkBack: never auto-hide the chrome/controls while touch exploration is on (the user could
     // not reach them before they vanish), and honour the system "Time to take action" otherwise.
@@ -310,7 +310,7 @@ fun ViewerScreen(
     var confirmDelete by remember { mutableStateOf<FileEntity?>(null) }
     var confirmDownload by remember { mutableStateOf<FileEntity?>(null) }
     var confirmConvert by remember { mutableStateOf<FileEntity?>(null) }
-    val convertedId by vm.convertedId.collectAsState()
+    val convertedId by vm.convertedId.collectAsStateWithLifecycle()
     val pagerScope = rememberCoroutineScope()
     // Swipe-to-close can be seen by more than one gesture layer: pop the viewer only once.
     var closing by remember { mutableStateOf(false) }
@@ -513,7 +513,7 @@ fun ViewerScreen(
             )
         }
 
-        val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
+        val inPip by com.cripta.app.viewer.PipController.inPip.collectAsStateWithLifecycle()
         // Bottom chrome: filmstrip of nearby files + the handle that opens the details panel.
         val scope = rememberCoroutineScope()
         val onVideo = currentFile?.let { com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } == true
@@ -689,7 +689,7 @@ fun ViewerScreen(
     // Tags, details and actions together in one panel (swipe up, or tap the "Scorri su" hint). The
     // split view's panel is drawn inside the viewer's Box instead (see detailsPanel above).
     if (showTags && !splitDetails && file != null) detailsPanel(file, false)
-    val trashOn by vm.trashEnabled.collectAsState()
+    val trashOn by vm.trashEnabled.collectAsStateWithLifecycle()
     // Each dialog names and acts on the file captured when it opened, even if the pager moved since.
     val delTarget = confirmDelete
     if (delTarget != null) {
@@ -722,7 +722,7 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmDownload = null }) { Text("Annulla") } },
         )
     }
-    val convertSettings by vm.convertSettings.collectAsState()
+    val convertSettings by vm.convertSettings.collectAsStateWithLifecycle()
     val convertTarget = confirmConvert
     if (convertTarget != null && !convertSettings.first) {
         // First conversion: ask what to do with the original (and offer to remember it).
@@ -749,7 +749,7 @@ fun ViewerScreen(
         )
     }
     if (convertedId != null) {
-        val originalId by vm.convertedOriginalId.collectAsState()
+        val originalId by vm.convertedOriginalId.collectAsStateWithLifecycle()
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.clearConverted() },
             title = { Text("Video convertito") },
@@ -1059,9 +1059,13 @@ private class PdfDoc(bytes: ByteArray) {
     private val doc = PDDocument.load(ByteArrayInputStream(bytes))
     private val renderer = PDFRenderer(doc)
     private val mutex = Mutex()
+    /** The last pages drawn, so scrolling back up doesn't render them again (each is a few MB). */
+    private val recent = android.util.LruCache<Int, Bitmap>(3)
     val pageCount: Int = doc.numberOfPages
-    suspend fun render(index: Int): Bitmap? = mutex.withLock {
-        withContext(Dispatchers.IO) { runCatching { renderer.renderImageWithDPI(index, 150f) }.getOrNull() }
+    suspend fun render(index: Int): Bitmap? = recent.get(index) ?: mutex.withLock {
+        recent.get(index) ?: withContext(Dispatchers.IO) {
+            runCatching { renderer.renderImageWithDPI(index, 150f) }.getOrNull()
+        }?.also { recent.put(index, it) }
     }
     fun close() { runCatching { doc.close() } }
 }
@@ -1261,8 +1265,8 @@ private fun VideoPlayer(
     var panY by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(modeIdx, file.id) { userZoom = 1f; panX = 0f; panY = 0f }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
-    val inPip by com.cripta.app.viewer.PipController.inPip.collectAsState()
-    val prefs by vm.playback.collectAsState()
+    val inPip by com.cripta.app.viewer.PipController.inPip.collectAsStateWithLifecycle()
+    val prefs by vm.playback.collectAsStateWithLifecycle()
 
     // "Prossimo": in the last seconds of a video (loop off, option on, a next file exists) a card
     // counts down, then the viewer moves on when playback ends. The card's X cancels it.
@@ -1292,7 +1296,7 @@ private fun VideoPlayer(
     val nextFile by produceState<FileEntity?>(null, nextId) { value = nextId?.let { vm.fileById(it) } }
     val nextThumb by produceState<Bitmap?>(null, nextId) { value = nextId?.let { vm.thumbOf(it) } }
     // Intro / outro: "Salta intro" / "Salta finale", or the automatic skip with its "Annulla".
-    val segmentRows by remember(file.id) { vm.segments(file.id) }.collectAsState(initial = emptyList())
+    val segmentRows by remember(file.id) { vm.segments(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
     val skipSegments = remember(segmentRows) {
         segmentRows.filter { it.source != "none" && it.endMs > it.startMs }.map {
             SegmentSkipper.Segment(if (it.kind == "intro") SegmentSkipper.Kind.INTRO else SegmentSkipper.Kind.OUTRO, it.startMs, it.endMs)
@@ -1338,7 +1342,7 @@ private fun VideoPlayer(
         }
     }
     LaunchedEffect(skippedChip) { if (skippedChip != null) { delay(3_000); skippedChip = null } }
-    val rotationLocked by vm.rotationLocked.collectAsState()
+    val rotationLocked by vm.rotationLocked.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? android.app.Activity
     val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE

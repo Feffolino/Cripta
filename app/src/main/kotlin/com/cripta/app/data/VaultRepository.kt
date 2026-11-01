@@ -110,48 +110,6 @@ class VaultRepository @Inject constructor(
     val conversionProgress: StateFlow<Int> = _conversionProgress
     fun setConversionProgress(pct: Int) { _conversionProgress.value = pct.coerceIn(0, 100) }
 
-    enum class DownloadPhase { QUEUED, PREPARING, DOWNLOADING, DONE, FAILED, CANCELLED }
-
-    /** One link in the downloader queue, with its destination and live progress. */
-    data class DownloadJob(
-        val id: String,
-        val url: String,
-        val maxHeight: Int? = null,
-        val folderId: Long? = null,
-        val tagIds: List<Long> = emptyList(),
-        val phase: DownloadPhase = DownloadPhase.QUEUED,
-        val pct: Int = 0,
-        val etaSec: Long = 0,
-        /** File name once known, or the failure reason. */
-        val message: String? = null,
-        /** Id of the imported file once done (for "Apri"). */
-        val fileId: String? = null,
-    ) {
-        val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
-        val finished: Boolean get() = phase == DownloadPhase.DONE || phase == DownloadPhase.FAILED || phase == DownloadPhase.CANCELLED
-    }
-
-    private val _downloads = MutableStateFlow<List<DownloadJob>>(emptyList())
-    /** The downloader queue, oldest first: running, waiting and recently finished links. */
-    val downloads: StateFlow<List<DownloadJob>> = _downloads
-
-    fun enqueueDownload(job: DownloadJob) = _downloads.update { it + job }
-    fun updateDownload(id: String, f: (DownloadJob) -> DownloadJob) =
-        _downloads.update { list -> list.map { if (it.id == id) f(it) else it } }
-    /** Claim the next waiting link (marks it PREPARING), or null when the queue is drained. */
-    @Synchronized fun takeNextDownload(): DownloadJob? {
-        val next = _downloads.value.firstOrNull { it.phase == DownloadPhase.QUEUED } ?: return null
-        updateDownload(next.id) { it.copy(phase = DownloadPhase.PREPARING) }
-        return next
-    }
-    /** Remove a waiting or finished link from the list (a running one must be cancelled first). */
-    fun removeDownload(id: String) {
-        val removable = _downloads.value.any { it.id == id && !it.active }
-        _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
-        if (removable) ioScope.launch { deletePendingJob(id) }
-    }
-    fun clearFinishedDownloads() = _downloads.update { list -> list.filterNot { it.finished } }
-
     /**
      * Live state of file imports (encryption into the vault), shared by every batch the service is
      * running. Drives the in-app banner so the user can see whether an import is still going, how
@@ -357,8 +315,28 @@ class VaultRepository @Inject constructor(
         db.folderDao().rename(folder.id, newName.trim()); notifyChanged()
     }
 
-    suspend fun setFolderStyle(id: Long, color: Int?, emoji: String?) = withContext(Dispatchers.IO) {
-        db.folderDao().setStyle(id, color, emoji?.trim()?.ifEmpty { null }); notifyChanged()
+    suspend fun setFolderStyle(id: Long, color: Int?, icon: String?) = withContext(Dispatchers.IO) {
+        db.folderDao().setStyle(id, color, icon?.trim()?.ifEmpty { null }); notifyChanged()
+    }
+
+    /**
+     * Icons replace emojis: a folder's emoji and a tag's emoji alias become the icon drawing the same
+     * emoji ([iconFor], null when there is none: then they stay as they are). A tag that already has
+     * an icon just loses its emoji alias. Acronyms are left alone. Cheap and idempotent: run at unlock.
+     */
+    suspend fun convertEmojisToIcons(iconFor: suspend (String) -> String?) = withContext(Dispatchers.IO) {
+        var changed = false
+        for (f in db.folderDao().withEmoji()) {
+            val icon = f.emoji?.let { iconFor(it) } ?: continue
+            db.folderDao().setStyle(f.id, f.color, f.icon ?: icon); changed = true
+        }
+        for (t in db.tagDao().all().first()) {
+            val alias = t.alias?.takeIf { it.isNotBlank() } ?: continue
+            val icon = iconFor(alias) ?: continue
+            if (t.icon == null) db.tagDao().setIcon(t.name, icon)
+            db.tagDao().setAlias(t.name, null); changed = true
+        }
+        if (changed) notifyChanged()
     }
 
     /** The file shown in front of the folder's stack; null = the newest one. */
@@ -1238,6 +1216,11 @@ class VaultRepository @Inject constructor(
 
     // --- Playback resume ---
 
+    /** [setPlaybackPos] on the repository's own scope: finishes even when the viewer closing cancels its caller. */
+    fun savePlaybackPos(fileId: String, posMs: Long?) {
+        ioScope.launch { runCatching { setPlaybackPos(fileId, posMs) } }
+    }
+
     /** Remember where playback stopped (null/0 = start over). No-op when unchanged. */
     suspend fun setPlaybackPos(fileId: String, posMs: Long?) = withContext(Dispatchers.IO) {
         val cur = db.fileDao().byId(fileId)?.playbackPosMs
@@ -1428,7 +1411,7 @@ class VaultRepository @Inject constructor(
                 folders.forEach {
                     put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL)
                         .put("createdAt", it.createdAt).put("color", it.color ?: org.json.JSONObject.NULL)
-                        .put("emoji", it.emoji ?: org.json.JSONObject.NULL)
+                        .put("emoji", it.emoji ?: org.json.JSONObject.NULL).put("icon", it.icon ?: org.json.JSONObject.NULL)
                         .put("favorite", it.isFavorite).put("excludedFromRandom", it.excludedFromRandom)
                         .put("sortKey", it.sortKey ?: org.json.JSONObject.NULL).put("sortAscending", it.sortAscending)
                         .put("coverIdx", it.coverFileId?.let { id -> fileIndex[id] } ?: org.json.JSONObject.NULL))
@@ -1603,10 +1586,12 @@ class VaultRepository @Inject constructor(
                             sortKey = if (o.isNull("sortKey")) null else o.optString("sortKey").takeIf { key -> SortKey.entries.any { it.name == key } },
                             sortAscending = o.optBoolean("sortAscending", false),
                         ))
-                        // v2: folder colour / emoji.
+                        // v2: folder colour / emoji (older backups; turned into an icon at the next unlock); then an icon.
                         val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
                         val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
-                        if (color != null || emoji != null) db.folderDao().setStyle(newId, color, emoji)
+                        val icon = if (o.has("icon") && !o.isNull("icon")) o.getString("icon") else null
+                        if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
+                        if (emoji != null && icon == null) db.folderDao().setEmoji(newId, emoji)
                         idMap[oldId] = newId; it.remove(); progressed = true
                     }
                     if (!progressed) break

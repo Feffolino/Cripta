@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.CriptaDialog
 import com.cripta.app.ui.components.vaultUnlocked
@@ -68,7 +69,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -97,8 +97,8 @@ import com.cripta.app.work.ConversionService
  */
 @Composable
 internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
-    val overview by vm.people.collectAsState()
-    val progress by vm.faceProgress.collectAsState()
+    val overview by vm.people.collectAsStateWithLifecycle()
+    val progress by vm.faceProgress.collectAsStateWithLifecycle()
     var askRestart by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
     var clearing by remember { mutableStateOf(false) }
@@ -358,17 +358,17 @@ private fun sortPeople(list: List<FaceRepository.Person>, k: com.cripta.app.data
 @Composable
 fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     val vm: SettingsViewModel = hiltViewModel()
-    val overview by vm.people.collectAsState()
-    val progress by vm.faceProgress.collectAsState()
-    val message by vm.faceMessage.collectAsState()
-    val undo by vm.faceUndo.collectAsState()
+    val overview by vm.people.collectAsStateWithLifecycle()
+    val progress by vm.faceProgress.collectAsStateWithLifecycle()
+    val message by vm.faceMessage.collectAsStateWithLifecycle()
+    val undo by vm.faceUndo.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var filter by rememberSaveable { mutableStateOf(PeopleFilter.MAIN) }
     var query by rememberSaveable { mutableStateOf("") }
     var showStats by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
-    val st by vm.settings.collectAsState()
+    val st by vm.settings.collectAsStateWithLifecycle()
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect
