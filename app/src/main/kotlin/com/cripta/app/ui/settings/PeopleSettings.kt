@@ -54,6 +54,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import com.cripta.app.ui.theme.pressScale
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -410,6 +412,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     /** People picked as in Cartelle: long press, then drag over the others. */
     var selected by remember { mutableStateOf(emptySet<Long>()) }
     var askMerge by remember { mutableStateOf(false) }
+    /** "Da sistemare" open one group at a time (kept across a trip to a media). */
+    var sorting by rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = selected.isNotEmpty()) { selected = emptySet() }
     val st by vm.settings.collectAsStateWithLifecycle()
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
@@ -622,28 +626,20 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 }
             } else if (filter == PeopleFilter.TODO) {
                 val g = groups
-                val many = g.orEmpty().filter { it.cards.size > 1 }
-                val single = g.orEmpty().filter { it.cards.size == 1 }.map { it.cards.first() }
+                val many = g.orEmpty().count { it.cards.size > 1 }
+                val single = g.orEmpty().count { it.cards.size == 1 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(when {
-                        g == null -> "Raggruppo i volti…"
-                        g.isEmpty() -> "Nessun volto da sistemare."
-                        else -> "Volti senza persona, raggruppati per somiglianza. Tocca un volto per toglierlo dal gruppo, tienilo premuto per aprire il suo media."
-                    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                items(many, key = { "g" + it.cards.first().id }, span = { GridItemSpan(maxLineSpan) }) { grp ->
-                    FaceGroupRow(grp, vm, onOpenFile, onName = { naming = it }, onSplit = { keep, out -> vm.keepFacesApart(keep, out) })
-                }
-                if (single.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Visti una volta · ${single.size}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            Text("Tocca per aprire il media.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    items(single, key = { "s" + it.id }) { c ->
-                        Box(Modifier.clickable(onClickLabel = "Apri il media") { onOpenFile(c.fileId) }, contentAlignment = Alignment.Center) {
-                            FaceAvatar(c.id, { vm.faceCrop(it) }, 96.dp)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(when {
+                            g == null -> "Raggruppo i volti…"
+                            g.isEmpty() -> "Nessun volto da sistemare."
+                            else -> listOfNotNull(
+                                many.takeIf { it > 0 }?.let { if (it == 1) "1 gruppo di volti simili" else "$it gruppi di volti simili" },
+                                single.takeIf { it > 0 }?.let { if (it == 1) "1 volto visto una volta" else "$it volti visti una volta" },
+                            ).joinToString(", ") + ". Uno alla volta, a tutto schermo: chi è, dividi o elimina."
+                        }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (!g.isNullOrEmpty()) FilledTonalButton(onClick = { sorting = true }, modifier = Modifier.fillMaxWidth()) {
+                            com.cripta.app.ui.components.ButtonText("Sistema i volti")
                         }
                     }
                 }
@@ -695,7 +691,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             }
         }
         if (showStats) StatsDialog(vm) { showStats = false }
-        naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
+        if (sorting) groups?.let { g -> TodoPager(g, o, vm, onClose = { sorting = false }, onOpenFile = onOpenFile) }
+        else naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
         if (askMerge) {
             // The user picks who stays (name, face, star); a named one is offered first.
             val chosen = shown.filter { it.id in selected }
@@ -735,62 +732,127 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
 }
 
 /**
- * A "Da sistemare" group: alike faces of different media, all picked at first (tap to leave one
- * out, long press to open its media), named or deleted at once.
+ * "Da sistemare" one group at a time, full screen, swiped up like "Forse è …": the frame of the
+ * face in view takes the free space (tap plays from there), the group's faces in a row under it
+ * (tap leaves one out or puts it back, and shows its frame; long press only shows it), then
+ * "Chi è?" and "Dividi" across the width, the deletions as text under them. Faces seen once come
+ * last, one per page. An answer regroups the faces and the next group takes the page.
  */
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onOpenFile: (String) -> Unit, onName: (List<Long>) -> Unit,
-                         onSplit: (List<Long>, List<Long>) -> Unit) {
-    var off by remember(g) { mutableStateOf(emptySet<Long>()) }
-    /** Every face of a large group, not only the first [SHOWN_IN_GROUP]: all of them are acted on. */
-    var all by remember(g) { mutableStateOf(false) }
-    val picked = g.cards.map { it.id }.filter { it !in off }
-    Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column {
-            Text("${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media", style = MaterialTheme.typography.bodyLarge)
-            Text(if (off.isEmpty()) "Tocca i volti di un'altra persona per toglierli dalla scelta."
-                else "«Dividi il gruppo»: quelli tolti non sono la stessa persona degli altri, e non tornano insieme.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-        }
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            (if (all) g.cards else g.cards.take(SHOWN_IN_GROUP)).forEach { c ->
-                val on = c.id !in off
-                Box(Modifier.clip(CircleShape).combinedClickable(onClickLabel = if (on) "Togli dal gruppo" else "Rimetti nel gruppo",
-                    onLongClickLabel = "Apri il media", onLongClick = {
-                        // Only this media, from just before the face shows.
-                        vm.openPersonMedia(listOf(c.fileId), c.fileId, c.timeMs); onOpenFile(c.fileId)
-                    }) { off = if (on) off + c.id else off - c.id }) {
-                    FaceAvatar(c.id, { vm.faceCrop(it) }, 64.dp, selected = on)
+private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.Overview, vm: SettingsViewModel,
+                      onClose: () -> Unit, onOpenFile: (String) -> Unit) {
+    val pages = remember(groups) { groups.filter { it.cards.size > 1 } + groups.filter { it.cards.size == 1 } }
+    val pager = androidx.compose.foundation.pager.rememberPagerState { pages.size }
+    var naming by remember { mutableStateOf<List<Long>?>(null) }
+    val undo by vm.faceUndo.collectAsStateWithLifecycle()
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Scaffold(topBar = {
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                title = {
+                    Column {
+                        Text("Da sistemare")
+                        if (pages.isNotEmpty()) Text("${(pager.currentPage + 1).coerceAtMost(pages.size)} di ${pages.size}",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
+                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
+        }, bottomBar = {
+            // The snackbar of the page is under this screen: "Annulla" lives here instead.
+            androidx.compose.animation.AnimatedVisibility(undo != null,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
+                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(undo?.first.orEmpty(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText("Annulla") }
                 }
             }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (g.cards.size > SHOWN_IN_GROUP) TextButton(onClick = { all = !all }) {
-                com.cripta.app.ui.components.ButtonText(if (all) "Mostra meno" else "Mostra gli altri ${g.cards.size - SHOWN_IN_GROUP}")
+        }) { pad ->
+            if (pages.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(pad).padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text("Nessun volto da sistemare.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                return@Scaffold
             }
-            Spacer(Modifier.weight(1f))
-            // Easier than tapping each face when only a few belong together.
-            TextButton(onClick = { off = if (off.isEmpty()) g.cards.map { it.id }.toSet() else emptySet() }) {
-                com.cripta.app.ui.components.ButtonText(if (off.isEmpty()) "Togli tutti" else "Scegli tutti")
-            }
-        }
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { com.cripta.app.ui.components.ButtonText("Chi è?") }
-            if (off.isNotEmpty() && picked.isNotEmpty()) TextButton(onClick = { onSplit(picked, off.toList()) }) {
-                com.cripta.app.ui.components.ButtonText("Dividi il gruppo")
-            }
-            TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
-                com.cripta.app.ui.components.ButtonText("Elimina i volti", color = MaterialTheme.colorScheme.error)
-            }
-            TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
-                com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
+            androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize().padding(pad),
+                key = { pages.getOrNull(it)?.cards?.first()?.id ?: it }, beyondViewportPageCount = 1) { page ->
+                val g = pages.getOrNull(page) ?: return@VerticalPager
+                TodoPage(g, vm, onName = { naming = it }, onOpen = { c ->
+                    vm.openPersonMedia(listOf(c.fileId), c.fileId, c.timeMs); onOpenFile(c.fileId)
+                })
             }
         }
     }
+    naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
 }
 
-private const val SHOWN_IN_GROUP = 24
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TodoPage(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onName: (List<Long>) -> Unit,
+                     onOpen: (com.cripta.app.data.db.TrackCard) -> Unit) {
+    var off by remember(g) { mutableStateOf(emptySet<Long>()) }
+    var focus by remember(g) { mutableStateOf(g.cards.first()) }
+    val picked = g.cards.map { it.id }.filter { it !in off }
+    val many = g.cards.size > 1
+    val frame by produceState<android.graphics.Bitmap?>(null, focus.id) { value = runCatching { vm.frameOf(focus) }.getOrNull() }
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val picture: @Composable (Modifier) -> Unit = { m ->
+        Box(m.clip(MaterialTheme.shapes.large).clickable(onClickLabel = "Riproduci da qui") { onOpen(focus) }, contentAlignment = Alignment.Center) {
+            com.cripta.app.ui.people.FrameWithFace(frame, focus.box, Modifier.fillMaxSize())
+        }
+    }
+    val controls: @Composable (Modifier) -> Unit = { m ->
+        Column(m, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
+                Text(if (many) "${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media" else "Un volto visto una volta",
+                    style = MaterialTheme.typography.titleMedium)
+                Text(when {
+                    !many -> "Di chi è? Tocca il fotogramma per vederlo nel video."
+                    off.isEmpty() -> "Tocca i volti di un'altra persona per toglierli; tieni premuto per vederne il fotogramma."
+                    else -> "«Dividi»: quelli tolti non sono la stessa persona degli altri, e non tornano insieme."
+                }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (many) androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(g.cards, key = { it.id }) { c ->
+                    val on = c.id !in off
+                    FaceAvatar(c, { vm.faceCrop(it) }, 64.dp,
+                        Modifier.clip(CircleShape).combinedClickable(onClickLabel = if (on) "Togli" else "Rimetti", onLongClickLabel = "Mostra il fotogramma",
+                            onLongClick = { focus = c }) { off = if (on) off + c.id else off - c.id; focus = c },
+                        selected = on)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.material3.Button(enabled = picked.isNotEmpty(), onClick = { onName(picked) },
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Chi è?") }
+                if (many) FilledTonalButton(enabled = off.isNotEmpty() && picked.isNotEmpty(), onClick = { vm.keepFacesApart(picked, off.toList()) },
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Dividi") }
+            }
+            Row {
+                TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
+                    com.cripta.app.ui.components.ButtonText("Elimina i volti", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
+                    com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+    if (landscape) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            picture(Modifier.weight(1.4f).fillMaxHeight())
+            controls(Modifier.weight(1f))
+        }
+    } else {
+        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            picture(Modifier.weight(1f).fillMaxWidth())
+            controls(Modifier.fillMaxWidth())
+        }
+    }
+}
 
 /** "Chi è?" for a group of faces: someone already there, or a new person. */
 @Composable
