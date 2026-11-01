@@ -2139,8 +2139,8 @@ private fun DetailsSheet(
     var editTag by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
     var showTech by remember { mutableStateOf(false) }
-    /** The whole tag library, opened from "Mostra tutte": the short form keeps Persone within reach. */
-    var allTagsOpen by remember(file.id) { mutableStateOf(false) }
+    /** The whole tag library, opened from "Mostra tutte" and remembered for the next media. */
+    val allTagsOpen by vm.detailsAllTags.collectAsStateWithLifecycle()
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -2255,7 +2255,7 @@ private fun DetailsSheet(
                 },
                 onLongPress = { editTag = it },
             )
-            if (hasQuick && allTags.isNotEmpty()) TextButton(onClick = { allTagsOpen = !allTagsOpen }) {
+            if (hasQuick && allTags.isNotEmpty()) TextButton(onClick = { vm.setDetailsAllTags(!allTagsOpen) }) {
                 com.cripta.app.ui.components.ButtonText(if (allTagsOpen) "Mostra meno" else "Mostra tutte (${allTags.size})")
             }
         }

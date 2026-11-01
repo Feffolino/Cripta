@@ -155,7 +155,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   Intro e finale, Informazioni. Each section opens with `PanelHeading` (accent heading, optional
   line of help, optional action at its end) and 24dp more above it than under it. One main action
   per section, tonal; the rare ones in a ⋮ menu. Etichette shows the file's, pinned and recent
-  tags, the whole library behind "Mostra tutte". Labels of values in sentence case ("Tipo",
+  tags, the whole library behind "Mostra tutte" (remembered for every media until "Mostra meno"). Labels of values in sentence case ("Tipo",
   "Link"), never all capitals.
   - Persone: a face row is the face, who it is and its moments. A suggestion reads "Forse è …?"
     with ✓ / ✗ on the row; a placed face has a plain 48dp star; not them, Dividi, Elimina and

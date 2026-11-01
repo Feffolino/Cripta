@@ -150,6 +150,8 @@ data class Settings(
      * faces like a person the user gave at least two faces, and leaves the others in the details.
      */
     val facesMode: String = "all",
+    /** Details panel: the whole tag library open ("Mostra tutte"), remembered across media. */
+    val detailsAllTags: Boolean = false,
     /** Order of the people page: a [PeopleSort] name, and its direction. */
     val peopleSort: String = "RELEVANCE",
     val peopleSortAscending: Boolean = false,
@@ -241,6 +243,7 @@ class SettingsStore @Inject constructor(
     private val faceMomentsKey = booleanPreferencesKey("face_moments")
     private val peopleHomeKey = stringPreferencesKey("people_on_home")
     private val facesModeKey = stringPreferencesKey("faces_mode")
+    private val detailsAllTagsKey = androidx.datastore.preferences.core.booleanPreferencesKey("details_all_tags")
     private val peopleSortKey = stringPreferencesKey("people_sort")
     private val peopleSortAscKey = booleanPreferencesKey("people_sort_asc")
     private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
@@ -320,6 +323,7 @@ class SettingsStore @Inject constructor(
             faceMoments = p[faceMomentsKey] ?: false,
             peopleOnHome = (p[peopleHomeKey] ?: "blur").let { if (it in listOf("off", "blur", "on")) it else "blur" },
             facesMode = (p[facesModeKey] ?: "all").let { if (it in listOf("all", "known")) it else "all" },
+            detailsAllTags = p[detailsAllTagsKey] ?: false,
             peopleSort = (p[peopleSortKey] ?: "RELEVANCE").let { k -> if (PeopleSort.entries.any { it.name == k }) k else "RELEVANCE" },
             peopleSortAscending = p[peopleSortAscKey] ?: false,
             introQuickScan = p[introQuickKey] ?: true,
@@ -366,6 +370,7 @@ class SettingsStore @Inject constructor(
     suspend fun setFaceMoments(v: Boolean) { context.dataStore.edit { it[faceMomentsKey] = v } }
     suspend fun setPeopleOnHome(v: String) { context.dataStore.edit { it[peopleHomeKey] = v } }
     suspend fun setFacesMode(v: String) { context.dataStore.edit { it[facesModeKey] = v } }
+    suspend fun setDetailsAllTags(v: Boolean) { context.dataStore.edit { it[detailsAllTagsKey] = v } }
     suspend fun setPeopleSort(key: PeopleSort, ascending: Boolean) {
         context.dataStore.edit { it[peopleSortKey] = key.name; it[peopleSortAscKey] = ascending }
     }

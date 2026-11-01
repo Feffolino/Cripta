@@ -219,6 +219,10 @@ class ViewerViewModel @Inject constructor(
         val what = if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati"
         faceUndo.value = FaceUndo(fileId, if (everywhere) "$what ovunque" else what, u)
     }
+    /** "Mostra tutte" in the details' tags: kept for every media until "Mostra meno". */
+    val detailsAllTags: StateFlow<Boolean> = settingsStore.settings.map { it.detailsAllTags }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, false)
+    fun setDetailsAllTags(v: Boolean) = viewModelScope.launch { settingsStore.setDetailsAllTags(v) }
     /** "Togli": [fileId], added to [personId] by hand, is not theirs any more. */
     fun unlinkPerson(fileId: String, personId: Long) = faceAction {
         faceUndo.value = FaceUndo(fileId, "Tolto dalla persona", faces.unlink(personId, fileId))
