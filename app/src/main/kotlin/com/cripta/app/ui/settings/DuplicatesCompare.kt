@@ -156,7 +156,7 @@ fun DuplicatesCompare(
                                 Text(shown, style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.weight(1f).padding(vertical = 8.dp))
-                                if (canUndo) TextButton(onClick = onUndo) { Text("Annulla") }
+                                if (canUndo) TextButton(onClick = onUndo) { com.cripta.app.ui.components.ButtonText("Annulla") }
                             }
                         }
                     }
@@ -240,10 +240,10 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
         text = { Text(body) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(if (trashDays != null) "Sposta nel cestino" else "Elimina", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText(if (trashDays != null) "Sposta nel cestino" else "Elimina", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -297,7 +297,7 @@ private fun GroupCard(
             }
             Button(onClick = { onKeep(group.best) }, modifier = Modifier.fillMaxWidth()) {
                 val n = group.candidates.size - 1
-                Text(if (n == 1) "Tieni il consigliato, elimina l'altra" else "Tieni il consigliato, elimina le altre $n")
+                com.cripta.app.ui.components.ButtonText(if (n == 1) "Tieni il consigliato, elimina l'altra" else "Tieni il consigliato, elimina le altre $n")
             }
             if (group.tagsToMove.isNotEmpty()) {
                 Text(
@@ -480,7 +480,7 @@ private fun PreviewDialog(
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Copia precedente",
                             tint = if (index > 0) Color.White else Color.White.copy(alpha = 0.3f))
                     }
-                    Button(onClick = { onKeep(c) }, modifier = Modifier.weight(1f)) { Text("Tieni solo questo") }
+                    Button(onClick = { onKeep(c) }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Tieni solo questo") }
                     IconButton(onClick = { index++ }, enabled = index < group.candidates.lastIndex) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Copia successiva",
                             tint = if (index < group.candidates.lastIndex) Color.White else Color.White.copy(alpha = 0.3f))

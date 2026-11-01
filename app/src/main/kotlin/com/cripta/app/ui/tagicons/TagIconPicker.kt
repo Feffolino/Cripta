@@ -82,7 +82,7 @@ fun TagIconField(name: String, icon: String?, onPick: (String?) -> Unit, onBrows
             (listOfNotNull(icon) + suggested.filter { it != icon }).forEach { n -> IconCell(n, n == icon) { onPick(n) } }
         }
         TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
-            Text("Tutte le icone")
+            com.cripta.app.ui.components.ButtonText("Tutte le icone")
         }
     }
 }
@@ -139,6 +139,6 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } },
+        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
     )
 }

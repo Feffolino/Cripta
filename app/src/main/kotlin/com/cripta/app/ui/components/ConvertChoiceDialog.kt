@@ -76,7 +76,7 @@ fun ConvertChoiceDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(choice, rememberIt) }) { Text("Converti") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(choice, rememberIt) }) { com.cripta.app.ui.components.ButtonText("Converti") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }

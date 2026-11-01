@@ -246,9 +246,9 @@ fun LabelEditorDialog(
                     onIcon?.invoke(icon)
                     onConfirm(name.trim(), alias.trim().ifEmpty { null })
                 },
-            ) { Text("Salva") }
+            ) { com.cripta.app.ui.components.ButtonText("Salva") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
     if (pickingIcon) {
         com.cripta.app.ui.tagicons.TagIconPicker(tagName = name, selected = icon,
@@ -307,12 +307,12 @@ fun TagEditorDialog(
                 )
                 TextButton(onClick = { creating = true }) {
                     Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
-                    Text("Nuova etichetta")
+                    com.cripta.app.ui.components.ButtonText("Nuova etichetta")
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(selected.toList()) }) { Text("Salva") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(selected.toList()) }) { com.cripta.app.ui.components.ButtonText("Salva") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 
     editTarget?.let { name ->
@@ -419,7 +419,7 @@ fun BatchTagDialog(
                 if (!removing) {
                     TextButton(onClick = { creating = true }) {
                         Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Nuova etichetta")
+                        com.cripta.app.ui.components.ButtonText("Nuova etichetta")
                     }
                 }
             }
@@ -429,7 +429,7 @@ fun BatchTagDialog(
                 if (removing) onRemove?.invoke(chosen.toList()) else onConfirm(chosen.toList())
             }) { Text(if (removing) "Rimuovi" else "Aggiungi") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 
     if (creating) {

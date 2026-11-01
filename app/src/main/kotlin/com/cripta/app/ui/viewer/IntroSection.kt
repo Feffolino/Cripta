@@ -116,8 +116,8 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
             onDismissRequest = { rejecting = null },
             title = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro" else "Non è un finale") },
             text = { Text("Scartare questo tratto solo in questo video, o in tutti i video in cui compare (anche in quelli futuri)?") },
-            confirmButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, true); rejecting = null }) { Text("In tutti i video") } },
-            dismissButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, false); rejecting = null }) { Text("Solo qui") } },
+            confirmButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, true); rejecting = null }) { com.cripta.app.ui.components.ButtonText("In tutti i video") } },
+            dismissButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, false); rejecting = null }) { com.cripta.app.ui.components.ButtonText("Solo qui") } },
         )
     }
 }
@@ -133,7 +133,7 @@ private fun StatusLine(text: String, action: String?, onAction: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f))
-        if (action != null) TextButton(onClick = onAction) { Text(action) }
+        if (action != null) TextButton(onClick = onAction) { com.cripta.app.ui.components.ButtonText(action) }
     }
 }
 
@@ -245,12 +245,12 @@ private fun SegmentBlock(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
                 if (pendingStart != null) {
                     FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f)) {
-                        Text("Segna fine qui · inizio ${clock(pendingStart)}")
+                        com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
                     }
                     IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
                 } else {
                     androidx.compose.material3.FilledTonalButton(onClick = onMarkStart, modifier = Modifier.weight(1f)) {
-                        Text(if (active == null) "Segna inizio qui (${clock(positionMs)})" else "Segna di nuovo da ${clock(positionMs)}")
+                        com.cripta.app.ui.components.ButtonText(if (active == null) "Inizio qui (${clock(positionMs)})" else "Di nuovo da ${clock(positionMs)}")
                     }
                     if (active != null) {
                         Spacer(Modifier.width(8.dp))

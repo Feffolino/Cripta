@@ -345,7 +345,7 @@ fun VaultScreen(
     compareResult?.let { text ->
         CriptaAlertDialog(
             onDismissRequest = { compareResult = null },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { compareResult = null }) { Text("Chiudi") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { compareResult = null }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
             title = { Text(compareTitle) },
             text = { Text(text) },
         )
@@ -1316,7 +1316,7 @@ fun VaultScreen(
                     downloadTreeLauncher.launch(null)
                 }) { Text("Scegli cartella") }
             },
-            dismissButton = { TextButton(onClick = { downloadAsk = null }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { downloadAsk = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
 
@@ -1342,7 +1342,7 @@ fun VaultScreen(
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmMultiDelete = false }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmMultiDelete = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
 
@@ -1390,7 +1390,7 @@ fun VaultScreen(
                     Text(if (trashEnabled) "Sposta nel cestino" else if (n == 0) "Elimina" else "Elimina tutto", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { folderToDelete = null }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { folderToDelete = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
 
@@ -1406,8 +1406,8 @@ fun VaultScreen(
                         " (Non è una cancellazione sicura dell'originale.)",
                 )
             },
-            confirmButton = { TextButton(onClick = { vm.deleteOriginals(pendingOriginals) }) { Text(if (n == 1) "Elimina originale" else "Elimina originali") } },
-            dismissButton = { TextButton(onClick = { vm.clearPendingOriginals() }) { Text("Mantieni") } },
+            confirmButton = { TextButton(onClick = { vm.deleteOriginals(pendingOriginals) }) { com.cripta.app.ui.components.ButtonText(if (n == 1) "Elimina originale" else "Elimina originali") } },
+            dismissButton = { TextButton(onClick = { vm.clearPendingOriginals() }) { com.cripta.app.ui.components.ButtonText("Mantieni") } },
         )
     }
 
@@ -1449,9 +1449,9 @@ fun VaultScreen(
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { vm.keepVersionsSeparate(sameKind) }) { Text("Tieni tutti") }
+                            TextButton(onClick = { vm.keepVersionsSeparate(sameKind) }) { com.cripta.app.ui.components.ButtonText("Tieni tutti") }
                             TextButton(onClick = { vm.replaceVersions(sameKind) }) {
-                                Text(if (versionAsk.identical) "Rimuovi tutte" else "Sostituisci tutti")
+                                com.cripta.app.ui.components.ButtonText(if (versionAsk.identical) "Rimuovi tutte" else "Sostituisci tutti")
                             }
                         }
                     }
@@ -1459,10 +1459,10 @@ fun VaultScreen(
             },
             confirmButton = {
                 TextButton(onClick = { vm.replaceVersions(listOf(versionAsk)) }) {
-                    Text(if (versionAsk.identical) "Rimuovi la copia" else if (single) "Sostituisci" else "Prendi le etichette")
+                    com.cripta.app.ui.components.ButtonText(if (versionAsk.identical) "Rimuovi la copia" else if (single) "Sostituisci" else "Prendi le etichette")
                 }
             },
-            dismissButton = { TextButton(onClick = { vm.keepVersionsSeparate(listOf(versionAsk)) }) { Text("Tieni entrambi") } },
+            dismissButton = { TextButton(onClick = { vm.keepVersionsSeparate(listOf(versionAsk)) }) { com.cripta.app.ui.components.ButtonText("Tieni entrambi") } },
         )
     }
 }
@@ -1978,7 +1978,7 @@ private fun ActiveFilterBar(
                     val t = tagById[id] ?: return@forEach
                     TagDismissChip(t, excluded = true, tagColors) { onExcludeTag(id) }
                 }
-                TextButton(onClick = onClearAll) { Text("Azzera") }
+                TextButton(onClick = onClearAll) { com.cripta.app.ui.components.ButtonText("Azzera") }
             }
             // The title still names the folder, but a filter searches everywhere: say so.
             Text("Risultati da tutto il vault, sottocartelle incluse",
@@ -2102,7 +2102,7 @@ private fun FilterSortSheet(
                 Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
             }
-            TextButton(onClick = onClear, enabled = filters.active) { Text("Azzera") }
+            TextButton(onClick = onClear, enabled = filters.active) { com.cripta.app.ui.components.ButtonText("Azzera") }
         }
 
         Column(
@@ -2151,7 +2151,7 @@ private fun FilterSortSheet(
                             onClick = { onSort(k, sortAscending) },
                             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
                             icon = {},
-                            label = { Text(lbl, maxLines = 1) },
+                            label = { Text(lbl, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         )
                     }
                 }
@@ -2177,13 +2177,13 @@ private fun FilterSortSheet(
                                     selected = !sortAscending, onClick = { onSort(sortKey, false) },
                                     shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
                                     icon = { Icon(Icons.Filled.ArrowDownward, null, Modifier.size(18.dp)) },
-                                    label = { Text(descLabel, maxLines = 1) },
+                                    label = { Text(descLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 )
                                 SegmentedButton(
                                     selected = sortAscending, onClick = { onSort(sortKey, true) },
                                     shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
                                     icon = { Icon(Icons.Filled.ArrowUpward, null, Modifier.size(18.dp)) },
-                                    label = { Text(ascLabel, maxLines = 1) },
+                                    label = { Text(ascLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 )
                             }
                         }
@@ -2201,7 +2201,7 @@ private fun FilterSortSheet(
                             onClick = { onType(t) },
                             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, types.size),
                             icon = {},
-                            label = { Text(typeLabel(t), maxLines = 1) },
+                            label = { Text(typeLabel(t), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         )
                     }
                 }
@@ -2340,10 +2340,10 @@ private fun FilterSortSheet(
             text = { Text("\"${sf.name}\" verrà rimosso dai filtri salvati. I file non vengono toccati.") },
             confirmButton = {
                 TextButton(onClick = { onDeleteSaved(sf.id); savedToDelete = null }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { savedToDelete = null }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { savedToDelete = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
 }
@@ -2677,7 +2677,7 @@ private fun CoverOptionDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -2714,8 +2714,8 @@ private fun FolderStyleDialog(
                 com.cripta.app.ui.tagicons.TagIconField(name = folderName, icon = icon, onPick = { icon = it }, onBrowse = { browsing = true })
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { Text("Salva") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { com.cripta.app.ui.components.ButtonText("Salva") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -2791,7 +2791,7 @@ private fun EmptyState(
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
                 Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Importa qui")
+                com.cripta.app.ui.components.ButtonText("Importa qui")
             }
         }
         return
@@ -2817,13 +2817,13 @@ private fun EmptyState(
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         if (filtering) {
             androidx.compose.material3.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp)) {
-                Text("Azzera filtri")
+                com.cripta.app.ui.components.ButtonText("Azzera filtri")
             }
         } else {
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
                 Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Importa file")
+                com.cripta.app.ui.components.ButtonText("Importa file")
             }
         }
     }
@@ -2854,7 +2854,7 @@ private fun FabRow(actions: List<FabAction>, modifier: Modifier = Modifier) {
                         Icon(a.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     }
                     Text(a.label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-                        modifier = Modifier.padding(top = 4.dp))
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -3171,7 +3171,7 @@ fun ConvertBanner(
                             } else Text(state.lastResult.orEmpty(), style = MaterialTheme.typography.bodySmall, color = on)
                         }
                     }
-                    if (state.active) TextButton(onClick = onCancel) { Text("Annulla", color = on) }
+                    if (state.active) TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText("Annulla", color = on) }
                     else IconButton(onClick = {
                         state.pendingOriginals.firstOrNull()?.let { onResolveOriginal(it.id, false) } ?: onDismiss()
                     }, modifier = Modifier.size(32.dp)) {
@@ -3185,15 +3185,15 @@ fun ConvertBanner(
                 val ask = state.pendingOriginals.firstOrNull()?.id
                 if (!state.active && ask != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                        TextButton(onClick = { onResolveOriginal(ask, false) }) { Text("Mantieni", color = on) }
+                        TextButton(onClick = { onResolveOriginal(ask, false) }) { com.cripta.app.ui.components.ButtonText("Mantieni", color = on) }
                         androidx.compose.material3.FilledTonalButton(onClick = { onResolveOriginal(ask, true) }) {
-                            Text("Elimina originale")
+                            com.cripta.app.ui.components.ButtonText("Elimina originale")
                         }
                     }
                     if (state.pendingOriginals.size > 1) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, false) } }) { Text("Mantieni tutti", color = on) }
-                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, true) } }) { Text("Elimina tutti", color = MaterialTheme.colorScheme.error) }
+                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, false) } }) { com.cripta.app.ui.components.ButtonText("Mantieni tutti", color = on) }
+                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, true) } }) { com.cripta.app.ui.components.ButtonText("Elimina tutti", color = MaterialTheme.colorScheme.error) }
                         }
                     }
                 }

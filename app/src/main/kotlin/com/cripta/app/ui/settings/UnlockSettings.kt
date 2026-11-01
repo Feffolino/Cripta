@@ -128,7 +128,7 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
             }
         }
         if (mode.usesPin) {
-            TextButton(onClick = { start(mode) }) { Text("Cambia codice (PIN o password)") }
+            TextButton(onClick = { start(mode) }) { com.cripta.app.ui.components.ButtonText("Cambia codice (PIN o password)") }
         }
     }
 
@@ -211,9 +211,9 @@ private fun CurrentPinDialog(kind: SecretKind, onCheck: (CharArray, (String) -> 
             TextButton(
                 onClick = { onCheck(pin.toCharArray()) { error = it }; pin = "" },
                 enabled = pin.length >= PinCrypto.MIN_LENGTH,
-            ) { Text("Continua") }
+            ) { com.cripta.app.ui.components.ButtonText("Continua") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -266,8 +266,8 @@ private fun NewPinDialog(
             TextButton(
                 onClick = { onConfirm(pin.toCharArray(), kind); pin = ""; again = "" },
                 enabled = !tooShort && again == pin,
-            ) { Text("Conferma") }
+            ) { com.cripta.app.ui.components.ButtonText("Conferma") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }

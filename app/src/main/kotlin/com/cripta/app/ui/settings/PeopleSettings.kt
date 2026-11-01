@@ -109,7 +109,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
             FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Vedi le persone")
+                com.cripta.app.ui.components.ButtonText("Vedi le persone")
             }
         }
     }
@@ -117,23 +117,23 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         ToggleRow("Analizza i nuovi media", s.facesAnalyzeNew, desc = "Dopo ogni importazione, download o conversione, in background.",
             icon = Icons.Filled.Face) { vm.setFacesAnalyzeNew(it) }
         FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
-            Text(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
+            com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
         Text("L'analisi trova i volti; sei tu a dire chi sono, dai dettagli di ogni media.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
-            Text("Elimina volti trovati per errore…")
+            com.cripta.app.ui.components.ButtonText("Elimina volti trovati per errore…")
         }
         val ignored by vm.ignoredFaces.collectAsStateWithLifecycle()
         if (ignored > 0) Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${com.cripta.app.ui.components.formatCount(ignored)} volti eliminati da te: le nuove analisi non li ripropongono.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            TextButton(onClick = { vm.forgetIgnoredFaces() }) { Text("Dimentica") }
+            TextButton(onClick = { vm.forgetIgnoredFaces() }) { com.cripta.app.ui.components.ButtonText("Dimentica") }
         }
         Row {
-            TextButton(onClick = { showStats = true }) { Text("Statistiche") }
+            TextButton(onClick = { showStats = true }) { com.cripta.app.ui.components.ButtonText("Statistiche") }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = { askRestart = true }, enabled = progress == null) { Text("Ricomincia da capo", color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = { askRestart = true }, enabled = progress == null) { com.cripta.app.ui.components.ButtonText("Ricomincia da capo", color = MaterialTheme.colorScheme.error) }
         }
     }
     Section("Visualizzazione") {
@@ -166,8 +166,8 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { vm.restartFaces(everything); askRestart = false }) { Text("Ricomincia") } },
-            dismissButton = { TextButton(onClick = { askRestart = false }) { Text("Annulla") } })
+            confirmButton = { TextButton(onClick = { vm.restartFaces(everything); askRestart = false }) { com.cripta.app.ui.components.ButtonText("Ricomincia") } },
+            dismissButton = { TextButton(onClick = { askRestart = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } })
     }
     if (showStats) StatsDialog(vm) { showStats = false }
     if (clearing) ClearDetectedDialog(vm) { clearing = false }
@@ -212,10 +212,10 @@ private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
         confirmButton = {
             val f = found
             TextButton(enabled = f != null && f.faces > 0, onClick = { f?.let { vm.clearDetected(it.media) }; onClose() }) {
-                Text("Elimina", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onClose) { Text("Annulla") } })
+        dismissButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Annulla") } })
 }
 
 /** Live progress while a scan runs, else how much of the vault is analysed. */
@@ -227,7 +227,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Analisi in corso: ${progress.done} di ${progress.total} media · $pct%", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f))
-                TextButton(onClick = onStop) { Text("Ferma") }
+                TextButton(onClick = onStop) { com.cripta.app.ui.components.ButtonText("Ferma") }
             }
             LinearProgressIndicator(progress = { progress.done.toFloat() / maxOf(1, progress.total) }, modifier = Modifier.fillMaxWidth())
             Text("Le persone compaiono e si aggiornano mentre l'analisi procede.", style = MaterialTheme.typography.bodySmall,
@@ -262,7 +262,7 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 val x = r.getOrNull()
                 if (x == null) {
                     Text("Non è stato possibile leggere le statistiche.")
-                    TextButton(onClick = { attempt++ }) { Text("Riprova") }
+                    TextButton(onClick = { attempt++ }) { com.cripta.app.ui.components.ButtonText("Riprova") }
                     return@Column
                 }
                 Text("Media analizzati: ${x.media}" + if (x.skipped > 0) " (${x.skipped} non leggibili)" else "")
@@ -272,7 +272,7 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 if (x.rejects.isNotEmpty()) Text("Scartati: " + x.rejects.entries.joinToString(", ") { "${it.value} ${it.key.label}" })
                 // The algorithm's numbers stay available, folded away under what a person needs to know.
                 TextButton(onClick = { tech = !tech }, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (tech) "Nascondi i dettagli tecnici" else "Dettagli tecnici")
+                    com.cripta.app.ui.components.ButtonText(if (tech) "Nascondi i dettagli tecnici" else "Dettagli tecnici")
                 }
                 if (tech) {
                     Text("Fotogrammi uguali saltati: ${x.duplicates} · aggiunti vicino ai volti: ${x.extra}",
@@ -286,7 +286,7 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
+        confirmButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
 }
 
 /**
@@ -514,7 +514,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                                     "poi \"Nuova persona\". Il nome è facoltativo.",
                                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 withFaces.firstOrNull()?.let { first ->
-                                    FilledTonalButton(onClick = { onOpenFile(first.fileId) }) { Text("Apri un media con volti") }
+                                    FilledTonalButton(onClick = { onOpenFile(first.fileId) }) { com.cripta.app.ui.components.ButtonText("Apri un media con volti") }
                                 }
                             }
                             else -> Text("Nessuna persona con questo filtro.",
@@ -545,7 +545,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
     }
 }
 
@@ -575,12 +575,12 @@ private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onO
         if (g.cards.size > SHOWN_IN_GROUP) Text("e altri ${g.cards.size - SHOWN_IN_GROUP}", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { Text("Chi è?") }
+            FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { com.cripta.app.ui.components.ButtonText("Chi è?") }
             TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
-                Text("Elimina", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
             }
             TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
-                Text("Non è un volto", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -616,7 +616,7 @@ private fun WhoDialog(ids: List<Long>, o: FaceRepository.Overview, vm: SettingsV
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } })
+        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
 }
 
 /** Pick people ([multi]) or one person, or name a new one ([allowNew]: "Dividi"). */
@@ -648,8 +648,8 @@ internal fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lo
         },
         confirmButton = {
             TextButton(enabled = picked.isNotEmpty() || (allowNew && newName.isNotBlank()), onClick = { onDone(picked, newName) }) {
-                Text(if (allowNew && picked.isEmpty()) "Dividi" else if (multi) "Unisci" else "Sposta")
+                com.cripta.app.ui.components.ButtonText(if (allowNew && picked.isEmpty()) "Dividi" else if (multi) "Unisci" else "Sposta")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } })
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } })
 }

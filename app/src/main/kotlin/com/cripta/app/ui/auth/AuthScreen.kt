@@ -187,9 +187,9 @@ fun AuthScreen(
                         Button(onClick = onOpenSecuritySettings, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
                             Icon(Icons.Filled.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text("Apri impostazioni di sicurezza")
+                            com.cripta.app.ui.components.ButtonText("Apri impostazioni di sicurezza")
                         }
-                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { Text("Riprova") }
+                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { com.cripta.app.ui.components.ButtonText("Riprova") }
                     } else {
                         if (withCode && hasCode) {
                             code(compact)
@@ -197,7 +197,7 @@ fun AuthScreen(
                         }
                         if (!pinOnly) {
                             Button(onClick = onAuthenticate, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
-                                Text(if (state.firstRun) "Crea vault" else "Sblocca", style = MaterialTheme.typography.titleSmall)
+                                com.cripta.app.ui.components.ButtonText(if (state.firstRun) "Crea vault" else "Sblocca", style = MaterialTheme.typography.titleSmall)
                             }
                         }
                     }
@@ -263,7 +263,7 @@ private fun CodeEntry(
 ) {
     var open by remember(alternative) { mutableStateOf(!alternative) }
     if (!open) {
-        TextButton(onClick = { open = true }) { Text("Usa il ${kind.noun} di Cripta") }
+        TextButton(onClick = { open = true }) { com.cripta.app.ui.components.ButtonText("Usa il ${kind.noun} di Cripta") }
         return
     }
     if (kind == com.cripta.app.security.SecretKind.PIN) PinKeypad(busy, compact, onSubmit)
@@ -461,9 +461,9 @@ fun KeyInvalidatedDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onReset) {
-                Text("Reimposta vault", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Reimposta vault", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }

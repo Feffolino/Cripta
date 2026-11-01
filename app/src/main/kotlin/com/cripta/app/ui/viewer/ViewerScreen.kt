@@ -702,10 +702,10 @@ fun ViewerScreen(
             },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = null; val id = delTarget.id; vm.delete(id) { removePage(id) } }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
     val exportTarget = confirmDownload
@@ -718,8 +718,8 @@ fun ViewerScreen(
                     "${ViewerViewModel.exportFolder(exportTarget.mimeType)}, visibile alle altre app. " +
                     "Il file resta anche nel vault.")
             },
-            confirmButton = { TextButton(onClick = { confirmDownload = null; vm.download(exportTarget) }) { Text("Esporta") } },
-            dismissButton = { TextButton(onClick = { confirmDownload = null }) { Text("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmDownload = null; vm.download(exportTarget) }) { com.cripta.app.ui.components.ButtonText("Esporta") } },
+            dismissButton = { TextButton(onClick = { confirmDownload = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
     val convertSettings by vm.convertSettings.collectAsStateWithLifecycle()
@@ -744,8 +744,8 @@ fun ViewerScreen(
                         "Impostazioni › Import e conversione."
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { Text("Converti") } },
-            dismissButton = { TextButton(onClick = { confirmConvert = null }) { Text("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { com.cripta.app.ui.components.ButtonText("Converti") } },
+            dismissButton = { TextButton(onClick = { confirmConvert = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
     if (convertedId != null) {
@@ -762,7 +762,7 @@ fun ViewerScreen(
                     if (orig != null && orig in vm.liveIds) removePage(orig)
                 }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { Text("Mantieni") } },
+            dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { com.cripta.app.ui.components.ButtonText("Mantieni") } },
         )
     }
 }
@@ -804,7 +804,7 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
             }
             TextButton(onClick = paste) {
                 Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
-                Text("  Incolla")
+                com.cripta.app.ui.components.ButtonText("  Incolla")
             }
         }
         return
@@ -1845,7 +1845,7 @@ private fun VideoPlayer(
                     Text(if (s.kind == SegmentSkipper.Kind.INTRO) "Intro saltata" else "Finale saltato",
                         color = Color.White, style = MaterialTheme.typography.labelLarge)
                     androidx.compose.material3.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
-                        Text("Annulla")
+                        com.cripta.app.ui.components.ButtonText("Annulla")
                     }
                 }
             }
@@ -2264,7 +2264,7 @@ private fun DetailsSheet(
                     modifier = Modifier.weight(1f).semantics { heading() })
                 TextButton(onClick = { creating = true }) {
                     Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
-                    Text("Nuova", modifier = Modifier.padding(start = 6.dp))
+                    com.cripta.app.ui.components.ButtonText("Nuova", modifier = Modifier.padding(start = 6.dp))
                 }
             }
             Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e per fissarla.",
@@ -2404,8 +2404,9 @@ private fun SheetActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = tint)
-        // Up to two lines: "Converti in MP4" reads in full instead of a cryptic short label.
-        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 2,
+        // Up to two lines, balanced: "Converti in MP4" reads in full instead of a cryptic short label.
+        Text(label, style = MaterialTheme.typography.labelMedium.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
+            color = tint, maxLines = 2,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
     }

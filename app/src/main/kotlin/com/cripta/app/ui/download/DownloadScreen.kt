@@ -201,7 +201,7 @@ fun DownloadScreen(
             leadingIcon = { Icon(Icons.Filled.Link, null) },
             trailingIcon = {
                 if (url.isBlank()) {
-                    TextButton(onClick = { paste() }, modifier = Modifier.padding(end = 4.dp)) { Text("Incolla") }
+                    TextButton(onClick = { paste() }, modifier = Modifier.padding(end = 4.dp)) { com.cripta.app.ui.components.ButtonText("Incolla") }
                 } else {
                     IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(Icons.Filled.Clear, "Svuota il link") }
                 }
@@ -246,7 +246,7 @@ fun DownloadScreen(
                             overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onTertiaryContainer)
                     }
                     TextButton(onClick = { vm.prepareOpen(f.id); onOpenFile(f.id) }) {
-                        Text("Apri", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        com.cripta.app.ui.components.ButtonText("Apri", color = MaterialTheme.colorScheme.onTertiaryContainer)
                     }
                 }
             }
@@ -357,7 +357,7 @@ fun DownloadScreen(
         if (finished.isNotEmpty()) {
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Heading("Finiti", Modifier.weight(1f))
-                TextButton(onClick = { vm.clearFinished() }) { Text("Pulisci") }
+                TextButton(onClick = { vm.clearFinished() }) { com.cripta.app.ui.components.ButtonText("Pulisci") }
             }
             jobs(finished)
         }
@@ -577,7 +577,7 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
             .padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Etichette dei download", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (chosen.isNotEmpty()) TextButton(onClick = onClear) { Text("Togli tutte") }
+                if (chosen.isNotEmpty()) TextButton(onClick = onClear) { com.cripta.app.ui.components.ButtonText("Togli tutte") }
             }
             Text("Vanno su ogni video scaricato da qui in poi.", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp))
@@ -665,10 +665,10 @@ private fun JobRow(
                 label = "jobAction",
             ) { g ->
                 when {
-                    g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { Text("Annulla") }
-                    g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { Text("Apri") }
+                    g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText("Annulla") }
+                    g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { com.cripta.app.ui.components.ButtonText("Apri") }
                     g == PhaseGroup.STOPPED -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onRetry) { Text("Riprova") }
+                        TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText("Riprova") }
                         IconButton(onClick = onRemove) {
                             Icon(Icons.Filled.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

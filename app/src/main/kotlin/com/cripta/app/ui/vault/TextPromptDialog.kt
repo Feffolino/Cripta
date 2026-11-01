@@ -67,8 +67,8 @@ fun TextPromptDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { confirm() }, enabled = canConfirm) { Text(confirmLabel) }
+            TextButton(onClick = { confirm() }, enabled = canConfirm) { com.cripta.app.ui.components.ButtonText(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }

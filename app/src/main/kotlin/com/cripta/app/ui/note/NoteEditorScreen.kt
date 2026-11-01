@@ -170,10 +170,10 @@ fun NoteEditorScreen(
             text = { Text("\"${vm.name.ifBlank { "Nota" }}\" verrà eliminata (nel cestino se attivo in Impostazioni).") },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; vm.delete(fileId) { onDeleted() } }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
         )
     }
 }
