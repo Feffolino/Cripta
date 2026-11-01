@@ -566,11 +566,13 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
 @Composable
 private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onOpenFile: (String) -> Unit, onName: (List<Long>) -> Unit) {
     var off by remember(g) { mutableStateOf(emptySet<Long>()) }
+    /** Every face of a large group, not only the first [SHOWN_IN_GROUP]: all of them are acted on. */
+    var all by remember(g) { mutableStateOf(false) }
     val picked = g.cards.map { it.id }.filter { it !in off }
     Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media", style = MaterialTheme.typography.bodyLarge)
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            g.cards.take(SHOWN_IN_GROUP).forEach { c ->
+            (if (all) g.cards else g.cards.take(SHOWN_IN_GROUP)).forEach { c ->
                 val on = c.id !in off
                 Box(Modifier.clip(CircleShape).combinedClickable(onClickLabel = if (on) "Togli dal gruppo" else "Rimetti nel gruppo",
                     onLongClickLabel = "Apri il media", onLongClick = { onOpenFile(c.fileId) }) { off = if (on) off + c.id else off - c.id }) {
@@ -581,8 +583,16 @@ private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onO
                 }
             }
         }
-        if (g.cards.size > SHOWN_IN_GROUP) Text("e altri ${g.cards.size - SHOWN_IN_GROUP}", style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (g.cards.size > SHOWN_IN_GROUP) TextButton(onClick = { all = !all }) {
+                com.cripta.app.ui.components.ButtonText(if (all) "Mostra meno" else "Mostra gli altri ${g.cards.size - SHOWN_IN_GROUP}")
+            }
+            Spacer(Modifier.weight(1f))
+            // Easier than tapping each face when only a few belong together.
+            TextButton(onClick = { off = if (off.isEmpty()) g.cards.map { it.id }.toSet() else emptySet() }) {
+                com.cripta.app.ui.components.ButtonText(if (off.isEmpty()) "Togli tutti" else "Scegli tutti")
+            }
+        }
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { com.cripta.app.ui.components.ButtonText("Chi è?") }
             TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
