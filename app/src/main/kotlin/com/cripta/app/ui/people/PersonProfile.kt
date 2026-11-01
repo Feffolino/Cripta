@@ -138,8 +138,8 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                 title = { Text("${selected.size} selezionati") },
                 navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
                 actions = {
-                    TextButton(onClick = { vm.removeFromPerson(p.id, selected); selected = emptySet() }) { Text("Togli") }
-                    TextButton(onClick = { moving = true }) { Text("Sposta") }
+                    TextButton(onClick = { vm.removeFromPerson(p.id, selected); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText("Togli") }
+                    TextButton(onClick = { moving = true }) { com.cripta.app.ui.components.ButtonText("Sposta") }
                     Box {
                         IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
                         val faceOf = remember(p) { p.faces.groupBy { it.fileId }.mapValues { (_, l) -> l.maxBy { it.width } } }
@@ -253,7 +253,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
     }
 }
 
@@ -274,7 +274,7 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
                 if (videos > 0) "$videos video" else null,
                 if (p.entity.ignored) "nascosta" else null,
             ).joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = onCover, contentPadding = PaddingValues(0.dp)) { Text("Cambia volto") }
+            TextButton(onClick = onCover, contentPadding = PaddingValues(0.dp)) { com.cripta.app.ui.components.ButtonText("Cambia volto") }
         }
     }
 }
@@ -294,7 +294,7 @@ private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, on
             n == 1 -> "1 volto potrebbe essere suo. Nulla viene aggiunto senza la tua conferma."
             else -> "$n volti potrebbero essere suoi. Nulla viene aggiunto senza la tua conferma."
         }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if ((n ?: 0) > 0) FilledTonalButton(onClick = onOpen) { Text("Controlla i suggerimenti") }
+        if ((n ?: 0) > 0) FilledTonalButton(onClick = onOpen) { com.cripta.app.ui.components.ButtonText("Controlla i suggerimenti") }
     }
 }
 
@@ -330,7 +330,7 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             com.cripta.app.ui.components.CriptaTextField(newLink, { newLink = it }, singleLine = true,
                 placeholder = { Text("Aggiungi un link") }, modifier = Modifier.weight(1f))
-            TextButton(enabled = newLink.isNotBlank(), onClick = { links.add(newLink.trim()); newLink = ""; save() }) { Text("Aggiungi") }
+            TextButton(enabled = newLink.isNotBlank(), onClick = { links.add(newLink.trim()); newLink = ""; save() }) { com.cripta.app.ui.components.ButtonText("Aggiungi") }
         }
     }
 }
@@ -358,8 +358,8 @@ private fun RenameDialog(p: FaceRepository.Person, o: FaceRepository.Overview, v
                     color = if (twin != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        confirmButton = { TextButton(onClick = { vm.renamePerson(p.id, name); onClose() }) { Text("Salva") } },
-        dismissButton = { TextButton(onClick = onClose) { Text("Annulla") } })
+        confirmButton = { TextButton(onClick = { vm.renamePerson(p.id, name); onClose() }) { com.cripta.app.ui.components.ButtonText("Salva") } },
+        dismissButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Annulla") } })
 }
 
 /** Every face found of the person: tap one to show it on their profile, Home and the lists. */
@@ -382,7 +382,7 @@ private fun CoverPicker(p: FaceRepository.Person, vm: SettingsViewModel, onClose
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
+        confirmButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
 }
 
 private fun likeness(s: Float) = when {
@@ -454,8 +454,8 @@ private fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Perso
         Text((file?.originalName ?: "Media") + if (isVideo) " · ${clock(s.card.timeMs)}" else "",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            FilledTonalButton(onClick = onYes) { Text("È ${p.title}") }
-            TextButton(onClick = onNo) { Text("Non è lui/lei") }
+            FilledTonalButton(onClick = onYes) { com.cripta.app.ui.components.ButtonText("È ${p.title}") }
+            TextButton(onClick = onNo) { com.cripta.app.ui.components.ButtonText("Non è lui/lei") }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onOpen) { Icon(Icons.Filled.PlayArrow, if (isVideo) "Riproduci da qui" else "Apri") }
         }

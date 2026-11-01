@@ -106,7 +106,7 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
                     else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta.",
                 icon = Icons.Filled.Speed) { vm.setIntroQuickScan(it) }
             FilledTonalButton(onClick = { vm.startIntroScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
-                Text(if (progress == null) "Analizza i video esistenti" else "Analisi in corso…")
+                com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza i video esistenti" else "Analisi in corso…")
             }
         }
         Maintenance(vm, onOpenFile)
@@ -149,8 +149,8 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
         if (progress == null && o.skipped > 0) Text("${fmt(o.skipped)} non analizzabili: il motivo è nei risultati.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f)) { Text("Risultati") }
-            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f)) { Text("Interrompi") }
+            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Risultati") }
+            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
         }
     }
 }
@@ -164,7 +164,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     var restartAll by remember { mutableStateOf(false) }
     Section("Manutenzione") {
         androidx.compose.material3.FilledTonalButton(onClick = { showRejected = true }, enabled = rejected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-            Text(if (rejected.isEmpty()) "Nessun segmento scartato" else "Segmenti scartati (${rejected.size})")
+            com.cripta.app.ui.components.ButtonText(if (rejected.isEmpty()) "Nessun segmento scartato" else "Segmenti scartati (${rejected.size})")
         }
         androidx.compose.material3.FilledTonalButton(onClick = { restartAll = false; askRestart = true }, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
@@ -173,7 +173,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     }
     if (showRejected) CriptaAlertDialog(
         onDismissRequest = { showRejected = false },
-        confirmButton = { TextButton(onClick = { showRejected = false }) { Text("Chiudi") } },
+        confirmButton = { TextButton(onClick = { showRejected = false }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
         title = { Text("Segmenti scartati") },
         text = {
             LazyColumn(Modifier.height(360.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,7 +189,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
                                 " · ${span(r.startMs, r.endMs)} · ${(r.endMs - r.startMs + 500) / 1000} s · tocca per aprire",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        TextButton(onClick = { vm.restoreRejected(r.id) }) { Text("Togli") }
+                        TextButton(onClick = { vm.restoreRejected(r.id) }) { com.cripta.app.ui.components.ButtonText("Togli") }
                     }
                 }
             }
@@ -210,10 +210,10 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = { vm.restartIntroScan(restartAll); askRestart = false }) {
-                Text("Ricomincia", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Ricomincia", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = { askRestart = false }) { Text("Annulla") } },
+        dismissButton = { TextButton(onClick = { askRestart = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -284,8 +284,8 @@ private fun IntroResultsPage(
                     title = { Text("${selected.size} selezionate") },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
                     actions = {
-                        TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { Text("Unisci") }
-                        TextButton(onClick = { deleting = selectedSigs }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                        TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText("Unisci") }
+                        TextButton(onClick = { deleting = selectedSigs }) { com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error) }
                     },
                 ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
@@ -389,10 +389,10 @@ private fun IntroResultsPage(
                 },
                 confirmButton = {
                     TextButton(onClick = { actions.delete(sigs); deleting = null; selected = emptySet() }) {
-                        Text("Elimina", color = MaterialTheme.colorScheme.error)
+                        com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                     }
                 },
-                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Annulla") } },
+                dismissButton = { TextButton(onClick = { deleting = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
             )
         }
         timing?.let { s -> DurationDialog(s, onDismiss = { timing = null }) { ds, de -> actions.duration(s, ds, de); timing = null } }
@@ -422,8 +422,8 @@ private fun NameDialog(title: String, initial: String, confirm: String, hint: St
                     placeholder = { Text("Es. Sigla One Piece") }, modifier = Modifier.fillMaxWidth())
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = allowBlank || text.isNotBlank()) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = allowBlank || text.isNotBlank()) { com.cripta.app.ui.components.ButtonText(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 
@@ -442,7 +442,7 @@ private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, 
             Text("$label: ${if (value == 0L) "come il suono" else deltaText(value)}", style = MaterialTheme.typography.bodyMedium)
             ChipFlowRow(gap = 4.dp) {
                 for ((d, t) in listOf(-5_000L to "−5 s", -1_000L to "−1 s", -500L to "−0,5", 500L to "+0,5", 1_000L to "+1 s", 5_000L to "+5 s")) {
-                    TextButton(onClick = { onChange(value + d) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) { Text(t) }
+                    TextButton(onClick = { onChange(value + d) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) { com.cripta.app.ui.components.ButtonText(t) }
                 }
             }
         }
@@ -460,8 +460,8 @@ private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, 
                 Stepper("Fine", end) { end = it }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(start, end) }) { Text("Applica") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(start, end) }) { com.cripta.app.ui.components.ButtonText("Applica") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
     )
 }
 

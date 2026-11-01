@@ -194,5 +194,5 @@ private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(s / 60, 
 internal fun CompareDialog(a: TrackCard, b: TrackCard, o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit) {
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Confronto") },
         text = { FacePair(a, b, clockOf(a.timeMs), clockOf(b.timeMs), o, vm) {} },
-        confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
+        confirmButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
 }

@@ -128,6 +128,10 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   search, links, names) are full pills; multi-line ones a 18dp slab.
 - **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
   no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
+- **Button labels** (`ButtonText`): one line, cut with "…" when the button is too narrow, never
+  broken mid-phrase. A label that would often be cut gets shorter words ("Inizio qui (1:23)"),
+  and several buttons that may not fit side by side go in a `FlowRow`. Two lines only where the
+  control is built for them (the details sheet's icon actions), and then balanced.
 - **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
   the current one larger, full opacity and ringed.
 - **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (32dp).

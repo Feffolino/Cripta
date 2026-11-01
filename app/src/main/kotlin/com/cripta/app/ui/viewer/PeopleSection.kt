@@ -112,12 +112,12 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     modifier = Modifier.weight(1f))
             }
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { Text("Stessa persona") }
+                FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText("Stessa persona") }
                 TextButton(onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() }) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                 }
                 TextButton(onClick = { vm.deleteFaces(file.id, chosen, everywhere = true); selected = emptySet() }) {
-                    Text("Non è un volto", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
                 }
             }
         } else if (clear.size >= 2) {
@@ -130,7 +130,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         for (t in clear) row(t)
         if (unclear.isNotEmpty()) {
             TextButton(onClick = { showUnclear = !showUnclear }) {
-                Text(if (showUnclear) "Nascondi i volti poco chiari" else if (unclear.size == 1) "Un altro volto poco chiaro" else "Altri ${unclear.size} volti poco chiari")
+                com.cripta.app.ui.components.ButtonText(if (showUnclear) "Nascondi i volti poco chiari" else if (unclear.size == 1) "Un altro volto poco chiaro" else "Altri ${unclear.size} volti poco chiari")
             }
             AnimatedVisibility(showUnclear, enter = fadeIn(tween(220)) + expandVertically(tween(220)), exit = fadeOut(tween(120)) + shrinkVertically(tween(120))) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -138,7 +138,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     for (t in unclear) row(t)
                     TextButton(onClick = { vm.deleteFaces(file.id, unclear.map { it.id }) }) {
-                        Text("Elimina i volti poco chiari", color = MaterialTheme.colorScheme.error)
+                        com.cripta.app.ui.components.ButtonText("Elimina i volti poco chiari", color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -148,13 +148,13 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { vm.findFaces(file) }) { Text("Aggiungi un volto") }
-            TextButton(onClick = { vm.describeFaces(file.id) }) { Text(if (shown.isEmpty()) "Perché?" else "Dettagli") }
-            TextButton(onClick = { vm.analyseFaces(file.id) }) { Text("Rianalizza") }
+            TextButton(onClick = { vm.findFaces(file) }) { com.cripta.app.ui.components.ButtonText("Aggiungi un volto") }
+            TextButton(onClick = { vm.describeFaces(file.id) }) { com.cripta.app.ui.components.ButtonText(if (shown.isEmpty()) "Perché?" else "Dettagli") }
+            TextButton(onClick = { vm.analyseFaces(file.id) }) { com.cripta.app.ui.components.ButtonText("Rianalizza") }
         }
         if (shown.any { it.personId == null && it.state != "manual" }) {
             TextButton(onClick = { vm.clearDetectedFaces(file.id) }) {
-                Text("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error)
             }
         }
         // "Annulla" for the last join or deletion here; the message stays while it fades out.
@@ -164,7 +164,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         AnimatedVisibility(mine != null, enter = fadeIn(tween(220)), exit = fadeOut(tween(120))) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(last, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.undoFaceChange() }) { Text("Annulla") }
+                TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText("Annulla") }
             }
         }
     }
@@ -208,12 +208,12 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     }
                     // Not the face wanted: look on from just after these (or after the stretch searched).
                     if (isVideo && !finding) TextButton(onClick = { vm.findFaces(file, from = if (list.isEmpty()) start + 15_500 else at + 1_000) }) {
-                        Text("Cerca più avanti")
+                        com.cripta.app.ui.components.ButtonText("Cerca più avanti")
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { vm.foundFaces.value = null }) { Text("Chiudi") } },
-            dismissButton = { TextButton(onClick = { vm.foundFaces.value = null; adding = true }) { Text("Senza volto") } })
+            confirmButton = { TextButton(onClick = { vm.foundFaces.value = null }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
+            dismissButton = { TextButton(onClick = { vm.foundFaces.value = null; adding = true }) { com.cripta.app.ui.components.ButtonText("Senza volto") } })
         else picked?.let { chosen ->
             FaceEditor(null, null, people, vm,
                 onPick = { id -> vm.addFoundFace(file, chosen, id, "") },
@@ -224,7 +224,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Volti") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
     }
     val also by vm.alsoFaces.collectAsStateWithLifecycle()
     also?.takeIf { it.fileId == file.id }?.let { a -> AlsoDialog(a, byId[a.personId]?.title ?: FaceRepository.UNNAMED, vm) }
@@ -288,8 +288,8 @@ private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerVie
                 }
             }
         },
-        confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { vm.joinAlso(a, picked) }) { Text("Sì, unisci") } },
-        dismissButton = { TextButton(onClick = { vm.alsoFaces.value = null }) { Text("No") } })
+        confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { vm.joinAlso(a, picked) }) { com.cripta.app.ui.components.ButtonText("Sì, unisci") } },
+        dismissButton = { TextButton(onClick = { vm.alsoFaces.value = null }) { com.cripta.app.ui.components.ButtonText("No") } })
 }
 
 /** "Dividi": the moments of a face that are someone else become a face of their own. */
@@ -309,14 +309,14 @@ private fun SplitDialog(t: TrackCard, moments: List<Long>, vm: ViewerViewModel, 
                     }
                 }
                 TextButton(onClick = { vm.seekPlayer(t.fileId, maxOf(0L, (picked.minOrNull() ?: moments.first()) - 1_000), play = true) }) {
-                    Text("Guarda dal primo momento scelto")
+                    com.cripta.app.ui.components.ButtonText("Guarda dal primo momento scelto")
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = picked.isNotEmpty() && picked.size < moments.size, onClick = { vm.splitFace(t.fileId, t.id, picked); onDismiss() }) { Text("Dividi") }
+            TextButton(enabled = picked.isNotEmpty() && picked.size < moments.size, onClick = { vm.splitFace(t.fileId, t.id, picked); onDismiss() }) { com.cripta.app.ui.components.ButtonText("Dividi") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } })
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } })
 }
 
 /**
@@ -349,17 +349,17 @@ private fun FaceEditor(
                         }, style = MaterialTheme.typography.bodyMedium)
                         if (placed && current != null) Row(verticalAlignment = Alignment.CenterVertically) {
                             FavoriteStar(current.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
-                            TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
+                            TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { com.cripta.app.ui.components.ButtonText("Non è lui/lei") }
                         }
                     }
                 }
                 if (t != null) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (moments.size >= 2) TextButton(onClick = { splitting = true }) { Text("Dividi…") }
+                    if (moments.size >= 2) TextButton(onClick = { splitting = true }) { com.cripta.app.ui.components.ButtonText("Dividi…") }
                     TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id)); onDismiss() }) {
-                        Text("Elimina", color = MaterialTheme.colorScheme.error)
+                        com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
                     }
                     TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id), everywhere = true); onDismiss() }) {
-                        Text("Non è un volto", color = MaterialTheme.colorScheme.error)
+                        com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
                     }
                 }
                 if (placed) {
@@ -390,10 +390,10 @@ private fun FaceEditor(
             }
         },
         confirmButton = {
-            if (placed && current != null) TextButton(enabled = name.trim() != current.entity.name, onClick = { vm.renamePerson(current.id, name); onDismiss() }) { Text("Salva nome") }
-            else TextButton(onClick = onDismiss) { Text("Chiudi") }
+            if (placed && current != null) TextButton(enabled = name.trim() != current.entity.name, onClick = { vm.renamePerson(current.id, name); onDismiss() }) { com.cripta.app.ui.components.ButtonText("Salva nome") }
+            else TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Chiudi") }
         },
-        dismissButton = { if (placed) TextButton(onClick = onDismiss) { Text("Chiudi") } })
+        dismissButton = { if (placed) TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
 }
 
 private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
