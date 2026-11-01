@@ -1,5 +1,8 @@
 package com.cripta.app.ui.components
 
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -45,6 +48,17 @@ fun criptaTopBarColors(): androidx.compose.material3.TopAppBarColors =
     androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
         containerColor = MaterialTheme.colorScheme.background,
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+    )
+
+/**
+ * Insets of every top bar outside the player: the status bar's height even while it is hidden.
+ * The player hides the system bars, and a bar following the visible inset jumped up while the
+ * page under the opening player was still on screen (and could stay up after closing it).
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+val criptaTopBarInsets: androidx.compose.foundation.layout.WindowInsets
+    @Composable get() = androidx.compose.foundation.layout.WindowInsets.systemBarsIgnoringVisibility.only(
+        androidx.compose.foundation.layout.WindowInsetsSides.Horizontal + androidx.compose.foundation.layout.WindowInsetsSides.Top,
     )
 
 /** Shape of multi-line text fields: a soft filled slab, no outline. */

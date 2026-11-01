@@ -195,6 +195,7 @@ fun SettingsScreen(
     LaunchedEffect(requestedPage) {
         requestedPage?.let { page = it; vm.consumeRequestedPage() }
     }
+    LaunchedEffect(Unit) { SettingsTabReselect.events.collect { page = null; anchor = null } }
 
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -205,7 +206,7 @@ fun SettingsScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text(current?.label ?: "Impostazioni") },
@@ -362,8 +363,8 @@ fun SettingsScreen(
                             ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
                             if (s.display.showTagsOnCover) {
                                 ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
-                                    indent = 16.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
-                                ChoiceRow("Testo", indent = 16.dp, options = listOf(
+                                    indent = 0.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
+                                ChoiceRow("Testo", indent = 0.dp, options = listOf(
                                     com.cripta.app.data.CoverTagStyle.ALIAS to "Sigla / emoji",
                                     com.cripta.app.data.CoverTagStyle.NAME to "Nome intero",
                                 ), selected = s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
@@ -409,7 +410,7 @@ fun SettingsScreen(
                             if (s.display.showRecentTags) {
                                 // Also how many recent tags the viewer's bar adds after the pinned ones.
                                 ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
-                                    s.display.recentTagsCount, indent = 16.dp) { vm.setRecentTagsCount(it) }
+                                    s.display.recentTagsCount, indent = 0.dp) { vm.setRecentTagsCount(it) }
                             }
                             ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
                                 desc = when {
@@ -765,7 +766,7 @@ fun SettingsScreen(
                                 desc = "Accoglie anche gli originali sostituiti da una conversione in MP4.") { vm.setTrashEnabled(it) }
                             if (s.trashEnabled) {
                                 ChoiceRow("Conserva per", listOf(3 to "3 giorni", 7 to "7 giorni", 30 to "30 giorni"), s.trashDays,
-                                    indent = 16.dp) { vm.setTrashDays(it) }
+                                    indent = 0.dp) { vm.setTrashDays(it) }
                             }
                             androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                 Text(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
@@ -1390,7 +1391,7 @@ private fun <T> ChoiceRow(
     options: List<Pair<T, String>>,
     selected: T,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    /** Sub-option of the toggle above: 36dp lines it up under a toggle with an icon, 16dp under one without. */
+    /** Sub-option of the toggle above: 36dp lines it up under a toggle with an icon, 0dp in line with one without. */
     indent: androidx.compose.ui.unit.Dp = 36.dp,
     /** What the choice does, under the chips (aligned with them). */
     desc: String? = null,

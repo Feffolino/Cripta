@@ -150,7 +150,7 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { com.cripta.app.ui.components.HeaderTitle("Cripta") },

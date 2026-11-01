@@ -279,7 +279,7 @@ private fun IntroResultsPage(
     CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(
             topBar = {
-                if (selected.isNotEmpty()) TopAppBar(
+                if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("${selected.size} selezionate") },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
@@ -287,7 +287,7 @@ private fun IntroResultsPage(
                         TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { Text("Unisci") }
                         TextButton(onClick = { deleting = selectedSigs }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
                     },
-                ) else TopAppBar(
+                ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("Risultati dell'analisi") },
                     navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },

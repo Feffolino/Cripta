@@ -255,6 +255,11 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             com.cripta.app.ui.vault.VaultTabReselect.notifyReselected()
             return
         }
+        // Reselecting Impostazioni inside a category page goes back to the list of pages.
+        if (route == "settings" && nav.currentDestination?.route == "settings") {
+            com.cripta.app.ui.settings.SettingsTabReselect.notifyReselected()
+            return
+        }
         nav.navigate(route) {
             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true

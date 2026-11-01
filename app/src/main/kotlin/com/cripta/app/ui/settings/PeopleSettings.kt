@@ -295,7 +295,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     }
     Scaffold(
         topBar = {
-            TopAppBar(colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     Box {
@@ -419,7 +419,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
     fun open(fileId: String, timeMs: Long?) { vm.openPersonMedia(ids, fileId, timeMs); onOpenFile(fileId) }
     CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
-            if (selected.isNotEmpty()) TopAppBar(
+            if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text("${selected.size} selezionati") },
                 navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
@@ -442,7 +442,7 @@ private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm:
                         }
                     }
                 },
-            ) else TopAppBar(colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
                     IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {

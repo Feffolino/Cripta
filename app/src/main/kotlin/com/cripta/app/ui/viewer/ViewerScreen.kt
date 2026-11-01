@@ -2051,7 +2051,27 @@ private fun Filmstrip(
     val animate = com.cripta.app.ui.theme.animationsEnabled()
     LaunchedEffect(current) {
         if (listState.firstVisibleItemIndex == current && listState.firstVisibleItemScrollOffset == 0) return@LaunchedEffect
-        if (animate) listState.animateScrollToItem(current) else listState.scrollToItem(current)
+        val near = listState.layoutInfo.visibleItemsInfo.any { it.index == current }
+        if (!animate || !near) { listState.scrollToItem(current); return@LaunchedEffect }
+        // Glide by chasing the new cover each frame. animateScrollToItem aimed at where the cover
+        // was when it started and snapped to the real place at the end; meanwhile the covers grow
+        // and shrink (and the edge padding follows the new aspect), so that last snap was a jerk.
+        listState.scroll {
+            val start = androidx.compose.runtime.withFrameNanos { it }
+            var last = start
+            while (true) {
+                val now = androidx.compose.runtime.withFrameNanos { it }
+                val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == current } ?: break
+                val left = info.offset.toFloat()
+                val elapsed = (now - start) / 1_000_000L
+                if (kotlin.math.abs(left) < 0.5f && elapsed > Motion.MEDIUM) break
+                if (elapsed > 1_500) { scrollBy(left); break }
+                // Exponential approach, the same pace whatever the frame rate.
+                val k = 1f - kotlin.math.exp(-((now - last) / 1_000_000f) / 70f)
+                last = now
+                scrollBy(left * k)
+            }
+        }
     }
     androidx.compose.foundation.layout.BoxWithConstraints(
         if (vertical) Modifier.heightIn(max = full) else Modifier.widthIn(max = full),

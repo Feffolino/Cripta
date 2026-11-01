@@ -2,6 +2,7 @@ package com.cripta.app.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,9 @@ enum class TagPillState { Plain, Off, On, Excluded }
 /** Dark glass behind tags and badges drawn over an image: readable on any picture, in either theme. */
 val OnImageGlass = Color(0xEB14171E)
 
+/** How much of a tag's colour fills its pill over a picture (the rim is stronger). */
+private const val TINT_ON_IMAGE = 0.45f
+
 /** A tag's text: its alias (emoji/acronym) before the name, when it has one. */
 fun tagText(tag: TagEntity): String =
     if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name
@@ -59,8 +63,9 @@ fun tagText(tag: TagEntity): String =
  *
  * Colour means "this tag is on the file / in the filter"; neutral means "not":
  * - Plain (a tag shown on a file) and On (assigned / filtered): the tag's colour, translucent
- *   (35% over [base]; 78% over a picture), name in the same hue or white/black at >= 4.5:1. On
- *   adds a tick.
+ *   (35% over [base]), name in the same hue or white/black at >= 4.5:1. On adds a tick. Over a
+ *   picture: a see-through tint of the colour on a light glass, with a rim of the same colour
+ *   less see-through, and white/black text.
  * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's colour.
  * - Excluded: neutral, struck through, with a "no" sign.
  *
@@ -99,13 +104,15 @@ fun TagPill(
     // colour over a dark backdrop, the darkest tone that pill can take.
     val bg = when {
         !colored -> neutral
-        onImage -> color.copy(alpha = 0.78f)
+        onImage -> color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass.copy(alpha = 0.55f))
         else -> color.copy(alpha = 0.35f).compositeOver(base)
     }
+    val rim = if (colored && onImage) color.copy(alpha = 0.85f) else null
     val fg = remember(color, bg, colored, onImage, muted) {
         when {
             !colored -> muted
-            onImage -> readableOn(Color.White, color.copy(alpha = 0.78f).compositeOver(OnImageGlass))
+            // Judged on the darkest backdrop the see-through pill can take.
+            onImage -> readableOn(Color.White, color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass))
             else -> readableOn(color, bg, 4.8)
         }
     }
@@ -141,7 +148,9 @@ fun TagPill(
     }
     if (maxWidth != Dp.Unspecified) m = m.widthIn(max = maxWidth)
     Row(
-        m.heightIn(min = minH).clip(CircleShape).background(bg).padding(horizontal = hPad, vertical = vPad),
+        m.heightIn(min = minH).clip(CircleShape).background(bg)
+            .then(if (rim != null) Modifier.border(1.dp, rim, CircleShape) else Modifier)
+            .padding(horizontal = hPad, vertical = vPad),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val lead: ImageVector? = when (state) {
