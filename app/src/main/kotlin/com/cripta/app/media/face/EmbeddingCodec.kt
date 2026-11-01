@@ -34,3 +34,39 @@ object EmbeddingCodec {
         }
     }
 }
+
+/** One face of a track as stored: its frame and moment, quality, width (px), place ("x,y,w,h" fractions) and embedding. */
+class StoredFace(val frame: Int, val timeMs: Long, val quality: Float, val width: Int, val box: FloatArray, val embedding: FloatArray)
+
+/**
+ * The faces of a track, kept so that the user can split it: about 150 bytes each (the embedding
+ * as [EmbeddingCodec] stores it). A leading version byte; anything else reads as no faces.
+ */
+object FaceCodec {
+    private const val V1: Byte = 1
+    private const val SIZE = 2 + 8 + 4 + 2 + 8 + 4 + 128
+
+    fun encode(list: List<StoredFace>): ByteArray {
+        if (list.isEmpty()) return ByteArray(0)
+        val b = ByteBuffer.allocate(1 + list.size * SIZE)
+        b.put(V1)
+        for (f in list) {
+            b.putShort(f.frame.toShort()); b.putLong(f.timeMs); b.putFloat(f.quality)
+            b.putShort(f.width.coerceIn(0, Short.MAX_VALUE.toInt()).toShort())
+            for (i in 0 until 4) b.putShort(((f.box.getOrNull(i) ?: 0f) * 10_000).roundToInt().coerceIn(0, 10_000).toShort())
+            b.put(EmbeddingCodec.encode(listOf(f.embedding)))
+        }
+        return b.array()
+    }
+
+    fun decode(bytes: ByteArray): List<StoredFace> {
+        if (bytes.isEmpty() || bytes[0] != V1 || (bytes.size - 1) % SIZE != 0) return emptyList()
+        val b = ByteBuffer.wrap(bytes, 1, bytes.size - 1)
+        return List((bytes.size - 1) / SIZE) {
+            val frame = b.short.toInt(); val time = b.long; val q = b.float; val w = b.short.toInt()
+            val box = FloatArray(4) { b.short / 10_000f }
+            val e = ByteArray(4 + 128).also { b.get(it) }
+            StoredFace(frame, time, q, w, box, EmbeddingCodec.decode(e).first())
+        }
+    }
+}

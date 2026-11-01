@@ -303,6 +303,21 @@ data class FaceTrackEntity(
     val times: String = "",
     /** Where the best face is in its picture, as fractions of it: "x,y,w,h" (empty for older scans). */
     val box: String = "",
+    /** Each face of the track (see [com.cripta.app.media.face.FaceCodec]), to split it; empty for older scans. */
+    val sightings: ByteArray = ByteArray(0),
+)
+
+/**
+ * A face the user deleted: found again in that media ([fileId]) it is left out; with no media
+ * ("Non è un volto") it is left out everywhere.
+ */
+@Entity(tableName = "face_ignored", indices = [Index("fileId")])
+data class IgnoredFaceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val fileId: String?,
+    /** Its embeddings, as a track keeps them (see [com.cripta.app.media.face.EmbeddingCodec]). */
+    val embeddings: ByteArray,
+    val createdAt: Long,
 )
 
 /** A person: named or not; [ignored] = "non è una persona" (its faces, and similar new ones, are hidden). */

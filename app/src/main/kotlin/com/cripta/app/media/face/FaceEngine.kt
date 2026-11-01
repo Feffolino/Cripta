@@ -8,7 +8,9 @@ import kotlin.math.sqrt
 
 /** Why a detected face is not used for recognition; shown in the diagnostics. */
 enum class FaceReject(val label: String) {
-    LOW_SCORE("incerti"), SMALL("troppo piccoli"), PROFILE("di profilo"), BLURRY("sfocati");
+    LOW_SCORE("incerti"), SMALL("troppo piccoli"), PROFILE("di profilo"), BLURRY("sfocati"),
+    /** Like a face the user deleted from this media, or marked as not a face. */
+    IGNORED("eliminati da te");
 
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }

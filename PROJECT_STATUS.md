@@ -42,7 +42,11 @@ viewed in an internal player that never writes plaintext to disk. Product contex
   and Home, on/off and size in Settings); faces found by mistake can be cleared by period or media.
   Within one media, tracks of one person that never share a frame are joined (`FaceTracker.JOIN`;
   older scans are joined from the stored tracks, not re-read); in the details a long press selects
-  faces to join ("Stessa persona") or delete, with "Annulla".
+  faces to join ("Stessa persona") or delete, with "Annulla". Deleted faces are remembered
+  (`face_ignored`: per media, or everywhere for "Non è un volto") and left out of new analyses;
+  each face of a track is kept (`face_tracks.sightings`) so a track can be split by moment (older
+  scans: after "Rianalizza"); unclear faces fold in the details; "Da sistemare" groups unassigned
+  faces across the vault; decoded embeddings are cached for suggestions and groups.
 - **Home:** summary, favourites, people, continue watching, shelves.
 - **Download:** in-app link downloader (yt-dlp) with quality choice, queue and default destination.
 - **Backup:** passphrase-encrypted archive of the whole vault (files, folders, tags, saved filters,

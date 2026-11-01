@@ -17,6 +17,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import kotlinx.coroutines.delay
 import com.cripta.app.ui.components.CriptaAlertDialog
 import androidx.compose.foundation.Image
@@ -81,6 +84,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     var adding by remember(file.id) { mutableStateOf(false) }
     /** Faces picked with a long press, for "Stessa persona" and "Elimina". */
     var selected by remember(file.id) { mutableStateOf(emptySet<Long>()) }
+    var showUnclear by remember(file.id) { mutableStateOf(false) }
     val undo by vm.faceUndo.collectAsStateWithLifecycle()
     LaunchedEffect(file.id) { vm.tidyFaces(file.id) }
     LaunchedEffect(undo) {
@@ -96,6 +100,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         // Faces gone meanwhile (joined, deleted, analysed again) leave the selection.
         val chosen = selected.filterTo(HashSet()) { id -> shown.any { it.id == id } }
         fun toggle(id: Long) { selected = if (id in chosen) chosen - id else chosen + id }
+        // Faces nearly always found by mistake wait folded at the end.
+        val (unclear, clear) = shown.partition { FaceRepository.uncertain(it, isVideo) }
         if (shown.isEmpty() && links.isEmpty()) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -105,45 +111,36 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 Text(if (chosen.size == 1) "1 volto" else "${chosen.size} volti", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { Text("Stessa persona") }
                 TextButton(onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() }) {
                     Text("Elimina", color = MaterialTheme.colorScheme.error)
                 }
+                TextButton(onClick = { vm.deleteFaces(file.id, chosen, everywhere = true); selected = emptySet() }) {
+                    Text("Non è un volto", color = MaterialTheme.colorScheme.error)
+                }
             }
-        } else if (shown.size >= 2) {
+        } else if (clear.size >= 2) {
             Text("Tieni premuto un volto per unirlo a un altro della stessa persona o per eliminarlo.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        for (t in shown) {
-            val p = t.personId?.let { byId[it] }
-            val on = t.id in chosen
-            val tap = Modifier.combinedClickable(onClickLabel = if (chosen.isEmpty()) "Modifica" else if (on) "Deseleziona" else "Seleziona",
-                onLongClickLabel = "Seleziona", onLongClick = { toggle(t.id) }) { if (chosen.isEmpty()) editing = t else toggle(t.id) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(tap) {
-                    FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp,
-                        if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
-                    if (on) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary).padding(3.dp))
-                }
-                Column(Modifier.weight(1f).then(tap)) {
-                    Text(when {
-                        p == null -> "Sconosciuto · tocca per dire chi è"
-                        else -> p.title
-                    }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        color = if (p == null || p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                    if (isVideo) {
-                        val moments = t.moments.ifEmpty { listOf(t.timeMs) }
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            moments.forEach { ms ->
-                                com.cripta.app.ui.components.ActionChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { Text(clock(ms)) })
-                            }
-                        }
+        @Composable
+        fun row(t: TrackCard) = FaceRow(t, t.personId?.let { byId[it] }, file, isVideo, vm, on = t.id in chosen, selecting = chosen.isNotEmpty(),
+            onTap = { if (chosen.isEmpty()) editing = t else toggle(t.id) }, onLongPress = { toggle(t.id) })
+        for (t in clear) row(t)
+        if (unclear.isNotEmpty()) {
+            TextButton(onClick = { showUnclear = !showUnclear }) {
+                Text(if (showUnclear) "Nascondi i volti poco chiari" else if (unclear.size == 1) "Un altro volto poco chiaro" else "Altri ${unclear.size} volti poco chiari")
+            }
+            AnimatedVisibility(showUnclear, enter = fadeIn(tween(220)) + expandVertically(tween(220)), exit = fadeOut(tween(120)) + shrinkVertically(tween(120))) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Visti una sola volta o poco nitidi: spesso non sono volti.", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    for (t in unclear) row(t)
+                    TextButton(onClick = { vm.deleteFaces(file.id, unclear.map { it.id }) }) {
+                        Text("Elimina i volti poco chiari", color = MaterialTheme.colorScheme.error)
                     }
                 }
-                if (p != null && t.state != "suggested") FavoriteStar(p.entity.favorite, p.title) { vm.setPersonFavorite(p.id, !p.entity.favorite) }
             }
         }
         links.forEach { pid ->
@@ -182,16 +179,20 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val found by vm.foundFaces.collectAsStateWithLifecycle()
     val finding by vm.findingFaces.collectAsStateWithLifecycle()
     var picked by remember(file.id) { mutableStateOf<FaceRepository.FoundFace?>(null) }
+    val start by vm.findStart.collectAsStateWithLifecycle()
     found?.let { list ->
+        val at = list.firstOrNull()?.timeMs ?: start
+        val later = isVideo && list.isNotEmpty() && at > start
         if (picked == null) CriptaAlertDialog(onDismissRequest = { vm.foundFaces.value = null },
-            title = { Text(if (isVideo) "Volti in questo momento" else "Volti nella foto") },
+            title = { Text(if (!isVideo) "Volti nella foto" else if (later) "Volti a ${clock(at)}" else "Volti in questo momento") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     when {
-                        finding -> Text("Ricerca dei volti…")
-                        list.isEmpty() -> Text("Nessun volto trovato" + (if (isVideo) " qui: metti in pausa dove il volto si vede bene e riprova." else ".") +
+                        finding -> Text(if (isVideo) "Ricerca dei volti, anche nei secondi dopo…" else "Ricerca dei volti…")
+                        list.isEmpty() -> Text("Nessun volto trovato" + (if (isVideo) " qui né nei 15 secondi dopo: metti in pausa dove il volto si vede bene e riprova." else ".") +
                             " Puoi anche aggiungere il media a una persona senza volto.")
                         else -> {
+                            if (later) Text("Qui nessun volto: questi sono poco più avanti.", style = MaterialTheme.typography.bodyMedium)
                             Text("Tocca il volto da aggiungere. Insegna alla persona anche questo aspetto.", style = MaterialTheme.typography.bodySmall)
                             // Large, so faces are told apart at a glance: two per row in a portrait dialog.
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -204,6 +205,10 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                                 }
                             }
                         }
+                    }
+                    // Not the face wanted: look on from just after these (or after the stretch searched).
+                    if (isVideo && !finding) TextButton(onClick = { vm.findFaces(file, from = if (list.isEmpty()) start + 15_500 else at + 1_000) }) {
+                        Text("Cerca più avanti")
                     }
                 }
             },
@@ -221,12 +226,104 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
+    val also by vm.alsoFaces.collectAsStateWithLifecycle()
+    also?.takeIf { it.fileId == file.id }?.let { a -> AlsoDialog(a, byId[a.personId]?.title ?: FaceRepository.UNNAMED, vm) }
+}
+
+/** One face of the media: its picture (ring and tick when selected), who it is, its moments, the star. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, isVideo: Boolean, vm: ViewerViewModel,
+                    on: Boolean, selecting: Boolean, onTap: () -> Unit, onLongPress: () -> Unit) {
+    val tap = Modifier.combinedClickable(onClickLabel = if (!selecting) "Modifica" else if (on) "Deseleziona" else "Seleziona",
+        onLongClickLabel = "Seleziona", onLongClick = onLongPress, onClick = onTap)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(tap) {
+            FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp,
+                if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier, key = t.timeMs)
+            if (on) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary).padding(3.dp))
+        }
+        Column(Modifier.weight(1f).then(tap)) {
+            Text(p?.title ?: "Sconosciuto · tocca per dire chi è", style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = if (p == null || p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+            if (isVideo) {
+                val moments = t.moments.ifEmpty { listOf(t.timeMs) }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    moments.forEach { ms ->
+                        com.cripta.app.ui.components.ActionChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { Text(clock(ms)) })
+                    }
+                }
+            }
+        }
+        if (p != null && t.state != "suggested") FavoriteStar(p.entity.favorite, p.title) { vm.setPersonFavorite(p.id, !p.entity.favorite) }
+    }
+}
+
+/** "Anche questi sono …?": the other faces of the media like the person just named; tap to leave one out. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerViewModel) {
+    var off by remember(a) { mutableStateOf(emptySet<Long>()) }
+    val picked = a.faces.map { it.card.id }.filter { it !in off }
+    CriptaAlertDialog(onDismissRequest = { vm.alsoFaces.value = null },
+        title = { Text("Anche questi sono $name?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Volti simili in questo media. Tocca quelli che non sono $name.", style = MaterialTheme.typography.bodySmall)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    a.faces.forEach { s ->
+                        val on = s.card.id !in off
+                        Box(Modifier.clip(CircleShape).clickable(onClickLabel = if (on) "Escludi" else "Includi") {
+                            off = if (on) off + s.card.id else off - s.card.id
+                        }) {
+                            FaceAvatar(s.card.id, { vm.faceCrop(it) }, 88.dp,
+                                if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                            if (on) Icon(Icons.Filled.Check, "Incluso", tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.align(Alignment.BottomEnd).size(24.dp).clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary).padding(3.dp))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { vm.joinAlso(a, picked) }) { Text("Sì, unisci") } },
+        dismissButton = { TextButton(onClick = { vm.alsoFaces.value = null }) { Text("No") } })
+}
+
+/** "Dividi": the moments of a face that are someone else become a face of their own. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun SplitDialog(t: TrackCard, moments: List<Long>, vm: ViewerViewModel, onDismiss: () -> Unit) {
+    var picked by remember(t.id) { mutableStateOf(emptySet<Long>()) }
+    CriptaAlertDialog(onDismissRequest = onDismiss, title = { Text("Dividi") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Scegli i momenti in cui c'è un'altra persona: diventano un volto a parte, da assegnare.",
+                    style = MaterialTheme.typography.bodySmall)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    moments.forEach { ms ->
+                        com.cripta.app.ui.components.ChoiceChip(selected = ms in picked, onClick = { picked = if (ms in picked) picked - ms else picked + ms },
+                            label = { Text(clock(ms)) })
+                    }
+                }
+                TextButton(onClick = { vm.seekPlayer(t.fileId, maxOf(0L, (picked.minOrNull() ?: moments.first()) - 1_000), play = true) }) {
+                    Text("Guarda dal primo momento scelto")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = picked.isNotEmpty() && picked.size < moments.size, onClick = { vm.splitFace(t.fileId, t.id, picked); onDismiss() }) { Text("Dividi") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } })
 }
 
 /**
  * "Chi è?": the name of the face's person (renaming it renames them everywhere), or another person,
  * or a new one; for a suggestion, yes or no; for a placed face, "not them" and the star.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FaceEditor(
     t: TrackCard?, current: FaceRepository.Person?, people: List<FaceRepository.Person>, vm: ViewerViewModel,
@@ -235,6 +332,10 @@ private fun FaceEditor(
     val placed = t != null && current != null && t.state != "suggested"
     var name by remember(t?.id) { mutableStateOf(if (placed && current != null) current.entity.name else "") }
     var query by remember(t?.id) { mutableStateOf("") }
+    /** Moments "Dividi" can move (faces analysed before they were kept one by one have none). */
+    val moments by produceState(emptyList<Long>(), t?.id) { value = t?.let { vm.splittable(it.id) }.orEmpty() }
+    var splitting by remember(t?.id) { mutableStateOf(false) }
+    if (splitting && t != null) { SplitDialog(t, moments, vm) { splitting = false; onDismiss() }; return }
     CriptaAlertDialog(onDismissRequest = onDismiss,
         title = { Text(if (t == null) "Aggiungi a una persona" else "Chi è?") },
         text = {
@@ -250,9 +351,15 @@ private fun FaceEditor(
                             FavoriteStar(current.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
                             TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
                         }
-                        TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id)); onDismiss() }) {
-                            Text("Non è un volto, elimina", color = MaterialTheme.colorScheme.error)
-                        }
+                    }
+                }
+                if (t != null) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (moments.size >= 2) TextButton(onClick = { splitting = true }) { Text("Dividi…") }
+                    TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id)); onDismiss() }) {
+                        Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id), everywhere = true); onDismiss() }) {
+                        Text("Non è un volto", color = MaterialTheme.colorScheme.error)
                     }
                 }
                 if (placed) {

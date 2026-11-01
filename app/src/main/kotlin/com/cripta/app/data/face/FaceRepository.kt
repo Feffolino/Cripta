@@ -13,12 +13,14 @@ import com.cripta.app.data.db.FaceRejectionEntity
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.data.db.IgnoredFaceEntity
 import com.cripta.app.data.db.PersonEntity
 import com.cripta.app.data.db.PersonMediaEntity
 import com.cripta.app.data.db.TrackCard
 import com.cripta.app.data.db.TrackRow
 import com.cripta.app.media.ChannelMediaDataSource
 import com.cripta.app.media.face.EmbeddingCodec
+import com.cripta.app.media.face.FaceCodec
 import com.cripta.app.media.face.FaceEngine
 import com.cripta.app.media.face.FaceImage
 import com.cripta.app.media.face.FaceReject
@@ -26,6 +28,8 @@ import com.cripta.app.media.face.FaceStats
 import com.cripta.app.media.face.FaceTracker
 import com.cripta.app.media.face.FramePlan
 import com.cripta.app.media.face.Sighting
+import com.cripta.app.media.face.StoredFace
+import com.cripta.app.media.face.TrackDraft
 import com.cripta.app.media.face.TrackInfo
 import com.cripta.app.media.face.similarity
 import com.cripta.app.security.SessionManager
@@ -124,7 +128,9 @@ class FaceRepository @Inject constructor(
 
     /** Faces and links of media deleted for good (media in the trash keep theirs). */
     suspend fun purgeDeleted(): Int = mutex.withLock {
-        db.withTransaction { dao.purgeScans() + dao.purgeTracks() + dao.purgeLinks().also { dao.deleteEmptyPersons() } }
+        db.withTransaction {
+            dao.purgeScans() + dao.purgeTracks() + dao.purgeLinks().also { dao.deleteEmptyPersons() } + dao.purgeRejections() + dao.purgeIgnored()
+        }
     }
 
     /** Forget [fileId]'s faces (the user's own links stay) before analysing it again. */
@@ -180,7 +186,13 @@ class FaceRepository @Inject constructor(
             android.util.Log.w("FaceRepository", "not readable (${e.javaClass.simpleName})")
             "skip:errore di lettura (${e.javaClass.simpleName})"
         }
-        val tracks = FaceTracker.build(sightings)
+        // Faces the user deleted from this media, or said are not a face, are not found again.
+        val ignored = dao.ignoredFor(file.id).map { it.fileId to EmbeddingCodec.decode(it.embeddings) }
+        val tracks = FaceTracker.build(sightings).filter { t ->
+            val gone = ignored.any { (f, e) -> maxPair(t.embeddings, e) >= if (f == null) NOT_A_FACE else DELETED }
+            if (gone) rejects.merge(FaceReject.IGNORED, t.sightings.size, Int::plus)
+            !gone
+        }
         db.withTransaction {
             // Faces added by hand (no sampled frame) are the user's: a new analysis keeps them.
             val old = dao.trackRowsOf(listOf(file.id)).filter { it.frames != 0L }
@@ -188,10 +200,14 @@ class FaceRepository @Inject constructor(
             val added = tracks.map { t ->
                 val best = t.best.first()
                 val face = best.payload as FaceEngine.Face
-                val box = face.box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()
+                val stored = t.sightings.map { s ->
+                    val f = s.payload as FaceEngine.Face
+                    StoredFace(s.frame, s.timeMs, s.quality, f.det.w.toInt(), f.box ?: FloatArray(4), s.embedding)
+                }
                 TrackInfo(dao.addTrack(FaceTrackEntity(fileId = file.id, frames = t.frames, timeMs = best.timeMs, faceCount = t.sightings.size,
                     width = face.det.w.toInt(), quality = t.quality, embeddings = EmbeddingCodec.encode(t.embeddings),
-                    crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = box)), file.id, t.frames, t.embeddings, t.quality)
+                    crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = boxText(face.box),
+                    sightings = FaceCodec.encode(stored))), file.id, t.frames, t.embeddings, t.quality)
             }
             if (old.isNotEmpty()) carry(old, added)
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
@@ -298,6 +314,8 @@ class FaceRepository @Inject constructor(
         return img
     }
 
+    private fun boxText(box: FloatArray?) = box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()
+
     private fun jpeg(face: FaceImage): ByteArray {
         val bmp = Bitmap.createBitmap(face.argb, face.width, face.height, Bitmap.Config.ARGB_8888)
         return ByteArrayOutputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it); bmp.recycle(); it.toByteArray() }
@@ -357,8 +375,9 @@ class FaceRepository @Inject constructor(
         val main get() = !entity.ignored && (entity.name.isNotBlank() || entity.favorite || media.size >= 2)
     }
 
-    class Overview(val scans: List<FaceScanEntity>, val media: Int, val people: List<Person>, val files: Map<String, FileEntity>) {
-    }
+    /** [unassigned]: faces nobody was given yet (the "Da sistemare" count). */
+    class Overview(val scans: List<FaceScanEntity>, val media: Int, val people: List<Person>, val files: Map<String, FileEntity>,
+                   val unassigned: Int = 0)
 
     private fun <T> live(block: (com.cripta.app.data.db.FaceDao) -> Flow<T>): Flow<T> =
         session.database.flatMapLatest { d -> if (d == null) emptyFlow() else block(d.faceDao()) }
@@ -395,7 +414,7 @@ class FaceRepository @Inject constructor(
         }.filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.entity.favorite }
             .sortedWith(compareBy<Person>({ it.entity.ignored }, { !it.entity.favorite }, { !it.main }, { -it.media.size }, { it.title.lowercase() }))
         val media = i.files.count { VaultRepository.isVideo(it.mimeType) || VaultRepository.isImage(it.mimeType) }
-        return Overview(i.scans.filter { it.fileId in byId }, media, people, byId)
+        return Overview(i.scans.filter { it.fileId in byId }, media, people, byId, faces[null].orEmpty().size)
     }
 
     fun people(): Flow<Overview> = overview
@@ -577,9 +596,37 @@ class FaceRepository @Inject constructor(
             }
         } else photo(file, 2 * FRAME_SIDE)
         img ?: return@withContext emptyList()
+        found(img, timeMs)
+    }
+
+    private fun found(img: FaceImage, timeMs: Long): List<FoundFace> =
         withEngine { it.analyze(img, all = true) }.filter { it.embedding != null }.sortedByDescending { it.det.w }.map { f ->
             val p = f.preview!!
             FoundFace(f, Bitmap.createBitmap(p.argb, p.width, p.height, Bitmap.Config.ARGB_8888), timeMs)
+        }
+
+    /**
+     * "Aggiungi un volto": the faces at [timeMs]; in a video with none there, those of the first
+     * moment with a face in the next seconds ([AHEAD_MS], each [FoundFace.timeMs] says where).
+     */
+    suspend fun facesFrom(file: FileEntity, timeMs: Long): List<FoundFace> = withContext(Dispatchers.Default) {
+        if (!VaultRepository.isVideo(file.mimeType)) return@withContext facesAt(file, timeMs)
+        val r = MediaMetadataRetriever()
+        val channel = repo.seekableChannel(file)
+        try {
+            r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+            val dur = file.durationMs?.takeIf { it > 0 } ?: r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            for (dt in AHEAD_MS) {
+                coroutineContext.ensureActive()
+                val t = timeMs + dt
+                if (dur != null && t >= dur) break
+                val img = runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()?.let { faceImage(it, 2 * FRAME_SIDE) } ?: continue
+                val list = found(img, t)
+                if (list.isNotEmpty()) return@withContext list
+            }
+            emptyList()
+        } finally {
+            runCatching { r.release() }; runCatching { channel.close() }
         }
     }
 
@@ -591,7 +638,7 @@ class FaceRepository @Inject constructor(
         val face = f.face
         val id = dao.addTrack(FaceTrackEntity(fileId = file.id, frames = 0L, timeMs = f.timeMs, faceCount = 1, width = face.det.w.toInt(),
             quality = face.quality, embeddings = EmbeddingCodec.encode(listOf(face.embedding!!)), crop = jpeg(face.preview!!),
-            times = f.timeMs.toString(), box = face.box?.joinToString(",") { "%.4f".format(java.util.Locale.ROOT, it) }.orEmpty()))
+            times = f.timeMs.toString(), box = boxText(face.box)))
         dao.confirm(id, personId)
         dao.removePersonMedia(personId, file.id)
     }
@@ -627,27 +674,94 @@ class FaceRepository @Inject constructor(
      * before, and faces in media where they already are, are left out.
      */
     suspend fun suggestionsFor(personId: Long, limit: Int = 300): List<Suggestion> = withContext(Dispatchers.Default) {
-        val rows = dao.allTrackRows()
+        val rows = dao.allTrackMeta()
         val own = rows.filter { it.personId == personId && it.state != "suggested" }
         if (own.isEmpty()) return@withContext emptyList()
-        val ownEmb = own.map { EmbeddingCodec.decode(it.embeddings) }
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
         val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
         val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
+        val candidates = rows.filter { it.personId == null && it.id !in refused && it.fileId !in ownMedia && it.fileId in live }
+        val emb = embeddings(own.map { it.id } + candidates.map { it.id })
+        val ownEmb = own.mapNotNull { emb[it.id] }
         val scored = ArrayList<Pair<Long, Float>>()
-        for (r in rows) {
+        for (r in candidates) {
             coroutineContext.ensureActive()
-            if (r.personId != null || r.id in refused || r.fileId in ownMedia || r.fileId !in live) continue
-            val emb = EmbeddingCodec.decode(r.embeddings)
-            val sims = ownEmb.map { o -> var best = -1f; for (x in o) for (y in emb) best = maxOf(best, similarity(x, y)); best }
-                .sortedDescending()
-            val score = sims.take(3).average().toFloat().let { mean -> maxOf(mean, sims.first() - 0.04f) }
+            val score = score(ownEmb, emb[r.id] ?: continue)
             if (score >= SUGGEST) scored += r.id to score
         }
         val top = scored.sortedByDescending { it.second }.take(limit)
         val cards = dao.allCards().associateBy { it.id }
         top.mapNotNull { (id, sc) -> cards[id]?.let { Suggestion(it, sc) } }
     }
+
+    /** How alike a face is to a person's faces: the mean of its three closest matches (or the closest, a little less). */
+    private fun score(own: List<List<FloatArray>>, emb: List<FloatArray>): Float {
+        val sims = own.map { o -> var best = -1f; for (x in o) for (y in emb) best = maxOf(best, similarity(x, y)); best }.sortedDescending()
+        return sims.take(3).average().toFloat().let { mean -> maxOf(mean, sims.first() - 0.04f) }
+    }
+
+    /**
+     * After "Chi è?" on [trackId]: the other unassigned faces of its media that look like its person
+     * and share no frame with it, most alike first, for "Anche questi?". Never joined without a yes.
+     */
+    suspend fun alikeInMedia(trackId: Long): List<Suggestion> = withContext(Dispatchers.Default) {
+        val rows = dao.allTrackMeta()
+        val t = rows.firstOrNull { it.id == trackId } ?: return@withContext emptyList()
+        val pid = t.personId ?: return@withContext emptyList()
+        val refused = dao.rejections().filter { it.personId == pid }.map { it.trackId }.toSet()
+        val candidates = rows.filter { it.fileId == t.fileId && it.personId == null && it.id !in refused && it.frames != 0L && it.frames and t.frames == 0L }
+        if (candidates.isEmpty()) return@withContext emptyList()
+        val own = rows.filter { it.personId == pid && it.state != "suggested" }
+        val emb = embeddings(own.map { it.id } + candidates.map { it.id })
+        val ownEmb = own.mapNotNull { emb[it.id] }
+        val cards = dao.cardsOf(t.fileId).associateBy { it.id }
+        candidates.mapNotNull { r ->
+            val s = score(ownEmb, emb[r.id] ?: return@mapNotNull null)
+            if (s >= SUGGEST) cards[r.id]?.let { Suggestion(it, s) } else null
+        }.sortedByDescending { it.similarity }
+    }
+
+    /** Unassigned faces of one person (as far as they look alike) in different media. */
+    class FaceGroup(val cards: List<TrackCard>)
+
+    /**
+     * "Da sistemare": every unassigned face of the vault, grouped by likeness ([GROUP]) so that a
+     * group can be named or deleted at once; biggest groups first, faces seen alone last.
+     */
+    suspend fun unsortedGroups(): List<FaceGroup> = withContext(Dispatchers.Default) {
+        val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
+        val free = dao.allTrackMeta().filter { it.personId == null && it.fileId in live }.sortedByDescending { it.quality }
+        val emb = embeddings(free.map { it.id })
+        val kept = free.filter { emb[it.id] != null }
+        val groups = FaceTracker.cluster(kept.map { emb.getValue(it.id).first() }, GROUP)
+        val cards = dao.allCards().associateBy { it.id }
+        groups.map { g -> FaceGroup(g.mapNotNull { cards[kept[it].id] }) }.filter { it.cards.isNotEmpty() }.sortedByDescending { it.cards.size }
+    }
+
+    /** A group of faces given to [personId] at once. */
+    suspend fun assignAll(trackIds: Collection<Long>, personId: Long): Undo {
+        val before = trackIds.mapNotNull { dao.card(it) }
+        change { for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons() }
+        return { change { for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() } }
+    }
+
+    // ---- Embeddings in memory ---------------------------------------------------------------
+
+    private val embeddingCache = java.util.concurrent.ConcurrentHashMap<Long, List<FloatArray>>()
+    @Volatile private var cacheDb: Any? = null
+
+    /** The embeddings of [ids], decoded once per vault; a change to a track's embeddings calls [stale]. */
+    private suspend fun embeddings(ids: Collection<Long>): Map<Long, List<FloatArray>> {
+        val d = db
+        if (cacheDb !== d) { embeddingCache.clear(); cacheDb = d }
+        val missing = ids.filter { !embeddingCache.containsKey(it) }
+        for (chunk in missing.chunked(500)) for (r in dao.embeddingsOf(chunk)) embeddingCache[r.id] = EmbeddingCodec.decode(r.embeddings)
+        val out = HashMap<Long, List<FloatArray>>(ids.size)
+        for (id in ids) embeddingCache[id]?.let { out[id] = it }
+        return out
+    }
+
+    private fun stale(ids: Collection<Long>) { ids.forEach { embeddingCache.remove(it); crops.remove(it) } }
 
     /** The picture [card] was found in (a video's frame, or the photo), at most [side] px. */
     suspend fun frameOf(card: TrackCard, side: Int = 720): Bitmap? = withContext(Dispatchers.IO) {
@@ -692,8 +806,12 @@ class FaceRepository @Inject constructor(
         val drop = rows.map { it.id }.filter { it != keep.id }
         val times = rows.flatMap { r -> r.times.split(',').mapNotNull { it.toLongOrNull() }.ifEmpty { listOf(r.timeMs) } }.distinct().sorted()
         val embeddings = FaceTracker.combine(rows.map { FaceTracker.Part(EmbeddingCodec.decode(it.embeddings), it.faceCount, it.quality) })
+        // The faces one by one only when every part has them (older scans do not): else no "Dividi".
+        val faces = rows.map { FaceCodec.decode(it.sightings) }
+        val sightings = if (faces.all { it.isNotEmpty() }) FaceCodec.encode(faces.flatten()) else ByteArray(0)
         dao.joinedTrack(keep.id, rows.fold(0L) { m, r -> m or r.frames }, rows.sumOf { it.faceCount },
-            EmbeddingCodec.encode(embeddings), times.joinToString(","))
+            EmbeddingCodec.encode(embeddings), times.joinToString(","), sightings)
+        stale(listOf(keep.id))
         dao.moveTrackRejections(drop, keep.id)
         dao.deleteRejectionsOfTracks(drop)
         for (d in drop) dao.moveCover(d, keep.id)
@@ -752,25 +870,32 @@ class FaceRepository @Inject constructor(
                 rejections.forEach { dao.addRejection(it) }
                 covers.forEach { (p, t) -> dao.setCover(p, t) }
             }
+            stale(ids)
         }
     }
 
-    /** "Elimina": faces that are not a face (or not wanted) go, with their person's choices about them. */
-    suspend fun deleteFaces(trackIds: Collection<Long>): Undo {
+    /**
+     * "Elimina": faces found by mistake go, with their person's choices about them, and are not
+     * found again in their media; [everywhere] ("Non è un volto"): in no media.
+     */
+    suspend fun deleteFaces(trackIds: Collection<Long>, everywhere: Boolean = false): Undo {
         val ids = trackIds.distinct()
         val before = dao.tracks(ids)
         val rejections = dao.rejectionsOfTracks(ids)
         val all = dao.persons()
         val covers = all.filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
         val people = all.filter { p -> before.any { it.personId == p.id } }
-        change {
+        val now = System.currentTimeMillis()
+        val remembered = change {
             dao.deleteRejectionsOfTracks(ids)
             dao.deleteTracks(ids)
             for ((p, _) in covers) dao.setCover(p, null)
             dao.deleteEmptyPersons()
+            before.map { dao.addIgnored(IgnoredFaceEntity(fileId = if (everywhere) null else it.fileId, embeddings = it.embeddings, createdAt = now)) }
         }
         return {
             change {
+                dao.deleteIgnored(remembered)
                 // A person left with nothing went with the face: back first, with their id.
                 val now = dao.persons().map { it.id }.toSet()
                 people.filter { it.id !in now }.forEach { dao.putPerson(it) }
@@ -780,6 +905,58 @@ class FaceRepository @Inject constructor(
             }
         }
     }
+
+    /** The moments of [trackId] that "Dividi" can move (none for faces analysed before faces were kept one by one). */
+    suspend fun splittable(trackId: Long): List<Long> =
+        dao.tracks(listOf(trackId)).firstOrNull()?.let { r -> FaceCodec.decode(r.sightings).map { it.timeMs }.distinct().sorted() }.orEmpty()
+
+    /**
+     * "Dividi": the faces of [trackId] at [moments] are someone else: they become a face of their
+     * own, unassigned, and the rest stays with its person. Null when nothing (or everything) would move.
+     */
+    suspend fun splitFace(trackId: Long, moments: Set<Long>): Undo? {
+        val row = dao.tracks(listOf(trackId)).firstOrNull() ?: return null
+        val (moving, staying) = FaceCodec.decode(row.sightings).partition { it.timeMs in moments }
+        if (moving.isEmpty() || staying.isEmpty()) return null
+        val file = repo.fileById(row.fileId) ?: return null
+        val out = draft(moving); val rest = draft(staying)
+        val outBest = out.best.first().payload as StoredFace
+        val restBest = rest.best.first().payload as StoredFace
+        // The face shown stays when its moment stays; else both parts get their own, found again on the frame.
+        val restPic = if (staying.any { it.timeMs == row.timeMs }) null else picture(file, restBest)
+        val outPic = picture(file, outBest)
+        val newId = change {
+            dao.putTrack(row.copy(frames = rest.frames, faceCount = rest.sightings.size, embeddings = EmbeddingCodec.encode(rest.embeddings),
+                times = rest.times.joinToString(","), sightings = FaceCodec.encode(staying), quality = rest.quality,
+                timeMs = if (restPic != null) restBest.timeMs else row.timeMs, crop = restPic?.crop ?: row.crop,
+                box = restPic?.box ?: row.box, width = restPic?.width ?: row.width))
+            dao.addTrack(FaceTrackEntity(fileId = row.fileId, frames = out.frames, timeMs = outBest.timeMs, faceCount = out.sightings.size,
+                width = outPic?.width ?: outBest.width, quality = out.quality, embeddings = EmbeddingCodec.encode(out.embeddings),
+                crop = outPic?.crop ?: row.crop, times = out.times.joinToString(","), box = outPic?.box ?: boxText(outBest.box),
+                sightings = FaceCodec.encode(moving)))
+        }
+        stale(listOf(trackId))
+        return { change { dao.deleteTracks(listOf(newId)); dao.putTrack(row) }; stale(listOf(trackId)) }
+    }
+
+    private fun draft(faces: List<StoredFace>) = TrackDraft(faces.map { Sighting(it.frame, it.timeMs, it.embedding, it.quality, it) })
+
+    private class Picture(val crop: ByteArray, val box: String, val width: Int)
+
+    /** [f]'s face found again on its frame (the nearest to where it was): its picture. */
+    private suspend fun picture(file: FileEntity, f: StoredFace): Picture? {
+        val cx = f.box[0] + f.box[2] / 2; val cy = f.box[1] + f.box[3] / 2
+        val near = runCatching { facesAt(file, f.timeMs) }.getOrNull().orEmpty().mapNotNull { ff ->
+            ff.face.box?.let { b -> ff to (b[0] + b[2] / 2 - cx).let { it * it } + (b[1] + b[3] / 2 - cy).let { it * it } }
+        }.minByOrNull { it.second }?.first ?: return null
+        return Picture(jpeg(near.face.preview!!), boxText(near.face.box), near.face.det.w.toInt())
+    }
+
+    /** How many faces the user deleted (left out of new analyses), live. */
+    fun ignoredCount(): Flow<Int> = live { it.observeIgnoredCount() }
+
+    /** Forget the deleted faces: a new analysis may find them again. */
+    suspend fun forgetIgnored() = change { dao.deleteAllIgnored() }
 
     // ---- Clearing faces found by mistake ----------------------------------------------------
 
@@ -815,7 +992,8 @@ class FaceRepository @Inject constructor(
     /** "Ricomincia da capo": every face and person is forgotten ([everything]: the user's choices too). */
     suspend fun resetAll(everything: Boolean) = change {
         dao.deleteAllScans(); dao.deleteAllTracks(); dao.deleteAllMerges()
-        if (everything) { dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections() }
+        if (everything) { dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections(); dao.deleteAllIgnored() }
+        embeddingCache.clear()
     }
 
     // ---- Diagnostics -----------------------------------------------------------------------
@@ -852,9 +1030,11 @@ class FaceRepository @Inject constructor(
         lines.joinToString("\n")
     }
 
-    private fun maxPair(a: TrackInfo, b: TrackInfo): Float {
+    private fun maxPair(a: TrackInfo, b: TrackInfo): Float = maxPair(a.embeddings, b.embeddings)
+
+    private fun maxPair(a: List<FloatArray>, b: List<FloatArray>): Float {
         var best = -1f
-        for (x in a.embeddings) for (y in b.embeddings) best = maxOf(best, similarity(x, y))
+        for (x in a) for (y in b) best = maxOf(best, similarity(x, y))
         return best
     }
 
@@ -896,6 +1076,21 @@ class FaceRepository @Inject constructor(
         const val VERSION = 4
         /** Media analysed by this version have their faces of one person joined by [tidyOld] instead of analysed again. */
         private const val TIDY_FROM = 3
+        /** A new face this alike to one the user deleted from the same media is that face again. */
+        private const val DELETED = 0.5f
+        /** A new face this alike to one marked "Non è un volto" is left out in any media (stricter: other light, other day). */
+        private const val NOT_A_FACE = 0.6f
+        /** Unassigned faces of different media this alike (to a group's mean) are offered together in "Da sistemare". */
+        const val GROUP = 0.45f
+        /** Where "Aggiungi un volto" looks when the paused frame has no face: half a second apart, then wider. */
+        private val AHEAD_MS = longArrayOf(0, 500, 1_000, 1_500, 2_000, 3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000)
+        /**
+         * A face shown folded under "poco chiari" in the details: unassigned and of low quality, or
+         * (videos) seen in a single frame, nearly always a mistake of the analysis.
+         */
+        fun uncertain(c: TrackCard, video: Boolean) = c.personId == null && c.state != "manual" && c.state != "carried" &&
+            (c.quality < LOW_QUALITY || (video && c.faceCount <= 1))
+        private const val LOW_QUALITY = 0.3f
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
         private const val CARRY = 0.6f
         private val VOLTO = Regex("Volto (\\d+)")

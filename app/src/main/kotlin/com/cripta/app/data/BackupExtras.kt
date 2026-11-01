@@ -5,6 +5,7 @@ import com.cripta.app.data.db.CriptaDatabase
 import com.cripta.app.data.db.FaceRejectionEntity
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
+import com.cripta.app.data.db.IgnoredFaceEntity
 import com.cripta.app.data.db.PersonEntity
 import com.cripta.app.data.db.PersonMediaEntity
 import com.cripta.app.data.db.RejectedPrintEntity
@@ -75,7 +76,15 @@ internal object BackupExtras {
                     put(JSONObject().put("id", t.id).put("f", fileIndex[t.fileId]).put("frames", t.frames).put("time", t.timeMs)
                         .put("count", t.faceCount).put("width", t.width).put("quality", t.quality.toDouble())
                         .put("person", t.personId ?: JSONObject.NULL).put("state", t.state).put("sim", t.similarity.toDouble())
-                        .put("times", t.times).put("box", t.box))
+                        .put("times", t.times).put("box", t.box)
+                        .put("sight", java.util.Base64.getEncoder().encodeToString(t.sightings)))
+                }
+            })
+            .put("ignored", JSONArray().apply {
+                faces.allIgnored().forEach { g ->
+                    val f = g.fileId?.let { fileIndex[it] ?: return@forEach }
+                    put(JSONObject().put("f", f ?: JSONObject.NULL).put("at", g.createdAt)
+                        .put("emb", java.util.Base64.getEncoder().encodeToString(g.embeddings)))
                 }
             })
             .put("rejections", JSONArray().apply {
@@ -161,11 +170,20 @@ internal object BackupExtras {
                     faceCount = t.optInt("count"), width = t.optInt("width"), quality = t.optDouble("quality").toFloat(),
                     embeddings = emb, crop = crop, personId = t.optLongOrNull("person")?.let { personIds[it] },
                     state = t.optString("state", "auto"), similarity = t.optDouble("sim", 0.0).toFloat(),
-                    times = t.optString("times"), box = t.optString("box")))
+                    times = t.optString("times"), box = t.optString("box"),
+                    sightings = runCatching { java.util.Base64.getDecoder().decode(t.optString("sight")) }.getOrDefault(ByteArray(0))))
                 trackIds[t.getLong("id")] = id
             }
         }
         for ((pid, old) in covers) trackIds[old]?.let { faces.setCover(pid, it) }
+        o.optJSONArray("ignored")?.let { a ->
+            for (i in 0 until a.length()) {
+                val g = a.getJSONObject(i)
+                val f = if (g.isNull("f")) null else file(g.get("f")) ?: continue
+                val emb = runCatching { java.util.Base64.getDecoder().decode(g.optString("emb")) }.getOrNull() ?: continue
+                faces.addIgnored(IgnoredFaceEntity(fileId = f, embeddings = emb, createdAt = g.optLong("at")))
+            }
+        }
         o.optJSONArray("rejections")?.let { a ->
             for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
