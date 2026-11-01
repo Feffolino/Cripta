@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -2185,8 +2186,18 @@ private fun DetailsSheet(
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
+                    // A long press copies the whole name (it may be cut here), with a short "Titolo copiato".
+                    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                    val ctx = LocalContext.current
+                    val copyName = {
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(file.originalName))
+                        android.widget.Toast.makeText(ctx, "Titolo copiato", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                     Text(file.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .pointerInput(file.originalName) { detectTapGestures(onLongPress = { copyName() }) }
+                            .semantics { onLongClick(label = "Copia il titolo") { copyName(); true } })
                     // Type and date on one quiet line: no chip around the type.
                     Text(
                         kind + (ext?.let { " · $it" } ?: "") + " · " +
