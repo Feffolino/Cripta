@@ -144,8 +144,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   and several buttons that may not fit side by side go in a `FlowRow`. Two lines only where the
   control is built for them (the details sheet's icon actions), and then balanced.
 - **Details panel** (viewer): the file (preview, name, type and date, its actions), its figures
-  side by side (`DetailFigure`: the value in `titleMedium`, what it is in small under it; size,
-  length, resolution with 4K/Full HD for videos; they wrap, never cut), then Persone, Etichette,
+  in equal columns across the panel (`DetailFigure`: the value in `titleLarge`, what it is in
+  small under it, "Risoluzione · 4K" for videos; two balanced lines at most, never cut), the link
+  as a single-line field (paste or copy at its end, saved on Done), then Persone, Etichette,
   Intro e finale, Informazioni. Each section opens with `PanelHeading` (accent heading, optional
   line of help, optional action at its end) and 24dp more above it than under it. One main action
   per section, tonal; the rare ones in a ⋮ menu. Etichette shows the file's, pinned and recent

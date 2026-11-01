@@ -112,6 +112,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     DropdownMenuItem(text = { Text(if (shown.isEmpty()) "Perché nessun volto?" else "Come sono stati trovati") },
                         onClick = { menu = false; vm.describeFaces(file.id) })
                     DropdownMenuItem(text = { Text("Analizza di nuovo") }, onClick = { menu = false; vm.analyseFaces(file.id) })
+                    DropdownMenuItem(text = { Text("Cerca più a fondo") }, onClick = { menu = false; vm.analyseFaces(file.id, deep = true) })
                     if (unassigned) DropdownMenuItem(
                         text = { Text("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error) },
                         onClick = { menu = false; vm.clearDetectedFaces(file.id) })

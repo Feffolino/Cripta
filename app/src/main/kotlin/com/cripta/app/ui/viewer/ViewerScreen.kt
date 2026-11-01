@@ -2,6 +2,8 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
@@ -779,71 +781,39 @@ private fun InfoLine(label: String, value: String) {
 }
 
 /**
- * Source-link row of the Info dialog. With a link: tap copies it, the paste button replaces it with
- * the clipboard and the clear button removes it. Without one: a paste button adds it from the clipboard.
+ * The media's source link: a single-line field like every other (write it, or paste it with the
+ * button at its end; copy it when there is one). Saved on Done or when the field is left; emptied,
+ * it is removed.
  */
 @Composable
 private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val ctx = LocalContext.current
-    val paste: () -> Unit = {
-        val clip = clipboard.getText()?.text?.trim().orEmpty()
-        if (clip.isBlank()) {
-            android.widget.Toast.makeText(ctx, "Appunti vuoti", android.widget.Toast.LENGTH_SHORT).show()
-        } else {
-            onSet(clip)
-            android.widget.Toast.makeText(ctx, "Link salvato", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
-    if (value == null) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Link", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Nessun link", style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-            }
-            TextButton(onClick = paste) {
-                Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
-                com.cripta.app.ui.components.ButtonText("Incolla", modifier = Modifier.padding(start = 6.dp))
-            }
-        }
-        return
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { CopyableInfoLine("Link", value) }
-        IconButton(onClick = paste) {
-            Icon(Icons.Filled.ContentPaste, "Sostituisci con il link copiato", tint = MaterialTheme.colorScheme.primary)
-        }
-        IconButton(onClick = { onSet(null) }) {
-            Icon(Icons.Filled.Close, "Rimuovi link", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-/** Info row whose value is copied to the clipboard on a single tap (used for the source link). */
-@Composable
-private fun CopyableInfoLine(label: String, value: String) {
-    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
-    val ctx = LocalContext.current
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp)
-            .clickable {
-                clipboard.setText(androidx.compose.ui.text.AnnotatedString(value))
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    var text by remember(value) { mutableStateOf(value.orEmpty()) }
+    fun save() { val t = text.trim(); if (t != value.orEmpty()) onSet(t.ifBlank { null }) }
+    com.cripta.app.ui.components.CriptaTextField(
+        value = text, onValueChange = { text = it }, singleLine = true,
+        label = { Text("Link") },
+        placeholder = { Text("Scrivi o incolla il link") },
+        leadingIcon = { Icon(Icons.Filled.Link, null) },
+        trailingIcon = {
+            if (text.isBlank()) IconButton(onClick = {
+                val clip = clipboard.getText()?.text?.trim().orEmpty()
+                if (clip.isBlank()) android.widget.Toast.makeText(ctx, "Appunti vuoti", android.widget.Toast.LENGTH_SHORT).show()
+                else { text = clip; onSet(clip) }
+            }) { Icon(Icons.Filled.ContentPaste, "Incolla il link copiato") }
+            else IconButton(onClick = {
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(text.trim()))
                 android.widget.Toast.makeText(ctx, "Link copiato", android.widget.Toast.LENGTH_SHORT).show()
-            },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary, maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp))
-        }
-        Icon(Icons.Filled.ContentCopy, "Copia link", tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 8.dp).size(20.dp))
-    }
+            }) { Icon(Icons.Filled.ContentCopy, "Copia il link") }
+        },
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save(); focus.clearFocus() }),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            .onFocusChanged { if (!it.isFocused) save() },
+    )
 }
 
 @Composable
@@ -2248,17 +2218,17 @@ private fun DetailsSheet(
             }
         }
     }
-    // Size, length, resolution side by side: the figure first, what it is under it. No tiles around
-    // them; with a large font they wrap to a second line instead of being cut.
+    // Size, length, resolution in equal columns across the whole panel, with room above and below:
+    // the figure first, what it is under it. The quality name goes with the label ("Risoluzione ·
+    // 4K") so the figure stays short enough for its column.
     val tiles: @Composable () -> Unit = {
-        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(28.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
-            DetailFigure(com.cripta.app.ui.components.formatBytes(file.sizeBytes), "Dimensione")
-            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailFigure(it, "Durata") }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+            DetailFigure(com.cripta.app.ui.components.formatBytes(file.sizeBytes), "Dimensione", Modifier.weight(1f))
+            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailFigure(it, "Durata", Modifier.weight(1f)) }
             val w = file.width; val h = file.height
             if (w != null && h != null) {
-                DetailFigure("$w × $h" + (quality(w, h)?.takeIf { isVid }?.let { " · $it" } ?: ""), "Risoluzione")
+                DetailFigure("$w × $h", "Risoluzione" + (quality(w, h)?.takeIf { isVid }?.let { " · $it" } ?: ""), Modifier.weight(1f))
             }
         }
     }
@@ -2401,11 +2371,12 @@ private fun DetailsSheet(
 
 /** One figure of the file (size, length, resolution): the value, then what it is in small under it. */
 @Composable
-private fun DetailFigure(value: String, label: String) {
-    Column {
-        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+private fun DetailFigure(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        // Two lines at most, balanced, when a large font makes the value wider than its column.
+        Text(value, style = MaterialTheme.typography.titleLarge.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), maxLines = 2)
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp))
+            maxLines = 2, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

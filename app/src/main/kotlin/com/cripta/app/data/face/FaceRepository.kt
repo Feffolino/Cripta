@@ -148,9 +148,10 @@ class FaceRepository @Inject constructor(
     }
 
     /** Find and store [file]'s faces (not placed among the people yet). True when it could be read. */
-    suspend fun analyse(file: FileEntity): Boolean = withEngine { analyse(file, it) }
+    /** [deep]: "Cerca più a fondo", for media where no face was found (slower, see [FramePlan.times]). */
+    suspend fun analyse(file: FileEntity, deep: Boolean = false): Boolean = withEngine { analyse(file, it, deep) }
 
-    private suspend fun analyse(file: FileEntity, engine: FaceEngine): Boolean {
+    private suspend fun analyse(file: FileEntity, engine: FaceEngine, deep: Boolean = false): Boolean {
         val started = android.os.SystemClock.elapsedRealtime()
         val sightings = ArrayList<Sighting>()
         val rejects = HashMap<FaceReject, Int>()
@@ -159,7 +160,7 @@ class FaceRepository @Inject constructor(
         /** Analyse one frame; true when it shows a face (usable or not). */
         fun take(frame: Int, timeMs: Long, img: FaceImage): Boolean {
             read++
-            val found = engine.analyze(img)
+            val found = engine.analyze(img, deep = deep)
             for (f in found) {
                 faces++
                 f.sharpness?.let { sharp[FaceStats.band(it)]++ }
@@ -171,7 +172,7 @@ class FaceRepository @Inject constructor(
         val status = try {
             withContext(Dispatchers.Default) {
                 if (VaultRepository.isVideo(file.mimeType)) {
-                    val r = videoFrames(file) { i, t, img -> take(i, t, img) }
+                    val r = videoFrames(file, deep) { i, t, img -> take(i, t, img) }
                     failed = r.failed; duplicates = r.duplicates; extra = r.extra
                     when {
                         r.why != null -> "skip:${r.why}"
@@ -179,7 +180,7 @@ class FaceRepository @Inject constructor(
                         else -> "ok"
                     }
                 } else {
-                    val img = photo(file)
+                    val img = photo(file, if (deep) DEEP_SIDE else FRAME_SIDE)
                     if (img == null) "skip:immagine non decodificabile" else { take(0, 0, img); "ok" }
                 }
             }
@@ -254,7 +255,7 @@ class FaceRepository @Inject constructor(
      * keyframe returned for two moments is analysed once; where a face shows, the exact frame
      * [REFINE_MS] later is read too (another angle, often a better one).
      */
-    private suspend fun videoFrames(file: FileEntity, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
+    private suspend fun videoFrames(file: FileEntity, deep: Boolean, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
         val r = MediaMetadataRetriever()
         val channel = repo.seekableChannel(file)
         try {
@@ -264,12 +265,14 @@ class FaceRepository @Inject constructor(
                 ?: return FrameRun(0, 0, 0, 0, "durata non leggibile")
             var ok = 0; var bad = 0; var dup = 0; var extra = 0
             val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
-            val plan = FramePlan.times(dur)
+            val plan = FramePlan.times(dur, deep)
+            // Deep: the exact frame of each moment, not the nearest key frame (often a cut or a blur).
+            val option = if (deep) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
             val withFaces = ArrayList<Long>()
             var lastHash: Long? = null
             for ((i, t) in plan.withIndex()) {
                 coroutineContext.ensureActive()
-                val bmp = runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, params) }.getOrNull()
+                val bmp = runCatching { r.getFrameAtTime(t * 1000, option, params) }.getOrNull()
                 if (bmp == null) { bad++; continue }
                 val img = faceImage(bmp, FRAME_SIDE)
                 val h = FaceStats.frameHash(img)
@@ -1168,5 +1171,7 @@ class FaceRepository @Inject constructor(
         const val REFINE_MS = 2_000L
         /** At most this many such extra frames per video. */
         const val MAX_EXTRA = 12
+        /** Photos are read this large by "Cerca più a fondo". */
+        private const val DEEP_SIDE = 1920
     }
 }

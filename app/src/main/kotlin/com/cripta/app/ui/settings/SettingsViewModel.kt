@@ -313,7 +313,8 @@ class SettingsViewModel @Inject constructor(
     fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
     fun startFaceScan() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true)
     /** [fileIds] analysed again, even those whose faces the user cleared. */
-    fun analyseAgain(fileIds: List<String>) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = fileIds)
+    fun analyseAgain(fileIds: List<String>, deep: Boolean = false) =
+        com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = fileIds, deep = deep)
     /**
      * The last "Da sistemare" groups: shown at once when the page comes back from a media, so the
      * list is whole when its scroll position is restored (else it opened again at the top).
