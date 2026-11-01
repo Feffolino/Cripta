@@ -121,9 +121,9 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
             ) {
                 RadioButton(selected = m == mode, onClick = null)
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                    Text(m.label, style = MaterialTheme.typography.bodyLarge)
+                    Text(m.label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
                     Text(m.description, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                 }
             }
         }

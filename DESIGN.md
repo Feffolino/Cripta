@@ -50,7 +50,11 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   separator lines as structure. A group is a heading plus space: more space above a heading than
   below it.
 - Settings: plain rows (neutral icon, title, caption); sections inside a page are
-  `Section(title, description)`; pages are grouped as Preferenze / I tuoi dati / App.
+  `Section(title, description)` (the description 4dp under its heading, the options 10dp further,
+  32dp between sections); pages are grouped as Preferenze / I tuoi dati / App. A page about one
+  feature (Persone, Intro e finale) opens with `PageIntro`: a sentence on what it does, no heading
+  repeating the top bar, its state and main action; then its settings; last "Manutenzione", where
+  rare actions are text buttons and the one that throws work away is in the error colour.
 - Filled tonal surfaces are allowed for things that are one object (the Home summary strip, the
   search pill, sheets, dialogs), never to frame a group of options.
 - Borders exist only as state markers: selection rings and checks on covers, the chosen colour,

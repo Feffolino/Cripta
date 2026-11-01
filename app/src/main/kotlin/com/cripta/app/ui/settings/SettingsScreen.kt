@@ -1340,12 +1340,26 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
  */
 @Composable
 internal fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // The explanation sits close under its heading (it belongs to it), the options a step further.
+    Column(Modifier.fillMaxWidth()) {
         Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 4.dp).semantics { heading() })
+            modifier = Modifier.semantics { heading() })
         if (description != null) {
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp))
         }
+        Column(Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { content() }
+    }
+}
+
+/**
+ * The opening of a page that is about one feature (Persone, Intro e finale): what it does in a
+ * sentence or two, no heading (the top bar already names the page), then its state and main action.
+ */
+@Composable
+internal fun PageIntro(text: String, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         content()
     }
 }
@@ -1402,7 +1416,7 @@ internal fun ToggleRow(
 /** A labelled single choice shown as chips, aligned with the toggle rows (icon column). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> ChoiceRow(
+internal fun <T> ChoiceRow(
     label: String,
     options: List<Pair<T, String>>,
     selected: T,
