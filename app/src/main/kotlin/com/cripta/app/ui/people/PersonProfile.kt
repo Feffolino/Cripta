@@ -402,16 +402,24 @@ private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02
 @Composable
 private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileEntity>, vm: SettingsViewModel,
                               onClose: () -> Unit, onOpen: (TrackCard) -> Unit) {
-    val list = remember(p.id) { mutableStateListOf<FaceRepository.Suggestion>() }
-    var loading by remember(p.id) { mutableStateOf(true) }
+    // Back from playing a suggestion: the same list at once, so the scroll position comes back too
+    // (loading it again showed an empty list first and the page opened at the top).
+    val cached = remember(p.id) { vm.lastSuggestions?.takeIf { it.first == p.id }?.second }
+    val list = remember(p.id) { mutableStateListOf<FaceRepository.Suggestion>().apply { cached?.let { addAll(it) } } }
+    var loading by remember(p.id) { mutableStateOf(cached == null) }
     LaunchedEffect(p.id) {
-        list.clear(); list.addAll(runCatching { vm.suggestionsFor(p.id) }.getOrDefault(emptyList())); loading = false
+        if (cached == null) {
+            list.addAll(runCatching { vm.suggestionsFor(p.id) }.getOrDefault(emptyList())); loading = false
+        }
+        vm.lastSuggestions = p.id to list.toList()
     }
-    CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    fun answered(s: FaceRepository.Suggestion) { list.remove(s); vm.lastSuggestions = p.id to list.toList() }
+    val close = { vm.lastSuggestions = null; onClose() }
+    CriptaDialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { Text("Forse è ${p.title}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
+                navigationIcon = { IconButton(onClick = close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
         }) { pad ->
             LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 32.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
@@ -424,8 +432,8 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
                 }
                 items(list.toList(), key = { it.card.id }) { s ->
                     SuggestionItem(s, p, files[s.card.fileId], vm,
-                        onYes = { list.remove(s); vm.acceptSuggestion(s.card.id, p.id) },
-                        onNo = { list.remove(s); vm.refuseSuggestion(s.card.id, p.id) },
+                        onYes = { answered(s); vm.acceptSuggestion(s.card.id, p.id) },
+                        onNo = { answered(s); vm.refuseSuggestion(s.card.id, p.id) },
                         onOpen = { onOpen(s.card) },
                         modifier = Modifier.animateItem())
                 }

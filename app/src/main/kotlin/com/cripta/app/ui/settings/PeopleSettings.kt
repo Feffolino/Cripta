@@ -435,8 +435,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }
         // "Da sistemare": grouped again whenever the unassigned faces change.
-        val groups by produceState<List<FaceRepository.FaceGroup>?>(null, filter, o.unassigned) {
-            value = if (filter == PeopleFilter.TODO) vm.unsortedGroups() else null
+        val groups by produceState(if (filter == PeopleFilter.TODO) vm.lastGroups else null, filter, o.unassigned) {
+            value = if (filter == PeopleFilter.TODO) vm.unsortedGroups().also { vm.lastGroups = it } else null
         }
         LazyVerticalGrid(GridCells.Adaptive(104.dp), Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -456,9 +456,16 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 }
             }
             if (filter == PeopleFilter.NONE) {
+                // Cleared by the user or with every face set aside: worth a new look (unreadable ones are not).
+                val again = noFaces.filter { it.status == "ok" || it.status == FaceRepository.CLEARED }.map { it.fileId }
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text("Media in cui nessun volto è utilizzabile. Tocca per il motivo.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Media in cui nessun volto è utilizzabile. Tocca per il motivo.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (again.isNotEmpty()) FilledTonalButton(onClick = { vm.analyseAgain(again) }, enabled = progress == null) {
+                            com.cripta.app.ui.components.ButtonText(if (again.size == 1) "Analizza di nuovo questo media" else "Analizza di nuovo questi ${again.size} media")
+                        }
+                    }
                 }
                 items(noFaces, key = { it.fileId }) { scan ->
                     val file = o.files[scan.fileId]
@@ -466,7 +473,12 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         if (file != null) MediaThumb(file, { vm.thumbOf(it) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false)
                         Text(file?.originalName ?: "File non trovato", style = MaterialTheme.typography.labelMedium,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (scan.status != "ok") "Non leggibile" else if (scan.faces == 0) "Nessun volto" else "Volti scartati",
+                        Text(when {
+                            scan.status == FaceRepository.CLEARED -> "Volti eliminati da te"
+                            scan.status != "ok" -> "Non leggibile"
+                            scan.faces == 0 -> "Nessun volto"
+                            else -> "Volti scartati"
+                        },
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }

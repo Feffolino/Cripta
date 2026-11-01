@@ -190,10 +190,15 @@ class FaceRepository @Inject constructor(
             android.util.Log.w("FaceRepository", "not readable (${e.javaClass.simpleName})")
             "skip:errore di lettura (${e.javaClass.simpleName})"
         }
-        // Faces the user deleted from this media, or said are not a face, are not found again.
+        // Faces the user deleted from this media, or said are not a face, are not found again. Unless
+        // the face is more like one the user kept here: deleting a second copy of someone's face
+        // must not hide that person from this media at the next analysis.
         val ignored = dao.ignoredFor(file.id).map { it.fileId to EmbeddingCodec.decode(it.embeddings) }
+        val kept = dao.trackRowsOf(listOf(file.id)).filter { it.personId != null && it.state != "suggested" }
+            .map { EmbeddingCodec.decode(it.embeddings) }
         val tracks = FaceTracker.build(sightings).filter { t ->
-            val gone = ignored.any { (f, e) -> maxPair(t.embeddings, e) >= if (f == null) NOT_A_FACE else DELETED }
+            val keptLike = kept.maxOfOrNull { maxPair(t.embeddings, it) } ?: -1f
+            val gone = ignored.any { (f, e) -> maxPair(t.embeddings, e).let { s -> s >= (if (f == null) NOT_A_FACE else DELETED) && s > keptLike } }
             if (gone) rejects.merge(FaceReject.IGNORED, t.sightings.size, Int::plus)
             !gone
         }
@@ -901,12 +906,19 @@ class FaceRepository @Inject constructor(
         val covers = all.filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
         val people = all.filter { p -> before.any { it.personId == p.id } }
         val now = System.currentTimeMillis()
+        // "Elimina" on a second copy of a face that stays in the media (same person, alike) is a
+        // duplicate going, not a mistake of the analysis: nothing to remember against new analyses.
+        val others = if (everywhere) emptyList() else dao.trackRowsOf(before.map { it.fileId }.distinct()).filter { it.id !in ids }
+        val remember = before.filter { t ->
+            everywhere || others.none { o -> o.fileId == t.fileId &&
+                maxPair(EmbeddingCodec.decode(t.embeddings), EmbeddingCodec.decode(o.embeddings)) >= DELETED }
+        }
         val remembered = change {
             dao.deleteRejectionsOfTracks(ids)
             dao.deleteTracks(ids)
             for ((p, _) in covers) dao.setCover(p, null)
             dao.deleteEmptyPersons()
-            before.map { dao.addIgnored(IgnoredFaceEntity(fileId = if (everywhere) null else it.fileId, embeddings = it.embeddings, createdAt = now)) }
+            remember.map { dao.addIgnored(IgnoredFaceEntity(fileId = if (everywhere) null else it.fileId, embeddings = it.embeddings, createdAt = now)) }
         }
         return {
             change {
@@ -1023,6 +1035,8 @@ class FaceRepository @Inject constructor(
     /** Why [fileId] has (no) faces: what was read, found and set aside, and where each face went. */
     suspend fun describe(fileId: String): String = withContext(Dispatchers.Default) {
         val s = dao.scanOf(fileId) ?: return@withContext "Non ancora analizzato."
+        if (s.status == CLEARED) return@withContext "Hai eliminato i volti trovati qui (da «Elimina i volti non assegnati» o " +
+            "«Elimina volti trovati per errore»), quindi non viene analizzato da solo. «Analizza di nuovo» li cerca ancora."
         if (s.status != "ok") return@withContext "Non analizzabile: " + s.status.removePrefix("skip:")
         val st = FaceStats.parse(s.stats)
         val cards = dao.cardsOf(fileId)

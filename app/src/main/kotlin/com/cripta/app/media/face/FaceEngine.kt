@@ -63,7 +63,9 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
         return YuNet.decode(outputs, pw, ph, MIN_DETECT).map { d0 ->
             val d = d0.scaled(kx, ky)
             val reject = when {
-                d.score < MIN_SCORE -> FaceReject.LOW_SCORE
+                // A large face the detector is unsure of is still a face (light, make-up, a hand in
+                // front): only small ones, where false finds come from, need the higher score.
+                d.score < MIN_SCORE && d.w < CONFIDENT_WIDTH -> FaceReject.LOW_SCORE
                 d.w < MIN_WIDTH -> FaceReject.SMALL
                 FaceAligner.yaw(d.landmarks) > MAX_YAW -> FaceReject.PROFILE
                 else -> null
@@ -98,6 +100,8 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
         /** Below this the detector reports nothing; between it and [MIN_SCORE] the face is counted as uncertain. */
         const val MIN_DETECT = 0.6f
         const val MIN_SCORE = 0.8f
+        /** At least this wide, a face found above [MIN_DETECT] is kept even below [MIN_SCORE]. */
+        const val CONFIDENT_WIDTH = 80f
         /** Narrower faces give unreliable embeddings (measured: false matches mostly came from them). */
         const val MIN_WIDTH = 36f
         const val MAX_YAW = 0.6f
