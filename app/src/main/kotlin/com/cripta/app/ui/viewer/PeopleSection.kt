@@ -272,11 +272,7 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
     var menu by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(tap) {
-            FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp,
-                if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier, key = t.timeMs)
-            if (on) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary).padding(3.dp))
+            FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp, key = t.timeMs, selected = on)
         }
         Column(Modifier.weight(1f).then(tap)) {
             Text(when {
@@ -341,11 +337,7 @@ private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerVie
                         Box(Modifier.clip(CircleShape).clickable(onClickLabel = if (on) "Escludi" else "Includi") {
                             off = if (on) off + s.card.id else off - s.card.id
                         }) {
-                            FaceAvatar(s.card.id, { vm.faceCrop(it) }, 88.dp,
-                                if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
-                            if (on) Icon(Icons.Filled.Check, "Incluso", tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.align(Alignment.BottomEnd).size(24.dp).clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary).padding(3.dp))
+                            FaceAvatar(s.card.id, { vm.faceCrop(it) }, 88.dp, selected = on)
                         }
                     }
                 }
