@@ -14,6 +14,7 @@ import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.IgnoredFaceEntity
+import com.cripta.app.data.db.FaceApartEntity
 import com.cripta.app.data.db.PersonEntity
 import com.cripta.app.data.db.PersonMediaEntity
 import com.cripta.app.data.db.TrackCard
@@ -693,10 +694,11 @@ class FaceRepository @Inject constructor(
      * so the more media the user groups by hand, the surer the suggestions. Faces said "not them"
      * before, and faces in media where they already are, are left out.
      */
-    suspend fun suggestionsFor(personId: Long, limit: Int = 300): List<Suggestion> = withContext(Dispatchers.Default) {
+    suspend fun suggestionsFor(personId: Long, limit: Int = 300, minMedia: Int = 1): List<Suggestion> = withContext(Dispatchers.Default) {
         val rows = dao.allTrackMeta()
         val own = rows.filter { it.personId == personId && it.state != "suggested" }
-        if (own.isEmpty()) return@withContext emptyList()
+        // Faces of one media count once: two of the same video are nearly the same example.
+        if (own.isEmpty() || own.map { it.fileId }.distinct().size < minMedia) return@withContext emptyList()
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
         val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
         val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
@@ -712,6 +714,24 @@ class FaceRepository @Inject constructor(
         val top = scored.sortedByDescending { it.second }.take(limit)
         val cards = dao.allCards().associateBy { it.id }
         top.mapNotNull { (id, sc) -> cards[id]?.let { Suggestion(it, sc) } }
+    }
+
+    /** A face of "Da confermare" and the known person it is most like. */
+    class PersonSuggestion(val personId: Long, val suggestion: Suggestion)
+
+    /**
+     * "Da confermare" (recognition "Solo persone note"): the faces like someone with faces in at
+     * least [minMedia] media, each offered once, to the person it is most like, most alike first.
+     */
+    suspend fun knownSuggestions(minMedia: Int = 2, limit: Int = 300): List<PersonSuggestion> = withContext(Dispatchers.Default) {
+        val best = HashMap<Long, PersonSuggestion>()
+        for (p in dao.persons().filter { !it.ignored }) {
+            for (s in suggestionsFor(p.id, limit, minMedia)) {
+                val cur = best[s.card.id]
+                if (cur == null || s.similarity > cur.suggestion.similarity) best[s.card.id] = PersonSuggestion(p.id, s)
+            }
+        }
+        best.values.sortedByDescending { it.suggestion.similarity }.take(limit)
     }
 
     /** How alike a face is to a person's faces: the mean of its three closest matches (or the closest, a little less). */
@@ -755,7 +775,25 @@ class FaceRepository @Inject constructor(
         val kept = free.filter { emb[it.id] != null }
         val groups = FaceTracker.cluster(kept.map { emb.getValue(it.id).first() }, GROUP)
         val cards = dao.allCards().associateBy { it.id }
-        groups.map { g -> FaceGroup(g.mapNotNull { cards[kept[it].id] }) }.filter { it.cards.isNotEmpty() }.sortedByDescending { it.cards.size }
+        // Faces the user said are not one person ("Dividi il gruppo") never share a group: each goes
+        // to the first part of its group holding none of them, best faces first.
+        val apart = HashMap<Long, MutableSet<Long>>()
+        for (p in dao.apart()) { apart.getOrPut(p.a) { HashSet() } += p.b; apart.getOrPut(p.b) { HashSet() } += p.a }
+        groups.flatMap { g ->
+            val parts = ArrayList<MutableList<Long>>()
+            for (id in g.sorted().map { kept[it].id }) {
+                val home = parts.firstOrNull { part -> part.none { apart[id]?.contains(it) == true } }
+                if (home != null) home += id else parts += mutableListOf(id)
+            }
+            parts.map { part -> FaceGroup(part.mapNotNull { cards[it] }) }
+        }.filter { it.cards.isNotEmpty() }.sortedByDescending { it.cards.size }
+    }
+
+    /** "Dividi il gruppo": no face of [a] is the person of any face of [b]; never grouped together again. */
+    suspend fun keepFacesApart(a: Collection<Long>, b: Collection<Long>): Undo {
+        val pairs = a.flatMap { x -> b.filter { it != x }.map { y -> FaceApartEntity(minOf(x, y), maxOf(x, y)) } }.distinct()
+        change { dao.addApart(pairs) }
+        return { change { dao.deleteApart(pairs) } }
     }
 
     /** A group of faces given to [personId] at once. */
@@ -1020,6 +1058,7 @@ class FaceRepository @Inject constructor(
     suspend fun resetAll(everything: Boolean) = change {
         dao.deleteAllScans(); dao.deleteAllTracks(); dao.deleteAllMerges()
         if (everything) { dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections(); dao.deleteAllIgnored() }
+        dao.deleteAllApart()
         embeddingCache.clear()
     }
 

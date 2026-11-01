@@ -42,6 +42,19 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import com.cripta.app.ui.theme.pressScale
+import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -117,6 +130,12 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     Section("Analisi") {
         ToggleRow("Analizza i nuovi media", s.facesAnalyzeNew, desc = "Dopo ogni importazione, download o conversione, in background.",
             icon = Icons.Filled.Face) { vm.setFacesAnalyzeNew(it) }
+        ChoiceRow("Riconoscimento", listOf("all" to "Tutti i volti", "known" to "Solo persone note"), s.facesMode,
+            icon = Icons.Filled.Groups,
+            desc = if (s.facesMode == "all") "Ti chiede chi sono tutti i volti trovati, raggruppati per somiglianza in «Da sistemare»."
+                else "Ti propone, in «Da confermare», solo volti simili a persone che hanno volti in almeno 2 media. Gli altri restano nei dettagli di ogni media.") {
+            vm.setFacesMode(it)
+        }
         FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
@@ -383,6 +402,10 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     var sortMenu by remember { mutableStateOf(false) }
     /** The faces of a "Da sistemare" group being named. */
     var naming by remember { mutableStateOf<List<Long>?>(null) }
+    /** People picked as in Cartelle: long press, then drag over the others. */
+    var selected by remember { mutableStateOf(emptySet<Long>()) }
+    var askMerge by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = selected.isNotEmpty()) { selected = emptySet() }
     val st by vm.settings.collectAsStateWithLifecycle()
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
     LaunchedEffect(undo) {
@@ -392,6 +415,22 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     }
     Scaffold(
         topBar = {
+            if (selected.isNotEmpty()) {
+                val chosen = overview?.people.orEmpty().filter { it.id in selected }
+                TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                    title = { Text(if (selected.size == 1) "1 selezionata" else "${selected.size} selezionate") },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
+                    actions = {
+                        val allFav = chosen.isNotEmpty() && chosen.all { it.entity.favorite }
+                        IconButton(onClick = { chosen.forEach { vm.setPersonFavorite(it.id, !allFav) }; selected = emptySet() }) {
+                            Icon(if (allFav) Icons.Filled.Star else Icons.Filled.StarBorder, if (allFav) "Togli dai preferiti" else "Aggiungi ai preferiti")
+                        }
+                        if (selected.size >= 2) TextButton(onClick = { askMerge = true }) { com.cripta.app.ui.components.ButtonText("Unisci") }
+                        IconButton(onClick = { chosen.forEach { vm.ignorePerson(it.id) }; selected = emptySet() }) {
+                            Icon(Icons.Filled.VisibilityOff, "Nascondi")
+                        }
+                    })
+            } else
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
@@ -435,10 +474,73 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }
         // "Da sistemare": grouped again whenever the unassigned faces change.
-        val groups by produceState(if (filter == PeopleFilter.TODO) vm.lastGroups else null, filter, o.unassigned) {
+        val groupsVersion by vm.groupsVersion.collectAsStateWithLifecycle()
+        val groups by produceState(if (filter == PeopleFilter.TODO) vm.lastGroups else null, filter, o.unassigned, groupsVersion) {
             value = if (filter == PeopleFilter.TODO) vm.unsortedGroups().also { vm.lastGroups = it } else null
         }
-        LazyVerticalGrid(GridCells.Adaptive(104.dp), Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
+        // "Solo persone note": "Da sistemare" becomes "Da confermare", the faces like someone known.
+        val known = st.facesMode == "known"
+        val knownList by produceState(if (known) vm.lastKnown else null, known, o.unassigned, o.people.size, groupsVersion) {
+            value = if (known) runCatching { vm.knownSuggestions() }.getOrNull() else null
+        }
+        var answered by remember { mutableStateOf(emptySet<Long>()) }
+        val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        /** The person under a finger held for 60 ms: pressed, as a cell in Cartelle. */
+        var pressedId by remember { mutableStateOf<Long?>(null) }
+        val order = shown.map { it.id }
+        val currentOrder by androidx.compose.runtime.rememberUpdatedState(order)
+        val currentSelected by androidx.compose.runtime.rememberUpdatedState(selected)
+        fun personAt(pos: androidx.compose.ui.geometry.Offset): Long? = gridState.layoutInfo.visibleItemsInfo.firstOrNull { i ->
+            pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
+        }?.key as? Long
+        LazyVerticalGrid(GridCells.Adaptive(104.dp), Modifier.fillMaxSize().padding(pad)
+            // As in Cartelle: tap opens (or toggles while selecting); a long press selects, and
+            // dragging from it picks (or drops, if it started on a picked one) everyone in between.
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = { off ->
+                    val id = personAt(off)
+                    if (id != null) {
+                        val job = scope.launch { kotlinx.coroutines.delay(60); pressedId = id }
+                        tryAwaitRelease()
+                        job.cancel(); pressedId = null
+                    }
+                }, onTap = { off ->
+                    val id = personAt(off) ?: return@detectTapGestures
+                    if (currentSelected.isNotEmpty()) selected = if (id in currentSelected) currentSelected - id else currentSelected + id
+                    else vm.openPerson(id)
+                })
+            }
+            .pointerInput(Unit) {
+                var anchor: Long? = null
+                var deselect = false
+                var base = emptySet<Long>()
+                var pointer = androidx.compose.ui.geometry.Offset.Zero
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { off ->
+                        pointer = off
+                        anchor = personAt(off)?.takeIf { it in currentOrder }
+                        anchor?.let { a ->
+                            deselect = a in currentSelected; base = currentSelected
+                            selected = if (deselect) base - a else base + a
+                        }
+                    },
+                    onDrag = { change, amount ->
+                        pointer += amount
+                        val a = anchor ?: return@detectDragGesturesAfterLongPress
+                        change.consume()
+                        val cur = personAt(pointer) ?: return@detectDragGesturesAfterLongPress
+                        val ai = currentOrder.indexOf(a); val ci = currentOrder.indexOf(cur)
+                        if (ai >= 0 && ci >= 0) {
+                            val range = currentOrder.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
+                            selected = if (deselect) base - range else base + range
+                        }
+                    },
+                    onDragEnd = { anchor = null },
+                    onDragCancel = { anchor = null },
+                )
+            },
+            state = gridState, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (progress != null || o.scans.size < o.media) item(span = { GridItemSpan(maxLineSpan) }) {
                 ScanStatus(o, progress, onStop = { vm.cancelFaceScan() })
@@ -451,7 +553,10 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PeopleFilter.entries.forEach { f ->
                         val n = when (f) { PeopleFilter.NONE -> noFaces.size; PeopleFilter.TODO -> o.unassigned; else -> o.people.count { f.matches(it) } }
-                        if (n > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
+                        val todo = f == PeopleFilter.TODO
+                        val label = if (todo && known) "Da confermare" else f.label
+                        val count = if (todo && known) knownList?.size ?: 0 else n
+                        if (count > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
                     }
                 }
             }
@@ -482,6 +587,24 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
+            } else if (filter == PeopleFilter.TODO && known) {
+                val list = knownList?.filter { it.suggestion.card.id !in answered }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(when {
+                        list == null -> "Confronto i volti con le persone note…"
+                        list.isEmpty() -> "Niente da confermare. Qui arrivano i volti simili a chi ha volti in almeno 2 media."
+                        else -> "Volti simili a persone note, i più simili prima. Nulla viene aggiunto senza un sì."
+                    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(list.orEmpty(), key = { "k" + it.suggestion.card.id }, span = { GridItemSpan(maxLineSpan) }) { ps ->
+                    val who = o.people.firstOrNull { it.id == ps.personId }
+                    val s = ps.suggestion
+                    if (who != null) com.cripta.app.ui.people.SuggestionItem(s, who, o.files[s.card.fileId], vm,
+                        onYes = { answered = answered + s.card.id; vm.acceptSuggestion(s.card.id, who.id) },
+                        onNo = { answered = answered + s.card.id; vm.refuseSuggestion(s.card.id, who.id) },
+                        onOpen = { vm.openPersonMedia(listOf(s.card.fileId), s.card.fileId, s.card.timeMs); onOpenFile(s.card.fileId) },
+                        modifier = Modifier.animateItem())
+                }
             } else if (filter == PeopleFilter.TODO) {
                 val g = groups
                 val many = g.orEmpty().filter { it.cards.size > 1 }
@@ -494,7 +617,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(many, key = { "g" + it.cards.first().id }, span = { GridItemSpan(maxLineSpan) }) { grp ->
-                    FaceGroupRow(grp, vm, onOpenFile, onName = { naming = it })
+                    FaceGroupRow(grp, vm, onOpenFile, onName = { naming = it }, onSplit = { keep, out -> vm.keepFacesApart(keep, out) })
                 }
                 if (single.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -532,11 +655,21 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     }
                 }
                 items(shown, key = { it.id }) { p ->
-                    Column(Modifier.animateItem().clickable(onClickLabel = "Apri ${p.title}") { vm.openPerson(p.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    val on = p.id in selected
+                    Column(Modifier.animateItem().pressScale(pressedId == p.id).semantics(mergeDescendants = true) {
+                        this.selected = on
+                        onClick(label = if (selected.isEmpty()) "Apri ${p.title}" else if (on) "Deseleziona" else "Seleziona") {
+                            if (selected.isEmpty()) vm.openPerson(p.id) else selected = if (on) selected - p.id else selected + p.id
+                            true
+                        }
+                        onLongClick(label = "Seleziona") { selected = selected + p.id; true }
+                    }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover, { vm.faceCrop(it) }, 96.dp,
-                                Modifier)
-                            if (!p.entity.ignored) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
+                                if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                            if (on) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.BottomEnd).size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface))
+                            else if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
@@ -550,6 +683,36 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         }
         if (showStats) StatsDialog(vm) { showStats = false }
         naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
+        if (askMerge) {
+            // The user picks who stays (name, face, star); a named one is offered first.
+            val chosen = shown.filter { it.id in selected }
+            var keepId by remember { mutableStateOf((chosen.firstOrNull { it.entity.name.isNotBlank() } ?: chosen.firstOrNull())?.id) }
+            val into = chosen.firstOrNull { it.id == keepId }
+            if (chosen.size < 2) askMerge = false
+            else CriptaAlertDialog(onDismissRequest = { askMerge = false },
+                title = { Text("Unire ${chosen.size} persone?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Diventano una sola persona con tutti i volti e i media. Scegli chi resta (nome e volto). Si può annullare.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LazyColumn(Modifier.heightIn(max = 320.dp).selectableGroup()) {
+                            items(chosen, key = { it.id }) { q ->
+                                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(MaterialTheme.shapes.small)
+                                    .selectable(selected = q.id == keepId, role = androidx.compose.ui.semantics.Role.RadioButton) { keepId = q.id },
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    androidx.compose.material3.RadioButton(selected = q.id == keepId, onClick = null)
+                                    FaceAvatar(q.cover, { vm.faceCrop(it) }, 40.dp)
+                                    Text("${q.title} · ${q.media.size} media", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(enabled = into != null, onClick = {
+                    into?.let { vm.mergePeople(it.id, chosen.map { c -> c.id } - it.id) }; askMerge = false; selected = emptySet()
+                }) { com.cripta.app.ui.components.ButtonText("Unisci") } },
+                dismissButton = { TextButton(onClick = { askMerge = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } })
+        }
     }
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
@@ -564,13 +727,19 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onOpenFile: (String) -> Unit, onName: (List<Long>) -> Unit) {
+private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onOpenFile: (String) -> Unit, onName: (List<Long>) -> Unit,
+                         onSplit: (List<Long>, List<Long>) -> Unit) {
     var off by remember(g) { mutableStateOf(emptySet<Long>()) }
     /** Every face of a large group, not only the first [SHOWN_IN_GROUP]: all of them are acted on. */
     var all by remember(g) { mutableStateOf(false) }
     val picked = g.cards.map { it.id }.filter { it !in off }
     Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media", style = MaterialTheme.typography.bodyLarge)
+        Column {
+            Text("${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media", style = MaterialTheme.typography.bodyLarge)
+            Text(if (off.isEmpty()) "Tocca i volti di un'altra persona per toglierli dalla scelta."
+                else "«Dividi il gruppo»: quelli tolti non sono la stessa persona degli altri, e non tornano insieme.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+        }
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             (if (all) g.cards else g.cards.take(SHOWN_IN_GROUP)).forEach { c ->
                 val on = c.id !in off
@@ -595,8 +764,11 @@ private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onO
         }
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { com.cripta.app.ui.components.ButtonText("Chi è?") }
+            if (off.isNotEmpty() && picked.isNotEmpty()) TextButton(onClick = { onSplit(picked, off.toList()) }) {
+                com.cripta.app.ui.components.ButtonText("Dividi il gruppo")
+            }
             TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
-                com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText("Elimina i volti", color = MaterialTheme.colorScheme.error)
             }
             TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
                 com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)

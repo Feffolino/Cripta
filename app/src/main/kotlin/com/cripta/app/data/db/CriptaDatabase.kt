@@ -14,8 +14,8 @@ import net.sqlcipher.database.SupportFactory
         AudioPrintEntity::class, MediaSegmentEntity::class, RejectedPrintEntity::class, SegmentRuleEntity::class,
         SignatureEntity::class, SignatureSoundEntity::class,
         FaceScanEntity::class, FaceTrackEntity::class, PersonEntity::class, PersonMediaEntity::class, FaceRejectionEntity::class, FaceMergeEntity::class,
-        IgnoredFaceEntity::class],
-    version = 30,
+        IgnoredFaceEntity::class, FaceApartEntity::class],
+    version = 31,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -258,6 +258,13 @@ abstract class CriptaDatabase : RoomDatabase() {
          * The faces the user confirmed, named and starred people stay.
          */
         /** People: each face of a track (to split it) and the faces the user deleted (not found again). */
+        internal val MIGRATION_30_31 = object : Migration(30, 31) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `face_apart` (`a` INTEGER NOT NULL, `b` INTEGER NOT NULL, PRIMARY KEY(`a`, `b`))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_apart_b` ON `face_apart` (`b`)")
+            }
+        }
+
         internal val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE face_tracks ADD COLUMN sightings BLOB NOT NULL DEFAULT x''")
@@ -341,7 +348,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()
                 .also { it.key = key }

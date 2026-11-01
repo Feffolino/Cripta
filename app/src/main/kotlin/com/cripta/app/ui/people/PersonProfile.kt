@@ -282,13 +282,16 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
 /** "N volti potrebbero essere suoi": counted when the profile opens, opens the review. */
 @Composable
 private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, onOpen: () -> Unit) {
-    val found by produceState<Int?>(null, p.id, p.faces.size) { value = runCatching { vm.suggestionsFor(p.id).size }.getOrDefault(0) }
+    val mode = vm.settings.collectAsStateWithLifecycle().value.facesMode
+    val found by produceState<Int?>(null, p.id, p.faces.size, mode) { value = runCatching { vm.suggestionsFor(p.id).size }.getOrDefault(0) }
     Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Suggerimenti", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.semantics { heading() })
         val n = found
+        val known = vm.settings.collectAsStateWithLifecycle().value.facesMode == "known"
         Text(when {
             p.faces.isEmpty() -> "Assegnagli almeno un volto: poi Cripta cerca volti simili negli altri media."
+            known && p.faces.map { it.fileId }.distinct().size < 2 -> "Dagli un volto in almeno 2 media diversi: con «Solo persone note» i suggerimenti partono da lì."
             n == null -> "Cerco volti simili…"
             n == 0 -> "Nessun volto simile da controllare. Più media gli assegni, più i suggerimenti diventano precisi."
             n == 1 -> "1 volto potrebbe essere suo. Nulla viene aggiunto senza la tua conferma."
@@ -443,7 +446,7 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
 }
 
 @Composable
-private fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Person, file: FileEntity?, vm: SettingsViewModel,
+internal fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Person, file: FileEntity?, vm: SettingsViewModel,
                            onYes: () -> Unit, onNo: () -> Unit, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val frame by produceState<Bitmap?>(null, s.card.id) { value = runCatching { vm.frameOf(s.card) }.getOrNull() }
     val isVideo = file != null && VaultRepository.isVideo(file.mimeType)

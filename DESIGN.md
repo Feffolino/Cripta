@@ -107,7 +107,12 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   under "Altri N volti poco chiari". "Chi è?" offers "Dividi" (moments that are someone else) and,
   after naming a face, "Anche questi sono …?" for the alike faces of the same media. "Aggiungi un
   volto" looks up to 15 s further when the paused frame has none. The people page's "Da
-  sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time.
+  sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time;
+  faces tapped out of a group and "Dividi il gruppo" are never grouped with the rest again.
+  Recognition (Impostazioni › Persone): "Tutti i volti" (Da sistemare) or "Solo persone note",
+  where "Da confermare" lists only faces like someone with faces in at least 2 media. The people
+  grid selects as Cartelle (long press, drag over the others): star, "Unisci" (the user picks who
+  stays), "Nascondi".
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
