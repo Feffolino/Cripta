@@ -53,8 +53,10 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
      * The faces of [img]. With [all] (a face added by hand) every face found gets its embedding and
      * picture, its reason to be set aside kept for the user to see; detection then runs larger too.
      */
-    fun analyze(img: FaceImage, all: Boolean = false): List<Face> {
-        val small = img.fit(if (all) 2 * DETECT_SIDE else DETECT_SIDE)
+    fun analyze(img: FaceImage, all: Boolean = false, deep: Boolean = false): List<Face> {
+        // [deep] ("Cerca più a fondo"): detection on a copy twice as large (smaller faces found) and
+        // unsure faces kept from the usable width up.
+        val small = img.fit(if (all || deep) 2 * DETECT_SIDE else DETECT_SIDE)
         val pw = YuNet.padded(small.width); val ph = YuNet.padded(small.height)
         val outputs = OnnxTensor.createTensor(env, FloatBuffer.wrap(YuNet.input(small)), longArrayOf(1, 3, ph.toLong(), pw.toLong())).use { t ->
             det.run(mapOf("input" to t)).use { r -> r.associate { it.key to floats(it.value as OnnxTensor) } }
@@ -65,7 +67,7 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
             val reject = when {
                 // A large face the detector is unsure of is still a face (light, make-up, a hand in
                 // front): only small ones, where false finds come from, need the higher score.
-                d.score < MIN_SCORE && d.w < CONFIDENT_WIDTH -> FaceReject.LOW_SCORE
+                d.score < MIN_SCORE && d.w < (if (deep) MIN_WIDTH else CONFIDENT_WIDTH) -> FaceReject.LOW_SCORE
                 d.w < MIN_WIDTH -> FaceReject.SMALL
                 FaceAligner.yaw(d.landmarks) > MAX_YAW -> FaceReject.PROFILE
                 else -> null

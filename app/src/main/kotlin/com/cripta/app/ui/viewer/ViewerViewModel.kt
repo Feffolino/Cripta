@@ -202,7 +202,8 @@ class ViewerViewModel @Inject constructor(
     fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
     fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
-    fun analyseFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId))
+    fun analyseFaces(fileId: String, deep: Boolean = false) =
+        com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId), deep = deep)
     /** The faces found here that nobody confirmed go (the analysis was on by mistake). */
     fun clearDetectedFaces(fileId: String) = faceAction { faces.clearDetected(listOf(fileId)) }
 

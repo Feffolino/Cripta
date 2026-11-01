@@ -326,7 +326,9 @@ class ConversionService : Service() {
                             faceJob?.let { it.cancel(); it.join() }
                             faces.resetAll(everything = what == "all")
                         }
-                        faceScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
+                        val ids = intent.getStringArrayListExtra(EX_IDS)
+                        if (intent.getBooleanExtra(EX_DEEP, false) && ids != null) faceDeep += ids
+                        faceScan(intent.getBooleanExtra(EX_MANUAL, false), ids)
                     }
                     MODE_INTRO_SCAN -> if (holdsSession) {
                         intent.getStringExtra(EX_RESET)?.let { what ->
@@ -1101,6 +1103,8 @@ class ConversionService : Service() {
     private val faceNoteLock = Any()
     /** Media asked for by the user (selection bar, details panel): analysed again, ahead of the rest. */
     private val faceAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    /** Media asked for with "Cerca più a fondo": analysed the deep way once. */
+    private val faceDeep = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var faceScanAll = false
 
     /**
@@ -1158,7 +1162,7 @@ class ConversionService : Service() {
                             launch {
                                 while (true) {
                                     val f = chunk.getOrNull(cursor.getAndIncrement()) ?: break
-                                    if (faces.analyse(f)) analysed.incrementAndGet() else skipped.incrementAndGet()
+                                    if (faces.analyse(f, deep = faceDeep.remove(f.id))) analysed.incrementAndGet() else skipped.incrementAndGet()
                                     finished.incrementAndGet()
                                     progress()
                                 }
@@ -1850,6 +1854,7 @@ class ConversionService : Service() {
         private const val FACE_CHUNK = 12
         private const val EX_MANUAL = "manual"
         private const val EX_RESET = "reset"
+        private const val EX_DEEP = "deep"
         /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
         private const val INTRO_WORKERS = 3
         /** Videos fingerprinted before each matching round. */
@@ -1986,9 +1991,9 @@ class ConversionService : Service() {
          * [fileIds] only, again;
          * [reset]: "auto" forgets the analysis, "all" the user's choices too.
          */
-        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null) {
+        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null, deep: Boolean = false) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
-                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual)
+                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_DEEP, deep)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)); if (reset != null) putExtra(EX_RESET, reset) })
         }
 

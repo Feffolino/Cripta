@@ -567,8 +567,14 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Media in cui nessun volto è utilizzabile. Tocca per il motivo.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (again.isNotEmpty()) FilledTonalButton(onClick = { vm.analyseAgain(again) }, enabled = progress == null) {
-                            com.cripta.app.ui.components.ButtonText(if (again.size == 1) "Analizza di nuovo questo media" else "Analizza di nuovo questi ${again.size} media")
+                        // Already searched the usual way: the deeper search (more frames, smaller and
+                        // less sure faces) is the one worth running here.
+                        if (again.isNotEmpty()) {
+                            FilledTonalButton(onClick = { vm.analyseAgain(again, deep = true) }, enabled = progress == null) {
+                                com.cripta.app.ui.components.ButtonText(if (again.size == 1) "Cerca più a fondo in questo media" else "Cerca più a fondo in ${again.size} media")
+                            }
+                            Text("Più fotogrammi, volti più piccoli o meno nitidi: richiede più tempo.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
