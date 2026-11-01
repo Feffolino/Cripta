@@ -26,13 +26,21 @@ import java.text.Normalizer
  * assets/tagicons (name, then the shapes: "f:" filled, "e:" filled even-odd, "s<w>:" stroked), read
  * once on first use; each icon is built when first drawn.
  *
- * Names are the English emoji names ("red-heart"); the search and the suggestions also take Italian
- * words through [IT].
+ * Names are the English emoji names ("red-heart"). assets/tagicons/it.txt gives each one its emoji
+ * and its Italian name and keywords (Unicode CLDR, built by scripts/tagicons_it.py), so the search
+ * takes Italian words too; [IT] adds a few library subjects CLDR doesn't word that way.
  */
 object TagIcons {
     private const val ASSET = "tagicons/fluent-emoji-high-contrast.txt"
+    private const val ITALIAN = "tagicons/it.txt"
     private val lock = Mutex()
     @Volatile private var specs: Map<String, String>? = null
+
+    /** An icon's emoji, Italian name, and the stems of its Italian name and keywords. */
+    private class Italian(val emoji: String, val title: String, val titleStems: List<String>, val keywordStems: Set<String>)
+    @Volatile private var italian: Map<String, Italian>? = null
+    /** Emoji (without FE0F) -> icon name. */
+    @Volatile private var byEmoji: Map<String, String>? = null
     private val built = LruCache<String, ImageVector>(400)
 
     /** Every icon name, in the file's (alphabetical) order. */
@@ -49,6 +57,34 @@ object TagIcons {
             }
             map
         }.also { specs = it }
+    }
+
+    private suspend fun italian(context: Context): Map<String, Italian> = italian ?: lock.withLock {
+        italian ?: withContext(Dispatchers.IO) {
+            val map = HashMap<String, Italian>(1700)
+            val emojis = HashMap<String, String>(1700)
+            context.applicationContext.assets.open(ITALIAN).bufferedReader().useLines { lines ->
+                lines.forEach { l ->
+                    val p = l.split('	')
+                    if (p.size < 4) return@forEach
+                    val keywords = p[3].split('|').flatMap { words(it) }.map(::stem).toSet()
+                    map[p[0]] = Italian(p[1], p[2], words(p[2]).map(::stem), keywords)
+                    // The first icon wins: the file is alphabetical, the plain form before its variants.
+                    emojis.putIfAbsent(p[1], p[0])
+                }
+            }
+            byEmoji = emojis
+            map
+        }.also { italian = it }
+    }
+
+    /** The Italian name of icon [name] ("cuore rosso"), or its English words while not loaded. */
+    fun title(name: String): String = italian?.get(name)?.title ?: name.replace('-', ' ')
+
+    /** The icon drawing [emoji] (a single emoji, FE0F or not), or null when there is none. */
+    suspend fun forEmoji(context: Context, emoji: String): String? {
+        italian(context)
+        return byEmoji?.get(emoji.trim().replace("️", ""))?.takeIf { it in load(context) }
     }
 
     suspend fun vector(context: Context, name: String): ImageVector? {
@@ -92,13 +128,14 @@ object TagIcons {
     }
 
     /**
-     * Icons for [text], best first: names sharing its words (English), then those its Italian words
-     * lead to. Empty text: [DEFAULTS].
+     * Icons for [text], best first: Italian or English names sharing its words, then Italian
+     * keywords and the subjects in [IT]. Empty text: [DEFAULTS].
      */
-    suspend fun search(context: Context, text: String, limit: Int = 200): List<String> {
+    suspend fun search(context: Context, text: String, limit: Int = 200): List<String> = withContext(Dispatchers.Default) {
         val all = load(context)
+        val ita = italian(context)
         val ws = words(text).filter { it.length >= 2 }
-        if (ws.isEmpty()) return DEFAULTS.filter { it in all }
+        if (ws.isEmpty()) return@withContext DEFAULTS.filter { d -> d in all }
         val score = HashMap<String, Int>()
         fun add(name: String, s: Int) { if (name in all) score.merge(name, s, ::maxOf) }
         for (name in all.keys) {
@@ -111,6 +148,18 @@ object TagIcons {
                 }
             }
         }
+        // Italian names and keywords: the name counts more than a keyword, a whole word more than a start.
+        for ((name, info) in ita) {
+            for (w in ws) {
+                val st = stem(w)
+                when {
+                    st in info.titleStems -> add(name, 95 - info.titleStems.size)
+                    st in info.keywordStems -> add(name, 75 - info.titleStems.size)
+                    w.length >= 3 && info.titleStems.any { s -> s.startsWith(st) } -> add(name, 65 - info.titleStems.size)
+                    w.length >= 4 && info.keywordStems.any { s -> s.startsWith(st) } -> add(name, 45 - info.titleStems.size)
+                }
+            }
+        }
         for (w in ws) {
             val st = stem(w)
             val hits = itIndex[st] ?: itIndex.entries.firstOrNull { (k, _) -> k.length >= 4 && st.length >= 4 && (k.startsWith(st) || st.startsWith(k)) }?.value
@@ -120,7 +169,7 @@ object TagIcons {
                 else for (name in all.keys) if (name.split('-').contains(target)) add(name, 70 - i - name.count { it == '-' })
             }
         }
-        return score.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key.length })
+        score.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key.length })
             .map { it.key }.take(limit)
     }
 

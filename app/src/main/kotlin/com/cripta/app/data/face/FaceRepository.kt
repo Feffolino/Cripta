@@ -72,18 +72,39 @@ class FaceRepository @Inject constructor(
     private val dao get() = db.faceDao()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    @Volatile private var engine: FaceEngine? = null
+    private var engine: FaceEngine? = null
     private val engineLock = Any()
+    /** Callers inside [withEngine] right now, and whether [release] waits for them to finish. */
+    private var engineUsers = 0
+    private var releaseWanted = false
 
-    /** The models, loaded on first use (about 10 MB) and kept until [release]. */
-    private fun engine(): FaceEngine = engine ?: synchronized(engineLock) {
-        engine ?: FaceEngine(asset("faces/yunet.onnx"), asset("faces/sface.onnx")).also { engine = it }
+    /**
+     * Run [block] with the models, loaded on first use (about 10 MB) and kept until [release].
+     * Counted, so a scan ending (and releasing them) never closes them under another caller, e.g.
+     * the viewer looking for the faces of a frame: that would run a closed ONNX session.
+     */
+    private inline fun <T> withEngine(block: (FaceEngine) -> T): T {
+        val e = synchronized(engineLock) {
+            engineUsers++
+            runCatching { engine ?: FaceEngine(asset("faces/yunet.onnx"), asset("faces/sface.onnx")).also { engine = it } }
+                .onFailure { engineUsers-- }.getOrThrow()
+        }
+        try {
+            return block(e)
+        } finally {
+            synchronized(engineLock) {
+                engineUsers--
+                if (engineUsers == 0 && releaseWanted) { engine?.close(); engine = null; releaseWanted = false }
+            }
+        }
     }
 
     private fun asset(name: String) = context.assets.open(name).use { it.readBytes() }
 
-    /** Free the models after a scan. */
-    fun release() = synchronized(engineLock) { engine?.close(); engine = null }
+    /** Free the models after a scan, as soon as nobody is using them. */
+    fun release() = synchronized(engineLock) {
+        if (engineUsers == 0) { engine?.close(); engine = null } else releaseWanted = true
+    }
 
     /** One writer at a time: placing new faces and the user's changes never interleave. */
     private val mutex = Mutex()
@@ -116,9 +137,10 @@ class FaceRepository @Inject constructor(
     }
 
     /** Find and store [file]'s faces (not placed among the people yet). True when it could be read. */
-    suspend fun analyse(file: FileEntity): Boolean {
+    suspend fun analyse(file: FileEntity): Boolean = withEngine { analyse(file, it) }
+
+    private suspend fun analyse(file: FileEntity, engine: FaceEngine): Boolean {
         val started = android.os.SystemClock.elapsedRealtime()
-        val engine = engine()
         val sightings = ArrayList<Sighting>()
         val rejects = HashMap<FaceReject, Int>()
         val sharp = IntArray(FaceStats.SHARP_BANDS.size + 1)
@@ -552,7 +574,7 @@ class FaceRepository @Inject constructor(
             }
         } else photo(file, 2 * FRAME_SIDE)
         img ?: return@withContext emptyList()
-        engine().analyze(img, all = true).filter { it.embedding != null }.sortedByDescending { it.det.w }.map { f ->
+        withEngine { it.analyze(img, all = true) }.filter { it.embedding != null }.sortedByDescending { it.det.w }.map { f ->
             val p = f.preview!!
             FoundFace(f, Bitmap.createBitmap(p.argb, p.width, p.height, Bitmap.Config.ARGB_8888), timeMs)
         }

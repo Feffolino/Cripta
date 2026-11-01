@@ -36,6 +36,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repo: VaultRepository,
+    private val downloadQueue: com.cripta.app.data.DownloadQueue,
     private val thumbs: ThumbnailLoader,
     private val viewerQueue: ViewerQueue,
     private val navigator: com.cripta.app.ui.vault.VaultNavigator,
@@ -65,13 +66,15 @@ class HomeViewModel @Inject constructor(
                 val s = settings.settingsOnce()
                 repo.purgeExpiredTrash(s.trashDays).forEach { thumbs.evict(it) }
             }
+            // Emojis of folders and tags (older vaults, restored backups) become icons.
+            runCatching { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
             // Resume downloads/conversions that were waiting when Android killed the app.
             if (repo.claimJobRestore()) runCatching { restorePendingJobs() }
         }
     }
 
     private suspend fun restorePendingJobs() {
-        val queuedUrls = repo.downloads.value.filter { !it.finished }.map { it.url }.toSet()
+        val queuedUrls = downloadQueue.downloads.value.filter { !it.finished }.map { it.url }.toSet()
         val converting = repo.convertingIds.value
         for (job in repo.pendingJobs()) {
             val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
@@ -160,7 +163,7 @@ class HomeViewModel @Inject constructor(
     /** False until the vault content has been read once, so the empty state doesn't flash on the
      *  first frame after unlock while the DB queries are still loading. */
     val loaded: StateFlow<Boolean> =
-        repo.changes.flatMapLatest { combine(repo.allFiles(), repo.folders(null)) { _, _ -> true } }
+        all.map { true }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val folderStats: StateFlow<Map<Long, FolderStat>> =

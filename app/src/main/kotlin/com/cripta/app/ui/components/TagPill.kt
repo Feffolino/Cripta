@@ -53,7 +53,7 @@ val OnImageGlass = Color(0xEB14171E)
 /** How much of a tag's colour fills its pill over a picture (the rim is stronger). */
 private const val TINT_ON_IMAGE = 0.45f
 
-/** A tag's text: its alias (emoji/acronym) before the name, when it has one. */
+/** A tag's text: its acronym before the name, when it has one. */
 fun tagText(tag: TagEntity): String =
     if (!tag.alias.isNullOrBlank()) "${tag.alias} ${tag.name}" else tag.name
 

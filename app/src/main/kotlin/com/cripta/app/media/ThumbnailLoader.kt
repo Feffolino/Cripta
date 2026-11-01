@@ -22,6 +22,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -71,13 +75,35 @@ class ThumbnailLoader @Inject constructor(
      */
     private val failed = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
+    /** Bumped at every lock, before the memory cache is emptied (see [remember]). */
+    private val lockEpoch = java.util.concurrent.atomic.AtomicInteger()
+
+    /** One generation per file at a time: a cover shown twice (grid + shelf) or asked for again
+     *  while it is generated is decrypted and decoded once, the second caller then reads the cache. */
+    private val generating = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
+
+    /** Video frames decoded at once on demand: a fast scroll can't pile up decoders on the few
+     *  hardware codec instances (each extra one fails or stalls the others). */
+    private val videoDecoders = Semaphore(2)
+
     init {
         // Locked: the decrypted covers held in memory go (they are the vault's content), and so
         // do the failures seen meanwhile (a load while locked fails for want of the key, and the
         // file then kept a grey cover for the rest of the session).
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default).launch {
-            session.locked.collect { locked -> if (locked) { cache.evictAll(); failed.clear() } }
+            session.locked.collect { locked -> if (locked) { lockEpoch.incrementAndGet(); cache.evictAll(); failed.clear() } }
         }
+    }
+
+    /**
+     * Put a decrypted cover in memory, unless the vault locked since [epoch]: a cover decoded while
+     * it was locking would otherwise outlive the eviction and stay in RAM while locked.
+     */
+    private fun remember(id: String, bmp: Bitmap, epoch: Int): Boolean {
+        cache.put(id, bmp)
+        if (lockEpoch.get() == epoch && repo.hasKey) return true
+        cache.remove(id)
+        return false
     }
 
     /** How many covers to generate at once during a background [prewarm] pass. Kept at 1 so the
@@ -88,27 +114,35 @@ class ThumbnailLoader @Inject constructor(
         // Nothing while locked: no key to decrypt with, and no cached plaintext to hand out.
         if (!repo.hasKey) return@withContext null
         cache.get(file.id)?.let { return@withContext it }
+        generating.getOrPut(file.id) { Mutex() }.withLock { loadOnce(file) }
+    }
+
+    private suspend fun loadOnce(file: FileEntity): Bitmap? {
+        val epoch = lockEpoch.get()
+        if (!repo.hasKey) return null
+        // Made by another caller while this one waited.
+        cache.get(file.id)?.let { return it }
         // A user-chosen cover always wins over the automatic one.
-        readSealed(File(customDir, file.id))?.let { cache.put(file.id, it); return@withContext it }
+        readSealed(File(customDir, file.id))?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
         // Persistent sealed cache.
-        readDisk(file.id)?.let { cache.put(file.id, it); return@withContext it }
+        readDisk(file.id)?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
         // Skip files already known to yield nothing this session.
-        if (file.id in failed) return@withContext null
+        if (file.id in failed) return null
         val bmp = runCatching {
             when {
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
-                VaultRepository.isVideo(file.mimeType) -> videoFrame(file, null)
+                VaultRepository.isVideo(file.mimeType) -> videoDecoders.withPermit { videoFrame(file, null) }
                 else -> null
             }
         }.getOrNull()
         if (bmp != null) {
-            cache.put(file.id, bmp)
+            if (!remember(file.id, bmp, epoch)) return null
             runCatching { writeDisk(file.id, bmp) }
         } else if (repo.hasKey) {
             // Only a real failure: one caused by the vault locking meanwhile would stick.
             failed.add(file.id)
         }
-        bmp
+        return bmp
     }
 
     /**

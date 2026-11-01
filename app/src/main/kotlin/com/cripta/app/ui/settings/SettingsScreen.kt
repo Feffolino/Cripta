@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.PushPin
 
 import androidx.compose.foundation.layout.safeDrawing
@@ -112,7 +113,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -137,13 +137,13 @@ fun SettingsScreen(
     onOpenFile: (String) -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
-    val s by vm.settings.collectAsState()
-    val tags by vm.tags.collectAsState()
-    val message by vm.message.collectAsState()
+    val s by vm.settings.collectAsStateWithLifecycle()
+    val tags by vm.tags.collectAsStateWithLifecycle()
+    val message by vm.message.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val pkgInfo = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull() }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
-    val updateState by vm.update.collectAsState()
+    val updateState by vm.update.collectAsStateWithLifecycle()
     LaunchedEffect(message) {
         message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
     }
@@ -162,23 +162,23 @@ fun SettingsScreen(
     var addTag by remember { mutableStateOf(false) }
     var confirmRandomColors by remember { mutableStateOf(false) }
 
-    val dupMode by vm.dupMode.collectAsState()
-    val dupScanning by vm.dupScanning.collectAsState()
-    val dupProgress by vm.dupProgress.collectAsState()
-    val dupScannedCount by vm.dupScannedCount.collectAsState()
-    val exactGroups by vm.exactGroups.collectAsState()
-    val dupGroups by vm.dupGroups.collectAsState()
-    val dupNotice by vm.dupNotice.collectAsState()
-    val dupWaiting by vm.dupResultWaiting.collectAsState()
-    val dupUndo by vm.dupUndo.collectAsState()
-    val backupBusy by vm.backupBusy.collectAsState()
-    val backupProgress by vm.backupProgress.collectAsState()
-    val backupEstimate by vm.backupEstimate.collectAsState()
+    val dupMode by vm.dupMode.collectAsStateWithLifecycle()
+    val dupScanning by vm.dupScanning.collectAsStateWithLifecycle()
+    val dupProgress by vm.dupProgress.collectAsStateWithLifecycle()
+    val dupScannedCount by vm.dupScannedCount.collectAsStateWithLifecycle()
+    val exactGroups by vm.exactGroups.collectAsStateWithLifecycle()
+    val dupGroups by vm.dupGroups.collectAsStateWithLifecycle()
+    val dupNotice by vm.dupNotice.collectAsStateWithLifecycle()
+    val dupWaiting by vm.dupResultWaiting.collectAsStateWithLifecycle()
+    val dupUndo by vm.dupUndo.collectAsStateWithLifecycle()
+    val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
+    val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
+    val backupEstimate by vm.backupEstimate.collectAsStateWithLifecycle()
 
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
-    val trashed by vm.trashed.collectAsState()
-    val trashedFolders by vm.trashedFolders.collectAsState()
+    val trashed by vm.trashed.collectAsStateWithLifecycle()
+    val trashedFolders by vm.trashedFolders.collectAsStateWithLifecycle()
 
     // Two-level navigation: the category list, or one category page. Back returns to the list.
     var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
@@ -191,7 +191,7 @@ fun SettingsScreen(
     val current = page?.let { p -> SettingsPage.entries.firstOrNull { it.name == p } }
     androidx.activity.compose.BackHandler(enabled = current != null) { page = null }
     // Requests from elsewhere (Home, duplicate-scan notification).
-    val requestedPage by vm.requestedPage.collectAsState()
+    val requestedPage by vm.requestedPage.collectAsStateWithLifecycle()
     LaunchedEffect(requestedPage) {
         requestedPage?.let { page = it; vm.consumeRequestedPage() }
     }
@@ -377,7 +377,7 @@ fun SettingsScreen(
                                 ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
                                     indent = 0.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
                                 ChoiceRow("Testo", indent = 0.dp, options = listOf(
-                                    com.cripta.app.data.CoverTagStyle.ALIAS to "Sigla / emoji",
+                                    com.cripta.app.data.CoverTagStyle.ALIAS to "Icona o sigla",
                                     com.cripta.app.data.CoverTagStyle.NAME to "Nome intero",
                                 ), selected = s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
                             }

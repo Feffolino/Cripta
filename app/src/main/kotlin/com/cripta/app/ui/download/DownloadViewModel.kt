@@ -27,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DownloadViewModel @Inject constructor(
     private val repo: VaultRepository,
+    private val queue: com.cripta.app.data.DownloadQueue,
     private val ytdlp: YtdlpDownloader,
     private val sharedLinks: SharedLinkStore,
     private val settings: SettingsStore,
@@ -34,7 +35,7 @@ class DownloadViewModel @Inject constructor(
 ) : ViewModel() {
 
     /** The download queue: running, waiting and finished links. */
-    val downloads: StateFlow<List<VaultRepository.DownloadJob>> = repo.downloads
+    val downloads: StateFlow<List<com.cripta.app.data.DownloadJob>> = queue.downloads
 
     /** A link shared into the app, to pre-fill the field (null once consumed). */
     val pendingSharedLink: StateFlow<String?> = sharedLinks.pending
@@ -124,14 +125,14 @@ class DownloadViewModel @Inject constructor(
 
     /** Cancel the link being downloaded now (the rest of the queue continues). */
     fun cancel(ctx: Context) = ConversionService.cancelDownload(ctx)
-    fun remove(id: String) = repo.removeDownload(id)
+    fun remove(id: String) = queue.removeDownload(id)
 
     /** Queue a failed/cancelled link again with the same quality and destination. */
-    fun retry(ctx: Context, job: VaultRepository.DownloadJob) {
-        repo.removeDownload(job.id)
+    fun retry(ctx: Context, job: com.cripta.app.data.DownloadJob) {
+        queue.removeDownload(job.id)
         ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds)
     }
-    fun clearFinished() = repo.clearFinishedDownloads()
+    fun clearFinished() = queue.clearFinishedDownloads()
 
     /** Prepare the viewer to open a single file (e.g. a finished or already-present download). */
     fun prepareOpen(fileId: String) = viewerQueue.set(listOf(fileId))

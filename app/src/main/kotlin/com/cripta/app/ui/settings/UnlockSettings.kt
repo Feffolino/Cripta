@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +20,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +48,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 internal fun UnlockModeOptions(vm: SettingsViewModel) {
-    val mode by vm.unlockMode.collectAsState()
+    val mode by vm.unlockMode.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val activity = remember(ctx) { ctx.findFragmentActivity() }
     val scope = rememberCoroutineScope()

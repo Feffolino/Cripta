@@ -1,5 +1,6 @@
 package com.cripta.app.ui.favorites
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,7 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,11 +66,11 @@ fun FavoritesScreen(
     onBack: () -> Unit = {},
     vm: FavoritesViewModel = hiltViewModel(),
 ) {
-    val favoritesOrNull by vm.favorites.collectAsState()
-    val coverVersions by vm.coverVersions.collectAsState()
-    val foldersOrNull by vm.folders.collectAsState()
-    val folderPreviews by vm.folderPreviews.collectAsState()
-    val sort by vm.sort.collectAsState()
+    val favoritesOrNull by vm.favorites.collectAsStateWithLifecycle()
+    val coverVersions by vm.coverVersions.collectAsStateWithLifecycle()
+    val foldersOrNull by vm.folders.collectAsStateWithLifecycle()
+    val folderPreviews by vm.folderPreviews.collectAsStateWithLifecycle()
+    val sort by vm.sort.collectAsStateWithLifecycle()
     var sortMenu by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

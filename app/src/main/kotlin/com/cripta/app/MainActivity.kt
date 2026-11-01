@@ -1,5 +1,6 @@
 package com.cripta.app
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -45,6 +46,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var session: SessionManager
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var repo: VaultRepository
+    @Inject lateinit var downloadQueue: com.cripta.app.data.DownloadQueue
     @Inject lateinit var sharedLinks: com.cripta.app.data.SharedLinkStore
     @Inject lateinit var sharedFiles: com.cripta.app.data.SharedFilesStore
     @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
@@ -195,9 +197,9 @@ class MainActivity : FragmentActivity() {
                 com.cripta.app.ui.theme.TagColorsEnabled.on = set.display.tagColors
                 com.cripta.app.ui.theme.RecentTagsCount.value = set.display.recentTagsCount
             }
-            val invalidated by keyInvalidated.collectAsState()
-            val auth by authUi.collectAsState()
-            val askNotif by askNotifications.collectAsState()
+            val invalidated by keyInvalidated.collectAsStateWithLifecycle()
+            val auth by authUi.collectAsStateWithLifecycle()
+            val askNotif by askNotifications.collectAsStateWithLifecycle()
             CriptaTheme(themeMode = set.themeMode, dynamicColor = set.dynamicColor) {
                 // System bars stay transparent so the content drawn behind them shows through and
                 // the bar / camera-cutout strips ADAPT to the current screen — the app surface on
@@ -266,7 +268,7 @@ class MainActivity : FragmentActivity() {
         val prefs = getSharedPreferences(UI_PREFS, MODE_PRIVATE)
         if (!needsNotificationPermission() || prefs.getBoolean(PREF_NOTIF_ASKED, false)) return
         lifecycleScope.launch {
-            combine(repo.importState, repo.downloads, repo.convertStatus) { imp, dl, conv ->
+            combine(repo.importState, downloadQueue.downloads, repo.convertStatus) { imp, dl, conv ->
                 imp.active || conv.active || dl.any { !it.finished }
             }.distinctUntilChanged().collect { busy ->
                 if (busy && needsNotificationPermission() && !prefs.getBoolean(PREF_NOTIF_ASKED, false)) {

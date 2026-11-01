@@ -43,6 +43,7 @@ import javax.inject.Inject
 class ConversionService : Service() {
 
     @Inject lateinit var repo: VaultRepository
+    @Inject lateinit var downloadQueue: com.cripta.app.data.DownloadQueue
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var converter: VideoConverter
     @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
@@ -62,7 +63,24 @@ class ConversionService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Keeps the CPU running while the service lives (it stops itself once idle): a foreground
+     * service alone doesn't, so with the screen off a conversion, a face scan or a download would
+     * stall until the phone woke up. The timeout only bounds a stuck job.
+     */
+    private val wakeLock by lazy {
+        getSystemService(android.os.PowerManager::class.java)
+            .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "Cripta:work")
+            .apply { setReferenceCounted(false) }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        runCatching { wakeLock.acquire(6 * 60 * 60 * 1000L) }
+    }
+
     override fun onDestroy() {
+        runCatching { if (wakeLock.isHeld) wakeLock.release() }
         // An outcome still in the island moves to its own notification now (it went with the service).
         synchronized(lock) {
             main.removeCallbacks(flushProgress); pendingProgress = null
@@ -241,14 +259,14 @@ class ConversionService : Service() {
             if (intent.getBooleanExtra(EX_RETRY, false)) getSystemService(NotificationManager::class.java).cancel(ResultKind.DOWNLOAD.id)
             val url = intent.getStringExtra(EX_URL)
             if (url != null) {
-                val job = VaultRepository.DownloadJob(
+                val job = com.cripta.app.data.DownloadJob(
                     id = java.util.UUID.randomUUID().toString(),
                     url = url,
                     maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
                     folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
                     tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
                 )
-                repo.enqueueDownload(job)
+                downloadQueue.enqueueDownload(job)
                 // Persisted so a waiting link survives the app being killed (resumed at next unlock).
                 scope.launch {
                     repo.putPendingJob(job.id, "download", org.json.JSONObject()
@@ -1182,7 +1200,7 @@ class ConversionService : Service() {
         try {
             while (true) {
                 val job = synchronized(workerLock) {
-                    repo.takeNextDownload() ?: run { downloadWorkerRunning = false; drained = true; null }
+                    downloadQueue.takeNextDownload() ?: run { downloadWorkerRunning = false; drained = true; null }
                 } ?: break
                 downloadUrl(job)
             }
@@ -1198,18 +1216,18 @@ class ConversionService : Service() {
      * notification; the source link is stored on the new file. Cancelling stops only this link:
      * the rest of the queue continues.
      */
-    private suspend fun downloadUrl(job: VaultRepository.DownloadJob) {
+    private suspend fun downloadUrl(job: com.cripta.app.data.DownloadJob) {
         val url = job.url
         var produced: java.io.File? = null
         val pid = java.util.UUID.randomUUID().toString()
         cancelRequested = false
         ytdlpProcessId = pid
         currentDownloadId = job.id
-        fun set(f: (VaultRepository.DownloadJob) -> VaultRepository.DownloadJob) = repo.updateDownload(job.id, f)
-        val waiting = { repo.downloads.value.count { it.phase == VaultRepository.DownloadPhase.QUEUED } }
+        fun set(f: (com.cripta.app.data.DownloadJob) -> com.cripta.app.data.DownloadJob) = downloadQueue.updateDownload(job.id, f)
+        val waiting = { downloadQueue.downloads.value.count { it.phase == com.cripta.app.data.DownloadPhase.QUEUED } }
         try {
             repo.setConversionProgress(0)
-            set { it.copy(phase = VaultRepository.DownloadPhase.PREPARING) }
+            set { it.copy(phase = com.cripta.app.data.DownloadPhase.PREPARING) }
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
             val queued = { waiting().let { if (it > 0) "$it in coda" else null } }
@@ -1221,7 +1239,7 @@ class ConversionService : Service() {
                 ytdlp.download(url, job.maxHeight, pid, isCancelled = { cancelRequested }) { pct, _ ->
                     repo.setConversionProgress(pct)
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
-                    set { it.copy(phase = VaultRepository.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
+                    set { it.copy(phase = com.cripta.app.data.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
                     notify(build("Download", pct, sub = "Scaricamento del video · $pct%", eta = leftMs?.let(::formatEtaShort), header = queued(),
                         cancelable = true, kind = ResultKind.DOWNLOAD))
                 }
@@ -1229,7 +1247,7 @@ class ConversionService : Service() {
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             if (!isDownloadedVideo(produced)) {
                 val msg = "Formato del video non leggibile dal player"
-                set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
+                set { it.copy(phase = com.cripta.app.data.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
                     actions = listOf(retryAction(job)))
                 return
@@ -1237,23 +1255,23 @@ class ConversionService : Service() {
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
             val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
-            set { it.copy(phase = VaultRepository.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
+            set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             // The title stays inside the app (queue, vault): the notification only says it is done.
             notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
+            set { it.copy(phase = com.cripta.app.data.DownloadPhase.CANCELLED) }
             notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
             // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
-                set { it.copy(phase = VaultRepository.DownloadPhase.CANCELLED) }
+                set { it.copy(phase = com.cripta.app.data.DownloadPhase.CANCELLED) }
                 notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             } else {
                 android.util.Log.e("ConversionService", "Download failed (${e.javaClass.simpleName})")
                 val msg = UserErrors.ofDownload(e)
-                set { it.copy(phase = VaultRepository.DownloadPhase.FAILED, message = msg) }
+                set { it.copy(phase = com.cripta.app.data.DownloadPhase.FAILED, message = msg) }
                 notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
                     actions = listOf(retryAction(job)))
             }
@@ -1698,7 +1716,7 @@ class ConversionService : Service() {
     }
 
     /** "Riprova" for a failed download: queues the same link again, same quality, folder and tags. */
-    private fun retryAction(job: VaultRepository.DownloadJob): NotificationCompat.Action =
+    private fun retryAction(job: com.cripta.app.data.DownloadJob): NotificationCompat.Action =
         retryAction(downloadUrlIntent(this, job.url, job.maxHeight, job.folderId, job.tagIds))
 
     private fun retryAction(download: Intent): NotificationCompat.Action {

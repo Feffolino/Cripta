@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.layout
 
 import com.cripta.app.ui.components.CriptaAlertDialog
@@ -114,7 +115,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
@@ -280,33 +280,33 @@ fun VaultScreen(
     onNewNote: (Long?) -> Unit = {},
     vm: VaultViewModel = hiltViewModel(),
 ) {
-    val folders by vm.folders.collectAsState()
-    val files by vm.files.collectAsState()
-    val tags by vm.tags.collectAsState()
-    val filters by vm.filters.collectAsState()
-    val path by vm.path.collectAsState()
-    val pendingOriginals by vm.pendingOriginals.collectAsState()
-    val pendingVersions by vm.pendingVersions.collectAsState()
-    val viewMode by vm.viewMode.collectAsState()
-    val portraitColumns by vm.gridColumns.collectAsState()
-    val landscapeColumns by vm.gridColumnsLandscape.collectAsState()
-    val allFolders by vm.allFolders.collectAsState()
-    val sortKey by vm.sortKey.collectAsState()
-    val sortAscending by vm.sortAscending.collectAsState()
-    val folderStats by vm.folderStats.collectAsState()
-    val folderPreviews by vm.folderPreviews.collectAsState()
-    val display by vm.display.collectAsState()
-    val filesLevelState = vm.filesLevel.collectAsState()
-    val foldersLevelState = vm.foldersLevel.collectAsState()
-    val coverOverrides by vm.coverOverrides.collectAsState()
-    val coverVersions by vm.coverVersions.collectAsState()
-    val stats by vm.stats.collectAsState()
-    val importState by vm.importState.collectAsState()
-    val savedFilters by vm.savedFilters.collectAsState()
-    val trashEnabled by vm.trashEnabled.collectAsState()
-    val filterLocalOnly by vm.filterLocalOnly.collectAsState()
-    val convertStatus by vm.convertStatus.collectAsState()
-    val convertSettings by vm.convertSettings.collectAsState()
+    val folders by vm.folders.collectAsStateWithLifecycle()
+    val files by vm.files.collectAsStateWithLifecycle()
+    val tags by vm.tags.collectAsStateWithLifecycle()
+    val filters by vm.filters.collectAsStateWithLifecycle()
+    val path by vm.path.collectAsStateWithLifecycle()
+    val pendingOriginals by vm.pendingOriginals.collectAsStateWithLifecycle()
+    val pendingVersions by vm.pendingVersions.collectAsStateWithLifecycle()
+    val viewMode by vm.viewMode.collectAsStateWithLifecycle()
+    val portraitColumns by vm.gridColumns.collectAsStateWithLifecycle()
+    val landscapeColumns by vm.gridColumnsLandscape.collectAsStateWithLifecycle()
+    val allFolders by vm.allFolders.collectAsStateWithLifecycle()
+    val sortKey by vm.sortKey.collectAsStateWithLifecycle()
+    val sortAscending by vm.sortAscending.collectAsStateWithLifecycle()
+    val folderStats by vm.folderStats.collectAsStateWithLifecycle()
+    val folderPreviews by vm.folderPreviews.collectAsStateWithLifecycle()
+    val display by vm.display.collectAsStateWithLifecycle()
+    val filesLevelState = vm.filesLevel.collectAsStateWithLifecycle()
+    val foldersLevelState = vm.foldersLevel.collectAsStateWithLifecycle()
+    val coverOverrides by vm.coverOverrides.collectAsStateWithLifecycle()
+    val coverVersions by vm.coverVersions.collectAsStateWithLifecycle()
+    val stats by vm.stats.collectAsStateWithLifecycle()
+    val importState by vm.importState.collectAsStateWithLifecycle()
+    val savedFilters by vm.savedFilters.collectAsStateWithLifecycle()
+    val trashEnabled by vm.trashEnabled.collectAsStateWithLifecycle()
+    val filterLocalOnly by vm.filterLocalOnly.collectAsStateWithLifecycle()
+    val convertStatus by vm.convertStatus.collectAsStateWithLifecycle()
+    val convertSettings by vm.convertSettings.collectAsStateWithLifecycle()
     /** Ids waiting for the first-conversion choice dialog. */
     var convertAsk by remember { mutableStateOf<List<String>?>(null) }
     val ctx = LocalContext.current
@@ -489,7 +489,7 @@ fun VaultScreen(
     SideEffect { if (selection.isNotEmpty()) lastSelCount = selection.size }
     val shownSelCount = if (selection.isNotEmpty()) selection.size else lastSelCount
 
-    val coverPeopleMap by vm.coverPeople.collectAsState()
+    val coverPeopleMap by vm.coverPeople.collectAsStateWithLifecycle()
     val coverPeople = remember(coverPeopleMap) { CoverPeople(coverPeopleMap) { vm.faceCrop(it) } }
     androidx.compose.runtime.CompositionLocalProvider(LocalCoverPeople provides coverPeople) {
     Scaffold(
@@ -767,7 +767,7 @@ fun VaultScreen(
             // Landscape: the banners/strips above the grid get a capped, scrollable area so an
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
-            val filterPeople by vm.filterPeople.collectAsState()
+            val filterPeople by vm.filterPeople.collectAsStateWithLifecycle()
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
@@ -1246,15 +1246,16 @@ fun VaultScreen(
 
     folderToStyle?.let { folder ->
         FolderStyleDialog(
+            folderName = folder.name,
             initialColor = folder.color,
-            initialEmoji = folder.emoji,
-            onConfirm = { c, e -> vm.setFolderStyle(folder.id, c, e); folderToStyle = null },
+            initialIcon = folder.icon,
+            onConfirm = { c, i -> vm.setFolderStyle(folder.id, c, i); folderToStyle = null },
             onDismiss = { folderToStyle = null },
         )
     }
 
     if (showFilterSheet) {
-        val sheetPeople by vm.filterPeople.collectAsState()
+        val sheetPeople by vm.filterPeople.collectAsStateWithLifecycle()
         FilterSortSheet(
             filters = filters,
             tags = tags,
@@ -2682,14 +2683,19 @@ private fun CoverOptionDialog(
 
 @Composable
 private fun FolderStyleDialog(
+    folderName: String,
     initialColor: Int?,
-    initialEmoji: String?,
+    initialIcon: String?,
     onConfirm: (Int?, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var color by remember { mutableStateOf(initialColor) }
-    var emoji by remember { mutableStateOf(initialEmoji ?: "") }
-    val emojis = listOf("📁", "⭐", "🔒", "❤️", "📷", "🎬", "🎵", "📄", "💼", "🎨", "🔑", "🎁", "🌍", "🔥", "💡", "✅")
+    var icon by remember { mutableStateOf(initialIcon) }
+    var browsing by remember { mutableStateOf(false) }
+    if (browsing) {
+        com.cripta.app.ui.tagicons.TagIconPicker(folderName, icon, onPick = { icon = it; browsing = false }, onDismiss = { browsing = false })
+        return
+    }
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Personalizza cartella") },
@@ -2705,17 +2711,10 @@ private fun FolderStyleDialog(
                         ColorSwatch(c, color == c, FOLDER_COLOR_NAMES.getOrElse(i) { "Colore ${i + 1}" }) { color = c }
                     }
                 }
-                Text("Emoji", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    EmojiPick("✕", emoji.isBlank(), "Nessuna emoji") { emoji = "" }
-                    emojis.forEach { e -> EmojiPick(e, emoji == e, "Emoji $e") { emoji = e } }
-                }
+                com.cripta.app.ui.tagicons.TagIconField(name = folderName, icon = icon, onPick = { icon = it }, onBrowse = { browsing = true })
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(color, emoji.ifBlank { null }) }) { Text("Salva") } },
+        confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { Text("Salva") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
 }
@@ -2745,21 +2744,6 @@ private fun ColorSwatch(color: Int?, selected: Boolean, name: String, onClick: (
             color == null -> Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             selected -> Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
         }
-    }
-}
-
-@Composable
-private fun EmojiPick(label: String, selected: Boolean, description: String, onClick: () -> Unit) {
-    Surface(
-        selected = selected,
-        onClick = onClick,
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.semantics { this.role = Role.RadioButton },
-    ) {
-        Text(label, style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                .clearAndSetSemantics { this.contentDescription = description })
     }
 }
 
@@ -3306,7 +3290,7 @@ fun FolderMosaic(
             ) {
                 val f = previews.firstOrNull()
                 if (f == null) {
-                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 44.dp)
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 44.dp)
                 } else {
                     val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                     bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
@@ -3319,7 +3303,7 @@ fun FolderMosaic(
             }
         }
         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.emoji, 22.dp)
+            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 22.dp)
             Column(Modifier.weight(1f).padding(start = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,

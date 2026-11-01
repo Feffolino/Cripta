@@ -42,8 +42,16 @@ interface FolderDao {
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: Long): FolderEntity?
 
-    @Query("UPDATE folders SET color = :color, emoji = :emoji WHERE id = :id")
-    suspend fun setStyle(id: Long, color: Int?, emoji: String?)
+    /** Colour and icon; an emoji left from older vaults is dropped with it. */
+    @Query("UPDATE folders SET color = :color, icon = :icon, emoji = NULL WHERE id = :id")
+    suspend fun setStyle(id: Long, color: Int?, icon: String?)
+
+    /** A backup of an older vault: its emoji, turned into an icon after the restore. */
+    @Query("UPDATE folders SET emoji = :emoji WHERE id = :id")
+    suspend fun setEmoji(id: Long, emoji: String?)
+
+    @Query("SELECT * FROM folders WHERE emoji IS NOT NULL")
+    suspend fun withEmoji(): List<FolderEntity>
 
     @Query("UPDATE folders SET coverFileId = :fileId WHERE id = :id")
     suspend fun setCover(id: Long, fileId: String?)

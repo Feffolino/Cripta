@@ -53,12 +53,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cripta.app.data.db.TagEntity
 
-/** Quick-pick emojis offered when creating/editing a label alias. */
-private val QUICK_EMOJIS = listOf(
-    "⭐", "🔒", "❤️", "📌", "🏷️", "📁", "📄", "🖼️", "🎬", "🎵",
-    "📷", "🔑", "💼", "🎨", "🎁", "✅", "🔥", "💡", "🧾", "🌍",
-)
-
 /** A tag in the pickers: the shared [TagPill], assigned (tick, full colour) or not (tint). */
 @Composable
 private fun TagChip(
@@ -156,8 +150,8 @@ private fun chipLabel(name: String, alias: String?): String =
     if (!alias.isNullOrBlank()) "$alias $name" else name
 
 /**
- * Create/edit a label choosing a name and, right away, an emoji/acronym alias.
- * The alias is shown as a compact badge on thumbnails.
+ * Create/edit a label: its name, an icon and/or a short acronym ("sigla"), shown as a compact badge
+ * on thumbnails. Icons replace the old emoji aliases.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -204,34 +198,15 @@ fun LabelEditorDialog(
                     Text("Il nome si cambia da Impostazioni › Etichette.", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                com.cripta.app.ui.components.CriptaTextField(
-                    // At most 6 visible characters, counted as graphemes so an emoji is never split.
-                    value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
-                    label = { Text("Emoji o acronimo (opzionale)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                )
-                Text("Suggerimenti", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    QUICK_EMOJIS.forEach { e ->
-                        val shape = MaterialTheme.shapes.small
-                        Surface(
-                            color = if (alias == e) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            shape = shape,
-                            modifier = Modifier.minimumInteractiveComponentSize().clip(shape)
-                                .selectable(selected = alias == e, role = Role.RadioButton, onClick = { alias = e })
-                                .semantics { contentDescription = "Alias $e" },
-                        ) {
-                            Text(e, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
-                        }
-                    }
-                }
                 if (onIcon != null) {
                     com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true })
                 }
+                com.cripta.app.ui.components.CriptaTextField(
+                    // At most 6 visible characters, counted as graphemes.
+                    value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
+                    label = { Text("Sigla (opzionale)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Text("Al posto dell'icona sulle copertine, oppure accanto.") },
+                )
                 if (onPinned != null) {
                     Row(
                         Modifier.fillMaxWidth().toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it }),
@@ -254,11 +229,11 @@ fun LabelEditorDialog(
                     TagColorPicker(selected = color, autoColor = auto, autoDescription = "Colore predefinito") { color = it }
                     // Live preview of the badge as it will look on covers.
                     val preview = color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto
-                    Surface(color = preview, shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)) {
-                        Text(alias.ifBlank { name.take(2).uppercase() }.ifBlank { "AB" },
-                            style = MaterialTheme.typography.labelMedium, color = androidx.compose.ui.graphics.Color.White,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                    }
+                    // As on a cover: the acronym, else the icon alone, else the first two letters.
+                    com.cripta.app.ui.components.TagPill(
+                        alias.trim().ifBlank { if (icon != null) "" else name.take(2).uppercase().ifBlank { "AB" } },
+                        preview, tagIcon = icon,
+                    )
                 }
             }
         },

@@ -304,14 +304,12 @@ class ViewerViewModel @Inject constructor(
 
     /**
      * Remember where playback stopped. Near the end counts as finished (next time starts over).
-     * Runs outside viewModelScope: the viewer may be closing, which would cancel the save.
+     * Saved on the repository's scope, not viewModelScope: the viewer may be closing, which would
+     * cancel the save.
      */
     fun savePosition(fileId: String, posMs: Long, durationMs: Long) {
         val finished = durationMs > 0 && posMs >= durationMs - 5_000
-        val value = if (finished || posMs < 3_000) null else posMs
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            runCatching { repo.setPlaybackPos(fileId, value) }
-        }
+        repo.savePlaybackPos(fileId, if (finished || posMs < 3_000) null else posMs)
     }
 
     /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */

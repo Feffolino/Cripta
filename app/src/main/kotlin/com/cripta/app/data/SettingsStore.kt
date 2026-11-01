@@ -30,7 +30,7 @@ enum class TagSortMode { ALPHA, CUSTOM }
  * stays recoverable. ASK: previous behaviour (prompt). KEEP_BOTH: keep both, no prompt.
  */
 enum class ConvertAfter { REPLACE, ASK, KEEP_BOTH }
-/** How a tag is written on a cover badge: its short alias/emoji, or its full name. */
+/** How a tag is written on a cover badge: its icon or acronym, or its full name. */
 enum class CoverTagStyle { ALIAS, NAME }
 
 /** Shape of the covers in the player's filmstrip. */

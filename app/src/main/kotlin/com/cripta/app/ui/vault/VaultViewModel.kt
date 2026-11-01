@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -105,7 +107,7 @@ data class VaultStats(val shown: TypeCounts = TypeCounts(), val scope: TypeCount
     }
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
 @HiltViewModel
 class VaultViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
@@ -255,7 +257,7 @@ class VaultViewModel @Inject constructor(
             (com.cripta.app.data.SortKey.entries.firstOrNull { it.name == folder.sortKey }
                 ?: com.cripta.app.data.SortKey.DATE) to folder.sortAscending
         } ?: (com.cripta.app.data.SortKey.DATE to false)
-    }
+    }.distinctUntilChanged()
 
     val sortKey: StateFlow<com.cripta.app.data.SortKey> =
         sortFlow.map { it.first }
@@ -278,26 +280,52 @@ class VaultViewModel @Inject constructor(
     /** Current folder, or the whole vault while filtering when allowed by Settings. */
     private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>, val folder: Long? = null)
 
-    private val scoped =
-        combine(currentFolderId, filters, sortFlow,
-            settings.settings.map { it.filterCurrentFolderOnly }, refresh) { folder, f, sort, localOnly, _ ->
-            Triple(folder, f, sort) to localOnly
+    /**
+     * The files the filters run on: the current folder, or the whole vault while filtering when
+     * allowed by Settings. Re-queried only when that scope changes, never on a filter or a keystroke.
+     */
+    private val source =
+        combine(currentFolderId, filters.map { it.active }.distinctUntilChanged(),
+            settings.settings.map { it.filterCurrentFolderOnly }.distinctUntilChanged(), refresh) { folder, active, localOnly, _ ->
+            folder to (active && !localOnly)
         }
-            .flatMapLatest { (request, localOnly) ->
-                val (folder, f, sort) = request
-                val source = if (f.active && !localOnly) repo.allFiles() else repo.files(folder)
-                // People come from the face index, not from the file rows: looked up once per filter change.
+            .distinctUntilChanged()
+            .flatMapLatest { (folder, wholeVault) ->
+                (if (wholeVault) repo.allFiles() else repo.files(folder)).map { folder to it }
+            }
+
+    /** A filter with what the face index adds: the media of the people chosen and of the names typed. */
+    private class Lookup(val f: Filters, val people: Set<String>?, val byName: Set<String>)
+
+    /**
+     * [filters] with their face lookups. While the search text is being typed (nothing else changed)
+     * it waits for a pause, so a word isn't searched letter by letter; any other change is immediate.
+     */
+    private val lookups = run {
+        var last: Filters? = null
+        filters.debounce { f ->
+            val prev = last
+            last = f
+            if (prev != null && f.query != prev.query && f.copy(query = "") == prev.copy(query = "")) 200L else 0L
+        }
+            .mapLatest { f ->
+                // People come from the face index, not from the file rows.
                 val people = if (f.personIds.isEmpty()) null else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())
                 // The search also finds the media of the people whose name matches.
                 val byName = if (f.query.isBlank()) emptySet() else runCatching { faces.mediaOfName(f.query) }.getOrDefault(emptySet())
-                val noQuery = f.copy(query = "")
-                source.map { list ->
-                    val shown = list.filter { f.matches(it) || (it.file.id in byName && noQuery.matches(it)) }
-                        .let { l -> if (people == null) l else l.filter { it.file.id in people } }
-                    Scoped(list, applySort(shown, sort.first, sort.second), folder)
-                }
-                    .flowOn(Dispatchers.Default)
+                Lookup(f, people, byName)
             }
+    }
+
+    private val scoped =
+        combine(source, lookups, sortFlow) { (folder, list), l, sort ->
+            val f = l.f
+            val noQuery = f.copy(query = "")
+            val shown = list.filter { f.matches(it) || (it.file.id in l.byName && noQuery.matches(it)) }
+                .let { s -> if (l.people == null) s else s.filter { it.file.id in l.people } }
+            Scoped(list, applySort(shown, sort.first, sort.second), folder)
+        }
+            .flowOn(Dispatchers.Default)
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     val files: StateFlow<List<FileWithTags>> =
@@ -527,8 +555,8 @@ class VaultViewModel @Inject constructor(
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
         repo.renameFolder(folder, name)    }
 
-    fun setFolderStyle(folderId: Long, color: Int?, emoji: String?) = viewModelScope.launch {
-        repo.setFolderStyle(folderId, color, emoji)
+    fun setFolderStyle(folderId: Long, color: Int?, icon: String?) = viewModelScope.launch {
+        repo.setFolderStyle(folderId, color, icon)
     }
 
     fun setFolderCover(folderId: Long, fileId: String?) = viewModelScope.launch { repo.setFolderCover(folderId, fileId) }
