@@ -42,7 +42,9 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -113,8 +115,10 @@ class FaceRepository @Inject constructor(
     /** One writer at a time: placing new faces and the user's changes never interleave. */
     private val mutex = Mutex()
 
-    /** Face pictures already decoded (track ids are never reused). */
+    /** Face pictures already decoded (track ids are never reused within one database). */
     private val crops = LruCache<Long, Bitmap>(300)
+    /** The database [crops] belong to: another vault or a restored backup counts ids from 1 again. */
+    private var cropsOf: Any? = null
 
     // ---- Analysis --------------------------------------------------------------------------
 
@@ -390,7 +394,10 @@ class FaceRepository @Inject constructor(
         live { it.observePersons() }, live { it.observeCards() }, live { it.observePersonMedia() }, live { it.observeScans() },
         repo.allFiles(),
     ) { persons, cards, links, scans, files -> Inputs(persons, cards, links, scans, files.map { it.file }) }
-        .debounce(400)
+        // At most one rebuild every 400 ms, the latest state always last. Not a debounce: while a
+        // scan writes for minutes a debounce never fires, and every list kept showing the old faces.
+        .conflate()
+        .transform { emit(it); delay(400) }
         .map { build(it) }
         .flowOn(Dispatchers.Default)
         .shareIn(scope, SharingStarted.WhileSubscribed(10_000), replay = 1)
@@ -438,6 +445,8 @@ class FaceRepository @Inject constructor(
 
 
     suspend fun crop(trackId: Long): Bitmap? {
+        val d = db
+        synchronized(crops) { if (cropsOf !== d) { crops.evictAll(); cropsOf = d } }
         crops.get(trackId)?.let { return it }
         return withContext(Dispatchers.IO) {
             dao.crop(trackId)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { crops.put(trackId, it) }

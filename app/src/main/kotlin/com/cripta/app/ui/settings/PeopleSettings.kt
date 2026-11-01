@@ -289,6 +289,14 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
         confirmButton = { TextButton(onClick = onClose) { Text("Chiudi") } })
 }
 
+/**
+ * A person's face (their cover). Keyed on the picture too: "Dividi" can give the same face another
+ * picture, and a list that kept the old one would show a face the person no longer has.
+ */
+@Composable
+internal fun FaceAvatar(face: com.cripta.app.data.db.TrackCard?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp,
+                        modifier: Modifier = Modifier) = FaceAvatar(face?.id, load, size, modifier, key = face?.timeMs)
+
 /** A face picture from the database, round. */
 @Composable
 internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp, modifier: Modifier = Modifier,
@@ -517,7 +525,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 items(shown, key = { it.id }) { p ->
                     Column(Modifier.animateItem().clickable(onClickLabel = "Apri ${p.title}") { vm.openPerson(p.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
-                            FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 96.dp,
+                            FaceAvatar(p.cover, { vm.faceCrop(it) }, 96.dp,
                                 Modifier)
                             if (!p.entity.ignored) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
@@ -599,7 +607,7 @@ private fun WhoDialog(ids: List<Long>, o: FaceRepository.Overview, vm: SettingsV
                     items(list, key = { it.id }) { q ->
                         Row(Modifier.fillMaxWidth().clickable { vm.assignFaces(ids, q.id, ""); onDismiss() }.padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 48.dp)
+                            FaceAvatar(q.cover, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                             if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
@@ -630,7 +638,7 @@ internal fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lo
                             picked = if (multi) (if (on) picked - q.id else picked + q.id) else listOf(q.id); newName = ""
                         }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Checkbox(on, null)
-                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 40.dp)
+                            FaceAvatar(q.cover, { vm.faceCrop(it) }, 40.dp)
                             Text("${q.title} · ${q.media.size}", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         }
