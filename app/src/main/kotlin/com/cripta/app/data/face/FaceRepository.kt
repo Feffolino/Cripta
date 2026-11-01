@@ -575,6 +575,103 @@ class FaceRepository @Inject constructor(
 
     suspend fun setCover(personId: Long, trackId: Long) = change { dao.setCover(personId, trackId) }
 
+    /** The profile's notes and links (one per line). */
+    suspend fun setProfile(personId: Long, notes: String, links: List<String>) =
+        change { dao.setProfile(personId, notes, links.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")) }
+
+    // ---- Suggestions ------------------------------------------------------------------------
+
+    /** A face found elsewhere that may be [personId]'s: how alike, best first. Never placed by itself. */
+    class Suggestion(val card: TrackCard, val similarity: Float)
+
+    /**
+     * Unassigned faces that look like [personId]. Every face the user gave them counts: a face is
+     * compared with each of them and scored by its closest matches (the mean of the best three),
+     * so the more media the user groups by hand, the surer the suggestions. Faces said "not them"
+     * before, and faces in media where they already are, are left out.
+     */
+    suspend fun suggestionsFor(personId: Long, limit: Int = 300): List<Suggestion> = withContext(Dispatchers.Default) {
+        val rows = dao.allTrackRows()
+        val own = rows.filter { it.personId == personId && it.state != "suggested" }
+        if (own.isEmpty()) return@withContext emptyList()
+        val ownEmb = own.map { EmbeddingCodec.decode(it.embeddings) }
+        val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
+        val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
+        val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
+        val scored = ArrayList<Pair<Long, Float>>()
+        for (r in rows) {
+            coroutineContext.ensureActive()
+            if (r.personId != null || r.id in refused || r.fileId in ownMedia || r.fileId !in live) continue
+            val emb = EmbeddingCodec.decode(r.embeddings)
+            val sims = ownEmb.map { o -> var best = -1f; for (x in o) for (y in emb) best = maxOf(best, similarity(x, y)); best }
+                .sortedDescending()
+            val score = sims.take(3).average().toFloat().let { mean -> maxOf(mean, sims.first() - 0.04f) }
+            if (score >= SUGGEST) scored += r.id to score
+        }
+        val top = scored.sortedByDescending { it.second }.take(limit)
+        val cards = dao.allCards().associateBy { it.id }
+        top.mapNotNull { (id, sc) -> cards[id]?.let { Suggestion(it, sc) } }
+    }
+
+    /** The picture [card] was found in (a video's frame, or the photo), at most [side] px. */
+    suspend fun frameOf(card: TrackCard, side: Int = 720): Bitmap? = withContext(Dispatchers.IO) {
+        val file = repo.fileById(card.fileId) ?: return@withContext null
+        runCatching {
+            if (VaultRepository.isVideo(file.mimeType)) {
+                val r = MediaMetadataRetriever()
+                val channel = repo.seekableChannel(file)
+                try {
+                    r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
+                    val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
+                    r.getFrameAtTime(card.timeMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST, params)?.let { scaled(it, side) }
+                } finally {
+                    runCatching { r.release() }; runCatching { channel.close() }
+                }
+            } else {
+                val bytes = repo.decryptBytes(file)
+                ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { dec, info, _ ->
+                    val k = minOf(1.0, side.toDouble() / maxOf(info.size.width, info.size.height))
+                    dec.setTargetSize(maxOf(1, (info.size.width * k).toInt()), maxOf(1, (info.size.height * k).toInt()))
+                    dec.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                }
+            }
+        }.getOrNull()
+    }
+
+    private fun scaled(src: Bitmap, side: Int): Bitmap {
+        val k = minOf(1.0, side.toDouble() / maxOf(src.width, src.height))
+        if (k >= 1.0) return src
+        return Bitmap.createScaledBitmap(src, maxOf(1, (src.width * k).toInt()), maxOf(1, (src.height * k).toInt()), true).also { src.recycle() }
+    }
+
+    // ---- Clearing faces found by mistake ----------------------------------------------------
+
+    /** What [clearDetected] would remove: media and faces analysed since [since] that nobody confirmed. */
+    class Detected(val media: List<String>, val faces: Int)
+
+    suspend fun detectedSince(since: Long): Detected = withContext(Dispatchers.Default) {
+        val scans = dao.allScans().filter { it.scannedAt >= since && it.status == "ok" }.map { it.fileId }.toSet()
+        val faces = dao.allCards().filter { it.fileId in scans && it.personId == null && it.state != "manual" && it.state != "carried" }
+        Detected(faces.map { it.fileId }.distinct(), faces.size)
+    }
+
+    /**
+     * Forget the faces found in [fileIds] that nobody confirmed (the analysis was on by mistake).
+     * Faces confirmed or added by hand, people and their names stay. A media left with no face is
+     * kept as analysed, so a new analysis does not find them again; "Rianalizza" on the media does.
+     */
+    suspend fun clearDetected(fileIds: Collection<String>): Int = change {
+        var n = 0
+        for (chunk in fileIds.distinct().chunked(500)) {
+            n += dao.deleteDetectedOf(chunk)
+            val left = dao.trackRowsOf(chunk).map { it.fileId }.toSet()
+            val empty = chunk.filter { it !in left }
+            if (empty.isNotEmpty()) dao.markCleared(empty, CLEARED)
+        }
+        dao.deleteEmptyPersons()
+        n
+    }
+
     /** Faces the user took away from someone wait unassigned; people left with nothing go. */
     private suspend fun replace(@Suppress("UNUSED_PARAMETER") ids: List<Long>) = change { dao.deleteEmptyPersons() }
 
@@ -654,6 +751,10 @@ class FaceRepository @Inject constructor(
     companion object {
         /** What an unnamed person is called on screen: faces found get no name, the user gives one. */
         const val UNNAMED = "Senza nome"
+        /** Status of a media whose faces the user cleared (analysed, nothing kept). */
+        const val CLEARED = "skip:volti eliminati da te"
+        /** A face this alike to a person's faces (cosine, see [suggestionsFor]) is offered as theirs. */
+        const val SUGGEST = 0.36f
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
         const val VERSION = 3
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */

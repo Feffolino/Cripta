@@ -413,6 +413,10 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             LaunchedEffect(peopleAsked) {
                 if (peopleAsked) { com.cripta.app.ui.people.PeopleNav.consume(); nav.navigate("people") { launchSingleTop = true } }
             }
+            val personAsked by com.cripta.app.ui.people.PeopleNav.person.collectAsState()
+            LaunchedEffect(personAsked) {
+                personAsked?.let { id -> com.cripta.app.ui.people.PeopleNav.consumePerson(); nav.navigate("person/$id") }
+            }
             NavHost(
                 navController = nav,
                 startDestination = "home",
@@ -463,6 +467,14 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             }
             composable("people") {
                 com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
+            }
+            composable("person/{id}") { entry ->
+                com.cripta.app.ui.people.PersonProfileScreen(
+                    personId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { nav.popBackStack() },
+                    onOpenFile = { nav.navigate("viewer/$it") },
+                    onShowInVault = { onTab("folders") },
+                )
             }
             composable("viewer/{fileId}") { entry ->
                 ViewerScreen(

@@ -403,6 +403,14 @@ interface FaceDao {
     @Query("DELETE FROM face_scans WHERE fileId = :fileId")
     suspend fun deleteScan(fileId: String)
 
+    /** Faces the analysis found in [ids] that nobody confirmed (those added or confirmed by hand stay). */
+    @Query("DELETE FROM face_tracks WHERE fileId IN (:ids) AND frames != 0 AND personId IS NULL AND state NOT IN ('manual', 'carried')")
+    suspend fun deleteDetectedOf(ids: List<String>): Int
+
+    /** Media whose faces were cleared: analysed (so not picked up again), with nothing left to show. */
+    @Query("UPDATE face_scans SET status = :status, faces = 0, rejects = '' WHERE fileId IN (:ids)")
+    suspend fun markCleared(ids: List<String>, status: String)
+
     /** Media deleted for good (not in the trash): their faces and links go too. */
     @Query("DELETE FROM face_scans WHERE fileId NOT IN (SELECT id FROM files)")
     suspend fun purgeScans(): Int

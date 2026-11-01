@@ -20,6 +20,8 @@ enum class DeleteOriginalPolicy { ASK, ALWAYS, NEVER }
 
 enum class ViewMode { GRID, LIST }
 enum class SortKey { DATE, NAME, SIZE, MANUAL }
+/** Orders of the people page: the app's (starred, then most media), name, media count, newest media, when added. */
+enum class PeopleSort { RELEVANCE, NAME, MEDIA, LATEST, ADDED }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class TagSortMode { ALPHA, CUSTOM }
 /**
@@ -139,6 +141,9 @@ data class Settings(
     val faceMoments: Boolean = false,
     /** People on Home: "off", "blur" (blurred until touched) or "on". */
     val peopleOnHome: String = "blur",
+    /** Order of the people page: a [PeopleSort] name, and its direction. */
+    val peopleSort: String = "RELEVANCE",
+    val peopleSortAscending: Boolean = false,
     /** Intro/outro: fingerprint only the first and last minute of each video (much faster). */
     val introQuickScan: Boolean = true,
     /** Player: skip a known intro / outro by itself instead of offering the button. */
@@ -224,6 +229,8 @@ class SettingsStore @Inject constructor(
     private val facesAnalyzeKey = booleanPreferencesKey("faces_analyze_new")
     private val faceMomentsKey = booleanPreferencesKey("face_moments")
     private val peopleHomeKey = stringPreferencesKey("people_on_home")
+    private val peopleSortKey = stringPreferencesKey("people_sort")
+    private val peopleSortAscKey = booleanPreferencesKey("people_sort_asc")
     private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
     private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
     private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
@@ -298,6 +305,8 @@ class SettingsStore @Inject constructor(
             facesAnalyzeNew = p[facesAnalyzeKey] ?: true,
             faceMoments = p[faceMomentsKey] ?: false,
             peopleOnHome = (p[peopleHomeKey] ?: "blur").let { if (it in listOf("off", "blur", "on")) it else "blur" },
+            peopleSort = (p[peopleSortKey] ?: "RELEVANCE").let { k -> if (PeopleSort.entries.any { it.name == k }) k else "RELEVANCE" },
+            peopleSortAscending = p[peopleSortAscKey] ?: false,
             introQuickScan = p[introQuickKey] ?: true,
             introAutoSkip = p[introAutoKey] ?: false,
             outroAutoSkip = p[outroAutoKey] ?: false,
@@ -339,6 +348,9 @@ class SettingsStore @Inject constructor(
     suspend fun setFacesAnalyzeNew(v: Boolean) { context.dataStore.edit { it[facesAnalyzeKey] = v } }
     suspend fun setFaceMoments(v: Boolean) { context.dataStore.edit { it[faceMomentsKey] = v } }
     suspend fun setPeopleOnHome(v: String) { context.dataStore.edit { it[peopleHomeKey] = v } }
+    suspend fun setPeopleSort(key: PeopleSort, ascending: Boolean) {
+        context.dataStore.edit { it[peopleSortKey] = key.name; it[peopleSortAscKey] = ascending }
+    }
     suspend fun setIntroQuickScan(v: Boolean) { context.dataStore.edit { it[introQuickKey] = v } }
     suspend fun setIntroAutoSkip(v: Boolean) { context.dataStore.edit { it[introAutoKey] = v } }
     suspend fun setOutroAutoSkip(v: Boolean) { context.dataStore.edit { it[outroAutoKey] = v } }
