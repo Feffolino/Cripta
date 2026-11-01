@@ -743,10 +743,13 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
 private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.Overview, vm: SettingsViewModel,
                       onClose: () -> Unit, onOpenFile: (String) -> Unit) {
     val pages = remember(groups) { groups.filter { it.cards.size > 1 } + groups.filter { it.cards.size == 1 } }
-    val pager = androidx.compose.foundation.pager.rememberPagerState { pages.size }
+    // Back from a media: the same page (the groups are kept by the view model).
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = vm.lastTodoPage.coerceIn(0, maxOf(0, pages.size - 1))) { pages.size }
+    LaunchedEffect(pager) { androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { vm.lastTodoPage = it } }
     var naming by remember { mutableStateOf<List<Long>?>(null) }
     val undo by vm.faceUndo.collectAsStateWithLifecycle()
-    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onClose,
+    val close = { vm.lastTodoPage = 0; onClose() }
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = close,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
@@ -757,7 +760,7 @@ private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
+                navigationIcon = { IconButton(onClick = close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
         }, bottomBar = {
             // The snackbar of the page is under this screen: "Annulla" lives here instead.
             androidx.compose.animation.AnimatedVisibility(undo != null,
@@ -776,7 +779,7 @@ private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.
                 return@Scaffold
             }
             androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize().padding(pad),
-                key = { pages.getOrNull(it)?.cards?.first()?.id ?: it }, beyondViewportPageCount = 1) { page ->
+                key = { pages.getOrNull(it)?.cards?.first()?.id ?: it }, beyondViewportPageCount = 2) { page ->
                 val g = pages.getOrNull(page) ?: return@VerticalPager
                 TodoPage(g, vm, onName = { naming = it }, onOpen = { c ->
                     vm.openPersonMedia(listOf(c.fileId), c.fileId, c.timeMs); onOpenFile(c.fileId)
@@ -800,7 +803,8 @@ private fun TodoPage(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onName:
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val picture: @Composable (Modifier) -> Unit = { m ->
         Box(m.clip(MaterialTheme.shapes.large).clickable(onClickLabel = "Riproduci da qui") { onOpen(focus) }, contentAlignment = Alignment.Center) {
-            com.cripta.app.ui.people.FrameWithFace(frame, focus.box, Modifier.fillMaxSize())
+            if (frame == null) FaceAvatar(focus, { vm.faceCrop(it) }, 180.dp)
+            else com.cripta.app.ui.people.FrameWithFace(frame, focus.box, Modifier.fillMaxSize())
         }
     }
     val controls: @Composable (Modifier) -> Unit = { m ->

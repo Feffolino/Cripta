@@ -320,8 +320,16 @@ class SettingsViewModel @Inject constructor(
      * list is whole when its scroll position is restored (else it opened again at the top).
      */
     var lastGroups: List<com.cripta.app.data.face.FaceRepository.FaceGroup>? = null
-    /** The "Forse è …" list of a person, kept while a suggestion is played, for the same reason. */
+    /**
+     * "Forse è …" of a person kept while a suggestion is played: the whole list (answered faces
+     * included: dropping them shifted the pages, and Back landed on the next face), the answers
+     * and the page in view.
+     */
     var lastSuggestions: Pair<Long, List<com.cripta.app.data.face.FaceRepository.Suggestion>>? = null
+    var lastAnswers: Map<Long, Boolean> = emptyMap()
+    var lastSuggestionPage = 0
+    /** The "Da sistemare" page in view, for the way back from a media. */
+    var lastTodoPage = 0
     fun restartFaces(everything: Boolean) =
         com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, reset = if (everything) "all" else "auto")
     fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
