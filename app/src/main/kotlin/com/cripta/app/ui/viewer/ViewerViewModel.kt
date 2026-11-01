@@ -197,6 +197,8 @@ class ViewerViewModel @Inject constructor(
     fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
     fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     fun analyseFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId))
+    /** The faces found here that nobody confirmed go (the analysis was on by mistake). */
+    fun clearDetectedFaces(fileId: String) = faceAction { faces.clearDetected(listOf(fileId)) }
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
     fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
         if (trackId != null) faces.assign(trackId, personId) else faces.link(personId, fileId)

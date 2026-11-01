@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
@@ -100,6 +101,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     val progress by vm.faceProgress.collectAsState()
     var askRestart by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
+    var clearing by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
     Section("Persone", "Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono. " +
@@ -119,6 +121,9 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         }
         Text("L'analisi trova i volti; sei tu a dire chi sono, dai dettagli di ogni media.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+            Text("Elimina volti trovati per errore…")
+        }
         Row {
             TextButton(onClick = { showStats = true }) { Text("Statistiche") }
             Spacer(Modifier.weight(1f))
@@ -159,6 +164,52 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             dismissButton = { TextButton(onClick = { askRestart = false }) { Text("Annulla") } })
     }
     if (showStats) StatsDialog(vm) { showStats = false }
+    if (clearing) ClearDetectedDialog(vm) { clearing = false }
+}
+
+/**
+ * "Elimina volti trovati per errore": the analysis ran when it should not have. The faces found
+ * in a chosen period that nobody confirmed are forgotten; confirmed faces and people stay, and those
+ * media are not analysed again unless asked ("Rianalizza" on the media).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
+    val periods = listOf(3_600_000L to "Ultima ora", 86_400_000L to "Ultime 24 ore", 7 * 86_400_000L to "Ultimi 7 giorni",
+        30 * 86_400_000L to "Ultimi 30 giorni", Long.MAX_VALUE to "Sempre")
+    var period by remember { mutableStateOf(periods[1].first) }
+    val found by produceState<FaceRepository.Detected?>(null, period) {
+        value = null
+        val since = if (period == Long.MAX_VALUE) 0L else System.currentTimeMillis() - period
+        value = runCatching { vm.detectedSince(since) }.getOrNull()
+    }
+    CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Elimina volti trovati") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Per quando l'analisi era attiva per errore. Restano i volti che hai confermato o aggiunto, " +
+                    "le persone e i loro nomi; questi media non vengono riesaminati da soli.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Analizzati nel periodo", style = MaterialTheme.typography.labelLarge)
+                com.cripta.app.ui.components.ChipFlowRow {
+                    periods.forEach { (ms, label) ->
+                        com.cripta.app.ui.components.ChoiceChip(selected = period == ms, onClick = { period = ms }, label = { Text(label) })
+                    }
+                }
+                val f = found
+                Text(when {
+                    f == null -> "Conteggio…"
+                    f.faces == 0 -> "Nessun volto da eliminare in questo periodo."
+                    else -> "${f.faces} volti in ${f.media.size} media."
+                }, style = MaterialTheme.typography.bodyMedium)
+            }
+        },
+        confirmButton = {
+            val f = found
+            TextButton(enabled = f != null && f.faces > 0, onClick = { f?.let { vm.clearDetected(it.media) }; onClose() }) {
+                Text("Elimina", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Annulla") } })
 }
 
 /** Live progress while a scan runs, else how much of the vault is analysed. */
@@ -180,7 +231,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
             Text("Lettura dello stato…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             val ok = o.scans.count { it.status == "ok" }
-            val skipped = o.scans.size - ok
+            val skipped = o.scans.count { it.status != "ok" && it.status != FaceRepository.CLEARED }
             val missing = (o.media - o.scans.size).coerceAtLeast(0)
             Text("Analizzati ${o.scans.size} di ${o.media} media" + (if (skipped > 0) " ($skipped non leggibili)" else "") +
                 " · ${o.people.count { it.main }} persone", style = MaterialTheme.typography.bodyMedium)
@@ -273,6 +324,35 @@ private enum class PeopleFilter(val label: String) {
     }
 }
 
+private fun sortLabel(k: com.cripta.app.data.PeopleSort) = when (k) {
+    com.cripta.app.data.PeopleSort.RELEVANCE -> "Preferite, poi più media"
+    com.cripta.app.data.PeopleSort.NAME -> "Nome"
+    com.cripta.app.data.PeopleSort.MEDIA -> "Numero di media"
+    com.cripta.app.data.PeopleSort.LATEST -> "Media più recente"
+    com.cripta.app.data.PeopleSort.ADDED -> "Data di creazione"
+}
+
+/** The two directions of [k], in words (descending first). */
+private fun sortDirections(k: com.cripta.app.data.PeopleSort) = when (k) {
+    com.cripta.app.data.PeopleSort.NAME -> "Z → A" to "A → Z"
+    com.cripta.app.data.PeopleSort.MEDIA -> "Più media" to "Meno media"
+    com.cripta.app.data.PeopleSort.LATEST, com.cripta.app.data.PeopleSort.ADDED -> "Più recenti" to "Meno recenti"
+    com.cripta.app.data.PeopleSort.RELEVANCE -> "Prima le principali" to "Prima le altre"
+}
+
+/** The people page's order. Hidden people stay last whatever the order. */
+private fun sortPeople(list: List<FaceRepository.Person>, k: com.cripta.app.data.PeopleSort, ascending: Boolean): List<FaceRepository.Person> {
+    val sorted = when (k) {
+        // The repository's order (starred, main, most media) is the "descending" one.
+        com.cripta.app.data.PeopleSort.RELEVANCE -> list.reversed()
+        com.cripta.app.data.PeopleSort.NAME -> list.sortedBy { it.title.lowercase() }
+        com.cripta.app.data.PeopleSort.MEDIA -> list.sortedBy { it.media.size }
+        com.cripta.app.data.PeopleSort.LATEST -> list.sortedBy { p -> p.media.maxOfOrNull { it.importedAt } ?: 0L }
+        com.cripta.app.data.PeopleSort.ADDED -> list.sortedBy { it.entity.createdAt }
+    }
+    return (if (ascending) sorted else sorted.reversed()).sortedBy { it.entity.ignored }
+}
+
 /** The people page: its own destination (Settings, Home, the scan's notification lead here). */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -285,9 +365,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     var filter by rememberSaveable { mutableStateOf(PeopleFilter.MAIN) }
     var query by rememberSaveable { mutableStateOf("") }
-    var openId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showStats by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
+    var sortMenu by remember { mutableStateOf(false) }
+    val st by vm.settings.collectAsState()
+    val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect
         if (snackbar.showSnackbar(u.first, "Annulla", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoFaceChange()
@@ -298,6 +380,24 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
+                    Box {
+                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, "Ordina") }
+                        DropdownMenu(sortMenu && vaultUnlocked(), { sortMenu = false }) {
+                            com.cripta.app.data.PeopleSort.entries.forEach { k ->
+                                DropdownMenuItem(text = { Text(sortLabel(k)) },
+                                    leadingIcon = { androidx.compose.material3.RadioButton(selected = k == sortKey, onClick = null) },
+                                    onClick = { vm.setPeopleSort(k, st.peopleSortAscending) })
+                            }
+                            androidx.compose.material3.HorizontalDivider()
+                            val (desc, asc) = sortDirections(sortKey)
+                            DropdownMenuItem(text = { Text(desc) },
+                                leadingIcon = { androidx.compose.material3.RadioButton(selected = !st.peopleSortAscending, onClick = null) },
+                                onClick = { vm.setPeopleSort(sortKey, false) })
+                            DropdownMenuItem(text = { Text(asc) },
+                                leadingIcon = { androidx.compose.material3.RadioButton(selected = st.peopleSortAscending, onClick = null) },
+                                onClick = { vm.setPeopleSort(sortKey, true) })
+                        }
+                    }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
                         DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
@@ -314,7 +414,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { Text("Lettura…") }
             return@Scaffold
         }
-        val shown = o.people.filter { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+        val shown = sortPeople(o.people.filter { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) },
+            sortKey, st.peopleSortAscending)
         val noFaces = remember(o) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }
@@ -373,7 +474,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     }
                 }
                 items(shown, key = { it.id }) { p ->
-                    Column(Modifier.clickable(onClickLabel = "Apri ${p.title}") { openId = p.id }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.animateItem().clickable(onClickLabel = "Apri ${p.title}") { vm.openPerson(p.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 96.dp,
                                 Modifier)
@@ -389,10 +490,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 }
             }
         }
-        openId?.let { id ->
-            o.people.firstOrNull { it.id == id }?.let { p -> PersonPage(p, o, vm, onClose = { openId = null }, onOpenFile = onOpenFile, onOpenPerson = { openId = it }) }
-                ?: run { openId = null }
-        }
         if (showStats) StatsDialog(vm) { showStats = false }
     }
     message?.let { m ->
@@ -402,119 +499,9 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
-@Composable
-private fun PersonPage(p: FaceRepository.Person, o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit,
-                       onOpenFile: (String) -> Unit, onOpenPerson: (Long) -> Unit) {
-    var menu by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf(false) }
-    var merging by remember { mutableStateOf(false) }
-    /** Selected media (long press starts the selection). */
-    var selected by remember(p.id) { mutableStateOf(emptySet<String>()) }
-    var moving by remember { mutableStateOf(false) }
-    var selMenu by remember { mutableStateOf(false) }
-    val faceOf = remember(p) { p.faces.groupBy { it.fileId }.mapValues { (_, l) -> l.maxBy { it.width } } }
-    var comparing by remember { mutableStateOf<Pair<com.cripta.app.data.db.TrackCard, com.cripta.app.data.db.TrackCard>?>(null) }
-    val ids = p.media.map { it.id }
-    fun open(fileId: String, timeMs: Long?) { vm.openPersonMedia(ids, fileId, timeMs); onOpenFile(fileId) }
-    CriptaDialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Scaffold(topBar = {
-            if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { Text("${selected.size} selezionati") },
-                navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
-                actions = {
-                    TextButton(onClick = { vm.removeFromPerson(p.id, selected); selected = emptySet() }) { Text("Togli") }
-                    TextButton(onClick = { moving = true }) { Text("Sposta") }
-                    Box {
-                        IconButton(onClick = { selMenu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(selMenu && vaultUnlocked(), { selMenu = false }) {
-                            val one = selected.singleOrNull()
-                            val face = one?.let { faceOf[it] }
-                            if (face != null) {
-                                DropdownMenuItem(text = { Text("Usa come suo volto") }, onClick = { selMenu = false; vm.setPersonCover(p.id, face.id); selected = emptySet() })
-                            }
-                            if (one != null) DropdownMenuItem(text = { Text("Volti di questo media") }, onClick = { selMenu = false; vm.describeMedia(one) })
-                            val two = selected.toList().takeIf { it.size == 2 }?.mapNotNull { faceOf[it] }?.takeIf { it.size == 2 }
-                            if (two != null) DropdownMenuItem(text = { Text("Confronta i due volti") }, onClick = {
-                                selMenu = false; comparing = two[0] to two[1]
-                            })
-                        }
-                    }
-                },
-            ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
-                actions = {
-                    IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
-                        Icon(if (p.entity.favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            if (p.entity.favorite) "Togli dai preferiti" else "Aggiungi ai preferiti",
-                            tint = if (p.entity.favorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    TextButton(onClick = { renaming = true }) { Text("Rinomina") }
-                    Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
-                        DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
-                            DropdownMenuItem(text = { Text("Unisci con…") }, onClick = { menu = false; merging = true })
-                            if (p.entity.ignored) DropdownMenuItem(text = { Text("Ripristina") }, onClick = { menu = false; vm.restorePerson(p.id) })
-                            // With no media left, the useful choice is to remove the profile, not to call it "not a person".
-                            else if (p.media.isEmpty()) DropdownMenuItem(text = { Text("Elimina la persona") }, onClick = { menu = false; vm.deleteEmptyPerson(p.id); onClose() })
-                            else DropdownMenuItem(text = { Text("Non è una persona") }, onClick = { menu = false; vm.ignorePerson(p.id); onClose() })
-                        }
-                    }
-                })
-        }) { pad ->
-            LazyVerticalGrid(GridCells.Adaptive(112.dp), Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text((if (p.entity.ignored) "Ignorata: i volti simili vengono nascosti. " else "") +
-                        if (p.media.isEmpty()) "Nessun media collegato. Il nome resta finché non elimini la persona dal menu in alto. Per aggiungere media, " +
-                            "apri una foto o un video, scorri su per i dettagli e in Persone scegli ${p.title}."
-                        else "${p.media.size} media. Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                items(p.media, key = { it.id }) { f ->
-                    val face = faceOf[f.id]
-                    val on = f.id in selected
-                    Box(Modifier.combinedClickable(onClickLabel = if (selected.isEmpty()) "Apri" else "Seleziona", onLongClickLabel = "Seleziona",
-                        onClick = { if (selected.isEmpty()) open(f.id, face?.timeMs) else selected = if (on) selected - f.id else selected + f.id },
-                        onLongClick = { selected = selected + f.id })) {
-                        MediaThumb(f, { vm.thumbOf(it) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false, selected = on,
-                            selectionMode = selected.isNotEmpty())
-                        if (face != null) FaceAvatar(face.id, { vm.faceCrop(it) }, 36.dp, Modifier.align(Alignment.BottomEnd).padding(4.dp))
-                    }
-                }
-            }
-        }
-        if (renaming) {
-            var name by remember { mutableStateOf(p.entity.name) }
-            CriptaAlertDialog(onDismissRequest = { renaming = false }, title = { Text("Nome della persona") },
-                text = {
-                    Column {
-                        com.cripta.app.ui.components.CriptaTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        val twin = o.people.firstOrNull { it.id != p.id && name.isNotBlank() && it.entity.name.equals(name.trim(), ignoreCase = true) }
-                        Text(if (twin != null) "Esiste già «${twin.title}»: dopo il salvataggio puoi unirle da «Unisci con…»."
-                            else "Il nome vale per tutti i suoi media. Un volto sbagliato si toglie tenendo premuto il media.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (twin != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
-                confirmButton = { TextButton(onClick = { vm.renamePerson(p.id, name); renaming = false }) { Text("Salva") } },
-                dismissButton = { TextButton(onClick = { renaming = false }) { Text("Annulla") } })
-        }
-        comparing?.let { (a, b) -> CompareDialog(a, b, o, vm) { comparing = null } }
-        if (merging) PeoplePicker("Unisci a ${p.title}", o, exclude = p.id, multi = true, vm = vm, onDismiss = { merging = false }) { picked, _ ->
-            vm.mergePeople(p.id, picked); merging = false
-        }
-        if (moving) PeoplePicker("Sposta ${selected.size} media a…", o, exclude = p.id, multi = false, vm = vm, allowNew = true,
-            onDismiss = { moving = false }) { picked, newName ->
-            vm.moveToPerson(p.id, selected, picked.firstOrNull(), newName); moving = false; selected = emptySet()
-        }
-    }
-}
-
 /** Pick people ([multi]) or one person, or name a new one ([allowNew]: "Dividi"). */
 @Composable
-private fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Long, multi: Boolean, vm: SettingsViewModel,
+internal fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Long, multi: Boolean, vm: SettingsViewModel,
                          allowNew: Boolean = false, onDismiss: () -> Unit, onDone: (List<Long>, String) -> Unit) {
     var picked by remember { mutableStateOf(emptyList<Long>()) }
     var newName by remember { mutableStateOf("") }

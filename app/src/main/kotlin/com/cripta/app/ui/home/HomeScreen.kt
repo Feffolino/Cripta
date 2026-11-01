@@ -233,9 +233,9 @@ fun HomeScreen(
                                 Modifier.width(68.dp).clip(MaterialTheme.shapes.small)
                                     .combinedClickable(
                                         role = Role.Button,
-                                        onClickLabel = if (hidden) "Mostra i volti" else "Mostra i media di ${p.title}",
+                                        onClickLabel = if (hidden) "Mostra i volti" else "Apri il profilo di ${p.title}",
                                         onLongClickLabel = if (p.entity.favorite) "Togli dai preferiti" else "Aggiungi ai preferiti",
-                                        onClick = { if (hidden) peopleRevealed = true else { vm.openPerson(p.id); onOpenFolders() } },
+                                        onClick = { if (hidden) peopleRevealed = true else com.cripta.app.ui.people.PeopleNav.openPerson(p.id) },
                                         onLongClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) },
                                     )
                                     .padding(vertical = 4.dp),

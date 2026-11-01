@@ -37,6 +37,7 @@ class SettingsViewModel @Inject constructor(
     private val intro: com.cripta.app.data.intro.IntroRepository,
     private val faces: com.cripta.app.data.face.FaceRepository,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
+    private val vaultNavigator: com.cripta.app.ui.vault.VaultNavigator,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -324,6 +325,21 @@ class SettingsViewModel @Inject constructor(
     fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
+    fun setPersonProfile(personId: Long, notes: String, links: List<String>) = faceAction { faces.setProfile(personId, notes, links) }
+    fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = viewModelScope.launch { store.setPeopleSort(key, ascending) }
+    suspend fun suggestionsFor(personId: Long) = faces.suggestionsFor(personId)
+    suspend fun frameOf(card: com.cripta.app.data.db.TrackCard) = faces.frameOf(card)
+    /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
+    fun acceptSuggestion(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
+    fun refuseSuggestion(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    suspend fun detectedSince(since: Long) = faces.detectedSince(since)
+    fun clearDetected(fileIds: Collection<String>) = faceAction {
+        val n = faces.clearDetected(fileIds)
+        faceMessage.value = if (n == 1) "Eliminato 1 volto." else "Eliminati $n volti."
+    }
+    fun openPerson(personId: Long) = com.cripta.app.ui.people.PeopleNav.openPerson(personId)
+    /** Cartelle filtered on [personId]. */
+    fun showPersonInVault(personId: Long) = vaultNavigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId)))
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
     fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {

@@ -52,6 +52,7 @@ import com.cripta.app.ui.settings.FavoriteStar
  * shows, a tap on a moment jumping there. A tap on a face opens one editor for everything: its
  * person's name, another person, not them, the star.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val faces by remember(file.id) { vm.facesOf(file.id) }.collectAsState(initial = emptyList())
@@ -74,7 +75,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         for (t in shown) {
             val p = t.personId?.let { byId[it] }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FaceAvatar(t.id, { vm.faceCrop(it) }, 52.dp, Modifier.clickable(onClickLabel = "Modifica") { editing = t })
+                FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp, Modifier.clickable(onClickLabel = "Modifica") { editing = t })
                 Column(Modifier.weight(1f).clickable(onClickLabel = "Modifica") { editing = t }) {
                     Text(when {
                         p == null -> "Sconosciuto · tocca per dire chi è"
@@ -102,6 +103,11 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             TextButton(onClick = { vm.describeFaces(file.id) }) { Text(if (shown.isEmpty()) "Perché?" else "Dettagli") }
             TextButton(onClick = { vm.analyseFaces(file.id) }) { Text("Rianalizza") }
         }
+        if (shown.any { it.personId == null && it.state != "manual" }) {
+            TextButton(onClick = { vm.clearDetectedFaces(file.id) }) {
+                Text("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 
     if (editing != null || adding) {
@@ -125,11 +131,13 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                             " Puoi anche aggiungere il media a una persona senza volto.")
                         else -> {
                             Text("Tocca il volto da aggiungere. Insegna alla persona anche questo aspetto.", style = MaterialTheme.typography.bodySmall)
-                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            // Large, so faces are told apart at a glance: two per row in a portrait dialog.
+                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 list.forEach { f ->
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { picked = f }) {
-                                        Image(f.picture.asImageBitmap(), null, Modifier.size(88.dp).clip(MaterialTheme.shapes.medium))
-                                        Text(f.why ?: "buono", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { picked = f }) {
+                                        Image(f.picture.asImageBitmap(), null, Modifier.size(128.dp).clip(MaterialTheme.shapes.medium))
+                                        Text(f.why ?: "buono", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
@@ -168,7 +176,7 @@ private fun FaceEditor(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (t != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp)
+                    FaceAvatar(t.id, { vm.faceCrop(it) }, 96.dp)
                     Column(Modifier.weight(1f)) {
                         Text(when {
                             current == null -> "Non ancora assegnato"
@@ -198,7 +206,7 @@ private fun FaceEditor(
                     items(list, key = { it.id }) { q ->
                         Row(Modifier.fillMaxWidth().clickable { onPick(q.id); onDismiss() }.padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 36.dp)
+                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                             if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)

@@ -10,4 +10,10 @@ object PeopleNav {
 
     fun request() { _open.value = true }
     fun consume() { _open.value = false }
+
+    private val _person = MutableStateFlow<Long?>(null)
+    /** A person's profile asked for (Home, the people page). */
+    val person: StateFlow<Long?> = _person
+    fun openPerson(id: Long) { _person.value = id }
+    fun consumePerson() { _person.value = null }
 }
