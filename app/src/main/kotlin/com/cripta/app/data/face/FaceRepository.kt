@@ -151,10 +151,14 @@ class FaceRepository @Inject constructor(
     }
 
     /** Find and store [file]'s faces (not placed among the people yet). True when it could be read. */
-    /** [deep]: "Cerca più a fondo", for media where no face was found (slower, see [FramePlan.times]). */
-    suspend fun analyse(file: FileEntity, deep: Boolean = false): Boolean = withEngine { analyse(file, it, deep) }
+    /**
+     * [deep]: "Cerca più a fondo", for media where no face was found (slower, see [FramePlan.times]).
+     * [onProgress]: how far into a video it is (0..1), frame by frame, for the notification.
+     */
+    suspend fun analyse(file: FileEntity, deep: Boolean = false, onProgress: ((Float) -> Unit)? = null): Boolean =
+        withEngine { analyse(file, it, deep, onProgress) }
 
-    private suspend fun analyse(file: FileEntity, engine: FaceEngine, deep: Boolean = false): Boolean {
+    private suspend fun analyse(file: FileEntity, engine: FaceEngine, deep: Boolean = false, onProgress: ((Float) -> Unit)? = null): Boolean {
         val started = android.os.SystemClock.elapsedRealtime()
         val sightings = ArrayList<Sighting>()
         val rejects = HashMap<FaceReject, Int>()
@@ -175,7 +179,7 @@ class FaceRepository @Inject constructor(
         val status = try {
             withContext(Dispatchers.Default) {
                 if (VaultRepository.isVideo(file.mimeType)) {
-                    val r = videoFrames(file, deep) { i, t, img -> take(i, t, img) }
+                    val r = videoFrames(file, deep, onProgress) { i, t, img -> take(i, t, img) }
                     failed = r.failed; duplicates = r.duplicates; extra = r.extra
                     when {
                         r.why != null -> "skip:${r.why}"
@@ -268,7 +272,7 @@ class FaceRepository @Inject constructor(
             ?: runCatching { r.getFrameAtTime(t * 1000, option) }.getOrNull()
             ?: runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
 
-    private suspend fun videoFrames(file: FileEntity, deep: Boolean, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
+    private suspend fun videoFrames(file: FileEntity, deep: Boolean, onProgress: ((Float) -> Unit)?, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
         val r = MediaMetadataRetriever()
         val channel = repo.seekableChannel(file)
         try {
@@ -285,6 +289,8 @@ class FaceRepository @Inject constructor(
             var lastHash: Long? = null
             for ((i, t) in plan.withIndex()) {
                 coroutineContext.ensureActive()
+                // The planned frames are most of the work; the extra ones near faces take the last tenth.
+                onProgress?.invoke(0.9f * i / plan.size)
                 val bmp = frameAt(r, t, option, params)
                 if (bmp == null) { bad++; continue }
                 val img = faceImage(bmp, FRAME_SIDE)
