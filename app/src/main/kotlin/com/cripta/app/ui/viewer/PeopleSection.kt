@@ -142,7 +142,9 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             onTap = { if (chosen.isEmpty()) editing = t else toggle(t.id) }, onLongPress = { toggle(t.id) },
             onSplit = { splitting = t })
         for (t in clear) row(t)
-        if (unclear.isNotEmpty()) {
+        // Only unclear faces here: shown as they are, folding them would leave the section empty.
+        if (clear.isEmpty()) for (t in unclear) row(t)
+        else if (unclear.isNotEmpty()) {
             TextButton(onClick = { showUnclear = !showUnclear }) {
                 com.cripta.app.ui.components.ButtonText(if (showUnclear) "Nascondi i volti poco chiari" else if (unclear.size == 1) "Un altro volto poco chiaro" else "Altri ${unclear.size} volti poco chiari")
             }

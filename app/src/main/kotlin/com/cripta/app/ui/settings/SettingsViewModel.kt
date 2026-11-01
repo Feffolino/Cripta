@@ -299,6 +299,15 @@ class SettingsViewModel @Inject constructor(
     fun setPeopleOnHome(v: String) = viewModelScope.launch { store.setPeopleOnHome(v) }
     fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
     fun startFaceScan() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true)
+    /** [fileIds] analysed again, even those whose faces the user cleared. */
+    fun analyseAgain(fileIds: List<String>) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = fileIds)
+    /**
+     * The last "Da sistemare" groups: shown at once when the page comes back from a media, so the
+     * list is whole when its scroll position is restored (else it opened again at the top).
+     */
+    var lastGroups: List<com.cripta.app.data.face.FaceRepository.FaceGroup>? = null
+    /** The "Forse è …" list of a person, kept while a suggestion is played, for the same reason. */
+    var lastSuggestions: Pair<Long, List<com.cripta.app.data.face.FaceRepository.Suggestion>>? = null
     fun restartFaces(everything: Boolean) =
         com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, reset = if (everything) "all" else "auto")
     fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
