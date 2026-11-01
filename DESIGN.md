@@ -110,7 +110,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   after naming a face, "Anche questi sono …?" for the alike faces of the same media. "Aggiungi un
   volto" looks up to 15 s further when the paused frame has none. The people page's "Da
   sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time;
-  faces tapped out of a group and "Dividi il gruppo" are never grouped with the rest again. "Senza volti": a tap opens the media (swiping through the list) to add faces by hand, a long
+  it opens one group per page, full screen, swiped up like the suggestions (the frame of the face in
+  view, the group's faces in a row, "Chi è?" and "Dividi" across the width, deletions as text,
+  faces seen once last); faces tapped out of a group and "Dividi" are never grouped together again. "Senza volti": a tap opens the media (swiping through the list) to add faces by hand, a long
   press says why; "Cerca più a fondo" covers them all, unreadable ones too.
   Recognition (Impostazioni › Persone): "Tutti i volti" (Da sistemare) or "Solo persone note",
   where "Da confermare" lists only faces like someone with faces in at least 2 media. The people

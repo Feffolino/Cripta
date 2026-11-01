@@ -567,7 +567,7 @@ internal fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Pers
 
 /** The frame a face was found in, the face marked by a ring (the box is stored as fractions of it). */
 @Composable
-private fun FrameWithFace(frame: Bitmap?, box: String, modifier: Modifier) {
+internal fun FrameWithFace(frame: Bitmap?, box: String, modifier: Modifier) {
     val r = box.split(',').mapNotNull { it.toFloatOrNull() }.takeIf { it.size == 4 }
     val accent = MaterialTheme.colorScheme.primary
     if (frame == null) {
