@@ -373,7 +373,7 @@ fun DownloadScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 title = { Text("Download") },
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),

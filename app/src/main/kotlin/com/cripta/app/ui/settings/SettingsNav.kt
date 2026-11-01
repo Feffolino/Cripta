@@ -13,3 +13,10 @@ class SettingsNav @Inject constructor() {
     fun open(page: String) { _page.value = page }
     fun consume() { _page.value = null }
 }
+
+/** "Impostazioni" tab reselected while already on it: a category page goes back to the list. */
+object SettingsTabReselect {
+    private val _events = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val events: kotlinx.coroutines.flow.SharedFlow<Unit> = _events
+    fun notifyReselected() { _events.tryEmit(Unit) }
+}

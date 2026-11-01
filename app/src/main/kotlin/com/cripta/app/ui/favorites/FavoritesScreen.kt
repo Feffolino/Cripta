@@ -77,7 +77,7 @@ fun FavoritesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
                 title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
                 navigationIcon = {

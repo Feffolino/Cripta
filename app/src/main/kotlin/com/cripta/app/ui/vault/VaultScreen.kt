@@ -485,7 +485,7 @@ fun VaultScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 // Same colour when the content scrolls under it (M3 otherwise switches to a tinted
                 // surface-container colour, which looked light blue on this theme).
@@ -681,13 +681,17 @@ fun VaultScreen(
                             // The row is anchored to the left edge of the "+" and takes no room in the
                             // layout: opening it never moves the "+" (it is taller than the button).
                             val gap = with(LocalDensity.current) { 12.dp.roundToPx() }
+                            // Its bottom edge 12dp under the middle of the "+" (16dp above the
+                            // button's bottom): centred, the taller row reached down to the
+                            // navigation bar.
+                            val lift = with(LocalDensity.current) { 12.dp.roundToPx() }
                             Box(Modifier.align(Alignment.CenterStart).layout { m, c ->
                                 val p = m.measure(c.copy(minWidth = 0, minHeight = 0,
                                     maxWidth = androidx.compose.ui.unit.Constraints.Infinity,
                                     maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
-                                layout(0, 0) { p.place(-p.width - gap, -p.height / 2) }
+                                layout(0, 0) { p.place(-p.width - gap, lift - p.height) }
                             }) {
-                                val origin = TransformOrigin(1f, 0.5f)
+                                val origin = TransformOrigin(1f, 1f)
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = fabExpanded,
                                     enter = fadeIn(Motion.enter(Motion.MEDIUM)) +
@@ -887,6 +891,10 @@ fun VaultScreen(
                     snapshotFlow { filesLevelState.value == target && foldersLevelState.value == target }.first { it }
                 }
                 val restore = if (!deeper) scrollMemory[newKey] else null
+                // The new level's items must be composed into the grid before scrolling: asked for
+                // while the grid still held the old (shorter) level, the position was clamped to it
+                // and Back landed at the top instead of where the user left.
+                repeat(2) { androidx.compose.runtime.withFrameNanos { } }
                 gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
                 if (animOn) {
                     levelX.snapTo(with(density) { 32.dp.toPx() } * if (deeper) 1f else -1f)
@@ -1559,13 +1567,19 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     // Bubble next to the thumb while scrolling: section / position of the first visible item.
     val label = if (alpha > 0f) labelAt(state.firstVisibleItemIndex) else null
     if (label != null) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = MaterialTheme.shapes.medium,
-            shadowElevation = 3.dp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 30.dp)
+        // A plain drawing, never a touch target: a Surface swallowed the touches landing on it, so a
+        // new swipe started on the bubble (while the list was still moving) stopped the list dead.
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(end = 30.dp)
                 .offset(y = offsetY + 6.dp)
-                .graphicsLayer { this.alpha = alpha },
+                .graphicsLayer {
+                    this.alpha = alpha
+                    shadowElevation = 3.dp.toPx()
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    clip = true
+                }
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clearAndSetSemantics { },
         ) {
             Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
                 maxLines = 1, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
