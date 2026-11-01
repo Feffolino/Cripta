@@ -77,9 +77,9 @@ fun TagIconField(name: String, icon: String?, onPick: (String?) -> Unit, onBrows
         Text("Icona", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            IconCell(null, icon == null, 44.dp) { onPick(null) }
+            IconCell(null, icon == null) { onPick(null) }
             // The chosen one stays first even when the name suggests others.
-            (listOfNotNull(icon) + suggested.filter { it != icon }).forEach { n -> IconCell(n, n == icon, 44.dp) { onPick(n) } }
+            (listOfNotNull(icon) + suggested.filter { it != icon }).forEach { n -> IconCell(n, n == icon) { onPick(n) } }
         }
         TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
             Text("Tutte le icone")

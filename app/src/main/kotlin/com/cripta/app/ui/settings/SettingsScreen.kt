@@ -235,7 +235,7 @@ fun SettingsScreen(
           transitionSpec = {
               // Into a page: it slides in from the right; back to the list: the reverse.
               val dir = if (targetState != null) 1 else -1
-              (androidx.compose.animation.fadeIn(tween(Motion.MEDIUM, 40, Motion.EaseOutQuart)) +
+              (androidx.compose.animation.fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) +
                   androidx.compose.animation.slideInHorizontally(Motion.enter(Motion.LONG)) { w -> dir * w / 10 }) togetherWith
                   (androidx.compose.animation.fadeOut(tween(Motion.SHORT, 0, Motion.EaseOutQuart)) +
                       androidx.compose.animation.slideOutHorizontally(Motion.exit(Motion.MEDIUM)) { w -> -dir * w / 14 })

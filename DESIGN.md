@@ -29,8 +29,9 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   stage and tag colours.
 - Tag colours ([TagPalette]) are the user's. Text on a tag tint goes through `readableOn()` so it
   reaches 4.5:1 in both themes and with custom colours.
-- Anything drawn over a picture (tags, length, star, play mark) sits on the dark glass
-  `OnImageGlass`, never on a gradient over the whole cover.
+- Anything drawn over a picture (length, star, play mark, people's faces) sits on the dark glass
+  `OnImageGlass`, never on a gradient over the whole cover. Tags over a picture are the one
+  exception: a see-through tint of their own colour (see Components).
 
 ## Type
 
@@ -52,8 +53,10 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   `Section(title, description)`; pages are grouped as Preferenze / I tuoi dati / App.
 - Filled tonal surfaces are allowed for things that are one object (the Home summary strip, the
   search pill, sheets, dialogs), never to frame a group of options.
-- Borders exist only as state markers: selection rings and checks on covers, the chosen colour in a
-  picker, the folder highlighted while dragging onto it.
+- Borders exist only as state markers: selection rings and checks on covers, the chosen colour,
+  icon or face in a picker, the folder highlighted while dragging onto it, the face marked on a
+  frame in the people suggestions. One exception that is not a state: the rim of a tag over a
+  picture, which keeps the tinted pill readable on any image.
 - Top bars are the page itself (same background) and lift one tier only when content scrolls under
   them (`criptaTopBarColors()`). The navigation bar is a flat tier with an accent pill on the
   current tab.
@@ -72,14 +75,26 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
   Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Colour means "on":
   Plain (a tag shown on a file) and On (assigned, filtered) are the tag colour, translucent (35%
-  over the page, 78% over a picture), name at 4.5:1; On adds a tick. Off is neutral with muted
-  text and only a dot in the tag colour. Excluded: neutral, strike-through, "no" sign. Over a
-  picture: `onImage = true`. "+N" is `MoreTagsPill`. The text is never given a weight (it would
-  measure to nothing in a LazyRow).
+  over the page), name at 4.5:1; On adds a tick. Over a picture (`onImage = true`) the pill is
+  the tag colour at 45% on a light dark glass, with a 1dp rim of the same colour at 85%, text
+  white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour.
+  Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
+  a weight (it would measure to nothing in a LazyRow).
+- **Tag icons** (`ui/tagicons/`): Microsoft's Fluent Emoji, high-contrast set (MIT, licence in
+  `assets/tagicons/`), one colour, drawn in the pill's text colour before the name (in place of
+  the colour dot). The editor offers icons fitting the tag's name (Italian or English words), the
+  common ones, and a searchable list of all. On a cover, the short style with an icon and no
+  alias shows the icon alone.
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
-  favourite star, the video length (top right) or a play mark, the watched bar. No quality badge
-  (4K/HD/SD) and no shade over the image.
+  favourite star and the faces of the people in the media (top left, up to three then "+N", size
+  and on/off in Impostazioni › Aspetto), the video length (top right) or a play mark, the watched
+  bar. No quality badge (4K/HD/SD) and no shade over the image.
+- **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
+  to each person's **profile** page: face (tap to pick another among those found), name, star,
+  notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
+  list, most alike first, the face found next to the person's own, the whole frame with the face
+  ringed (tap to play from there) and "È …" / "Non è lui/lei": nothing is added without a yes.
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
@@ -112,6 +127,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - Selected state is never told by colour alone: a tick or a ring goes with it.
 - Motion explains a state change and is short (120 / 220 / 320 ms, ease-out, no bounce); it
   collapses when the system removes animations.
+- Navigation: tabs cross-fade with a slight drift towards the tab chosen; pages (people, a
+  profile, favourites, a note, a Settings page) slide in along X from the right and Back reverses
+  it; only the player moves in depth (comes forward, the page recedes).
 
 ## Copy
 
