@@ -98,7 +98,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
   to each person's **profile** page: face (tap to pick another among those found), name, star,
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
-  list, most alike first, the face found next to the person's own, the whole frame with the face
+  are one face at a time, full screen, swiped up like a feed (the frame takes the free space, the
+  two faces side by side under it, "No" and "È …" across the width; an answer glides to the next
+  and the answered page stays, marked), most alike first, the face found next to the person's own, the whole frame with the face
   ringed (tap to play from there) and "È …" / "Non è lui/lei": nothing is added without a yes.
   In a media's details a long press selects faces (ring and tick on the face): "Stessa persona"
   joins faces of one person into one row, "Elimina" removes faces found by mistake; "Annulla"
