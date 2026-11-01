@@ -4,6 +4,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import com.cripta.app.ui.components.CriptaAlertDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -50,9 +64,10 @@ import com.cripta.app.ui.settings.FavoriteStar
 /**
  * Details panel › "Persone": every face that shows in this media, who it is and (videos) when it
  * shows, a tap on a moment jumping there. A tap on a face opens one editor for everything: its
- * person's name, another person, not them, the star.
+ * person's name, another person, not them, the star. A long press selects faces: two or more of
+ * one person become one ("Stessa persona"), faces found by mistake go ("Elimina").
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val faces by remember(file.id) { vm.facesOf(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -64,19 +79,56 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     /** The face being edited; with [adding] the whole media is added to a person instead. */
     var editing by remember(file.id) { mutableStateOf<TrackCard?>(null) }
     var adding by remember(file.id) { mutableStateOf(false) }
+    /** Faces picked with a long press, for "Stessa persona" and "Elimina". */
+    var selected by remember(file.id) { mutableStateOf(emptySet<Long>()) }
+    val undo by vm.faceUndo.collectAsStateWithLifecycle()
+    LaunchedEffect(file.id) { vm.tidyFaces(file.id) }
+    LaunchedEffect(undo) {
+        val u = undo ?: return@LaunchedEffect
+        delay(8_000)
+        if (vm.faceUndo.value === u) vm.faceUndo.value = null
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Persone", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.semantics { heading() })
         val shown = faces.sortedWith(compareBy<TrackCard>({ it.personId == null }, { it.moments.firstOrNull() ?: it.timeMs }))
+        // Faces gone meanwhile (joined, deleted, analysed again) leave the selection.
+        val chosen = selected.filterTo(HashSet()) { id -> shown.any { it.id == id } }
+        fun toggle(id: Long) { selected = if (id in chosen) chosen - id else chosen + id }
         if (shown.isEmpty() && links.isEmpty()) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (chosen.isNotEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
+                Text(if (chosen.size == 1) "1 volto" else "${chosen.size} volti", style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { Text("Stessa persona") }
+                TextButton(onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        } else if (shown.size >= 2) {
+            Text("Tieni premuto un volto per unirlo a un altro della stessa persona o per eliminarlo.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         for (t in shown) {
             val p = t.personId?.let { byId[it] }
+            val on = t.id in chosen
+            val tap = Modifier.combinedClickable(onClickLabel = if (chosen.isEmpty()) "Modifica" else if (on) "Deseleziona" else "Seleziona",
+                onLongClickLabel = "Seleziona", onLongClick = { toggle(t.id) }) { if (chosen.isEmpty()) editing = t else toggle(t.id) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp, Modifier.clickable(onClickLabel = "Modifica") { editing = t })
-                Column(Modifier.weight(1f).clickable(onClickLabel = "Modifica") { editing = t }) {
+                Box(tap) {
+                    FaceAvatar(t.id, { vm.faceCrop(it) }, 64.dp,
+                        if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                    if (on) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary).padding(3.dp))
+                }
+                Column(Modifier.weight(1f).then(tap)) {
                     Text(when {
                         p == null -> "Sconosciuto · tocca per dire chi è"
                         else -> p.title
@@ -106,6 +158,16 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         if (shown.any { it.personId == null && it.state != "manual" }) {
             TextButton(onClick = { vm.clearDetectedFaces(file.id) }) {
                 Text("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error)
+            }
+        }
+        // "Annulla" for the last join or deletion here; the message stays while it fades out.
+        val mine = undo?.takeIf { it.fileId == file.id }
+        var last by remember(file.id) { mutableStateOf("") }
+        if (mine != null) last = mine.message
+        AnimatedVisibility(mine != null, enter = fadeIn(tween(220)), exit = fadeOut(tween(120))) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(last, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = { vm.undoFaceChange() }) { Text("Annulla") }
             }
         }
     }
@@ -187,6 +249,9 @@ private fun FaceEditor(
                         if (placed && current != null) Row(verticalAlignment = Alignment.CenterVertically) {
                             FavoriteStar(current.entity.favorite, current.title) { vm.setPersonFavorite(current.id, !current.entity.favorite) }
                             TextButton(onClick = { vm.rejectFace(t.id, current.id); onDismiss() }) { Text("Non è lui/lei") }
+                        }
+                        TextButton(onClick = { vm.deleteFaces(t.fileId, listOf(t.id)); onDismiss() }) {
+                            Text("Non è un volto, elimina", color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

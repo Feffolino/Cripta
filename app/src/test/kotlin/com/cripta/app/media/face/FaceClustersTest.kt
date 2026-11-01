@@ -66,4 +66,56 @@ class FaceClustersTest {
         assertEquals(2, tracks.size)
         assertEquals(0b11L, tracks.first { it.sightings.size == 2 }.frames)
     }
+
+    @Test
+    fun tracksOfOnePersonThatShareNoFrameAreJoined() {
+        val a = random(); val other = random()
+        // Alike means, no frame in common: one person; the stranger stays apart.
+        assertEquals(listOf(listOf(0, 1), listOf(2)),
+            FaceTracker.groups(listOf(0b001L, 0b010L, 0b100L), listOf(a, near(a, 0.5f), other), listOf(3, 2, 1)))
+        // The same frame: two people, however alike.
+        assertEquals(listOf(listOf(0), listOf(1)), FaceTracker.groups(listOf(1L, 1L), listOf(a, near(a, 0.9f)), listOf(1, 1)))
+        // Below the bar: kept apart.
+        assertEquals(2, FaceTracker.groups(listOf(1L, 2L), listOf(a, near(a, FaceTracker.JOIN - 0.1f)), listOf(1, 1)).size)
+    }
+
+    @Test
+    fun aPersonSplitByTheLightBecomesOneTrack() {
+        val a = random()
+        val dark = near(a, 0.7f); val light = near(a, 0.7f)
+        // Each look alike within itself but less than SAME to the other's faces.
+        val faces = (0 until 4).map { Sighting(it, it * 10_000L, near(dark, 0.85f), 0.9f - it * 0.01f) } +
+            (4 until 8).map { Sighting(it, it * 10_000L, near(light, 0.85f), 0.8f - it * 0.01f) }
+        val tracks = FaceTracker.build(faces)
+        assertEquals(1, tracks.size)
+        assertEquals((0 until 8).map { it * 10_000L }, tracks.single().times)
+    }
+
+    @Test
+    fun combineWeighsEachMeanByItsFaces() {
+        val a = random(); val b = random()
+        val joined = FaceTracker.combine(listOf(FaceTracker.Part(listOf(a, a, a), 9, 0.5f), FaceTracker.Part(listOf(b), 1, 0.9f)))
+        assertEquals(FaceTracker.KEPT, joined.size)
+        assertTrue(similarity(joined[0], a) > similarity(joined[0], b))
+        assertEquals(1f, similarity(joined[0], joined[0]), 1e-4f)
+        // The best face first after the mean: the single face of the sharper track.
+        assertTrue(joined[1].contentEquals(b))
+    }
+
+    @Test
+    fun trackerNeverJoinsTwoPeopleOfTheTestPhotos() {
+        val who = HashMap<Sighting, String>()
+        TestFaces.names().forEachIndexed { i, name ->
+            for (f in TestFaces.engine.analyze(TestFaces.image(name))) {
+                val id = TestFaces.who(name, f.det) ?: continue
+                who[Sighting(i, i * 1_000L, f.embedding ?: continue, f.quality)] = id
+            }
+        }
+        val list = who.keys.toList()
+        val same = ArrayList<Float>(); val diff = ArrayList<Float>()
+        for (x in list.indices) for (y in x + 1 until list.size)
+            (if (who[list[x]] == who[list[y]]) same else diff) += similarity(list[x].embedding, list[y].embedding)
+        println("faces ${list.size}; same person, lowest: ${same.minOrNull()}; different people, highest: ${diff.maxOrNull()}")
+        for (t in FaceTracker.build(list)) assertEquals(1, t.sightings.map { who[it] }.distinct().size)
+    }
 }

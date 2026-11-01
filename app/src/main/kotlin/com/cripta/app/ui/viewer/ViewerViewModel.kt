@@ -199,6 +199,24 @@ class ViewerViewModel @Inject constructor(
     fun analyseFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId))
     /** The faces found here that nobody confirmed go (the analysis was on by mistake). */
     fun clearDetectedFaces(fileId: String) = faceAction { faces.clearDetected(listOf(fileId)) }
+
+    /** The last change to the faces of [fileId], which "Annulla" in its details takes back. */
+    class FaceUndo(val fileId: String, val message: String, val undo: com.cripta.app.data.face.Undo)
+    val faceUndo = MutableStateFlow<FaceUndo?>(null)
+    fun undoFaceChange() { val u = faceUndo.value ?: return; faceUndo.value = null; faceAction { u.undo() } }
+    /** Faces analysed before tracks were joined: those of one person become one when the details open. */
+    fun tidyFaces(fileId: String) = faceAction { faces.tidy(fileId) }
+    /** "Elimina": faces that are not a face, or a face not wanted. */
+    fun deleteFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
+        val u = faces.deleteFaces(trackIds)
+        faceUndo.value = FaceUndo(fileId, if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati", u)
+    }
+    /** "Stessa persona": faces of [fileId] that are one person become one. */
+    fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
+        val u = faces.mergeFaces(trackIds)
+        if (u == null) faceMessage.value = "Questi volti sono di persone diverse. Togli prima il volto sbagliato dalla sua persona."
+        else faceUndo.value = FaceUndo(fileId, "Volti uniti", u)
+    }
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
     fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
         if (trackId != null) faces.assign(trackId, personId) else faces.link(personId, fileId)

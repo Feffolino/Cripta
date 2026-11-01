@@ -1120,6 +1120,7 @@ class ConversionService : Service() {
         try {
             // Faces of media deleted for good go; media analysed by a scan that stopped before placing them are placed.
             faces.purgeDeleted()
+            faces.tidyOld()
             faces.placeNew()
             do {
                 faceRerun = false

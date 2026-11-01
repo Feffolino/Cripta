@@ -40,6 +40,9 @@ viewed in an internal player that never writes plaintext to disk. Product contex
   order) reached from Home and the people page; suggestions of similar faces elsewhere, confirmed
   one by one with the frame and the video at that moment; faces shown top-left on covers (Cartelle
   and Home, on/off and size in Settings); faces found by mistake can be cleared by period or media.
+  Within one media, tracks of one person that never share a frame are joined (`FaceTracker.JOIN`;
+  older scans are joined from the stored tracks, not re-read); in the details a long press selects
+  faces to join ("Stessa persona") or delete, with "Annulla".
 - **Home:** summary, favourites, people, continue watching, shelves.
 - **Download:** in-app link downloader (yt-dlp) with quality choice, queue and default destination.
 - **Backup:** passphrase-encrypted archive of the whole vault (files, folders, tags, saved filters,
@@ -77,7 +80,7 @@ viewed in an internal player that never writes plaintext to disk. Product contex
 
 - Everything since the start of November was verified by build and unit tests only, not yet on a
   device: people profile and suggestions (the similarity threshold `FaceRepository.SUGGEST` = 0.36
-  may need tuning on real faces), backup round trip with people and intro data, new navigation
+  may need tuning on real faces, like `FaceTracker.JOIN` = 0.40), joining and deleting faces in the details, backup round trip with people and intro data, new navigation
   motion.
 - A restore onto a vault that already holds the same people creates them twice (files behave the
   same way: restore merges, it never replaces).

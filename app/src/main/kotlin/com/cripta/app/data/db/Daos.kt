@@ -453,6 +453,25 @@ interface FaceDao {
     @Insert
     suspend fun addTrack(t: FaceTrackEntity): Long
 
+    @Query("SELECT * FROM face_tracks WHERE id IN (:ids)")
+    suspend fun tracks(ids: List<Long>): List<FaceTrackEntity>
+
+    /** A face back as it was (undoing a deletion or a join), with its old id. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putTrack(t: FaceTrackEntity)
+
+    @Query("UPDATE face_tracks SET frames = :frames, faceCount = :faceCount, embeddings = :embeddings, times = :times WHERE id = :id")
+    suspend fun joinedTrack(id: Long, frames: Long, faceCount: Int, embeddings: ByteArray, times: String)
+
+    @Query("DELETE FROM face_tracks WHERE id IN (:ids)")
+    suspend fun deleteTracks(ids: List<Long>)
+
+    @Query("SELECT * FROM face_scans WHERE version = :version")
+    suspend fun scansOfVersion(version: Int): List<FaceScanEntity>
+
+    @Query("UPDATE face_scans SET version = :version WHERE fileId IN (:ids)")
+    suspend fun setScanVersion(ids: List<String>, version: Int)
+
     /** Every face of [fileId] with its picture and embeddings (the backup). */
     @Query("SELECT * FROM face_tracks WHERE fileId = :fileId")
     suspend fun tracksOfFile(fileId: String): List<FaceTrackEntity>
@@ -589,6 +608,15 @@ interface FaceDao {
 
     @Query("SELECT * FROM face_rejections")
     suspend fun rejections(): List<FaceRejectionEntity>
+
+    @Query("SELECT * FROM face_rejections WHERE trackId IN (:ids)")
+    suspend fun rejectionsOfTracks(ids: List<Long>): List<FaceRejectionEntity>
+
+    @Query("UPDATE OR IGNORE face_rejections SET trackId = :to WHERE trackId IN (:from)")
+    suspend fun moveTrackRejections(from: List<Long>, to: Long)
+
+    @Query("DELETE FROM face_rejections WHERE trackId IN (:ids)")
+    suspend fun deleteRejectionsOfTracks(ids: List<Long>)
 
     @Query("UPDATE OR IGNORE face_rejections SET personId = :to WHERE personId = :from")
     suspend fun moveRejections(from: Long, to: Long)
