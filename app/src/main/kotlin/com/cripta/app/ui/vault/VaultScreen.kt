@@ -663,8 +663,9 @@ fun VaultScreen(
                     enter = fadeIn(Motion.enter()) + slideInVertically(Motion.enter()) { it / 2 },
                     exit = fadeOut(Motion.exit()) + slideOutVertically(Motion.exit()) { it / 2 },
                 ) {
-                    // "+" opens its actions in a row to its left (adding things); "Apri a caso" is a
-                    // separate small button above it, since it opens rather than adds.
+                    // "+" opens its actions in a column above it (adding things); "Apri a caso" is a
+                    // separate small button above it, since it opens rather than adds, hidden while
+                    // the actions are open (they take its place).
                     // Centred column: the small "a caso" button sits exactly over the middle of the "+".
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val here = path.lastOrNull()?.name
@@ -682,25 +683,29 @@ fun VaultScreen(
                                 path.isNotEmpty() -> "Apri a caso in questa cartella"
                                 else -> "Apri a caso"
                             }
+                            // Kept in place (only faded) while the actions are open: removed, the
+                            // column would shrink and the "+" jump down under the finger.
+                            val randomAlpha by animateFloatAsState(if (fabExpanded) 0f else 1f, Motion.enter(Motion.SHORT), label = "randomFab")
                             androidx.compose.material3.SmallFloatingActionButton(
-                                onClick = { fabExpanded = false; vm.randomShuffleOpen(onOpenFile) },
+                                onClick = { if (!fabExpanded) vm.randomShuffleOpen(onOpenFile) },
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 contentColor = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.graphicsLayer { alpha = randomAlpha }
+                                    .then(if (fabExpanded) Modifier.clearAndSetSemantics { } else Modifier),
                             ) { Icon(Icons.Filled.Shuffle, randomLabel) }
                         }
-                        Box(contentAlignment = Alignment.CenterStart) {
-                            // The row is anchored to the left edge of the "+" and takes no room in the
-                            // layout: opening it never moves the "+" (it is taller than the button).
-                            val gap = with(LocalDensity.current) { 12.dp.roundToPx() }
-                            // Its bottom edge 12dp under the middle of the "+" (16dp above the
-                            // button's bottom): centred, the taller row reached down to the
-                            // navigation bar.
-                            val lift = with(LocalDensity.current) { 12.dp.roundToPx() }
-                            Box(Modifier.align(Alignment.CenterStart).layout { m, c ->
+                        Box {
+                            // The actions stand above the "+", right edges aligned, and take no room in
+                            // the layout: opening them never moves the "+". Their height no longer has
+                            // to match the button's (a row beside it was taller than the "+": centred
+                            // it reached the navigation bar, lifted it looked off-centre).
+                            val gap = with(LocalDensity.current) { 16.dp.roundToPx() }
+                            val fabW = with(LocalDensity.current) { 56.dp.roundToPx() }
+                            Box(Modifier.align(Alignment.TopStart).layout { m, c ->
                                 val p = m.measure(c.copy(minWidth = 0, minHeight = 0,
                                     maxWidth = androidx.compose.ui.unit.Constraints.Infinity,
                                     maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
-                                layout(0, 0) { p.place(-p.width - gap, lift - p.height) }
+                                layout(0, 0) { p.place(fabW - p.width, -p.height - gap) }
                             }) {
                                 val origin = TransformOrigin(1f, 1f)
                                 androidx.compose.animation.AnimatedVisibility(
@@ -710,7 +715,7 @@ fun VaultScreen(
                                     exit = fadeOut(Motion.exit(Motion.SHORT)) +
                                         scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
                                 ) {
-                                    FabRow(actions)
+                                    FabMenu(actions)
                                 }
                             }
                             // "+" turns 45 degrees into an "x" while the actions are open.
@@ -2831,31 +2836,27 @@ private fun EmptyState(
 }
 
 /**
- * The "+" actions: one tonal pill (a single object, so a filled surface is allowed) opening to the
- * left of the button, each action a round accent icon with its short name under it.
+ * The "+" actions, in a column above the button (the first one nearest to it), right-aligned with
+ * it: each a tonal pill button with its icon and name, like Material's FAB menu.
  */
 @Composable
-private fun FabRow(actions: List<FabAction>, modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        shadowElevation = 6.dp,
-        modifier = modifier,
-    ) {
-        Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp)) {
-            actions.forEach { a ->
-                Column(
-                    Modifier.widthIn(min = 68.dp).clip(MaterialTheme.shapes.large)
-                        .clickable(role = Role.Button, onClickLabel = a.caption, onClick = a.onClick)
-                        .padding(horizontal = 6.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+private fun FabMenu(actions: List<FabAction>, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        actions.asReversed().forEach { a ->
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                shadowElevation = 6.dp,
+            ) {
+                Row(
+                    Modifier.clickable(role = Role.Button, onClickLabel = a.caption, onClick = a.onClick)
+                        .heightIn(min = 52.dp).padding(start = 16.dp, end = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
-                        contentAlignment = Alignment.Center) {
-                        Icon(a.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                    }
-                    Text(a.label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    Icon(a.icon, null, modifier = Modifier.size(22.dp))
+                    Text(a.label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                        modifier = Modifier.padding(start = 12.dp))
                 }
             }
         }
