@@ -120,6 +120,9 @@ class FaceRepository @Inject constructor(
     private val crops = LruCache<Long, Bitmap>(300)
     /** The database [crops] belong to: another vault or a restored backup counts ids from 1 again. */
     private var cropsOf: Any? = null
+    /** Frames shown by the suggestion pages (about 1 MB each), and the database they belong to. */
+    private val frames = LruCache<String, Bitmap>(16)
+    private var framesOf: Any? = null
 
     // ---- Analysis --------------------------------------------------------------------------
 
@@ -836,6 +839,12 @@ class FaceRepository @Inject constructor(
 
     /** The picture [card] was found in (a video's frame, or the photo), at most [side] px. */
     suspend fun frameOf(card: TrackCard, side: Int = 720): Bitmap? = withContext(Dispatchers.IO) {
+        // Read once: reading the exact frame of an encrypted video takes a while, and the pages of
+        // "Forse è …" / "Da sistemare" ask again when they come back into view.
+        val key = "${card.id}:${card.timeMs}:$side"
+        val d = db
+        synchronized(frames) { if (framesOf !== d) { frames.evictAll(); framesOf = d } }
+        frames.get(key)?.let { return@withContext it }
         val file = repo.fileById(card.fileId) ?: return@withContext null
         runCatching {
             if (VaultRepository.isVideo(file.mimeType)) {
@@ -856,7 +865,7 @@ class FaceRepository @Inject constructor(
                     dec.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 }
             }
-        }.getOrNull()
+        }.getOrNull()?.also { frames.put(key, it) }
     }
 
     private fun scaled(src: Bitmap, side: Int): Bitmap {

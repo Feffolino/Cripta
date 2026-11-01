@@ -421,21 +421,42 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
         }
         vm.lastSuggestions = p.id to list.toList()
     }
-    val pager = androidx.compose.foundation.pager.rememberPagerState { list.size }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = if (cached != null) vm.lastSuggestionPage else 0) { list.size }
+    LaunchedEffect(pager) { androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { vm.lastSuggestionPage = it } }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     /** The answers given here (face → yes): answered pages stay where they are, marked, so nothing jumps. */
-    var answers by remember(p.id) { mutableStateOf(emptyMap<Long, Boolean>()) }
+    var answers by remember(p.id) { mutableStateOf(if (cached != null) vm.lastAnswers else emptyMap()) }
     val answeredCount = answers.size
+    /**
+     * After a yes the person has one more face: the faces still ahead are looked for again with it,
+     * so the next ones are the new most alike (and those no longer alike enough go). The pages seen
+     * so far stay as they are. A newer answer cancels a refresh still running.
+     */
+    var refresh by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun refreshAhead() {
+        refresh?.cancel()
+        refresh = scope.launch {
+            kotlinx.coroutines.delay(600)   // the yes is written first
+            val fresh = runCatching { vm.suggestionsFor(p.id) }.getOrNull() ?: return@launch
+            val keep = list.take(pager.currentPage + 1)
+            val kept = keep.map { it.card.id }.toSet()
+            val ahead = fresh.filter { it.card.id !in kept && it.card.id !in answers }
+            list.removeRange(keep.size, list.size)
+            list.addAll(ahead)
+            vm.lastSuggestions = p.id to list.toList()
+        }
+    }
     /** Answer the face on [page], then glide to the next one. */
     fun answer(page: Int, s: FaceRepository.Suggestion, yes: Boolean) {
         if (yes) vm.acceptSuggestion(s.card.id, p.id) else vm.refuseSuggestion(s.card.id, p.id)
         answers = answers + (s.card.id to yes)
-        vm.lastSuggestions = p.id to list.filter { it.card.id !in answers }
-        if (page + 1 < list.size) scope.launch {
-            pager.animateScrollToPage(page + 1, animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart))
+        vm.lastAnswers = answers
+        scope.launch {
+            if (page + 1 < list.size) pager.animateScrollToPage(page + 1, animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart))
+            if (yes) refreshAhead()
         }
     }
-    val close = { vm.lastSuggestions = null; onClose() }
+    val close = { vm.lastSuggestions = null; vm.lastAnswers = emptyMap(); vm.lastSuggestionPage = 0; onClose() }
     CriptaDialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
@@ -460,7 +481,7 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
                 return@Scaffold
             }
             androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize().padding(pad),
-                key = { list.getOrNull(it)?.card?.id ?: it }, beyondViewportPageCount = 1) { page ->
+                key = { list.getOrNull(it)?.card?.id ?: it }, beyondViewportPageCount = 2) { page ->
                 val s = list.getOrNull(page) ?: return@VerticalPager
                 SuggestionPage(s, p, files[s.card.fileId], vm, answer = answers[s.card.id],
                     onYes = { answer(page, s, true) }, onNo = { answer(page, s, false) }, onOpen = { onOpen(s.card) })
@@ -481,7 +502,9 @@ private fun SuggestionPage(s: FaceRepository.Suggestion, p: FaceRepository.Perso
         // The whole frame, letterboxed in the free space; a tap plays from that moment.
         Box(m.clip(MaterialTheme.shapes.large).clickable(onClickLabel = if (isVideo) "Riproduci da qui" else "Apri", onClick = onOpen),
             contentAlignment = Alignment.Center) {
-            FrameWithFace(frame, s.card.box, Modifier.fillMaxSize())
+            // While the frame is read from the video, the face itself, large: the page is usable at once.
+            if (frame == null) FaceAvatar(s.card, { vm.faceCrop(it) }, 180.dp)
+            else FrameWithFace(frame, s.card.box, Modifier.fillMaxSize())
         }
     }
     val decision: @Composable (Modifier) -> Unit = { m ->

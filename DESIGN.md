@@ -100,7 +100,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
   are one face at a time, full screen, swiped up like a feed (the frame takes the free space, the
   two faces side by side under it, "No" and "È …" across the width; an answer glides to the next
-  and the answered page stays, marked), most alike first, the face found next to the person's own, the whole frame with the face
+  and the answered page stays, marked; after a yes the faces ahead are looked for again with the
+  new face; Back from a video returns to the same face; the face shows large while its frame
+  loads), most alike first, the face found next to the person's own, the whole frame with the face
   ringed (tap to play from there) and "È …" / "Non è lui/lei": nothing is added without a yes.
   In a media's details a long press selects faces (ring and tick on the face): "Stessa persona"
   joins faces of one person into one row, "Elimina" removes faces found by mistake; "Annulla"
