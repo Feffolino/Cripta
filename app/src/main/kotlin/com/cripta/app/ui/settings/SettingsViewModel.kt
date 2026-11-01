@@ -297,6 +297,19 @@ class SettingsViewModel @Inject constructor(
     fun setFacesAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setFacesAnalyzeNew(v) }
     fun setFaceMoments(v: Boolean) = viewModelScope.launch { store.setFaceMoments(v) }
     fun setPeopleOnHome(v: String) = viewModelScope.launch { store.setPeopleOnHome(v) }
+    fun setFacesMode(v: String) = viewModelScope.launch { store.setFacesMode(v); groupsVersion.value++ }
+    /** Bumped when "Da sistemare" must be grouped again though the unassigned count did not change. */
+    val groupsVersion = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** "Dividi il gruppo": [a] and [b] are not one person. */
+    fun keepFacesApart(a: Collection<Long>, b: Collection<Long>) = viewModelScope.launch {
+        try {
+            val u = faces.keepFacesApart(a, b)
+            groupsVersion.value++
+            faceUndo.value = "Gruppo diviso" to suspend { u(); groupsVersion.value += 1 }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+        }
+    }
     fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
     fun startFaceScan() = com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true)
     /** [fileIds] analysed again, even those whose faces the user cleared. */
@@ -353,7 +366,13 @@ class SettingsViewModel @Inject constructor(
     fun forgetIgnoredFaces() = faceAction { faces.forgetIgnored() }
     fun setPersonProfile(personId: Long, notes: String, links: List<String>) = faceAction { faces.setProfile(personId, notes, links) }
     fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = viewModelScope.launch { store.setPeopleSort(key, ascending) }
-    suspend fun suggestionsFor(personId: Long) = faces.suggestionsFor(personId)
+    /** "Solo persone note": suggestions only from people with faces in at least two media. */
+    suspend fun suggestionsFor(personId: Long) =
+        faces.suggestionsFor(personId, minMedia = if (settings.value.facesMode == "known") 2 else 1)
+    /** "Da confermare": the faces like a known person, across everyone. */
+    suspend fun knownSuggestions() = faces.knownSuggestions().also { lastKnown = it }
+    /** The last "Da confermare" list, shown at once when the page comes back from a media. */
+    var lastKnown: List<com.cripta.app.data.face.FaceRepository.PersonSuggestion>? = null
     suspend fun frameOf(card: com.cripta.app.data.db.TrackCard) = faces.frameOf(card)
     /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
     fun acceptSuggestion(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }

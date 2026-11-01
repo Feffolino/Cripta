@@ -145,6 +145,11 @@ data class Settings(
     val faceMoments: Boolean = false,
     /** People on Home: "off", "blur" (blurred until touched) or "on". */
     val peopleOnHome: String = "blur",
+    /**
+     * Recognition: "all" asks about every face found (grouped in "Da sistemare"); "known" only offers
+     * faces like a person the user gave at least two faces, and leaves the others in the details.
+     */
+    val facesMode: String = "all",
     /** Order of the people page: a [PeopleSort] name, and its direction. */
     val peopleSort: String = "RELEVANCE",
     val peopleSortAscending: Boolean = false,
@@ -235,6 +240,7 @@ class SettingsStore @Inject constructor(
     private val facesAnalyzeKey = booleanPreferencesKey("faces_analyze_new")
     private val faceMomentsKey = booleanPreferencesKey("face_moments")
     private val peopleHomeKey = stringPreferencesKey("people_on_home")
+    private val facesModeKey = stringPreferencesKey("faces_mode")
     private val peopleSortKey = stringPreferencesKey("people_sort")
     private val peopleSortAscKey = booleanPreferencesKey("people_sort_asc")
     private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
@@ -313,6 +319,7 @@ class SettingsStore @Inject constructor(
             facesAnalyzeNew = p[facesAnalyzeKey] ?: true,
             faceMoments = p[faceMomentsKey] ?: false,
             peopleOnHome = (p[peopleHomeKey] ?: "blur").let { if (it in listOf("off", "blur", "on")) it else "blur" },
+            facesMode = (p[facesModeKey] ?: "all").let { if (it in listOf("all", "known")) it else "all" },
             peopleSort = (p[peopleSortKey] ?: "RELEVANCE").let { k -> if (PeopleSort.entries.any { it.name == k }) k else "RELEVANCE" },
             peopleSortAscending = p[peopleSortAscKey] ?: false,
             introQuickScan = p[introQuickKey] ?: true,
@@ -358,6 +365,7 @@ class SettingsStore @Inject constructor(
     suspend fun setFacesAnalyzeNew(v: Boolean) { context.dataStore.edit { it[facesAnalyzeKey] = v } }
     suspend fun setFaceMoments(v: Boolean) { context.dataStore.edit { it[faceMomentsKey] = v } }
     suspend fun setPeopleOnHome(v: String) { context.dataStore.edit { it[peopleHomeKey] = v } }
+    suspend fun setFacesMode(v: String) { context.dataStore.edit { it[facesModeKey] = v } }
     suspend fun setPeopleSort(key: PeopleSort, ascending: Boolean) {
         context.dataStore.edit { it[peopleSortKey] = key.name; it[peopleSortAscKey] = ascending }
     }
@@ -448,7 +456,7 @@ class SettingsStore @Inject constructor(
             "VISUALIZZATORE" -> listOf(resumeKey, videoLoopKey, videoMutedKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, rotationLockKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,
                 swipeCloseKey, splitDetailsKey, holdSpeedOnKey, holdSpeedKey, controlsTimeoutKey)
-            "ANALISI" -> listOf(introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey)
+            "ANALISI" -> listOf(introAnalyzeKey, introQuickKey, introAutoKey, outroAutoKey, facesAnalyzeKey, faceMomentsKey, peopleHomeKey, facesModeKey)
             "SICUREZZA" -> listOf(autoLock, allowShotsKey)
             "IMPORT" -> listOf(delPolicy, convertAfterKey, convertAfterChosenKey)
             else -> emptyList()

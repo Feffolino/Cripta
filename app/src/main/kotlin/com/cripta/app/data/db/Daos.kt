@@ -487,6 +487,18 @@ interface FaceDao {
     @Query("DELETE FROM face_ignored")
     suspend fun deleteAllIgnored()
 
+    @Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE)
+    suspend fun addApart(pairs: List<FaceApartEntity>)
+
+    @androidx.room.Delete
+    suspend fun deleteApart(pairs: List<FaceApartEntity>)
+
+    @Query("SELECT * FROM face_apart")
+    suspend fun apart(): List<FaceApartEntity>
+
+    @Query("DELETE FROM face_apart")
+    suspend fun deleteAllApart()
+
     /** Faces deleted from media deleted for good ("Non è un volto" ones stay). */
     @Query("DELETE FROM face_ignored WHERE fileId IS NOT NULL AND fileId NOT IN (SELECT id FROM files)")
     suspend fun purgeIgnored(): Int
