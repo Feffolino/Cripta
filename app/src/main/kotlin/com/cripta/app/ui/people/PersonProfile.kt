@@ -56,6 +56,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.core.tween
+import com.cripta.app.ui.theme.Motion
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -397,16 +403,16 @@ private fun likeness(s: Float) = when {
 private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
 
 /**
- * "Forse è …": faces elsewhere that look like the person, most alike first. Each shows the face,
- * the whole frame it was found in (the face marked) and opens the video at that moment, so the
- * user compares quickly; "È lui/lei" and "No" teach the next round. Nothing is added by itself.
+ * "Forse è …": one face at a time, full screen, swiped up like a feed (most alike first). The frame
+ * it was found in takes the free space (the face ringed; a tap plays from there), under it the face
+ * found next to the person's own, then "No" and "È …" across the width. An answer moves on to the
+ * next by itself; swiping skips without answering. Nothing is added by itself.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileEntity>, vm: SettingsViewModel,
                               onClose: () -> Unit, onOpen: (TrackCard) -> Unit) {
-    // Back from playing a suggestion: the same list at once, so the scroll position comes back too
-    // (loading it again showed an empty list first and the page opened at the top).
+    // Back from playing a suggestion: the same list at once, on the same face.
     val cached = remember(p.id) { vm.lastSuggestions?.takeIf { it.first == p.id }?.second }
     val list = remember(p.id) { mutableStateListOf<FaceRepository.Suggestion>().apply { cached?.let { addAll(it) } } }
     var loading by remember(p.id) { mutableStateOf(cached == null) }
@@ -416,31 +422,118 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
         }
         vm.lastSuggestions = p.id to list.toList()
     }
-    fun answered(s: FaceRepository.Suggestion) { list.remove(s); vm.lastSuggestions = p.id to list.toList() }
+    val pager = androidx.compose.foundation.pager.rememberPagerState { list.size }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    /** The answers given here (face → yes): answered pages stay where they are, marked, so nothing jumps. */
+    var answers by remember(p.id) { mutableStateOf(emptyMap<Long, Boolean>()) }
+    val answeredCount = answers.size
+    /** Answer the face on [page], then glide to the next one. */
+    fun answer(page: Int, s: FaceRepository.Suggestion, yes: Boolean) {
+        if (yes) vm.acceptSuggestion(s.card.id, p.id) else vm.refuseSuggestion(s.card.id, p.id)
+        answers = answers + (s.card.id to yes)
+        vm.lastSuggestions = p.id to list.filter { it.card.id !in answers }
+        if (page + 1 < list.size) scope.launch {
+            pager.animateScrollToPage(page + 1, animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart))
+        }
+    }
     val close = { vm.lastSuggestions = null; onClose() }
     CriptaDialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { Text("Forse è ${p.title}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Column {
+                        Text("Forse è ${p.title}?", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (list.isNotEmpty()) Text(if (answeredCount == list.size) "Fatto: hai risposto a tutti"
+                            else "${(pager.currentPage + 1).coerceAtMost(list.size)} di ${list.size}" + if (answeredCount > 0) " · $answeredCount risposte" else "",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = { IconButton(onClick = close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
         }) { pad ->
-            LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 32.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                item {
-                    Text(when {
-                        loading -> "Confronto con i ${p.faces.size} volti di ${p.title}…"
-                        list.isEmpty() -> "Nient'altro da controllare. Più media gli assegni, più i suggerimenti diventano precisi."
-                        else -> "${list.size} da controllare, i più simili prima. Confrontati con i ${p.faces.size} volti che gli hai dato."
-                    }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (loading || list.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(pad).padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(if (loading) "Confronto con i ${p.faces.size} volti di ${p.title}…"
+                        else if (answeredCount > 0) "Fatto: nient'altro da controllare."
+                        else "Nient'altro da controllare. Più media gli assegni, più i suggerimenti diventano precisi.",
+                        style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
-                items(list.toList(), key = { it.card.id }) { s ->
-                    SuggestionItem(s, p, files[s.card.fileId], vm,
-                        onYes = { answered(s); vm.acceptSuggestion(s.card.id, p.id) },
-                        onNo = { answered(s); vm.refuseSuggestion(s.card.id, p.id) },
-                        onOpen = { onOpen(s.card) },
-                        modifier = Modifier.animateItem())
+                return@Scaffold
+            }
+            androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize().padding(pad),
+                key = { list.getOrNull(it)?.card?.id ?: it }, beyondViewportPageCount = 1) { page ->
+                val s = list.getOrNull(page) ?: return@VerticalPager
+                SuggestionPage(s, p, files[s.card.fileId], vm, answer = answers[s.card.id],
+                    onYes = { answer(page, s, true) }, onNo = { answer(page, s, false) }, onOpen = { onOpen(s.card) })
+            }
+        }
+    }
+}
+
+/** One page of "Forse è …": the frame as large as the screen allows, the two faces, the answer. */
+@Composable
+private fun SuggestionPage(s: FaceRepository.Suggestion, p: FaceRepository.Person, file: FileEntity?, vm: SettingsViewModel,
+                           answer: Boolean?, onYes: () -> Unit, onNo: () -> Unit, onOpen: () -> Unit) {
+    val frame by produceState<Bitmap?>(null, s.card.id) { value = runCatching { vm.frameOf(s.card) }.getOrNull() }
+    val isVideo = file != null && VaultRepository.isVideo(file.mimeType)
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val picture: @Composable (Modifier) -> Unit = { m ->
+        // The whole frame, letterboxed in the free space; a tap plays from that moment.
+        Box(m.clip(MaterialTheme.shapes.large).clickable(onClickLabel = if (isVideo) "Riproduci da qui" else "Apri", onClick = onOpen),
+            contentAlignment = Alignment.Center) {
+            FrameWithFace(frame, s.card.box, Modifier.fillMaxSize())
+        }
+    }
+    val decision: @Composable (Modifier) -> Unit = { m ->
+        Column(m, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                // The face found, then the person's own to compare with: the same size, side by side.
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    FaceAvatar(s.card, { vm.faceCrop(it) }, 88.dp)
+                    Text("Trovato", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    FaceAvatar(p.cover, { vm.faceCrop(it) }, 88.dp)
+                    Text(p.title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp).widthIn(max = 88.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(likeness(s.similarity), style = MaterialTheme.typography.titleMedium)
+                    Text((file?.originalName ?: "Media") + if (isVideo) " · ${clock(s.card.timeMs)}" else "",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                 }
             }
+            // The answer across the width, large: the one thing to do on this page. Once given, it
+            // is said in its place (the page stays, the next one is below).
+            if (answer != null) Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                Icon(if (answer) Icons.Filled.Check else Icons.Filled.Close, null,
+                    tint = if (answer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (answer) "  È ${p.title}" else "  Non è ${p.title}", style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilledTonalButton(onClick = onNo, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                    com.cripta.app.ui.components.ButtonText("No")
+                }
+                androidx.compose.material3.Button(onClick = onYes, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                    com.cripta.app.ui.components.ButtonText("È ${p.title}")
+                }
+            }
+        }
+    }
+    if (landscape) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            picture(Modifier.weight(1.4f).fillMaxHeight())
+            decision(Modifier.weight(1f))
+        }
+    } else {
+        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            picture(Modifier.weight(1f).fillMaxWidth())
+            decision(Modifier.fillMaxWidth())
         }
     }
 }
@@ -485,7 +578,7 @@ private fun FrameWithFace(frame: Bitmap?, box: String, modifier: Modifier) {
         return
     }
     Image(frame.asImageBitmap(), "Fotogramma", contentScale = ContentScale.Fit,
-        modifier = modifier.aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1)).drawWithContent {
+        modifier = modifier.aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1), matchHeightConstraintsFirst = frame.height > frame.width).drawWithContent {
             drawContent()
             if (r != null) {
                 val pad = 0.15f
