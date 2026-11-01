@@ -245,6 +245,11 @@ interface IntroDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putPrint(p: AudioPrintEntity)
 
+    /** Bytes the intro/outro analysis adds to a backup (fingerprints and their index). */
+    @Query("SELECT (SELECT COALESCE(SUM(length(hashes) + 80), 0) FROM audio_prints) + (SELECT COALESCE(SUM(length(hashes) + 20), 0) FROM signature_sounds) " +
+        "+ (SELECT COALESCE(SUM(length(hashes) + 120), 0) FROM segment_rules) + (SELECT COALESCE(SUM(length(hashes) + 120), 0) FROM rejected_prints)")
+    fun observeBackupBytes(): Flow<Long>
+
     // Whole tables, for the backup.
     @Query("SELECT * FROM audio_prints")
     suspend fun backupPrints(): List<AudioPrintEntity>
@@ -446,6 +451,10 @@ interface FaceDao {
 
     @Query("SELECT * FROM person_media")
     suspend fun allPersonMedia(): List<PersonMediaEntity>
+
+    /** Bytes the faces add to a backup: pictures, embeddings and about 200 bytes of index each. */
+    @Query("SELECT COALESCE(SUM(length(crop) + length(embeddings) + 208), 0) FROM face_tracks")
+    fun observeBackupBytes(): Flow<Long>
 
     @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks")
     suspend fun allTrackRows(): List<TrackRow>

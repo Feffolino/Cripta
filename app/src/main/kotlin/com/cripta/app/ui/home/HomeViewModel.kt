@@ -195,6 +195,11 @@ class HomeViewModel @Inject constructor(
 
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
 
+    /** Faces on the covers of Home's shelves; none when "Persone in Home" is off. */
+    val coverPeople: StateFlow<Map<String, List<Long>>> =
+        combine(faces.coverFaces, settings.settings.map { it.peopleOnHome }) { m, mode -> if (mode == "off") emptyMap() else m }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     /** The vault, filtered on [personId]. */
     fun openPerson(personId: Long) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId)))
 
