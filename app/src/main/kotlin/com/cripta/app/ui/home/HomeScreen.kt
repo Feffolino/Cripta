@@ -452,7 +452,7 @@ private fun HeroCarousel(
                             fwt.tags.take(3).forEach { t ->
                                 com.cripta.app.ui.components.TagPill(com.cripta.app.ui.components.tagText(t),
                                     if (display.tagColors) com.cripta.app.ui.theme.tagColor(t) else MaterialTheme.colorScheme.primary,
-                                    onImage = true)
+                                    onImage = true, tagIcon = t.icon)
                             }
                             if (fwt.tags.size > 3) com.cripta.app.ui.components.MoreTagsPill(fwt.tags.size - 3, onImage = true)
                         }

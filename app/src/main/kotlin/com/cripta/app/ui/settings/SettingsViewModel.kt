@@ -394,11 +394,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun createTag(name: String, alias: String? = null, color: Int? = null) = viewModelScope.launch {
-        repo.createTag(name, alias)
+    fun createTag(name: String, alias: String? = null, color: Int? = null, icon: String? = null) = viewModelScope.launch {
+        repo.createTag(name, alias, icon)
         if (color != null) repo.setTagColorByName(name, color)
     }
     fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
+    fun setTagIcon(name: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(name, icon) }
 
     /**
      * Gives every tag a colour from the sober palette, at random but spread out (no two tags share

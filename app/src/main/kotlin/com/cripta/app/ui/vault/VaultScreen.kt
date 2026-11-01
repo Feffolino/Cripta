@@ -1145,7 +1145,8 @@ fun VaultScreen(
                 if (before[id].orEmpty().toSet() != names.toSet()) notify("Etichette aggiornate") { vm.restoreTags(before) }
             },
             onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
-            onCreateTag = { name, alias -> vm.createTag(name, alias) },
+            onCreateTag = { name, alias, icon -> vm.createTag(name, alias, icon) },
+            onSetIcon = { name, icon -> vm.setTagIcon(name, icon) },
             onDismiss = { tagTargetId = null },
             showRecents = display.showRecentTags,
             onSetColor = { name, c -> vm.setTagColor(name, c) },
@@ -1170,7 +1171,7 @@ fun VaultScreen(
                 vm.removeTagsFromFiles(ids, names); batchTag = false; selection = emptySet()
                 notify("Etichette rimosse da ${countLabel(ids.size)}") { vm.restoreTags(before) }
             },
-            onCreateTag = { name, alias -> vm.createTag(name, alias) },
+            onCreateTag = { name, alias, icon -> vm.createTag(name, alias, icon) },
             onDismiss = { batchTag = false },
             showRecents = display.showRecentTags,
         )
@@ -1710,9 +1711,15 @@ private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
     return parts.joinToString(" · ")
 }
 
-/** Text a tag shows on a cover badge, per the user's style choice. */
-private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String =
-    if (display?.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME) tag.name else tagAlias(tag)
+/**
+ * Text a tag shows on a cover badge, per the user's style choice. Short style with an icon and no
+ * alias: the icon alone (it replaces the two letters).
+ */
+private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String = when {
+    display?.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME -> tag.name
+    tag.icon != null && tag.alias.isNullOrBlank() -> ""
+    else -> tagAlias(tag)
+}
 
 /** A tag's colour on screen: its own, or the app accent for every tag when tag colours are off. */
 @Composable
@@ -1796,7 +1803,7 @@ private fun ThumbBox(
 @Composable
 private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
     com.cripta.app.ui.components.TagPill(
-        com.cripta.app.ui.components.tagText(tag), tagHue(tag, display),
+        com.cripta.app.ui.components.tagText(tag), tagHue(tag, display), tagIcon = tag.icon,
         size = com.cripta.app.ui.components.TagPillSize.Small,
         base = MaterialTheme.colorScheme.background,
     )
@@ -1831,8 +1838,14 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
         }
         val texts = remember(tags, display?.coverTagStyle) { tags.map { badgeText(it, display) } }
         // Measured on-screen width of each badge (text + padding), capped to a full row.
-        val widths = remember(texts, availPx) {
-            texts.map { minOf(measurer.measure(it, style).size.width + hPadPx, availPx) }
+        val iconPx = with(density) { 14.dp.toPx() }
+        val iconGapPx = with(density) { 4.dp.toPx() }
+        val widths = remember(texts, availPx, tags) {
+            texts.mapIndexed { i, t ->
+                val text = if (t.isEmpty()) 0f else measurer.measure(t, style).size.width.toFloat()
+                val icon = if (tags[i].icon == null) 0f else iconPx + if (t.isEmpty()) 0f else iconGapPx
+                minOf(text + icon + hPadPx, availPx)
+            }
         }
 
         // Greedy row packing: returns the tag indices of each row.
@@ -1872,7 +1885,7 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
                 Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     row.forEach { i ->
                         com.cripta.app.ui.components.TagPill(
-                            texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp,
+                            texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp, tagIcon = tags[i].icon,
                         )
                     }
                     if (r == 0 && extra > 0) com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
@@ -1951,6 +1964,7 @@ private fun TagDismissChip(tag: TagEntity, excluded: Boolean, tagColors: Boolean
     com.cripta.app.ui.components.TagPill(
         com.cripta.app.ui.components.tagText(tag),
         if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
+        tagIcon = tag.icon,
         size = com.cripta.app.ui.components.TagPillSize.Medium,
         state = if (excluded) com.cripta.app.ui.components.TagPillState.Excluded else com.cripta.app.ui.components.TagPillState.On,
         base = MaterialTheme.colorScheme.background,
@@ -1985,9 +1999,9 @@ private enum class TagFilterState { NEUTRAL, INCLUDE, EXCLUDE }
  * takes the dot's place), so the rows don't reflow under the finger.
  */
 @Composable
-private fun TagFilterChip(label: String, state: TagFilterState, color: Color, onClick: () -> Unit) {
+private fun TagFilterChip(label: String, state: TagFilterState, color: Color, icon: String? = null, onClick: () -> Unit) {
     com.cripta.app.ui.components.TagPill(
-        label, color,
+        label, color, tagIcon = icon,
         size = com.cripta.app.ui.components.TagPillSize.Medium,
         state = when (state) {
             TagFilterState.INCLUDE -> com.cripta.app.ui.components.TagPillState.On
@@ -2274,6 +2288,7 @@ private fun FilterSortSheet(
                                 label = label,
                                 state = state,
                                 color = if (tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
+                                icon = tag.icon,
                                 // neutral -> include; include -> exclude; exclude -> neutral.
                                 onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
                             )
