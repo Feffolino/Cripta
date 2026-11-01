@@ -262,7 +262,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
 private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCover: () -> Unit, onRename: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 112.dp,
+        FaceAvatar(p.cover, { vm.faceCrop(it) }, 112.dp,
             Modifier.clip(CircleShape).clickable(onClickLabel = "Scegli il volto da mostrare", onClick = onCover))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(p.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -374,7 +374,7 @@ private fun CoverPicker(p: FaceRepository.Person, vm: SettingsViewModel, onClose
                     horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(p.faces.sortedByDescending { it.width }, key = { it.id }) { f ->
                         val on = f.id == p.cover?.id
-                        FaceAvatar(f.id, { vm.faceCrop(it) }, 88.dp,
+                        FaceAvatar(f, { vm.faceCrop(it) }, 88.dp,
                             Modifier.clip(CircleShape)
                                 .then(if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
                                 .clickable(onClickLabel = "Usa questo volto") { vm.setPersonCover(p.id, f.id); onClose() })
@@ -443,7 +443,7 @@ private fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Perso
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             // The face found, and next to it the person's own face to compare with.
             FaceAvatar(s.card.id, { vm.faceCrop(it) }, 96.dp)
-            FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp)
+            FaceAvatar(p.cover, { vm.faceCrop(it) }, 56.dp)
             Column(Modifier.weight(1f)) {
                 Text(likeness(s.similarity), style = MaterialTheme.typography.titleMedium)
                 Text("somiglianza %.2f".format(s.similarity), style = MaterialTheme.typography.bodySmall,

@@ -2241,7 +2241,7 @@ private fun FilterSortSheet(
                                     .padding(vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, faceCrop, 56.dp,
+                                com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 56.dp,
                                     if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
                                 Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)

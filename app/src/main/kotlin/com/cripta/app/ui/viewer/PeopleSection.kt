@@ -341,7 +341,7 @@ private fun FaceEditor(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (t != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FaceAvatar(t.id, { vm.faceCrop(it) }, 96.dp)
+                    FaceAvatar(t, { vm.faceCrop(it) }, 96.dp)
                     Column(Modifier.weight(1f)) {
                         Text(when {
                             current == null -> "Non ancora assegnato"
@@ -380,7 +380,7 @@ private fun FaceEditor(
                     items(list, key = { it.id }) { q ->
                         Row(Modifier.fillMaxWidth().clickable { onPick(q.id); onDismiss() }.padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 48.dp)
+                            FaceAvatar(q.cover, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                             if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
