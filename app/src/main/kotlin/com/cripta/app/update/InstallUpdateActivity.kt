@@ -3,7 +3,6 @@ package com.cripta.app.update
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
-import java.io.File
 
 /**
  * Invisible step between "Installa" (update notification, Hyper Island) and the system installer.
@@ -15,7 +14,7 @@ import java.io.File
 class InstallUpdateActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val apk = File(cacheDir, AppUpdater.APK_NAME)
+        val apk = AppUpdater.apkFile(this)
         val opened = apk.exists() && runCatching { startActivity(AppUpdater.installerIntent(this, apk)) }.isSuccess
         if (!opened) {
             Toast.makeText(this, "Aggiornamento non disponibile: scaricalo di nuovo da Impostazioni", Toast.LENGTH_LONG).show()

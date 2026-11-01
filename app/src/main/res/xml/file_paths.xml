@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- The downloaded update.apk lives in the app cache dir. -->
-    <cache-path name="updates" path="." />
+    <!-- The downloaded update.apk, in its own cache folder: the rest of the cache (conversion and
+         download temp files in plaintext, sealed covers) is never reachable through the provider. -->
+    <cache-path name="updates" path="updates/" />
 </paths>

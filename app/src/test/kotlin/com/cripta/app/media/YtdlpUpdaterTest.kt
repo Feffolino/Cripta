@@ -29,9 +29,13 @@ class YtdlpUpdaterTest {
         engine.writeText("working old engine")
     }
 
-    private fun release() = JSONObject().put("tag_name", "new-version").put("assets",
+    private fun sha256(b: ByteArray) =
+        "sha256:" + java.security.MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
+
+    private fun release(digest: String?) = JSONObject().put("tag_name", "new-version").put("assets",
         org.json.JSONArray().put(JSONObject().put("name", "yt-dlp").put("browser_download_url",
-            "https://github.com/yt-dlp/yt-dlp/releases/download/new-version/yt-dlp"))).toString().toByteArray()
+            "https://github.com/yt-dlp/yt-dlp/releases/download/new-version/yt-dlp")
+            .apply { digest?.let { put("digest", it) } })).toString().toByteArray()
 
     @Test fun failedUpdateKeepsWorkingEngineAndRetriesLater() {
         val updater = YtdlpUpdater(context) { throw java.net.SocketTimeoutException() }
@@ -42,7 +46,8 @@ class YtdlpUpdaterTest {
     }
 
     @Test fun invalidDownloadedArchiveDoesNotReplaceEngine() {
-        val updater = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release() else "not a zip".toByteArray() }
+        val junk = "not a zip".toByteArray()
+        val updater = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release(sha256(junk)) else junk }
         assertThrows(Exception::class.java) { updater.updateIfDue(now) }
         assertEquals("working old engine", engine.readText())
         assertEquals(1, engine.parentFile!!.listFiles()!!.size)
@@ -56,10 +61,21 @@ class YtdlpUpdaterTest {
             }
         }
         val bytes = output.toByteArray()
-        val updater = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release() else bytes }
+        val updater = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release(sha256(bytes)) else bytes }
         updater.updateIfDue(now)
         assertArrayEquals(bytes, engine.readBytes())
         assertFalse(updater.isDue(now + 23 * 60 * 60_000L))
         assertTrue(updater.isDue(now + 24 * 60 * 60_000L))
+    }
+
+    @Test fun updateWithoutOrWithWrongChecksumIsNeverInstalled() {
+        var downloaded = false
+        val noDigest = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release(null) else { downloaded = true; ByteArray(1) } }
+        assertThrows(IllegalStateException::class.java) { noDigest.updateIfDue(now) }
+        assertFalse(downloaded)
+        context.getSharedPreferences("download_engine", 0).edit().clear().commit()
+        val wrong = YtdlpUpdater(context) { if (it == YtdlpUpdater.RELEASE_URL) release(sha256(ByteArray(2))) else ByteArray(1) }
+        assertThrows(IllegalStateException::class.java) { wrong.updateIfDue(now) }
+        assertEquals("working old engine", engine.readText())
     }
 }

@@ -81,6 +81,17 @@ class MainActivity : FragmentActivity() {
     @Volatile private var awaitingResult = false
 
     /**
+     * The screen went off while a picker of ours was open. Then the absence counts as leaving the
+     * app: a picker left open on a phone that locked itself kept the vault open on return.
+     */
+    @Volatile private var screenOffInPicker = false
+    private val screenOff = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (awaitingResult) screenOffInPicker = true
+        }
+    }
+
+    /**
      * The auto-lock setting, kept current from onCreate so [onStart] can lock before the first
      * frame. Read from DataStore there, the lock came a few frames late: the vault showed briefly
      * to whoever reopened the app after the timeout. Null until loaded.
@@ -184,6 +195,7 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null) handleShare(intent)
         handleOpenDuplicates(intent)
         watchBackgroundWorkForNotificationPermission()
+        runCatching { registerReceiver(screenOff, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)) }
         setContent {
             val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
             // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.
@@ -511,10 +523,16 @@ class MainActivity : FragmentActivity() {
         if (session.isUnlocked) session.backgroundedAt = stoppedAt
     }
 
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(screenOff) }
+        super.onDestroy()
+    }
+
     override fun onStart() {
         super.onStart()
-        val fromPicker = awaitingResult
+        val fromPicker = awaitingResult && !screenOffInPicker
         awaitingResult = false
+        screenOffInPicker = false
         val backgroundedAt = session.backgroundedAt
         // Consumed here: a later start without a stop in between (a new activity in the
         // foreground) must not count this absence again.

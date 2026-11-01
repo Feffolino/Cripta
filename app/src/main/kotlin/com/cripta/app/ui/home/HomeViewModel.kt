@@ -74,7 +74,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun restorePendingJobs() {
-        val queuedUrls = downloadQueue.downloads.value.filter { !it.finished }.map { it.url }.toSet()
+        val queued = downloadQueue.downloads.value.filter { !it.finished }
+        val queuedUrls = queued.map { it.url }.toSet()
+        val queuedIds = queued.map { it.id }.toSet()
         val converting = repo.convertingIds.value
         for (job in repo.pendingJobs()) {
             val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
@@ -88,7 +90,10 @@ class HomeViewModel @Inject constructor(
                 }
                 "download" -> {
                     val url = o.optString("url")
-                    // Blank, or already queued in this process (the service keeps its own record).
+                    // A link queued in this process: this row is its own record (it survives the
+                    // process being killed) and stays; deleting it lost the waiting link.
+                    if (job.id in queuedIds) continue
+                    // Blank, or an older record of a link queued again meanwhile.
                     if (url.isBlank() || url in queuedUrls) { repo.deletePendingJob(job.id); continue }
                     val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
                     // Start first, delete after: if the start throws (e.g. the app is in the

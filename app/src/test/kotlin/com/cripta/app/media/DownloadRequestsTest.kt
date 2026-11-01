@@ -44,4 +44,10 @@ class DownloadRequestsTest {
         assertTrue(args[index + 2].endsWith(DownloadRequests.RESULT_FILE))
         assertEquals("https://example.com/video", args.last())
     }
+
+    @Test fun onlyWebLinksReachTheEngine() {
+        assertThrows(IllegalArgumentException::class.java) { DownloadRequests.common("--exec rm x") }
+        assertThrows(IllegalArgumentException::class.java) { DownloadRequests.common("file:///data/x") }
+        assertEquals("https://example.com/v", DownloadRequests.checkedUrl("  https://example.com/v "))
+    }
 }

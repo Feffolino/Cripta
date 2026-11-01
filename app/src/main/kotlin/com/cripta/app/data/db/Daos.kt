@@ -586,6 +586,23 @@ interface FaceDao {
     @Query("DELETE FROM face_tracks WHERE fileId = :fileId")
     suspend fun deleteTracksOf(fileId: String)
 
+    @Query("DELETE FROM person_media WHERE fileId = :fileId")
+    suspend fun deleteLinksOf(fileId: String)
+
+    @Query("DELETE FROM face_ignored WHERE fileId = :fileId")
+    suspend fun deleteIgnoredOf(fileId: String)
+
+    /** A media destroyed for good: everything the people feature kept about it goes with it. */
+    @androidx.room.Transaction
+    suspend fun forgetFile(fileId: String) {
+        deleteTracksOf(fileId)
+        deleteScan(fileId)
+        deleteLinksOf(fileId)
+        deleteIgnoredOf(fileId)
+        purgeRejections()
+        deleteEmptyPersons()
+    }
+
     /** The faces the analysis found in [fileId]; those added by hand (no frame) stay. */
     @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND frames != 0")
     suspend fun deleteScannedTracksOf(fileId: String)
@@ -692,6 +709,14 @@ interface FaceDao {
 
     @Query("DELETE FROM face_tracks")
     suspend fun deleteAllTracks()
+
+    /** Every face the user has not confirmed or added: what an analysis found and nobody took. */
+    @Query("DELETE FROM face_tracks WHERE personId IS NULL OR state NOT IN ('manual', 'carried')")
+    suspend fun deleteUnconfirmedTracks()
+
+    /** [deleteUnconfirmedTracks] for one media. */
+    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND (personId IS NULL OR state NOT IN ('manual', 'carried'))")
+    suspend fun deleteUnconfirmedTracksOf(fileId: String)
 
     @Query("DELETE FROM persons")
     suspend fun deleteAllPersons()

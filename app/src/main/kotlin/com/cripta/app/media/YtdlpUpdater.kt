@@ -36,12 +36,13 @@ internal class YtdlpUpdater(
                 .first { it.getString("name") == YoutubeDL.ytdlpBin }
             val url = asset.getString("browser_download_url")
             require(url.startsWith("https://github.com/yt-dlp/yt-dlp/releases/download/"))
-            val bytes = fetch(url)
+            // This is code the app runs: never installed without the release's own checksum. A
+            // release listed without one keeps the engine already installed.
             val digest = asset.optString("digest")
-            if (digest.startsWith("sha256:")) {
-                val actual = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-                check(digest.removePrefix("sha256:").equals(actual, ignoreCase = true))
-            }
+            check(digest.startsWith("sha256:") && digest.length == 7 + 64) { "Engine update without checksum" }
+            val bytes = fetch(url)
+            val actual = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            check(digest.removePrefix("sha256:").equals(actual, ignoreCase = true)) { "Engine update checksum mismatch" }
             engineDir.mkdirs()
             val staged = File.createTempFile("yt-dlp-update-", ".zip", engineDir)
             try {

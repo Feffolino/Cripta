@@ -8,12 +8,18 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore by preferencesDataStore(name = "cripta_settings")
+// A damaged settings file is replaced by defaults: thrown, it crashed every launch for good
+// (the vault itself, in its own database, was fine but could not be reached).
+private val Context.dataStore by preferencesDataStore(
+    name = "cripta_settings",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() },
+)
 
 /** Choice for what to do with the original file after import. */
 enum class DeleteOriginalPolicy { ASK, ALWAYS, NEVER }
@@ -250,7 +256,10 @@ class SettingsStore @Inject constructor(
     private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
     private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
 
-    val settings: Flow<Settings> = context.dataStore.data.map { p ->
+    val settings: Flow<Settings> = context.dataStore.data
+        // A read error (storage trouble) gives the defaults instead of crashing whoever collects.
+        .catch { e -> if (e is java.io.IOException) emit(androidx.datastore.preferences.core.emptyPreferences()) else throw e }
+        .map { p ->
         Settings(
             autoLockMinutes = p[autoLock] ?: 1,
             deleteOriginalPolicy = DeleteOriginalPolicy.entries

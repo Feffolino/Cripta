@@ -116,7 +116,7 @@ class AppUpdater @Inject constructor() {
         sha256Url: String? = null,
         onProgress: (Int) -> Unit,
     ): File = withContext(Dispatchers.IO) {
-        val out = File(ctx.cacheDir, APK_NAME).apply { if (exists()) delete() }
+        val out = apkFile(ctx).apply { parentFile?.mkdirs(); if (exists()) delete() }
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = true; connectTimeout = 20000; readTimeout = 20000
@@ -185,6 +185,10 @@ class AppUpdater @Inject constructor() {
         const val REPO = "Feffolino/Cripta"
         /** The downloaded update, in the app cache (shared with the FileProvider as "updates"). */
         const val APK_NAME = "update.apk"
+
+        /** Where the update is downloaded: its own cache folder, the only one the FileProvider shares. */
+        fun apkFile(ctx: Context): File = File(File(ctx.cacheDir, UPDATES_DIR), APK_NAME)
+        private const val UPDATES_DIR = "updates"
 
         /** The system installer for [apk] (see also [InstallUpdateActivity], the notification's way to it). */
         fun installerIntent(ctx: Context, apk: File): Intent {
