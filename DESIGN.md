@@ -93,7 +93,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
   and on/off in Impostazioni › Aspetto; on Home they follow "Persone in Home": hidden, or blurred
-  until the people row is touched), the video length (top right) or a play mark, the watched
+  until the people row is touched, and again 30 s later), the video length (top right) or a play mark, the watched
   bar. No quality badge (4K/HD/SD) and no shade over the image.
 - **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
   to each person's **profile** page: face (tap to pick another among those found), name, star,
@@ -136,12 +136,21 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   broken mid-phrase. A label that would often be cut gets shorter words ("Inizio qui (1:23)"),
   and several buttons that may not fit side by side go in a `FlowRow`. Two lines only where the
   control is built for them (the details sheet's icon actions), and then balanced.
-- **Details panel** (viewer): the file (preview, name, type and date, its actions), its figures as
-  `CountRow`, then Etichette, Intro e finale, Persone, Informazioni. Each section opens with
-  `PanelHeading` (accent heading, optional line of help, optional action at its end) and 24dp
-  more above it than under it. The section's main action is tonal, the rarer ones text, in a
-  `FlowRow`. Labels of values read in sentence case ("Tipo", "Link"), never all capitals. Intro
-  and outro are both the accent, the outro lighter.
+- **Details panel** (viewer): the file (preview, name, type and date, its actions), its figures
+  side by side (`DetailFigure`: the value in `titleMedium`, what it is in small under it; size,
+  length, resolution with 4K/Full HD for videos; they wrap, never cut), then Persone, Etichette,
+  Intro e finale, Informazioni. Each section opens with `PanelHeading` (accent heading, optional
+  line of help, optional action at its end) and 24dp more above it than under it. One main action
+  per section, tonal; the rare ones in a ⋮ menu. Etichette shows the file's, pinned and recent
+  tags, the whole library behind "Mostra tutte". Labels of values in sentence case ("Tipo",
+  "Link"), never all capitals.
+  - Persone: a face row is the face, who it is and its moments. A suggestion reads "Forse è …?"
+    with ✓ / ✗ on the row; a placed face has a plain 48dp star; not them, Dividi, Elimina and
+    "Non è un volto" are in the row's ⋮. "Chi è?" is only the people (search, "Nuova persona" as
+    a row like the others) and the name. People given the media by hand are rows with "Togli".
+  - Intro e finale: both the accent, the outro lighter. With none found, one line and "Intro da
+    qui" / "Finale da qui". A found one shows "Prova" and "Regola" (the ±1 s / ±0,1 s trim opens
+    only then); marking it again is in ⋮. Plain words: trovata, segnata da te, sigla.
 - **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
   the current one larger, full opacity and ringed.
 - **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (32dp).

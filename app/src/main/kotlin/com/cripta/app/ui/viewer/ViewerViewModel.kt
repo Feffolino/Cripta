@@ -212,6 +212,10 @@ class ViewerViewModel @Inject constructor(
         val what = if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati"
         faceUndo.value = FaceUndo(fileId, if (everywhere) "$what ovunque" else what, u)
     }
+    /** "Togli": [fileId], added to [personId] by hand, is not theirs any more. */
+    fun unlinkPerson(fileId: String, personId: Long) = faceAction {
+        faceUndo.value = FaceUndo(fileId, "Tolto dalla persona", faces.unlink(personId, fileId))
+    }
     /** "Stessa persona": faces of [fileId] that are one person become one. */
     fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
         val u = faces.mergeFaces(trackIds)

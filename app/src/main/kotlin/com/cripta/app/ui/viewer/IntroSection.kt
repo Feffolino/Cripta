@@ -89,7 +89,19 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
             pending = pending.values.toList(), introColor = introColor, outroColor = outroColor,
             onSeek = { vm.seekPlayer(file.id, it) },
         )
-        for (kind in SegmentKind.entries) {
+        // Nothing found or marked: one line and the two marks, instead of two empty blocks.
+        if (segments.active(SegmentKind.INTRO) == null && segments.active(SegmentKind.OUTRO) == null && pending.isEmpty()) {
+            if (status == "ok") Text("Nessuna intro né finale trovati.", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = { pending[SegmentKind.INTRO] = position }) {
+                    com.cripta.app.ui.components.ButtonText("Intro da qui (${clock(position)})")
+                }
+                FilledTonalButton(onClick = { pending[SegmentKind.OUTRO] = position }) {
+                    com.cripta.app.ui.components.ButtonText("Finale da qui (${clock(position)})")
+                }
+            }
+        } else for (kind in SegmentKind.entries) {
             val signature by produceState<String?>(initialValue = null, file.id, segments, kind) { value = vm.signatureName(file.id, kind) }
             SegmentBlock(
                 kind = kind,
@@ -195,8 +207,12 @@ private fun SegmentBlock(
     onReject: (MediaSegmentEntity) -> Unit, onRemove: () -> Unit,
 ) {
     val name = if (kind == SegmentKind.INTRO) "Intro" else "Finale"
+    // Intro is feminine, finale masculine: "trovata" / "trovato".
+    val a = if (kind == SegmentKind.INTRO) "a" else "o"
     val active = seg?.takeIf { it.source != "none" && it.endMs > it.startMs }
     var menu by remember { mutableStateOf(false) }
+    /** The fine trim, opened with "Regola": rarely needed, so it does not crowd the block. */
+    var trimming by remember(kind) { mutableStateOf(false) }
     // No tile around it: the coloured dot and the name head the block, like the panel's other sections.
     Box(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(top = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -208,18 +224,18 @@ private fun SegmentBlock(
                     Text(
                         when {
                             active != null -> "${clock(active.startMs)}–${clock(active.endMs)} · " + when {
-                                active.source == "auto" && active.autoStartMs != null -> "rilevata, allungata da una regola"
-                                active.source == "auto" -> "rilevata"
-                                active.autoStartMs != null -> "corretta da te · suono ${clock(active.autoStartMs)}–${clock(active.autoEndMs ?: 0)}"
-                                else -> "segnata da te"
+                                active.source == "auto" && active.autoStartMs != null -> "trovat$a e allungat$a"
+                                active.source == "auto" -> "trovat$a"
+                                active.autoStartMs != null -> "spostat$a da te (il suono era ${clock(active.autoStartMs)}–${clock(active.autoEndMs ?: 0)})"
+                                else -> "segnat$a da te"
                             }
-                            seg?.source == "none" -> "Nessuna (scelta tua)"
-                            else -> "Non rilevata"
+                            seg?.source == "none" -> "Nessun$a (scelta tua)"
+                            else -> "Non trovat$a"
                         },
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (active != null && signature != null) {
-                        Text("Firma: $signature", style = MaterialTheme.typography.labelMedium, color = color)
+                        Text("Sigla: $signature", style = MaterialTheme.typography.labelMedium, color = color)
                     }
                 }
                 if (active != null) {
@@ -231,6 +247,7 @@ private fun SegmentBlock(
                                 (active.startMs != active.autoStartMs || active.endMs != active.autoEndMs)) DropdownMenuItem(
                                 text = { Text("Applica a tutti i video con la stessa sigla") },
                                 onClick = { menu = false; onApplyToAll() })
+                            DropdownMenuItem(text = { Text("Segna di nuovo da ${clock(positionMs)}") }, onClick = { menu = false; onMarkStart() })
                             DropdownMenuItem(text = { Text("Cerca negli altri video") }, onClick = { menu = false; onSearch(active) })
                             if (active.source == "auto") DropdownMenuItem(
                                 text = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro…" else "Non è un finale…") },
@@ -240,28 +257,40 @@ private fun SegmentBlock(
                     }
                 }
             }
-            // One mark button that walks through start → end; the ✕ drops a half-made mark.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
-                if (pendingStart != null) {
-                    FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f)) {
-                        com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
+            // The mark walks through start → end (the ✕ drops a half-made mark); a found segment
+            // offers "Prova" and "Regola", marking it again is in ⋮.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                when {
+                    pendingStart != null -> {
+                        FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f)) {
+                            com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
+                        }
+                        IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
                     }
-                    IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
-                } else {
-                    androidx.compose.material3.FilledTonalButton(onClick = onMarkStart, modifier = Modifier.weight(1f)) {
-                        com.cripta.app.ui.components.ButtonText(if (active == null) "Inizio qui (${clock(positionMs)})" else "Di nuovo da ${clock(positionMs)}")
+                    active == null -> FilledTonalButton(onClick = onMarkStart) {
+                        com.cripta.app.ui.components.ButtonText("$name da qui (${clock(positionMs)})")
                     }
-                    if (active != null) {
-                        Spacer(Modifier.width(8.dp))
+                    else -> {
                         FilledTonalButton(onClick = { onTry(active) }) {
-                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); com.cripta.app.ui.components.ButtonText("Prova")
+                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                            com.cripta.app.ui.components.ButtonText("Prova")
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        TextButton(onClick = { trimming = !trimming }) {
+                            com.cripta.app.ui.components.ButtonText(if (trimming) "Fine regolazione" else "Regola")
                         }
                     }
                 }
             }
-            if (active != null && pendingStart == null) {
-                Trim("Inizio", active.startMs) { d -> onNudge(active, d, 0) }
-                Trim("Fine", active.endMs) { d -> onNudge(active, 0, d) }
+            androidx.compose.animation.AnimatedVisibility(active != null && pendingStart == null && trimming,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, 0, com.cripta.app.ui.theme.Motion.EaseOutQuart)) +
+                    androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(220, 0, com.cripta.app.ui.theme.Motion.EaseOutQuart)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
+                    androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(120))) {
+                if (active != null) Column {
+                    Trim("Inizio", active.startMs) { d -> onNudge(active, d, 0) }
+                    Trim("Fine", active.endMs) { d -> onNudge(active, 0, d) }
+                }
             }
         }
     }
@@ -274,9 +303,9 @@ private fun Trim(label: String, ms: Long, onDelta: (Long) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("$label ${clockTenths(ms)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 92.dp))
         ChipFlowRow(gap = 4.dp) {
-            for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−0,1", 100L to "+0,1", 1_000L to "+1 s")) {
+            for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−0,1 s", 100L to "+0,1 s", 1_000L to "+1 s")) {
                 TextButton(onClick = { onDelta(d) }, contentPadding = PaddingValues(horizontal = 6.dp),
-                    modifier = Modifier.semantics { contentDescription = "$label ${if (d < 0) "indietro" else "avanti"} di ${t.trimStart('−', '+')}" }) {
+                    modifier = Modifier.semantics { contentDescription = "$label ${if (d < 0) "indietro" else "avanti"} di ${t.trimStart('−', '+').removeSuffix(" s")} secondi" }) {
                     com.cripta.app.ui.components.ButtonText(t)
                 }
             }

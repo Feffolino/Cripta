@@ -2148,7 +2148,7 @@ private fun Filmstrip(
  * One panel for everything about the file: its details (size, duration, resolution, date, source
  * link, technical info) and its tags, editable in place (tap toggles, long-press edits the tag).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun DetailsSheet(
     file: FileEntity,
@@ -2169,6 +2169,8 @@ private fun DetailsSheet(
     var editTag by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
     var showTech by remember { mutableStateOf(false) }
+    /** The whole tag library, opened from "Mostra tutte": the short form keeps Persone within reach. */
+    var allTagsOpen by remember(file.id) { mutableStateOf(false) }
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -2246,14 +2248,17 @@ private fun DetailsSheet(
             }
         }
     }
-    // Size, duration, resolution: plain figures side by side, no tiles around them.
+    // Size, length, resolution side by side: the figure first, what it is under it. No tiles around
+    // them; with a large font they wrap to a second line instead of being cut.
     val tiles: @Composable () -> Unit = {
-        // One line per detail (label left, value right): long values never squeeze or cut.
-        Column {
-            com.cripta.app.ui.components.CountRow("Dimensione", com.cripta.app.ui.components.formatBytes(file.sizeBytes))
-            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { com.cripta.app.ui.components.CountRow("Durata", it) }
-            if (file.width != null && file.height != null) {
-                com.cripta.app.ui.components.CountRow("Risoluzione", "${file.width} × ${file.height}")
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(28.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+            DetailFigure(com.cripta.app.ui.components.formatBytes(file.sizeBytes), "Dimensione")
+            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailFigure(it, "Durata") }
+            val w = file.width; val h = file.height
+            if (w != null && h != null) {
+                DetailFigure("$w × $h" + (quality(w, h)?.takeIf { isVid }?.let { " · $it" } ?: ""), "Risoluzione")
             }
         }
     }
@@ -2265,7 +2270,10 @@ private fun DetailsSheet(
                     com.cripta.app.ui.components.ButtonText("Nuova", modifier = Modifier.padding(start = 6.dp))
                 }
             }
+            // Short form unless there is nothing quick to show (no tags on the file, pinned or recent).
+            val hasQuick = onFile.isNotEmpty() || allTags.any { it.pinned } || (showRecents && allTags.any { it.lastUsedAt != null })
             com.cripta.app.ui.vault.TagSections(
+                showLibrary = allTagsOpen || !hasQuick,
                 allTags = allTags,
                 extraNames = onFile,
                 showRecents = showRecents,
@@ -2277,6 +2285,9 @@ private fun DetailsSheet(
                 },
                 onLongPress = { editTag = it },
             )
+            if (hasQuick && allTags.isNotEmpty()) TextButton(onClick = { allTagsOpen = !allTagsOpen }) {
+                com.cripta.app.ui.components.ButtonText(if (allTagsOpen) "Mostra meno" else "Mostra tutte (${allTags.size})")
+            }
         }
     }
     val info: @Composable () -> Unit = {
@@ -2315,9 +2326,10 @@ private fun DetailsSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
         ) {
-            header(); tiles(); SectionGap(); tags()
-            if (isVid) { SectionGap(); IntroSection(file, vm) }
+            header(); tiles()
             if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
+            SectionGap(); tags()
+            if (isVid) { SectionGap(); IntroSection(file, vm) }
             SectionGap(); info()
         }
     }
@@ -2347,9 +2359,9 @@ private fun DetailsSheet(
                     }
                     Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                        if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { PeopleSection(file, vm); SectionGap() }
                         tags()
                         if (isVid) { SectionGap(); IntroSection(file, vm) }
-                        if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
                     }
                 }
             } else column()
@@ -2385,6 +2397,25 @@ private fun DetailsSheet(
             onDismiss = { creating = false },
         )
     }
+}
+
+/** One figure of the file (size, length, resolution): the value, then what it is in small under it. */
+@Composable
+private fun DetailFigure(value: String, label: String) {
+    Column {
+        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** The usual name of a video's resolution, by its shorter side. */
+private fun quality(w: Int, h: Int): String? = when (minOf(w, h)) {
+    in 2000..Int.MAX_VALUE -> "4K"
+    in 1400..1999 -> "QHD"
+    in 1000..1399 -> "Full HD"
+    in 700..999 -> "HD"
+    else -> null
 }
 
 /** The viewer's file actions, shown in the details panel instead of the top bar. */

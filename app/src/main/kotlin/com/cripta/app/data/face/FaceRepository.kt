@@ -655,6 +655,12 @@ class FaceRepository @Inject constructor(
     /** A media added to [personId] without one of its faces. */
     suspend fun link(personId: Long, fileId: String) = change { dao.addPersonMedia(PersonMediaEntity(personId, fileId)) }
 
+    /** "Togli": the media [fileId] added to [personId] by hand stops being theirs. */
+    suspend fun unlink(personId: Long, fileId: String): Undo {
+        change { dao.removePersonMedia(personId, fileId); dao.deleteEmptyPersons() }
+        return { link(personId, fileId) }
+    }
+
     /** A new named person, for "Chi è? › Nuova persona". */
     suspend fun newPerson(name: String): Long = change {
         // No name given: "Volto N", the next number free (the user can rename them later).
