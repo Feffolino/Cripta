@@ -109,6 +109,11 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
   with the name underneath, never on the picture. No "more" button: actions are on long-press,
   so the name keeps the whole width.
+- **Start carousel** (Home with an empty vault): three pages to swipe, one step each (add,
+  organise, lock): a tonal disc with the step's icon in the accent, a `headlineSmall` title, one
+  or two lines of why, then the step's own buttons, so each page works without the others. Under
+  it "Indietro", dots and "Avanti" in fixed slots; the current dot is a wider accent pill. Pages
+  move with the 320 ms ease-out.
 - **Long titles** in the top bar (a folder's name) glide sideways (`basicMarquee`), cut when
   animations are off.
 - **"+"**: adds things. Its actions (Importa, Cartella, Nota) open in one tonal pill to the left
