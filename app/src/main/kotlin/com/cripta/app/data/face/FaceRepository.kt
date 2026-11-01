@@ -255,6 +255,16 @@ class FaceRepository @Inject constructor(
      * keyframe returned for two moments is analysed once; where a face shows, the exact frame
      * [REFINE_MS] later is read too (another angle, often a better one).
      */
+    /**
+     * The frame at [t] ms. Some decoders return nothing for the small RGB_565 copy or for the key
+     * frame asked: then the default config, then the exact frame, before the moment counts as unreadable
+     * (whole videos showed as "non leggibili" in Senza volti that way).
+     */
+    private fun frameAt(r: MediaMetadataRetriever, t: Long, option: Int, params: MediaMetadataRetriever.BitmapParams): Bitmap? =
+        runCatching { r.getFrameAtTime(t * 1000, option, params) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(t * 1000, option) }.getOrNull()
+            ?: runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
+
     private suspend fun videoFrames(file: FileEntity, deep: Boolean, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
         val r = MediaMetadataRetriever()
         val channel = repo.seekableChannel(file)
@@ -272,7 +282,7 @@ class FaceRepository @Inject constructor(
             var lastHash: Long? = null
             for ((i, t) in plan.withIndex()) {
                 coroutineContext.ensureActive()
-                val bmp = runCatching { r.getFrameAtTime(t * 1000, option, params) }.getOrNull()
+                val bmp = frameAt(r, t, option, params)
                 if (bmp == null) { bad++; continue }
                 val img = faceImage(bmp, FRAME_SIDE)
                 val h = FaceStats.frameHash(img)
@@ -286,7 +296,7 @@ class FaceRepository @Inject constructor(
                 coroutineContext.ensureActive()
                 val at = t + REFINE_MS
                 if (at >= dur) continue
-                val bmp = runCatching { r.getFrameAtTime(at * 1000, MediaMetadataRetriever.OPTION_CLOSEST, params) }.getOrNull() ?: continue
+                val bmp = frameAt(r, at, MediaMetadataRetriever.OPTION_CLOSEST, params) ?: continue
                 extra++; ok++
                 onFrame(plan.size + k, at, faceImage(bmp, FRAME_SIDE))
             }
