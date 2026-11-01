@@ -93,6 +93,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.contentDescription
+import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.semantics
 import com.cripta.app.ui.theme.Motion
 import com.cripta.app.ui.theme.pressScale
@@ -248,7 +250,7 @@ fun HomeScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box {
-                                    com.cripta.app.ui.settings.FaceAvatar(p.cover?.id, { vm.faceCrop(it) }, 56.dp,
+                                    com.cripta.app.ui.settings.FaceAvatar(p.cover, { vm.faceCrop(it) }, 56.dp,
                                         if (hidden) Modifier.blur(12.dp) else Modifier)
                                     if (p.entity.favorite) com.cripta.app.ui.settings.FavoriteBadge(Modifier.align(Alignment.TopEnd))
                                 }
@@ -479,9 +481,11 @@ private fun HeroCarousel(
 }
 
 /**
- * Empty vault (in practice the first run): three short steps instead of a bare message. Import is
- * the main action; organising and the lock are one tap away, each with what it does in a line.
+ * Empty vault (in practice the first run): three short pages to swipe through instead of a bare
+ * message, one step each (add, organise, lock). Every page acts on its own: import is the main
+ * action, so nothing has to be "finished" before using the app. Dots and Indietro / Avanti below.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun EmptyHome(
     modifier: Modifier,
@@ -491,59 +495,90 @@ private fun EmptyHome(
     onOpenSecurity: () -> Unit,
     autoLockMinutes: Int,
 ) {
-    Column(
-        modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
-            .wrapContentWidth().widthIn(max = 560.dp).padding(horizontal = 24.dp, vertical = 24.dp),
-    ) {
-        Text("Il tuo vault è pronto", style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { heading() })
-        Text("Tre passi per iniziare. Tutto quello che aggiungi resta cifrato su questo telefono.",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 6.dp))
-        StartStep(1, "Aggiungi i primi file",
-            "Foto, video e PDF dalla galleria o da altre app (anche da Condividi), oppure un video da un link.") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onImport) {
-                    Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Importa file")
+    val pager = rememberPagerState { 3 }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    fun go(page: Int) = scope.launch { pager.animateScrollToPage(page, animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart)) }
+    val lock = when (autoLockMinutes) {
+        -1 -> "Ora il vault non si blocca da solo."
+        0 -> "Ora si blocca appena esci dall'app."
+        else -> "Ora si blocca dopo $autoLockMinutes min che l'app è in background."
+    }
+    Column(modifier) {
+        HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { page ->
+            when (page) {
+                0 -> StartPage(Icons.Filled.EnhancedEncryption, "Aggiungi i primi file",
+                    "Foto, video e PDF dalla galleria o da altre app, anche con Condividi. Restano cifrati su questo telefono.") {
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onImport) {
+                            Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Importa file", maxLines = 1)
+                        }
+                        androidx.compose.material3.FilledTonalButton(onClick = onDownload) {
+                            Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Da un link", maxLines = 1)
+                        }
+                    }
                 }
-                androidx.compose.material3.TextButton(onClick = onDownload) {
-                    Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Da un link")
+                1 -> StartPage(Icons.Filled.Folder, "Mettili in ordine",
+                    "Crea cartelle con il + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
+                    androidx.compose.material3.FilledTonalButton(onClick = onOpenFolders) { Text("Apri Cartelle", maxLines = 1) }
+                }
+                else -> StartPage(Icons.Filled.Lock, "Scegli quando si blocca",
+                    "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
+                    androidx.compose.material3.FilledTonalButton(onClick = onOpenSecurity) { Text("Apri Sicurezza", maxLines = 1) }
                 }
             }
         }
-        StartStep(2, "Mettili in ordine",
-            "Crea cartelle dal pulsante + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
-            androidx.compose.material3.FilledTonalButton(onClick = onOpenFolders) { Text("Apri Cartelle") }
-        }
-        val lock = when (autoLockMinutes) {
-            -1 -> "Ora il vault non si blocca da solo."
-            0 -> "Ora si blocca appena esci dall'app."
-            else -> "Ora si blocca dopo $autoLockMinutes min che l'app è in background."
-        }
-        StartStep(3, "Scegli quando si blocca", "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
-            androidx.compose.material3.FilledTonalButton(onClick = onOpenSecurity) { Text("Apri Sicurezza") }
+        // Indietro / dots / Avanti. Fixed slots so the dots never shift when a button hides.
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (pager.currentPage > 0) androidx.compose.material3.TextButton(onClick = { go(pager.currentPage - 1) }) { Text("Indietro", maxLines = 1) }
+            }
+            PageDots(pager.currentPage, 3)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                if (pager.currentPage < 2) androidx.compose.material3.TextButton(onClick = { go(pager.currentPage + 1) }) { Text("Avanti", maxLines = 1) }
+            }
         }
     }
 }
 
-/** One numbered step: the number (the order matters), what to do, why, and its action. */
+/** One page of the start carousel: a mark, what to do, why, and its action(s). */
 @Composable
-private fun StartStep(n: Int, title: String, text: String, action: @Composable () -> Unit) {
-    Row(Modifier.padding(top = 28.dp)) {
-        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(32.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Text("$n", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+private fun StartPage(icon: ImageVector, title: String, text: String, action: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp),
+        ) {
+            // One object, so a tonal disc is allowed; the accent glyph says "this is the step".
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.size(64.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                }
             }
-        }
-        Column(Modifier.weight(1f).padding(start = 16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            Text(title, style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(top = 24.dp).semantics { heading() })
+            Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp))
             action()
+        }
+    }
+}
+
+/** Where the carousel is: the current dot is a wider accent pill, so it never relies on colour alone. */
+@Composable
+private fun PageDots(current: Int, count: Int) {
+    Row(Modifier.semantics { contentDescription = "Passo ${current + 1} di $count" },
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        repeat(count) { i ->
+            val on = i == current
+            val w by androidx.compose.animation.core.animateDpAsState(if (on) 20.dp else 8.dp,
+                tween(Motion.MEDIUM, 0, Motion.EaseOutQuart), label = "dot")
+            Box(Modifier.size(w, 8.dp).clip(CircleShape)
+                .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant))
         }
     }
 }
