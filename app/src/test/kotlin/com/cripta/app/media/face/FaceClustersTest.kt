@@ -118,4 +118,28 @@ class FaceClustersTest {
         println("faces ${list.size}; same person, lowest: ${same.minOrNull()}; different people, highest: ${diff.maxOrNull()}")
         for (t in FaceTracker.build(list)) assertEquals(1, t.sightings.map { who[it] }.distinct().size)
     }
+
+    @Test
+    fun storedFacesKeepWhatASplitNeeds() {
+        val a = random()
+        val faces = listOf(StoredFace(3, 12_500L, 0.7f, 88, floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f), a),
+            StoredFace(41, 3_600_000L, 0.2f, 40, floatArrayOf(0f, 0.5f, 1f, 0.25f), near(a, 0.3f)))
+        val back = FaceCodec.decode(FaceCodec.encode(faces))
+        assertEquals(2, back.size)
+        assertEquals(41, back[1].frame); assertEquals(3_600_000L, back[1].timeMs); assertEquals(40, back[1].width)
+        assertEquals(0.7f, back[0].quality, 1e-6f)
+        assertEquals(0.3f, back[0].box[2], 1e-4f)
+        assertEquals(1f, similarity(back[0].embedding, a), 0.005f)
+        assertTrue(FaceCodec.decode(ByteArray(0)).isEmpty())
+        assertTrue(FaceCodec.decode(byteArrayOf(9, 1, 2)).isEmpty())
+    }
+
+    @Test
+    fun clusterGroupsAlikeFacesOfDifferentMedia() {
+        val a = random(); val b = random()
+        val means = listOf(near(a, 0.8f), near(b, 0.8f), near(a, 0.8f), near(a, 0.8f), random())
+        val groups = FaceTracker.cluster(means, 0.45f)
+        assertEquals(listOf(0, 2, 3), groups.first { 0 in it })
+        assertEquals(3, groups.size)
+    }
 }

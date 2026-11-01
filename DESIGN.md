@@ -98,7 +98,12 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   ringed (tap to play from there) and "È …" / "Non è lui/lei": nothing is added without a yes.
   In a media's details a long press selects faces (ring and tick on the face): "Stessa persona"
   joins faces of one person into one row, "Elimina" removes faces found by mistake; "Annulla"
-  stays under the list for a few seconds (the details sheet hides the snackbar).
+  stays under the list for a few seconds (the details sheet hides the snackbar). "Non è un volto"
+  also leaves similar faces out of every new analysis. Faces seen in one frame or blurry fold
+  under "Altri N volti poco chiari". "Chi è?" offers "Dividi" (moments that are someone else) and,
+  after naming a face, "Anche questi sono …?" for the alike faces of the same media. "Aggiungi un
+  volto" looks up to 15 s further when the paused frame has none. The people page's "Da
+  sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time.
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go

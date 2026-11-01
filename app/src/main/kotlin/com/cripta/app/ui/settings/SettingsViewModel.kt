@@ -327,6 +327,21 @@ class SettingsViewModel @Inject constructor(
     fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId) }
     fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
+    /** "Da sistemare": the unassigned faces grouped by likeness. */
+    suspend fun unsortedGroups() = faces.unsortedGroups()
+    fun deleteFaces(trackIds: Collection<Long>, everywhere: Boolean) =
+        undoable((if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati") + if (everywhere) " ovunque" else "") {
+            faces.deleteFaces(trackIds, everywhere)
+        }
+    /** A group of faces to [personId], or to a new person named [newName]. */
+    fun assignFaces(trackIds: Collection<Long>, personId: Long?, newName: String) =
+        undoable(if (trackIds.size == 1) "Volto assegnato" else "${trackIds.size} volti assegnati") {
+            faces.assignAll(trackIds, personId ?: faces.newPerson(newName))
+        }
+    /** Faces the user deleted, left out of new analyses. */
+    val ignoredFaces: StateFlow<Int> = faces.ignoredCount()
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), 0)
+    fun forgetIgnoredFaces() = faceAction { faces.forgetIgnored() }
     fun setPersonProfile(personId: Long, notes: String, links: List<String>) = faceAction { faces.setProfile(personId, notes, links) }
     fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = viewModelScope.launch { store.setPeopleSort(key, ascending) }
     suspend fun suggestionsFor(personId: Long) = faces.suggestionsFor(personId)

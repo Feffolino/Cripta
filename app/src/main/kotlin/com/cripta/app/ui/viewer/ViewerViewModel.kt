@@ -206,10 +206,11 @@ class ViewerViewModel @Inject constructor(
     fun undoFaceChange() { val u = faceUndo.value ?: return; faceUndo.value = null; faceAction { u.undo() } }
     /** Faces analysed before tracks were joined: those of one person become one when the details open. */
     fun tidyFaces(fileId: String) = faceAction { faces.tidy(fileId) }
-    /** "Elimina": faces that are not a face, or a face not wanted. */
-    fun deleteFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
-        val u = faces.deleteFaces(trackIds)
-        faceUndo.value = FaceUndo(fileId, if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati", u)
+    /** "Elimina": faces found by mistake, not found again here; [everywhere] ("Non è un volto"): nowhere. */
+    fun deleteFaces(fileId: String, trackIds: Collection<Long>, everywhere: Boolean = false) = faceAction {
+        val u = faces.deleteFaces(trackIds, everywhere)
+        val what = if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati"
+        faceUndo.value = FaceUndo(fileId, if (everywhere) "$what ovunque" else what, u)
     }
     /** "Stessa persona": faces of [fileId] that are one person become one. */
     fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
@@ -219,14 +220,47 @@ class ViewerViewModel @Inject constructor(
     }
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
     fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
-        if (trackId != null) faces.assign(trackId, personId) else faces.link(personId, fileId)
+        if (trackId != null) { faces.assign(trackId, personId); offerAlike(fileId, trackId, personId) } else faces.link(personId, fileId)
+    }
+
+    /** After "Chi è?" on [trackId]: the other faces of its media that look like [personId], for "Anche questi?". */
+    class AlsoFaces(val fileId: String, val trackId: Long, val personId: Long, val faces: List<com.cripta.app.data.face.FaceRepository.Suggestion>)
+    val alsoFaces = MutableStateFlow<AlsoFaces?>(null)
+    private suspend fun offerAlike(fileId: String, trackId: Long, personId: Long) {
+        val list = faces.alikeInMedia(trackId)
+        if (list.isNotEmpty()) alsoFaces.value = AlsoFaces(fileId, trackId, personId, list)
+    }
+    /** "Anche questi?" › "Unisci": [picked] join the face just named. */
+    fun joinAlso(a: AlsoFaces, picked: Collection<Long>) {
+        alsoFaces.value = null
+        if (picked.isNotEmpty()) mergeFaces(a.fileId, listOf(a.trackId) + picked)
+    }
+    /** The moments of a face that "Dividi" can move. */
+    suspend fun splittable(trackId: Long) = faces.splittable(trackId)
+    /** "Dividi": the faces of [trackId] at [moments] are someone else. */
+    fun splitFace(fileId: String, trackId: Long, moments: Set<Long>) = faceAction {
+        val u = faces.splitFace(trackId, moments)
+        if (u == null) faceMessage.value = "Scegli alcuni momenti, non tutti."
+        else faceUndo.value = FaceUndo(fileId, "Volto diviso", u)
     }
     /** "Aggiungi un volto": the faces at the player's spot (null: none asked, empty: still looking or none). */
     val foundFaces = MutableStateFlow<List<com.cripta.app.data.face.FaceRepository.FoundFace>?>(null)
     val findingFaces = MutableStateFlow(false)
-    fun findFaces(file: com.cripta.app.data.db.FileEntity) = faceAction {
+    /** Where the last search started (ms): faces found later than this were found further on. */
+    val findStart = MutableStateFlow(0L)
+    /**
+     * Look for faces at the player's spot (or [from]); in a video with none there, in the next
+     * seconds, the player moving to where they were found.
+     */
+    fun findFaces(file: com.cripta.app.data.db.FileEntity, from: Long? = null) = faceAction {
+        val at = from ?: playerSpots.value[file.id]?.positionMs ?: 0L
+        findStart.value = at
         findingFaces.value = true; foundFaces.value = emptyList()
-        try { foundFaces.value = faces.facesAt(file, playerSpots.value[file.id]?.positionMs ?: 0L) } finally { findingFaces.value = false }
+        try {
+            val list = faces.facesFrom(file, at)
+            foundFaces.value = list
+            list.firstOrNull()?.timeMs?.takeIf { it > at }?.let { seekPlayer(file.id, it) }
+        } finally { findingFaces.value = false }
     }
     fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceAction {
         faces.addFace(file, f, personId ?: faces.newPerson(newName))
@@ -234,7 +268,7 @@ class ViewerViewModel @Inject constructor(
     }
     fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceAction {
         val id = faces.newPerson(name)
-        if (trackId != null) faces.assign(trackId, id) else faces.link(id, fileId)
+        if (trackId != null) { faces.assign(trackId, id); offerAlike(fileId, trackId, id) } else faces.link(id, fileId)
     }
 
     /** A start position asked for by the page that opened [id] (People: the face's moment), once. */

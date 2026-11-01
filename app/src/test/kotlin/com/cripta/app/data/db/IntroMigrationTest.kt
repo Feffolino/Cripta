@@ -53,11 +53,12 @@ class IntroMigrationTest {
         CriptaDatabase.MIGRATION_24_25.migrate(migrated)
         CriptaDatabase.MIGRATION_25_26.migrate(migrated)
         CriptaDatabase.MIGRATION_27_28.migrate(migrated)
+        CriptaDatabase.MIGRATION_29_30.migrate(migrated)
         for (t in listOf("tags", "audio_prints", "media_segments", "rejected_prints", "segment_rules", "signatures", "signature_sounds",
-            "face_scans", "face_tracks", "persons", "person_media", "face_rejections", "face_merges")) {
+            "face_scans", "face_tracks", "persons", "person_media", "face_rejections", "face_merges", "face_ignored")) {
             assertEquals(t, columns(expected, t), columns(migrated, t))
         }
-        for (t in listOf("face_tracks", "person_media")) assertEquals(t, indices(expected, t), indices(migrated, t))
+        for (t in listOf("face_tracks", "person_media", "face_ignored")) assertEquals(t, indices(expected, t), indices(migrated, t))
         fresh.close(); helper.close()
     }
 

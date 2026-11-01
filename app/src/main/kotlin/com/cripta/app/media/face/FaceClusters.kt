@@ -102,6 +102,23 @@ object FaceTracker {
         return members
     }
 
+    /**
+     * Faces of different media in groups of one person, as far as they look alike: each joins the
+     * group whose mean is most alike, at least [threshold], else starts one. [means] best first.
+     */
+    fun cluster(means: List<FloatArray>, threshold: Float): List<List<Int>> {
+        val groups = ArrayList<MutableList<Int>>()
+        val sums = ArrayList<FloatArray>()
+        val units = ArrayList<FloatArray>()
+        for ((i, e) in means.withIndex()) {
+            var home = -1; var best = threshold
+            for (g in groups.indices) { val sim = similarity(units[g], e); if (sim >= best) { best = sim; home = g } }
+            if (home < 0) { groups += mutableListOf(i); sums += e.copyOf(); units += e }
+            else { groups[home] += i; val m = sums[home]; for (k in m.indices) m[k] += e[k]; units[home] = normalised(m) }
+        }
+        return groups
+    }
+
     /** One stored track's part in a join: its embeddings (mean first when [count] > 1), faces and best quality. */
     class Part(val embeddings: List<FloatArray>, val count: Int, val quality: Float)
 

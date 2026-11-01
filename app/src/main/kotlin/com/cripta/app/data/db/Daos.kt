@@ -398,12 +398,18 @@ data class TrackRow(
     val personId: Long?, val state: String, val similarity: Float, val width: Int = 0,
 )
 
+/** A track without its embeddings and picture, to score it against cached embeddings. */
+data class TrackMeta(val id: Long, val fileId: String, val frames: Long, val quality: Float, val personId: Long?, val state: String)
+
+class TrackEmbeddings(val id: Long, val embeddings: ByteArray)
+
 /** A track for the lists: everything but its embeddings and picture. */
 data class TrackCard(
     val id: Long, val fileId: String, val timeMs: Long, val width: Int, val faceCount: Int,
     val personId: Long?, val state: String, val similarity: Float, val times: String = "",
     /** Where the face is in its picture: "x,y,w,h" as fractions (empty for older scans). */
     val box: String = "",
+    val quality: Float = 0f,
 ) {
     /** Every moment it shows in (ms), sorted. */
     val moments: List<Long> get() = times.split(',').mapNotNull { it.toLongOrNull() }.sorted()
@@ -456,12 +462,45 @@ interface FaceDao {
     @Query("SELECT * FROM face_tracks WHERE id IN (:ids)")
     suspend fun tracks(ids: List<Long>): List<FaceTrackEntity>
 
+    @Query("SELECT id, fileId, frames, quality, personId, state FROM face_tracks")
+    suspend fun allTrackMeta(): List<TrackMeta>
+
+    @Query("SELECT id, embeddings FROM face_tracks WHERE id IN (:ids)")
+    suspend fun embeddingsOf(ids: List<Long>): List<TrackEmbeddings>
+
+    @Insert
+    suspend fun addIgnored(f: IgnoredFaceEntity): Long
+
+    @Query("DELETE FROM face_ignored WHERE id IN (:ids)")
+    suspend fun deleteIgnored(ids: List<Long>)
+
+    /** Faces deleted from [fileId] and those that are not a face anywhere. */
+    @Query("SELECT * FROM face_ignored WHERE fileId = :fileId OR fileId IS NULL")
+    suspend fun ignoredFor(fileId: String): List<IgnoredFaceEntity>
+
+    @Query("SELECT * FROM face_ignored")
+    suspend fun allIgnored(): List<IgnoredFaceEntity>
+
+    @Query("SELECT COUNT(*) FROM face_ignored")
+    fun observeIgnoredCount(): Flow<Int>
+
+    @Query("DELETE FROM face_ignored")
+    suspend fun deleteAllIgnored()
+
+    /** Faces deleted from media deleted for good ("Non è un volto" ones stay). */
+    @Query("DELETE FROM face_ignored WHERE fileId IS NOT NULL AND fileId NOT IN (SELECT id FROM files)")
+    suspend fun purgeIgnored(): Int
+
+    /** Rejections left by faces or people that are gone. */
+    @Query("DELETE FROM face_rejections WHERE trackId NOT IN (SELECT id FROM face_tracks) OR personId NOT IN (SELECT id FROM persons)")
+    suspend fun purgeRejections(): Int
+
     /** A face back as it was (undoing a deletion or a join), with its old id. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putTrack(t: FaceTrackEntity)
 
-    @Query("UPDATE face_tracks SET frames = :frames, faceCount = :faceCount, embeddings = :embeddings, times = :times WHERE id = :id")
-    suspend fun joinedTrack(id: Long, frames: Long, faceCount: Int, embeddings: ByteArray, times: String)
+    @Query("UPDATE face_tracks SET frames = :frames, faceCount = :faceCount, embeddings = :embeddings, times = :times, sightings = :sightings WHERE id = :id")
+    suspend fun joinedTrack(id: Long, frames: Long, faceCount: Int, embeddings: ByteArray, times: String, sightings: ByteArray)
 
     @Query("DELETE FROM face_tracks WHERE id IN (:ids)")
     suspend fun deleteTracks(ids: List<Long>)
@@ -492,22 +531,22 @@ interface FaceDao {
     @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks WHERE id = :id")
     suspend fun trackRow(id: Long): TrackRow?
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks")
     fun observeCards(): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks")
     suspend fun allCards(): List<TrackCard>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks WHERE fileId = :fileId")
     fun observeCardsOf(fileId: String): Flow<List<TrackCard>>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE fileId = :fileId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks WHERE fileId = :fileId")
     suspend fun cardsOf(fileId: String): List<TrackCard>
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE id = :id")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks WHERE id = :id")
     suspend fun card(id: Long): TrackCard?
 
-    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box FROM face_tracks WHERE personId = :personId")
+    @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks WHERE personId = :personId")
     suspend fun cardsOfPerson(personId: Long): List<TrackCard>
 
     @Query("SELECT crop FROM face_tracks WHERE id = :id")

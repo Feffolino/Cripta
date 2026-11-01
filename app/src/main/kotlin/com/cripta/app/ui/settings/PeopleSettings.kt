@@ -124,6 +124,12 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             Text("Elimina volti trovati per errore…")
         }
+        val ignored by vm.ignoredFaces.collectAsStateWithLifecycle()
+        if (ignored > 0) Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${com.cripta.app.ui.components.formatCount(ignored)} volti eliminati da te: le nuove analisi non li ripropongono.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            TextButton(onClick = { vm.forgetIgnoredFaces() }) { Text("Dimentica") }
+        }
         Row {
             TextButton(onClick = { showStats = true }) { Text("Statistiche") }
             Spacer(Modifier.weight(1f))
@@ -285,8 +291,10 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
 
 /** A face picture from the database, round. */
 @Composable
-internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp, modifier: Modifier = Modifier) {
-    val bmp by produceState<android.graphics.Bitmap?>(null, trackId) { value = trackId?.let { load(it) } }
+internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp, modifier: Modifier = Modifier,
+                        /** Changes when the face's picture does (a face split keeps its id). */
+                        key: Any? = null) {
+    val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { load(it) } }
     Box(modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -312,7 +320,7 @@ internal fun FavoriteBadge(modifier: Modifier = Modifier) {
 }
 
 private enum class PeopleFilter(val label: String) {
-    MAIN("Persone"), FAVORITE("Preferite"), NAMED("Con nome"), SINGLE("Una volta"), IGNORED("Ignorate"), NONE("Senza volti");
+    MAIN("Persone"), FAVORITE("Preferite"), NAMED("Con nome"), SINGLE("Una volta"), IGNORED("Ignorate"), TODO("Da sistemare"), NONE("Senza volti");
 
     fun matches(p: FaceRepository.Person) = when (this) {
         MAIN -> p.main
@@ -320,7 +328,7 @@ private enum class PeopleFilter(val label: String) {
         NAMED -> !p.entity.ignored && p.entity.name.isNotBlank()
         SINGLE -> !p.entity.ignored && !p.main
         IGNORED -> p.entity.ignored
-        NONE -> false
+        TODO, NONE -> false
     }
 }
 
@@ -368,6 +376,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     var showStats by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
+    /** The faces of a "Da sistemare" group being named. */
+    var naming by remember { mutableStateOf<List<Long>?>(null) }
     val st by vm.settings.collectAsStateWithLifecycle()
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
     LaunchedEffect(undo) {
@@ -419,6 +429,10 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         val noFaces = remember(o) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }
+        // "Da sistemare": grouped again whenever the unassigned faces change.
+        val groups by produceState<List<FaceRepository.FaceGroup>?>(null, filter, o.unassigned) {
+            value = if (filter == PeopleFilter.TODO) vm.unsortedGroups() else null
+        }
         LazyVerticalGrid(GridCells.Adaptive(104.dp), Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (progress != null || o.scans.size < o.media) item(span = { GridItemSpan(maxLineSpan) }) {
@@ -431,7 +445,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PeopleFilter.entries.forEach { f ->
-                        val n = if (f == PeopleFilter.NONE) noFaces.size else o.people.count { f.matches(it) }
+                        val n = when (f) { PeopleFilter.NONE -> noFaces.size; PeopleFilter.TODO -> o.unassigned; else -> o.people.count { f.matches(it) } }
                         if (n > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
                     }
                 }
@@ -449,6 +463,33 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(if (scan.status != "ok") "Non leggibile" else if (scan.faces == 0) "Nessun volto" else "Volti scartati",
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                }
+            } else if (filter == PeopleFilter.TODO) {
+                val g = groups
+                val many = g.orEmpty().filter { it.cards.size > 1 }
+                val single = g.orEmpty().filter { it.cards.size == 1 }.map { it.cards.first() }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(when {
+                        g == null -> "Raggruppo i volti…"
+                        g.isEmpty() -> "Nessun volto da sistemare."
+                        else -> "Volti senza persona, raggruppati per somiglianza. Tocca un volto per toglierlo dal gruppo, tienilo premuto per aprire il suo media."
+                    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(many, key = { "g" + it.cards.first().id }, span = { GridItemSpan(maxLineSpan) }) { grp ->
+                    FaceGroupRow(grp, vm, onOpenFile, onName = { naming = it })
+                }
+                if (single.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Visti una volta · ${single.size}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Tocca per aprire il media.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    items(single, key = { "s" + it.id }) { c ->
+                        Box(Modifier.clickable(onClickLabel = "Apri il media") { onOpenFile(c.fileId) }, contentAlignment = Alignment.Center) {
+                            FaceAvatar(c.id, { vm.faceCrop(it) }, 96.dp)
+                        }
                     }
                 }
             } else {
@@ -491,12 +532,83 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             }
         }
         if (showStats) StatsDialog(vm) { showStats = false }
+        naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
     }
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text("Perché") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { Text("OK") } })
     }
+}
+
+/**
+ * A "Da sistemare" group: alike faces of different media, all picked at first (tap to leave one
+ * out, long press to open its media), named or deleted at once.
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onOpenFile: (String) -> Unit, onName: (List<Long>) -> Unit) {
+    var off by remember(g) { mutableStateOf(emptySet<Long>()) }
+    val picked = g.cards.map { it.id }.filter { it !in off }
+    Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("${g.cards.size} volti simili in ${g.cards.map { it.fileId }.distinct().size} media", style = MaterialTheme.typography.bodyLarge)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            g.cards.take(SHOWN_IN_GROUP).forEach { c ->
+                val on = c.id !in off
+                Box(Modifier.clip(CircleShape).combinedClickable(onClickLabel = if (on) "Togli dal gruppo" else "Rimetti nel gruppo",
+                    onLongClickLabel = "Apri il media", onLongClick = { onOpenFile(c.fileId) }) { off = if (on) off + c.id else off - c.id }) {
+                    FaceAvatar(c.id, { vm.faceCrop(it) }, 64.dp,
+                        if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                    if (on) Icon(Icons.Filled.CheckCircle, "Nel gruppo", tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface))
+                }
+            }
+        }
+        if (g.cards.size > SHOWN_IN_GROUP) Text("e altri ${g.cards.size - SHOWN_IN_GROUP}", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(enabled = picked.isNotEmpty(), onClick = { onName(picked) }) { Text("Chi è?") }
+            TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
+                Text("Elimina", color = MaterialTheme.colorScheme.error)
+            }
+            TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
+                Text("Non è un volto", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+private const val SHOWN_IN_GROUP = 24
+
+/** "Chi è?" for a group of faces: someone already there, or a new person. */
+@Composable
+private fun WhoDialog(ids: List<Long>, o: FaceRepository.Overview, vm: SettingsViewModel, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    CriptaAlertDialog(onDismissRequest = onDismiss, title = { Text(if (ids.size == 1) "Chi è?" else "Chi è? · ${ids.size} volti") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.cripta.app.ui.components.CriptaTextField(query, { query = it }, singleLine = true, label = { Text("Nome (cerca o crea)") },
+                    modifier = Modifier.fillMaxWidth())
+                val list = o.people.filter { !it.entity.ignored && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+                    .sortedWith(compareBy({ !it.entity.favorite }, { -it.entity.createdAt }))
+                LazyColumn(Modifier.heightIn(max = 300.dp)) {
+                    if (query.isBlank() || o.people.none { it.entity.name.equals(query.trim(), ignoreCase = true) }) item {
+                        Text(if (query.isBlank()) "+ Nuova persona senza nome (Volto…)" else "+ Nuova persona «${query.trim()}»", color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().clickable { vm.assignFaces(ids, null, query); onDismiss() }.padding(vertical = 12.dp))
+                    }
+                    items(list, key = { it.id }) { q ->
+                        Row(Modifier.fillMaxWidth().clickable { vm.assignFaces(ids, q.id, ""); onDismiss() }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FaceAvatar(q.cover?.id, { vm.faceCrop(it) }, 48.dp)
+                            Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                                color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                            if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Chiudi") } })
 }
 
 /** Pick people ([multi]) or one person, or name a new one ([allowNew]: "Dividi"). */
