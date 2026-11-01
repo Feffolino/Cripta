@@ -311,15 +311,20 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
  */
 @Composable
 internal fun FaceAvatar(face: com.cripta.app.data.db.TrackCard?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp,
-                        modifier: Modifier = Modifier) = FaceAvatar(face?.id, load, size, modifier, key = face?.timeMs)
+                        modifier: Modifier = Modifier, selected: Boolean = false) =
+    FaceAvatar(face?.id, load, size, modifier, key = face?.timeMs, selected = selected)
 
-/** A face picture from the database, round. */
+/**
+ * A face picture from the database, round. [selected]: the one way a picked face looks everywhere
+ * (filters, people, groups, details, pickers): a 3dp accent ring, as in the vault's filters.
+ */
 @Composable
 internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp, modifier: Modifier = Modifier,
                         /** Changes when the face's picture does (a face split keeps its id). */
-                        key: Any? = null) {
+                        key: Any? = null, selected: Boolean = false) {
     val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { load(it) } }
-    Box(modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+    Box(modifier.size(size).then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+        .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         else Icon(Icons.Filled.Face, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -671,16 +676,14 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         onLongClick(label = "Seleziona") { selected = selected + p.id; true }
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
-                            FaceAvatar(p.cover, { vm.faceCrop(it) }, 96.dp,
-                                if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
-                            if (on) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.align(Alignment.BottomEnd).size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface))
-                            else if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
+                            FaceAvatar(p.cover, { vm.faceCrop(it) }, 96.dp, selected = on)
+                            if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
                         Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                            color = if (on) MaterialTheme.colorScheme.primary
+                                else if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                         Text("${p.media.size} media",
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
@@ -754,10 +757,7 @@ private fun FaceGroupRow(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onO
                         // Only this media, from just before the face shows.
                         vm.openPersonMedia(listOf(c.fileId), c.fileId, c.timeMs); onOpenFile(c.fileId)
                     }) { off = if (on) off + c.id else off - c.id }) {
-                    FaceAvatar(c.id, { vm.faceCrop(it) }, 64.dp,
-                        if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
-                    if (on) Icon(Icons.Filled.CheckCircle, "Nel gruppo", tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.BottomEnd).size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface))
+                    FaceAvatar(c.id, { vm.faceCrop(it) }, 64.dp, selected = on)
                 }
             }
         }

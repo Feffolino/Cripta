@@ -384,9 +384,8 @@ private fun CoverPicker(p: FaceRepository.Person, vm: SettingsViewModel, onClose
                     items(p.faces.sortedByDescending { it.width }, key = { it.id }) { f ->
                         val on = f.id == p.cover?.id
                         FaceAvatar(f, { vm.faceCrop(it) }, 88.dp,
-                            Modifier.clip(CircleShape)
-                                .then(if (on) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
-                                .clickable(onClickLabel = "Usa questo volto") { vm.setPersonCover(p.id, f.id); onClose() })
+                            Modifier.clip(CircleShape).clickable(onClickLabel = "Usa questo volto") { vm.setPersonCover(p.id, f.id); onClose() },
+                            selected = on)
                     }
                 }
             }

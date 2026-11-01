@@ -170,6 +170,8 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 
 - Targets at least 48dp (chips in the viewer bar at least 36dp tall with padding around them).
 - Selected state is never told by colour alone: a tick or a ring goes with it.
+- A picked face looks the same everywhere (filters, people grid, groups, details, pickers): a 3dp
+  accent ring (`FaceAvatar(selected = …)`), the name under it in the accent where there is one.
 - Motion explains a state change and is short (120 / 220 / 320 ms, ease-out, no bounce); it
   collapses when the system removes animations.
 - Navigation: tabs cross-fade with a slight drift towards the tab chosen; pages (people, a
