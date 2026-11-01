@@ -88,7 +88,8 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
-  and on/off in Impostazioni › Aspetto), the video length (top right) or a play mark, the watched
+  and on/off in Impostazioni › Aspetto; on Home they follow "Persone in Home": hidden, or blurred
+  until the people row is touched), the video length (top right) or a play mark, the watched
   bar. No quality badge (4K/HD/SD) and no shade over the image.
 - **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
   to each person's **profile** page: face (tap to pick another among those found), name, star,

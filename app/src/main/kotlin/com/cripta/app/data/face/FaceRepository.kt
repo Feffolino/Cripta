@@ -375,6 +375,17 @@ class FaceRepository @Inject constructor(
 
     fun people(): Flow<Overview> = overview
 
+    /** For each media, the faces (cover track ids) of the people in it, starred people first: drawn on its cover. */
+    val coverFaces: Flow<Map<String, List<Long>>> = overview.map { o ->
+        val m = HashMap<String, MutableList<Long>>()
+        for (p in o.people) {
+            if (p.entity.ignored) continue
+            val face = p.cover?.id ?: continue
+            for (f in p.media) m.getOrPut(f.id) { ArrayList() } += face
+        }
+        m as Map<String, List<Long>>
+    }.flowOn(Dispatchers.Default)
+
     /** The faces found in [fileId], live. */
     fun facesOf(fileId: String): Flow<List<TrackCard>> = live { it.observeCardsOf(fileId) }
 

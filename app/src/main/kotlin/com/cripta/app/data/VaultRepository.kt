@@ -1398,7 +1398,9 @@ class VaultRepository @Inject constructor(
             // live(): follows the session. Bound to `db` directly this kept querying the closed
             // database after a lock, Room reopened it with the wiped key and the app crashed.
             live { it.fileDao().allWithTags() }, live { it.tagDao().all() }, live { it.folderDao().all() }, compressDocs,
-        ) { files, tags, folders, compress ->
+            // People, faces and intro/outro analysis, written after the files ([BackupExtras]).
+            kotlinx.coroutines.flow.combine(live { it.faceDao().observeBackupBytes() }, live { it.introDao().observeBackupBytes() }) { a, b -> a + b },
+        ) { files, tags, folders, compress, extras ->
             // Compressed documents: ~60% of their size is a typical guess for text / PDF.
             val data = files.sumOf {
                 val sz = it.file.sizeBytes
@@ -1406,7 +1408,7 @@ class VaultRepository @Inject constructor(
             }
             val manifest = 4L + files.sumOf { 300L + it.file.originalName.length * 2L + (it.file.sourceUrl?.length ?: 0) + it.tags.size * 16L } +
                 tags.size * 90L + folders.size * 120L
-            files.size to (manifest + data).let { it + BackupCrypto.overhead(it) }
+            files.size to (manifest + data + extras).let { it + BackupCrypto.overhead(it) }
         }
 
     private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray, compressDocs: Boolean, onProgress: (Float) -> Unit): Int {

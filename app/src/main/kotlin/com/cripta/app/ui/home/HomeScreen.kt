@@ -147,6 +147,12 @@ fun HomeScreen(
 
     // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
+    // Faces on the shelves' covers follow "Persone in Home": none when off, blurred until the row is touched.
+    val coverPeopleMap by vm.coverPeople.collectAsState()
+    val coverPeople = remember(coverPeopleMap, peopleBlurred, peopleRevealed) {
+        com.cripta.app.ui.vault.CoverPeople(coverPeopleMap, peopleBlurred && !peopleRevealed) { vm.faceCrop(it) }
+    }
+    androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.vault.LocalCoverPeople provides coverPeople) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -300,6 +306,7 @@ fun HomeScreen(
         }
         }
         }
+    }
     }
 }
 

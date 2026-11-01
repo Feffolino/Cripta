@@ -124,6 +124,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -256,9 +257,12 @@ private fun typeLabel(t: TypeFilter) = when (t) {
 /** Scroll-memory key of the vault root (folders use their id). */
 private const val ROOT_KEY = -1L
 
-/** Faces of the people in each media (cover track ids) and how to load one, for [ThumbBox]. */
-private class CoverPeople(val byFile: Map<String, List<Long>>, val crop: suspend (Long) -> android.graphics.Bitmap?)
-private val LocalCoverPeople = androidx.compose.runtime.staticCompositionLocalOf<CoverPeople?> { null }
+/**
+ * Faces of the people in each media (cover track ids) and how to load one, for [ThumbBox] (Cartelle,
+ * Home). [blurred]: drawn blurred (Home, "Persone in Home: Sfocate", until the people row is touched).
+ */
+internal class CoverPeople(val byFile: Map<String, List<Long>>, val blurred: Boolean = false, val crop: suspend (Long) -> android.graphics.Bitmap?)
+internal val LocalCoverPeople = androidx.compose.runtime.staticCompositionLocalOf<CoverPeople?> { null }
 
 /** Grid key of the folders row (file keys are ids, so they never clash). */
 private const val FOLDERS_KEY = "folders"
@@ -1796,7 +1800,7 @@ private fun ThumbBox(
             Row(Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (favorite) com.cripta.app.ui.components.CoverStar(Modifier, size = if (compact) 18.dp else 22.dp)
-                if (people != null && faces.isNotEmpty()) CoverFaces(faces, display?.coverPeopleSize ?: 1, people.crop)
+                if (people != null && faces.isNotEmpty()) CoverFaces(faces, display?.coverPeopleSize ?: 1, people.blurred, people.crop)
             }
         }
         if (compact) {
@@ -1812,12 +1816,12 @@ private fun ThumbBox(
 
 /** Up to three faces of the people in a media, each on the dark glass, then "+N". */
 @Composable
-private fun CoverFaces(ids: List<Long>, sizeStep: Int, crop: suspend (Long) -> android.graphics.Bitmap?) {
+private fun CoverFaces(ids: List<Long>, sizeStep: Int, blurred: Boolean, crop: suspend (Long) -> android.graphics.Bitmap?) {
     val size = when (sizeStep) { 0 -> 20.dp; 2 -> 34.dp; else -> 26.dp }
     ids.take(3).forEach { id ->
         val bmp by produceState<android.graphics.Bitmap?>(null, id) { value = crop(id) }
         Box(Modifier.size(size).clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass).padding(1.5.dp)
-            .clip(CircleShape)) {
+            .clip(CircleShape).then(if (blurred) Modifier.blur(size / 4) else Modifier)) {
             bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
         }
     }

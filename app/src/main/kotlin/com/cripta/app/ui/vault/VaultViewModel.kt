@@ -214,16 +214,7 @@ class VaultViewModel @Inject constructor(
      * top-left on its cover.
      */
     val coverPeople: StateFlow<Map<String, List<Long>>> =
-        faces.people().map { o ->
-            val m = HashMap<String, MutableList<Long>>()
-            for (p in o.people) {
-                if (p.entity.ignored) continue
-                val face = p.cover?.id ?: continue
-                for (f in p.media) m.getOrPut(f.id) { ArrayList() } += face
-            }
-            m as Map<String, List<Long>>
-        }.flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+        faces.coverFaces.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val tags: StateFlow<List<TagEntity>> =
         refresh.flatMapLatest { repo.tags() }
