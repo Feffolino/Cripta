@@ -6,8 +6,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FilterOutputStream
 import java.io.OutputStream
-import java.io.RandomAccessFile
-import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,26 +47,12 @@ class BlobStore @Inject constructor(
         dir.listFiles()?.forEach { runCatching { it.delete() } }
     }
 
-    /** Best-effort overwrite then delete. Real guarantee is crypto-shredding the keyset. */
+    /**
+     * Delete a blob. It is ciphertext whose key was destroyed with its row (crypto-shredding): that
+     * is the guarantee. Overwriting it first cost minutes per video (every byte from SecureRandom)
+     * and bought nothing on flash storage, which writes the new bytes elsewhere anyway.
+     */
     fun shred(uuid: String) {
-        val f = blob(uuid)
-        if (f.exists()) {
-            runCatching {
-                val len = f.length()
-                RandomAccessFile(f, "rw").use { raf ->
-                    val rnd = SecureRandom()
-                    val chunk = ByteArray(64 * 1024)
-                    var written = 0L
-                    while (written < len) {
-                        rnd.nextBytes(chunk)
-                        val n = minOf(chunk.size.toLong(), len - written).toInt()
-                        raf.write(chunk, 0, n)
-                        written += n
-                    }
-                    raf.fd.sync()
-                }
-            }
-            f.delete()
-        }
+        blob(uuid).delete()
     }
 }

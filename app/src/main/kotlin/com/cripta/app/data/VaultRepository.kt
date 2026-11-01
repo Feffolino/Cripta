@@ -663,7 +663,8 @@ class VaultRepository @Inject constructor(
                 originalName = "$baseName.mp4",
                 mimeType = "video/mp4",
                 sizeBytes = written,
-                folderId = original.folderId,
+                // Its folder may have gone to the trash during the conversion: the root then.
+                folderId = liveFolder(original.folderId),
                 isFavorite = original.isFavorite,
                 createdAt = original.createdAt,
                 // Replacing: take the original's place in date and manual order too.
@@ -1071,6 +1072,9 @@ class VaultRepository @Inject constructor(
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
             db.introDao().clearPrints(fileId)
             db.introDao().clearSegments(fileId)
+            // Its faces too (pictures and embeddings): left for the next face scan to purge, they
+            // stayed for good with the analysis off.
+            db.faceDao().forgetFile(fileId)
             true
         }
         if (!deleted) return@withContext false
@@ -1554,158 +1558,185 @@ class VaultRepository @Inject constructor(
                     }
                     else -> throw IllegalArgumentException("Formato non valido")
                 }
-            } catch (e: java.io.EOFException) {
-                throw IllegalArgumentException("Formato non valido")
+            } catch (e: Exception) {
+                // Too short, not a backup, or a key that can't even be derived.
+                throw WrongPassphraseException(e)
             }
             plaintext.use { cis ->
                 val inp = java.io.DataInputStream(java.io.BufferedInputStream(cis, 256 * 1024))
-                val mLen = inp.readInt()
-                require(mLen in 1..50_000_000) { "Passphrase errata o file corrotto" }
-                val mBytes = ByteArray(mLen); inp.readFully(mBytes)
-                val manifest = org.json.JSONObject(String(mBytes))
-
-                // Folders: remap old ids to new, inserting parents before children.
-                val fArr = manifest.getJSONArray("folders")
-                val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
-                val idMap = HashMap<Long, Long>()
-                var guard = 0
-                while (pending.isNotEmpty() && guard < 10000) {
-                    guard++
-                    val it = pending.iterator()
-                    var progressed = false
-                    while (it.hasNext()) {
-                        val o = it.next()
-                        val oldId = o.getLong("id")
-                        val parentOld = if (o.isNull("parentId")) null else o.getLong("parentId")
-                        val newParent = if (parentOld == null) null else idMap[parentOld]
-                        if (parentOld != null && newParent == null) continue // parent not yet inserted
-                        val newId = db.folderDao().insert(FolderEntity(
-                            name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now()),
-                            isFavorite = o.optBoolean("favorite", false),
-                            excludedFromRandom = o.optBoolean("excludedFromRandom", false),
-                            sortKey = if (o.isNull("sortKey")) null else o.optString("sortKey").takeIf { key -> SortKey.entries.any { it.name == key } },
-                            sortAscending = o.optBoolean("sortAscending", false),
-                        ))
-                        // v2: folder colour / emoji (older backups; turned into an icon at the next unlock); then an icon.
-                        val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
-                        val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
-                        val icon = if (o.has("icon") && !o.isNull("icon")) o.getString("icon") else null
-                        if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
-                        if (emoji != null && icon == null) db.folderDao().setEmoji(newId, emoji)
-                        idMap[oldId] = newId; it.remove(); progressed = true
-                    }
-                    if (!progressed) break
+                // Failing before the manifest is read means the key is wrong (or it is no backup):
+                // told apart from a failure later on (a full disk), which is not the passphrase.
+                val manifest = try {
+                    val mLen = inp.readInt()
+                    require(mLen in 1..50_000_000) { "Passphrase errata o file corrotto" }
+                    val mBytes = ByteArray(mLen); inp.readFully(mBytes)
+                    org.json.JSONObject(String(mBytes))
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw WrongPassphraseException(e)
                 }
-
-                // Tags with alias.
-                val tArr = manifest.getJSONArray("tags")
-                for (i in 0 until tArr.length()) {
-                    val o = tArr.getJSONObject(i)
-                    val name = o.getString("name")
-                    db.tagDao().insert(TagEntity(name = name))
-                    // v2: pin and custom order.
-                    if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
-                    if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
-                    if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
-                    // Optional (older backups have no colour).
-                    if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
-                    if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, o.getString("icon"))
-                    // Keeps the "Recenti" row as it was.
-                    o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
-                }
-
-                // Files: order matches the blob stream order.
-                val fileArr = manifest.getJSONArray("files")
-                val newIds = arrayOfNulls<String>(fileArr.length())
-                for (i in 0 until fileArr.length()) {
-                    val o = fileArr.getJSONObject(i)
-                    currentCoroutineContext().ensureActive()
-                    val stored = inp.readLong()
-                    // Negative = deflated document (v3): -(compressed size) - 1.
-                    val zipped = stored < 0
-                    val storedLen = if (zipped) -(stored + 1) else stored
-                    require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { "File corrotto" }
-                    val uuid = UUID.randomUUID().toString()
-                    val wrapped = FileCrypto.createWrappedFileKeyset(dek)
-                    val len = try {
-                        blobs.blob(uuid).outputStream().use { out ->
-                            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
-                                if (zipped) {
-                                    val z = ByteArray(storedLen.toInt()); inp.readFully(z)
-                                    java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { it.copyTo(enc) }
-                                } else {
-                                    val copied = copyAtMost(inp, enc, storedLen)
-                                    if (copied != storedLen) throw java.io.IOException("Backup troncato o corrotto")
-                                    copied
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        blobs.shred(uuid); throw e
-                    }
-                    val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
-                    val entity = FileEntity(
-                        id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
-                        sizeBytes = len, folderId = folderOld?.let { idMap[it] },
-                        isFavorite = o.optBoolean("favorite", false),
-                        // Older backups have no import date / manual order: now, and no weight.
-                        createdAt = o.optLong("createdAt", now()), importedAt = o.optLongOrNull("importedAt") ?: now(), wrappedKeyset = wrapped,
-                        sortWeight = o.optLongOrNull("sortWeight") ?: 0L,
-                        durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
-                        // v2 extras (absent in older backups).
-                        sourceUrl = o.optStr("sourceUrl"),
-                        playbackPosMs = o.optLongOrNull("playbackPosMs"),
-                        lastPlayedAt = o.optLongOrNull("lastPlayedAt"),
-                        width = o.optLongOrNull("width")?.toInt(),
-                        height = o.optLongOrNull("height")?.toInt(),
-                        contentHash = o.optStr("contentHash"),
-                    )
-                    db.fileDao().insert(entity)
-                    newIds[i] = uuid
-                    val tagNames = o.getJSONArray("tags")
-                    val names = (0 until tagNames.length()).map { tagNames.getString(it) }
-                    // Link directly (setTags would mark every tag as "recently used").
-                    for (n in names.distinct()) {
-                        val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
-                        db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
-                    }
-                    // v3: intro/outro segments (absent in older backups).
-                    o.optJSONArray("segments")?.let { arr ->
-                        for (k in 0 until arr.length()) {
-                            val s = arr.getJSONObject(k)
-                            db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
-                                uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source"),
-                                s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
-                        }
-                    }
-                }
-                // People, faces and intro/outro analysis, when the archive has them.
-                BackupExtras.read(db, newIds, inp)
-                // Folder covers chosen by the user (by the file's position in the archive).
-                for (k in 0 until fArr.length()) {
-                    val o = fArr.getJSONObject(k)
-                    val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
-                    val folder = idMap[o.getLong("id")] ?: continue
-                    newIds.getOrNull(idx)?.let { db.folderDao().setCover(folder, it) }
-                }
-                // v2: saved filters, tag names mapped back to the restored tag ids.
-                manifest.optJSONArray("savedFilters")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val o = arr.getJSONObject(i)
-                        val f = o.optJSONObject("filter") ?: continue
-                        suspend fun ids(key: String) = org.json.JSONArray().apply {
-                            f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
-                        }
-                        f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
-                        f.remove("tagNames"); f.remove("exNames")
-                        db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", "Filtro"), json = f.toString()))
-                    }
+                // All or nothing: one transaction, and the blobs written so far removed on failure.
+                // Stopped halfway (a full disk, a damaged archive), a restore left a half-merged
+                // vault, and trying again duplicated what had come in.
+                val written = ArrayList<String>()
+                val restored = try {
+                    db.withTransaction { restoreArchive(manifest, inp, written) }
+                } catch (e: Throwable) {
+                    withContext(kotlinx.coroutines.NonCancellable) { written.forEach { runCatching { blobs.shred(it) } } }
+                    throw e
                 }
                 notifyChanged()
-                return fileArr.length()
+                restored
             }
         }
     }
+
+    /** The manifest's content and the files after it, into the vault (see [importBackupInner]). */
+    private suspend fun restoreArchive(manifest: org.json.JSONObject, inp: java.io.DataInputStream, written: MutableList<String>): Int {
+        // Folders: remap old ids to new, inserting parents before children.
+        val fArr = manifest.getJSONArray("folders")
+        val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
+        val idMap = HashMap<Long, Long>()
+        var guard = 0
+        while (pending.isNotEmpty() && guard < 10000) {
+            guard++
+            val it = pending.iterator()
+            var progressed = false
+            while (it.hasNext()) {
+                val o = it.next()
+                val oldId = o.getLong("id")
+                val parentOld = if (o.isNull("parentId")) null else o.getLong("parentId")
+                val newParent = if (parentOld == null) null else idMap[parentOld]
+                if (parentOld != null && newParent == null) continue // parent not yet inserted
+                val newId = db.folderDao().insert(FolderEntity(
+                    name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now()),
+                    isFavorite = o.optBoolean("favorite", false),
+                    excludedFromRandom = o.optBoolean("excludedFromRandom", false),
+                    sortKey = if (o.isNull("sortKey")) null else o.optString("sortKey").takeIf { key -> SortKey.entries.any { it.name == key } },
+                    sortAscending = o.optBoolean("sortAscending", false),
+                ))
+                // v2: folder colour / emoji (older backups; turned into an icon at the next unlock); then an icon.
+                val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
+                val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
+                val icon = if (o.has("icon") && !o.isNull("icon")) o.getString("icon") else null
+                if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
+                if (emoji != null && icon == null) db.folderDao().setEmoji(newId, emoji)
+                idMap[oldId] = newId; it.remove(); progressed = true
+            }
+            if (!progressed) break
+        }
+
+        // Tags with alias.
+        val tArr = manifest.getJSONArray("tags")
+        for (i in 0 until tArr.length()) {
+            val o = tArr.getJSONObject(i)
+            val name = o.getString("name")
+            db.tagDao().insert(TagEntity(name = name))
+            // v2: pin and custom order.
+            if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
+            if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
+            if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
+            // Optional (older backups have no colour).
+            if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
+            if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, o.getString("icon"))
+            // Keeps the "Recenti" row as it was.
+            o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
+        }
+
+        // Files: order matches the blob stream order.
+        val fileArr = manifest.getJSONArray("files")
+        val newIds = arrayOfNulls<String>(fileArr.length())
+        for (i in 0 until fileArr.length()) {
+            val o = fileArr.getJSONObject(i)
+            currentCoroutineContext().ensureActive()
+            val stored = inp.readLong()
+            // Negative = deflated document (v3): -(compressed size) - 1.
+            val zipped = stored < 0
+            val storedLen = if (zipped) -(stored + 1) else stored
+            require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { "File corrotto" }
+            val uuid = UUID.randomUUID().toString()
+            val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+            written += uuid
+            val len = try {
+                blobs.durableOutput(blobs.blob(uuid)).use { out ->
+                    FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
+                        if (zipped) {
+                            val z = ByteArray(storedLen.toInt()); inp.readFully(z)
+                            java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { it.copyTo(enc) }
+                        } else {
+                            val copied = copyAtMost(inp, enc, storedLen)
+                            if (copied != storedLen) throw java.io.IOException("Backup troncato o corrotto")
+                            copied
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                blobs.shred(uuid); throw e
+            }
+            val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
+            val entity = FileEntity(
+                id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
+                sizeBytes = len, folderId = folderOld?.let { idMap[it] },
+                isFavorite = o.optBoolean("favorite", false),
+                // Older backups have no import date / manual order: now, and no weight.
+                createdAt = o.optLong("createdAt", now()), importedAt = o.optLongOrNull("importedAt") ?: now(), wrappedKeyset = wrapped,
+                sortWeight = o.optLongOrNull("sortWeight") ?: 0L,
+                durationMs = if (o.isNull("durationMs")) null else o.optLong("durationMs").takeIf { it > 0 },
+                // v2 extras (absent in older backups).
+                sourceUrl = o.optStr("sourceUrl"),
+                playbackPosMs = o.optLongOrNull("playbackPosMs"),
+                lastPlayedAt = o.optLongOrNull("lastPlayedAt"),
+                width = o.optLongOrNull("width")?.toInt(),
+                height = o.optLongOrNull("height")?.toInt(),
+                contentHash = o.optStr("contentHash"),
+            )
+            db.fileDao().insert(entity)
+            newIds[i] = uuid
+            val tagNames = o.getJSONArray("tags")
+            val names = (0 until tagNames.length()).map { tagNames.getString(it) }
+            // Link directly (setTags would mark every tag as "recently used").
+            for (n in names.distinct()) {
+                val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
+                db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
+            }
+            // v3: intro/outro segments (absent in older backups).
+            o.optJSONArray("segments")?.let { arr ->
+                for (k in 0 until arr.length()) {
+                    val s = arr.getJSONObject(k)
+                    db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
+                        uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source"),
+                        s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
+                }
+            }
+        }
+        // People, faces and intro/outro analysis, when the archive has them.
+        BackupExtras.read(db, newIds, inp)
+        // Folder covers chosen by the user (by the file's position in the archive).
+        for (k in 0 until fArr.length()) {
+            val o = fArr.getJSONObject(k)
+            val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
+            val folder = idMap[o.getLong("id")] ?: continue
+            newIds.getOrNull(idx)?.let { db.folderDao().setCover(folder, it) }
+        }
+        // v2: saved filters, tag names mapped back to the restored tag ids.
+        manifest.optJSONArray("savedFilters")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val f = o.optJSONObject("filter") ?: continue
+                suspend fun ids(key: String) = org.json.JSONArray().apply {
+                    f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
+                }
+                f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
+                f.remove("tagNames"); f.remove("exNames")
+                db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", "Filtro"), json = f.toString()))
+            }
+        }
+        return fileArr.length()
+    }
+
+    /** The backup could not be opened: wrong passphrase, or not a Cripta backup. */
+    class WrongPassphraseException(cause: Throwable) : Exception("Passphrase errata o file non valido", cause)
 
     /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
     private fun copyAtMost(

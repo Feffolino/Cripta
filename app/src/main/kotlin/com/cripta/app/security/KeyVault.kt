@@ -75,14 +75,19 @@ class KeyVault @Inject constructor(
     fun completeSetup(authorizedEncryptCipher: Cipher) {
         val dekBytes = DekManager.newDekKeysetBytes()
         val wrappedDek = kek.wrapWith(authorizedEncryptCipher, dekBytes)
-        storeBytes(KEY_WRAPPED_DEK, wrappedDek)
-        // Record the alias so this fresh vault is never treated as a pre-fix install.
-        prefs.edit().putString(KEY_KEK_ALIAS, activeAlias).apply()
-
         val dek = DekManager.dekAeadFromBytes(dekBytes)
         val dbKey = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val wrappedDbKey = dek.encrypt(dbKey, DB_KEY_AAD)
-        storeBytes(KEY_WRAPPED_DBKEY, wrappedDbKey)
+        // One synchronous write: saved one at a time, a crash in between left a vault that counted
+        // as set up (wrapped DEK) but could never open ("Missing DB key"), with no way to reset it.
+        // The alias is recorded so this fresh vault is never treated as a pre-fix install.
+        check(
+            prefs.edit()
+                .putString(KEY_WRAPPED_DEK, encode(wrappedDek))
+                .putString(KEY_WRAPPED_DBKEY, encode(wrappedDbKey))
+                .putString(KEY_KEK_ALIAS, activeAlias)
+                .commit()
+        ) { "Could not save the vault keys" }
 
         val db = CriptaDatabase.open(context, dbKey)
         session.activate(dek, db, dekBytes)
@@ -303,10 +308,9 @@ class KeyVault @Inject constructor(
         prefs.edit().clear().apply()
         runCatching { CriptaDatabase.deleteDatabase(context) }
         runCatching { blobs.wipeAll() }
-    }
-
-    private fun storeBytes(key: String, value: ByteArray) {
-        prefs.edit().putString(key, encode(value)).apply()
+        // Covers sealed with the lost key (picked ones and the cache): unreadable, only taking space.
+        runCatching { java.io.File(context.filesDir, "covers").deleteRecursively() }
+        runCatching { java.io.File(context.cacheDir, "thumbs").deleteRecursively() }
     }
 
     private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)

@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -141,11 +142,15 @@ class FaceRepository @Inject constructor(
         }
     }
 
-    /** Forget [fileId]'s faces (the user's own links stay) before analysing it again. */
+    /**
+     * Forget [fileId]'s analysis before analysing it again. The faces the user confirmed or added
+     * stay (the analysis carries them to the faces it finds again): "Analizza di nuovo" deleted
+     * them along with the rest.
+     */
     suspend fun forget(fileId: String): FileEntity? {
         val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null } ?: return null
         mutex.withLock {
-            db.withTransaction { dao.deleteTracksOf(fileId); dao.deleteScan(fileId) }
+            db.withTransaction { dao.deleteUnconfirmedTracksOf(fileId); dao.deleteScan(fileId); dao.purgeRejections() }
         }
         return f
     }
@@ -199,6 +204,16 @@ class FaceRepository @Inject constructor(
             android.util.Log.w("FaceRepository", "not readable (${e.javaClass.simpleName})")
             "skip:errore di lettura (${e.javaClass.simpleName})"
         }
+        // Under the writers' lock (as placing and the user's changes): a change made to this media's
+        // faces while it was being read is not overwritten with what was read before it.
+        mutex.withLock { store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started) }
+        return status == "ok"
+    }
+
+    private suspend fun store(
+        file: FileEntity, status: String, sightings: List<Sighting>, rejects: HashMap<FaceReject, Int>,
+        read: Int, failed: Int, faces: Int, sharp: IntArray, duplicates: Int, extra: Int, started: Long,
+    ) {
         // Faces the user deleted from this media, or said are not a face, are not found again. Unless
         // the face is more like one the user kept here: deleting a second copy of someone's face
         // must not hide that person from this media at the next analysis.
@@ -232,7 +247,6 @@ class FaceRepository @Inject constructor(
                 rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, VERSION, System.currentTimeMillis(),
                 ms = android.os.SystemClock.elapsedRealtime() - started, stats = FaceStats.encode(sharp, duplicates, extra)))
         }
-        return status == "ok"
     }
 
     /**
@@ -392,6 +406,14 @@ class FaceRepository @Inject constructor(
         dao.deletePersonMedia(drop)
         dao.moveRejections(drop, keep)
         dao.deleteRejectionsOf(drop)
+        // The merged person's notes and links go to the one kept: deleted with it, they were lost
+        // for good (an undo brings back its name, not its profile).
+        val kept = dao.persons().firstOrNull { it.id == keep }
+        if (p != null && kept != null && (p.notes.isNotBlank() || p.links.isNotBlank())) {
+            val notes = listOf(kept.notes, p.notes).filter { it.isNotBlank() }.distinct().joinToString("\n\n")
+            val links = (kept.links.lines() + p.links.lines()).map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString("\n")
+            dao.setProfile(keep, notes, links)
+        }
         dao.deletePerson(drop)
         if (p?.favorite == true) dao.setFavorite(keep, true)
         return logId
@@ -830,6 +852,19 @@ class FaceRepository @Inject constructor(
     private val embeddingCache = java.util.concurrent.ConcurrentHashMap<Long, List<FloatArray>>()
     @Volatile private var cacheDb: Any? = null
 
+    init {
+        // Face pictures, frames and embeddings leave memory with the lock (as the covers do), not
+        // at the next unlock: nothing of the vault should stay readable in RAM behind the lock.
+        scope.launch {
+            session.locked.collect { locked ->
+                if (!locked) return@collect
+                synchronized(crops) { crops.evictAll(); cropsOf = null }
+                synchronized(frames) { frames.evictAll(); framesOf = null }
+                embeddingCache.clear(); cacheDb = null
+            }
+        }
+    }
+
     /** The embeddings of [ids], decoded once per vault; a change to a track's embeddings calls [stale]. */
     private suspend fun embeddings(ids: Collection<Long>): Map<Long, List<FloatArray>> {
         val d = db
@@ -1082,10 +1117,22 @@ class FaceRepository @Inject constructor(
     /** Faces the user took away from someone wait unassigned; people left with nothing go. */
     private suspend fun replace(@Suppress("UNUSED_PARAMETER") ids: List<Long>) = change { dao.deleteEmptyPersons() }
 
-    /** "Ricomincia da capo": every face and person is forgotten ([everything]: the user's choices too). */
+    /**
+     * "Ricomincia da capo": every media is analysed anew. Without [everything] the faces the user
+     * confirmed or added stay; with it, people, faces and every choice of the user go too.
+     */
     suspend fun resetAll(everything: Boolean) = change {
-        dao.deleteAllScans(); dao.deleteAllTracks(); dao.deleteAllMerges()
-        if (everything) { dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections(); dao.deleteAllIgnored() }
+        dao.deleteAllScans()
+        if (everything) {
+            dao.deleteAllTracks(); dao.deleteAllMerges()
+            dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections(); dao.deleteAllIgnored()
+        } else {
+            // "Ricomincia" without "Cancella anche nomi… e correzioni": the faces the user confirmed
+            // or added stay, and the new analysis carries them to the faces it finds ([carry]).
+            // Deleting every face here left the named people empty, every confirmation lost.
+            dao.deleteUnconfirmedTracks()
+            dao.purgeRejections()
+        }
         dao.deleteAllApart()
         embeddingCache.clear()
     }

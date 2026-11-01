@@ -6,7 +6,7 @@ import java.io.File
 internal object DownloadRequests {
     const val RESULT_FILE = "completed-path.txt"
 
-    fun common(url: String) = YoutubeDLRequest(url).apply {
+    fun common(url: String) = YoutubeDLRequest(checkedUrl(url)).apply {
         addOption("--ignore-config")
         addOption("--no-playlist")
         addOption("--socket-timeout", 20)
@@ -32,6 +32,16 @@ internal object DownloadRequests {
         // Only the file reported after merging/postprocessing is importable, never a .part or
         // a larger intermediate video-only stream left in the working directory.
         addCommands(listOf("--print-to-file", "after_move:filepath", File(dir, RESULT_FILE).absolutePath))
+    }
+
+    /**
+     * Only a web link reaches yt-dlp: anything else typed or pasted in the field (text starting with
+     * "-") would be read as one of its options, some of which run commands.
+     */
+    fun checkedUrl(url: String): String {
+        val u = url.trim()
+        require(u.startsWith("https://", ignoreCase = true) || u.startsWith("http://", ignoreCase = true)) { "Not a web link" }
+        return u
     }
 
     fun completedFile(dir: File): File {

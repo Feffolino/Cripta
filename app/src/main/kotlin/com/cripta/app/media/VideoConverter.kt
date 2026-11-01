@@ -32,7 +32,7 @@ import kotlin.coroutines.resumeWithException
  * a Looper); callers use Dispatchers.Main.
  */
 @Singleton
-@UnstableApi
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 class VideoConverter @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {

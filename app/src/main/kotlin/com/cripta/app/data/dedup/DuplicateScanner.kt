@@ -79,7 +79,8 @@ class DuplicateScanner @Inject constructor(
                     val byFull = HashMap<String, MutableList<FileEntity>>()
                     for (f in candidates) {
                         coroutineContext.ensureActive()
-                        val h = runCatching { fullHash(f) }.getOrNull()
+                        // The hash recorded at import: no need to decrypt the whole file again.
+                        val h = f.contentHash ?: runCatching { fullHash(f) }.getOrNull()?.also { repo.setContentHash(f.id, it) }
                         if (h != null) byFull.getOrPut(h) { mutableListOf() }.add(f)
                     }
                     byFull.values.filter { it.size > 1 }.forEach { dupes ->
@@ -263,16 +264,17 @@ class DuplicateScanner @Inject constructor(
     }
 
     /**
-     * Video fingerprint: decrypt to a temp file (shredded afterwards, like the transcoder), then
-     * dHash [VIDEO_FRAMES] frames sampled at even interior time points. Returns null if the video
-     * can't be read or any frame is missing.
+     * Video fingerprint: [VIDEO_FRAMES] frames sampled at even interior time points, read straight
+     * from the decrypting channel (no plaintext copy on disk: decrypting each video to a temp file
+     * wrote the whole vault's videos out in the clear, and twice the bytes). Returns null if the
+     * video can't be read or any frame is missing.
      */
     private suspend fun videoFingerprint(f: FileEntity): LongArray? {
-        val tmp = repo.decryptToTempFile(f, "vid")
+        val channel = repo.seekableChannel(f)
         try {
             val retriever = android.media.MediaMetadataRetriever()
             try {
-                retriever.setDataSource(tmp.absolutePath)
+                retriever.setDataSource(com.cripta.app.media.ChannelMediaDataSource(channel, f.sizeBytes))
                 val durMs = f.durationMs
                     ?: retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
                     ?: return null
@@ -293,7 +295,7 @@ class DuplicateScanner @Inject constructor(
                 runCatching { retriever.release() }
             }
         } finally {
-            repo.shredTempFile(tmp)
+            runCatching { channel.close() }
         }
     }
 

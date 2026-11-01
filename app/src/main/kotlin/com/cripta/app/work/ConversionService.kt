@@ -38,7 +38,7 @@ import javax.inject.Inject
  * video transcode) off the UI, surviving app backgrounding, with a progress notification
  * showing percentage and ETA.
  */
-@UnstableApi
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @AndroidEntryPoint
 class ConversionService : Service() {
 
@@ -54,6 +54,7 @@ class ConversionService : Service() {
     @Inject lateinit var updater: com.cripta.app.update.AppUpdater
     @Inject lateinit var intro: com.cripta.app.data.intro.IntroRepository
     @Inject lateinit var faces: com.cripta.app.data.face.FaceRepository
+    @Inject lateinit var backups: com.cripta.app.data.BackupJobs
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Number of in-flight commands; the foreground notification is only torn down when it hits 0,
@@ -253,6 +254,7 @@ class ConversionService : Service() {
                 MODE_INTRO_SCAN -> ResultKind.INTRO
                 MODE_FACE_SCAN -> ResultKind.FACES
                 MODE_CONVERT -> ResultKind.CONVERT
+                MODE_BACKUP -> ResultKind.BACKUP
                 else -> null
             }))
         if (mode == MODE_DOWNLOAD_URL) {
@@ -315,6 +317,7 @@ class ConversionService : Service() {
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_UPDATE -> downloadUpdate(intent)
+                    MODE_BACKUP -> runBackup(holdsSession)
                     MODE_DEBUG_PROGRESS -> debugRun(intent.getStringExtra(EX_DEBUG_KIND) ?: "convert")
                     MODE_DUP_SCAN -> {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
@@ -346,10 +349,15 @@ class ConversionService : Service() {
                 android.util.Log.e("ConversionService", "job failed: $mode", e)
             } finally {
                 // New videos get their intro/outro analysis right after (when on in Settings).
+                // Never thrown out of here: Android may refuse a foreground start while the app is in
+                // the background (ForegroundServiceStartNotAllowedException), and an escaping
+                // exception crashed the app and skipped the lines below (keys held, service stuck).
                 if (mode == MODE_IMPORT || mode == MODE_DOWNLOAD_URL || mode == MODE_CONVERT) withContext(NonCancellable) {
                     val s = runCatching { settings.settingsOnce() }.getOrNull()
-                    if (s?.introAnalyzeNew == true) startIntroScan(this@ConversionService, manual = false)
-                    if (s?.facesAnalyzeNew == true) startFaceScan(this@ConversionService, manual = false)
+                    if (s?.introAnalyzeNew == true) runCatching { startIntroScan(this@ConversionService, manual = false) }
+                        .onFailure { android.util.Log.w("ConversionService", "intro scan not started", it) }
+                    if (s?.facesAnalyzeNew == true) runCatching { startFaceScan(this@ConversionService, manual = false) }
+                        .onFailure { android.util.Log.w("ConversionService", "face scan not started", it) }
                 }
                 if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) stopWhenIdle()
@@ -449,6 +457,53 @@ class ConversionService : Service() {
      * Annulla in the notification, then "Aggiornamento pronto" whose tap / Installa opens the
      * system installer. The settings screen follows it through [AppUpdater.downloadState].
      */
+    /**
+     * The backup or restore handed over by Settings ([com.cripta.app.data.BackupJobs]), run here in
+     * the foreground so it ends even with the app in the background. Not cancellable halfway: an
+     * archive stopped there is deleted, a restore is undone ([VaultRepository.importBackup]).
+     */
+    private suspend fun runBackup(holdsSession: Boolean) {
+        val req = backups.take() ?: return
+        val title = if (req.restore) "Ripristino del backup" else "Creazione del backup"
+        try {
+            if (!holdsSession) {
+                backups.finish(if (req.restore) "Ripristino non riuscito: sblocca Cripta e riprova." else "Backup non riuscito: sblocca Cripta e riprova.")
+                return
+            }
+            var lastPct = -1
+            val progress: (Float) -> Unit = { p ->
+                backups.progress(p)
+                val pct = (p * 100).toInt().coerceIn(0, 100)
+                if (pct != lastPct) {
+                    lastPct = pct
+                    notify(build(title, pct, sub = "$pct%", kind = ResultKind.BACKUP))
+                }
+            }
+            notify(build(title, 0, sub = "Preparazione…", indeterminate = true, kind = ResultKind.BACKUP))
+            val outcome = withContext(NonCancellable) {
+                if (req.restore) runCatching { repo.importBackup(req.uri, req.passphrase, progress) }
+                else runCatching { repo.exportBackup(req.uri, req.passphrase, req.compressDocs, progress) }
+            }
+            outcome.onSuccess { n ->
+                val text = if (req.restore) { if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" }
+                    else { if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" }
+                backups.finish(text)
+                notifyResult(if (req.restore) "Ripristino completato" else "Backup completato", text, ResultKind.BACKUP)
+            }.onFailure { e ->
+                android.util.Log.e("ConversionService", "backup failed (restore=${req.restore})", e)
+                val text = when {
+                    !req.restore -> "Backup non riuscito. Controlla lo spazio libero nella destinazione e riprova."
+                    e is VaultRepository.WrongPassphraseException -> "Ripristino non riuscito: passphrase errata o file di backup non valido. Il vault non è cambiato."
+                    else -> "Ripristino non riuscito (${UserErrors.of(e)}). Il vault non è cambiato."
+                }
+                backups.finish(text)
+                notifyResult(if (req.restore) "Ripristino non riuscito" else "Backup non riuscito", text, ResultKind.BACKUP, state = ResultState.FAILED)
+            }
+        } finally {
+            req.passphrase.fill('\u0000')
+        }
+    }
+
     private suspend fun downloadUpdate(intent: Intent) {
         val rel = com.cripta.app.update.AppUpdater.Release(
             versionName = intent.getStringExtra(EX_UPD_VERSION) ?: return,
@@ -987,7 +1042,16 @@ class ConversionService : Service() {
     private suspend fun introScan(manual: Boolean, onlyIds: List<String>? = null) {
         if (onlyIds == null) introScanAll = true else introAsked += onlyIds
         introManual = introManual || manual
-        if (!introMutex.tryLock()) { introRerun = true; return }
+        // A request landing after the running scan's last look at [introRerun] but before it let go
+        // of the lock found it taken and was dropped: the scan that ends looks again once unlocked.
+        while (introMutex.tryLock()) {
+            try { runIntroScan() } finally { introMutex.unlock() }
+            if (!introScanAll && introAsked.isEmpty()) return
+        }
+        introRerun = true
+    }
+
+    private suspend fun runIntroScan() {
         introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         val label = "Analisi intro e finali"
         val analysedCount = java.util.concurrent.atomic.AtomicInteger(0)
@@ -1092,7 +1156,6 @@ class ConversionService : Service() {
             introJob = null
             introManual = false
             introProgress.value = null
-            introMutex.unlock()
         }
     }
 
@@ -1115,7 +1178,15 @@ class ConversionService : Service() {
     private suspend fun faceScan(manual: Boolean, onlyIds: List<String>? = null) {
         if (onlyIds == null) faceScanAll = true else faceAsked += onlyIds
         faceManual = faceManual || manual
-        if (!faceMutex.tryLock()) { faceRerun = true; return }
+        // As in [introScan]: a request that found the lock taken just as the scan ended is not lost.
+        while (faceMutex.tryLock()) {
+            try { runFaceScan() } finally { faceMutex.unlock() }
+            if (!faceScanAll && faceAsked.isEmpty()) return
+        }
+        faceRerun = true
+    }
+
+    private suspend fun runFaceScan() {
         faceJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         val label = "Analisi dei volti"
         val analysed = java.util.concurrent.atomic.AtomicInteger(0)
@@ -1205,7 +1276,6 @@ class ConversionService : Service() {
             faceManual = false
             faceProgress.value = null
             faces.release()
-            faceMutex.unlock()
         }
     }
 
@@ -1643,6 +1713,7 @@ class ConversionService : Service() {
         CONVERT(4222, "Converti"), SCAN(4223, "Duplicati"),
         EXPORT(4224, "Export"), UPDATE(4225, "Aggiorna"),
         INTRO(4226, "Analisi"), FACES(4227, "Volti"),
+        BACKUP(4228, "Backup"),
     }
 
     /** How an operation ended (the island's chip: Fatto, Errore, Annullato). */
@@ -1883,6 +1954,7 @@ class ConversionService : Service() {
         private const val EX_TAGS = "tags"
         private const val MODE_CANCEL_BATCH = "cancel_batch"
         private const val MODE_UPDATE = "update"
+        private const val MODE_BACKUP = "backup"
         private const val MODE_CANCEL_UPDATE = "cancel_update"
         private const val EX_UPD_VERSION = "upd_version"
         private const val EX_UPD_BUILD = "upd_build"
@@ -2070,6 +2142,11 @@ class ConversionService : Service() {
         /** Debug isola › Solo scelta: a sample two-button choice. */
         fun debugChoice(ctx: Context) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE))
+        }
+
+        /** Run the backup or restore waiting in [com.cripta.app.data.BackupJobs]. */
+        fun startBackup(ctx: Context) {
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_BACKUP))
         }
 
         fun cancelUpdateDownload(ctx: Context) {

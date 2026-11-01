@@ -38,6 +38,7 @@ class SettingsViewModel @Inject constructor(
     private val faces: com.cripta.app.data.face.FaceRepository,
     private val viewerQueue: com.cripta.app.viewer.ViewerQueue,
     private val vaultNavigator: com.cripta.app.ui.vault.VaultNavigator,
+    private val backups: com.cripta.app.data.BackupJobs,
 ) : ViewModel() {
 
     sealed interface UpdateState {
@@ -418,49 +419,40 @@ class SettingsViewModel @Inject constructor(
     fun clearMessage() { _message.value = null }
 
     /** Backup/restore running now (label shown with a progress bar), or null. */
-    private val _backupBusy = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    val backupBusy: StateFlow<String?> = _backupBusy
+    val backupBusy: StateFlow<String?> = backups.running.map { it?.label }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.label)
     /** 0..1 while a backup / restore streams, null when idle or the size is unknown. */
-    private val _backupProgress = kotlinx.coroutines.flow.MutableStateFlow<Float?>(null)
-    val backupProgress: StateFlow<Float?> = _backupProgress
+    val backupProgress: StateFlow<Float?> = backups.running.map { it?.progress }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.progress)
     /** What a backup made now would contain: (files, bytes). Live, always shown in its section. */
     val backupEstimate: StateFlow<Pair<Int, Long>?> = repo.backupEstimate(store.settings.map { it.backupCompressDocs }.distinctUntilChanged())
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), null)
 
-    fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
-        if (_backupBusy.value != null) return@launch
-        _backupBusy.value = "Creazione del backup…"
-        val pass = passphrase.toCharArray()
-        try {
-            val compress = runCatching { store.settingsOnce().backupCompressDocs }.getOrDefault(false)
-            _message.value = runCatching { heldToEnd { repo.exportBackup(uri, pass, compress) { _backupProgress.value = it } } }
-                .fold(
-                    { n -> if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" },
-                    { if (it is kotlinx.coroutines.CancellationException) throw it
-                        "Backup non riuscito. Controlla lo spazio libero nella destinazione e riprova." },
-                )
-        } finally {
-            java.util.Arrays.fill(pass, '\u0000')
-            _backupBusy.value = null
-            _backupProgress.value = null
+    init {
+        // The outcome of a backup / restore run by the service, shown when Settings is open.
+        viewModelScope.launch {
+            backups.result.collect { r -> if (r != null) { _message.value = r; backups.consumeResult() } }
         }
     }
 
-    fun importBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
-        if (_backupBusy.value != null) return@launch
-        _backupBusy.value = "Ripristino del backup…"
-        val pass = passphrase.toCharArray()
-        try {
-            _message.value = runCatching { heldToEnd { repo.importBackup(uri, pass) { _backupProgress.value = it } } }
-                .fold(
-                    { n -> if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" },
-                    { if (it is kotlinx.coroutines.CancellationException) throw it
-                        "Ripristino non riuscito: passphrase errata o file di backup non valido." },
-                )
-        } finally {
-            java.util.Arrays.fill(pass, '\u0000')
-            _backupBusy.value = null
-            _backupProgress.value = null
+    /**
+     * Backup and restore run in the background service, in the foreground: here, with the app in
+     * the background, the process could be killed halfway (a truncated archive, a half restore).
+     */
+    fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
+        val compress = runCatching { store.settingsOnce().backupCompressDocs }.getOrDefault(false)
+        startBackup(com.cripta.app.data.BackupJobs.Request(restore = false, uri = uri, passphrase = passphrase.toCharArray(), compressDocs = compress))
+    }
+
+    fun importBackup(uri: android.net.Uri, passphrase: String) =
+        startBackup(com.cripta.app.data.BackupJobs.Request(restore = true, uri = uri, passphrase = passphrase.toCharArray(), compressDocs = false))
+
+    private fun startBackup(request: com.cripta.app.data.BackupJobs.Request) {
+        if (!backups.offer(request)) return
+        runCatching { com.cripta.app.work.ConversionService.startBackup(appContext) }.onFailure {
+            android.util.Log.e("SettingsViewModel", "backup service not started", it)
+            backups.take()?.passphrase?.fill('\u0000')
+            backups.finish(if (request.restore) "Ripristino non avviato. Riprova." else "Backup non avviato. Riprova.")
         }
     }
 
