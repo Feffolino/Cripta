@@ -40,12 +40,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -94,14 +90,13 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Persone", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.semantics { heading() })
         val shown = faces.sortedWith(compareBy<TrackCard>({ it.personId == null }, { it.moments.firstOrNull() ?: it.timeMs }))
         // Faces gone meanwhile (joined, deleted, analysed again) leave the selection.
         val chosen = selected.filterTo(HashSet()) { id -> shown.any { it.id == id } }
         fun toggle(id: Long) { selected = if (id in chosen) chosen - id else chosen + id }
         // Faces nearly always found by mistake wait folded at the end.
         val (unclear, clear) = shown.partition { FaceRepository.uncertain(it, isVideo) }
+        PanelHeading("Persone", if (chosen.isEmpty() && clear.size >= 2) "Tocca un volto per dire chi è, tienilo premuto per unirlo a un altro o eliminarlo." else null)
         if (shown.isEmpty() && links.isEmpty()) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -120,9 +115,6 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
                 }
             }
-        } else if (clear.size >= 2) {
-            Text("Tieni premuto un volto per unirlo a un altro della stessa persona o per eliminarlo.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         @Composable
         fun row(t: TrackCard) = FaceRow(t, t.personId?.let { byId[it] }, file, isVideo, vm, on = t.id in chosen, selecting = chosen.isNotEmpty(),
@@ -147,8 +139,10 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             Text("Aggiunto a mano a ${byId[pid]?.title ?: FaceRepository.UNNAMED}", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { vm.findFaces(file) }) { com.cripta.app.ui.components.ButtonText("Aggiungi un volto") }
+        // The section's main action is tonal, the rarer ones text; a FlowRow so none is cut on a narrow panel.
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilledTonalButton(onClick = { vm.findFaces(file) }) { com.cripta.app.ui.components.ButtonText("Aggiungi un volto") }
             TextButton(onClick = { vm.describeFaces(file.id) }) { com.cripta.app.ui.components.ButtonText(if (shown.isEmpty()) "Perché?" else "Dettagli") }
             TextButton(onClick = { vm.analyseFaces(file.id) }) { com.cripta.app.ui.components.ButtonText("Rianalizza") }
         }

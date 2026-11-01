@@ -771,7 +771,7 @@ fun ViewerScreen(
 private fun InfoLine(label: String, value: String) {
     // The value is what the user came for: full contrast; the label is the quieter caption.
     Column(Modifier.padding(vertical = 6.dp)) {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
+        Text(label, style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 2.dp))
@@ -798,13 +798,13 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
     if (value == null) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("LINK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Link", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Nessun link", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
             }
             TextButton(onClick = paste) {
                 Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
-                com.cripta.app.ui.components.ButtonText("  Incolla")
+                com.cripta.app.ui.components.ButtonText("Incolla", modifier = Modifier.padding(start = 6.dp))
             }
         }
         return
@@ -834,7 +834,7 @@ private fun CopyableInfoLine(label: String, value: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
+            Text(label, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary, maxLines = 2,
@@ -2258,17 +2258,13 @@ private fun DetailsSheet(
         }
     }
     val tags: @Composable () -> Unit = {
-        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Etichette", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f).semantics { heading() })
+        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+            PanelHeading("Etichette", "Tocca per aggiungere o togliere, tieni premuto per alias, colore e icona.") {
                 TextButton(onClick = { creating = true }) {
                     Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
                     com.cripta.app.ui.components.ButtonText("Nuova", modifier = Modifier.padding(start = 6.dp))
                 }
             }
-            Text("Tocca per aggiungere o togliere · tieni premuto per alias, colore e per fissarla.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             com.cripta.app.ui.vault.TagSections(
                 allTags = allTags,
                 extraNames = onFile,
@@ -2284,20 +2280,29 @@ private fun DetailsSheet(
         }
     }
     val info: @Composable () -> Unit = {
-        LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
-        androidx.compose.foundation.text.selection.SelectionContainer {
-            Column {
-                InfoLine("Tipo", file.mimeType)
-                if (isVid && videoDiag.isNotBlank()) {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { showTech = !showTech }.padding(top = 8.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("Dettagli tecnici", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (showTech) "Comprimi" else "Espandi")
-                    }
-                    if (showTech) {
-                        Text(videoDiag, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            PanelHeading("Informazioni")
+            LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Column {
+                    InfoLine("Tipo", file.mimeType)
+                    if (isVid && videoDiag.isNotBlank()) {
+                        // A plain row that opens the figures in place: rarely needed, so it starts closed.
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
+                                .clickable(onClickLabel = if (showTech) "Comprimi" else "Espandi") { showTech = !showTech },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Dettagli tecnici", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        androidx.compose.animation.AnimatedVisibility(showTech,
+                            enter = androidx.compose.animation.fadeIn(tween(220, 0, com.cripta.app.ui.theme.Motion.EaseOutQuart)) +
+                                androidx.compose.animation.expandVertically(tween(220, 0, com.cripta.app.ui.theme.Motion.EaseOutQuart)),
+                            exit = androidx.compose.animation.fadeOut(tween(120)) + androidx.compose.animation.shrinkVertically(tween(120))) {
+                            Text(videoDiag, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
@@ -2308,9 +2313,9 @@ private fun DetailsSheet(
     val column: @Composable () -> Unit = {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
         ) {
-            header(); tiles(); tags()
+            header(); tiles(); SectionGap(); tags()
             if (isVid) { SectionGap(); IntroSection(file, vm) }
             if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
             SectionGap(); info()
@@ -2336,12 +2341,12 @@ private fun DetailsSheet(
                 ) {
                     Column(
                         Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
                     ) {
                         header(); tiles(); SectionGap(); info()
                     }
                     Column(Modifier.weight(1.2f).verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)) {
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
                         tags()
                         if (isVid) { SectionGap(); IntroSection(file, vm) }
                         if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
@@ -2412,6 +2417,9 @@ private fun SheetActionButton(
     }
 }
 
-/** Space between the panel's sections: they are told apart by their headings, not by lines. */
+/**
+ * Space before a section of the panel (on top of the column's own 12dp): more above a heading than
+ * under it, so the sections are told apart by their headings, not by lines.
+ */
 @Composable
-private fun SectionGap() = Spacer(Modifier.height(14.dp))
+private fun SectionGap() = Spacer(Modifier.height(12.dp))

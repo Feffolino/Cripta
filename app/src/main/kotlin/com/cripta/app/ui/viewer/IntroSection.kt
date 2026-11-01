@@ -31,7 +31,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,11 +73,11 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     val duration = spot?.durationMs?.takeIf { it > 0 } ?: file.durationMs ?: 0L
     val position = spot?.positionMs ?: 0L
     val introColor = MaterialTheme.colorScheme.primary
-    val outroColor = MaterialTheme.colorScheme.tertiary
+    // One accent (DESIGN.md): the outro is the same blue, lighter; where it sits tells it apart too.
+    val outroColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Intro e finale", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.semantics { heading() })
+        PanelHeading("Intro e finale", "Il video le salta. Tocca la barra per spostarti.")
         when (status) {
             null -> StatusLine("Non ancora analizzato.", "Analizza ora") { vm.analyzeIntro(file) }
             "ok" -> {}
@@ -255,7 +254,7 @@ private fun SegmentBlock(
                     if (active != null) {
                         Spacer(Modifier.width(8.dp))
                         FilledTonalButton(onClick = { onTry(active) }) {
-                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Prova")
+                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); com.cripta.app.ui.components.ButtonText("Prova")
                         }
                     }
                 }
@@ -278,7 +277,7 @@ private fun Trim(label: String, ms: Long, onDelta: (Long) -> Unit) {
             for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−0,1", 100L to "+0,1", 1_000L to "+1 s")) {
                 TextButton(onClick = { onDelta(d) }, contentPadding = PaddingValues(horizontal = 6.dp),
                     modifier = Modifier.semantics { contentDescription = "$label ${if (d < 0) "indietro" else "avanti"} di ${t.trimStart('−', '+')}" }) {
-                    Text(t)
+                    com.cripta.app.ui.components.ButtonText(t)
                 }
             }
         }
