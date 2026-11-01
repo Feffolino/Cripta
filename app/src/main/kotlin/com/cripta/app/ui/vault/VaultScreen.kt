@@ -1578,8 +1578,10 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     val maxOffset = (trackH - thumbPx).coerceAtLeast(0f)
     val offsetY = with(density) { (fraction * maxOffset).toDp() }
   Box(modifier.fillMaxHeight()) {
-    // Bubble next to the thumb while scrolling: section / position of the first visible item.
-    val label = if (alpha > 0f) labelAt(state.firstVisibleItemIndex) else null
+    // Bubble next to the thumb (section / position of the first visible item) only while the thumb
+    // is held: shown on every swipe of the list, it covered the covers for nothing.
+    val bubbleAlpha by animateFloatAsState(if (dragging) 1f else 0f, label = "fastscrollBubble")
+    val label = if (bubbleAlpha > 0f) labelAt(state.firstVisibleItemIndex) else null
     if (label != null) {
         // A plain drawing, never a touch target: a Surface swallowed the touches landing on it, so a
         // new swipe started on the bubble (while the list was still moving) stopped the list dead.
@@ -1587,7 +1589,7 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
             Modifier.align(Alignment.TopEnd).padding(end = 30.dp)
                 .offset(y = offsetY + 6.dp)
                 .graphicsLayer {
-                    this.alpha = alpha
+                    this.alpha = bubbleAlpha
                     shadowElevation = 3.dp.toPx()
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     clip = true
