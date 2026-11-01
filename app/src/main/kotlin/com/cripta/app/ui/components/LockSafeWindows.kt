@@ -46,7 +46,8 @@ fun CriptaAlertDialog(
         icon = icon,
         // Dialog titles in the app's title style (not Material's larger headline), like sheet titles.
         title = title?.let { t -> { androidx.compose.material3.ProvideTextStyle(androidx.compose.material3.MaterialTheme.typography.titleLarge) { t() } } },
-        text = text,
+        // Fields inside sit in a well darker (lighter in the light theme) than the dialog.
+        text = text?.let { t -> { androidx.compose.runtime.CompositionLocalProvider(LocalFieldContainer provides androidx.compose.material3.MaterialTheme.colorScheme.surface) { t() } } },
         shape = shape,
         containerColor = containerColor,
         iconContentColor = iconContentColor,

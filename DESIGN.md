@@ -136,7 +136,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then
   slides in; the previous level never flashes.
 - **Fields**: `CriptaTextField`, filled with no outline or underline. Single-line fields (every
-  search, links, names) are full pills; multi-line ones a 18dp slab.
+  search, links, names) are full pills; multi-line ones a 18dp slab. The fill is one tier above the
+  page; inside a dialog (itself that tier) it is a darker well (`surface`, `LocalFieldContainer`),
+  so a field never reads as plain text.
 - **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
   no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
 - **Button labels** (`ButtonText`): one line, cut with "…" when the button is too narrow, never
