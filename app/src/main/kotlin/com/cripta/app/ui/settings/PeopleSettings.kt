@@ -391,7 +391,7 @@ private fun sortPeople(list: List<FaceRepository.Person>, k: com.cripta.app.data
 }
 
 /** The people page: its own destination (Settings, Home, the scan's notification lead here). */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     val vm: SettingsViewModel = hiltViewModel()
@@ -566,11 +566,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 }
             }
             if (filter == PeopleFilter.NONE) {
-                // Cleared by the user or with every face set aside: worth a new look (unreadable ones are not).
-                val again = noFaces.filter { it.status == "ok" || it.status == FaceRepository.CLEARED }.map { it.fileId }
+                // All worth a deeper look, unreadable ones too (the deep search reads frames another way).
+                val again = noFaces.map { it.fileId }
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Media in cui nessun volto è utilizzabile. Tocca per il motivo.",
+                        Text("Media in cui nessun volto è utilizzabile. Tocca per aprirlo e aggiungere un volto a mano dai dettagli; tieni premuto per il motivo.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         // Already searched the usual way: the deeper search (more frames, smaller and
                         // less sure faces) is the one worth running here.
@@ -585,13 +585,17 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 }
                 items(noFaces, key = { it.fileId }) { scan ->
                     val file = o.files[scan.fileId]
-                    Column(Modifier.clickable(onClickLabel = "Perché") { vm.describeMedia(scan.fileId) }) {
+                    // Tap: the media itself (swiping goes through this list), to add the faces by hand.
+                    Column(Modifier.clip(MaterialTheme.shapes.medium).combinedClickable(onClickLabel = "Apri", onLongClickLabel = "Perché",
+                        onLongClick = { vm.describeMedia(scan.fileId) }) {
+                        vm.openPersonMedia(noFaces.map { it.fileId }, scan.fileId, null); onOpenFile(scan.fileId)
+                    }) {
                         if (file != null) MediaThumb(file, { vm.thumbOf(it) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false)
                         Text(file?.originalName ?: "File non trovato", style = MaterialTheme.typography.labelMedium,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(when {
                             scan.status == FaceRepository.CLEARED -> "Volti eliminati da te"
-                            scan.status != "ok" -> "Non leggibile"
+                            scan.status != "ok" -> "Non letto: " + scan.status.removePrefix("skip:")
                             scan.faces == 0 -> "Nessun volto"
                             else -> "Volti scartati"
                         },
