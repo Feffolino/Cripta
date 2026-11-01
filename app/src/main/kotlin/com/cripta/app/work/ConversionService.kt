@@ -1135,13 +1135,17 @@ class ConversionService : Service() {
                 val askedIds = HashSet<String>()
                 val eta = EtaEstimator()
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
+                // How far each media being analysed is (0..1): a deep search of one video takes minutes.
+                val partial = java.util.concurrent.ConcurrentHashMap<String, Float>()
                 fun progress() = synchronized(faceNoteLock) {
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
+                    val done = (d + partial.values.sum()).coerceAtMost(total.toFloat())
+                    val pct = (done * 100 / total).toInt()
                     faceProgress.value = IntroProgress(d, total, "Analisi dei volti")
-                    notifyScan(ResultKind.FACES, d * 100 / total) { others ->
-                        build(label, d * 100 / total, sub = "$d di $total media analizzati",
-                            eta = if (d > 0) eta.left(d.toFloat() / total) else null, header = others,
+                    notifyScan(ResultKind.FACES, pct) { others ->
+                        build(label, pct, sub = "$d di $total media analizzati",
+                            eta = if (done > 0f) eta.left(done / total) else null, header = others,
                             cancelable = true, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
                 }
@@ -1150,19 +1154,29 @@ class ConversionService : Service() {
                 while (true) {
                     kotlinx.coroutines.yield()   // a cancelled scan stops between groups
                     val askedNow = generateSequence { faceAsked.poll() }.toList().distinct().filter { askedIds.add(it) }
-                    val chunk = askedNow.mapNotNull { faces.forget(it) }.toMutableList()
+                    // The total counts the media asked for right away, not after the first one is done.
+                    if (askedNow.isNotEmpty()) progress()
+                    // Media asked for are forgotten one at a time, just before each is analysed again:
+                    // the first starts at once, and a cancelled scan leaves the rest as they were.
+                    val chunk = ArrayList<suspend () -> com.cripta.app.data.db.FileEntity?>()
+                    askedNow.forEach { id -> chunk += { faces.forget(id) } }
                     if (askedNow.isEmpty()) while (chunk.size < FACE_CHUNK && next < todo.size) {
                         val t = todo[next++]
-                        if (t.id !in askedIds) chunk += t
+                        if (t.id !in askedIds) chunk += { t }
                     }
-                    if (chunk.isEmpty() && askedNow.isEmpty()) break
+                    if (chunk.isEmpty()) break
                     val cursor = java.util.concurrent.atomic.AtomicInteger(0)
                     kotlinx.coroutines.coroutineScope {
                         repeat(minOf(FACE_WORKERS, chunk.size)) {
                             launch {
                                 while (true) {
-                                    val f = chunk.getOrNull(cursor.getAndIncrement()) ?: break
-                                    if (faces.analyse(f, deep = faceDeep.remove(f.id))) analysed.incrementAndGet() else skipped.incrementAndGet()
+                                    val take = chunk.getOrNull(cursor.getAndIncrement()) ?: break
+                                    val f = take()
+                                    if (f == null) skipped.incrementAndGet()
+                                    else try {
+                                        val ok = faces.analyse(f, deep = faceDeep.remove(f.id)) { p -> partial[f.id] = p; progress() }
+                                        if (ok) analysed.incrementAndGet() else skipped.incrementAndGet()
+                                    } finally { partial.remove(f.id) }
                                     finished.incrementAndGet()
                                     progress()
                                 }
