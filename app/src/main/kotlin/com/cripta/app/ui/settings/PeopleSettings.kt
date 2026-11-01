@@ -622,12 +622,20 @@ internal fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lo
                          allowNew: Boolean = false, onDismiss: () -> Unit, onDone: (List<Long>, String) -> Unit) {
     var picked by remember { mutableStateOf(emptyList<Long>()) }
     var newName by remember { mutableStateOf("") }
-    val others = o.people.filter { it.id != exclude && !it.entity.ignored && (it.main || it.id in picked) }
+    var query by remember { mutableStateOf("") }
+    // The main people at first; a search reaches everyone (faces seen once included).
+    val q = query.trim()
+    val others = o.people.filter { it.id != exclude && !it.entity.ignored &&
+        (if (q.isEmpty()) it.main || it.id in picked else it.title.contains(q, ignoreCase = true)) }
     CriptaAlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (allowNew) com.cripta.app.ui.components.CriptaTextField(newName, { newName = it; if (it.isNotBlank()) picked = emptyList() }, singleLine = true,
                     label = { Text("Nuova persona (dividi)") }, modifier = Modifier.fillMaxWidth())
+                com.cripta.app.ui.components.CriptaTextField(query, { query = it }, singleLine = true,
+                    placeholder = { Text("Cerca tra tutte le persone") }, modifier = Modifier.fillMaxWidth())
+                if (others.isEmpty()) Text("Nessuna persona trovata.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyColumn(Modifier.heightIn(max = 340.dp)) {
                     items(others, key = { it.id }) { q ->
                         val on = q.id in picked

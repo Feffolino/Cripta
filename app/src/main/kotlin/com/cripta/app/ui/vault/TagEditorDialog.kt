@@ -93,6 +93,11 @@ internal fun TagSections(
     onLongPress: ((String) -> Unit)?,
     /** Optional search text: when set, only matching tags are listed (in a single section). */
     query: String = "",
+    /**
+     * False: the short form (the details panel) — the tags on the file, pinned and recent ones, and
+     * not the whole library, which is opened on request.
+     */
+    showLibrary: Boolean = true,
 ) {
     val byName = remember(allTags) { allTags.associateBy { it.name } }
     val pinned = remember(allTags) { allTags.filter { it.pinned } }
@@ -141,9 +146,14 @@ internal fun TagSections(
         } else row("Risultati", matches)
         return
     }
+    if (!showLibrary) {
+        val quick = (pinned.map { it.name } + if (showRecents) recents.map { it.name } else emptyList()).toSet()
+        val onFile = library.filter { isSelected(it) && it !in quick }
+        if (onFile.isNotEmpty()) row("Su questo file", onFile)
+    }
     if (pinned.isNotEmpty()) row("Fissate", pinned.map { it.name })
     if (showRecents && recents.isNotEmpty()) row("Recenti", recents.map { it.name })
-    if (library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
+    if (showLibrary && library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
 }
 
 private fun chipLabel(name: String, alias: String?): String =

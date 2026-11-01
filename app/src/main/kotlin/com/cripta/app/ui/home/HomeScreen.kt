@@ -128,6 +128,10 @@ fun HomeScreen(
     val peopleBlurred by vm.peopleBlurred.collectAsStateWithLifecycle()
     // Blurred faces stay blurred until the row is touched once (per visit).
     var peopleRevealed by remember { mutableStateOf(false) }
+    // ...and blur again after 30 s: shown once in public, they do not stay on screen.
+    androidx.compose.runtime.LaunchedEffect(peopleRevealed) {
+        if (peopleRevealed) { kotlinx.coroutines.delay(30_000); peopleRevealed = false }
+    }
     val summary by vm.summary.collectAsStateWithLifecycle()
     val display by vm.display.collectAsStateWithLifecycle()
     val coverVersions by vm.coverVersions.collectAsStateWithLifecycle()
