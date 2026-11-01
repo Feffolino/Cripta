@@ -93,6 +93,8 @@ fun TagPill(
     onLongClickLabel: String? = null,
     /** TalkBack text for the state; defaults to Italian names of [state]. */
     stateLabel: String? = null,
+    /** The tag's own icon ([com.cripta.app.ui.tagicons.TagIcons] name), before the text. */
+    tagIcon: String? = null,
 ) {
     // With tag colours off (Settings › Etichette) every tag takes the accent, here for every screen.
     val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
@@ -160,11 +162,18 @@ fun TagPill(
         }
         if (lead != null) {
             Icon(lead, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(iconSize))
-        } else if (size != TagPillSize.Small) {
+        } else if (size != TagPillSize.Small && tagIcon == null) {
             // The tag's own colour as a dot, so every tag is recognisable even when it is off.
             Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape).background(if (colored) fg else color))
         }
-        Text(
+        if (tagIcon != null) {
+            // Its room is kept while the icon loads, so the pill never grows under the finger.
+            val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tagIcon)
+            Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
+                if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize())
+            }
+        }
+        if (text.isNotEmpty()) Text(
             text,
             style = style,
             color = fg,

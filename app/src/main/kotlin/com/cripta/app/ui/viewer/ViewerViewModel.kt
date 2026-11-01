@@ -349,7 +349,8 @@ class ViewerViewModel @Inject constructor(
 
     fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
-    fun createTag(name: String, alias: String?) = viewModelScope.launch { repo.createTag(name, alias); _refresh.value++ }
+    fun createTag(name: String, alias: String?, icon: String? = null) = viewModelScope.launch { repo.createTag(name, alias, icon); _refresh.value++ }
+    fun setTagIcon(name: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(name, icon); _refresh.value++ }
 
     fun download(file: FileEntity) {
         // Run decryption in the foreground service so it survives backgrounding and shows progress.

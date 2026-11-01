@@ -667,6 +667,7 @@ fun ViewerScreen(
                                 size = com.cripta.app.ui.components.TagPillSize.Large,
                                 state = if (on) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
                                 onImage = true,
+                                tagIcon = t.icon,
                                 leadingIcon = if (t.pinned) Icons.Filled.PushPin else null,
                                 onClick = { chromeTouch++; vm.toggleTag(qf.id, t.id) },
                                 onClickLabel = if (on) "Togli" else "Aggiungi",
@@ -2357,13 +2358,17 @@ private fun DetailsSheet(
             initialColor = t?.color,
             onPinned = if (t != null) ({ p -> vm.setTagPinned(name, p) }) else null,
             initialPinned = t?.pinned == true,
+            initialIcon = t?.icon,
+            onIcon = if (t != null) ({ i -> vm.setTagIcon(name, i) }) else null,
         )
     }
     if (creating) {
+        var newIcon by remember { mutableStateOf<String?>(null) }
         com.cripta.app.ui.vault.LabelEditorDialog(
             title = "Nuova etichetta",
+            onIcon = { newIcon = it },
             onConfirm = { name, alias ->
-                vm.createTag(name, alias)
+                vm.createTag(name, alias, newIcon)
                 vm.setTags(file.id, (onFile + name).distinct())
                 creating = false
             },

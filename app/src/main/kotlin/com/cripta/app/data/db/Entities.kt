@@ -121,6 +121,8 @@ data class TagEntity(
     val pinned: Boolean = false,
     /** When the tag was last assigned to a file (epoch ms), for the "Recenti" row; null = never. */
     val lastUsedAt: Long? = null,
+    /** Icon shown with the tag (a [com.cripta.app.ui.tagicons.TagIcons] name); null = none. */
+    val icon: String? = null,
 )
 
 @Entity(
@@ -309,6 +311,10 @@ data class PersonEntity(
     val createdAt: Long,
     /** Starred: listed first everywhere and shown on Home. */
     val favorite: Boolean = false,
+    /** The user's notes on the person's profile. */
+    val notes: String = "",
+    /** Links on the person's profile, one per line. */
+    val links: String = "",
 )
 
 /** A media the user added to a person by hand although none of its faces is theirs (or none was found). */

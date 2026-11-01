@@ -78,6 +78,9 @@ interface TagDao {
     @Query("UPDATE tags SET alias = :alias WHERE name = :name")
     suspend fun setAlias(name: String, alias: String?)
 
+    @Query("UPDATE tags SET icon = :icon WHERE name = :name")
+    suspend fun setIcon(name: String, icon: String?)
+
     @Query("UPDATE tags SET pinned = :pinned WHERE name = :name")
     suspend fun setPinned(name: String, pinned: Boolean)
 
@@ -484,6 +487,9 @@ interface FaceDao {
 
     @Query("UPDATE persons SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
+
+    @Query("UPDATE persons SET notes = :notes, links = :links WHERE id = :id")
+    suspend fun setProfile(id: Long, notes: String, links: String)
 
     @Query("UPDATE persons SET favorite = :favorite WHERE id = :id")
     suspend fun setFavorite(id: Long, favorite: Boolean)

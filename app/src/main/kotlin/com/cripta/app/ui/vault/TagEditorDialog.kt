@@ -67,9 +67,10 @@ private fun TagChip(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     color: androidx.compose.ui.graphics.Color,
+    icon: String? = null,
 ) {
     com.cripta.app.ui.components.TagPill(
-        label, color,
+        label, color, tagIcon = icon,
         size = com.cripta.app.ui.components.TagPillSize.Medium,
         state = if (selected) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
         base = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -130,6 +131,7 @@ internal fun TagSections(
                     onClick = { onToggle(name) },
                     onLongClick = onLongPress?.let { f -> { f(name) } },
                     color = t?.let { com.cripta.app.ui.theme.tagColor(it) } ?: com.cripta.app.ui.theme.tagColor(name),
+                    icon = t?.icon,
                 )
             }
         }
@@ -173,8 +175,13 @@ fun LabelEditorDialog(
     initialPinned: Boolean = false,
     /** False when the name can't be changed from here: it is shown as text instead of a field. */
     nameEditable: Boolean = true,
+    /** When set, an icon can be chosen (null = none) and the choice is reported here. */
+    onIcon: ((String?) -> Unit)? = null,
+    initialIcon: String? = null,
 ) {
     var pinnedState by remember { mutableStateOf(initialPinned) }
+    var icon by remember { mutableStateOf(initialIcon) }
+    var pickingIcon by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf(initialName) }
     var alias by remember { mutableStateOf(initialAlias) }
     var color by remember { mutableStateOf(initialColor) }
@@ -222,6 +229,9 @@ fun LabelEditorDialog(
                         }
                     }
                 }
+                if (onIcon != null) {
+                    com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true })
+                }
                 if (onPinned != null) {
                     Row(
                         Modifier.fillMaxWidth().toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it }),
@@ -258,12 +268,17 @@ fun LabelEditorDialog(
                 onClick = {
                     onColor?.invoke(color)
                     onPinned?.invoke(pinnedState)
+                    onIcon?.invoke(icon)
                     onConfirm(name.trim(), alias.trim().ifEmpty { null })
                 },
             ) { Text("Salva") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } },
     )
+    if (pickingIcon) {
+        com.cripta.app.ui.tagicons.TagIconPicker(tagName = name, selected = icon,
+            onPick = { icon = it; pickingIcon = false }, onDismiss = { pickingIcon = false })
+    }
 }
 
 /**
@@ -277,11 +292,12 @@ fun TagEditorDialog(
     initialSelected: List<String>,
     onConfirm: (List<String>) -> Unit,
     onSetAlias: (String, String?) -> Unit,
-    onCreateTag: (name: String, alias: String?) -> Unit,
+    onCreateTag: (name: String, alias: String?, icon: String?) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
     onSetColor: ((name: String, color: Int?) -> Unit)? = null,
     onSetPinned: ((name: String, pinned: Boolean) -> Unit)? = null,
+    onSetIcon: ((name: String, icon: String?) -> Unit)? = null,
 ) {
     val selected: SnapshotStateList<String> = remember {
         initialSelected.map { it.trim() }.filter { it.isNotEmpty() }.toMutableStateList()
@@ -340,15 +356,19 @@ fun TagEditorDialog(
             initialColor = t?.color,
             onPinned = if (t != null && onSetPinned != null) ({ p -> onSetPinned(name, p) }) else null,
             initialPinned = t?.pinned == true,
+            initialIcon = t?.icon,
+            onIcon = if (t != null && onSetIcon != null) ({ i -> onSetIcon(name, i) }) else null,
             nameEditable = false,
         )
     }
 
     if (creating) {
+        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = "Nuova etichetta",
+            onIcon = { newIcon = it },
             onConfirm = { name, alias ->
-                onCreateTag(name, alias)
+                onCreateTag(name, alias, newIcon)
                 if (selected.none { it.equals(name, ignoreCase = true) }) selected.add(name)
                 creating = false
             },
@@ -367,7 +387,7 @@ fun BatchTagDialog(
     count: Int,
     allTags: List<TagEntity>,
     onConfirm: (List<String>) -> Unit,
-    onCreateTag: (name: String, alias: String?) -> Unit,
+    onCreateTag: (name: String, alias: String?, icon: String?) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
     /** When set, a "Rimuovi" mode is offered and its choice is reported here. */
@@ -438,10 +458,12 @@ fun BatchTagDialog(
     )
 
     if (creating) {
+        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = "Nuova etichetta",
+            onIcon = { newIcon = it },
             onConfirm = { name, alias ->
-                onCreateTag(name, alias)
+                onCreateTag(name, alias, newIcon)
                 if (chosen.none { it.equals(name, ignoreCase = true) }) chosen.add(name)
                 creating = false
             },

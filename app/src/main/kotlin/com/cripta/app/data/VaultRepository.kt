@@ -922,17 +922,23 @@ class VaultRepository @Inject constructor(
         !has
     }
 
-    suspend fun createTag(name: String, alias: String? = null) = withContext(Dispatchers.IO) {
+    suspend fun createTag(name: String, alias: String? = null, icon: String? = null) = withContext(Dispatchers.IO) {
         val n = name.trim()
         if (n.isEmpty()) return@withContext
         val a = alias?.trim()?.ifEmpty { null }
-        val id = db.tagDao().insert(TagEntity(name = n, alias = a))
-        // Tag already existed (insert ignored): just refresh its alias if one was provided.
+        val i = icon?.ifBlank { null }
+        val id = db.tagDao().insert(TagEntity(name = n, alias = a, icon = i))
+        // Tag already existed (insert ignored): just refresh its alias / icon if one was provided.
         if (id == -1L && a != null) db.tagDao().setAlias(n, a)
+        if (id == -1L && i != null) db.tagDao().setIcon(n, i)
         notifyChanged()
     }
 
     /** Set a tag's colour (null = automatic). */
+    suspend fun setTagIcon(tagName: String, icon: String?) = withContext(Dispatchers.IO) {
+        db.tagDao().setIcon(tagName, icon?.ifBlank { null }); notifyChanged()
+    }
+
     suspend fun setTagColor(tagId: Long, color: Int?) = withContext(Dispatchers.IO) {
         db.tagDao().setColor(tagId, color); notifyChanged()
     }

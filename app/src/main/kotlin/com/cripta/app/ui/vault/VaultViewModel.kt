@@ -603,8 +603,10 @@ class VaultViewModel @Inject constructor(
         fileIds.forEach { repo.addTags(it, tagNames) }    }
 
     /** Create a tag (optionally with an emoji/acronym alias) up front. */
-    fun createTag(name: String, alias: String?) = viewModelScope.launch {
-        repo.createTag(name, alias)    }
+    fun createTag(name: String, alias: String?, icon: String? = null) = viewModelScope.launch {
+        repo.createTag(name, alias, icon)    }
+
+    fun setTagIcon(tagName: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(tagName, icon) }
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
         repo.renameFile(fileId, newName)    }

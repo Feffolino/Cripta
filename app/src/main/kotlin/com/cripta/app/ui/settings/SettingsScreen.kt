@@ -325,6 +325,7 @@ fun SettingsScreen(
                                                 if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
                                                 size = com.cripta.app.ui.components.TagPillSize.Medium,
                                                 base = MaterialTheme.colorScheme.background,
+                                                tagIcon = tag.icon,
                                                 leadingIcon = if (tag.pinned) androidx.compose.material.icons.Icons.Filled.PushPin else null,
                                                 onClick = { editTag = tag },
                                                 onClickLabel = "Modifica nome, alias e colore",
@@ -937,10 +938,12 @@ fun SettingsScreen(
     }
     if (addTag) {
         var newColor by remember { mutableStateOf<Int?>(null) }
+        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = "Nuova etichetta",
             onColor = { newColor = it },
-            onConfirm = { name, alias -> vm.createTag(name, alias, newColor); addTag = false },
+            onIcon = { newIcon = it },
+            onConfirm = { name, alias -> vm.createTag(name, alias, newColor, newIcon); addTag = false },
             onDismiss = { addTag = false },
         )
     }
@@ -965,6 +968,8 @@ fun SettingsScreen(
             onColor = { vm.setTagColor(tag.id, it) },
             initialPinned = tag.pinned,
             onPinned = { vm.setTagPinned(tag.name, it) },
+            initialIcon = tag.icon,
+            onIcon = { vm.setTagIcon(tag.name, it) },
             onConfirm = { name, alias -> vm.editTag(tag.id, name, alias); editTag = null },
             onDismiss = { editTag = null },
         )

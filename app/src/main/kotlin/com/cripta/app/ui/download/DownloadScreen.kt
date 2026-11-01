@@ -300,7 +300,7 @@ fun DownloadScreen(
                     } else {
                         FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            chosen.forEach { t -> TagPill(tagText(t), tagColor(t), base = MaterialTheme.colorScheme.background) }
+                            chosen.forEach { t -> TagPill(tagText(t), tagColor(t), base = MaterialTheme.colorScheme.background, tagIcon = t.icon) }
                         }
                     }
                 }
@@ -585,7 +585,7 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
                 tags.forEach { t ->
                     val sel = t.id in chosen
                     TagPill(
-                        tagText(t), tagColor(t),
+                        tagText(t), tagColor(t), tagIcon = t.icon,
                         size = TagPillSize.Medium,
                         state = if (sel) TagPillState.On else TagPillState.Off,
                         base = MaterialTheme.colorScheme.surfaceContainerLow,
