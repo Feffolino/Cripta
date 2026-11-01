@@ -61,6 +61,10 @@ data class DisplayPrefs(
     val recentTagsCount: Int = 6,
     /** Viewer: quick-tag bar (pinned + recent tags, one tap to toggle). */
     val viewerQuickTags: Boolean = true,
+    /** The faces of the people in a media, top-left on its cover. */
+    val coverPeople: Boolean = true,
+    /** Their size: 0 small, 1 medium, 2 large. */
+    val coverPeopleSize: Int = 1,
 )
 
 /**
@@ -188,6 +192,8 @@ class SettingsStore @Inject constructor(
     private val tagColorsKey = booleanPreferencesKey("tag_colors")
     private val defaultTagColorKey = intPreferencesKey("default_tag_color")
     private val durationBadgeKey = booleanPreferencesKey("duration_badge")
+    private val coverPeopleKey = booleanPreferencesKey("cover_people")
+    private val coverPeopleSizeKey = intPreferencesKey("cover_people_size")
     // The 4K/HD/SD cover badge is gone; the key stays only so a reset clears the old value.
     private val qualityBadgeKey = booleanPreferencesKey("quality_badge")
     private val statsStripKey = booleanPreferencesKey("stats_strip")
@@ -262,6 +268,8 @@ class SettingsStore @Inject constructor(
                 tagColors = p[tagColorsKey] ?: true,
                 defaultTagColor = p[defaultTagColorKey],
                 showDurationBadge = p[durationBadgeKey] ?: true,
+                coverPeople = p[coverPeopleKey] ?: true,
+                coverPeopleSize = (p[coverPeopleSizeKey] ?: 1).coerceIn(0, 2),
                 showStatsStrip = p[statsStripKey] ?: true,
                 resumePlayback = p[resumeKey] ?: true,
                 showRecentTags = p[recentTagsKey] ?: true,
@@ -330,6 +338,8 @@ class SettingsStore @Inject constructor(
         context.dataStore.edit { if (argb == null) it.remove(defaultTagColorKey) else it[defaultTagColorKey] = argb }
     }
     suspend fun setShowDurationBadge(v: Boolean) { context.dataStore.edit { it[durationBadgeKey] = v } }
+    suspend fun setCoverPeople(v: Boolean) { context.dataStore.edit { it[coverPeopleKey] = v } }
+    suspend fun setCoverPeopleSize(v: Int) { context.dataStore.edit { it[coverPeopleSizeKey] = v.coerceIn(0, 2) } }
     suspend fun setShowStatsStrip(v: Boolean) { context.dataStore.edit { it[statsStripKey] = v } }
     suspend fun setSeekStep(v: Int) { context.dataStore.edit { it[seekStepKey] = v } }
     suspend fun setGestureControls(v: Boolean) { context.dataStore.edit { it[gestureKey] = v } }
@@ -431,7 +441,8 @@ class SettingsStore @Inject constructor(
     suspend fun resetPage(page: String) {
         val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
-                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, durationBadgeKey, qualityBadgeKey)
+                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, durationBadgeKey, qualityBadgeKey,
+                coverPeopleKey, coverPeopleSizeKey)
             "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey,
                 recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "VISUALIZZATORE" -> listOf(resumeKey, videoLoopKey, videoMutedKey,

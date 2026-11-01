@@ -161,6 +161,8 @@ class SettingsViewModel @Inject constructor(
     fun setTagColors(v: Boolean) = viewModelScope.launch { store.setTagColors(v) }
     fun setDefaultTagColor(argb: Int?) = viewModelScope.launch { store.setDefaultTagColor(argb) }
     fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
+    fun setCoverPeople(v: Boolean) = viewModelScope.launch { store.setCoverPeople(v) }
+    fun setCoverPeopleSize(v: Int) = viewModelScope.launch { store.setCoverPeopleSize(v) }
     fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
     /** Page requested from another screen (Home "Strumenti", scan notification). */
     val requestedPage: StateFlow<String?> = nav.page
