@@ -122,9 +122,9 @@ private fun NavBackStackEntry.isViewer() = destination.route?.startsWith("viewer
 // Between tabs: a short drift towards the tab chosen in the bar while the pages cross-fade, so
 // the switch says "next to it", not "on top of it".
 private fun tabEnter(dir: Int): EnterTransition =
-    fadeIn(tween(220, 60, Motion.EaseOutQuart)) + slideInHorizontally(tween(280, 0, Motion.EaseOutQuint)) { w -> dir * w / 14 }
+    fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> dir * w / 14 }
 private fun tabExit(dir: Int): ExitTransition =
-    fadeOut(tween(110, 0, Motion.EaseOutQuart)) + slideOutHorizontally(tween(200, 0, Motion.EaseOutQuart)) { w -> -dir * w / 20 }
+    fadeOut(Motion.exit(Motion.SHORT)) + slideOutHorizontally(Motion.exit(Motion.MEDIUM)) { w -> -dir * w / 20 }
 
 // Z-axis for the player: it comes forward from slightly behind, the page recedes towards the
 // viewer. Pop is the exact reverse.
@@ -140,11 +140,11 @@ private val popExit: ExitTransition =
 // Shared X axis for pages (people, a profile, favourites, a note): the new one slides in from
 // the right over a fading page that moves a little left; Back reverses it.
 private val pageEnter: EnterTransition =
-    fadeIn(tween(Motion.LONG, 40, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> w / 8 }
+    fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> w / 8 }
 private val pageExit: ExitTransition =
     fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -w / 12 }
 private val pagePopEnter: EnterTransition =
-    fadeIn(tween(Motion.LONG, 40, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> -w / 12 }
+    fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> -w / 12 }
 private val pagePopExit: ExitTransition =
     fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> w / 8 }
 

@@ -2066,7 +2066,8 @@ private fun Filmstrip(
                 val left = info.offset.toFloat()
                 val elapsed = (now - start) / 1_000_000L
                 if (kotlin.math.abs(left) < 0.5f && elapsed > Motion.MEDIUM) break
-                if (elapsed > 1_500) { scrollBy(left); break }
+                // Never longer than the longest motion step: whatever is left is covered at once.
+                if (elapsed > Motion.LONG) { scrollBy(left); break }
                 // Exponential approach, the same pace whatever the frame rate.
                 val k = 1f - kotlin.math.exp(-((now - last) / 1_000_000f) / 70f)
                 last = now

@@ -121,7 +121,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         }
         Text("L'analisi trova i volti; sei tu a dire chi sono, dai dettagli di ogni media.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             Text("Elimina volti trovati per errore…")
         }
         Row {
