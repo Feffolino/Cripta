@@ -109,13 +109,25 @@ private val tabRoutes = tabs.map { it.route }.toSet()
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boolean =
     initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
 
-// Fade-through between tabs: the old one leaves fast, the new one arrives after it, barely scaled.
-private val tabEnter: EnterTransition =
-    fadeIn(tween(210, 90, Motion.EaseOutQuart)) + scaleIn(tween(210, 90, Motion.EaseOutQuart), initialScale = 0.98f)
-private val tabExit: ExitTransition = fadeOut(tween(90, 0, Motion.EaseOutQuart))
+/** +1 when the new tab sits right of the old one in the bar, -1 when left. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabDirection(): Int {
+    val from = tabs.indexOfFirst { it.route == initialState.destination.route }
+    val to = tabs.indexOfFirst { it.route == targetState.destination.route }
+    return if (to >= from) 1 else -1
+}
 
-// Z-axis for pushed screens (viewer, note, favourites…): the new screen comes forward from
-// slightly behind, the old one recedes towards the viewer. Pop is the exact reverse.
+/** The player (and its media) opens in depth; every other page slides along the reading direction. */
+private fun NavBackStackEntry.isViewer() = destination.route?.startsWith("viewer") == true
+
+// Between tabs: a short drift towards the tab chosen in the bar while the pages cross-fade, so
+// the switch says "next to it", not "on top of it".
+private fun tabEnter(dir: Int): EnterTransition =
+    fadeIn(tween(220, 60, Motion.EaseOutQuart)) + slideInHorizontally(tween(280, 0, Motion.EaseOutQuint)) { w -> dir * w / 14 }
+private fun tabExit(dir: Int): ExitTransition =
+    fadeOut(tween(110, 0, Motion.EaseOutQuart)) + slideOutHorizontally(tween(200, 0, Motion.EaseOutQuart)) { w -> -dir * w / 20 }
+
+// Z-axis for the player: it comes forward from slightly behind, the page recedes towards the
+// viewer. Pop is the exact reverse.
 private val pushEnter: EnterTransition =
     fadeIn(Motion.enter(Motion.LONG)) + scaleIn(Motion.enter(Motion.LONG), initialScale = 0.94f)
 private val pushExit: ExitTransition =
@@ -124,6 +136,17 @@ private val popEnter: EnterTransition =
     fadeIn(Motion.enter(Motion.LONG)) + scaleIn(Motion.enter(Motion.LONG), initialScale = 1.03f)
 private val popExit: ExitTransition =
     fadeOut(Motion.exit(Motion.LONG)) + scaleOut(Motion.exit(Motion.LONG), targetScale = 0.94f)
+
+// Shared X axis for pages (people, a profile, favourites, a note): the new one slides in from
+// the right over a fading page that moves a little left; Back reverses it.
+private val pageEnter: EnterTransition =
+    fadeIn(tween(Motion.LONG, 40, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> w / 8 }
+private val pageExit: ExitTransition =
+    fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -w / 12 }
+private val pagePopEnter: EnterTransition =
+    fadeIn(tween(Motion.LONG, 40, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> -w / 12 }
+private val pagePopExit: ExitTransition =
+    fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> w / 8 }
 
 @Composable
 fun AppRoot(
@@ -426,11 +449,12 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                     if (showBar && landscape) Modifier.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Start))
                     else Modifier,
                 ),
-                // Tabs are siblings (fade-through); pushed screens move in depth (Z-axis).
-                enterTransition = { if (isTabSwitch()) tabEnter else pushEnter },
-                exitTransition = { if (isTabSwitch()) tabExit else pushExit },
-                popEnterTransition = { if (isTabSwitch()) tabEnter else popEnter },
-                popExitTransition = { if (isTabSwitch()) tabExit else popExit },
+                // Tabs are siblings (fade-through with a drift); the player moves in depth (Z-axis);
+                // other pages slide along X.
+                enterTransition = { when { isTabSwitch() -> tabEnter(tabDirection()); targetState.isViewer() -> pushEnter; else -> pageEnter } },
+                exitTransition = { when { isTabSwitch() -> tabExit(tabDirection()); targetState.isViewer() -> pushExit; else -> pageExit } },
+                popEnterTransition = { when { isTabSwitch() -> tabEnter(tabDirection()); initialState.isViewer() -> popEnter; else -> pagePopEnter } },
+                popExitTransition = { when { isTabSwitch() -> tabExit(tabDirection()); initialState.isViewer() -> popExit; else -> pagePopExit } },
             ) {
             composable("home") {
                 HomeScreen(
