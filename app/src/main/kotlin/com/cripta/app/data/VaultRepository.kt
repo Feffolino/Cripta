@@ -1435,7 +1435,7 @@ class VaultRepository @Inject constructor(
             put("tags", org.json.JSONArray().apply {
                 tags.forEach {
                     put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)
-                        .put("color", it.color ?: org.json.JSONObject.NULL)
+                        .put("color", it.color ?: org.json.JSONObject.NULL).put("icon", it.icon ?: org.json.JSONObject.NULL)
                         .put("pinned", it.pinned).put("order", it.orderIndex)
                         .put("lastUsedAt", it.lastUsedAt ?: org.json.JSONObject.NULL))
                 }
@@ -1517,6 +1517,8 @@ class VaultRepository @Inject constructor(
                     }
                     if (copied != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
                 }
+                // People, faces and intro/outro analysis (an older app stops before this part).
+                BackupExtras.write(db, fileIndex, out)
                 out.flush()
             }
         }
@@ -1620,6 +1622,7 @@ class VaultRepository @Inject constructor(
                     if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
                     // Optional (older backups have no colour).
                     if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
+                    if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, o.getString("icon"))
                     // Keeps the "Recenti" row as it was.
                     o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
                 }
@@ -1689,6 +1692,8 @@ class VaultRepository @Inject constructor(
                         }
                     }
                 }
+                // People, faces and intro/outro analysis, when the archive has them.
+                BackupExtras.read(db, newIds, inp)
                 // Folder covers chosen by the user (by the file's position in the archive).
                 for (k in 0 until fArr.length()) {
                     val o = fArr.getJSONObject(k)

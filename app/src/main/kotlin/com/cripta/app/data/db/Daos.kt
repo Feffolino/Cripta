@@ -245,6 +245,22 @@ interface IntroDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putPrint(p: AudioPrintEntity)
 
+    // Whole tables, for the backup.
+    @Query("SELECT * FROM audio_prints")
+    suspend fun backupPrints(): List<AudioPrintEntity>
+
+    @Query("SELECT * FROM signatures ORDER BY id")
+    suspend fun backupSignatures(): List<SignatureEntity>
+
+    @Query("SELECT * FROM signature_sounds ORDER BY id")
+    suspend fun backupSignatureSounds(): List<SignatureSoundEntity>
+
+    @Query("SELECT * FROM segment_rules ORDER BY id")
+    suspend fun backupRules(): List<SegmentRuleEntity>
+
+    @Query("SELECT * FROM rejected_prints ORDER BY id")
+    suspend fun backupRejected(): List<RejectedPrintEntity>
+
     @Query("SELECT * FROM audio_prints WHERE fileId = :fileId")
     suspend fun printsOf(fileId: String): List<AudioPrintEntity>
 
@@ -423,6 +439,13 @@ interface FaceDao {
 
     @Insert
     suspend fun addTrack(t: FaceTrackEntity): Long
+
+    /** Every face of [fileId] with its picture and embeddings (the backup). */
+    @Query("SELECT * FROM face_tracks WHERE fileId = :fileId")
+    suspend fun tracksOfFile(fileId: String): List<FaceTrackEntity>
+
+    @Query("SELECT * FROM person_media")
+    suspend fun allPersonMedia(): List<PersonMediaEntity>
 
     @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks")
     suspend fun allTrackRows(): List<TrackRow>
