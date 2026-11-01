@@ -256,6 +256,10 @@ private fun typeLabel(t: TypeFilter) = when (t) {
 /** Scroll-memory key of the vault root (folders use their id). */
 private const val ROOT_KEY = -1L
 
+/** Faces of the people in each media (cover track ids) and how to load one, for [ThumbBox]. */
+private class CoverPeople(val byFile: Map<String, List<Long>>, val crop: suspend (Long) -> android.graphics.Bitmap?)
+private val LocalCoverPeople = androidx.compose.runtime.staticCompositionLocalOf<CoverPeople?> { null }
+
 /** Grid key of the folders row (file keys are ids, so they never clash). */
 private const val FOLDERS_KEY = "folders"
 
@@ -481,6 +485,9 @@ fun VaultScreen(
     SideEffect { if (selection.isNotEmpty()) lastSelCount = selection.size }
     val shownSelCount = if (selection.isNotEmpty()) selection.size else lastSelCount
 
+    val coverPeopleMap by vm.coverPeople.collectAsState()
+    val coverPeople = remember(coverPeopleMap) { CoverPeople(coverPeopleMap) { vm.faceCrop(it) } }
+    androidx.compose.runtime.CompositionLocalProvider(LocalCoverPeople provides coverPeople) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbar) },
@@ -1116,6 +1123,7 @@ fun VaultScreen(
             )
         }
       }
+    }
     }
 
     if (showNewFolder) {
@@ -1782,11 +1790,14 @@ private fun ThumbBox(
                 Box(Modifier.fillMaxHeight().fillMaxWidth(shownWatched).background(MaterialTheme.colorScheme.primary))
             }
         }
-        if (favorite) {
-            com.cripta.app.ui.components.CoverStar(
-                Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 6.dp),
-                size = if (compact) 18.dp else 22.dp,
-            )
+        val people = if (!compact && display?.coverPeople != false && file != null) LocalCoverPeople.current else null
+        val faces = people?.byFile?.get(file?.id).orEmpty()
+        if (favorite || faces.isNotEmpty()) {
+            Row(Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (favorite) com.cripta.app.ui.components.CoverStar(Modifier, size = if (compact) 18.dp else 22.dp)
+                if (people != null && faces.isNotEmpty()) CoverFaces(faces, display?.coverPeopleSize ?: 1, people.crop)
+            }
         }
         if (compact) {
             if (duration != null) {
@@ -1797,6 +1808,20 @@ private fun ThumbBox(
             com.cripta.app.ui.components.CoverBadge(duration, Modifier.align(Alignment.TopEnd).padding(6.dp))
         }
     }
+}
+
+/** Up to three faces of the people in a media, each on the dark glass, then "+N". */
+@Composable
+private fun CoverFaces(ids: List<Long>, sizeStep: Int, crop: suspend (Long) -> android.graphics.Bitmap?) {
+    val size = when (sizeStep) { 0 -> 20.dp; 2 -> 34.dp; else -> 26.dp }
+    ids.take(3).forEach { id ->
+        val bmp by produceState<android.graphics.Bitmap?>(null, id) { value = crop(id) }
+        Box(Modifier.size(size).clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass).padding(1.5.dp)
+            .clip(CircleShape)) {
+            bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        }
+    }
+    if (ids.size > 3) com.cripta.app.ui.components.CoverBadge("+${ids.size - 3}", Modifier)
 }
 
 /** A tag on the list row: the shared pill, small. */

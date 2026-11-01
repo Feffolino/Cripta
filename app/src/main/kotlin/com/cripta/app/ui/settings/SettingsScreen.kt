@@ -296,6 +296,12 @@ fun SettingsScreen(
                             ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                             ToggleRow("Durata sulle copertine dei video", s.display.showDurationBadge,
                                 desc = "In alto a destra, es. 3:12.") { vm.setShowDurationBadge(it) }
+                            ToggleRow("Persone sulle copertine", s.display.coverPeople,
+                                desc = "In alto a sinistra, i volti delle persone che compaiono nel media (fino a 3).") { vm.setCoverPeople(it) }
+                            if (s.display.coverPeople) {
+                                ChoiceRow("Grandezza dei volti", listOf(0 to "Piccoli", 1 to "Medi", 2 to "Grandi"),
+                                    s.display.coverPeopleSize, indent = 0.dp) { vm.setCoverPeopleSize(it) }
+                            }
                         }
                     },
                     sec("Pulsanti") {
