@@ -208,11 +208,14 @@ class FaceRepository @Inject constructor(
      */
     private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>) {
         val rejections = dao.rejections().groupBy { it.trackId }
+        // Two faces the user gave to different people may now be one track: the first keeps it.
+        val placed = HashMap<Long, Long>()
         for (o in old) {
             val before = info(o)
             val match = added.filter { it.frames and o.frames != 0L }.map { it to maxPair(it, before) }
                 .filter { it.second >= CARRY }.maxByOrNull { it.second }?.first ?: continue
-            if (o.state == "manual" && o.personId != null) dao.place(match.id, o.personId, "carried", o.similarity)
+            if (o.state == "manual" && o.personId != null && placed.getOrPut(match.id) { o.personId } == o.personId)
+                dao.place(match.id, o.personId, "carried", o.similarity)
             for (r in rejections[o.id].orEmpty()) { dao.deleteRejection(o.id, r.personId); dao.addRejection(r.copy(trackId = match.id)) }
             dao.moveCover(o.id, match.id)
         }
@@ -677,6 +680,107 @@ class FaceRepository @Inject constructor(
         return Bitmap.createScaledBitmap(src, maxOf(1, (src.width * k).toInt()), maxOf(1, (src.height * k).toInt()), true).also { src.recycle() }
     }
 
+    // ---- One person split in two, faces that are not faces ----------------------------------
+
+    /**
+     * Join [rows] (faces of one media) into one: the face placed with a person, else the best one,
+     * keeps its id, picture and person and takes the others' frames, moments and embeddings; their
+     * rejections and covers move to it. Returns its id.
+     */
+    private suspend fun joinRows(rows: List<FaceTrackEntity>): Long {
+        val keep = rows.firstOrNull { it.personId != null && it.state != "suggested" } ?: rows.maxBy { it.quality }
+        val drop = rows.map { it.id }.filter { it != keep.id }
+        val times = rows.flatMap { r -> r.times.split(',').mapNotNull { it.toLongOrNull() }.ifEmpty { listOf(r.timeMs) } }.distinct().sorted()
+        val embeddings = FaceTracker.combine(rows.map { FaceTracker.Part(EmbeddingCodec.decode(it.embeddings), it.faceCount, it.quality) })
+        dao.joinedTrack(keep.id, rows.fold(0L) { m, r -> m or r.frames }, rows.sumOf { it.faceCount },
+            EmbeddingCodec.encode(embeddings), times.joinToString(","))
+        dao.moveTrackRejections(drop, keep.id)
+        dao.deleteRejectionsOfTracks(drop)
+        for (d in drop) dao.moveCover(d, keep.id)
+        dao.deleteTracks(drop)
+        return keep.id
+    }
+
+    /** The unassigned faces the analysis found in [rows] (one media) that are one person, joined. Returns how many went. */
+    private suspend fun tidyRows(rows: List<FaceTrackEntity>): Int {
+        val free = rows.filter { it.personId == null && it.frames != 0L && it.state != "manual" && it.state != "carried" }
+        if (free.size < 2) return 0
+        val groups = FaceTracker.groups(free.map { it.frames }, free.map { EmbeddingCodec.decode(it.embeddings).first() }, free.map { it.faceCount })
+        var n = 0
+        for (g in groups) if (g.size > 1) { joinRows(g.map { free[it] }); n += g.size - 1 }
+        return n
+    }
+
+    /**
+     * Media analysed before the tracks of one person were joined ([TIDY_FROM]): their unassigned
+     * faces of one person are joined from what is stored, without reading the media again, and the
+     * media count as analysed by this version. Returns how many faces went.
+     */
+    suspend fun tidyOld(): Int {
+        var n = 0
+        for (chunk in dao.scansOfVersion(TIDY_FROM).map { it.fileId }.chunked(50)) n += change {
+            var k = 0
+            for (f in chunk) k += tidyRows(dao.tracksOfFile(f))
+            dao.setScanVersion(chunk, VERSION)
+            k
+        }
+        return n
+    }
+
+    /** [tidyOld] for one media (its details are open). */
+    suspend fun tidy(fileId: String) {
+        if (dao.scanOf(fileId)?.version != TIDY_FROM) return
+        change { tidyRows(dao.tracksOfFile(fileId)); dao.setScanVersion(listOf(fileId), VERSION) }
+    }
+
+    /**
+     * "Stessa persona": faces of one media that are one person become one, with all their moments.
+     * Null when they are not of one media or belong to two different people.
+     */
+    suspend fun mergeFaces(trackIds: Collection<Long>): Undo? {
+        val before = dao.tracks(trackIds.distinct())
+        if (before.size < 2 || before.map { it.fileId }.distinct().size != 1) return null
+        if (before.filter { it.personId != null && it.state != "suggested" }.map { it.personId }.distinct().size > 1) return null
+        val ids = before.map { it.id }
+        val rejections = dao.rejectionsOfTracks(ids)
+        val covers = dao.persons().filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
+        val keep = change { joinRows(before) }
+        return {
+            change {
+                dao.deleteRejectionsOfTracks(listOf(keep))
+                before.forEach { dao.putTrack(it) }
+                rejections.forEach { dao.addRejection(it) }
+                covers.forEach { (p, t) -> dao.setCover(p, t) }
+            }
+        }
+    }
+
+    /** "Elimina": faces that are not a face (or not wanted) go, with their person's choices about them. */
+    suspend fun deleteFaces(trackIds: Collection<Long>): Undo {
+        val ids = trackIds.distinct()
+        val before = dao.tracks(ids)
+        val rejections = dao.rejectionsOfTracks(ids)
+        val all = dao.persons()
+        val covers = all.filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
+        val people = all.filter { p -> before.any { it.personId == p.id } }
+        change {
+            dao.deleteRejectionsOfTracks(ids)
+            dao.deleteTracks(ids)
+            for ((p, _) in covers) dao.setCover(p, null)
+            dao.deleteEmptyPersons()
+        }
+        return {
+            change {
+                // A person left with nothing went with the face: back first, with their id.
+                val now = dao.persons().map { it.id }.toSet()
+                people.filter { it.id !in now }.forEach { dao.putPerson(it) }
+                before.forEach { dao.putTrack(it) }
+                rejections.forEach { dao.addRejection(it) }
+                covers.forEach { (p, t) -> dao.setCover(p, t) }
+            }
+        }
+    }
+
     // ---- Clearing faces found by mistake ----------------------------------------------------
 
     /** What [clearDetected] would remove: media and faces analysed since [since] that nobody confirmed. */
@@ -789,7 +893,9 @@ class FaceRepository @Inject constructor(
         /** A face this alike to a person's faces (cosine, see [suggestionsFor]) is offered as theirs. */
         const val SUGGEST = 0.36f
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
-        const val VERSION = 3
+        const val VERSION = 4
+        /** Media analysed by this version have their faces of one person joined by [tidyOld] instead of analysed again. */
+        private const val TIDY_FROM = 3
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
         private const val CARRY = 0.6f
         private val VOLTO = Regex("Volto (\\d+)")

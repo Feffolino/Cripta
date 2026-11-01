@@ -96,6 +96,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
   list, most alike first, the face found next to the person's own, the whole frame with the face
   ringed (tap to play from there) and "È …" / "Non è lui/lei": nothing is added without a yes.
+  In a media's details a long press selects faces (ring and tick on the face): "Stessa persona"
+  joins faces of one person into one row, "Elimina" removes faces found by mistake; "Annulla"
+  stays under the list for a few seconds (the details sheet hides the snackbar).
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
