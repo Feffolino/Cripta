@@ -2,6 +2,7 @@ package com.cripta.app.data
 
 import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
+import com.cripta.app.data.db.DupPrintEntity
 import com.cripta.app.data.db.FaceRejectionEntity
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
@@ -19,8 +20,8 @@ import java.io.DataOutputStream
 
 /**
  * What a backup carries after the files: the people (faces found, names, notes, links, choices),
- * the face analysis of each media, and the intro/outro analysis (fingerprints, signatures, rules,
- * rejected sounds). Written as [MAGIC], a JSON index, then the binary parts (embeddings, face
+ * the face analysis of each media, the intro/outro analysis (fingerprints, signatures, rules,
+ * rejected sounds) and the duplicate search's fingerprints (a restored vault needs no new deep search). Written as [MAGIC], a JSON index, then the binary parts (embeddings, face
  * pictures, fingerprints) in the index's order, so nothing large is held in a string.
  *
  * Media are referred to by their position in the archive (ids change on restore). An app that
@@ -50,6 +51,7 @@ internal object BackupExtras {
         val sounds = intro.backupSignatureSounds()
         val rules = intro.backupRules()
         val rejected = intro.backupRejected()
+        val dupPrints = db.dupPrintDao().all().filter { it.fileId in fileIndex }
         fun origin(id: String): Any = fileIndex[id] ?: id
 
         val index = JSONObject()
@@ -108,6 +110,11 @@ internal object BackupExtras {
             .put("rejected", JSONArray().apply {
                 rejected.forEach { put(JSONObject().put("kind", it.kind).put("origin", origin(it.originFileId)).put("originName", it.originName)
                     .put("start", it.startMs).put("end", it.endMs).put("at", it.createdAt)) }
+            })
+            // A few bytes each: inline, so the binary parts (and older apps reading them) are unchanged.
+            .put("dupPrints", JSONArray().apply {
+                dupPrints.forEach { put(JSONObject().put("f", fileIndex[it.fileId]).put("size", it.sizeBytes).put("v", it.version)
+                    .put("h", java.util.Base64.getEncoder().encodeToString(it.hashes))) }
             })
             .toString().toByteArray()
 
@@ -228,6 +235,16 @@ internal object BackupExtras {
                 intro.addRejected(RejectedPrintEntity(kind = r.optString("kind"), originFileId = originOf(r.opt("origin")),
                     originName = r.optString("originName"), startMs = r.optLong("start"), endMs = r.optLong("end"),
                     hashes = inp.blob(), createdAt = r.optLong("at")))
+            }
+        }
+        // Checked like any stored fingerprint when used (size and version), so a stale one is made again.
+        o.optJSONArray("dupPrints")?.let { a ->
+            val dup = db.dupPrintDao()
+            for (i in 0 until a.length()) {
+                val d = a.getJSONObject(i)
+                val f = file(d.opt("f")) ?: continue
+                val hashes = runCatching { java.util.Base64.getDecoder().decode(d.optString("h")) }.getOrNull() ?: continue
+                dup.put(DupPrintEntity(f, d.optLong("size"), d.optInt("v"), hashes))
             }
         }
         return true
