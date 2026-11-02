@@ -170,6 +170,7 @@ fun SettingsScreen(
     val dupGroups by vm.dupGroups.collectAsStateWithLifecycle()
     val dupNotice by vm.dupNotice.collectAsStateWithLifecycle()
     val dupWaiting by vm.dupResultWaiting.collectAsStateWithLifecycle()
+    val dupLast by vm.dupLastResult.collectAsStateWithLifecycle()
     val dupUndo by vm.dupUndo.collectAsStateWithLifecycle()
     val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
@@ -720,7 +721,9 @@ fun SettingsScreen(
                 )
                 SettingsPage.SPAZIO -> listOf(
                     sec("File duplicati") {
-                        Section("File duplicati", "Trova file identici o media simili, confrontali e libera spazio. Tutto sul dispositivo.") {
+                        Section("File duplicati", "Trova le copie e i media simili, confrontali e libera spazio. Tutto avviene sul dispositivo.") {
+                            // How much of the vault the deep search already knows (it only reads the rest).
+                            val prints by androidx.compose.runtime.produceState<Pair<Int, Int>?>(null, dupScanning, dupLast) { value = vm.printStats() }
                             androidx.compose.animation.AnimatedContent(
                                 targetState = dupScanning,
                                 transitionSpec = { calmSwap() },
@@ -731,7 +734,7 @@ fun SettingsScreen(
                                 val (done, total) = dupProgress
                                 val scanEta = com.cripta.app.ui.components.rememberEta(
                                     if (total > 0) done.toFloat() / total else 0f, total > 0)
-                                Text((if (total > 0) "Scansione… $done/$total" else "Scansione…") + (scanEta?.let { " · $it" } ?: ""),
+                                Text((if (total > 0) "Ricerca in corso… $done/$total" else "Ricerca in corso…") + (scanEta?.let { " · $it" } ?: ""),
                                     style = MaterialTheme.typography.bodyMedium)
                                 if (total > 0) {
                                     val smooth by animateFloatAsState(
@@ -743,30 +746,47 @@ fun SettingsScreen(
                                 } else {
                                     androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                                 }
-                                Text("Puoi uscire dall'app: la scansione continua in background e ti avvisa con una notifica.",
+                                Text("Puoi uscire dall'app: la ricerca continua in background e ti avvisa con una notifica.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
-                                    com.cripta.app.ui.components.ButtonText("Interrompi scansione")
+                                    com.cripta.app.ui.components.ButtonText("Interrompi la ricerca")
                                 }
                             } else {
-                                dupWaiting?.let { r ->
-                                    Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
-                                        com.cripta.app.ui.components.ButtonText(
-                                            if (r.groups.isEmpty()) "Nessun doppione trovato"
-                                            else "Apri i ${r.groups.size} gruppi trovati"
-                                        )
+                                dupLast?.let { r ->
+                                    val deep = r.mode == com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR
+                                    Text("Ultima ricerca ${if (deep) "approfondita" else "rapida"}: " +
+                                        (if (r.groups.isEmpty()) "nessun gruppo" else if (r.groups.size == 1) "1 gruppo" else "${r.groups.size} gruppi") +
+                                        " su ${r.scanned} elementi.", style = MaterialTheme.typography.bodyMedium)
+                                    if (r.groups.isNotEmpty()) Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
+                                        com.cripta.app.ui.components.ButtonText(if (r.groups.size == 1) "Apri il gruppo trovato" else "Apri i ${r.groups.size} gruppi trovati")
                                     }
                                 }
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.weight(1f)) {
-                                        com.cripta.app.ui.components.ButtonText("Cerca identici")
-                                    }
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.weight(1f)) {
-                                        com.cripta.app.ui.components.ButtonText("Cerca simili")
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Ricerca rapida", style = MaterialTheme.typography.titleSmall)
+                                    Text("Copie identiche byte per byte, di qualsiasi tipo di file. Pochi secondi: usa l'impronta calcolata all'importazione.",
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
+                                        com.cripta.app.ui.components.ButtonText("Ricerca rapida")
                                     }
                                 }
-                                Text("Identici: file uguali byte per byte (qualsiasi tipo). Simili: foto e video uguali anche se ri-salvati, ri-codificati o ridimensionati.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Ricerca approfondita", style = MaterialTheme.typography.titleSmall)
+                                    val known = prints
+                                    Text("Anche foto e video uguali ma salvati di nuovo, ricompressi o ridimensionati. " + when {
+                                        known == null -> ""
+                                        known.second == 0 -> "Nessuna foto o video nel vault."
+                                        known.first >= known.second -> "Tutti i ${known.second} media sono già analizzati: pochi secondi."
+                                        known.first == 0 -> "La prima volta analizza tutti i ${known.second} media: qualche minuto, anche in background."
+                                        else -> "${known.first} di ${known.second} media già analizzati: legge solo i ${known.second - known.first} nuovi."
+                                    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
+                                        com.cripta.app.ui.components.ButtonText("Ricerca approfondita")
+                                    }
+                                }
+                                ToggleRow("Controlla i simili all'importazione", s.similarOnImport,
+                                    desc = "Ogni foto o video nuovo è confrontato con i media già analizzati: se somiglia a uno, ti chiede cosa fare. Circa un secondo in più per video.") {
+                                    vm.setSimilarOnImport(it)
+                                }
                             }
                             }
                             }
@@ -1236,7 +1256,7 @@ private val SEARCH_INDEX: List<SearchEntry> = listOf(
     SearchEntry("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT, "Originale dopo import"),
     SearchEntry("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.IMPORT, "Conversione in MP4"),
     SearchEntry("Backup cifrato", "backup esporta ripristina passphrase archivio copia", SettingsPage.BACKUP, "Backup cifrato"),
-    SearchEntry("File duplicati / media simili", "duplicati simili doppioni spazio", SettingsPage.SPAZIO, "File duplicati"),
+    SearchEntry("File duplicati / media simili", "duplicati simili doppioni spazio ricerca rapida approfondita importazione", SettingsPage.SPAZIO, "File duplicati"),
     SearchEntry("Cestino", "cestino eliminati ripristina", SettingsPage.SPAZIO, "Cestino"),
     SearchEntry("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO, "Aggiornamenti"),
 )

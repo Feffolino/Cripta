@@ -742,6 +742,14 @@ interface DupPrintDao {
     @Query("DELETE FROM dup_prints WHERE fileId = :fileId")
     suspend fun forget(fileId: String)
 
+    /** Live photos and videos, for "N di M già analizzati". */
+    @Query("SELECT COUNT(*) FROM files WHERE deletedAt IS NULL AND (mimeType LIKE 'image/%' OR mimeType LIKE 'video/%')")
+    suspend fun mediaCount(): Int
+
+    /** Live media with a fingerprint of their current content. */
+    @Query("SELECT COUNT(*) FROM dup_prints p JOIN files f ON f.id = p.fileId WHERE f.deletedAt IS NULL AND f.sizeBytes = p.sizeBytes")
+    suspend fun printedCount(): Int
+
     /** Rows of files no longer in the vault (destroyed some other way than [forget]). */
     @Query("DELETE FROM dup_prints WHERE fileId NOT IN (SELECT id FROM files)")
     suspend fun purgeOrphans()

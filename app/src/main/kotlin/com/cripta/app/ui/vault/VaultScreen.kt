@@ -1421,12 +1421,16 @@ fun VaultScreen(
     // rest of the same kind the same way. Dismissed, nothing changes for that file.
     val versionAsk = pendingVersions.firstOrNull()
     if (versionAsk != null && !importState.active && pendingOriginals.isEmpty()) {
-        val sameKind = pendingVersions.filter { it.identical == versionAsk.identical }
+        val sameKind = pendingVersions.filter { it.identical == versionAsk.identical && it.similar == versionAsk.similar }
         val more = sameKind.size - 1
         val single = versionAsk.previousIds.size == 1
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.keepVersionsSeparate(listOf(versionAsk)) },
-            title = { Text(if (versionAsk.identical) "Già nel vault?" else "Nuova versione?") },
+            title = { Text(when {
+                versionAsk.identical -> "Già nel vault?"
+                versionAsk.similar -> "Simile a uno del vault"
+                else -> "Nuova versione?"
+            }) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -1434,6 +1438,10 @@ fun VaultScreen(
                             versionAsk.identical ->
                                 "\"${versionAsk.newName}\" è identico a \"${versionAsk.previousName}\", già nel vault. " +
                                     (if (trashEnabled) "La copia appena importata va nel cestino." else "La copia appena importata viene eliminata.")
+                            versionAsk.similar ->
+                                "\"${versionAsk.newName}\" sembra lo stesso contenuto di \"${versionAsk.previousName}\", già nel vault " +
+                                    "(salvato di nuovo, ricompresso o ridimensionato). «Sostituisci»: il nuovo ne prende etichette, cartella, " +
+                                    "preferito e posizione; " + (if (trashEnabled) "il vecchio va nel cestino." else "il vecchio resta nel vault.")
                             single ->
                                 "\"${versionAsk.newName}\" ha lo stesso nome di \"${versionAsk.previousName}\", già nel vault, " +
                                     "ma un contenuto diverso. Se ne è la nuova versione, ne prende etichette, cartella, preferito e posizione; " +
@@ -1448,6 +1456,8 @@ fun VaultScreen(
                             when {
                                 versionAsk.identical && more == 1 -> "Dopo questo c'è un'altra copia identica di un file del vault."
                                 versionAsk.identical -> "Dopo questo ci sono altre $more copie identiche di file del vault."
+                                versionAsk.similar && more == 1 -> "Dopo questo c'è un altro media simile a uno del vault."
+                                versionAsk.similar -> "Dopo questo ci sono altri $more media simili a quelli del vault."
                                 more == 1 -> "Dopo questo c'è un altro file con lo stesso nome di uno del vault."
                                 else -> "Dopo questo ci sono altri $more file con lo stesso nome di file del vault."
                             },
@@ -1459,6 +1469,11 @@ fun VaultScreen(
                                 com.cripta.app.ui.components.ButtonText(if (versionAsk.identical) "Rimuovi tutte" else "Sostituisci tutti")
                             }
                         }
+                    }
+                    // Look-alikes may simply be unwanted: the new one can go instead.
+                    if (versionAsk.similar) TextButton(onClick = { vm.removeNewCopies(listOf(versionAsk)) }) {
+                        com.cripta.app.ui.components.ButtonText(if (trashEnabled) "Sposta il nuovo nel cestino" else "Elimina il nuovo",
+                            color = MaterialTheme.colorScheme.error)
                     }
                 }
             },

@@ -719,14 +719,24 @@ class ConversionService : Service() {
                         // Same name as a vault file: maybe an edited version, which would take the
                         // old one's place and tags. Never decided here: the user is asked when the
                         // import ends.
-                        try {
+                        val named = try {
                             val previous = repo.previousVersionsOf(f, batchStart)
                             if (previous.isNotEmpty()) repo.askNewVersion(VaultRepository.VersionMatch(
                                 f.id, f.originalName, previous.map { it.id }, previous.first().originalName))
+                            previous.isNotEmpty()
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             android.util.Log.e("ConversionService", "tag inheritance failed", e)
+                            false
+                        }
+                        // Not named like one: maybe the same photo or video re-saved or resized,
+                        // found by its fingerprint (kept, so the next "approfondita" scan has it).
+                        if (!named && runCatching { settings.settingsOnce().similarOnImport }.getOrDefault(true)) {
+                            val like = try { dupScanner.similarTo(f) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { emptyList() }
+                            like.firstOrNull()?.let { near ->
+                                repo.askNewVersion(VaultRepository.VersionMatch(f.id, f.originalName, listOf(near.id), near.originalName, similar = true))
+                            }
                         }
                     }
                 }
@@ -770,6 +780,7 @@ class ConversionService : Service() {
         if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
         // Short: the same text is the Hyper Island's line.
         if (fin.versionAsks > 0) append(" · ${fin.versionAsks} omonimi da confermare")
+        if (fin.similarAsks > 0) append(" · ${fin.similarAsks} simili da confermare")
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
     @Volatile private var lastImportSummary: String? = null
@@ -986,7 +997,7 @@ class ConversionService : Service() {
      */
     private suspend fun scanDuplicates(similar: Boolean) {
         val mode = if (similar) com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR else com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
-        val label = if (similar) "Ricerca media simili" else "Ricerca duplicati"
+        val label = if (similar) "Ricerca approfondita" else "Ricerca rapida"
         dupStore.start(mode)
         notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
         var last = 0L
@@ -1011,7 +1022,7 @@ class ConversionService : Service() {
                 r.groups.map { it.files } to r.filesScanned
             }
             dupStore.finish(com.cripta.app.data.dedup.DupScanStore.Result(mode, groups, scanned))
-            val title = if (groups.isEmpty()) "$label completata" else if (similar) "Media simili trovati" else "Duplicati trovati"
+            val title = if (groups.isEmpty()) "$label completata" else if (similar) "Media simili trovati" else "Copie identiche trovate"
             val text = if (groups.isEmpty()) "Nessun risultato su $scanned elementi"
                 else "${groups.size} gruppi su $scanned elementi"
             notifyResult(title, text, ResultKind.SCAN, openDuplicates = true,
