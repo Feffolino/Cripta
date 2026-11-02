@@ -88,6 +88,31 @@ class SimilarityPrintsTest {
         assertEquals(3, SimilarityPrints.maxDistance(prints, BooleanArray(3), intArrayOf(0, 1, 2)))
     }
 
+    @Test
+    fun flatPicturesAreNotInformative() {
+        assertEquals(false, SimilarityPrints.informative(longArrayOf(0L)))
+        assertEquals(false, SimilarityPrints.informative(longArrayOf(-1L)))
+        assertEquals(true, SimilarityPrints.informative(longArrayOf(0x0F0F0F0F0F0F0F0FL)))
+        // A video: most frames must say something.
+        val busy = 0x0123456789ABCDEFL
+        assertEquals(true, SimilarityPrints.informative(longArrayOf(busy, busy, busy, 0L, 0L)))
+        assertEquals(false, SimilarityPrints.informative(longArrayOf(busy, busy, 0L, 0L, 0L)))
+        assertEquals(false, SimilarityPrints.informative(LongArray(0)))
+    }
+
+    @Test
+    fun closestKeepsOnlyNearOnesNearestFirst() {
+        val print = longArrayOf(0L)
+        val candidates = listOf(
+            longArrayOf((1L shl 10) - 1),   // 10 bits away
+            longArrayOf(0xFFFFFFL),          // 24: too far
+            longArrayOf(1L),                 // 1
+            longArrayOf(0L, 0L),             // another length (a video): not comparable
+            longArrayOf(3L),                 // 2
+        )
+        assertEquals(listOf(2, 4, 0), SimilarityPrints.closest(print, candidates, 12))
+    }
+
     private fun grey(v: Int) = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
 
     /** The grouping as the scan did it before (lists, nullable distances), for comparison. */

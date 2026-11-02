@@ -282,10 +282,7 @@ class DuplicateScanner @Inject constructor(
         // other flat picture (black frames, blank pages, plain screenshots). Such items say nothing
         // about similarity and are left out, rather than grouped as "simili".
         val usable = media.indices.mapNotNull { i ->
-            hashes[i]?.takeIf { h ->
-                val informative = h.count { java.lang.Long.bitCount(it) in MIN_BITS..(64 - MIN_BITS) }
-                h.isNotEmpty() && informative * 2 > h.size
-            }?.let { i to it }
+            hashes[i]?.takeIf { SimilarityPrints.informative(it, MIN_BITS) }?.let { i to it }
         }
         val kept = usable.map { it.first }
         val prints = usable.map { it.second }
@@ -315,6 +312,55 @@ class DuplicateScanner @Inject constructor(
         throw e
     } catch (e: Exception) {
         null
+    }
+
+    /**
+     * Media already in the vault that look like [file] (just imported), most alike first, with the
+     * thresholds of [scanSimilar]. [file] is fingerprinted now and kept, so the next scan has it;
+     * the vault side is the stored fingerprints only, nothing else is decrypted. Media never
+     * fingerprinted yet are not found. A video the app's decoder cannot read is left to the scan
+     * (the retriever takes far too long for an import).
+     */
+    suspend fun similarTo(file: FileEntity): List<FileEntity> = withContext(Dispatchers.IO) {
+        val video = VaultRepository.isVideo(file.mimeType)
+        if (!video && !VaultRepository.isImage(file.mimeType)) return@withContext emptyList()
+        val dao = session.requireDb().dupPrintDao()
+        val rows = orNull { dao.all() }.orEmpty()
+        val version = versionOf(file)
+        val own = SimilarityPrints.cached(rows.firstOrNull { it.fileId == file.id }, file.id, file.sizeBytes, version)?.hashes
+            ?: run {
+                val print = try {
+                    if (video) videoFingerprint(file, retriever = false) else Print(imageDHash(file)?.let { longArrayOf(it) }, definite = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    Print(null, definite = false)
+                }
+                if (print.definite) orNull { dao.put(DupPrintEntity(file.id, file.sizeBytes, version, SimilarityPrints.encode(print.hashes))) }
+                print.hashes
+            }
+        if (own == null || !SimilarityPrints.informative(own, MIN_BITS)) return@withContext emptyList()
+        val others = rows.filter { it.fileId != file.id && it.version == version }.mapNotNull { r ->
+            SimilarityPrints.decode(r.hashes)?.takeIf { it.size == own.size && SimilarityPrints.informative(it, MIN_BITS) }?.let { r to it }
+        }
+        val limit = if (video) VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD else DEFAULT_SIMILARITY_THRESHOLD
+        val found = ArrayList<FileEntity>()
+        for (i in SimilarityPrints.closest(own, others.map { it.second }, limit)) {
+            if (found.size >= MAX_SIMILAR) break
+            val r = others[i].first
+            // Still that content, live, the same kind; byte-identical copies are the exact check's.
+            repo.fileById(r.fileId)?.takeIf {
+                it.deletedAt == null && it.sizeBytes == r.sizeBytes && VaultRepository.isVideo(it.mimeType) == video &&
+                    (it.contentHash == null || it.contentHash != file.contentHash)
+            }?.let { found += it }
+        }
+        found
+    }
+
+    /** Live photos and videos and how many have a fingerprint already (null while locked). */
+    suspend fun printStats(): Pair<Int, Int>? = withContext(Dispatchers.IO) {
+        val dao = session.dbOrNull()?.dupPrintDao() ?: return@withContext null
+        orNull { dao.printedCount() to dao.mediaCount() }
     }
 
     /** The version of the fingerprint [f] gets: a stored one made another way is made again. */
@@ -347,7 +393,7 @@ class DuplicateScanner @Inject constructor(
      * media server, as before, within [RETRIEVER_LIMIT_MS]. Unreadable (null hashes) if the video
      * can't be read or any frame is missing; not [Print.definite] when the time ran out.
      */
-    private suspend fun videoFingerprint(f: FileEntity): Print = coroutineScope {
+    private suspend fun videoFingerprint(f: FileEntity, retriever: Boolean = true): Print = coroutineScope {
         val channels = CopyOnWriteArrayList<SeekableByteChannel>()
         fun source() = ChannelMediaDataSource(repo.seekableChannel(f).also { channels += it }, f.sizeBytes)
         fun closeAll() = channels.forEach { runCatching { it.close() } }
@@ -357,6 +403,7 @@ class DuplicateScanner @Inject constructor(
         try {
             readerFingerprint(f, source())?.let { return@coroutineScope Print(it, definite = true) }
             coroutineContext.ensureActive()
+            if (!retriever) return@coroutineScope Print(null, definite = false)
             // The retriever blocks in the media server and may never give up on a broken file: past
             // the limit its channel is closed, so its reads fail and it returns.
             val timedOut = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -465,8 +512,9 @@ class DuplicateScanner @Inject constructor(
         private const val VIDEO_FRAMES = 5
         /** Per-frame Hamming tolerance; a video pair matches within VIDEO_FRAMES * this bits total. */
         private const val VIDEO_PER_FRAME_THRESHOLD = 10
-        /** A hash with fewer set (or unset) bits than this comes from a nearly flat picture. */
-        private const val MIN_BITS = 4
+        private const val MIN_BITS = SimilarityPrints.MIN_BITS
+        /** At most this many look-alikes named for one imported media. */
+        private const val MAX_SIMILAR = 5
         /** Media fingerprinted at once (each holds one small decoded picture or one video decoder). */
         private const val WORKERS = 3
         /** Longest side of a video frame read for its dHash (plenty for a 9x8 grid). */

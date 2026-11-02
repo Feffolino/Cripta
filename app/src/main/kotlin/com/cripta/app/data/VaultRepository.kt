@@ -131,6 +131,8 @@ class VaultRepository @Inject constructor(
         val failures: List<Pair<String, String>> = emptyList(),
         /** Imports named like a vault file, waiting for the user's choice ([pendingVersions]). */
         val versionAsks: Int = 0,
+        /** Imports that look like a vault photo or video, waiting for the user's choice. */
+        val similarAsks: Int = 0,
         /** Source uris imported successfully in the current run (all batches since the banner reset). */
         val importedUris: List<Uri> = emptyList(),
         /** Weight ([com.cripta.app.util.batchWeight]) of every file of the running batches, and of the finished ones. */
@@ -202,11 +204,13 @@ class VaultRepository @Inject constructor(
     /**
      * An import waiting for "Sostituisci / Tieni entrambi": the new file and the vault files it
      * would replace. [identical]: same bytes as them (a copy), so the choice is to remove the new
-     * file or keep both, nothing is inherited.
+     * file or keep both, nothing is inherited. [similar]: a photo or video that looks the same
+     * (re-saved, re-encoded, resized), found by its fingerprint.
      */
     data class VersionMatch(
         val newId: String, val newName: String, val previousIds: List<String>, val previousName: String,
         val identical: Boolean = false,
+        val similar: Boolean = false,
     )
 
     private val _pendingVersions = MutableStateFlow<List<VersionMatch>>(emptyList())
@@ -219,7 +223,8 @@ class VaultRepository @Inject constructor(
     /** [match] waits for the user's choice; a same-name one is counted in the import result too. */
     fun askNewVersion(match: VersionMatch) {
         _pendingVersions.update { it + match }
-        if (!match.identical) _importState.update { it.copy(versionAsks = it.versionAsks + 1) }
+        if (match.similar) _importState.update { it.copy(similarAsks = it.similarAsks + 1) }
+        else if (!match.identical) _importState.update { it.copy(versionAsks = it.versionAsks + 1) }
     }
 
     /** The user answered for these new files (see [applyNewVersion]). */

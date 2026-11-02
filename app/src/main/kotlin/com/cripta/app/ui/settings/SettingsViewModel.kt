@@ -176,6 +176,10 @@ class SettingsViewModel @Inject constructor(
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
     fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
     fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
+    fun setSimilarOnImport(v: Boolean) = viewModelScope.launch { store.setSimilarOnImport(v) }
+
+    /** (media with a fingerprint, photos and videos in the vault), or null while locked. */
+    suspend fun printStats(): Pair<Int, Int>? = scanner.printStats()
 
     /** Files in the trash, newest first. */
     val trashed: StateFlow<List<com.cripta.app.data.db.FileWithTags>> =
@@ -591,6 +595,9 @@ class SettingsViewModel @Inject constructor(
     val dupProgress: StateFlow<Pair<Int, Int>> =
         dupStore.state.map { it.done to it.total }.stateIn(viewModelScope, SharingStarted.Eagerly, 0 to 0)
     /** A finished scan the user hasn't opened yet (e.g. it completed in the background). */
+    /** The last scan's result, seen or not (it can be opened again until the app closes). */
+    val dupLastResult: StateFlow<com.cripta.app.data.dedup.DupScanStore.Result?> =
+        dupStore.state.map { it.result }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val dupResultWaiting: StateFlow<com.cripta.app.data.dedup.DupScanStore.Result?> =
         dupStore.state.map { it.result?.takeIf { r -> !r.seen } }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     /** Set when this screen started the scan: open the results as soon as it finishes. */

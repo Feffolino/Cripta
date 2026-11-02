@@ -614,6 +614,20 @@ class VaultViewModel @Inject constructor(
         repo.clearImportDuplicates(listOf(f.id))
     }
 
+    /**
+     * "Elimina la nuova" for media that look like vault ones: the new files go where any deletion
+     * goes (the trash when it is on), so a wrong answer can be undone.
+     */
+    fun removeNewCopies(matches: List<VaultRepository.VersionMatch>) {
+        repo.resolveNewVersions(matches.map { it.newId })
+        launchBulk("removeNewCopies") {
+            matches.forEach { m ->
+                val f = repo.fileById(m.newId)?.takeIf { it.deletedAt == null } ?: return@forEach
+                if (!repo.deleteOrTrash(f.id)) thumbs.evict(f.id)
+            }
+        }
+    }
+
     /** "Tieni entrambi": nothing changes, the new files stay where they were imported. */
     fun keepVersionsSeparate(matches: List<VaultRepository.VersionMatch>) =
         repo.resolveNewVersions(matches.map { it.newId })

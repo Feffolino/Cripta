@@ -64,6 +64,30 @@ internal object SimilarityPrints {
         return (r * 299 + g * 587 + b * 114) / 1000
     }
 
+    /**
+     * False for a (nearly) flat picture: its hash is ~all zeros, the same as every other flat
+     * picture (black frames, blank pages, plain screenshots), so it says nothing about similarity.
+     * A video needs most of its frames informative.
+     */
+    fun informative(hashes: LongArray, minBits: Int = MIN_BITS): Boolean {
+        val n = hashes.count { java.lang.Long.bitCount(it) in minBits..(64 - minBits) }
+        return hashes.isNotEmpty() && n * 2 > hashes.size
+    }
+
+    /**
+     * The indices of [candidates] within [limit] of [print] (same length only, so same modality),
+     * nearest first; ties keep their order.
+     */
+    fun closest(print: LongArray, candidates: List<LongArray>, limit: Int): List<Int> =
+        candidates.indices
+            .map { it to distance(print, false, candidates[it], false) }
+            .filter { (_, d) -> d in 0..limit }
+            .sortedBy { it.second }
+            .map { it.first }
+
+    /** A hash with fewer set (or unset) bits than this comes from a nearly flat picture. */
+    const val MIN_BITS = 4
+
     /** Total Hamming distance between [a] and [b], or -1 when they are not comparable. */
     fun distance(a: LongArray, aVideo: Boolean, b: LongArray, bVideo: Boolean): Int {
         if (aVideo != bVideo || a.size != b.size) return -1
