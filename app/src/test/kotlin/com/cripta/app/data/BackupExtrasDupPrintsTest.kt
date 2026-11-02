@@ -32,6 +32,7 @@ class BackupExtrasDupPrintsTest {
         from.dupPrintDao().put(DupPrintEntity("old-b", 200, 2, ByteArray(0)))
         // Not in the archive: left out.
         from.dupPrintDao().put(DupPrintEntity("gone", 300, 1, hashes))
+        from.dupPrintDao().putApart(listOf(com.cripta.app.data.db.DupApartEntity("old-a", "old-b"), com.cripta.app.data.db.DupApartEntity("gone", "old-a")))
         val bytes = ByteArrayOutputStream()
         DataOutputStream(bytes).use { BackupExtras.write(from, mapOf("old-a" to 0, "old-b" to 1), it) }
 
@@ -47,6 +48,8 @@ class BackupExtrasDupPrintsTest {
         assertArrayEquals(hashes, rows.getValue("new-a").hashes)
         // An unreadable media stays known as such.
         assertEquals(0, rows.getValue("new-b").hashes.size)
+        // "Non sono simili" follows too, only between files in the archive.
+        assertEquals(listOf("new-a|new-b"), to.dupPrintDao().apartPairs().map { it.a + "|" + it.b })
         from.close(); to.close()
     }
 }

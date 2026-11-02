@@ -171,6 +171,8 @@ fun SettingsScreen(
     val dupNotice by vm.dupNotice.collectAsStateWithLifecycle()
     val dupWaiting by vm.dupResultWaiting.collectAsStateWithLifecycle()
     val dupLast by vm.dupLastResult.collectAsStateWithLifecycle()
+    val dupFreed by vm.dupFreed.collectAsStateWithLifecycle()
+    val dupApart by vm.dupApart.collectAsStateWithLifecycle()
     val dupUndo by vm.dupUndo.collectAsStateWithLifecycle()
     val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
@@ -1034,12 +1036,17 @@ fun SettingsScreen(
             emptyText = "Analizzati $dupScannedCount elementi. Nessun media simile trovato.",
             notice = dupNotice,
             thumb = { vm.thumb(it) },
-            channelFor = { vm.channelFor(it) },
             imageBytes = { vm.imageBytes(it) },
-            onKeepOnly = { vm.keepOnly(it) },
-            onDelete = { vm.deleteDuplicate(it) },
+            onKeep = { vm.keepCopies(it) },
+            onNotSimilar = { vm.notSimilar(it) },
+            // As a face's frame: the media full screen in the viewer, swiping through the group.
+            onOpen = { ids, id -> vm.openPersonMedia(ids, id, null); onOpenFile(id) },
             onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
+            freed = dupFreed,
+            apart = dupApart,
+            initialPage = vm.lastSimilarPage,
+            onPage = { vm.lastSimilarPage = it },
             trashDays = if (s.trashEnabled) s.trashDays else null,
             canUndo = dupUndo.isNotEmpty(),
             onUndo = { vm.undoDuplicates() },

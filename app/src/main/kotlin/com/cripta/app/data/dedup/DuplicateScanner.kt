@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.SystemClock
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.db.DupApartEntity
 import com.cripta.app.data.db.DupPrintEntity
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.media.ChannelMediaDataSource
@@ -287,7 +288,12 @@ class DuplicateScanner @Inject constructor(
         val kept = usable.map { it.first }
         val prints = usable.map { it.second }
         val isVideo = BooleanArray(kept.size) { VaultRepository.isVideo(media[kept[it]].mimeType) }
-        val clusters = SimilarityPrints.group(prints, isVideo, imageThreshold, VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD) {
+        // Pairs the user said are not alike ("Non sono simili") never share a group.
+        orNull { dao.purgeApartOrphans() }
+        val apartPairs = orNull { dao.apartPairs() }.orEmpty().mapTo(HashSet()) { it.a + "|" + it.b }
+        val ids = kept.map { media[it].id }
+        val apart = { x: Int, y: Int -> apartPairs.isNotEmpty() && SimilarityPrints.pairKey(ids[x], ids[y]) in apartPairs }
+        val clusters = SimilarityPrints.group(prints, isVideo, imageThreshold, VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD, apart) {
             coroutineContext.ensureActive()
         }
         val groups = clusters.map { idxs ->
@@ -355,6 +361,13 @@ class DuplicateScanner @Inject constructor(
             }?.let { found += it }
         }
         found
+    }
+
+    /** "Non sono simili": no two of [fileIds] are grouped together again. */
+    suspend fun keepApart(fileIds: List<String>) = withContext(Dispatchers.IO) {
+        val ids = fileIds.distinct()
+        val pairs = ids.indices.flatMap { i -> (i + 1 until ids.size).map { j -> DupApartEntity(minOf(ids[i], ids[j]), maxOf(ids[i], ids[j])) } }
+        if (pairs.isNotEmpty()) session.requireDb().dupPrintDao().putApart(pairs)
     }
 
     /** Live photos and videos and how many have a fingerprint already (null while locked). */

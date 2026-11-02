@@ -124,6 +124,16 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   where "Da confermare" lists only faces like someone with faces in at least 2 media. The people
   grid selects as Cartelle (long press, drag over the others): star, "Unisci" (the user picks who
   stays), "Nascondi".
+- **Similar media** (Impostazioni › Duplicati e cestino, "Ricerca approfondita"): one group per
+  page, full screen, swiped up like "Da sistemare". The copy in view takes the free space (tap: the
+  viewer, full screen, swiping through the group); under it name and figures, never on the
+  picture. The copies in a row, each kept (ring and tick) or deleted (bin): a tap switches it and
+  puts it in view, a long press only shows it; the suggested one starts kept. Then the tags the
+  kept copy will have (those coming from deleted copies marked +), "Perché è consigliata" (the
+  suggested copy against another: "Conta di più", then "Anche", tags that never decide, the slide
+  comparison and both in the viewer), "Tieni N, elimina M" across the width and "Non sono
+  simili" (remembered: never grouped again). No confirmation with the trash on, "Annulla" at the
+  bottom; the last page says what was freed.
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go

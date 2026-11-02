@@ -753,4 +753,16 @@ interface DupPrintDao {
     /** Rows of files no longer in the vault (destroyed some other way than [forget]). */
     @Query("DELETE FROM dup_prints WHERE fileId NOT IN (SELECT id FROM files)")
     suspend fun purgeOrphans()
+
+    @Query("SELECT * FROM dup_apart")
+    suspend fun apartPairs(): List<DupApartEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun putApart(pairs: List<DupApartEntity>)
+
+    @Query("DELETE FROM dup_apart WHERE a = :fileId OR b = :fileId")
+    suspend fun forgetApart(fileId: String)
+
+    @Query("DELETE FROM dup_apart WHERE a NOT IN (SELECT id FROM files) OR b NOT IN (SELECT id FROM files)")
+    suspend fun purgeApartOrphans()
 }

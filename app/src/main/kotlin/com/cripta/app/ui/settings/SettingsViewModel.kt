@@ -722,6 +722,9 @@ class SettingsViewModel @Inject constructor(
         _dupGroups.value = buildGroups(r.groups, exact)
         _dupScannedCount.value = r.scanned
         _dupMode.value = if (exact) DupMode.EXACT else DupMode.SIMILAR
+        _dupFreed.value = 0L to 0
+        _dupApart.value = 0
+        lastSimilarPage = 0
         dupStore.markSeen()
     }
 
@@ -754,8 +757,15 @@ class SettingsViewModel @Inject constructor(
      * Keep [keepId] and delete every other copy of its group, moving their tags (plus favorite and
      * source link) onto the kept file so no organisation is lost.
      */
-    fun keepOnly(keepId: String) = launchHeld("keepOnly") {
-        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == keepId } } ?: return@launchHeld
+    fun keepOnly(keepId: String) = keepCopies(setOf(keepId))
+
+    /**
+     * Keep [keepIds] of their group and delete the other copies. The tags, favorite mark and link
+     * of the deleted ones go to the kept copy ranked first (the suggested one when it is kept).
+     */
+    fun keepCopies(keepIds: Set<String>) = launchHeld("keepCopies") {
+        val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id in keepIds } } ?: return@launchHeld
+        val keepId = group.candidates.first { it.file.id in keepIds }.file.id
         // The kept copy deleted or trashed since the scan: removing the others too would leave
         // no live copy at all (and the trash is purged after a while).
         val kept = repo.fileById(keepId)
@@ -764,8 +774,12 @@ class SettingsViewModel @Inject constructor(
             _dupNotice.value = "La copia da tenere non è più nel vault: nessuna copia eliminata"
             return@launchHeld
         }
-        val remove = unchangedSinceScan(group.candidates.filter { it.file.id != keepId })
+        val remove = unchangedSinceScan(group.candidates.filter { it.file.id !in keepIds })
+        if (remove.isEmpty()) return@launchHeld
+        val freedNow = group.candidates.filter { it.file.id in remove }.sumOf { it.file.sizeBytes }
         val moved = repo.mergeDuplicates(keepId, remove)
+        lastFreed = freedNow
+        _dupFreed.value = _dupFreed.value.let { (b, n) -> (b + freedNow) to (n + 1) }
         // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
         val trash = trashOn()
         if (!trash) remove.forEach { thumbs.evict(it) }
@@ -774,11 +788,30 @@ class SettingsViewModel @Inject constructor(
         dropFromResults(remove.toSet())
         val name = group.candidates.first { it.file.id == keepId }.file.originalName
         _dupNotice.value = buildString {
-            append("Tenuto \"$name\", ")
+            append(if (keepIds.size > 1) "Tenute ${keepIds.size} copie, " else "Tenuto \"$name\", ")
             append(if (remove.size == 1) "eliminata 1 copia" else "eliminate ${remove.size} copie")
             if (trash) append(" (nel cestino)")
             if (moved.isNotEmpty()) append(" · spostate ${moved.size} etichette")
         }
+    }
+
+    /** Space freed and groups resolved since the results were opened, for "Tutto sistemato". */
+    private val _dupFreed = kotlinx.coroutines.flow.MutableStateFlow(0L to 0)
+    val dupFreed: StateFlow<Pair<Long, Int>> = _dupFreed
+    private var lastFreed = 0L
+    /** Groups the user said are not alike since the results were opened. */
+    private val _dupApart = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val dupApart: StateFlow<Int> = _dupApart
+    /** The similar-media page in view: the same one again after a media opened from it. */
+    var lastSimilarPage = 0
+
+    /** "Non sono simili": the group leaves the results and its media are never grouped together again. */
+    fun notSimilar(fileIds: List<String>) = launchHeld("notSimilar") {
+        scanner.keepApart(fileIds)
+        _dupApart.value += 1
+        _dupUndo.value = emptyList()
+        dropFromResults(fileIds.toSet())
+        _dupNotice.value = "Segnati come non simili: non verranno più proposti insieme"
     }
 
     /** The results as they were before the last resolution, put back by [undoDuplicates]. */
@@ -803,6 +836,8 @@ class SettingsViewModel @Inject constructor(
         if (ids.isEmpty()) return@launchHeld
         _dupUndo.value = emptyList()
         ids.forEach { repo.restore(it) }
+        if (lastFreed > 0) _dupFreed.value = _dupFreed.value.let { (b, n) -> (b - lastFreed).coerceAtLeast(0) to (n - 1).coerceAtLeast(0) }
+        lastFreed = 0
         // The group comes back too, re-read (the kept copy has the tags it was given meanwhile).
         beforeResolution?.let { r ->
             _dupGroups.value = r.dup

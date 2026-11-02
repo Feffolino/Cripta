@@ -2,6 +2,7 @@ package com.cripta.app.data
 
 import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
+import com.cripta.app.data.db.DupApartEntity
 import com.cripta.app.data.db.DupPrintEntity
 import com.cripta.app.data.db.FaceRejectionEntity
 import com.cripta.app.data.db.FaceScanEntity
@@ -52,6 +53,7 @@ internal object BackupExtras {
         val rules = intro.backupRules()
         val rejected = intro.backupRejected()
         val dupPrints = db.dupPrintDao().all().filter { it.fileId in fileIndex }
+        val dupApart = db.dupPrintDao().apartPairs().filter { it.a in fileIndex && it.b in fileIndex }
         fun origin(id: String): Any = fileIndex[id] ?: id
 
         val index = JSONObject()
@@ -115,6 +117,9 @@ internal object BackupExtras {
             .put("dupPrints", JSONArray().apply {
                 dupPrints.forEach { put(JSONObject().put("f", fileIndex[it.fileId]).put("size", it.sizeBytes).put("v", it.version)
                     .put("h", java.util.Base64.getEncoder().encodeToString(it.hashes))) }
+            })
+            .put("dupApart", JSONArray().apply {
+                dupApart.forEach { put(JSONObject().put("a", fileIndex[it.a]).put("b", fileIndex[it.b])) }
             })
             .toString().toByteArray()
 
@@ -246,6 +251,15 @@ internal object BackupExtras {
                 val hashes = runCatching { java.util.Base64.getDecoder().decode(d.optString("h")) }.getOrNull() ?: continue
                 dup.put(DupPrintEntity(f, d.optLong("size"), d.optInt("v"), hashes))
             }
+        }
+        o.optJSONArray("dupApart")?.let { a ->
+            val pairs = (0 until a.length()).mapNotNull { i ->
+                val d = a.getJSONObject(i)
+                val x = file(d.opt("a")) ?: return@mapNotNull null
+                val y = file(d.opt("b")) ?: return@mapNotNull null
+                DupApartEntity(minOf(x, y), maxOf(x, y))
+            }
+            if (pairs.isNotEmpty()) db.dupPrintDao().putApart(pairs)
         }
         return true
     }

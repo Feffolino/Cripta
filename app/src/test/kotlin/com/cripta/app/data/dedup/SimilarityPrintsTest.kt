@@ -83,6 +83,15 @@ class SimilarityPrintsTest {
     }
 
     @Test
+    fun pairsKeptApartNeverShareAGroup() {
+        val p = listOf(longArrayOf(0L), longArrayOf(1L), longArrayOf(3L))
+        val apart = { x: Int, y: Int -> setOf(x, y) == setOf(0, 1) }
+        // 0 and 1 apart: 0 groups with 2, and 1 is left alone (it is apart from a member).
+        assertEquals(listOf(listOf(0, 2)), SimilarityPrints.group(p, BooleanArray(3), 12, 50, apart).map { it.toList() })
+        assertEquals("a|b", SimilarityPrints.pairKey("b", "a"))
+    }
+
+    @Test
     fun maxDistanceIsTheWidestPair() {
         val prints = listOf(longArrayOf(0L), longArrayOf(1L), longArrayOf(7L))
         assertEquals(3, SimilarityPrints.maxDistance(prints, BooleanArray(3), intArrayOf(0, 1, 2)))

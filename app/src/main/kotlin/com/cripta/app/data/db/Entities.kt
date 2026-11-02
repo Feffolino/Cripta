@@ -391,3 +391,10 @@ data class DupPrintEntity(
     val version: Int,
     val hashes: ByteArray,
 )
+
+/**
+ * Two media the user said are not alike ("Non sono simili"): the "simili" scan never puts them in
+ * one group again. [a] < [b], file ids.
+ */
+@Entity(tableName = "dup_apart", primaryKeys = ["a", "b"], indices = [Index("b")])
+data class DupApartEntity(val a: String, val b: String)
