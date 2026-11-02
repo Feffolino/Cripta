@@ -1008,11 +1008,9 @@ fun SettingsScreen(
             canUndo = dupUndo.isNotEmpty(),
             onUndo = { vm.undoDuplicates() },
         )
-        SettingsViewModel.DupMode.SIMILAR -> DuplicatesCompare(
+        SettingsViewModel.DupMode.SIMILAR -> SimilarPager(
             title = "Media simili",
             groups = dupGroups,
-            summary = "Analizzati $dupScannedCount elementi (foto e video). Confronta le copie: il consigliato è " +
-                "quello di qualità migliore. Le etichette delle copie eliminate passano a quella tenuta.",
             emptyText = "Analizzati $dupScannedCount elementi. Nessun media simile trovato.",
             notice = dupNotice,
             thumb = { vm.thumb(it) },
