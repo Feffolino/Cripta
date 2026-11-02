@@ -1214,7 +1214,9 @@ class ConversionService : Service() {
         val label = "Analisi dei volti"
         val analysed = java.util.concurrent.atomic.AtomicInteger(0)
         val skipped = java.util.concurrent.atomic.AtomicInteger(0)
-        fun summary() = "${analysed.get()} analizzati" + (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "")
+        val stalled = java.util.concurrent.atomic.AtomicInteger(0)
+        fun summary() = "${analysed.get()} analizzati" + (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "") +
+            (if (stalled.get() > 0) ", ${stalled.get()} bloccati (riprova dai dettagli di ciascuno)" else "")
         try {
             // Faces of media deleted for good go; media analysed by a scan that stopped before placing them are placed.
             faces.purgeDeleted()
@@ -1231,18 +1233,27 @@ class ConversionService : Service() {
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
                 // How far each media being analysed is (0..1): a deep search of one video takes minutes.
                 val partial = java.util.concurrent.ConcurrentHashMap<String, Float>()
+                // The media being analysed (name, since when): the one in hand longest is named, so a
+                // scan that seems stuck says on which file.
+                val running = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
                 fun progress() = synchronized(faceNoteLock) {
                     // Ended (a late "Annullamento" repost): nothing to show any more.
                     if (faceRepost == null) return@synchronized
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
                     val done = (d + partial.values.sum()).coerceAtMost(total.toFloat())
-                    val pct = (done * 100 / total).toInt()
+                    val exact = done * 100 / total
+                    val pct = exact.toInt()
+                    // Below 10 % with a decimal: thousands of media kept the island at "0%" for many
+                    // minutes, as if the scan stood still.
+                    val chip = if (exact < 10f) String.format(java.util.Locale.getDefault(), "%.1f%%", exact) else "$pct%"
                     val stopping = faceStopping
-                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping)
+                    val current = running.values.minByOrNull { it.second }?.first
+                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current)
                     notifyScan(ResultKind.FACES, pct) { others ->
-                        build(label, pct, sub = if (stopping) "Annullamento in corso…" else "$d di $total media analizzati",
-                            eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others,
+                        build(label, pct, sub = if (stopping) "Annullamento in corso…"
+                            else "$d di $total media" + (current?.let { " · $it" } ?: ""),
+                            eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others, chip = chip,
                             cancelable = !stopping, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
                 }
@@ -1272,9 +1283,19 @@ class ConversionService : Service() {
                                     val f = take()
                                     if (f == null) skipped.incrementAndGet()
                                     else try {
-                                        val ok = faces.analyse(f, deep = faceDeep.remove(f.id)) { p -> partial[f.id] = p; progress() }
-                                        if (ok) analysed.incrementAndGet() else skipped.incrementAndGet()
-                                    } finally { partial.remove(f.id) }
+                                        running[f.id] = f.originalName to android.os.SystemClock.elapsedRealtime()
+                                        progress()
+                                        // Media asked for by hand are waited for however long they take;
+                                        // in the scan of the whole vault a stuck one is left behind.
+                                        val outcome = faces.analyse(f, deep = faceDeep.remove(f.id), watched = f.id !in askedIds) { p ->
+                                            partial[f.id] = p; progress()
+                                        }
+                                        when (outcome) {
+                                            com.cripta.app.data.face.FaceRepository.Outcome.OK -> analysed.incrementAndGet()
+                                            com.cripta.app.data.face.FaceRepository.Outcome.STALLED -> stalled.incrementAndGet()
+                                            com.cripta.app.data.face.FaceRepository.Outcome.UNREADABLE -> skipped.incrementAndGet()
+                                        }
+                                    } finally { partial.remove(f.id); running.remove(f.id) }
                                     finished.incrementAndGet()
                                     progress()
                                 }
@@ -2094,9 +2115,10 @@ class ConversionService : Service() {
 
         /**
          * A running scan: [done] of [total] in its current [phase]; for Settings. [stopping]:
-         * Annulla was pressed and the scan is finishing the frame or photo in hand.
+         * Annulla was pressed and the scan is finishing the frame or photo in hand. [current]: the
+         * name of the media in hand longest.
          */
-        data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false)
+        data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false, val current: String? = null)
 
         /** Null while no intro/outro scan runs. */
         val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
