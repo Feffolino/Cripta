@@ -358,14 +358,26 @@ class FaceRepository @Inject constructor(
     private inner class VideoFrames(private val file: FileEntity, private val channels: MutableList<java.nio.channels.SeekableByteChannel>) : java.io.Closeable {
         private var codec: VideoFrameReader? = VideoFrameReader.open(source())
         private var retrieved: Retrieved? = null
-        /** Still on the app's own decoder. */
-        val onCodec: Boolean get() = codec != null
+        private var noRetriever = false
 
         private fun source() = ChannelMediaDataSource(repo.seekableChannel(file).also { channels += it }, file.sizeBytes)
 
-        private fun retriever() = retrieved ?: Retrieved(source()).also { retrieved = it }
+        /**
+         * Null when the retriever refuses the video too: the frames left count as unreadable, those
+         * the app's decoder already read are kept (an exception here lost the whole media).
+         */
+        private fun retriever(): Retrieved? {
+            retrieved?.let { return it }
+            if (noRetriever) return null
+            return try {
+                Retrieved(source()).also { retrieved = it }
+            } catch (e: Exception) {
+                noRetriever = true
+                null
+            }
+        }
 
-        fun durationMs(): Long? = file.durationMs?.takeIf { it > 0 } ?: codec?.durationMs?.takeIf { it > 0 } ?: retriever().durationMs()
+        fun durationMs(): Long? = file.durationMs?.takeIf { it > 0 } ?: codec?.durationMs?.takeIf { it > 0 } ?: retriever()?.durationMs()
 
         /** The frame at [t] ms (see [VideoFrameReader.frame] for [exact]), or null when it cannot be read. */
         suspend fun at(t: Long, exact: Boolean): FaceImage? {
@@ -378,7 +390,7 @@ class FaceRepository @Inject constructor(
             }
             coroutineContext.ensureActive()
             val option = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-            return retriever().frame(t, option)?.let { faceImage(it, FRAME_SIDE) }
+            return retriever()?.frame(t, option)?.let { faceImage(it, FRAME_SIDE) }
         }
 
         /** From now on the retriever. False when already there. */
@@ -423,7 +435,8 @@ class FaceRepository @Inject constructor(
                     val img = source.at(t, exact = deep)
                     if (img == null) { bad++; continue }
                     val h = FaceStats.frameHash(img)
-                    if (lastHash != null && FaceStats.sameFrame(h, lastHash!!)) { dup++; continue }
+                    val last = lastHash
+                    if (last != null && FaceStats.sameFrame(h, last)) { dup++; continue }
                     lastHash = h
                     ok++
                     if (onFrame(i, t, img)) withFaces += t

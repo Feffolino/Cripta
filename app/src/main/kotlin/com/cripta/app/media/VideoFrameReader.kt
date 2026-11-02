@@ -69,6 +69,8 @@ internal class VideoFrameReader private constructor(
      */
     suspend fun frame(tMs: Long, exact: Boolean, side: Int): FaceImage? {
         while (true) {
+            // A cancelled scan whose closed channel broke the decoder does not start the next one.
+            coroutineContext.ensureActive()
             val c = codec ?: nextDecoder() ?: throw Unreadable()
             try {
                 pastEnd = false
@@ -113,7 +115,9 @@ internal class VideoFrameReader private constructor(
             coroutineContext.ensureActive()
             // A file without a seek index may need minutes of decoding to reach a late frame: it
             // is given up after a while (the next frame goes on from where this one stopped).
-            if (decoded > MAX_DECODED || SystemClock.elapsedRealtime() - started > BUDGET_MS) return null
+            // A decoder not proven yet gets less: one that gives nothing must leave time for the
+            // next ones (and the retriever) within the scan's stall limit.
+            if (decoded > MAX_DECODED || SystemClock.elapsedRealtime() - started > (if (proven) BUDGET_MS else TRIAL_MS)) return null
             if (!inputDone) {
                 val inIdx = c.dequeueInputBuffer(TICK_US)
                 if (inIdx >= 0) {
@@ -216,6 +220,7 @@ internal class VideoFrameReader private constructor(
         /** At most this many frames decoded, and this long, to reach one frame. */
         private const val MAX_DECODED = 1_800
         private const val BUDGET_MS = 20_000L
+        private const val TRIAL_MS = 10_000L
 
         /** A reader for the video track of [source], or null when it has none or cannot be opened. */
         fun open(source: MediaDataSource): VideoFrameReader? {
