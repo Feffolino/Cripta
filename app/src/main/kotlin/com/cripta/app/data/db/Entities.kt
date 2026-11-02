@@ -377,3 +377,17 @@ data class FaceMergeEntity(
     val auto: Boolean,
     val createdAt: Long,
 )
+
+/**
+ * A media's similarity fingerprint, kept so the next "simili" scan only decodes new media: one
+ * dHash for a picture, one per sampled frame for a video, as little-endian longs. Empty [hashes]:
+ * the media could not be read. [sizeBytes] and [version] guard against a stale row (another
+ * content under the same id, or a fingerprint made another way).
+ */
+@Entity(tableName = "dup_prints")
+data class DupPrintEntity(
+    @PrimaryKey val fileId: String,
+    val sizeBytes: Long,
+    val version: Int,
+    val hashes: ByteArray,
+)

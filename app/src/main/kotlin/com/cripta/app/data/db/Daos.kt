@@ -730,3 +730,19 @@ interface FaceDao {
     @Query("DELETE FROM face_merges")
     suspend fun deleteAllMerges()
 }
+
+@Dao
+interface DupPrintDao {
+    @Query("SELECT * FROM dup_prints")
+    suspend fun all(): List<DupPrintEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun put(p: DupPrintEntity)
+
+    @Query("DELETE FROM dup_prints WHERE fileId = :fileId")
+    suspend fun forget(fileId: String)
+
+    /** Rows of files no longer in the vault (destroyed some other way than [forget]). */
+    @Query("DELETE FROM dup_prints WHERE fileId NOT IN (SELECT id FROM files)")
+    suspend fun purgeOrphans()
+}

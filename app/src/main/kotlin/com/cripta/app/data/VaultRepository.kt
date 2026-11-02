@@ -1072,6 +1072,7 @@ class VaultRepository @Inject constructor(
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
             db.introDao().clearPrints(fileId)
             db.introDao().clearSegments(fileId)
+            db.dupPrintDao().forget(fileId)
             // Its faces too (pictures and embeddings): left for the next face scan to purge, they
             // stayed for good with the analysis off.
             db.faceDao().forgetFile(fileId)
