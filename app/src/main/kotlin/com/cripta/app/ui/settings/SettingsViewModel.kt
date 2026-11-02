@@ -366,6 +366,8 @@ class SettingsViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.videosOf(trackIds))
     /** Videos with a confirmed face not looked at closer as they are now. */
     suspend fun refineWanted() = faces.refineWanted()
+    /** "Analizza meglio i suoi video" in a person's profile: [fileIds] looked at again, each result posted. */
+    fun refineVideos(fileIds: List<String>) = com.cripta.app.work.ConversionService.startFaceRefine(appContext, fileIds, force = true)
     /** "Analizza meglio i video con persone confermate". */
     fun refineAll() = faceAction {
         com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.refineWanted(), manual = true)

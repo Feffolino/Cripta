@@ -178,6 +178,11 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                                 DropdownMenuItem(text = { Text("Rinomina") }, onClick = { menu = false; renaming = true })
                                 DropdownMenuItem(text = { Text("Mostra in Cartelle") }, onClick = { menu = false; vm.showPersonInVault(p.id); onShowInVault() })
                                 DropdownMenuItem(text = { Text("Unisci con…") }, onClick = { menu = false; merging = true })
+                                // Their videos where the user confirmed them: each looked at closer around them.
+                                val confirmedVideos = p.faces.filter { it.state == "manual" }.map { it.fileId }.distinct()
+                                    .filter { id -> p.media.any { it.id == id && com.cripta.app.data.VaultRepository.isVideo(it.mimeType) } }
+                                if (confirmedVideos.isNotEmpty()) DropdownMenuItem(text = { Text("Analizza meglio i suoi video") },
+                                    onClick = { menu = false; vm.refineVideos(confirmedVideos) })
                                 if (p.entity.ignored) DropdownMenuItem(text = { Text("Ripristina") }, onClick = { menu = false; vm.restorePerson(p.id) })
                                 else if (p.media.isEmpty()) DropdownMenuItem(text = { Text("Elimina la persona") }, onClick = { menu = false; vm.deleteEmptyPerson(p.id); onBack() })
                                 else DropdownMenuItem(text = { Text("Non è una persona") }, onClick = { menu = false; vm.ignorePerson(p.id); onBack() })
