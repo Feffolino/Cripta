@@ -125,7 +125,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     PageIntro("Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono, dai dettagli di ogni media. " +
         "Tutto avviene sul telefono: volti e persone restano nel database cifrato.") {
         ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
-        FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             com.cripta.app.ui.components.ButtonText("Vedi le persone")
         }
     }
@@ -138,7 +138,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
                 else "Ti propone, in «Da confermare», solo volti simili a persone che hanno volti in almeno 2 media. Gli altri restano nei dettagli di ogni media.") {
             vm.setFacesMode(it)
         }
-        FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
         // Videos with someone confirmed that the closer look has not seen as they are now (counted again after each scan).
@@ -147,7 +147,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             Text("Quando confermi un volto in un video, Cripta lo guarda più da vicino: unisce gli altri volti di quella persona " +
                 "nello stesso video e mette tra i poco chiari quelli che non ritrova. Non assegna mai volti da sola.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FilledTonalButton(onClick = { vm.refineAll() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = { vm.refineAll() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 com.cripta.app.ui.components.ButtonText(if (wanted == 1) "Analizza meglio 1 video con persone confermate"
                     else "Analizza meglio ${com.cripta.app.ui.components.formatCount(wanted)} video con persone confermate")
             }
@@ -166,7 +166,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             }) { vm.setPeopleOnHome(it) }
     }
     Section("Manutenzione") {
-        FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             com.cripta.app.ui.components.ButtonText("Elimina volti trovati per errore…")
         }
         val ignored by vm.ignoredFaces.collectAsStateWithLifecycle()
@@ -608,7 +608,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         // Already searched the usual way: the deeper search (more frames, smaller and
                         // less sure faces) is the one worth running here.
                         if (again.isNotEmpty()) {
-                            FilledTonalButton(onClick = { vm.analyseAgain(again, deep = true) }, enabled = progress == null) {
+                            FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { vm.analyseAgain(again, deep = true) }, enabled = progress == null) {
                                 com.cripta.app.ui.components.ButtonText(if (again.size == 1) "Cerca più a fondo in questo media" else "Cerca più a fondo in ${again.size} media")
                             }
                             Text("Più fotogrammi, volti più piccoli o meno nitidi: richiede più tempo.",
@@ -668,7 +668,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                                 single.takeIf { it > 0 }?.let { if (it == 1) "1 volto visto una volta" else "$it volti visti una volta" },
                             ).joinToString(", ") + ". Uno alla volta, a tutto schermo: chi è, dividi o elimina."
                         }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (!g.isNullOrEmpty()) FilledTonalButton(onClick = { sorting = true }, modifier = Modifier.fillMaxWidth()) {
+                        if (!g.isNullOrEmpty()) FilledTonalButton(onClick = { sorting = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                             com.cripta.app.ui.components.ButtonText("Sistema i volti")
                         }
                     }
@@ -687,7 +687,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                                     "poi \"Nuova persona\". Il nome è facoltativo.",
                                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 withFaces.firstOrNull()?.let { first ->
-                                    FilledTonalButton(onClick = { onOpenFile(first.fileId) }) { com.cripta.app.ui.components.ButtonText("Apri un media con volti") }
+                                    FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { onOpenFile(first.fileId) }) { com.cripta.app.ui.components.ButtonText("Apri un media con volti") }
                                 }
                             }
                             else -> Text("Nessuna persona con questo filtro.",

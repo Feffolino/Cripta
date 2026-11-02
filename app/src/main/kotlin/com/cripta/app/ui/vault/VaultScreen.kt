@@ -2809,7 +2809,7 @@ private fun EmptyState(
             Text("Importa qui dei file, oppure torna indietro, tieni premuto un file e trascinalo su questa cartella.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
+            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp).heightIn(min = 56.dp)) {
                 Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 com.cripta.app.ui.components.ButtonText("Importa qui")
@@ -2837,11 +2837,11 @@ private fun EmptyState(
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         if (filtering) {
-            androidx.compose.material3.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp)) {
+            androidx.compose.material3.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp).heightIn(min = 48.dp)) {
                 com.cripta.app.ui.components.ButtonText("Azzera filtri")
             }
         } else {
-            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp)) {
+            Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp).heightIn(min = 56.dp)) {
                 Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 com.cripta.app.ui.components.ButtonText("Importa file")

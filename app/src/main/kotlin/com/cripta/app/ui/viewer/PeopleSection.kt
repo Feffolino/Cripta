@@ -135,7 +135,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     modifier = Modifier.weight(1f))
             }
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText("Stessa persona") }
+                FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText("Stessa persona") }
                 com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() })
                 com.cripta.app.ui.components.DestructiveButton("Non è un volto",
                     onClick = { vm.deleteFaces(file.id, chosen, everywhere = true); selected = emptySet() })
@@ -176,7 +176,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 TextButton(onClick = { vm.unlinkPerson(file.id, pid) }) { com.cripta.app.ui.components.ButtonText("Togli") }
             }
         }
-        FilledTonalButton(onClick = { vm.findFaces(file) }) { com.cripta.app.ui.components.ButtonText("Aggiungi un volto") }
+        FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { vm.findFaces(file) }) { com.cripta.app.ui.components.ButtonText("Aggiungi un volto") }
         // "Annulla" for the last join or deletion here; the message stays while it fades out.
         val mine = undo?.takeIf { it.fileId == file.id }
         var last by remember(file.id) { mutableStateOf("") }

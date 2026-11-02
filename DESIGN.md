@@ -202,6 +202,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 ## Touch and motion
 
 - Targets at least 48dp (chips in the viewer bar at least 36dp tall with padding around them).
+  Buttons: a page's main action (filled) 56dp tall, the others (tonal, destructive) 48dp; buttons
+  side by side share one height. The trash keeps its actions in a bottom bar at 56dp ("Svuota il
+  cestino", or Elimina / Ripristina for a selection).
 - Selected state is never told by colour alone: a tick or a ring goes with it.
 - A picked face looks the same everywhere (filters, people grid, groups, details, pickers): a 3dp
   accent ring (`FaceAvatar(selected = …)`), the name under it in the accent where there is one.

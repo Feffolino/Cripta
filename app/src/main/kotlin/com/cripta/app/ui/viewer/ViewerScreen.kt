@@ -877,7 +877,7 @@ private fun MediaPage(
                     androidx.compose.material3.FilledTonalButton(
                         onClick = { retry++ },
                         colors = ButtonDefaults.filledTonalButtonColors(contentColor = Color.White),
-                        modifier = Modifier.padding(top = 20.dp),
+                        modifier = Modifier.padding(top = 20.dp).heightIn(min = 48.dp),
                     ) {
                         Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
