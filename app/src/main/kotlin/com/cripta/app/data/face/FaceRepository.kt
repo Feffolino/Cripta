@@ -20,6 +20,7 @@ import com.cripta.app.data.db.PersonMediaEntity
 import com.cripta.app.data.db.TrackCard
 import com.cripta.app.data.db.TrackRow
 import com.cripta.app.media.ChannelMediaDataSource
+import com.cripta.app.media.VideoFrameReader
 import com.cripta.app.media.face.EmbeddingCodec
 import com.cripta.app.media.face.FaceCodec
 import com.cripta.app.media.face.FaceEngine
@@ -317,65 +318,135 @@ class FaceRepository @Inject constructor(
     private class FrameRun(val read: Int, val failed: Int, val duplicates: Int, val extra: Int, val why: String?)
 
     /**
+     * MediaMetadataRetriever, for videos the app's own decoder cannot read ([VideoFrames]). Some
+     * decoders return nothing for the small RGB_565 copy or for the key frame asked: then the
+     * default config, then the exact frame, before the moment counts as unreadable (whole videos
+     * showed as "non leggibili" in Senza volti that way). Each way that fails costs seconds, so the
+     * one that worked last is asked first for the next frames; the others still follow, no frame
+     * is lost.
+     */
+    private class Retrieved(source: ChannelMediaDataSource) : java.io.Closeable {
+        private val r = MediaMetadataRetriever().apply { setDataSource(source) }
+        private val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
+        /** The way that gave the last frame: the option and whether as the small RGB_565 copy. */
+        private var worked: Pair<Int, Boolean>? = null
+
+        fun durationMs(): Long? = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+
+        fun frame(t: Long, option: Int): Bitmap? {
+            // The same way twice (the exact frame asked already) is asked once.
+            val ways = listOf(option to true, option to false, MediaMetadataRetriever.OPTION_CLOSEST to false).distinct()
+            for (way in ways.sortedByDescending { it == worked }) {
+                val (o, small) = way
+                val bmp = runCatching { if (small) r.getFrameAtTime(t * 1000, o, params) else r.getFrameAtTime(t * 1000, o) }.getOrNull()
+                    ?: continue
+                worked = way
+                return bmp
+            }
+            return null
+        }
+
+        override fun close() { runCatching { r.release() } }
+    }
+
+    /**
+     * Where [videoFrames] takes a video's frames: the app's own decoder ([VideoFrameReader], in
+     * process, milliseconds a frame), else the retriever ([Retrieved], seconds a frame through the
+     * media server) once no decoder here can read the video. Each opens its own decrypting channel,
+     * kept in [channels] so that a cancelled scan closes it (see [videoFrames]).
+     */
+    private inner class VideoFrames(private val file: FileEntity, private val channels: MutableList<java.nio.channels.SeekableByteChannel>) : java.io.Closeable {
+        private var codec: VideoFrameReader? = VideoFrameReader.open(source())
+        private var retrieved: Retrieved? = null
+        /** Still on the app's own decoder. */
+        val onCodec: Boolean get() = codec != null
+
+        private fun source() = ChannelMediaDataSource(repo.seekableChannel(file).also { channels += it }, file.sizeBytes)
+
+        private fun retriever() = retrieved ?: Retrieved(source()).also { retrieved = it }
+
+        fun durationMs(): Long? = file.durationMs?.takeIf { it > 0 } ?: codec?.durationMs?.takeIf { it > 0 } ?: retriever().durationMs()
+
+        /** The frame at [t] ms (see [VideoFrameReader.frame] for [exact]), or null when it cannot be read. */
+        suspend fun at(t: Long, exact: Boolean): FaceImage? {
+            codec?.let { c ->
+                try {
+                    return c.frame(t, exact, FRAME_SIDE)
+                } catch (e: VideoFrameReader.Unreadable) {
+                    fallBack()
+                }
+            }
+            coroutineContext.ensureActive()
+            val option = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+            return retriever().frame(t, option)?.let { faceImage(it, FRAME_SIDE) }
+        }
+
+        /** From now on the retriever. False when already there. */
+        fun fallBack(): Boolean {
+            val c = codec ?: return false
+            android.util.Log.i("FaceRepository", "video decoder cannot read it, retriever instead")
+            c.close()
+            codec = null
+            return true
+        }
+
+        override fun close() {
+            codec?.close()
+            retrieved?.close()
+        }
+    }
+
+    /**
      * Read [file]'s sampled frames one at a time (longest side at most [FRAME_SIDE]). The same
      * keyframe returned for two moments is analysed once; where a face shows, the exact frame
      * [REFINE_MS] later is read too (another angle, often a better one).
      */
-    /**
-     * The frame at [t] ms. Some decoders return nothing for the small RGB_565 copy or for the key
-     * frame asked: then the default config, then the exact frame, before the moment counts as unreadable
-     * (whole videos showed as "non leggibili" in Senza volti that way).
-     */
-    private fun frameAt(r: MediaMetadataRetriever, t: Long, option: Int, params: MediaMetadataRetriever.BitmapParams): Bitmap? =
-        runCatching { r.getFrameAtTime(t * 1000, option, params) }.getOrNull()
-            ?: runCatching { r.getFrameAtTime(t * 1000, option) }.getOrNull()
-            ?: runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
-
     private suspend fun videoFrames(file: FileEntity, deep: Boolean, onProgress: ((Float) -> Unit)?, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun = coroutineScope {
-        val r = MediaMetadataRetriever()
-        val channel = repo.seekableChannel(file)
-        // Annulla while a frame is being read (an exact frame takes seconds): the channel closes at
-        // once, so the read fails now instead of the scan waiting for the frame to be done.
-        val closer = launch { try { awaitCancellation() } finally { runCatching { channel.close() } } }
+        val channels = java.util.concurrent.CopyOnWriteArrayList<java.nio.channels.SeekableByteChannel>()
+        // Annulla while a frame is being read (an exact frame can take seconds): the channels close
+        // at once, so the read fails now instead of the scan waiting for the frame to be done.
+        val closer = launch { try { awaitCancellation() } finally { channels.forEach { runCatching { it.close() } } } }
+        var frames: VideoFrames? = null
         try {
-            r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            val dur = file.durationMs?.takeIf { it > 0 }
-                ?: r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-                ?: return@coroutineScope FrameRun(0, 0, 0, 0, "durata non leggibile")
+            val source = VideoFrames(file, channels).also { frames = it }
+            val dur = source.durationMs() ?: return@coroutineScope FrameRun(0, 0, 0, 0, "durata non leggibile")
             var ok = 0; var bad = 0; var dup = 0; var extra = 0
-            val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
             val plan = FramePlan.times(dur, deep)
-            // Deep: the exact frame of each moment, not the nearest key frame (often a cut or a blur).
-            val option = if (deep) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
             val withFaces = ArrayList<Long>()
             var lastHash: Long? = null
-            for ((i, t) in plan.withIndex()) {
-                coroutineContext.ensureActive()
-                // The planned frames are most of the work; the extra ones near faces take the last tenth.
-                onProgress?.invoke(0.9f * i / plan.size)
-                val bmp = frameAt(r, t, option, params)
-                if (bmp == null) { bad++; continue }
-                val img = faceImage(bmp, FRAME_SIDE)
-                val h = FaceStats.frameHash(img)
-                if (lastHash != null && FaceStats.sameFrame(h, lastHash)) { dup++; continue }
-                lastHash = h
-                ok++
-                if (onFrame(i, t, img)) withFaces += t
+            suspend fun sample() {
+                for ((i, t) in plan.withIndex()) {
+                    coroutineContext.ensureActive()
+                    // The planned frames are most of the work; the extra ones near faces take the last tenth.
+                    onProgress?.invoke(0.9f * i / plan.size)
+                    // Deep: the exact frame of each moment, not the nearest key frame (often a cut or a blur).
+                    val img = source.at(t, exact = deep)
+                    if (img == null) { bad++; continue }
+                    val h = FaceStats.frameHash(img)
+                    if (lastHash != null && FaceStats.sameFrame(h, lastHash!!)) { dup++; continue }
+                    lastHash = h
+                    ok++
+                    if (onFrame(i, t, img)) withFaces += t
+                }
             }
+            sample()
+            // Not one frame from the app's decoder, though it opened: the retriever reads them all again.
+            if (ok == 0 && dup == 0 && source.fallBack()) { bad = 0; sample() }
             // Frame bits stay below 64: the plan takes at most 40, the extra ones at most MAX_EXTRA.
             for ((k, t) in withFaces.take(MAX_EXTRA).withIndex()) {
                 coroutineContext.ensureActive()
+                onProgress?.invoke(0.9f + 0.1f * k / minOf(withFaces.size, MAX_EXTRA))
                 val at = t + REFINE_MS
                 if (at >= dur) continue
-                val bmp = frameAt(r, at, MediaMetadataRetriever.OPTION_CLOSEST, params) ?: continue
+                val img = source.at(at, exact = true) ?: continue
                 extra++; ok++
-                onFrame(plan.size + k, at, faceImage(bmp, FRAME_SIDE))
+                onFrame(plan.size + k, at, img)
             }
             FrameRun(ok, bad, dup, extra, null)
         } finally {
             closer.cancel()
-            runCatching { r.release() }
-            runCatching { channel.close() }
+            frames?.close()
+            channels.forEach { runCatching { it.close() } }
         }
     }
 

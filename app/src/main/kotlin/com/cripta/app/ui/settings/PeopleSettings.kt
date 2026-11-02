@@ -241,16 +241,21 @@ private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
 private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.Companion.IntroProgress?, onStop: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (progress != null) {
-            val pct = progress.done * 100 / maxOf(1, progress.total)
+            // Frames read inside the videos in hand count too: a scan of long videos moves before
+            // the first one ends. The count stays the media finished.
+            val share = progress.share ?: (progress.done.toFloat() / maxOf(1, progress.total))
+            val exact = share * 100
+            val pct = if (exact < 10f) String.format(java.util.Locale.getDefault(), "%.1f%%", exact) else "${exact.toInt()}%"
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (progress.stopping) "Annullamento in corso…" else "Analisi in corso: ${progress.done} di ${progress.total} media · $pct%",
+                Text(if (progress.stopping) "Annullamento in corso…" else "Analisi in corso: ${progress.done} di ${progress.total} media · $pct",
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 TextButton(onClick = onStop, enabled = !progress.stopping) { com.cripta.app.ui.components.ButtonText("Ferma") }
             }
-            LinearProgressIndicator(progress = { progress.done.toFloat() / maxOf(1, progress.total) }, modifier = Modifier.fillMaxWidth())
-            // Which file is in hand: a scan that seems stuck says where.
+            LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth())
+            // Which file is in hand, and how far: a scan that seems stuck says where.
             if (!progress.stopping) progress.current?.let {
-                Text("In analisi: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text("In analisi: $it" + (progress.currentShare?.let { s -> " · ${(s * 100).toInt()}%" } ?: ""),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Text("Le persone compaiono e si aggiornano mentre l'analisi procede.", style = MaterialTheme.typography.bodySmall,

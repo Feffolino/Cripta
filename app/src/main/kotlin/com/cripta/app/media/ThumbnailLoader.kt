@@ -635,11 +635,7 @@ class ThumbnailLoader @Inject constructor(
         }
     }
 
-    /** Software decoders for [mime] (e.g. c2.android.av1.decoder / dav1d), in platform order. */
-    private fun softwareDecoders(mime: String): List<String> =
-        android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
-            .filter { !it.isEncoder && it.isSoftwareOnly && it.supportedTypes.any { t -> t.equals(mime, ignoreCase = true) } }
-            .map { it.name }
+    private fun softwareDecoders(mime: String): List<String> = VideoFrameReader.softwareDecoders(mime)
 
     /** One decode attempt with the decoder [codecName] (null = the platform's default for the type). */
     private fun decodeFrameWith(file: FileEntity, cover: VideoCover?, codecName: String?): Bitmap? {
