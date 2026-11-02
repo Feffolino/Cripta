@@ -9,9 +9,11 @@ import com.cripta.app.data.db.FileEntity
 import com.cripta.app.media.ChannelMediaDataSource
 import com.cripta.app.media.VideoFrameReader
 import com.cripta.app.security.SessionManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -218,8 +220,8 @@ class DuplicateScanner @Inject constructor(
 
         // Fingerprint each item: an image is one dHash; a video is a dHash per sampled frame.
         val dao = session.requireDb().dupPrintDao()
-        runCatching { dao.purgeOrphans() }
-        val stored = runCatching { dao.all() }.getOrDefault(emptyList()).associateBy { it.fileId }
+        orNull { dao.purgeOrphans() }
+        val stored = orNull { dao.all() }.orEmpty().associateBy { it.fileId }
         val hashes = arrayOfNulls<LongArray>(total)
         val todo = ArrayList<Int>()
         media.forEachIndexed { i, f ->
@@ -227,54 +229,66 @@ class DuplicateScanner @Inject constructor(
             if (c != null) hashes[i] = c.hashes else todo += i
         }
         val done = AtomicInteger(total - todo.size)
-        val progressLock = Any()
         onProgress(done.get(), total)
         val imagesMs = AtomicLong()
         val videosMs = AtomicLong()
         val cursor = AtomicInteger(0)
         coroutineScope {
-            repeat(minOf(WORKERS, todo.size)) {
-                launch {
-                    while (true) {
-                        coroutineContext.ensureActive()
-                        val i = todo.getOrNull(cursor.getAndIncrement()) ?: break
-                        val f = media[i]
-                        val video = VaultRepository.isVideo(f.mimeType)
-                        val t0 = SystemClock.elapsedRealtime()
-                        // Unreadable items are skipped, but a cancellation must still stop the scan.
-                        // Only a definite answer is stored: the fingerprint, or a picture that
-                        // decodes to nothing. A failure that may pass (memory, a frame not reached
-                        // in time) is tried again by the next scan.
-                        var definite = false
-                        val print = try {
-                            if (video) videoFingerprint(f).also { definite = it != null }
-                            else imageDHash(f).also { definite = true }?.let { longArrayOf(it) }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            null
+            // Progress goes out from here, not from the workers: the service posts a notification
+            // for it, and the workers would wait on each other to report in order.
+            val reporter = launch {
+                var last = -1
+                while (true) {
+                    val d = done.get()
+                    if (d != last) { last = d; onProgress(d, total) }
+                    delay(PROGRESS_MS)
+                }
+            }
+            coroutineScope {
+                repeat(minOf(WORKERS, todo.size)) {
+                    launch {
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            val i = todo.getOrNull(cursor.getAndIncrement()) ?: break
+                            val f = media[i]
+                            val video = VaultRepository.isVideo(f.mimeType)
+                            val t0 = SystemClock.elapsedRealtime()
+                            // Unreadable items are skipped, but a cancellation must still stop the scan.
+                            val print = try {
+                                if (video) videoFingerprint(f) else Print(imageDHash(f)?.let { longArrayOf(it) }, definite = true)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Throwable) {
+                                Print(null, definite = false)
+                            }
+                            (if (video) videosMs else imagesMs).addAndGet(SystemClock.elapsedRealtime() - t0)
+                            hashes[i] = print.hashes
+                            if (print.definite) orNull {
+                                dao.put(DupPrintEntity(f.id, f.sizeBytes, versionOf(f), SimilarityPrints.encode(print.hashes)))
+                            }
+                            done.incrementAndGet()
                         }
-                        (if (video) videosMs else imagesMs).addAndGet(SystemClock.elapsedRealtime() - t0)
-                        hashes[i] = print
-                        if (definite) runCatching {
-                            dao.put(DupPrintEntity(f.id, f.sizeBytes, versionOf(f), SimilarityPrints.encode(print)))
-                        }
-                        synchronized(progressLock) { onProgress(done.incrementAndGet(), total) }
                     }
                 }
             }
+            reporter.cancel()
         }
+        onProgress(done.get(), total)
+        // A file destroyed while it was being fingerprinted got its row after secureDelete dropped it.
+        orNull { dao.purgeOrphans() }
         val printedMs = SystemClock.elapsedRealtime() - started
 
         // A (nearly) flat picture has almost no gradient: its hash is ~all zeros, the same as every
         // other flat picture (black frames, blank pages, plain screenshots). Such items say nothing
         // about similarity and are left out, rather than grouped as "simili".
-        val kept = media.indices.filter { i ->
-            val h = hashes[i]
-            val informative = h?.count { java.lang.Long.bitCount(it) in MIN_BITS..(64 - MIN_BITS) } ?: 0
-            h != null && h.isNotEmpty() && informative * 2 > h.size
+        val usable = media.indices.mapNotNull { i ->
+            hashes[i]?.takeIf { h ->
+                val informative = h.count { java.lang.Long.bitCount(it) in MIN_BITS..(64 - MIN_BITS) }
+                h.isNotEmpty() && informative * 2 > h.size
+            }?.let { i to it }
         }
-        val prints = kept.map { hashes[it]!! }
+        val kept = usable.map { it.first }
+        val prints = usable.map { it.second }
         val isVideo = BooleanArray(kept.size) { VaultRepository.isVideo(media[kept[it]].mimeType) }
         val clusters = SimilarityPrints.group(prints, isVideo, imageThreshold, VIDEO_FRAMES * VIDEO_PER_FRAME_THRESHOLD) {
             coroutineContext.ensureActive()
@@ -286,6 +300,21 @@ class DuplicateScanner @Inject constructor(
             "(work: images ${imagesMs.get()} ms, videos ${videosMs.get()} ms), " +
             "grouped in ${SystemClock.elapsedRealtime() - started - printedMs} ms")
         SimilarResult(groups, total)
+    }
+
+    /**
+     * A media's fingerprint ([hashes] null: unreadable) and whether it is [definite], so stored:
+     * a failure that may pass (memory, a frame not reached in time) is tried again next scan.
+     */
+    private class Print(val hashes: LongArray?, val definite: Boolean)
+
+    /** [block]'s result, or null when it fails; a cancellation still stops the scan. */
+    private suspend fun <T> orNull(block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
     }
 
     /** The version of the fingerprint [f] gets: a stored one made another way is made again. */
@@ -315,19 +344,27 @@ class DuplicateScanner @Inject constructor(
      * nearest each, else the exact frame), read straight from the decrypting channel (no plaintext
      * copy on disk). The app's own decoder ([VideoFrameReader]) reads them in milliseconds; a video
      * it cannot read (or not all of it) goes through MediaMetadataRetriever, seconds a frame in the
-     * media server, as before. Returns null if the video can't be read or any frame is missing.
+     * media server, as before, within [RETRIEVER_LIMIT_MS]. Unreadable (null hashes) if the video
+     * can't be read or any frame is missing; not [Print.definite] when the time ran out.
      */
-    private suspend fun videoFingerprint(f: FileEntity): LongArray? = coroutineScope {
+    private suspend fun videoFingerprint(f: FileEntity): Print = coroutineScope {
         val channels = CopyOnWriteArrayList<SeekableByteChannel>()
         fun source() = ChannelMediaDataSource(repo.seekableChannel(f).also { channels += it }, f.sizeBytes)
+        fun closeAll() = channels.forEach { runCatching { it.close() } }
         // A cancelled scan closes the channels at once: a frame being read fails now, instead of the
         // scan waiting for it.
-        val closer = launch { try { awaitCancellation() } finally { channels.forEach { runCatching { it.close() } } } }
+        val closer = launch { try { awaitCancellation() } finally { closeAll() } }
         try {
-            readerFingerprint(f, source()) ?: run {
-                coroutineContext.ensureActive()
-                retrieverFingerprint(f, source())
-            }
+            readerFingerprint(f, source())?.let { return@coroutineScope Print(it, definite = true) }
+            coroutineContext.ensureActive()
+            // The retriever blocks in the media server and may never give up on a broken file: past
+            // the limit its channel is closed, so its reads fail and it returns.
+            val timedOut = java.util.concurrent.atomic.AtomicBoolean(false)
+            val timer = launch { delay(RETRIEVER_LIMIT_MS); timedOut.set(true); closeAll() }
+            val hashes = try { retrieverFingerprint(f, source()) } finally { timer.cancel() }
+            // Closed channels read as a broken file: a cancelled scan or the limit is no answer.
+            coroutineContext.ensureActive()
+            Print(hashes, definite = !timedOut.get())
         } finally {
             closer.cancel()
             channels.forEach { runCatching { it.close() } }
@@ -359,7 +396,8 @@ class DuplicateScanner @Inject constructor(
     private suspend fun retrieverFingerprint(f: FileEntity, source: ChannelMediaDataSource): LongArray? {
         val retriever = android.media.MediaMetadataRetriever()
         try {
-            retriever.setDataSource(source)
+            // A file the retriever cannot open is unreadable, as one it opens but cannot decode.
+            try { retriever.setDataSource(source) } catch (e: RuntimeException) { return null }
             val durMs = f.durationMs
                 ?: retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
                 ?: return null
@@ -371,13 +409,23 @@ class DuplicateScanner @Inject constructor(
                 val frame = retriever.getFrameAtTime(us, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     ?: retriever.getFrameAtTime(us, android.media.MediaMetadataRetriever.OPTION_CLOSEST)
                     ?: return null
-                out[i] = bitmapDHash(frame)
+                // Scaled as the app's decoder gives its frames, so a video reads the same either way.
+                val fitted = fit(frame, VIDEO_FRAME_SIDE)
+                out[i] = bitmapDHash(fitted)
+                if (fitted !== frame) fitted.recycle()
                 frame.recycle()
             }
             return out
         } finally {
             runCatching { retriever.release() }
         }
+    }
+
+    /** [bmp] scaled down (filtered) so its longest side is at most [side]; [bmp] itself when it fits. */
+    private fun fit(bmp: Bitmap, side: Int): Bitmap {
+        val k = side.toDouble() / maxOf(bmp.width, bmp.height)
+        if (k >= 1.0) return bmp
+        return Bitmap.createScaledBitmap(bmp, maxOf(1, Math.round(bmp.width * k).toInt()), maxOf(1, Math.round(bmp.height * k).toInt()), true)
     }
 
     /** The moment (us) of the [i]th sampled frame of a [durMs] long video. */
@@ -425,7 +473,11 @@ class DuplicateScanner @Inject constructor(
         private const val VIDEO_FRAME_SIDE = 512
         /** Bumped when a fingerprint is made another way: stored ones are then made again. */
         private const val IMAGE_PRINT_VERSION = 1
-        private const val VIDEO_PRINT_VERSION = 1
+        private const val VIDEO_PRINT_VERSION = 2
+        /** Time given to MediaMetadataRetriever for one video's frames. */
+        private const val RETRIEVER_LIMIT_MS = 90_000L
+        /** How often the progress of the similar scan is reported. */
+        private const val PROGRESS_MS = 250L
         private const val TAG = "DuplicateScanner"
     }
 }
