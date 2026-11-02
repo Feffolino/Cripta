@@ -1114,7 +1114,8 @@ class VaultRepository @Inject constructor(
 
     /** Tag names per file id (one query per file; meant for small sets like duplicate groups). */
     suspend fun tagNamesOf(fileIds: Collection<String>): Map<String, List<String>> = withContext(Dispatchers.IO) {
-        fileIds.associateWith { id -> db.fileDao().withTagsById(id)?.tags?.map { it.name } ?: emptyList() }
+        // The vault may lock meanwhile (scan results opened as it closes): no tags, not a crash.
+        readOrDefault(emptyMap()) { d -> fileIds.associateWith { id -> d.fileDao().withTagsById(id)?.tags?.map { it.name } ?: emptyList() } }
     }
 
     // --- Trash (optional; see Settings.trashEnabled) ---
