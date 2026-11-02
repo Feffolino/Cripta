@@ -162,16 +162,14 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     var showRejected by remember { mutableStateOf(false) }
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }
-    // Like the people page: the rare actions as text, the one that throws work away in the error colour.
+    // Like the people page: the rare actions as text, the one that throws work away a destructive button.
     Section("Manutenzione") {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             if (rejected.isNotEmpty()) TextButton(onClick = { showRejected = true }) {
                 com.cripta.app.ui.components.ButtonText("Segmenti scartati (${rejected.size})")
             }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = { restartAll = false; askRestart = true }) {
-                com.cripta.app.ui.components.ButtonText("Ricomincia da capo", color = MaterialTheme.colorScheme.error)
-            }
+            com.cripta.app.ui.components.DestructiveButton("Ricomincia da capo", onClick = { restartAll = false; askRestart = true })
         }
     }
     if (showRejected) CriptaAlertDialog(
@@ -288,7 +286,8 @@ private fun IntroResultsPage(
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
                     actions = {
                         TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText("Unisci") }
-                        TextButton(onClick = { deleting = selectedSigs }) { com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error) }
+                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { deleting = selectedSigs },
+                            modifier = Modifier.padding(end = 8.dp))
                     },
                 ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),

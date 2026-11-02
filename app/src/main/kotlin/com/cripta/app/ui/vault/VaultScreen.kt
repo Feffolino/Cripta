@@ -3201,16 +3201,15 @@ fun ConvertBanner(
                 // "Chiedimi alla fine": the same choice as the completion notification, here too.
                 val ask = state.pendingOriginals.firstOrNull()?.id
                 if (!state.active && ask != null) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { onResolveOriginal(ask, false) }) { com.cripta.app.ui.components.ButtonText("Mantieni", color = on) }
-                        androidx.compose.material3.FilledTonalButton(onClick = { onResolveOriginal(ask, true) }) {
-                            com.cripta.app.ui.components.ButtonText("Elimina originale")
-                        }
+                        com.cripta.app.ui.components.DestructiveButton("Elimina originale", onClick = { onResolveOriginal(ask, true) })
                     }
                     if (state.pendingOriginals.size > 1) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, false) } }) { com.cripta.app.ui.components.ButtonText("Mantieni tutti", color = on) }
-                            TextButton(onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, true) } }) { com.cripta.app.ui.components.ButtonText("Elimina tutti", color = MaterialTheme.colorScheme.error) }
+                            com.cripta.app.ui.components.DestructiveButton("Elimina tutti",
+                                onClick = { state.pendingOriginals.forEach { onResolveOriginal(it.id, true) } })
                         }
                     }
                 }

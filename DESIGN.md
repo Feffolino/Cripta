@@ -54,7 +54,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   32dp between sections); pages are grouped as Preferenze / I tuoi dati / App. A page about one
   feature (Persone, Intro e finale) opens with `PageIntro`: a sentence on what it does, no heading
   repeating the top bar, its state and main action; then its settings; last "Manutenzione", where
-  rare actions are text buttons and the one that throws work away is in the error colour.
+  rare actions are text buttons and the one that throws work away is a `DestructiveButton`.
 - Filled tonal surfaces are allowed for things that are one object (the Home summary strip, the
   search pill, sheets, dialogs), never to frame a group of options.
 - Borders exist only as state markers: selection rings and checks on covers, the chosen colour,
@@ -117,7 +117,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   volto" looks up to 15 s further when the paused frame has none. The people page's "Da
   sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time;
   it opens one group per page, full screen, swiped up like the suggestions (the frame of the face in
-  view, the group's faces in a row, "Chi è?" and "Dividi" across the width, deletions as text,
+  view, the group's faces in a row, "Chi è?" and "Dividi" across the width, the two deletions as destructive buttons under them,
   faces seen once last); faces tapped out of a group and "Dividi" are never grouped together again. "Senza volti": a tap opens the media (swiping through the list) to add faces by hand, a long
   press says why; "Cerca più a fondo" covers them all, unreadable ones too.
   Recognition (Impostazioni › Persone): "Tutti i volti" (Da sistemare) or "Solo persone note",
@@ -150,6 +150,13 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   so a field never reads as plain text.
 - **Chips**: `ChoiceChip` (neutral tonal, accent plus tick when on) and `ActionChip` (tonal);
   no outlined chips. Secondary buttons are tonal (`FilledTonalButton`), not outlined.
+- **Destructive actions** (delete, empty, start over): a destructive action is still a button,
+  never bare text. `DestructiveButton` is the neutral tonal button with its label and icon in the
+  error colour, 48dp tall at least, full width or weighted in a row like the buttons beside it;
+  never filled red, so the view keeps its one filled button. Rare actions that throw nothing away
+  may stay text buttons. Dialogs (`CriptaAlertDialog`) keep the platform convention: every
+  action, a confirm that deletes too, is a text button, the deleting one in the error colour; the
+  dialog itself is the weight. Menu items that delete are text in the error colour.
 - **Button labels** (`ButtonText`): one line, cut with "…" when the button is too narrow, never
   broken mid-phrase. A label that would often be cut gets shorter words ("Inizio qui (1:23)"),
   and several buttons that may not fit side by side go in a `FlowRow`. Two lines only where the

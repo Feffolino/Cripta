@@ -130,12 +130,9 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             }
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(enabled = chosen.size >= 2, onClick = { vm.mergeFaces(file.id, chosen); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText("Stessa persona") }
-                TextButton(onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = { vm.deleteFaces(file.id, chosen, everywhere = true); selected = emptySet() }) {
-                    com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
-                }
+                com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { vm.deleteFaces(file.id, chosen); selected = emptySet() })
+                com.cripta.app.ui.components.DestructiveButton("Non è un volto",
+                    onClick = { vm.deleteFaces(file.id, chosen, everywhere = true); selected = emptySet() })
             }
         }
         @Composable
@@ -154,9 +151,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     Text("Visti una sola volta o poco nitidi: spesso non sono volti.", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     for (t in unclear) row(t)
-                    TextButton(onClick = { vm.deleteFaces(file.id, unclear.map { it.id }) }) {
-                        com.cripta.app.ui.components.ButtonText("Elimina i volti poco chiari", color = MaterialTheme.colorScheme.error)
-                    }
+                    com.cripta.app.ui.components.DestructiveButton("Elimina i volti poco chiari",
+                        onClick = { vm.deleteFaces(file.id, unclear.map { it.id }) })
                 }
             }
         }

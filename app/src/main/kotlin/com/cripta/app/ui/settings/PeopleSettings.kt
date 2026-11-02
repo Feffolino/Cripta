@@ -164,10 +164,10 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             TextButton(onClick = { vm.forgetIgnoredFaces() }) { com.cripta.app.ui.components.ButtonText("Dimentica") }
         }
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { showStats = true }) { com.cripta.app.ui.components.ButtonText("Statistiche") }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = { askRestart = true }, enabled = progress == null) { com.cripta.app.ui.components.ButtonText("Ricomincia da capo", color = MaterialTheme.colorScheme.error) }
+            com.cripta.app.ui.components.DestructiveButton("Ricomincia da capo", onClick = { askRestart = true }, enabled = progress == null)
         }
     }
     }
@@ -852,14 +852,11 @@ private fun TodoPage(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onName:
                 if (many) FilledTonalButton(enabled = off.isNotEmpty() && picked.isNotEmpty(), onClick = { vm.keepFacesApart(picked, off.toList()) },
                     modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Dividi") }
             }
-            Row {
-                TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = false) }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina i volti", color = MaterialTheme.colorScheme.error)
-                }
-                Spacer(Modifier.weight(1f))
-                TextButton(enabled = picked.isNotEmpty(), onClick = { vm.deleteFaces(picked, everywhere = true) }) {
-                    com.cripta.app.ui.components.ButtonText("Non è un volto", color = MaterialTheme.colorScheme.error)
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.cripta.app.ui.components.DestructiveButton("Elimina i volti", enabled = picked.isNotEmpty(),
+                    onClick = { vm.deleteFaces(picked, everywhere = false) }, modifier = Modifier.weight(1f))
+                com.cripta.app.ui.components.DestructiveButton("Non è un volto", enabled = picked.isNotEmpty(),
+                    onClick = { vm.deleteFaces(picked, everywhere = true) }, modifier = Modifier.weight(1f))
             }
         }
     }
