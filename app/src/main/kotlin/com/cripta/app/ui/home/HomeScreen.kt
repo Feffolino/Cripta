@@ -514,12 +514,12 @@ private fun EmptyHome(
                     "Foto, video e PDF dalla galleria o da altre app, anche con Condividi. Restano cifrati su questo telefono.") {
                     androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onImport) {
+                        Button(modifier = Modifier.heightIn(min = 56.dp), onClick = onImport) {
                             Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                             Text("Importa file", maxLines = 1)
                         }
-                        androidx.compose.material3.FilledTonalButton(onClick = onDownload) {
+                        androidx.compose.material3.FilledTonalButton(modifier = Modifier.heightIn(min = 56.dp), onClick = onDownload) {
                             Icon(Icons.Filled.CloudDownload, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                             Text("Da un link", maxLines = 1)
@@ -528,11 +528,11 @@ private fun EmptyHome(
                 }
                 1 -> StartPage(Icons.Filled.Folder, "Mettili in ordine",
                     "Crea cartelle con il + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
-                    androidx.compose.material3.FilledTonalButton(onClick = onOpenFolders) { Text("Apri Cartelle", maxLines = 1) }
+                    androidx.compose.material3.FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onOpenFolders) { Text("Apri Cartelle", maxLines = 1) }
                 }
                 else -> StartPage(Icons.Filled.Lock, "Scegli quando si blocca",
                     "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
-                    androidx.compose.material3.FilledTonalButton(onClick = onOpenSecurity) { Text("Apri Sicurezza", maxLines = 1) }
+                    androidx.compose.material3.FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onOpenSecurity) { Text("Apri Sicurezza", maxLines = 1) }
                 }
             }
         }

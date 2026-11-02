@@ -389,7 +389,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { submit() }),
             modifier = Modifier.widthIn(max = 280.dp).focusRequester(focus),
         )
-        androidx.compose.material3.FilledTonalButton(onClick = submit, enabled = ready, modifier = Modifier.padding(top = 8.dp)) {
+        androidx.compose.material3.FilledTonalButton(onClick = submit, enabled = ready, modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp)) {
             if (busy) {
                 androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))

@@ -365,7 +365,7 @@ fun SettingsScreen(
                             }
                             androidx.compose.material3.FilledTonalButton(
                                 onClick = { addTag = true },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             ) {
                                 Icon(Icons.Filled.Add, null, Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
@@ -405,7 +405,7 @@ fun SettingsScreen(
                                 )
                                 if (tags.isNotEmpty()) {
                                     androidx.compose.material3.FilledTonalButton(onClick = { confirmRandomColors = true },
-                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                                         Icon(Icons.Filled.Palette, null, Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                                         Text("Colori casuali a tutte le etichette")
@@ -708,9 +708,9 @@ fun SettingsScreen(
                                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Button(
                                             onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                                         ) { com.cripta.app.ui.components.ButtonText("Crea backup") }
-                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
+                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                             com.cripta.app.ui.components.ButtonText("Ripristina da un backup")
                                         }
                                     }
@@ -750,7 +750,7 @@ fun SettingsScreen(
                                 }
                                 Text("Puoi uscire dall'app: la ricerca continua in background e ti avvisa con una notifica.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth()) {
+                                androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                     com.cripta.app.ui.components.ButtonText("Interrompi la ricerca")
                                 }
                             } else {
@@ -759,7 +759,7 @@ fun SettingsScreen(
                                     Text("Ultima ricerca ${if (deep) "approfondita" else "rapida"}: " +
                                         (if (r.groups.isEmpty()) "nessun gruppo" else if (r.groups.size == 1) "1 gruppo" else "${r.groups.size} gruppi") +
                                         " su ${r.scanned} elementi.", style = MaterialTheme.typography.bodyMedium)
-                                    if (r.groups.isNotEmpty()) Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth()) {
+                                    if (r.groups.isNotEmpty()) Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                                         com.cripta.app.ui.components.ButtonText(if (r.groups.size == 1) "Apri il gruppo trovato" else "Apri i ${r.groups.size} gruppi trovati")
                                     }
                                 }
@@ -767,7 +767,7 @@ fun SettingsScreen(
                                     Text("Ricerca rapida", style = MaterialTheme.typography.titleSmall)
                                     Text("Copie identiche byte per byte, di qualsiasi tipo di file. Pochi secondi: usa l'impronta calcolata all'importazione.",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth()) {
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Ricerca rapida")
                                     }
                                 }
@@ -781,7 +781,7 @@ fun SettingsScreen(
                                         known.first == 0 -> "La prima volta analizza tutti i ${known.second} media: qualche minuto, anche in background."
                                         else -> "${known.first} di ${known.second} media già analizzati: legge solo i ${known.second - known.first} nuovi."
                                     }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth()) {
+                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Ricerca approfondita")
                                     }
                                 }
@@ -802,7 +802,7 @@ fun SettingsScreen(
                                 ChoiceRow("Conserva per", listOf(3 to "3 giorni", 7 to "7 giorni", 30 to "30 giorni"), s.trashDays,
                                     indent = 0.dp) { vm.setTrashDays(it) }
                             }
-                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                                 com.cripta.app.ui.components.ButtonText(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
                                     else "Apri il cestino (${trashed.size + trashedFolders.size})")
                             }
@@ -832,7 +832,7 @@ fun SettingsScreen(
                                 is SettingsViewModel.UpdateState.Available -> {
                                     Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
                                         style = MaterialTheme.typography.bodyMedium)
-                                    Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                    Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Installa aggiornamento")
                                     }
                                 }
@@ -854,7 +854,7 @@ fun SettingsScreen(
                                 is SettingsViewModel.UpdateState.ReadyToInstall -> {
                                     Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
                                         style = MaterialTheme.typography.bodyMedium)
-                                    Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                    Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Installa aggiornamento")
                                     }
                                 }
@@ -868,7 +868,7 @@ fun SettingsScreen(
                             ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                             if (updateState !is SettingsViewModel.UpdateState.Downloading) {
                                 androidx.compose.material3.FilledTonalButton(
-                                    onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth()) {
+                                    onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                     Text("Controlla aggiornamenti")
                                 }
                             }
@@ -902,11 +902,11 @@ fun SettingsScreen(
                                             clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
                                             android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
                                         },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                     ) { com.cripta.app.ui.components.ButtonText("Copia dettagli") }
                                     androidx.compose.material3.FilledTonalButton(
                                         onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                     ) { com.cripta.app.ui.components.ButtonText("Elimina") }
                                 }
                             }
@@ -1619,25 +1619,27 @@ private fun TrashDialog(
                             }) { Text(if (all) "Nessuno" else "Tutti") }
                         } else if (openId != null) {
                             TextButton(onClick = { onRestoreFolder(openId) }) { com.cripta.app.ui.components.ButtonText("Ripristina tutto") }
-                        } else if (items.isNotEmpty() || folders.isNotEmpty()) {
-                            com.cripta.app.ui.components.DestructiveButton("Svuota", onClick = { confirmEmpty = true },
-                                modifier = Modifier.padding(end = 8.dp))
                         }
                     },
                 )
             },
             bottomBar = {
-                if (inSel) {
+                // The trash's actions sit at the bottom, always at the same height (the main buttons'
+                // 56dp, as in the faces' pages): "Svuota il cestino", or those of the selection.
+                val top = openId == null && (items.isNotEmpty() || folders.isNotEmpty())
+                if (inSel || top) {
                     androidx.compose.material3.BottomAppBar(
                         windowInsets = safe.only(
                             androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
                                 androidx.compose.foundation.layout.WindowInsetsSides.Bottom
                         ),
                     ) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!inSel) com.cripta.app.ui.components.DestructiveButton("Svuota il cestino", onClick = { confirmEmpty = true },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).heightIn(min = 56.dp))
+                        else Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { confirmDeleteSel = true },
-                                modifier = Modifier.weight(1f))
-                            Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f)) {
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp))
+                            Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
                                 com.cripta.app.ui.components.ButtonText("Ripristina")
                             }
                         }
@@ -1751,8 +1753,8 @@ private fun TrashDialog(
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Asked first, as for folders and several files: this destroys it for good.
                         com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFile = f } },
-                            modifier = Modifier.weight(1f))
-                        Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
+                            modifier = Modifier.weight(1f).heightIn(min = 56.dp))
+                        Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
                     }
                     if (f.folderId != null && f.folderId in trashedIds) {
                         Text("Torna nella sua cartella, che viene ricreata se serve.", style = MaterialTheme.typography.bodySmall,
@@ -1775,8 +1777,8 @@ private fun TrashDialog(
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFolder = fo } },
-                            modifier = Modifier.weight(1f))
-                        Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
+                            modifier = Modifier.weight(1f).heightIn(min = 56.dp))
+                        Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
                     }
                     TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { com.cripta.app.ui.components.ButtonText("Apri e scegli gli elementi") }
                 }

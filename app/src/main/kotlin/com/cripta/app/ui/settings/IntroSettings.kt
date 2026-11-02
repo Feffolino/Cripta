@@ -1,6 +1,7 @@
 package com.cripta.app.ui.settings
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 
@@ -105,7 +106,7 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
                     "ma non trova le sigle che iniziano dopo il primo minuto."
                     else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta.",
                 icon = Icons.Filled.Speed) { vm.setIntroQuickScan(it) }
-            FilledTonalButton(onClick = { vm.startIntroScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = { vm.startIntroScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza i video esistenti" else "Analisi in corso…")
             }
         }
@@ -149,8 +150,8 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
         if (progress == null && o.skipped > 0) Text("${fmt(o.skipped)} non analizzabili: il motivo è nei risultati.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Risultati") }
-            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
+            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Risultati") }
+            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
         }
     }
 }

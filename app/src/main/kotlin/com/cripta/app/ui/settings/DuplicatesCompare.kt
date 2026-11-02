@@ -399,7 +399,9 @@ private fun SimilarPage(
                 items(g.candidates, key = { it.file.id }) { c ->
                     val on = c.file.id in keep
                     val best = c.file.id == g.bestId
-                    Column(Modifier.width(80.dp).clip(MaterialTheme.shapes.small)
+                    // Not clipped as a whole: the rounded clip cut the marker (out past the picture's
+                    // corner) and the ends of the text under it. The picture is rounded on its own.
+                    Column(Modifier.width(80.dp)
                         .combinedClickable(onClickLabel = if (on) "Elimina" else "Tieni", onLongClickLabel = "Metti in vista",
                             onLongClick = { focusId = c.file.id }) {
                             keep = if (on) keep - c.file.id else keep + c.file.id
@@ -783,7 +785,7 @@ private fun GroupCard(
                     )
                 }
             }
-            Button(onClick = { onKeep(group.best) }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onKeep(group.best) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                 val n = group.candidates.size - 1
                 com.cripta.app.ui.components.ButtonText(if (n == 1) "Tieni il consigliato, elimina l'altra" else "Tieni il consigliato, elimina le altre $n")
             }
@@ -891,7 +893,7 @@ private fun CandidateCard(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                androidx.compose.material3.FilledTonalButton(onClick = onKeep, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                androidx.compose.material3.FilledTonalButton(onClick = onKeep, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
                     Text("Tieni solo questo", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                 }
                 IconButton(onClick = onDelete) {
@@ -968,7 +970,7 @@ private fun PreviewDialog(
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Copia precedente",
                             tint = if (index > 0) Color.White else Color.White.copy(alpha = 0.3f))
                     }
-                    Button(onClick = { onKeep(c) }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Tieni solo questo") }
+                    Button(onClick = { onKeep(c) }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Tieni solo questo") }
                     IconButton(onClick = { index++ }, enabled = index < group.candidates.lastIndex) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Copia successiva",
                             tint = if (index < group.candidates.lastIndex) Color.White else Color.White.copy(alpha = 0.3f))

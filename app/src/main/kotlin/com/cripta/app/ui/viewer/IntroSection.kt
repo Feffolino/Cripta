@@ -1,6 +1,7 @@
 package com.cripta.app.ui.viewer
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.heading
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.vaultUnlocked
@@ -94,10 +95,10 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
             if (status == "ok") Text("Nessuna intro né finale trovati.", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = { pending[SegmentKind.INTRO] = position }) {
+                FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { pending[SegmentKind.INTRO] = position }) {
                     com.cripta.app.ui.components.ButtonText("Intro da qui (${clock(position)})")
                 }
-                FilledTonalButton(onClick = { pending[SegmentKind.OUTRO] = position }) {
+                FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { pending[SegmentKind.OUTRO] = position }) {
                     com.cripta.app.ui.components.ButtonText("Finale da qui (${clock(position)})")
                 }
             }
@@ -262,16 +263,16 @@ private fun SegmentBlock(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when {
                     pendingStart != null -> {
-                        FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f)) {
+                        FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                             com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
                         }
                         IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
                     }
-                    active == null -> FilledTonalButton(onClick = onMarkStart) {
+                    active == null -> FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onMarkStart) {
                         com.cripta.app.ui.components.ButtonText("$name da qui (${clock(positionMs)})")
                     }
                     else -> {
-                        FilledTonalButton(onClick = { onTry(active) }) {
+                        FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { onTry(active) }) {
                             Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
                             com.cripta.app.ui.components.ButtonText("Prova")
                         }
