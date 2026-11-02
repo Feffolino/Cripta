@@ -1613,7 +1613,8 @@ private fun TrashDialog(
                         } else if (openId != null) {
                             TextButton(onClick = { onRestoreFolder(openId) }) { com.cripta.app.ui.components.ButtonText("Ripristina tutto") }
                         } else if (items.isNotEmpty() || folders.isNotEmpty()) {
-                            TextButton(onClick = { confirmEmpty = true }) { com.cripta.app.ui.components.ButtonText("Svuota", color = MaterialTheme.colorScheme.error) }
+                            com.cripta.app.ui.components.DestructiveButton("Svuota", onClick = { confirmEmpty = true },
+                                modifier = Modifier.padding(end = 8.dp))
                         }
                     },
                 )
@@ -1627,10 +1628,8 @@ private fun TrashDialog(
                         ),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            androidx.compose.material3.FilledTonalButton(
-                                onClick = { confirmDeleteSel = true }, modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            ) { com.cripta.app.ui.components.ButtonText("Elimina") }
+                            com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { confirmDeleteSel = true },
+                                modifier = Modifier.weight(1f))
                             Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f)) {
                                 com.cripta.app.ui.components.ButtonText("Ripristina")
                             }
@@ -1743,11 +1742,9 @@ private fun TrashDialog(
                         "Distruzione" to leftText(f.deletedAt).replaceFirstChar { it.uppercase() },
                     ).forEach { (k, v) -> InfoRow(k, v) }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.FilledTonalButton(
-                            // Asked first, as for folders and several files: this destroys it for good.
-                            onClick = { afterSheet { confirmFile = f } }, modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        ) { com.cripta.app.ui.components.ButtonText("Elimina") }
+                        // Asked first, as for folders and several files: this destroys it for good.
+                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFile = f } },
+                            modifier = Modifier.weight(1f))
                         Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
                     }
                     if (f.folderId != null && f.folderId in trashedIds) {
@@ -1770,10 +1767,8 @@ private fun TrashDialog(
                     InfoRow("Eliminata il", fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
                     InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.FilledTonalButton(
-                            onClick = { afterSheet { confirmFolder = fo } }, modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        ) { com.cripta.app.ui.components.ButtonText("Elimina") }
+                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFolder = fo } },
+                            modifier = Modifier.weight(1f))
                         Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
                     }
                     TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { com.cripta.app.ui.components.ButtonText("Apri e scegli gli elementi") }

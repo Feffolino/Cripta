@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -226,3 +227,31 @@ fun ButtonText(text: String, modifier: Modifier = Modifier, color: Color = Color
                style: TextStyle = androidx.compose.material3.LocalTextStyle.current) =
     androidx.compose.material3.Text(text, modifier, color = color, maxLines = 1,
         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = style)
+
+/**
+ * A button that throws something away (delete, empty, start over): still a button, never bare
+ * text. Neutral tonal like [androidx.compose.material3.FilledTonalButton], the label and icon in
+ * the error colour; never filled red, so the view keeps its one filled button. Dialog confirms
+ * stay text buttons (see DESIGN.md).
+ */
+@Composable
+fun DestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+) {
+    androidx.compose.material3.FilledTonalButton(
+        onClick = onClick, modifier = modifier.heightIn(min = 48.dp), enabled = enabled,
+        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        contentPadding = if (icon != null) androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding
+            else androidx.compose.material3.ButtonDefaults.ContentPadding,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, Modifier.size(androidx.compose.material3.ButtonDefaults.IconSize))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(androidx.compose.material3.ButtonDefaults.IconSpacing))
+        }
+        ButtonText(text)
+    }
+}

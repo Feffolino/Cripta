@@ -406,9 +406,8 @@ private fun SimilarPage(
             if (moving.isNotEmpty()) Text("Le etichette ${moving.joinToString(", ") { "#$it" }} passano alla copia tenuta.",
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp))
-            TextButton(onClick = { onDelete(focus) }) {
-                com.cripta.app.ui.components.ButtonText("Elimina questa copia", color = MaterialTheme.colorScheme.error)
-            }
+            com.cripta.app.ui.components.DestructiveButton("Elimina questa copia", onClick = { onDelete(focus) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
     if (landscape) {
