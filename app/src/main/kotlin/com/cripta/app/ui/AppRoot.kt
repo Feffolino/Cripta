@@ -456,9 +456,9 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 popEnterTransition = { when { isTabSwitch() -> tabEnter(tabDirection()); initialState.isViewer() -> popEnter; else -> pagePopEnter } },
                 popExitTransition = { when { isTabSwitch() -> tabExit(tabDirection()); initialState.isViewer() -> popExit; else -> pagePopExit } },
             ) {
-            composable("home") {
+            composable("home") { entry ->
                 HomeScreen(
-                    onOpenFile = { nav.navigate("viewer/$it") },
+                    onOpenFile = { nav.openViewer(entry, it) },
                     onOpenFolders = {
                         // Switch to the Cartelle tab with the same semantics as the bottom bar,
                         // so the back stack stays consistent and the Home tab keeps working.
@@ -470,33 +470,33 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                     onOpenDownload = { onTab("download") },
                 )
             }
-            composable("folders") {
+            composable("folders") { entry ->
                 VaultScreen(
-                    onOpenFile = { nav.navigate("viewer/$it") },
+                    onOpenFile = { nav.openViewer(entry, it) },
                     onNewNote = { folder -> nav.navigate(if (folder != null) "note/new?folder=$folder" else "note/new") },
                 )
             }
-            composable("favorites") {
+            composable("favorites") { entry ->
                 FavoritesScreen(
-                    onOpenFile = { nav.navigate("viewer/$it") },
+                    onOpenFile = { nav.openViewer(entry, it) },
                     onOpenFolders = { onTab("folders") },
                     onBack = { nav.popBackStack() },
                 )
             }
-            composable("download") {
-                com.cripta.app.ui.download.DownloadScreen(onOpenFile = { nav.navigate("viewer/$it") })
+            composable("download") { entry ->
+                com.cripta.app.ui.download.DownloadScreen(onOpenFile = { nav.openViewer(entry, it) })
             }
-            composable("settings") {
-                SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
+            composable("settings") { entry ->
+                SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.openViewer(entry, it) })
             }
-            composable("people") {
-                com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.navigate("viewer/$it") })
+            composable("people") { entry ->
+                com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.openViewer(entry, it) })
             }
             composable("person/{id}") { entry ->
                 com.cripta.app.ui.people.PersonProfileScreen(
                     personId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
                     onBack = { nav.popBackStack() },
-                    onOpenFile = { nav.navigate("viewer/$it") },
+                    onOpenFile = { nav.openViewer(entry, it) },
                     onShowInVault = { onTab("folders") },
                 )
             }
@@ -559,4 +559,13 @@ private class GatedLifecycleOwner(private val parent: LifecycleOwner) : Lifecycl
         if (target == Lifecycle.State.INITIALIZED) return
         registry.currentState = target
     }
+}
+
+/**
+ * Open [fileId] in the player from the page [from], only while that page is the one in front: a
+ * second tap, or a tap while the page was still coming back from the player, opened a second player
+ * on top of the first (two to close, one under the other).
+ */
+private fun androidx.navigation.NavController.openViewer(from: androidx.navigation.NavBackStackEntry, fileId: String) {
+    if (from.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) navigate("viewer/$fileId")
 }
