@@ -1248,11 +1248,16 @@ class ConversionService : Service() {
                     // minutes, as if the scan stood still.
                     val chip = if (exact < 10f) String.format(java.util.Locale.getDefault(), "%.1f%%", exact) else "$pct%"
                     val stopping = faceStopping
-                    val current = running.values.minByOrNull { it.second }?.first
-                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current)
+                    // The count is of media finished; how far the one in hand is shows by its name,
+                    // so a long video moves the line frame by frame without counting as done.
+                    val hand = running.entries.minByOrNull { it.value.second }
+                    val current = hand?.value?.first
+                    val currentShare = hand?.let { partial[it.key] }
+                    val named = current?.let { n -> " · $n" + (currentShare?.let { " ${(it * 100).toInt()}%" } ?: "") } ?: ""
+                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current, done / total, currentShare)
                     notifyScan(ResultKind.FACES, pct) { others ->
                         build(label, pct, sub = if (stopping) "Annullamento in corso…"
-                            else "$d di $total media" + (current?.let { " · $it" } ?: ""),
+                            else "$d di $total media$named",
                             eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others, chip = chip,
                             cancelable = !stopping, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
@@ -2118,7 +2123,12 @@ class ConversionService : Service() {
          * Annulla was pressed and the scan is finishing the frame or photo in hand. [current]: the
          * name of the media in hand longest.
          */
-        data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false, val current: String? = null)
+        /**
+         * [share]: how far the whole scan is (0..1), counting the frames read inside the media in
+         * hand too; null: [done] / [total]. [currentShare]: how far [current] is.
+         */
+        data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false, val current: String? = null,
+                                 val share: Float? = null, val currentShare: Float? = null)
 
         /** Null while no intro/outro scan runs. */
         val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
