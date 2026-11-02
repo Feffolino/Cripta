@@ -360,7 +360,16 @@ class SettingsViewModel @Inject constructor(
         undoable(if (fileIds.size == 1) "Media tolto" else "${fileIds.size} media tolti") { faces.removeMedia(personId, fileIds) }
     /** "Sposta a…" ([to] a person) or "Dividi" ([to] null: a new person named [newName]). */
     fun moveToPerson(from: Long, fileIds: Collection<String>, to: Long?, newName: String = "") = faceAction { faces.moveMedia(from, fileIds, to, newName) }
-    fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId) }
+    fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId).also { lookCloser(listOf(trackId)) } }
+    /** Faces confirmed: their videos are looked at closer in the background ([com.cripta.app.data.face.FaceRepository.refine]). */
+    private suspend fun lookCloser(trackIds: Collection<Long>) =
+        com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.videosOf(trackIds))
+    /** Videos with a confirmed face not looked at closer as they are now. */
+    suspend fun refineWanted() = faces.refineWanted()
+    /** "Analizza meglio i video con persone confermate". */
+    fun refineAll() = faceAction {
+        com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.refineWanted(), manual = true)
+    }
     fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
     /** "Da sistemare": the unassigned faces grouped by likeness. */
@@ -372,7 +381,7 @@ class SettingsViewModel @Inject constructor(
     /** A group of faces to [personId], or to a new person named [newName]. */
     fun assignFaces(trackIds: Collection<Long>, personId: Long?, newName: String) =
         undoable(if (trackIds.size == 1) "Volto assegnato" else "${trackIds.size} volti assegnati") {
-            faces.assignAll(trackIds, personId ?: faces.newPerson(newName))
+            faces.assignAll(trackIds, personId ?: faces.newPerson(newName)).also { lookCloser(trackIds) }
         }
     /** Faces the user deleted, left out of new analyses. */
     val ignoredFaces: StateFlow<Int> = faces.ignoredCount()
@@ -389,7 +398,7 @@ class SettingsViewModel @Inject constructor(
     var lastKnown: List<com.cripta.app.data.face.FaceRepository.PersonSuggestion>? = null
     suspend fun frameOf(card: com.cripta.app.data.db.TrackCard) = faces.frameOf(card)
     /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
-    fun acceptSuggestion(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
+    fun acceptSuggestion(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
     fun refuseSuggestion(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
     suspend fun detectedSince(since: Long) = faces.detectedSince(since)
     fun clearDetected(fileIds: Collection<String>) = faceAction {

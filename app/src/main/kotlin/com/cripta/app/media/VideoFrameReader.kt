@@ -53,6 +53,8 @@ internal class VideoFrameReader private constructor(
     private var proven = false
     /** Presentation time of the last frame decoded since the last seek (-1: none). */
     private var lastUs = -1L
+    /** When the frame [frame] returned last really is (ms): a key frame is often well before the moment asked. */
+    val lastMs: Long? get() = lastUs.takeIf { it >= 0 }?.div(1000)
     /** The end of the stream was queued: the decoder takes nothing more until the next seek. */
     private var inputDone = false
     /**
@@ -98,8 +100,10 @@ internal class VideoFrameReader private constructor(
 
     private suspend fun read(c: MediaCodec, tUs: Long, exact: Boolean, side: Int): FaceImage? {
         val target: Long
-        if (noIndex && !inputDone && lastUs in 0..tUs) {
-            // Ahead of where the reading is, in a file that cannot seek: decode on from here.
+        if (!inputDone && lastUs in 0..tUs && (noIndex || exact && tUs - lastUs <= NEAR_US)) {
+            // Ahead of where the reading is, in a file that cannot seek, or an exact frame just
+            // after the last one (the closer look of a video reads one a second): decode on from
+            // here instead of from the key frame again.
             target = tUs
         } else {
             extractor.seekTo(tUs, if (exact || noIndex) MediaExtractor.SEEK_TO_PREVIOUS_SYNC else MediaExtractor.SEEK_TO_CLOSEST_SYNC)
@@ -219,6 +223,8 @@ internal class VideoFrameReader private constructor(
     }
 
     companion object {
+        /** An exact frame at most this far after the last one is reached by decoding on. */
+        private const val NEAR_US = 1_500_000L
         /** Polling step of the decoder's queues. */
         private const val TICK_US = 10_000L
         /** A seek landing this far before the time asked: the file cannot really seek. */

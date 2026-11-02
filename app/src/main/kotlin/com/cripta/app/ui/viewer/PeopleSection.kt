@@ -78,6 +78,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     val links by remember(file.id) { vm.personLinksOf(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
     val people by vm.peopleList.collectAsStateWithLifecycle()
     val message by vm.faceMessage.collectAsStateWithLifecycle()
+    val refined by remember(file.id) { vm.refineNote(file.id) }.collectAsStateWithLifecycle(initialValue = null)
     val byId = remember(people) { people.associateBy { it.id } }
     val isVideo = VaultRepository.isVideo(file.mimeType)
     /** The face being edited; with [adding] the whole media is added to a person instead. */
@@ -105,6 +106,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         // Faces nearly always found by mistake wait folded at the end.
         val (unclear, clear) = shown.partition { FaceRepository.uncertain(it, isVideo) }
         val unassigned = shown.any { it.personId == null && it.state != "manual" }
+        // Someone confirmed in a video: it can be looked at closer around them.
+        val confirmed = isVideo && shown.any { it.personId != null && it.state == "manual" }
         PanelHeading("Persone", if (chosen.isEmpty() && clear.size >= 2) "Tocca un volto per dire chi è, tienilo premuto per unirlo a un altro o eliminarlo." else null) {
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni sui volti") }
@@ -113,12 +116,15 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                         onClick = { menu = false; vm.describeFaces(file.id) })
                     DropdownMenuItem(text = { Text("Analizza di nuovo") }, onClick = { menu = false; vm.analyseFaces(file.id) })
                     DropdownMenuItem(text = { Text("Cerca più a fondo") }, onClick = { menu = false; vm.analyseFaces(file.id, deep = true) })
+                    if (confirmed) DropdownMenuItem(text = { Text("Analizza meglio") }, onClick = { menu = false; vm.refineFaces(file.id) })
                     if (unassigned) DropdownMenuItem(
                         text = { Text("Elimina i volti non assegnati", color = MaterialTheme.colorScheme.error) },
                         onClick = { menu = false; vm.clearDetectedFaces(file.id) })
                 }
             }
         }
+        // What the closer look did here, so that faces joined or folded away are not a mystery.
+        refined?.takeIf { confirmed }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (shown.isEmpty() && links.isEmpty()) {
             Text("Nessun volto riconosciuto.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -148,7 +154,8 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             }
             AnimatedVisibility(showUnclear, enter = fadeIn(tween(220)) + expandVertically(tween(220)), exit = fadeOut(tween(120)) + shrinkVertically(tween(120))) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Visti una sola volta o poco nitidi: spesso non sono volti.", style = MaterialTheme.typography.bodySmall,
+                    Text(if (unclear.any { it.state == FaceRepository.ASIDE }) "Visti una sola volta, poco nitidi o non ritrovati guardando meglio il video: spesso non sono volti."
+                        else "Visti una sola volta o poco nitidi: spesso non sono volti.", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     for (t in unclear) row(t)
                     com.cripta.app.ui.components.DestructiveButton("Elimina i volti poco chiari",
@@ -322,7 +329,7 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
 private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerViewModel) {
     var off by remember(a) { mutableStateOf(emptySet<Long>()) }
     val picked = a.faces.map { it.card.id }.filter { it !in off }
-    CriptaAlertDialog(onDismissRequest = { vm.alsoFaces.value = null },
+    CriptaAlertDialog(onDismissRequest = { vm.dismissAlso() },
         title = { Text("Anche questi sono $name?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -340,7 +347,7 @@ private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerVie
             }
         },
         confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { vm.joinAlso(a, picked) }) { com.cripta.app.ui.components.ButtonText("Sì, unisci") } },
-        dismissButton = { TextButton(onClick = { vm.alsoFaces.value = null }) { com.cripta.app.ui.components.ButtonText("No") } })
+        dismissButton = { TextButton(onClick = { vm.dismissAlso() }) { com.cripta.app.ui.components.ButtonText("No") } })
 }
 
 /** "Dividi": the moments of a face that are someone else become a face of their own. */

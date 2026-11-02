@@ -429,6 +429,13 @@ interface FaceDao {
     @Query("SELECT * FROM face_scans")
     fun observeScans(): Flow<List<FaceScanEntity>>
 
+    @Query("SELECT * FROM face_scans WHERE fileId = :fileId")
+    fun observeScanOf(fileId: String): Flow<FaceScanEntity?>
+
+    /** The closer look's result kept with the scan (see [com.cripta.app.media.face.FaceStats.withRefine]). */
+    @Query("UPDATE face_scans SET stats = :stats WHERE fileId = :fileId")
+    suspend fun setScanStats(fileId: String, stats: String)
+
     @Query("SELECT fileId FROM face_scans WHERE clustered = 0 AND status = 'ok'")
     suspend fun unclusteredIds(): List<String>
 

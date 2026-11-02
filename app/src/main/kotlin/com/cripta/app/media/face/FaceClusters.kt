@@ -17,9 +17,12 @@ private fun normalised(v: FloatArray): FloatArray {
 /** A face seen in one frame of a media (frame 0 for a photo), already accepted by the quality checks. */
 class Sighting(val frame: Int, val timeMs: Long, val embedding: FloatArray, val quality: Float, val payload: Any? = null)
 
-/** One person in one media: the frames they show in ([frames] bit n = frame n) and their best faces. */
+/**
+ * One person in one media: the frames they show in ([frames] bit n = frame n; a face added by hand,
+ * frame -1, has none) and their best faces.
+ */
 class TrackDraft(val sightings: List<Sighting>) {
-    val frames: Long = sightings.fold(0L) { m, s -> m or (1L shl s.frame.coerceIn(0, 63)) }
+    val frames: Long = sightings.fold(0L) { m, s -> if (s.frame < 0) m else m or (1L shl s.frame.coerceAtMost(63)) }
     /** Best first: the face shown and the embeddings kept. */
     val best: List<Sighting> = sightings.sortedByDescending { it.quality }
     /**

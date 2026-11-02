@@ -199,7 +199,18 @@ class ViewerViewModel @Inject constructor(
             faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
         }
     }
-    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId) }
+    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
+    /**
+     * A face confirmed in a video: the video is looked at closer in the background, to join its
+     * other faces of that person and set aside those that are not faces
+     * ([com.cripta.app.data.face.FaceRepository.refine]). Only that video, nothing given to anyone.
+     */
+    private suspend fun lookCloser(trackIds: Collection<Long>) =
+        com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.videosOf(trackIds))
+    /** "Analizza meglio" in the details of a video with a confirmed face. */
+    fun refineFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceRefine(appContext, listOf(fileId), force = true)
+    /** What the closer look did to [fileId], in words (null: it has not looked at it). */
+    fun refineNote(fileId: String) = faces.refineNote(fileId)
     fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
     fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     fun analyseFaces(fileId: String, deep: Boolean = false) =
@@ -241,14 +252,29 @@ class ViewerViewModel @Inject constructor(
     /** After "Chi è?" on [trackId]: the other faces of its media that look like [personId], for "Anche questi?". */
     class AlsoFaces(val fileId: String, val trackId: Long, val personId: Long, val faces: List<com.cripta.app.data.face.FaceRepository.Suggestion>)
     val alsoFaces = MutableStateFlow<AlsoFaces?>(null)
+    /**
+     * The closer look at the video starts once "Anche questi?" is answered (or when there is none
+     * to ask): started before, it could join the very faces the dialog shows.
+     */
     private suspend fun offerAlike(fileId: String, trackId: Long, personId: Long) {
         val list = faces.alikeInMedia(trackId)
-        if (list.isNotEmpty()) alsoFaces.value = AlsoFaces(fileId, trackId, personId, list)
+        if (list.isNotEmpty()) alsoFaces.value = AlsoFaces(fileId, trackId, personId, list) else lookCloser(listOf(trackId))
     }
     /** "Anche questi?" › "Unisci": [picked] join the face just named. */
-    fun joinAlso(a: AlsoFaces, picked: Collection<Long>) {
+    fun joinAlso(a: AlsoFaces, picked: Collection<Long>) = faceAction {
         alsoFaces.value = null
-        if (picked.isNotEmpty()) mergeFaces(a.fileId, listOf(a.trackId) + picked)
+        if (picked.isNotEmpty()) {
+            val u = faces.mergeFaces(listOf(a.trackId) + picked)
+            if (u == null) faceMessage.value = "Questi volti sono di persone diverse. Togli prima il volto sbagliato dalla sua persona."
+            else faceUndo.value = FaceUndo(a.fileId, "Volti uniti", u)
+        }
+        lookCloser(listOf(a.trackId))
+    }
+    /** "Anche questi?" › "No". */
+    fun dismissAlso() {
+        val a = alsoFaces.value ?: return
+        alsoFaces.value = null
+        faceAction { lookCloser(listOf(a.trackId)) }
     }
     /** The moments of a face that "Dividi" can move. */
     suspend fun splittable(trackId: Long) = faces.splittable(trackId)
@@ -280,6 +306,8 @@ class ViewerViewModel @Inject constructor(
     fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceAction {
         faces.addFace(file, f, personId ?: faces.newPerson(newName))
         foundFaces.value = null
+        // A face added by hand teaches what the person looks like here: their other faces of the video too.
+        if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType)) com.cripta.app.work.ConversionService.startFaceRefine(appContext, listOf(file.id))
     }
     fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceAction {
         val id = faces.newPerson(name)

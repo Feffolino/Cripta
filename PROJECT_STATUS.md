@@ -46,7 +46,14 @@ viewed in an internal player that never writes plaintext to disk. Product contex
   (`face_ignored`: per media, or everywhere for "Non è un volto") and left out of new analyses;
   each face of a track is kept (`face_tracks.sightings`) so a track can be split by moment (older
   scans: after "Rianalizza"); unclear faces fold in the details; "Da sistemare" groups unassigned
-  faces across the vault; decoded embeddings are cached for suggestions and groups.
+  faces across the vault; decoded embeddings are cached for suggestions and groups. A video with a
+  confirmed face is looked at closer (`FaceFollower`, `FaceRepository.refine`), in the face scan,
+  right after the confirmation or from "Analizza meglio": frames about one a second, larger, the
+  confirmed person found by likeness to their faces of that video and followed by place; an
+  unassigned face of the video joins theirs only when every moment of it is them at the same place
+  (never two faces of one frame), faces not found again are set aside (state `aside`, among the
+  unclear ones and in "Da sistemare"); the result is kept in the scan's stats. Faces of other media
+  are never touched. Sampled frames keep their real moment (a key frame, not the moment asked).
 - **Home:** summary, favourites, people, continue watching, shelves.
 - **Download:** in-app link downloader (yt-dlp) with quality choice, queue and default destination.
 - **Backup:** passphrase-encrypted archive of the whole vault (files, folders, tags, saved filters,
