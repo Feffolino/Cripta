@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -311,6 +312,7 @@ private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, on
 @Composable
 private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
     val context = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var notes by remember(p.id) { mutableStateOf(p.entity.notes) }
     val links = remember(p.id) { mutableStateListOf<String>().apply { addAll(p.entity.links.lines().filter { it.isNotBlank() }) } }
     var newLink by remember(p.id) { mutableStateOf("") }
@@ -333,6 +335,10 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(horizontal = 10.dp).clickable(onClickLabel = "Apri il link") { openLink(context, l) }
                         .padding(vertical = 10.dp))
+                IconButton(onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(l))
+                    android.widget.Toast.makeText(context, "Link copiato", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Icon(Icons.Filled.ContentCopy, "Copia il link") }
                 IconButton(onClick = { links.removeAt(i); save() }) { Icon(Icons.Filled.Close, "Togli il link") }
             }
         }

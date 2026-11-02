@@ -104,7 +104,14 @@ class ConversionService : Service() {
             return START_NOT_STICKY
         }
         if (mode == MODE_CANCEL_FACES) {
-            faceJob?.cancel()
+            // What was asked before the cancel is dropped; the scan stops within the frame or the
+            // photo in hand, and says so meanwhile (the notification and Settings).
+            faceScanAll = false; faceAsked.clear(); faceRerun = false
+            faceJob?.let { job ->
+                faceStopping = true
+                job.cancel()
+                scope.launch { faceRepost?.invoke() }
+            }
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -1169,6 +1176,10 @@ class ConversionService : Service() {
     /** Media asked for with "Cerca più a fondo": analysed the deep way once. */
     private val faceDeep = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var faceScanAll = false
+    /** Annulla was pressed: the running scan is stopping. */
+    @Volatile private var faceStopping = false
+    /** Posts the running scan's progress again (the cancel's "Annullamento in corso…"). */
+    @Volatile private var faceRepost: (() -> Unit)? = null
 
     /**
      * Find the faces of every photo and video not analysed yet ([onlyIds]: just those, again), a
@@ -1178,15 +1189,27 @@ class ConversionService : Service() {
     private suspend fun faceScan(manual: Boolean, onlyIds: List<String>? = null) {
         if (onlyIds == null) faceScanAll = true else faceAsked += onlyIds
         faceManual = faceManual || manual
-        // As in [introScan]: a request that found the lock taken just as the scan ended is not lost.
-        while (faceMutex.tryLock()) {
-            try { runFaceScan() } finally { faceMutex.unlock() }
-            if (!faceScanAll && faceAsked.isEmpty()) return
+        while (true) {
+            if (!faceMutex.tryLock()) {
+                // The running scan takes this request in. One being cancelled would drop it with
+                // its own: this request waits for it to end and runs next.
+                if (!faceStopping) { faceRerun = true; return }
+                faceMutex.lock()
+            }
+            // A request that found the lock taken just as the scan ended is not lost: the scan
+            // looks again once unlocked. Only after a scan that ended well: one that failed was
+            // started again at once, failed again, and so on for ever, its progress back to 0 at
+            // every turn (the analysis "stuck at 0").
+            val ok = try {
+                if (!faceScanAll && faceAsked.isEmpty()) return
+                runFaceScan()
+            } finally { faceMutex.unlock() }
+            if (!ok || !faceScanAll && faceAsked.isEmpty()) return
         }
-        faceRerun = true
     }
 
-    private suspend fun runFaceScan() {
+    /** False when the scan failed. */
+    private suspend fun runFaceScan(): Boolean {
         faceJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         val label = "Analisi dei volti"
         val analysed = java.util.concurrent.atomic.AtomicInteger(0)
@@ -1209,17 +1232,21 @@ class ConversionService : Service() {
                 // How far each media being analysed is (0..1): a deep search of one video takes minutes.
                 val partial = java.util.concurrent.ConcurrentHashMap<String, Float>()
                 fun progress() = synchronized(faceNoteLock) {
+                    // Ended (a late "Annullamento" repost): nothing to show any more.
+                    if (faceRepost == null) return@synchronized
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
                     val done = (d + partial.values.sum()).coerceAtMost(total.toFloat())
                     val pct = (done * 100 / total).toInt()
-                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti")
+                    val stopping = faceStopping
+                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping)
                     notifyScan(ResultKind.FACES, pct) { others ->
-                        build(label, pct, sub = "$d di $total media analizzati",
-                            eta = if (done > 0f) eta.left(done / total) else null, header = others,
-                            cancelable = true, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
+                        build(label, pct, sub = if (stopping) "Annullamento in corso…" else "$d di $total media analizzati",
+                            eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others,
+                            cancelable = !stopping, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
                 }
+                synchronized(faceNoteLock) { faceRepost = ::progress }
                 progress()
                 var next = 0
                 while (true) {
@@ -1264,15 +1291,19 @@ class ConversionService : Service() {
             } while (faceRerun)
             if (faceManual || analysed.get() > 0) notifyResult("Analisi dei volti completata", summary(), ResultKind.FACES,
                 actions = listOf(NotificationCompat.Action(R.drawable.ic_action_open, "Vedi persone", openAppIntent(openPeople = true))))
+            return true
         } catch (e: kotlinx.coroutines.CancellationException) {
             notifyResult("$label annullata", summary(), ResultKind.FACES, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "face scan failed", e)
             notifyResult("$label non riuscita", UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
+            return false
         } finally {
+            synchronized(faceNoteLock) { faceRepost = null }
             releaseScan(ResultKind.FACES)
             faceJob = null
+            faceStopping = false
             faceManual = false
             faceProgress.value = null
             faces.release()
@@ -1498,7 +1529,9 @@ class ConversionService : Service() {
         var cancelPi: android.app.PendingIntent? = null
         if (cancelable) {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
-            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; else -> 6 }
+            // One request code per cancel: the intro and face scans shared one, so the PendingIntent
+            // carried whichever cancel was built last and "Annulla" could stop the other scan.
+            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7; else -> 6 }
             val pi = android.app.PendingIntent.getService(
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
@@ -2059,8 +2092,11 @@ class ConversionService : Service() {
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)) })
         }
 
-        /** A running intro/outro scan: [done] of [total] in its current [phase]; for Settings. */
-        data class IntroProgress(val done: Int, val total: Int, val phase: String)
+        /**
+         * A running scan: [done] of [total] in its current [phase]; for Settings. [stopping]:
+         * Annulla was pressed and the scan is finishing the frame or photo in hand.
+         */
+        data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false)
 
         /** Null while no intro/outro scan runs. */
         val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)

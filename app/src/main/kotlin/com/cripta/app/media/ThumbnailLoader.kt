@@ -35,7 +35,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Produces small thumbnails for images/videos by decrypting in memory only.
+ * Produces small thumbnails by decrypting in memory only: images, video frames, the first page of
+ * a PDF, the first lines of a note, a text or a document.
  * Two-level cache: in-memory LRU + a persistent on-disk cache of thumbnails encrypted
  * with the session DEK, so covers load fast after the app is closed/reopened without
  * re-decrypting the full media. Plaintext thumbnails are never written to disk.
@@ -86,6 +87,9 @@ class ThumbnailLoader @Inject constructor(
      *  hardware codec instances (each extra one fails or stalls the others). */
     private val videoDecoders = Semaphore(2)
 
+    /** One PDF rendered at a time (the renderer's engine is shared by the whole process). */
+    private val pdfPages = Semaphore(1)
+
     init {
         // Locked: the decrypted covers held in memory go (they are the vault's content), and so
         // do the failures seen meanwhile (a load while locked fails for want of the key, and the
@@ -132,7 +136,8 @@ class ThumbnailLoader @Inject constructor(
             when {
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
                 VaultRepository.isVideo(file.mimeType) -> videoDecoders.withPermit { videoFrame(file, null) }
-                else -> null
+                VaultRepository.isPdf(file.mimeType) -> pdfPages.withPermit { pdfCover(file) }
+                else -> documentText(file)?.let { textCover(it) }
             }
         }.getOrNull()
         if (bmp != null) {
@@ -372,6 +377,114 @@ class ThumbnailLoader @Inject constructor(
         val sample = calcSample(bounds.outWidth, bounds.outHeight, target)
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
         return repo.decryptingStream(file).use { BitmapFactory.decodeStream(it, null, opts) }
+    }
+
+    /**
+     * The first page of a PDF, its top as a square: what the document is, at a glance. The renderer
+     * needs a seekable descriptor, so the decrypted PDF goes into an anonymous memory file (memfd):
+     * in RAM only, gone when closed, never on disk.
+     */
+    private fun pdfCover(file: FileEntity): Bitmap? {
+        if (file.sizeBytes > MAX_PDF_BYTES) return null
+        val fd = android.system.Os.memfd_create("cover", 0)
+        try {
+            // Not closed: closing the stream would close [fd] before the renderer reads it.
+            val out = java.io.FileOutputStream(fd)
+            repo.decryptingStream(file).use { it.copyTo(out, 64 * 1024) }
+            android.system.Os.lseek(fd, 0, android.system.OsConstants.SEEK_SET)
+            val pfd = android.os.ParcelFileDescriptor.dup(fd)
+            val renderer = try { android.graphics.pdf.PdfRenderer(pfd) } catch (e: Exception) { pfd.close(); throw e }
+            return renderer.use { r ->
+                if (r.pageCount == 0) return null
+                r.openPage(0).use { page ->
+                    val h = (page.height * target.toFloat() / page.width.coerceAtLeast(1)).toInt().coerceIn(1, target * 3)
+                    val full = Bitmap.createBitmap(target, h, Bitmap.Config.ARGB_8888)
+                    full.eraseColor(android.graphics.Color.WHITE)
+                    page.render(full, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    if (h <= target) full else Bitmap.createBitmap(full, 0, 0, target, target).also { full.recycle() }
+                }
+            }
+        } finally {
+            runCatching { android.system.Os.close(fd) }
+        }
+    }
+
+    /**
+     * The opening text of a note, a text file or a document (Word, OpenDocument), for its cover;
+     * null for any other file (its type's icon stays).
+     */
+    private fun documentText(file: FileEntity): String? {
+        val mime = file.mimeType
+        val text = when {
+            mime.startsWith("text/") || mime == "application/json" || mime == "application/xml" ->
+                repo.decryptingStream(file).use { String(readUpTo(it, TEXT_COVER_BYTES), Charsets.UTF_8) }
+            mime == DOCX -> zipText(file, "word/document.xml")
+            mime == ODT -> zipText(file, "content.xml")
+            else -> null
+        }
+        return text?.takeIf { it.isNotBlank() }
+    }
+
+    /** The paragraphs of a zipped document's [entry] (its XML), read in memory, tags left out. */
+    private fun zipText(file: FileEntity, entry: String): String? {
+        java.util.zip.ZipInputStream(repo.decryptingStream(file)).use { zip ->
+            var e = zip.nextEntry
+            while (e != null && e.name != entry) e = zip.nextEntry
+            if (e == null) return null
+            val xml = String(readUpTo(zip, XML_COVER_BYTES), Charsets.UTF_8)
+            return xml.replace(Regex("</(w:p|text:p|text:h)>"), "\n").replace(Regex("<[^>]*>?"), "")
+                .replace(Regex("&#(x?)([0-9a-fA-F]+);")) { m ->
+                    m.groupValues[2].toIntOrNull(if (m.groupValues[1].isEmpty()) 10 else 16)
+                        ?.takeIf { Character.isValidCodePoint(it) }?.let { String(Character.toChars(it)) } ?: ""
+                }
+                .replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+                .take(TEXT_COVER_BYTES)
+        }
+    }
+
+    /** Up to [n] bytes of [input] (fewer at its end). */
+    private fun readUpTo(input: java.io.InputStream, n: Int): ByteArray {
+        val buf = ByteArray(n)
+        var read = 0
+        while (read < n) {
+            val k = input.read(buf, read, n - read)
+            if (k < 0) break
+            read += k
+        }
+        return buf.copyOf(read)
+    }
+
+    /**
+     * A page with the first lines of [text], drawn the same in either theme (it is a sheet of
+     * paper, like a PDF's page): the first line in bold when it reads as a title, then as much of
+     * the rest as fits.
+     */
+    private fun textCover(text: String): Bitmap {
+        val side = target
+        val bmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(PAPER)
+        val pad = side * 0.085f
+        val width = (side - 2 * pad).toInt()
+        val lines = text.replace("\r", "").replace('\t', ' ').lines().dropWhile { it.isBlank() }
+        val first = lines.firstOrNull()?.trim().orEmpty()
+        val rest = lines.drop(1).joinToString("\n").trim()
+        val titled = rest.isNotEmpty() && first.length <= 60
+        val bold = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = INK; textSize = side * 0.074f; typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        val plain = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = INK_SOFT; textSize = side * 0.06f }
+        var y = pad
+        fun block(s: String, paint: android.text.TextPaint, maxLines: Int) {
+            if (s.isEmpty() || maxLines <= 0) return
+            val layout = android.text.StaticLayout.Builder.obtain(s, 0, s.length, paint, width)
+                .setLineSpacing(0f, 1.2f).setMaxLines(maxLines).setEllipsize(android.text.TextUtils.TruncateAt.END).build()
+            canvas.save(); canvas.translate(pad, y); layout.draw(canvas); canvas.restore()
+            y += layout.height
+        }
+        val body = if (titled) { block(first, bold, 2); y += side * 0.03f; rest } else lines.joinToString("\n").trim()
+        block(body.take(TEXT_COVER_BYTES), plain, ((side - pad - y) / (plain.fontSpacing * 1.2f)).toInt())
+        return bmp
     }
 
     /** Which frame of a video to use as its cover, chosen by the user when regenerating. */
@@ -767,5 +880,20 @@ class ThumbnailLoader @Inject constructor(
         var halfH = h / 2
         while (halfW / sample >= target && halfH / sample >= target) sample *= 2
         return sample.coerceAtLeast(1)
+    }
+
+    private companion object {
+        /** Larger PDFs keep their icon: the whole file is held in memory to draw its page. */
+        const val MAX_PDF_BYTES = 64L * 1024 * 1024
+        /** How much of a text is read for its cover: far more than a cover shows. */
+        const val TEXT_COVER_BYTES = 4 * 1024
+        /** How much of a document's XML is read: its markup takes most of it. */
+        const val XML_COVER_BYTES = 256 * 1024
+        const val DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        const val ODT = "application/vnd.oasis.opendocument.text"
+        /** The sheet and its ink: the app's light page and text colours. */
+        const val PAPER = 0xFFF7F8FA.toInt()
+        const val INK = 0xFF0F172A.toInt()
+        const val INK_SOFT = 0xFF475467.toInt()
     }
 }

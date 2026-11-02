@@ -70,7 +70,7 @@ import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.TrackCard
 import com.cripta.app.data.face.FaceRepository
-import com.cripta.app.ui.components.MediaThumb
+import com.cripta.app.ui.people.FrameWithFace
 import com.cripta.app.viewer.EncryptedDataSource
 
 /**
@@ -90,18 +90,24 @@ private fun TrackCard.boxOrNull(): FloatArray? =
 
 /**
  * One moment of a face: for a video, the three seconds around it playing in a loop, silent; for a
- * photo, the photo. [zoom]: on the face (when its place is known), else the whole picture.
+ * photo, the photo. [zoom]: on the face (when its place is known), else the whole picture: the
+ * frame of that moment with the face ringed, under the clip until it plays.
  */
 @OptIn(UnstableApi::class)
 @Composable
 internal fun MomentClip(file: FileEntity, card: TrackCard, zoom: Boolean, vm: SettingsViewModel, modifier: Modifier = Modifier) {
     val box = card.boxOrNull()
     Box(modifier.aspectRatio(1f).clip(MaterialTheme.shapes.medium).background(Color.Black), contentAlignment = Alignment.Center) {
+        if (!zoom) {
+            // Read from the encrypted file in memory (never a plaintext copy), kept for the next look.
+            val still by produceState<android.graphics.Bitmap?>(null, card.id) { value = runCatching { vm.frameOf(card) }.getOrNull() }
+            still?.let { FrameWithFace(it, card.box, Modifier) }
+        }
         if (!VaultRepository.isVideo(file.mimeType)) {
             if (zoom) {
                 val bmp by produceState<android.graphics.Bitmap?>(null, card.id) { value = vm.faceCrop(card.id) }
                 bmp?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-            } else MediaThumb(file, { vm.thumbOf(it) }, Modifier.fillMaxSize(), showFavoriteBadge = false)
+            }
             return@Box
         }
         val ctx = LocalContext.current
@@ -165,7 +171,8 @@ private fun frame(side: Float, s: VideoSize, box: FloatArray?): Matrix {
 @Composable
 internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: String, o: FaceRepository.Overview, vm: SettingsViewModel,
                       onOpen: (TrackCard) -> Unit) {
-    var zoom by rememberSaveable { mutableStateOf(true) }
+    // The scene first: where and when each face was found tells more than the two faces alone.
+    var zoom by rememberSaveable { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             for ((card, caption) in listOf(a to captionA, b to captionB)) {
@@ -181,8 +188,8 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { Text("Volto") })
             com.cripta.app.ui.components.ChoiceChip(selected = !zoom, onClick = { zoom = false }, label = { Text("Scena") })
+            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { Text("Volto") })
         }
     }
 }

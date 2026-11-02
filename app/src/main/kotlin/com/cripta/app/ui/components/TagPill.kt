@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -62,12 +63,16 @@ fun tagText(tag: TagEntity): String =
  * rows, filters, tag pickers, the viewer's quick bar, Home and the downloader, in three sizes.
  *
  * Colour means "this tag is on the file / in the filter"; neutral means "not":
- * - Plain (a tag shown on a file) and On (assigned / filtered): the tag's colour, translucent
- *   (35% over [base]), name in the same hue or white/black at >= 4.5:1. On adds a tick. Over a
- *   picture: a see-through tint of the colour on a light glass, with a rim of the same colour
- *   less see-through, and white/black text.
+ * - Plain (a tag shown on a file): the tag's colour, translucent (35% over [base]), name in the
+ *   same hue or white/black at >= 4.5:1. Over a picture: a see-through tint of the colour on a
+ *   light glass, with a rim of the same colour less see-through, and white/black text.
+ * - On (assigned / filtered): the tag's colour in full, white or black text, and a tick. Told
+ *   apart from Off at a glance even when every tag has one colour (tag colours off).
  * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's colour.
  * - Excluded: neutral, struck through, with a "no" sign.
+ *
+ * On, Off and Excluded take the same width (the tick takes the room of the dot, the pin or the
+ * tag's icon): a tap never moves the tags after it, nor wraps them to another line.
  *
  * [onImage] draws it over a picture (covers, viewer). [base] is the colour behind the pill, for
  * the contrast maths.
@@ -106,13 +111,17 @@ fun TagPill(
     // colour over a dark backdrop, the darkest tone that pill can take.
     val bg = when {
         !colored -> neutral
+        on && onImage -> color.copy(alpha = 0.9f).compositeOver(OnImageGlass)
+        on -> color.compositeOver(base)
         onImage -> color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass.copy(alpha = 0.55f))
         else -> color.copy(alpha = 0.35f).compositeOver(base)
     }
     val rim = if (colored && onImage) color.copy(alpha = 0.85f) else null
-    val fg = remember(color, bg, colored, onImage, muted) {
+    val fg = remember(color, bg, colored, on, onImage, muted) {
         when {
             !colored -> muted
+            // The full colour: white or black, whichever reads better on it.
+            on -> if (bg.luminance() < 0.18f) Color.White else Color.Black
             // Judged on the darkest backdrop the see-through pill can take.
             onImage -> readableOn(Color.White, color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass))
             else -> readableOn(color, bg, 4.8)
@@ -155,22 +164,25 @@ fun TagPill(
             .padding(horizontal = hPad, vertical = vPad),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val lead: ImageVector? = when (state) {
-            TagPillState.On -> Icons.Filled.Check
-            TagPillState.Excluded -> Icons.Filled.Block
-            else -> leadingIcon
-        }
+        // The tick (or the "no" sign) takes the place of what leads when off (the pin, else the
+        // tag's icon, else the dot), in a slot of one size: a tap never changes the pill's width.
+        val mark = when (state) { TagPillState.On -> Icons.Filled.Check; TagPillState.Excluded -> Icons.Filled.Block; else -> null }
+        val markOnIcon = mark != null && tagIcon != null && leadingIcon == null
+        val lead: ImageVector? = if (markOnIcon) null else mark ?: leadingIcon
         if (lead != null) {
             Icon(lead, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(iconSize))
-        } else if (size != TagPillSize.Small && tagIcon == null) {
+        } else if (tagIcon == null && (size != TagPillSize.Small || state == TagPillState.Off)) {
             // The tag's own colour as a dot, so every tag is recognisable even when it is off.
-            Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape).background(if (colored) fg else color))
+            Box(Modifier.padding(end = 4.dp).size(iconSize), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(if (colored) fg else color))
+            }
         }
         if (tagIcon != null) {
             // Its room is kept while the icon loads, so the pill never grows under the finger.
             val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tagIcon)
             Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
-                if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize())
+                if (markOnIcon && mark != null) Icon(mark, null, tint = fg, modifier = Modifier.matchParentSize())
+                else if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize())
             }
         }
         if (text.isNotEmpty()) Text(

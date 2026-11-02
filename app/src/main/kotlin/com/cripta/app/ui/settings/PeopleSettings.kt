@@ -243,9 +243,9 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
         if (progress != null) {
             val pct = progress.done * 100 / maxOf(1, progress.total)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Analisi in corso: ${progress.done} di ${progress.total} media · $pct%", style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f))
-                TextButton(onClick = onStop) { com.cripta.app.ui.components.ButtonText("Ferma") }
+                Text(if (progress.stopping) "Annullamento in corso…" else "Analisi in corso: ${progress.done} di ${progress.total} media · $pct%",
+                    style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = onStop, enabled = !progress.stopping) { com.cripta.app.ui.components.ButtonText("Ferma") }
             }
             LinearProgressIndicator(progress = { progress.done.toFloat() / maxOf(1, progress.total) }, modifier = Modifier.fillMaxWidth())
             Text("Le persone compaiono e si aggiornano mentre l'analisi procede.", style = MaterialTheme.typography.bodySmall,
