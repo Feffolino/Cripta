@@ -30,7 +30,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.withStyle
+import kotlin.math.roundToLong
 import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.text.style.TextAlign
@@ -81,6 +84,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.ScreenLockRotation
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.ScreenRotation
@@ -2229,17 +2234,32 @@ private fun DetailsSheet(
             }
         }
     }
-    // Size, length, resolution in equal columns across the whole panel, with room above and below:
-    // the figure first, what it is under it. The quality name goes with the label ("Risoluzione ·
-    // 4K") so the figure stays short enough for its column.
+    // Size, length, resolution as one quiet strip, like Home's summary: in equal columns, each
+    // figure short (its unit smaller) with what it is under it. A video's resolution reads as its
+    // name ("Full HD"), a photo's in megapixels, the exact pixels under it: "1920 × 1080" as the
+    // figure took two lines in its column.
     val tiles: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
-            DetailFigure(com.cripta.app.ui.components.formatBytes(file.sizeBytes), "Dimensione", Modifier.weight(1f))
-            com.cripta.app.ui.components.formatDuration(file.durationMs)?.let { DetailFigure(it, "Durata", Modifier.weight(1f)) }
-            val w = file.width; val h = file.height
-            if (w != null && h != null) {
-                DetailFigure("$w × $h", "Risoluzione" + (quality(w, h)?.takeIf { isVid }?.let { " · $it" } ?: ""), Modifier.weight(1f))
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
+            Row(Modifier.padding(vertical = 4.dp)) {
+                val size = com.cripta.app.ui.components.formatBytes(file.sizeBytes)
+                DetailFigure(size.substringBeforeLast(' '), size.substringAfterLast(' ', ""), "Dimensione",
+                    Icons.Filled.SdStorage, "Dimensione $size", Modifier.weight(1f))
+                com.cripta.app.ui.components.formatDuration(file.durationMs)?.let {
+                    DetailFigure(it, null, "Durata", Icons.Filled.Schedule, "Durata $it", Modifier.weight(1f))
+                }
+                val w = file.width; val h = file.height
+                if (w != null && h != null && w > 0 && h > 0) {
+                    val pixels = "$w × $h"
+                    if (isVid) {
+                        val name = quality(w, h) ?: "${minOf(w, h)}p"
+                        DetailFigure(name, null, pixels, Icons.Filled.AspectRatio, "Risoluzione $name, $w per $h", Modifier.weight(1f))
+                    } else {
+                        val mp = w.toLong() * h / 1_000_000.0
+                        val value = if (mp < 10) String.format(java.util.Locale.getDefault(), "%.1f", mp) else "${mp.roundToLong()}"
+                        DetailFigure(value, "MP", pixels, Icons.Filled.AspectRatio, "Risoluzione $value megapixel, $w per $h", Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
@@ -2380,14 +2400,30 @@ private fun DetailsSheet(
     }
 }
 
-/** One figure of the file (size, length, resolution): the value, then what it is in small under it. */
+/**
+ * One figure of the file (size, length, resolution): the [value] large with its [unit] smaller and
+ * quieter beside it, then what it is ([label], after its [icon]) under it. Read out as [spoken].
+ */
 @Composable
-private fun DetailFigure(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        // Two lines at most, balanced, when a large font makes the value wider than its column.
-        Text(value, style = MaterialTheme.typography.titleLarge.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), maxLines = 2)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2, modifier = Modifier.padding(top = 4.dp))
+private fun DetailFigure(value: String, unit: String?, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+                         spoken: String, modifier: Modifier = Modifier) {
+    val quiet = MaterialTheme.colorScheme.onSurfaceVariant
+    val unitSize = MaterialTheme.typography.titleSmall.fontSize
+    Column(modifier.clearAndSetSemantics { contentDescription = spoken }.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        // Two lines at most, balanced, only when a large font makes the value wider than its column.
+        Text(
+            androidx.compose.ui.text.buildAnnotatedString {
+                append(value)
+                if (!unit.isNullOrEmpty()) {
+                    withStyle(androidx.compose.ui.text.SpanStyle(fontSize = unitSize, color = quiet)) { append("\u00A0$unit") }
+                }
+            },
+            style = MaterialTheme.typography.titleLarge.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), maxLines = 2,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+            Icon(icon, null, tint = quiet, modifier = Modifier.size(14.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = quiet, maxLines = 2, modifier = Modifier.padding(start = 4.dp))
+        }
     }
 }
 
