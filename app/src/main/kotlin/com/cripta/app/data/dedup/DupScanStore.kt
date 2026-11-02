@@ -58,6 +58,9 @@ class DupScanStore @Inject constructor() {
         })
     }
 
+    /** Put back groups dropped by [dropFiles] (their copies were restored from the trash). */
+    fun putBack(groups: List<List<FileEntity>>) = _state.update { s -> s.copy(result = s.result?.copy(groups = groups)) }
+
     fun requestOpen() { _openRequested.value = true }
     fun consumeOpen() { _openRequested.value = false }
 }

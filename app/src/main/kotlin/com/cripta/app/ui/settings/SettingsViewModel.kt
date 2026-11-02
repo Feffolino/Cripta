@@ -633,7 +633,7 @@ class SettingsViewModel @Inject constructor(
     /** Label of the last resolution, e.g. "Tenuto X · spostate 2 etichette". */
     private val _dupNotice = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val dupNotice: StateFlow<String?> = _dupNotice
-    fun clearDupNotice() { _dupNotice.value = null; _dupUndo.value = emptyList() }
+    fun clearDupNotice() { _dupNotice.value = null; _dupUndo.value = emptyList(); beforeResolution = null }
 
     suspend fun thumb(file: com.cripta.app.data.db.FileEntity): android.graphics.Bitmap? = thumbs.load(file)
     /** Seekable decrypting channel for in-place video preview (nothing written to disk). */
@@ -763,6 +763,7 @@ class SettingsViewModel @Inject constructor(
         val trash = trashOn()
         if (!trash) remove.forEach { thumbs.evict(it) }
         _dupUndo.value = if (trash) remove else emptyList()
+        beforeResolution = if (trash) snapshotResults() else null
         dropFromResults(remove.toSet())
         val name = group.candidates.first { it.file.id == keepId }.file.originalName
         _dupNotice.value = buildString {
@@ -772,6 +773,18 @@ class SettingsViewModel @Inject constructor(
             if (moved.isNotEmpty()) append(" · spostate ${moved.size} etichette")
         }
     }
+
+    /** The results as they were before the last resolution, put back by [undoDuplicates]. */
+    private class ResultsSnapshot(
+        val dup: List<DupGroup>,
+        val exact: List<DuplicateScanner.ExactGroup>,
+        val similar: List<DuplicateScanner.SimilarGroup>,
+        val stored: List<List<com.cripta.app.data.db.FileEntity>>?,
+    )
+    private var beforeResolution: ResultsSnapshot? = null
+
+    private fun snapshotResults() =
+        ResultsSnapshot(_dupGroups.value, _exactGroups.value, _similarGroups.value, dupStore.state.value.result?.groups)
 
     /** Copies just sent to the trash by a resolution, restorable with [undoDuplicates]. */
     private val _dupUndo = kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
@@ -783,6 +796,15 @@ class SettingsViewModel @Inject constructor(
         if (ids.isEmpty()) return@launchHeld
         _dupUndo.value = emptyList()
         ids.forEach { repo.restore(it) }
+        // The group comes back too, re-read (the kept copy has the tags it was given meanwhile).
+        beforeResolution?.let { r ->
+            _dupGroups.value = r.dup
+            _exactGroups.value = r.exact
+            _similarGroups.value = r.similar
+            r.stored?.let { dupStore.putBack(it) }
+            dropFromResults(emptySet())
+        }
+        beforeResolution = null
         _dupNotice.value = if (ids.size == 1) "Copia ripristinata" else "Ripristinate ${ids.size} copie"
     }
 
@@ -803,6 +825,7 @@ class SettingsViewModel @Inject constructor(
         val trash = trashOn()
         if (!trash) thumbs.evict(fileId)
         _dupUndo.value = if (trash) listOf(fileId) else emptyList()
+        beforeResolution = if (trash) snapshotResults() else null
         dropFromResults(setOf(fileId))
         _dupNotice.value = buildString {
             append(if (trash) "Copia spostata nel cestino" else "Copia eliminata")
@@ -857,6 +880,7 @@ class SettingsViewModel @Inject constructor(
         _dupGroups.value = emptyList()
         _dupNotice.value = null
         _dupUndo.value = emptyList()
+        beforeResolution = null
         _exactGroups.value = emptyList()
         _similarGroups.value = emptyList()
     }

@@ -389,22 +389,25 @@ private fun SimilarPage(
                     }
                 }
             }
-            Column {
-                Button(onClick = { onKeep(focus) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                    val n = g.candidates.size - 1
-                    com.cripta.app.ui.components.ButtonText(when {
-                        best && n == 1 -> "Tieni il consigliato, elimina l'altra"
-                        best -> "Tieni il consigliato, elimina le altre $n"
-                        else -> "Tieni solo questo"
-                    })
-                }
-                val moving = g.candidates.filter { it.file.id != focus.file.id }.flatMap { it.tags }.distinct().filterNot { it in focus.tags }
-                if (moving.isNotEmpty()) Text("Le etichette ${moving.joinToString(", ") { "#$it" }} passano alla copia tenuta.",
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp))
-                TextButton(onClick = { onDelete(focus) }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina questa copia", color = MaterialTheme.colorScheme.error)
-                }
+        }
+    }
+    // The choice stays in sight: only the details above it scroll when they are long (many tags).
+    val actions: @Composable (Modifier) -> Unit = { m ->
+        Column(m) {
+            Button(onClick = { onKeep(focus) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                val n = g.candidates.size - 1
+                com.cripta.app.ui.components.ButtonText(when {
+                    best && n == 1 -> "Tieni il consigliato, elimina l'altra"
+                    best -> "Tieni il consigliato, elimina le altre $n"
+                    else -> "Tieni solo questo"
+                })
+            }
+            val moving = g.candidates.filter { it.file.id != focus.file.id }.flatMap { it.tags }.distinct().filterNot { it in focus.tags }
+            if (moving.isNotEmpty()) Text("Le etichette ${moving.joinToString(", ") { "#$it" }} passano alla copia tenuta.",
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp))
+            TextButton(onClick = { onDelete(focus) }) {
+                com.cripta.app.ui.components.ButtonText("Elimina questa copia", color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -412,12 +415,20 @@ private fun SimilarPage(
         Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically) {
             picture(Modifier.weight(1.4f).fillMaxHeight())
-            controls(Modifier.weight(1f).verticalScroll(rememberScrollState()))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                controls(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
+                actions(Modifier.fillMaxWidth())
+            }
         }
     } else {
-        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            picture(Modifier.weight(1f).fillMaxWidth())
-            controls(Modifier.fillMaxWidth())
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            // The details take at most 40% of the page (then scroll): the picture always keeps room.
+            val detailsMax = maxHeight * 0.4f
+            Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                picture(Modifier.weight(1f).fillMaxWidth())
+                controls(Modifier.fillMaxWidth().heightIn(max = detailsMax).verticalScroll(rememberScrollState()))
+                actions(Modifier.fillMaxWidth())
+            }
         }
     }
 }
