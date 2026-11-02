@@ -83,6 +83,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.ui.components.formatBytes
@@ -92,6 +105,7 @@ import com.cripta.app.ui.components.formatDuration
 private sealed interface DupAction {
     data class KeepOnly(val group: SettingsViewModel.DupGroup, val keep: SettingsViewModel.DupCandidate) : DupAction
     data class DeleteOne(val group: SettingsViewModel.DupGroup, val target: SettingsViewModel.DupCandidate) : DupAction
+    data class KeepSome(val group: SettingsViewModel.DupGroup, val keepIds: Set<String>) : DupAction
 }
 
 /**
@@ -204,6 +218,7 @@ fun DuplicatesCompare(
             when (action) {
                 is DupAction.KeepOnly -> onKeepOnly(action.keep.file.id)
                 is DupAction.DeleteOne -> onDelete(action.target.file.id)
+                is DupAction.KeepSome -> Unit
             }
             pending = null
         }, onDismiss = { pending = null }) }
@@ -211,10 +226,12 @@ fun DuplicatesCompare(
 }
 
 /**
- * "Media simili" one group at a time, full screen, swiped up like "Da sistemare" of the faces: the
- * copy in view takes the free space (tap: full size, a video plays), the group's copies in a row
- * under it (tap shows one), its details, then "Tieni solo questa" across the width and "Elimina
- * questa copia" as text under it. Once a group is resolved the next one takes the page.
+ * "Media simili" one group at a time, full screen, swiped up like "Da sistemare" of the faces. The
+ * copy in view takes the free space (tap: the viewer, full screen); the group's copies in a row
+ * under it, each kept or deleted (tap switches it and puts it in view, long press only shows it);
+ * the tags the kept copy will have; "Perché è consigliata"; then "Tieni N, elimina M" across the
+ * width and "Non sono simili" (remembered: never grouped again). With the trash on nothing is
+ * confirmed, "Annulla" stays at the bottom; once every group is done the page says what was freed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -224,22 +241,29 @@ fun SimilarPager(
     emptyText: String,
     notice: String?,
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
-    channelFor: (FileEntity) -> java.nio.channels.SeekableByteChannel,
     imageBytes: suspend (FileEntity) -> ByteArray,
-    onKeepOnly: (String) -> Unit,
-    onDelete: (String) -> Unit,
+    onKeep: (Set<String>) -> Unit,
+    onNotSimilar: (List<String>) -> Unit,
+    onOpen: (List<String>, String) -> Unit,
     onClearNotice: () -> Unit,
     onDismiss: () -> Unit,
+    /** Space freed and groups resolved so far, and groups marked "non simili". */
+    freed: Pair<Long, Int> = 0L to 0,
+    apart: Int = 0,
+    initialPage: Int = 0,
+    onPage: (Int) -> Unit = {},
     trashDays: Int? = null,
     canUndo: Boolean = false,
     onUndo: () -> Unit = {},
 ) {
     var pending by remember { mutableStateOf<DupAction?>(null) }
-    var preview by remember { mutableStateOf<Pair<SettingsViewModel.DupGroup, Int>?>(null) }
+    var why by remember { mutableStateOf<SettingsViewModel.DupGroup?>(null) }
+    var compare by remember { mutableStateOf<Pair<SettingsViewModel.DupCandidate, SettingsViewModel.DupCandidate>?>(null) }
     LaunchedEffect(notice, canUndo) {
         if (notice != null) { kotlinx.coroutines.delay(if (canUndo) 8000L else 4000L); onClearNotice() }
     }
-    val pager = androidx.compose.foundation.pager.rememberPagerState { groups.size }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = initialPage.coerceIn(0, maxOf(0, groups.size - 1))) { groups.size }
+    LaunchedEffect(pager) { androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { onPage(it) } }
     com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Scaffold(topBar = {
@@ -253,7 +277,7 @@ fun SimilarPager(
                 },
                 navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
         }, bottomBar = {
-            // Outcome of the last resolution, with "Annulla" while the copies sit in the trash.
+            // Outcome of the last answer, with "Annulla" while the copies sit in the trash.
             var shown by remember { mutableStateOf("") }
             if (notice != null) shown = notice   // keep the text while it fades out
             AnimatedVisibility(notice != null, enter = fadeIn(Motion.enter()), exit = fadeOut(Motion.exit())) {
@@ -265,157 +289,195 @@ fun SimilarPager(
             }
         }) { pad ->
             if (groups.isEmpty()) {
-                Box(Modifier.fillMaxSize().padding(pad).padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(emptyText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                DoneOrEmpty(freed, apart, emptyText, onDismiss, Modifier.fillMaxSize().padding(pad))
                 return@Scaffold
             }
             androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize().padding(pad),
                 key = { groups.getOrNull(it)?.candidates?.joinToString("|") { c -> c.file.id } ?: it }, beyondViewportPageCount = 1) { page ->
                 val g = groups.getOrNull(page) ?: return@VerticalPager
                 SimilarPage(g, thumb,
-                    onPreview = { c -> preview = g to g.candidates.indexOf(c) },
-                    onKeep = { c -> pending = DupAction.KeepOnly(g, c) },
-                    onDelete = { c -> pending = DupAction.DeleteOne(g, c) })
+                    onOpen = { c -> onOpen(g.candidates.map { it.file.id }, c.file.id) },
+                    onKeep = { keep -> if (trashDays != null) onKeep(keep) else pending = DupAction.KeepSome(g, keep) },
+                    onNotSimilar = { onNotSimilar(g.candidates.map { it.file.id }) },
+                    onWhy = { why = g })
             }
         }
 
-        preview?.let { (g, index) ->
-            PreviewDialog(
-                group = g,
-                startIndex = index,
-                channelFor = channelFor,
-                imageBytes = imageBytes,
-                onKeep = { c -> preview = null; pending = DupAction.KeepOnly(g, c) },
-                onDismiss = { preview = null },
-            )
+        why?.let { g ->
+            WhyRecommended(g, thumb, onDismiss = { why = null },
+                onCompare = { a, b -> compare = a to b },
+                onPlayBoth = { a, b -> onOpen(listOf(a.file.id, b.file.id), a.file.id) })
         }
+        compare?.let { (a, b) -> SlideCompare(a, b, thumb, imageBytes) { compare = null } }
 
         pending?.let { action -> ConfirmDialog(action, trashDays, onConfirm = {
-            when (action) {
-                is DupAction.KeepOnly -> onKeepOnly(action.keep.file.id)
-                is DupAction.DeleteOne -> onDelete(action.target.file.id)
-            }
+            if (action is DupAction.KeepSome) onKeep(action.keepIds)
             pending = null
         }, onDismiss = { pending = null }) }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** No group left: what the session freed, or that the scan found nothing. */
+@Composable
+private fun DoneOrEmpty(freed: Pair<Long, Int>, apart: Int, emptyText: String, onClose: () -> Unit, modifier: Modifier) {
+    Column(modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        if (freed.second == 0 && apart == 0) {
+            Text(emptyText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            return@Column
+        }
+        Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+        }
+        Text("Tutto sistemato", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp))
+        Text(buildString {
+            if (freed.second > 0) append("Liberati ${formatBytes(freed.first)} in ${if (freed.second == 1) "1 gruppo" else "${freed.second} gruppi"}.")
+            if (apart > 0) {
+                if (isNotEmpty()) append(" ")
+                append(if (apart == 1) "1 gruppo segnato come «non simili»: non tornerà." else "$apart gruppi segnati come «non simili»: non torneranno.")
+            }
+        }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        androidx.compose.material3.FilledTonalButton(onClick = onClose, modifier = Modifier.padding(top = 24.dp).heightIn(min = 48.dp)) {
+            com.cripta.app.ui.components.ButtonText("Chiudi")
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SimilarPage(
     g: SettingsViewModel.DupGroup,
     thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
-    onPreview: (SettingsViewModel.DupCandidate) -> Unit,
-    onKeep: (SettingsViewModel.DupCandidate) -> Unit,
-    onDelete: (SettingsViewModel.DupCandidate) -> Unit,
+    onOpen: (SettingsViewModel.DupCandidate) -> Unit,
+    onKeep: (Set<String>) -> Unit,
+    onNotSimilar: () -> Unit,
+    onWhy: () -> Unit,
 ) {
-    // The suggested copy first in view; the choice follows the copy shown.
+    // The suggested copy is kept and in view at first; the others are to delete.
+    var keep by remember(g) { mutableStateOf(setOf(g.bestId)) }
     var focusId by remember(g) { mutableStateOf(g.bestId) }
     val focus = g.candidates.firstOrNull { it.file.id == focusId } ?: g.best
-    val best = focus.file.id == g.bestId
+    val removing = g.candidates.filter { it.file.id !in keep }
+    // The tags go to the first kept copy (in the suggested order), as the resolution does.
+    val heir = g.candidates.firstOrNull { it.file.id in keep }
+    val moving = heir?.let { h -> removing.flatMap { it.tags }.distinct().filterNot { it in h.tags } }.orEmpty()
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val picture: @Composable (Modifier) -> Unit = { m ->
         val f = focus.file
-        Box(m.clip(MaterialTheme.shapes.large).clickable(onClickLabel = if (VaultRepository.isVideo(f.mimeType)) "Riproduci" else "Ingrandisci") {
-            onPreview(focus)
-        }, contentAlignment = Alignment.Center) {
-            val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-            Crossfade(bmp, label = "similarcover") { b ->
-                if (b != null) Image(b.asImageBitmap(), f.originalName, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(if (VaultRepository.isVideo(f.mimeType)) Icons.Filled.Movie else Icons.Filled.Image, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
+        val video = VaultRepository.isVideo(f.mimeType)
+        Column(m, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f).fillMaxWidth().clip(MaterialTheme.shapes.large)
+                .clickable(onClickLabel = if (video) "Guarda a schermo intero" else "Apri a schermo intero") { onOpen(focus) },
+                contentAlignment = Alignment.Center) {
+                val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+                com.cripta.app.ui.components.CoverPlaceholderBackground()
+                Crossfade(bmp, label = "similarcover") { b ->
+                    if (b != null) Image(b.asImageBitmap(), f.originalName, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                }
+                Box(Modifier.size(52.dp).clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
+                    Icon(if (video) Icons.Filled.PlayArrow else Icons.Filled.ZoomIn, null, tint = Color.White, modifier = Modifier.size(30.dp))
+                }
+                if (video) formatDuration(f.durationMs)?.let { d ->
+                    Text(d, color = Color.White, style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(CircleShape)
+                            .background(com.cripta.app.ui.components.OnImageGlass).padding(horizontal = 8.dp, vertical = 2.dp))
                 }
             }
-            Box(Modifier.size(48.dp).clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
-                Icon(if (VaultRepository.isVideo(f.mimeType)) Icons.Filled.PlayArrow else Icons.Filled.ZoomIn, null,
-                    tint = Color.White, modifier = Modifier.size(30.dp))
-            }
+            // The name under the picture, never on it.
+            Text(buildString {
+                append(listOfNotNull(focus.resolution?.let { "${it.first}×${it.second}" }, formatBytes(f.sizeBytes),
+                    java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))).joinToString(" · "))
+            }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.originalName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
-    val controls: @Composable (Modifier) -> Unit = { m ->
-        Column(m, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column {
-                val total = g.candidates.sumOf { it.file.sizeBytes }
-                Text("${g.candidates.size} media simili · recuperabili ${formatBytes(total - g.best.file.sizeBytes)}",
-                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                Text(buildString {
-                    append("Consigliato: \"${g.best.file.originalName}\"")
-                    if (g.reasons.isNotEmpty()) append(" — ${g.reasons.joinToString(", ")}")
-                    append(". Tocca una copia per vederla.")
-                }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-            }
-            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    val details: @Composable (Modifier) -> Unit = { m ->
+        Column(m, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(top = 6.dp, end = 6.dp)) {
                 items(g.candidates, key = { it.file.id }) { c ->
-                    val on = c.file.id == focus.file.id
-                    Column(Modifier.width(72.dp).clip(MaterialTheme.shapes.small)
-                        .clickable(onClickLabel = "Mostra") { focusId = c.file.id }
-                        .semantics(mergeDescendants = true) { selected = on },
-                        horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(72.dp).clip(com.cripta.app.ui.theme.CoverShape)
-                            .alpha(if (on) 1f else 0.5f)) {
-                            val b by produceState<android.graphics.Bitmap?>(null, c.file.id) { value = thumb(c.file) }
-                            com.cripta.app.ui.components.CoverPlaceholderBackground()
-                            b?.let { Image(it.asImageBitmap(), c.file.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                            if (c.file.isFavorite) com.cripta.app.ui.components.CoverStar(Modifier.align(Alignment.TopEnd).padding(4.dp), size = 16.dp)
+                    val on = c.file.id in keep
+                    val best = c.file.id == g.bestId
+                    Column(Modifier.width(80.dp).clip(MaterialTheme.shapes.small)
+                        .combinedClickable(onClickLabel = if (on) "Elimina" else "Tieni", onLongClickLabel = "Metti in vista",
+                            onLongClick = { focusId = c.file.id }) {
+                            keep = if (on) keep - c.file.id else keep + c.file.id
+                            focusId = c.file.id
                         }
-                        Text(if (c.file.id == g.bestId) "Consigliato" else c.resolution?.let { "${it.first}×${it.second}" } ?: formatBytes(c.file.sizeBytes),
-                            style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        .semantics(mergeDescendants = true) { selected = on }) {
+                        Box {
+                            val b by produceState<android.graphics.Bitmap?>(null, c.file.id) { value = thumb(c.file) }
+                            Box(Modifier.size(80.dp).clip(com.cripta.app.ui.theme.CoverShapeSmall)) {
+                                com.cripta.app.ui.components.CoverPlaceholderBackground()
+                                b?.let { Image(it.asImageBitmap(), c.file.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                            }
+                            // State marker: the ring and a tick for kept, a bin for deleted (never colour alone).
+                            if (on) Box(Modifier.matchParentSize().border(3.dp, MaterialTheme.colorScheme.primary, com.cripta.app.ui.theme.CoverShapeSmall))
+                            Box(Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(22.dp).clip(CircleShape)
+                                .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center) {
+                                Icon(if (on) Icons.Filled.Check else Icons.Filled.Delete, null, modifier = Modifier.size(14.dp),
+                                    tint = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.error)
+                            }
+                        }
+                        Text(if (on) "Tieni" else "Elimina", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp),
+                            color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                        Text(listOfNotNull(if (best) "consigliata" else null,
+                            when (c.tags.size) { 0 -> "nessuna etichetta"; 1 -> "1 etichetta"; else -> "${c.tags.size} etichette" }).joinToString(" · "),
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                     }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val f = focus.file
-                Text(f.originalName, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                val lower = focus.pixels in 1 until g.best.pixels
-                Text(listOfNotNull(
-                    focus.resolution?.let { "${it.first}×${it.second}" },
-                    formatBytes(f.sizeBytes),
-                    formatDuration(f.durationMs),
-                    f.mimeType.substringAfter('/').uppercase().take(6),
-                    java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt)),
-                ).joinToString(" · "), style = MaterialTheme.typography.bodySmall,
-                    color = if (lower) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-                if (!f.sourceUrl.isNullOrBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Link, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                    Text("link di origine", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                }
-                if (focus.tags.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    focus.tags.forEach { t ->
-                        com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t), base = MaterialTheme.colorScheme.background)
+            Text("Tocca una copia: la metti in vista e passa da tieni a elimina.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (heir != null && (heir.tags.isNotEmpty() || moving.isNotEmpty())) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (keep.size > 1) "Etichette di \"${heir.file.originalName}\"" else "Etichette della copia tenuta",
+                        style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        heir.tags.forEach { t -> com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t), base = MaterialTheme.colorScheme.background) }
+                        moving.forEach { t ->
+                            com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t), base = MaterialTheme.colorScheme.background,
+                                leadingIcon = Icons.Filled.Add)
+                        }
                     }
+                    if (moving.isNotEmpty()) Text(
+                        if (moving.size == 1) "«${moving.single()}» arriva da una copia che elimini: non si perde."
+                        else "Quelle con + arrivano dalle copie che elimini: non si perdono.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onWhy),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Perché è consigliata", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
-    // The choice stays in sight: only the details above it scroll when they are long (many tags).
+    // The answer stays in sight: only the details above it scroll when they are long (many tags).
     val actions: @Composable (Modifier) -> Unit = { m ->
-        Column(m) {
-            Button(onClick = { onKeep(focus) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                val n = g.candidates.size - 1
+        Column(m, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { onKeep(keep) }, enabled = keep.isNotEmpty() && removing.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                 com.cripta.app.ui.components.ButtonText(when {
-                    best && n == 1 -> "Tieni il consigliato, elimina l'altra"
-                    best -> "Tieni il consigliato, elimina le altre $n"
-                    else -> "Tieni solo questo"
+                    keep.isEmpty() -> "Tieni almeno una copia"
+                    removing.isEmpty() -> "Segna una copia da eliminare"
+                    else -> "Tieni ${keep.size}, elimina ${removing.size} · ${formatBytes(removing.sumOf { it.file.sizeBytes })}"
                 })
             }
-            val moving = g.candidates.filter { it.file.id != focus.file.id }.flatMap { it.tags }.distinct().filterNot { it in focus.tags }
-            if (moving.isNotEmpty()) Text("Le etichette ${moving.joinToString(", ") { "#$it" }} passano alla copia tenuta.",
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp))
-            com.cripta.app.ui.components.DestructiveButton("Elimina questa copia", onClick = { onDelete(focus) },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            androidx.compose.material3.FilledTonalButton(onClick = onNotSimilar, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                com.cripta.app.ui.components.ButtonText("Non sono simili")
+            }
         }
     }
     if (landscape) {
         Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            picture(Modifier.weight(1.4f).fillMaxHeight())
+            picture(Modifier.weight(1.3f).fillMaxHeight())
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                controls(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
+                GroupTitle(g, removing)
+                details(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
                 actions(Modifier.fillMaxWidth())
             }
         }
@@ -423,13 +485,198 @@ private fun SimilarPage(
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             // The details take at most 40% of the page (then scroll): the picture always keeps room.
             val detailsMax = maxHeight * 0.4f
-            Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GroupTitle(g, removing)
                 picture(Modifier.weight(1f).fillMaxWidth())
-                controls(Modifier.fillMaxWidth().heightIn(max = detailsMax).verticalScroll(rememberScrollState()))
+                details(Modifier.fillMaxWidth().heightIn(max = detailsMax).verticalScroll(rememberScrollState()))
                 actions(Modifier.fillMaxWidth())
             }
         }
     }
+}
+
+/** "3 copie simili · recuperi 212 MB": what the current choice frees. */
+@Composable
+private fun GroupTitle(g: SettingsViewModel.DupGroup, removing: List<SettingsViewModel.DupCandidate>) {
+    Text("${g.candidates.size} copie simili · recuperi ${formatBytes(removing.sumOf { it.file.sizeBytes })}",
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+}
+
+private fun facts(c: SettingsViewModel.DupCandidate) = com.cripta.app.data.dedup.CopyComparison.Facts(
+    width = c.resolution?.first, height = c.resolution?.second, bytes = c.file.sizeBytes, durationMs = c.file.durationMs,
+    importedAt = c.file.importedAt, video = VaultRepository.isVideo(c.file.mimeType), mp4 = c.file.mimeType == "video/mp4",
+    favorite = c.file.isFavorite, hasLink = !c.file.sourceUrl.isNullOrBlank(),
+)
+
+/**
+ * "Perché è consigliata": the suggested copy against one other (picked when there are more), the
+ * decisive reasons apart from the rest, the tags (which never decide), and two ways to see it:
+ * the slide comparison and both copies one after the other in the viewer.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun WhyRecommended(
+    g: SettingsViewModel.DupGroup,
+    thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
+    onDismiss: () -> Unit,
+    onCompare: (SettingsViewModel.DupCandidate, SettingsViewModel.DupCandidate) -> Unit,
+    onPlayBoth: (SettingsViewModel.DupCandidate, SettingsViewModel.DupCandidate) -> Unit,
+) {
+    val best = g.best
+    val others = g.candidates.filter { it.file.id != g.bestId }
+    var otherId by remember(g) { mutableStateOf(others.firstOrNull()?.file?.id) }
+    val other = others.firstOrNull { it.file.id == otherId } ?: others.firstOrNull() ?: return
+    var picking by remember { mutableStateOf(false) }
+    val dateFmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM) }
+    val reasons = remember(best, other) {
+        com.cripta.app.data.dedup.CopyComparison.reasons(facts(best), facts(other),
+            date = { dateFmt.format(java.util.Date(it)) }, duration = { formatDuration(it).orEmpty() })
+    }
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Scaffold(topBar = {
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                title = { Text("Perché ${best.file.originalName}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
+        }) { pad ->
+            Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf(best, other).forEach { c ->
+                        Column(Modifier.weight(1f)) {
+                            val b by produceState<android.graphics.Bitmap?>(null, c.file.id) { value = thumb(c.file) }
+                            Box(Modifier.fillMaxWidth().aspectRatio(1.3f).clip(com.cripta.app.ui.theme.CoverShape)
+                                .then(if (c === best) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, com.cripta.app.ui.theme.CoverShape) else Modifier)) {
+                                com.cripta.app.ui.components.CoverPlaceholderBackground()
+                                b?.let { Image(it.asImageBitmap(), c.file.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                            }
+                            Text(c.file.originalName, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 4.dp))
+                            if (c === best) Text("consigliata", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+                if (others.size > 1) Box {
+                    Row(Modifier.heightIn(min = 48.dp).clip(MaterialTheme.shapes.small).clickable { picking = true },
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("Rispetto a: ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(other.file.originalName, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false))
+                        Icon(Icons.Filled.ArrowDropDown, "Scegli la copia da confrontare")
+                    }
+                    androidx.compose.material3.DropdownMenu(expanded = picking, onDismissRequest = { picking = false }) {
+                        others.forEach { o ->
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(o.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                onClick = { otherId = o.file.id; picking = false })
+                        }
+                    }
+                }
+                val major = reasons.filter { it.major }
+                val minor = reasons.filter { !it.major }
+                if (major.isNotEmpty()) ReasonBlock("Conta di più", major, MaterialTheme.colorScheme.primary)
+                if (minor.isNotEmpty()) ReasonBlock(if (major.isEmpty()) "Le differenze" else "Anche", minor, MaterialTheme.colorScheme.onSurfaceVariant)
+                if (major.isEmpty() && minor.isEmpty()) Text("Le due copie si equivalgono: tieni quella che preferisci.",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val theirs = other.tags.filterNot { it in best.tags }
+                if (best.tags.isNotEmpty() || theirs.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Etichette: non decidono", style = MaterialTheme.typography.bodyLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        best.tags.forEach { t -> com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t), base = MaterialTheme.colorScheme.background) }
+                        theirs.forEach { t ->
+                            com.cripta.app.ui.components.TagPill(t, com.cripta.app.ui.theme.tagColor(t), base = MaterialTheme.colorScheme.background,
+                                leadingIcon = Icons.Filled.Add)
+                        }
+                    }
+                    Text("Finiscono tutte sulla copia tenuta, qualunque tieni" + (if (theirs.isNotEmpty()) " (con + quelle dell'altra)." else "."),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.FilledTonalButton(onClick = { onCompare(best, other) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Icon(Icons.Filled.SwapHoriz, null, Modifier.size(18.dp))
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                    com.cripta.app.ui.components.ButtonText("Confronta a scorrimento")
+                }
+                androidx.compose.material3.FilledTonalButton(onClick = { onPlayBoth(best, other) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    com.cripta.app.ui.components.ButtonText("Guarda le due di seguito")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReasonBlock(title: String, reasons: List<com.cripta.app.data.dedup.CopyComparison.Reason>, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = color, modifier = Modifier.semantics { heading() })
+        reasons.forEach { r ->
+            Column {
+                Text(r.title, style = MaterialTheme.typography.bodyLarge)
+                Text(r.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+    }
+}
+
+/**
+ * One picture, half from each copy, split by a line dragged sideways: photos at screen size
+ * (decoded in memory), videos by their cover. The names sit on the dark glass at the bottom.
+ */
+@Composable
+private fun SlideCompare(
+    a: SettingsViewModel.DupCandidate,
+    b: SettingsViewModel.DupCandidate,
+    thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
+    imageBytes: suspend (FileEntity) -> ByteArray,
+    onDismiss: () -> Unit,
+) {
+    suspend fun picture(c: SettingsViewModel.DupCandidate): android.graphics.Bitmap? =
+        if (!VaultRepository.isImage(c.file.mimeType)) thumb(c.file)
+        else runCatching { decodeFitted(imageBytes(c.file), 2048) }.getOrNull() ?: thumb(c.file)
+    val left by produceState<android.graphics.Bitmap?>(null, a.file.id) { value = picture(a) }
+    val right by produceState<android.graphics.Bitmap?>(null, b.file.id) { value = picture(b) }
+    var split by remember { mutableStateOf(0.5f) }
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Chiudi", tint = Color.White) }
+                    Text("Trascina la linea per confrontare", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                }
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, _ -> split = (change.position.x / size.width).coerceIn(0f, 1f) }
+                    }
+                    .pointerInput(Unit) { detectTapGestures { p -> split = (p.x / size.width).coerceIn(0f, 1f) } }
+                    .semantics { contentDescription = "Confronto: a sinistra ${a.file.originalName}, a destra ${b.file.originalName}" }) {
+                    right?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
+                    left?.let {
+                        Image(it.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()
+                            .drawWithContent { clipRect(right = size.width * split) { this@drawWithContent.drawContent() } })
+                    }
+                    val x = maxWidth * split
+                    Box(Modifier.offset(x = x - 1.dp).width(2.dp).fillMaxHeight().background(Color.White))
+                    Box(Modifier.offset(x = x - 18.dp).align(Alignment.CenterStart).size(36.dp).clip(CircleShape)
+                        .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.SwapHoriz, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    listOf(a to Alignment.BottomStart, b to Alignment.BottomEnd).forEach { (c, at) ->
+                        Text(c.file.originalName, color = Color.White, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, modifier = Modifier.align(at).padding(12.dp).widthIn(max = maxWidth / 2 - 24.dp)
+                                .clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass).padding(horizontal = 10.dp, vertical = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** [bytes] decoded with the longest side at most about [side] (power-of-two subsampling, in memory). */
+private fun decodeFitted(bytes: ByteArray, side: Int): android.graphics.Bitmap? {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= side) sample *= 2
+    return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
 }
 
 @Composable
@@ -448,6 +695,18 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
                 append(fate)
             }
             t to b
+        }
+        is DupAction.KeepSome -> {
+            val keep = action.group.candidates.filter { it.file.id in action.keepIds }
+            val others = action.group.candidates.filter { it.file.id !in action.keepIds }
+            val heir = keep.firstOrNull()
+            val moving = heir?.let { h -> others.flatMap { it.tags }.distinct().filterNot { it in h.tags } }.orEmpty()
+            val t = if (others.size == 1) "Eliminare 1 copia?" else "Eliminare ${others.size} copie?"
+            t to buildString {
+                append(if (keep.size == 1) "Resta \"${heir?.file?.originalName}\". " else "Restano ${keep.size} copie. ")
+                if (moving.isNotEmpty() && heir != null) append("Le etichette ${moving.joinToString(", ") { "#$it" }} passano a \"${heir.file.originalName}\".")
+                append(fate)
+            }
         }
         is DupAction.DeleteOne -> {
             val g = action.group

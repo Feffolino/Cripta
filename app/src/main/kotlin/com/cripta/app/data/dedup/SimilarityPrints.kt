@@ -101,10 +101,13 @@ internal object SimilarityPrints {
      * every later free item joins when it is within the limit (of the seed's modality) of EVERY
      * member so far. Chaining (A~B and B~C put A with C, however far apart) grouped pictures that
      * looked nothing alike. Only same-modality fingerprints of equal length are comparable, so
-     * images never mix with videos. Returns the groups of 2+, members in input order. [check] runs
-     * once per seed (cancellation).
+     * images never mix with videos, and never two items the user kept [apart]. Returns the groups
+     * of 2+, members in input order. [check] runs once per seed (cancellation).
      */
-    fun group(prints: List<LongArray>, video: BooleanArray, imageLimit: Int, videoLimit: Int, check: () -> Unit = {}): List<IntArray> {
+    fun group(
+        prints: List<LongArray>, video: BooleanArray, imageLimit: Int, videoLimit: Int,
+        apart: (Int, Int) -> Boolean = { _, _ -> false }, check: () -> Unit = {},
+    ): List<IntArray> {
         val n = prints.size
         val assigned = BooleanArray(n)
         val members = IntArray(n)
@@ -121,11 +124,11 @@ internal object SimilarityPrints {
                 if (assigned[b] || video[b] != video[a]) continue
                 val pb = prints[b]
                 val d = distance(pa, video[a], pb, video[b])
-                if (d < 0 || d > limit) continue
+                if (d < 0 || d > limit || apart(a, b)) continue
                 var ok = true
                 for (m in 1 until size) {
                     val dm = distance(prints[members[m]], video[members[m]], pb, video[b])
-                    if (dm < 0 || dm > limit) { ok = false; break }
+                    if (dm < 0 || dm > limit || apart(members[m], b)) { ok = false; break }
                 }
                 if (ok) members[size++] = b
             }
@@ -136,6 +139,9 @@ internal object SimilarityPrints {
         }
         return out
     }
+
+    /** The stored key of a "not alike" pair, whatever the order of [x] and [y]. */
+    fun pairKey(x: String, y: String) = if (x < y) "$x|$y" else "$y|$x"
 
     /** The largest pairwise distance inside [group]. */
     fun maxDistance(prints: List<LongArray>, video: BooleanArray, group: IntArray): Int {
