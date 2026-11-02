@@ -86,7 +86,12 @@ class NoteEditorViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val n = name.ifBlank { "Nota" }
-                if (id == null) repo.createNote(folderId ?: routeFolderId, n, text) else repo.updateNote(id, n, text)
+                if (id == null) repo.createNote(folderId ?: routeFolderId, n, text)
+                else {
+                    repo.updateNote(id, n, text)
+                    // Its cover shows its first lines: drawn again from the new text.
+                    thumbs.evict(id)
+                }
                 savedName = name; savedText = text
                 onDone()
             } catch (e: CancellationException) {

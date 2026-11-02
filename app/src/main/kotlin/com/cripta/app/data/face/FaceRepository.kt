@@ -39,6 +39,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -286,14 +288,17 @@ class FaceRepository @Inject constructor(
             ?: runCatching { r.getFrameAtTime(t * 1000, option) }.getOrNull()
             ?: runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
 
-    private suspend fun videoFrames(file: FileEntity, deep: Boolean, onProgress: ((Float) -> Unit)?, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun {
+    private suspend fun videoFrames(file: FileEntity, deep: Boolean, onProgress: ((Float) -> Unit)?, onFrame: (Int, Long, FaceImage) -> Boolean): FrameRun = coroutineScope {
         val r = MediaMetadataRetriever()
         val channel = repo.seekableChannel(file)
+        // Annulla while a frame is being read (an exact frame takes seconds): the channel closes at
+        // once, so the read fails now instead of the scan waiting for the frame to be done.
+        val closer = launch { try { awaitCancellation() } finally { runCatching { channel.close() } } }
         try {
             r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
             val dur = file.durationMs?.takeIf { it > 0 }
                 ?: r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-                ?: return FrameRun(0, 0, 0, 0, "durata non leggibile")
+                ?: return@coroutineScope FrameRun(0, 0, 0, 0, "durata non leggibile")
             var ok = 0; var bad = 0; var dup = 0; var extra = 0
             val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
             val plan = FramePlan.times(dur, deep)
@@ -323,8 +328,9 @@ class FaceRepository @Inject constructor(
                 extra++; ok++
                 onFrame(plan.size + k, at, faceImage(bmp, FRAME_SIDE))
             }
-            return FrameRun(ok, bad, dup, extra, null)
+            FrameRun(ok, bad, dup, extra, null)
         } finally {
+            closer.cancel()
             runCatching { r.release() }
             runCatching { channel.close() }
         }

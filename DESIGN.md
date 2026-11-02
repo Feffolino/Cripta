@@ -78,9 +78,11 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 
 - **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
   Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Colour means "on":
-  Plain (a tag shown on a file) and On (assigned, filtered) are the tag colour, translucent (35%
-  over the page), name at 4.5:1; On adds a tick. Over a picture (`onImage = true`) the pill is
-  the tag colour at 45% on a light dark glass, with a 1dp rim of the same colour at 85%, text
+  Plain (a tag shown on a file) is the tag colour, translucent (35% over the page), name at 4.5:1;
+  On (assigned, filtered) is the tag colour in full, white or black text, and a tick, so it reads
+  apart from Off even with tag colours off. The tick takes the room of the dot, the pin or the
+  tag's icon: turning a tag on or off never changes the pill's width (nothing after it moves). Over a picture (`onImage = true`) the pill is
+  the tag colour at 45% (On: 90%) on a light dark glass, with a 1dp rim of the same colour at 85%, text
   white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour.
   Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
   a weight (it would measure to nothing in a LazyRow).
@@ -94,7 +96,9 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
   and on/off in Impostazioni › Aspetto; on Home they follow "Persone in Home": hidden, or blurred
   until the people row is touched, and again 30 s later), the video length (top right) or a play mark, the watched
-  bar. No quality badge (4K/HD/SD) and no shade over the image.
+  bar. No quality badge (4K/HD/SD) and no shade over the image. Notes, texts and documents
+  show their content: a light sheet with the first lines (the first in bold when it reads as a
+  title); a PDF its first page. So do the folders holding them.
 - **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
   to each person's **profile** page: face (tap to pick another among those found), name, star,
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
