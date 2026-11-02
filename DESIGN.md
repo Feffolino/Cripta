@@ -116,7 +116,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   after naming a face, "Anche questi sono …?" for the alike faces of the same media. "Aggiungi un
   volto" looks up to 15 s further when the paused frame has none. Once a face of a video is
   confirmed, the video is looked at closer in the background ("Analizza meglio" in the ⋮ by
-  Persone asks again): its other faces that are surely that person join their row, those not found
+  Persone asks again, "Analizza meglio i suoi video" in a person's ⋮ for all of theirs): its other faces that are surely that person join their row, those not found
   again fold under "poco chiari", and one quiet line under the heading says what was done (and that
   "Dividi" undoes a join). Nothing is ever given to anyone by it. The people page's "Da
   sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time;
