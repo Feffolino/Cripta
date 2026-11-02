@@ -22,6 +22,11 @@ import kotlin.coroutines.coroutineContext
  * each frame (2 to 6 s a frame on a POCO X8 Pro); here a frame is a seek and a few decodes. The
  * decoder's YUV planes go straight to a [FaceImage] ([YuvFrame]): no JPEG, no Bitmap, nothing on disk.
  *
+ * Software decoders first, the default (hardware) one last, as the platform's own frame decoder
+ * does: the scan runs for hours in the background with several readers at once, and hardware
+ * decoders are few; holding them could keep the viewer's player or the video conversion from starting.
+ * It also skips the AV1 hardware decoders that only give frames in a private layout.
+ *
  * Not thread safe: one caller at a time.
  */
 internal class VideoFrameReader private constructor(
@@ -40,8 +45,7 @@ internal class VideoFrameReader private constructor(
     private class BadDecoder : Exception()
 
     private var codec: MediaCodec? = null
-    private var defaultTried = false
-    /** Decoders already tried (the default one is also among the software ones at times). */
+    /** Decoders already tried (the default one is one of the software ones at times). */
     private val tried = HashSet<String>()
     /** The last moment asked lies past the end of the stream: no decoder's fault. */
     private var pastEnd = false
@@ -176,13 +180,15 @@ internal class VideoFrameReader private constructor(
         return dest
     }
 
-    /** The next decoder to try (the default one first, then the software ones), started. */
+    /** The next decoder to try (the software ones, then the default one), started. */
     private fun nextDecoder(): MediaCodec? {
         while (true) {
-            val name = if (!defaultTried) null else decoders.removeFirstOrNull() ?: return null
-            if (name == null) defaultTried = true else if (name in tried) continue
-            val c = runCatching { if (name == null) MediaCodec.createDecoderByType(mime) else MediaCodec.createByCodecName(name) }.getOrNull()
+            val name = decoders.removeFirstOrNull() ?: return null
+            if (name in tried) continue
+            val c = runCatching { if (name == DEFAULT) MediaCodec.createDecoderByType(mime) else MediaCodec.createByCodecName(name) }.getOrNull()
                 ?: continue
+            // The default one is a software decoder already tried (no hardware one for this type).
+            if (c.name in tried) { runCatching { c.release() }; continue }
             tried += c.name
             val ok = runCatching {
                 // A readable YUV layout, not the decoder's own tiled one. No surface: Image output.
@@ -221,6 +227,8 @@ internal class VideoFrameReader private constructor(
         private const val MAX_DECODED = 1_800
         private const val BUDGET_MS = 20_000L
         private const val TRIAL_MS = 10_000L
+        /** In the decoders' list: the platform's default for the type (usually the hardware one). */
+        private const val DEFAULT = ""
 
         /** A reader for the video track of [source], or null when it has none or cannot be opened. */
         fun open(source: MediaDataSource): VideoFrameReader? {
@@ -232,20 +240,17 @@ internal class VideoFrameReader private constructor(
                 } ?: run { extractor.release(); return null }
                 val format = extractor.getTrackFormat(track)
                 extractor.selectTrack(track)
-                val mime = format.getString(MediaFormat.KEY_MIME)!!
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: run { extractor.release(); return null }
                 val rotation = if (format.containsKey(MediaFormat.KEY_ROTATION)) format.getInteger(MediaFormat.KEY_ROTATION) else 0
                 val durUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
-                VideoFrameReader(extractor, format, mime, ArrayDeque(softwareDecoders(mime)), durUs / 1000, rotation)
+                VideoFrameReader(extractor, format, mime, ArrayDeque(softwareDecoders(mime) + DEFAULT), durUs / 1000, rotation)
             } catch (e: Exception) {
                 runCatching { extractor.release() }
                 null
             }
         }
 
-        /**
-         * Software decoders for [mime] (e.g. c2.android.av1.decoder / dav1d), in platform order: for
-         * when the default (hardware) one only gives frames in a private layout, as AV1 ones often do.
-         */
+        /** Software decoders for [mime] (e.g. c2.android.av1.decoder / dav1d), in platform order. */
         fun softwareDecoders(mime: String): List<String> =
             MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
                 .filter { !it.isEncoder && it.isSoftwareOnly && it.supportedTypes.any { t -> t.equals(mime, ignoreCase = true) } }
