@@ -39,6 +39,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
@@ -161,32 +162,35 @@ class FaceRepository @Inject constructor(
     /**
      * [deep]: "Cerca più a fondo", for media where no face was found (slower, see [FramePlan.times]).
      * [onProgress]: how far into a video it is (0..1), frame by frame, for the notification.
+     * [watched]: a reading that stops moving is left behind (the scan of the whole vault); media the
+     * user asked for are waited for as long as they take.
      */
-    suspend fun analyse(file: FileEntity, deep: Boolean = false, onProgress: ((Float) -> Unit)? = null): Boolean =
-        withEngine { analyse(file, it, deep, onProgress) }
-
-    private suspend fun analyse(file: FileEntity, engine: FaceEngine, deep: Boolean = false, onProgress: ((Float) -> Unit)? = null): Boolean {
+    suspend fun analyse(file: FileEntity, deep: Boolean = false, watched: Boolean = true, onProgress: ((Float) -> Unit)? = null): Outcome {
         val started = android.os.SystemClock.elapsedRealtime()
         val sightings = ArrayList<Sighting>()
         val rejects = HashMap<FaceReject, Int>()
         val sharp = IntArray(FaceStats.SHARP_BANDS.size + 1)
         var faces = 0; var read = 0; var failed = 0; var duplicates = 0; var extra = 0
-        /** Analyse one frame; true when it shows a face (usable or not). */
-        fun take(frame: Int, timeMs: Long, img: FaceImage): Boolean {
-            read++
-            val found = engine.analyze(img, deep = deep)
-            for (f in found) {
-                faces++
-                f.sharpness?.let { sharp[FaceStats.band(it)]++ }
-                if (f.reject != null) rejects.merge(f.reject, 1, Int::plus)
-                else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f)
-            }
-            return found.isNotEmpty()
-        }
-        val status = try {
-            withContext(Dispatchers.Default) {
+        // When the reading last moved on (a frame read or analysed): what the watchdog looks at.
+        val beat = java.util.concurrent.atomic.AtomicLong(started)
+        val reader = readers.async {
+            // Its own hold on the models: a reading left behind (below) may still be running them.
+            withEngine { engine ->
+                /** Analyse one frame; true when it shows a face (usable or not). */
+                fun take(frame: Int, timeMs: Long, img: FaceImage): Boolean {
+                    read++
+                    val found = engine.analyze(img, deep = deep)
+                    beat.set(android.os.SystemClock.elapsedRealtime())
+                    for (f in found) {
+                        faces++
+                        f.sharpness?.let { sharp[FaceStats.band(it)]++ }
+                        if (f.reject != null) rejects.merge(f.reject, 1, Int::plus)
+                        else sightings += Sighting(frame, timeMs, f.embedding!!, f.quality, f)
+                    }
+                    return found.isNotEmpty()
+                }
                 if (VaultRepository.isVideo(file.mimeType)) {
-                    val r = videoFrames(file, deep, onProgress) { i, t, img -> take(i, t, img) }
+                    val r = videoFrames(file, deep, { p -> beat.set(android.os.SystemClock.elapsedRealtime()); onProgress?.invoke(p) }) { i, t, img -> take(i, t, img) }
                     failed = r.failed; duplicates = r.duplicates; extra = r.extra
                     when {
                         r.why != null -> "skip:${r.why}"
@@ -198,6 +202,24 @@ class FaceRepository @Inject constructor(
                     if (img == null) "skip:immagine non decodificabile" else { take(0, 0, img); "ok" }
                 }
             }
+        }
+        // A media whose reading stops moving (a decoder that never returns a frame) is left behind
+        // after a while without a single frame, and the scan goes on with the next one: one such
+        // file kept the whole scan at 0. Judged frame by frame, never on the whole media, so a deep
+        // search, slow but moving, is never cut; and media asked for by hand never are.
+        val stallMs = if (deep) STALL_DEEP_MS else STALL_MS
+        var stalled = false
+        val status = try {
+            var outcome: String? = null
+            while (outcome == null) {
+                outcome = kotlinx.coroutines.withTimeoutOrNull(5_000) { reader.await() }
+                if (outcome == null && watched && android.os.SystemClock.elapsedRealtime() - beat.get() > stallMs) {
+                    stalled = true
+                    android.util.Log.w("FaceRepository", "reading stalled, left behind")
+                    outcome = "$STALLED (nessun fotogramma in ${stallMs / 1000} s): riprova dai dettagli del media, senza limite di tempo"
+                }
+            }
+            outcome
         } catch (e: CancellationException) {
             throw e
         } catch (e: OutOfMemoryError) {
@@ -205,12 +227,33 @@ class FaceRepository @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.w("FaceRepository", "not readable (${e.javaClass.simpleName})")
             "skip:errore di lettura (${e.javaClass.simpleName})"
+        } finally {
+            // Cancelled, stalled or done: a reading still running stops (its channel closes, see
+            // [videoFrames]); nothing waits for it.
+            reader.cancel()
         }
         // Under the writers' lock (as placing and the user's changes): a change made to this media's
-        // faces while it was being read is not overwritten with what was read before it.
-        mutex.withLock { store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started) }
-        return status == "ok"
+        // faces while it was being read is not overwritten with what was read before it. A reading
+        // left behind may still add to its lists: none of it is kept.
+        mutex.withLock {
+            if (stalled) store(file, status, emptyList(), HashMap(), 0, 0, 0, IntArray(sharp.size), 0, 0, started)
+            else store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started)
+        }
+        return when {
+            status == "ok" -> Outcome.OK
+            stalled -> Outcome.STALLED
+            else -> Outcome.UNREADABLE
+        }
     }
+
+    /** How the analysis of one media ended. */
+    enum class Outcome { OK, UNREADABLE, STALLED }
+
+    /**
+     * Where media are read for [analyse]: not the scan's own job, so that a reading that never
+     * returns can be left behind instead of holding the whole scan.
+     */
+    private val readers = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private suspend fun store(
         file: FileEntity, status: String, sightings: List<Sighting>, rejects: HashMap<FaceReject, Int>,
@@ -1157,6 +1200,7 @@ class FaceRepository @Inject constructor(
         val s = dao.scanOf(fileId) ?: return@withContext "Non ancora analizzato."
         if (s.status == CLEARED) return@withContext "Hai eliminato i volti trovati qui (da «Elimina i volti non assegnati» o " +
             "«Elimina volti trovati per errore»), quindi non viene analizzato da solo. «Analizza di nuovo» li cerca ancora."
+        if (s.status.startsWith(STALLED)) return@withContext s.status.removePrefix("skip:").replaceFirstChar { it.uppercase() }
         if (s.status != "ok") return@withContext "Non analizzabile: " + s.status.removePrefix("skip:")
         val st = FaceStats.parse(s.stats)
         val cards = dao.cardsOf(fileId)
@@ -1219,6 +1263,8 @@ class FaceRepository @Inject constructor(
         const val UNNAMED = "Senza nome"
         /** Status of a media whose faces the user cleared (analysed, nothing kept). */
         const val CLEARED = "skip:volti eliminati da te"
+        /** Start of the status of a media whose reading got stuck and was left behind ([analyse]). */
+        const val STALLED = "skip:analisi bloccata"
         /** A face this alike to a person's faces (cosine, see [suggestionsFor]) is offered as theirs. */
         const val SUGGEST = 0.36f
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
@@ -1251,5 +1297,9 @@ class FaceRepository @Inject constructor(
         const val MAX_EXTRA = 12
         /** Photos are read this large by "Cerca più a fondo". */
         private const val DEEP_SIDE = 1920
+        /** No frame read for this long: the media's reading is stuck and is left behind. */
+        private const val STALL_MS = 90_000L
+        /** The same for "Cerca più a fondo": its exact frames, larger, take far longer each. */
+        private const val STALL_DEEP_MS = 240_000L
     }
 }

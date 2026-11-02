@@ -248,6 +248,11 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
                 TextButton(onClick = onStop, enabled = !progress.stopping) { com.cripta.app.ui.components.ButtonText("Ferma") }
             }
             LinearProgressIndicator(progress = { progress.done.toFloat() / maxOf(1, progress.total) }, modifier = Modifier.fillMaxWidth())
+            // Which file is in hand: a scan that seems stuck says where.
+            if (!progress.stopping) progress.current?.let {
+                Text("In analisi: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             Text("Le persone compaiono e si aggiornano mentre l'analisi procede.", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -255,9 +260,14 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
             Text("Lettura dello stato…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             val ok = o.scans.count { it.status == "ok" }
-            val skipped = o.scans.count { it.status != "ok" && it.status != FaceRepository.CLEARED }
+            val stalled = o.scans.count { it.status.startsWith(FaceRepository.STALLED) }
+            val skipped = o.scans.count { it.status != "ok" && it.status != FaceRepository.CLEARED } - stalled
             val missing = (o.media - o.scans.size).coerceAtLeast(0)
-            Text("Analizzati ${o.scans.size} di ${o.media} media" + (if (skipped > 0) " ($skipped non leggibili)" else "") +
+            val notes = listOfNotNull(
+                "$skipped non leggibili".takeIf { skipped > 0 },
+                (if (stalled == 1) "1 bloccato" else "$stalled bloccati").takeIf { stalled > 0 },
+            )
+            Text("Analizzati ${o.scans.size} di ${o.media} media" + (if (notes.isNotEmpty()) " (${notes.joinToString(", ")})" else "") +
                 " · ${o.people.count { it.main }} persone", style = MaterialTheme.typography.bodyMedium)
             if (progress == null && missing > 0) Text("Mancano $missing media: avvia l'analisi qui sotto.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -599,6 +609,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(when {
                             scan.status == FaceRepository.CLEARED -> "Volti eliminati da te"
+                            scan.status.startsWith(FaceRepository.STALLED) -> "Analisi bloccata: riprova"
                             scan.status != "ok" -> "Non letto: " + scan.status.removePrefix("skip:")
                             scan.faces == 0 -> "Nessun volto"
                             else -> "Volti scartati"
