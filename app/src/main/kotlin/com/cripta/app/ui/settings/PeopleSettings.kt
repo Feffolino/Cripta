@@ -252,11 +252,14 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
                 TextButton(onClick = onStop, enabled = !progress.stopping) { com.cripta.app.ui.components.ButtonText("Ferma") }
             }
             LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth())
-            // Which file is in hand, and how far: a scan that seems stuck says where.
-            if (!progress.stopping) progress.current?.let {
-                Text("In analisi: $it" + (progress.currentShare?.let { s -> " · ${(s * 100).toInt()}%" } ?: ""),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Which files are in hand, and how far each: a scan that seems stuck says where.
+            if (!progress.stopping) {
+                val hands = progress.inHand.ifEmpty { listOfNotNull(progress.current?.let { it to null }) }
+                for ((name, s) in hands) {
+                    Text("In analisi: $name" + (s?.let { " · ${(it * 100).toInt()}%" } ?: ""),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             Text("Le persone compaiono e si aggiornano mentre l'analisi procede.", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

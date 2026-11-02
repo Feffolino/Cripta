@@ -1244,20 +1244,17 @@ class ConversionService : Service() {
                     val done = (d + partial.values.sum()).coerceAtMost(total.toFloat())
                     val exact = done * 100 / total
                     val pct = exact.toInt()
-                    // Below 10 % with a decimal: thousands of media kept the island at "0%" for many
-                    // minutes, as if the scan stood still.
-                    val chip = if (exact < 10f) String.format(java.util.Locale.getDefault(), "%.1f%%", exact) else "$pct%"
+                    // With a decimal: thousands of media kept the island at "0%" for many minutes,
+                    // as if the scan stood still.
+                    val chip = String.format(java.util.Locale.getDefault(), "%.1f%%", exact)
                     val stopping = faceStopping
-                    // The count is of media finished; how far the one in hand is shows by its name,
-                    // so a long video moves the line frame by frame without counting as done.
-                    val hand = running.entries.minByOrNull { it.value.second }
-                    val current = hand?.value?.first
-                    val currentShare = hand?.let { partial[it.key] }
-                    val named = current?.let { n -> " · $n" + (currentShare?.let { " ${(it * 100).toInt()}%" } ?: "") } ?: ""
-                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current, done / total, currentShare)
+                    // Settings shows the media finished and how far each one in hand is (longest in
+                    // hand first); the notification only how far the whole scan is.
+                    val hands = running.entries.sortedBy { it.value.second }.map { it.value.first to partial[it.key] }
+                    val current = hands.firstOrNull()?.first
+                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current, done / total, hands)
                     notifyScan(ResultKind.FACES, pct) { others ->
-                        build(label, pct, sub = if (stopping) "Annullamento in corso…"
-                            else "$d di $total media$named",
+                        build(label, pct, sub = if (stopping) "Annullamento in corso…" else chip,
                             eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others, chip = chip,
                             cancelable = !stopping, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
@@ -2125,10 +2122,11 @@ class ConversionService : Service() {
          */
         /**
          * [share]: how far the whole scan is (0..1), counting the frames read inside the media in
-         * hand too; null: [done] / [total]. [currentShare]: how far [current] is.
+         * hand too; null: [done] / [total]. [inHand]: every media being analysed (name, how far
+         * when known), longest in hand first.
          */
         data class IntroProgress(val done: Int, val total: Int, val phase: String, val stopping: Boolean = false, val current: String? = null,
-                                 val share: Float? = null, val currentShare: Float? = null)
+                                 val share: Float? = null, val inHand: List<Pair<String, Float?>> = emptyList())
 
         /** Null while no intro/outro scan runs. */
         val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
