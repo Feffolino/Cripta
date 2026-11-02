@@ -107,6 +107,9 @@ class ConversionService : Service() {
             // What was asked before the cancel is dropped; the scan stops within the frame or the
             // photo in hand, and says so meanwhile (the notification and Settings).
             faceScanAll = false; faceAsked.clear(); faceRerun = false
+            // A media asked for the deep way and dropped here would have been searched deep the next
+            // time it was analysed, asked or not.
+            faceDeep.clear(); faceRefine.clear(); faceRefineForced.clear()
             faceJob?.let { job ->
                 faceStopping = true
                 job.cancel()
@@ -337,8 +340,14 @@ class ConversionService : Service() {
                             faces.resetAll(everything = what == "all")
                         }
                         val ids = intent.getStringArrayListExtra(EX_IDS)
-                        if (intent.getBooleanExtra(EX_DEEP, false) && ids != null) faceDeep += ids
-                        faceScan(intent.getBooleanExtra(EX_MANUAL, false), ids)
+                        if (intent.getBooleanExtra(EX_REFINE, false) && ids != null) {
+                            if (intent.getBooleanExtra(EX_FORCE, false)) faceRefineForced += ids
+                            faceRefine += ids
+                            faceScan(intent.getBooleanExtra(EX_MANUAL, false), emptyList())
+                        } else {
+                            if (intent.getBooleanExtra(EX_DEEP, false) && ids != null) faceDeep += ids
+                            faceScan(intent.getBooleanExtra(EX_MANUAL, false), ids)
+                        }
                     }
                     MODE_INTRO_SCAN -> if (holdsSession) {
                         intent.getStringExtra(EX_RESET)?.let { what ->
@@ -1186,6 +1195,10 @@ class ConversionService : Service() {
     private val faceAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
     /** Media asked for with "Cerca più a fondo": analysed the deep way once. */
     private val faceDeep = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /** Videos with a confirmed face to look at closer ([com.cripta.app.data.face.FaceRepository.refine]), after the media asked for. */
+    private val faceRefine = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    /** Those asked with "Analizza meglio": looked at again even when nothing was confirmed since. */
+    private val faceRefineForced = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var faceScanAll = false
     /** Annulla was pressed: the running scan is stopping. */
     @Volatile private var faceStopping = false
@@ -1212,10 +1225,10 @@ class ConversionService : Service() {
             // started again at once, failed again, and so on for ever, its progress back to 0 at
             // every turn (the analysis "stuck at 0").
             val ok = try {
-                if (!faceScanAll && faceAsked.isEmpty()) return
+                if (!faceScanAll && faceAsked.isEmpty() && faceRefine.isEmpty()) return
                 runFaceScan()
             } finally { faceMutex.unlock() }
-            if (!ok || !faceScanAll && faceAsked.isEmpty()) return
+            if (!ok || !faceScanAll && faceAsked.isEmpty() && faceRefine.isEmpty()) return
         }
     }
 
@@ -1226,7 +1239,9 @@ class ConversionService : Service() {
         val analysed = java.util.concurrent.atomic.AtomicInteger(0)
         val skipped = java.util.concurrent.atomic.AtomicInteger(0)
         val stalled = java.util.concurrent.atomic.AtomicInteger(0)
-        fun summary() = "${analysed.get()} analizzati" + (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "") +
+        val refined = java.util.concurrent.atomic.AtomicInteger(0)
+        fun summary() = "${analysed.get()} analizzati" + (if (refined.get() > 0) ", ${refined.get()} video analizzati meglio" else "") +
+            (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "") +
             (if (stalled.get() > 0) ", ${stalled.get()} bloccati (riprova dai dettagli di ciascuno)" else "")
         try {
             // Faces of media deleted for good go; media analysed by a scan that stopped before placing them are placed.
@@ -1238,8 +1253,10 @@ class ConversionService : Service() {
                 val all = faceScanAll
                 faceScanAll = false
                 val todo = if (all) faces.pending() else emptyList()
-                if (todo.isEmpty() && faceAsked.isEmpty()) break
+                if (todo.isEmpty() && faceAsked.isEmpty() && faceRefine.isEmpty()) break
                 val askedIds = HashSet<String>()
+                // Media asked for (and videos to look at closer) so far, the same one twice counting twice.
+                val askedCount = java.util.concurrent.atomic.AtomicInteger(0)
                 val eta = EtaEstimator()
                 val finished = java.util.concurrent.atomic.AtomicInteger(0)
                 // How far each media being analysed is (0..1): a deep search of one video takes minutes.
@@ -1251,7 +1268,7 @@ class ConversionService : Service() {
                     // Ended (a late "Annullamento" repost): nothing to show any more.
                     if (faceRepost == null) return@synchronized
                     val d = finished.get()
-                    val total = maxOf(1, todo.size + askedIds.size)
+                    val total = maxOf(1, todo.size + askedCount.get())
                     val done = (d + partial.values.sum()).coerceAtMost(total.toFloat())
                     val exact = done * 100 / total
                     val pct = exact.toInt()
@@ -1275,16 +1292,25 @@ class ConversionService : Service() {
                 var next = 0
                 while (true) {
                     kotlinx.coroutines.yield()   // a cancelled scan stops between groups
-                    val askedNow = generateSequence { faceAsked.poll() }.toList().distinct().filter { askedIds.add(it) }
+                    // A media asked for again while this scan runs is analysed again too: it was
+                    // dropped as already asked, a second "Cerca più a fondo" lost without a word.
+                    val askedNow = generateSequence { faceAsked.poll() }.toList().distinct().onEach { askedIds += it }
+                    // Videos to look at closer come after the media asked for: a video analysed
+                    // again is looked at as it is after that.
+                    val refineNow = if (askedNow.isEmpty()) generateSequence { faceRefine.poll() }.toList().distinct() else emptyList()
+                    askedCount.addAndGet(askedNow.size + refineNow.size)
                     // The total counts the media asked for right away, not after the first one is done.
-                    if (askedNow.isNotEmpty()) progress()
+                    if (askedNow.isNotEmpty() || refineNow.isNotEmpty()) progress()
                     // Media asked for are forgotten one at a time, just before each is analysed again:
                     // the first starts at once, and a cancelled scan leaves the rest as they were.
-                    val chunk = ArrayList<suspend () -> com.cripta.app.data.db.FileEntity?>()
-                    askedNow.forEach { id -> chunk += { faces.forget(id) } }
-                    if (askedNow.isEmpty()) while (chunk.size < FACE_CHUNK && next < todo.size) {
+                    // True: a closer look ([com.cripta.app.data.face.FaceRepository.refine]) instead of an analysis.
+                    val chunk = ArrayList<Pair<Boolean, suspend () -> com.cripta.app.data.db.FileEntity?>>()
+                    askedNow.forEach { id -> chunk += false to suspend { faces.forget(id) } }
+                    refineNow.forEach { id -> chunk += true to suspend { faces.liveFile(id) } }
+                    val forcedNow = refineNow.filter { it in faceRefineForced }
+                    if (askedNow.isEmpty() && refineNow.isEmpty()) while (chunk.size < FACE_CHUNK && next < todo.size) {
                         val t = todo[next++]
-                        if (t.id !in askedIds) chunk += { t }
+                        if (t.id !in askedIds) chunk += false to suspend { t }
                     }
                     if (chunk.isEmpty()) break
                     val cursor = java.util.concurrent.atomic.AtomicInteger(0)
@@ -1292,9 +1318,20 @@ class ConversionService : Service() {
                         repeat(minOf(FACE_WORKERS, chunk.size)) {
                             launch {
                                 while (true) {
-                                    val take = chunk.getOrNull(cursor.getAndIncrement()) ?: break
+                                    val (closer, take) = chunk.getOrNull(cursor.getAndIncrement()) ?: break
                                     val f = take()
-                                    if (f == null) skipped.incrementAndGet()
+                                    if (f == null) { if (!closer) skipped.incrementAndGet() }
+                                    else if (closer) try {
+                                        running[f.id] = f.originalName to android.os.SystemClock.elapsedRealtime()
+                                        progress()
+                                        val r = faces.refine(f, force = faceRefineForced.remove(f.id)) { p -> partial[f.id] = p; progress() }
+                                        if (r != null) refined.incrementAndGet()
+                                    } catch (e: kotlinx.coroutines.CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        // A video that cannot be read again stays as it was: the scan goes on.
+                                        android.util.Log.w("ConversionService", "closer look failed (${e.javaClass.simpleName})")
+                                    } finally { partial.remove(f.id); running.remove(f.id) }
                                     else try {
                                         running[f.id] = f.originalName to android.os.SystemClock.elapsedRealtime()
                                         progress()
@@ -1316,6 +1353,12 @@ class ConversionService : Service() {
                         }
                     }
                     faces.placeNew()
+                    // The answer to "Analizza meglio": what the closer look did.
+                    if (forcedNow.isNotEmpty()) {
+                        val notes = forcedNow.take(3).mapNotNull { faces.refineNoteNow(it) }
+                        notifyResult(if (forcedNow.size == 1) "Video analizzato meglio" else "${forcedNow.size} video analizzati meglio",
+                            notes.joinToString("\n").ifEmpty { "Nessun volto da unire o da mettere da parte." }, ResultKind.FACES)
+                    }
                     // The answer to "Analizza volti": what the chosen media have now.
                     if (askedNow.isNotEmpty()) {
                         notifyResult(if (askedNow.size == 1) "Volti analizzati" else "Volti di ${askedNow.size} media analizzati",
@@ -2007,6 +2050,8 @@ class ConversionService : Service() {
         private const val EX_MANUAL = "manual"
         private const val EX_RESET = "reset"
         private const val EX_DEEP = "deep"
+        private const val EX_REFINE = "refine"
+        private const val EX_FORCE = "force"
         /** Videos fingerprinted at the same time (memory: about 15 MB of audio each). */
         private const val INTRO_WORKERS = 3
         /** Videos fingerprinted before each matching round. */
@@ -2154,6 +2199,18 @@ class ConversionService : Service() {
          * [fileIds] only, again;
          * [reset]: "auto" forgets the analysis, "all" the user's choices too.
          */
+        /**
+         * Look closer at the videos [fileIds] where the user confirmed someone
+         * ([com.cripta.app.data.face.FaceRepository.refine]), in the face scan; [force]: "Analizza
+         * meglio", again even when nothing was confirmed since, its result posted.
+         */
+        fun startFaceRefine(ctx: Context, fileIds: List<String>, force: Boolean = false, manual: Boolean = force) {
+            if (fileIds.isEmpty()) return
+            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+                .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_REFINE, true).putExtra(EX_FORCE, force)
+                .putStringArrayListExtra(EX_IDS, ArrayList(fileIds)))
+        }
+
         fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null, deep: Boolean = false) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_DEEP, deep)

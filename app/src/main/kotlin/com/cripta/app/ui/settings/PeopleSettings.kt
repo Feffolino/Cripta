@@ -141,6 +141,17 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
             com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
         }
+        // Videos with someone confirmed that the closer look has not seen as they are now (counted again after each scan).
+        val wanted by produceState(0, progress == null) { value = if (progress == null) runCatching { vm.refineWanted().size }.getOrDefault(0) else value }
+        if (wanted > 0) {
+            Text("Quando confermi un volto in un video, Cripta lo guarda più da vicino: unisce gli altri volti di quella persona " +
+                "nello stesso video e mette tra i poco chiari quelli che non ritrova. Non assegna mai volti da sola.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FilledTonalButton(onClick = { vm.refineAll() }, enabled = progress == null, modifier = Modifier.fillMaxWidth()) {
+                com.cripta.app.ui.components.ButtonText(if (wanted == 1) "Analizza meglio 1 video con persone confermate"
+                    else "Analizza meglio ${com.cripta.app.ui.components.formatCount(wanted)} video con persone confermate")
+            }
+        }
     }
     Section("Visualizzazione") {
         ToggleRow("Momenti nel lettore", s.faceMoments,

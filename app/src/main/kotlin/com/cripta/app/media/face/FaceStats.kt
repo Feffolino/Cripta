@@ -18,6 +18,29 @@ object FaceStats {
         return Parsed(sharp, m["dup"]?.toIntOrNull() ?: 0, m["extra"]?.toIntOrNull() ?: 0)
     }
 
+    /**
+     * What the closer look at a video did ([com.cripta.app.data.face.FaceRepository.refine]):
+     * [signature] the confirmed faces it learnt from ("track:person", sorted), the faces it joined
+     * to them and set aside, the frames it read.
+     */
+    class Refine(val signature: String, val joined: Int, val aside: Int, val frames: Int)
+
+    private fun entries(s: String) = s.split(';').mapNotNull { e -> e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }
+
+    /** The closer look kept in [s], or null when there was none since the media was analysed. */
+    fun refineOf(s: String): Refine? {
+        val m = entries(s).toMap()
+        val sig = m["refined"] ?: return null
+        return Refine(sig, m["rjoined"]?.toIntOrNull() ?: 0, m["raside"]?.toIntOrNull() ?: 0, m["rframes"]?.toIntOrNull() ?: 0)
+    }
+
+    /** [s] with [r] in place of the closer look it held. */
+    fun withRefine(s: String, r: Refine): String {
+        val mine = setOf("refined", "rjoined", "raside", "rframes")
+        val kept = entries(s).filter { it.first !in mine }.map { "${it.first}=${it.second}" }
+        return (kept + listOf("refined=${r.signature}", "rjoined=${r.joined}", "raside=${r.aside}", "rframes=${r.frames}")).joinToString(";")
+    }
+
     /** "10–20" style label of band [i]. */
     fun bandLabel(i: Int): String = when (i) {
         0 -> "< %.0f".format(SHARP_BANDS[0])

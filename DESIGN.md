@@ -114,7 +114,11 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   also leaves similar faces out of every new analysis. Faces seen in one frame or blurry fold
   under "Altri N volti poco chiari". "Chi è?" offers "Dividi" (moments that are someone else) and,
   after naming a face, "Anche questi sono …?" for the alike faces of the same media. "Aggiungi un
-  volto" looks up to 15 s further when the paused frame has none. The people page's "Da
+  volto" looks up to 15 s further when the paused frame has none. Once a face of a video is
+  confirmed, the video is looked at closer in the background ("Analizza meglio" in the ⋮ by
+  Persone asks again): its other faces that are surely that person join their row, those not found
+  again fold under "poco chiari", and one quiet line under the heading says what was done (and that
+  "Dividi" undoes a join). Nothing is ever given to anyone by it. The people page's "Da
   sistemare" chip lists unassigned faces grouped by likeness, named or deleted a group at a time;
   it opens one group per page, full screen, swiped up like the suggestions (the frame of the face in
   view, the group's faces in a row, "Chi è?" and "Dividi" across the width, the two deletions as destructive buttons under them,

@@ -18,17 +18,23 @@ import com.cripta.app.data.db.FaceApartEntity
 import com.cripta.app.data.db.PersonEntity
 import com.cripta.app.data.db.PersonMediaEntity
 import com.cripta.app.data.db.TrackCard
+import com.cripta.app.data.db.TrackMeta
 import com.cripta.app.data.db.TrackRow
 import com.cripta.app.media.ChannelMediaDataSource
 import com.cripta.app.media.VideoFrameReader
 import com.cripta.app.media.face.EmbeddingCodec
 import com.cripta.app.media.face.FaceCodec
 import com.cripta.app.media.face.FaceEngine
+import com.cripta.app.media.face.FaceFollower
 import com.cripta.app.media.face.FaceImage
 import com.cripta.app.media.face.FaceReject
 import com.cripta.app.media.face.FaceStats
 import com.cripta.app.media.face.FaceTracker
 import com.cripta.app.media.face.FramePlan
+import com.cripta.app.media.face.KnownHere
+import com.cripta.app.media.face.LooseFace
+import com.cripta.app.media.face.SeenFace
+import com.cripta.app.media.face.SeenFrame
 import com.cripta.app.media.face.Sighting
 import com.cripta.app.media.face.StoredFace
 import com.cripta.app.media.face.TrackDraft
@@ -379,18 +385,22 @@ class FaceRepository @Inject constructor(
 
         fun durationMs(): Long? = file.durationMs?.takeIf { it > 0 } ?: codec?.durationMs?.takeIf { it > 0 } ?: retriever()?.durationMs()
 
+        /** When the frame [at] returned last really is (ms); null when the reader cannot tell (a key frame of the retriever). */
+        var lastMs: Long? = null
+            private set
+
         /** The frame at [t] ms (see [VideoFrameReader.frame] for [exact]), or null when it cannot be read. */
-        suspend fun at(t: Long, exact: Boolean): FaceImage? {
+        suspend fun at(t: Long, exact: Boolean, side: Int = FRAME_SIDE): FaceImage? {
             codec?.let { c ->
                 try {
-                    return c.frame(t, exact, FRAME_SIDE)
+                    return c.frame(t, exact, side).also { lastMs = c.lastMs }
                 } catch (e: VideoFrameReader.Unreadable) {
                     fallBack()
                 }
             }
             coroutineContext.ensureActive()
             val option = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-            return retriever()?.frame(t, option)?.let { faceImage(it, FRAME_SIDE) }
+            return retriever()?.frame(t, option)?.let { faceImage(it, side) }.also { lastMs = if (exact) t else null }
         }
 
         /** From now on the retriever. False when already there. */
@@ -439,7 +449,10 @@ class FaceRepository @Inject constructor(
                     if (last != null && FaceStats.sameFrame(h, last)) { dup++; continue }
                     lastHash = h
                     ok++
-                    if (onFrame(i, t, img)) withFaces += t
+                    // Where the frame really is: a key frame is often well before the moment asked, and
+                    // the moment kept is where the details jump to and where the frame is read again.
+                    val real = source.lastMs ?: t
+                    if (onFrame(i, real, img)) withFaces += real
                 }
             }
             sample()
@@ -777,16 +790,8 @@ class FaceRepository @Inject constructor(
      * analysis uses and none set aside: the user picks the one to add.
      */
     suspend fun facesAt(file: FileEntity, timeMs: Long): List<FoundFace> = withContext(Dispatchers.Default) {
-        val img = if (VaultRepository.isVideo(file.mimeType)) {
-            val r = MediaMetadataRetriever()
-            val channel = repo.seekableChannel(file)
-            try {
-                r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-                r.getFrameAtTime(timeMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)?.let { faceImage(it, 2 * FRAME_SIDE) }
-            } finally {
-                runCatching { r.release() }; runCatching { channel.close() }
-            }
-        } else photo(file, 2 * FRAME_SIDE)
+        val img = if (VaultRepository.isVideo(file.mimeType)) withFrames(file) { it.at(timeMs, exact = true, side = 2 * FRAME_SIDE) }
+            else photo(file, 2 * FRAME_SIDE)
         img ?: return@withContext emptyList()
         found(img, timeMs)
     }
@@ -803,22 +808,34 @@ class FaceRepository @Inject constructor(
      */
     suspend fun facesFrom(file: FileEntity, timeMs: Long): List<FoundFace> = withContext(Dispatchers.Default) {
         if (!VaultRepository.isVideo(file.mimeType)) return@withContext facesAt(file, timeMs)
-        val r = MediaMetadataRetriever()
-        val channel = repo.seekableChannel(file)
-        try {
-            r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-            val dur = file.durationMs?.takeIf { it > 0 } ?: r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+        // One reader for every moment: half a second apart, each frame is decoded on from the last.
+        withFrames(file) { source ->
+            val dur = source.durationMs()
             for (dt in AHEAD_MS) {
                 coroutineContext.ensureActive()
                 val t = timeMs + dt
                 if (dur != null && t >= dur) break
-                val img = runCatching { r.getFrameAtTime(t * 1000, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()?.let { faceImage(it, 2 * FRAME_SIDE) } ?: continue
+                val img = runCatching { source.at(t, exact = true, side = 2 * FRAME_SIDE) }.getOrNull() ?: continue
                 val list = found(img, t)
-                if (list.isNotEmpty()) return@withContext list
+                if (list.isNotEmpty()) return@withFrames list
             }
             emptyList()
+        }
+    }
+
+    /**
+     * [block] with a reader of [file]'s frames ([VideoFrames]: the app's decoder, the retriever
+     * when it cannot read the video), closed after. The analysis' reader, milliseconds a frame:
+     * the retriever alone took seconds for each face looked up in the details.
+     */
+    private suspend fun <T> withFrames(file: FileEntity, block: suspend (VideoFrames) -> T): T {
+        val channels = java.util.concurrent.CopyOnWriteArrayList<java.nio.channels.SeekableByteChannel>()
+        var source: VideoFrames? = null
+        try {
+            return block(VideoFrames(file, channels).also { source = it })
         } finally {
-            runCatching { r.release() }; runCatching { channel.close() }
+            source?.close()
+            channels.forEach { runCatching { it.close() } }
         }
     }
 
@@ -1022,15 +1039,8 @@ class FaceRepository @Inject constructor(
         val file = repo.fileById(card.fileId) ?: return@withContext null
         runCatching {
             if (VaultRepository.isVideo(file.mimeType)) {
-                val r = MediaMetadataRetriever()
-                val channel = repo.seekableChannel(file)
-                try {
-                    r.setDataSource(ChannelMediaDataSource(channel, file.sizeBytes))
-                    val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
-                    r.getFrameAtTime(card.timeMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST, params)?.let { scaled(it, side) }
-                } finally {
-                    runCatching { r.release() }; runCatching { channel.close() }
-                }
+                withFrames(file) { it.at(card.timeMs, exact = true, side = side) }
+                    ?.let { Bitmap.createBitmap(it.argb, it.width, it.height, Bitmap.Config.ARGB_8888) }
             } else {
                 val bytes = repo.decryptBytes(file)
                 ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { dec, info, _ ->
@@ -1042,10 +1052,158 @@ class FaceRepository @Inject constructor(
         }.getOrNull()?.also { frames.put(key, it) }
     }
 
-    private fun scaled(src: Bitmap, side: Int): Bitmap {
-        val k = minOf(1.0, side.toDouble() / maxOf(src.width, src.height))
-        if (k >= 1.0) return src
-        return Bitmap.createScaledBitmap(src, maxOf(1, (src.width * k).toInt()), maxOf(1, (src.height * k).toInt()), true).also { src.recycle() }
+    // ---- A closer look at videos with a confirmed face --------------------------------------
+
+    /** What [refine] did to one video. */
+    class Refined(val joined: Int, val aside: Int, val frames: Int)
+
+    /** The confirmed faces of a video, as the closer look records them ("track:person", sorted). */
+    private fun signature(rows: List<TrackMeta>) =
+        rows.filter { it.personId != null && it.state == "manual" }.map { "${it.id}:${it.personId}" }.sorted().joinToString(",")
+
+    private fun meta(rows: List<FaceTrackEntity>) = rows.map { TrackMeta(it.id, it.fileId, it.frames, it.quality, it.personId, it.state) }
+
+    /** A face of a video nobody was given that the analysis found: the faces the closer look judges. */
+    private fun loose(personId: Long?, state: String, frames: Long) =
+        frames != 0L && (personId == null || state == "suggested") && state != "manual" && state != "carried"
+
+    /**
+     * Live videos with a face the user confirmed whose other faces the closer look ([refine]) has
+     * not judged as they are now: never looked at, or confirmed faces changed since.
+     */
+    suspend fun refineWanted(): List<String> = withContext(Dispatchers.Default) {
+        val videos = repo.allFilesSnapshot().filter { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) }.map { it.id }.toSet()
+        val scans = dao.allScans().filter { it.status == "ok" && it.fileId in videos }.associateBy { it.fileId }
+        dao.allTrackMeta().filter { it.fileId in scans }.groupBy { it.fileId }.filter { (f, rows) ->
+            val sig = signature(rows)
+            sig.isNotEmpty() && rows.any { loose(it.personId, it.state, it.frames) } &&
+                FaceStats.refineOf(scans.getValue(f).stats)?.signature != sig
+        }.keys.toList()
+    }
+
+    /** The videos among the media of [trackIds]: looked at closer once their faces are confirmed. */
+    suspend fun videosOf(trackIds: Collection<Long>): List<String> =
+        dao.tracks(trackIds.distinct()).map { it.fileId }.distinct()
+            .filter { id -> liveFile(id)?.let { VaultRepository.isVideo(it.mimeType) } == true }
+
+    /** [fileId] while it is in the vault (not in the trash). */
+    suspend fun liveFile(fileId: String): FileEntity? = repo.fileById(fileId)?.takeIf { it.deletedAt == null }
+
+    /** What the closer look did to [fileId], in words, live; null when it has not looked at it since it was analysed. */
+    fun refineNote(fileId: String): Flow<String?> =
+        live { it.observeScanOf(fileId) }.map { s -> s?.let { FaceStats.refineOf(it.stats) }?.let(::refineText) }
+
+    /** [refineNote] once. */
+    suspend fun refineNoteNow(fileId: String): String? = dao.scanOf(fileId)?.let { FaceStats.refineOf(it.stats) }?.let(::refineText)
+
+    private fun refineText(r: FaceStats.Refine): String {
+        if (r.frames == 0) return "Analizzato meglio: nessun altro volto da controllare."
+        val parts = ArrayList<String>()
+        if (r.joined == 1) parts += "1 volto era la persona confermata ed è stato unito al suo"
+        else if (r.joined > 1) parts += "${r.joined} volti erano la persona confermata e sono stati uniti al suo"
+        if (r.aside == 1) parts += "1 volto non è stato ritrovato ed è tra i poco chiari"
+        else if (r.aside > 1) parts += "${r.aside} volti non sono stati ritrovati e sono tra i poco chiari"
+        return "Analizzato meglio, ${r.frames} fotogrammi attorno a chi hai confermato: " +
+            (if (parts.isEmpty()) "nessun altro volto è di sicuro la stessa persona." else parts.joinToString("; ") + ".") +
+            (if (r.joined > 0) " Se un'unione è sbagliata, «Dividi» dal menu del volto." else "")
+    }
+
+    /**
+     * "Analizza meglio": a closer look at [file], a video where the user confirmed someone. Its
+     * frames are read about one a second, larger, and around every moment of the faces nobody was
+     * given; the confirmed people are found in them by likeness to their own faces of this video
+     * and followed by place ([FaceFollower]). A face nobody was given joins the confirmed one only
+     * when every moment of it is that person at the same place: nothing is given to anyone, and
+     * faces of other media are never touched. Faces the closer reading does not find again are set
+     * aside ([ASIDE]: among "poco chiari", still in "Da sistemare"). [force]: look again though
+     * nothing was confirmed since the last look. Null when there was nothing to look at.
+     */
+    suspend fun refine(file: FileEntity, force: Boolean = false, onProgress: ((Float) -> Unit)? = null): Refined? {
+        if (!VaultRepository.isVideo(file.mimeType)) return null
+        val scan = dao.scanOf(file.id)?.takeIf { it.status == "ok" } ?: return null
+        val rows = dao.tracksOfFile(file.id)
+        val sig = signature(meta(rows))
+        if (sig.isEmpty() || !force && FaceStats.refineOf(scan.stats)?.signature == sig) return null
+        val anchors = rows.filter { it.personId != null && it.state == "manual" }
+        // What each confirmed person looks like in this very video: their faces here, nothing else.
+        val people = anchors.groupBy { it.personId!! }.map { (pid, list) ->
+            KnownHere(pid, list.flatMap { r -> EmbeddingCodec.decode(r.embeddings) + FaceCodec.decode(r.sightings).map { it.embedding } },
+                list.fold(0L) { m, r -> m or r.frames })
+        }
+        // Faces analysed before they were kept one by one cannot be checked moment by moment: left as they are.
+        val free = rows.filter { loose(it.personId, it.state, it.frames) }
+            .map { LooseFace(it.id, it.frames, FaceCodec.decode(it.sightings)) }.filter { it.faces.isNotEmpty() }
+        val seen = if (free.isEmpty()) emptyList() else readCloser(file, free, anchors, onProgress)
+        val labels = FaceFollower.label(seen, people)
+        val verdicts = free.associate { it.id to FaceFollower.judge(it, seen, labels, people) }
+        return change {
+            // Analysed again while it was read: nothing is applied.
+            val now = dao.scanOf(file.id)
+            if (now == null || now.scannedAt != scan.scannedAt) return@change null
+            var joined = 0; var aside = 0
+            for (p in people) {
+                // Faces added by hand (no frame) are not joined into: a new analysis keeps them as they are.
+                val mine = dao.tracksOfFile(file.id).filter { it.personId == p.personId && it.state == "manual" && it.frames != 0L &&
+                    FaceCodec.decode(it.sightings).isNotEmpty() }.sortedByDescending { it.faceCount }
+                var target = mine.firstOrNull() ?: continue
+                // The same person confirmed twice in this video, never in one frame: one face.
+                for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = dao.tracks(listOf(joinRows(listOf(target, o)))).first()
+                for ((id, v) in verdicts) {
+                    if (v != FaceFollower.Verdict.Join(p.personId)) continue
+                    // Changed meanwhile (given to someone, deleted, joined): left alone. Never two faces of one frame.
+                    val row = dao.tracks(listOf(id)).firstOrNull() ?: continue
+                    if (!loose(row.personId, row.state, row.frames) || row.frames and target.frames != 0L) continue
+                    target = dao.tracks(listOf(joinRows(listOf(target, row)))).first()
+                    joined++
+                }
+            }
+            for ((id, v) in verdicts) {
+                if (v != FaceFollower.Verdict.Aside) continue
+                val row = dao.tracks(listOf(id)).firstOrNull() ?: continue
+                if (!loose(row.personId, row.state, row.frames)) continue
+                dao.place(id, null, ASIDE, 0f)
+                aside++
+            }
+            val after = signature(meta(dao.tracksOfFile(file.id)))
+            dao.setScanStats(file.id, FaceStats.withRefine(now.stats, FaceStats.Refine(after, joined, aside, seen.size)))
+            Refined(joined, aside, seen.size)
+        }
+    }
+
+    /**
+     * The frames of the closer look ([FaceFollower.plan]), larger than the analysis reads them,
+     * every face found kept with its place. Each moment of the faces to judge is read twice: its
+     * key frame (as the analysis read it, the moment asked standing for it) and its exact frame.
+     */
+    private suspend fun readCloser(file: FileEntity, free: List<LooseFace>, anchors: List<FaceTrackEntity>, onProgress: ((Float) -> Unit)?): List<SeenFrame> = coroutineScope {
+        val channels = java.util.concurrent.CopyOnWriteArrayList<java.nio.channels.SeekableByteChannel>()
+        // Annulla while a frame is being read: the channels close at once (as in [videoFrames]).
+        val closer = launch { try { awaitCancellation() } finally { channels.forEach { runCatching { it.close() } } } }
+        var frames: VideoFrames? = null
+        try {
+            val source = VideoFrames(file, channels).also { frames = it }
+            val dur = source.durationMs() ?: return@coroutineScope emptyList()
+            val judged = free.flatMap { f -> f.faces.map { it.timeMs } }.toSet()
+            val plan = FaceFollower.plan(dur, judged + anchors.flatMap { a -> FaceCodec.decode(a.sightings).map { it.timeMs } })
+            val reads = plan.flatMap { t -> if (t in judged) listOf(t to false, t to true) else listOf(t to true) }
+            val out = ArrayList<SeenFrame>()
+            withEngine { engine ->
+                for ((i, read) in reads.withIndex()) {
+                    coroutineContext.ensureActive()
+                    onProgress?.invoke(i.toFloat() / reads.size)
+                    val (t, exact) = read
+                    val img = source.at(t, exact, CLOSE_SIDE) ?: continue
+                    val at = source.lastMs
+                    val faces = engine.analyze(img, all = true).mapNotNull { f -> f.box?.let { SeenFace(it, f.embedding, f.reject == null) } }
+                    out += SeenFrame(t, at, faces)
+                }
+            }
+            out
+        } finally {
+            closer.cancel()
+            frames?.close()
+            channels.forEach { runCatching { it.close() } }
+        }
     }
 
     // ---- One person split in two, faces that are not faces ----------------------------------
@@ -1061,7 +1219,9 @@ class FaceRepository @Inject constructor(
         val times = rows.flatMap { r -> r.times.split(',').mapNotNull { it.toLongOrNull() }.ifEmpty { listOf(r.timeMs) } }.distinct().sorted()
         val embeddings = FaceTracker.combine(rows.map { FaceTracker.Part(EmbeddingCodec.decode(it.embeddings), it.faceCount, it.quality) })
         // The faces one by one only when every part has them (older scans do not): else no "Dividi".
-        val faces = rows.map { FaceCodec.decode(it.sightings) }
+        // A face added by hand is one face: it gets its own (frame -1, no sampled frame), so joining
+        // it to a face of the analysis leaves "Dividi" to take it apart again.
+        val faces = rows.map { r -> FaceCodec.decode(r.sightings).ifEmpty { if (r.frames == 0L) handFace(r) else emptyList() } }
         val sightings = if (faces.all { it.isNotEmpty() }) FaceCodec.encode(faces.flatten()) else ByteArray(0)
         dao.joinedTrack(keep.id, rows.fold(0L) { m, r -> m or r.frames }, rows.sumOf { it.faceCount },
             EmbeddingCodec.encode(embeddings), times.joinToString(","), sightings)
@@ -1071,6 +1231,13 @@ class FaceRepository @Inject constructor(
         for (d in drop) dao.moveCover(d, keep.id)
         dao.deleteTracks(drop)
         return keep.id
+    }
+
+    /** A face added by hand ([addFace]) as [joinRows] keeps faces one by one. */
+    private fun handFace(r: FaceTrackEntity): List<StoredFace> {
+        val box = r.box.split(',').mapNotNull { it.toFloatOrNull() }.takeIf { it.size == 4 }?.toFloatArray() ?: FloatArray(4)
+        val e = EmbeddingCodec.decode(r.embeddings).firstOrNull() ?: return emptyList()
+        return listOf(StoredFace(-1, r.timeMs, r.quality, r.width, box, e))
     }
 
     /** The unassigned faces the analysis found in [rows] (one media) that are one person, joined. Returns how many went. */
@@ -1111,7 +1278,10 @@ class FaceRepository @Inject constructor(
      */
     suspend fun mergeFaces(trackIds: Collection<Long>): Undo? {
         val before = dao.tracks(trackIds.distinct())
-        if (before.size < 2 || before.map { it.fileId }.distinct().size != 1) return null
+        // Joined already meanwhile (the closer look at the video, see [refine]): nothing left to do,
+        // and not "persone diverse" as a null would say.
+        if (before.size < 2) return if (before.isNotEmpty()) ({}) else null
+        if (before.map { it.fileId }.distinct().size != 1) return null
         if (before.filter { it.personId != null && it.state != "suggested" }.map { it.personId }.distinct().size > 1) return null
         val ids = before.map { it.id }
         val rejections = dao.rejectionsOfTracks(ids)
@@ -1296,6 +1466,7 @@ class FaceRepository @Inject constructor(
         lines += "Volti trovati: ${s.faces}" + (if (s.rejects.isNotBlank()) ", scartati: ${rejectText(s.rejects)}" else "") + "."
         if (s.faces == 0) lines += "Nessun volto rilevato nei fotogrammi analizzati: prova «Rianalizza» se ne vedi uno."
         if (s.ms > 0) lines += "Analisi: %.1f s.".format(s.ms / 1000.0)
+        FaceStats.refineOf(s.stats)?.let { lines += refineText(it) }
         for (c in cards) {
             val who = c.personId?.let { names[it] }
             lines += "• " + when {
@@ -1368,7 +1539,9 @@ class FaceRepository @Inject constructor(
          * (videos) seen in a single frame, nearly always a mistake of the analysis.
          */
         fun uncertain(c: TrackCard, video: Boolean) = c.personId == null && c.state != "manual" && c.state != "carried" &&
-            (c.quality < LOW_QUALITY || (video && c.faceCount <= 1))
+            (c.state == ASIDE || c.quality < LOW_QUALITY || (video && c.faceCount <= 1))
+        /** State of an unassigned face that the closer look at its video ([refine]) did not find again. */
+        const val ASIDE = "aside"
         private const val LOW_QUALITY = 0.3f
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
         private const val CARRY = 0.6f
@@ -1379,6 +1552,8 @@ class FaceRepository @Inject constructor(
         const val REFINE_MS = 2_000L
         /** At most this many such extra frames per video. */
         const val MAX_EXTRA = 12
+        /** Frames are read this large by the closer look ([refine]). */
+        private const val CLOSE_SIDE = 1600
         /** Photos are read this large by "Cerca più a fondo". */
         private const val DEEP_SIDE = 1920
         /** No frame read for this long: the media's reading is stuck and is left behind. */
