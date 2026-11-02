@@ -295,7 +295,10 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
 @Composable
 private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, onOpen: () -> Unit) {
     val mode = vm.settings.collectAsStateWithLifecycle().value.facesMode
-    val found by produceState<Int?>(null, p.id, p.faces.size, mode) { value = runCatching { vm.suggestionsFor(p.id).size }.getOrDefault(0) }
+    // Counted again when their faces grow too (the closer look at a video joins faces into theirs), not only when they get one more.
+    val found by produceState<Int?>(null, p.id, p.faces.size, p.faces.sumOf { it.faceCount }, mode) {
+        value = runCatching { vm.suggestionsFor(p.id).size }.getOrDefault(0)
+    }
     Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Suggerimenti", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.semantics { heading() })
@@ -309,7 +312,7 @@ private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, on
             n == 1 -> "1 volto potrebbe essere suo. Nulla viene aggiunto senza la tua conferma."
             else -> "$n volti potrebbero essere suoi. Nulla viene aggiunto senza la tua conferma."
         }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if ((n ?: 0) > 0) FilledTonalButton(onClick = onOpen) { com.cripta.app.ui.components.ButtonText("Controlla i suggerimenti") }
+        if ((n ?: 0) > 0) FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onOpen) { com.cripta.app.ui.components.ButtonText("Controlla i suggerimenti") }
     }
 }
 
@@ -591,7 +594,7 @@ internal fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Pers
         Text((file?.originalName ?: "Media") + if (isVideo) " · ${clock(s.card.timeMs)}" else "",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            FilledTonalButton(onClick = onYes) { com.cripta.app.ui.components.ButtonText("È ${p.title}") }
+            FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onYes) { com.cripta.app.ui.components.ButtonText("È ${p.title}") }
             TextButton(onClick = onNo) { com.cripta.app.ui.components.ButtonText("Non è lui/lei") }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onOpen) { Icon(Icons.Filled.PlayArrow, if (isVideo) "Riproduci da qui" else "Apri") }

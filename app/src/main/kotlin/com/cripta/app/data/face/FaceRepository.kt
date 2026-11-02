@@ -896,7 +896,8 @@ class FaceRepository @Inject constructor(
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
         val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
         val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
-        val candidates = rows.filter { it.personId == null && it.id !in refused && it.fileId !in ownMedia && it.fileId in live }
+        // Faces the closer look of their video did not find again ([ASIDE]) are hardly faces: never offered.
+        val candidates = rows.filter { it.personId == null && it.state != ASIDE && it.id !in refused && it.fileId !in ownMedia && it.fileId in live }
         val emb = embeddings(own.map { it.id } + candidates.map { it.id })
         val ownEmb = own.mapNotNull { emb[it.id] }
         val scored = ArrayList<Pair<Long, Float>>()
@@ -943,7 +944,8 @@ class FaceRepository @Inject constructor(
         val t = rows.firstOrNull { it.id == trackId } ?: return@withContext emptyList()
         val pid = t.personId ?: return@withContext emptyList()
         val refused = dao.rejections().filter { it.personId == pid }.map { it.trackId }.toSet()
-        val candidates = rows.filter { it.fileId == t.fileId && it.personId == null && it.id !in refused && it.frames != 0L && it.frames and t.frames == 0L }
+        val candidates = rows.filter { it.fileId == t.fileId && it.personId == null && it.state != ASIDE && it.id !in refused &&
+            it.frames != 0L && it.frames and t.frames == 0L }
         if (candidates.isEmpty()) return@withContext emptyList()
         val own = rows.filter { it.personId == pid && it.state != "suggested" }
         val emb = embeddings(own.map { it.id } + candidates.map { it.id })
