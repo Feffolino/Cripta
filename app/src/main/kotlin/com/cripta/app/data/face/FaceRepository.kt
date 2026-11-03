@@ -29,6 +29,7 @@ import com.cripta.app.media.face.FaceFollower
 import com.cripta.app.media.face.FaceImage
 import com.cripta.app.media.face.FaceReject
 import com.cripta.app.media.face.FaceStats
+import com.cripta.app.media.face.FaceSuggest
 import com.cripta.app.media.face.FaceTracker
 import com.cripta.app.media.face.FramePlan
 import com.cripta.app.media.face.KnownHere
@@ -363,6 +364,9 @@ class FaceRepository @Inject constructor(
      */
     private inner class VideoFrames(private val file: FileEntity, private val channels: MutableList<java.nio.channels.SeekableByteChannel>) : java.io.Closeable {
         private var codec: VideoFrameReader? = VideoFrameReader.open(source())
+        /** The retriever turns the picture upright but leaves a squeezed one squeezed: widened here as the decoder does. */
+        private val aspect = codec?.pixelAspect ?: 1.0
+        private val sideways = codec?.rotation?.let { ((it % 360) + 360) % 180 == 90 } == true
         private var retrieved: Retrieved? = null
         private var noRetriever = false
 
@@ -400,7 +404,7 @@ class FaceRepository @Inject constructor(
             }
             coroutineContext.ensureActive()
             val option = if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-            return retriever()?.frame(t, option)?.let { faceImage(it, side) }.also { lastMs = if (exact) t else null }
+            return retriever()?.frame(t, option)?.let { faceImage(it, side, aspect, sideways) }.also { lastMs = if (exact) t else null }
         }
 
         /** From now on the retriever. False when already there. */
@@ -495,9 +499,13 @@ class FaceRepository @Inject constructor(
         return faceImage(bmp, side)
     }
 
-    private fun faceImage(src: Bitmap, side: Int): FaceImage {
-        val k = minOf(1.0, side.toDouble() / maxOf(src.width, src.height))
-        val bmp = if (k < 1.0) Bitmap.createScaledBitmap(src, maxOf(1, (src.width * k).toInt()), maxOf(1, (src.height * k).toInt()), true) else src
+    /** [src] at most [side] px; [aspect]: a stored pixel's width over its height, along the height when the picture was turned ([sideways]). */
+    private fun faceImage(src: Bitmap, side: Int, aspect: Double = 1.0, sideways: Boolean = false): FaceImage {
+        val stretch = if (aspect > 0.0 && kotlin.math.abs(aspect - 1.0) >= 0.02) aspect else 1.0
+        val sw = src.width * (if (sideways) 1.0 else stretch)
+        val sh = src.height * (if (sideways) stretch else 1.0)
+        val k = minOf(1.0, side / maxOf(sw, sh))
+        val bmp = if (k < 1.0 || stretch != 1.0) Bitmap.createScaledBitmap(src, maxOf(1, (sw * k).toInt()), maxOf(1, (sh * k).toInt()), true) else src
         val px = IntArray(bmp.width * bmp.height)
         bmp.getPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
         val img = FaceImage(bmp.width, bmp.height, px)
@@ -883,32 +891,36 @@ class FaceRepository @Inject constructor(
     class Suggestion(val card: TrackCard, val similarity: Float)
 
     /**
-     * Unassigned faces that look like [personId]. Every face the user gave them counts: a face is
-     * compared with each of them and scored by its closest matches (the mean of the best three),
-     * so the more media the user groups by hand, the surer the suggestions. Faces said "not them"
-     * before, and faces in media where they already are, are left out.
+     * Unassigned faces that look like [personId], all of them (the profile shows the real count),
+     * scored by [FaceSuggest]: the faces the user gave them media by media, a share of those media
+     * that must agree growing with them, so the more media the user confirms the stricter the
+     * suggestions. Faces said "not them" (and faces kept apart from theirs) count against alike
+     * faces; faces in media where they already are, and those set aside ([ASIDE]), are left out.
      */
-    suspend fun suggestionsFor(personId: Long, limit: Int = 300, minMedia: Int = 1): List<Suggestion> = withContext(Dispatchers.Default) {
+    suspend fun suggestionsFor(personId: Long, limit: Int = Int.MAX_VALUE, minMedia: Int = 1): List<Suggestion> = withContext(Dispatchers.Default) {
         val rows = dao.allTrackMeta()
         val own = rows.filter { it.personId == personId && it.state != "suggested" }
-        // Faces of one media count once: two of the same video are nearly the same example.
         if (own.isEmpty() || own.map { it.fileId }.distinct().size < minMedia) return@withContext emptyList()
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
         val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
-        val live = repo.allFilesSnapshot().filter { it.deletedAt == null }.map { it.id }.toSet()
+        val ownIds = own.map { it.id }.toSet()
+        val apart = dao.apart().mapNotNull { p -> if (p.a in ownIds) p.b else if (p.b in ownIds) p.a else null }.toSet()
+        val files = repo.allFilesSnapshot().filter { it.deletedAt == null }.associateBy { it.id }
         // Faces the closer look of their video did not find again ([ASIDE]) are hardly faces: never offered.
-        val candidates = rows.filter { it.personId == null && it.state != ASIDE && it.id !in refused && it.fileId !in ownMedia && it.fileId in live }
-        val emb = embeddings(own.map { it.id } + candidates.map { it.id })
-        val ownEmb = own.mapNotNull { emb[it.id] }
-        val scored = ArrayList<Pair<Long, Float>>()
-        for (r in candidates) {
-            coroutineContext.ensureActive()
-            val score = score(ownEmb, emb[r.id] ?: continue)
-            if (score >= SUGGEST) scored += r.id to score
-        }
-        val top = scored.sortedByDescending { it.second }.take(limit)
+        val candidates = rows.filter { it.personId == null && it.state != ASIDE && it.id !in refused && it.id !in apart &&
+            it.fileId !in ownMedia && it.fileId in files }
+        val emb = embeddings(own.map { it.id } + candidates.map { it.id } + refused + apart)
+        val person = own.groupBy { it.fileId }.mapValues { (_, l) -> l.flatMap { emb[it.id].orEmpty() } }
+        val negatives = (refused + apart).flatMap { emb[it].orEmpty() }
         val cards = dao.allCards().associateBy { it.id }
-        top.mapNotNull { (id, sc) -> cards[id]?.let { Suggestion(it, sc) } }
+        val judged = candidates.mapNotNull { r ->
+            val e = emb[r.id] ?: return@mapNotNull null
+            val card = cards[r.id] ?: return@mapNotNull null
+            FaceSuggest.Candidate(r.id, r.fileId, r.frames, e,
+                uncertain = uncertain(card, files[r.fileId]?.let { VaultRepository.isVideo(it.mimeType) } == true))
+        }
+        coroutineContext.ensureActive()
+        FaceSuggest.pick(person, judged, ownMedia, negatives).take(limit).mapNotNull { (c, sc) -> cards[c.id]?.let { Suggestion(it, sc) } }
     }
 
     /** A face of "Da confermare" and the known person it is most like. */
@@ -918,7 +930,7 @@ class FaceRepository @Inject constructor(
      * "Da confermare" (recognition "Solo persone note"): the faces like someone with faces in at
      * least [minMedia] media, each offered once, to the person it is most like, most alike first.
      */
-    suspend fun knownSuggestions(minMedia: Int = 2, limit: Int = 300): List<PersonSuggestion> = withContext(Dispatchers.Default) {
+    suspend fun knownSuggestions(minMedia: Int = 2, limit: Int = Int.MAX_VALUE): List<PersonSuggestion> = withContext(Dispatchers.Default) {
         val best = HashMap<Long, PersonSuggestion>()
         for (p in dao.persons().filter { !it.ignored }) {
             for (s in suggestionsFor(p.id, limit, minMedia)) {
@@ -1522,7 +1534,7 @@ class FaceRepository @Inject constructor(
         const val CLEARED = "skip:volti eliminati da te"
         /** Start of the status of a media whose reading got stuck and was left behind ([analyse]). */
         const val STALLED = "skip:analisi bloccata"
-        /** A face this alike to a person's faces (cosine, see [suggestionsFor]) is offered as theirs. */
+        /** A face this alike to a person's faces of the same media is offered by "Anche questi?" ([alikeInMedia]). */
         const val SUGGEST = 0.36f
         /** Analyser version: raise it to analyse every media again after a change in the pipeline. */
         const val VERSION = 4

@@ -36,7 +36,10 @@ internal class VideoFrameReader private constructor(
     private val decoders: ArrayDeque<String>,
     /** The track's duration in ms (0 when the container does not say). */
     val durationMs: Long,
-    private val rotation: Int,
+    /** Degrees the container turns the picture clockwise. */
+    val rotation: Int,
+    /** Width of a pixel over its height ([YuvFrame.pixelAspect]): not 1 for videos stored squeezed. */
+    val pixelAspect: Double,
 ) : Closeable {
     /** No decoder here gives a picture that can be read: the caller falls back to the retriever. */
     class Unreadable : Exception("no decoder gives a readable picture")
@@ -173,7 +176,7 @@ internal class VideoFrameReader private constructor(
         val full = key(MediaFormat.KEY_COLOR_RANGE) == MediaFormat.COLOR_RANGE_FULL
         val bt709 = key(MediaFormat.KEY_COLOR_STANDARD) == MediaFormat.COLOR_STANDARD_BT709
         val planes = YuvFrame.Planes(yBytes, yp.rowStride, uBytes, vBytes, up.rowStride, up.pixelStride)
-        return YuvFrame.toFace(planes, crop.left, crop.top, crop.width(), crop.height(), side, rotation, full, bt709)
+        return YuvFrame.toFace(planes, crop.left, crop.top, crop.width(), crop.height(), side, rotation, full, bt709, pixelAspect)
     }
 
     /** [buf]'s bytes into [into] (grown when too small: reused from frame to frame). */
@@ -249,7 +252,12 @@ internal class VideoFrameReader private constructor(
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: run { extractor.release(); return null }
                 val rotation = if (format.containsKey(MediaFormat.KEY_ROTATION)) format.getInteger(MediaFormat.KEY_ROTATION) else 0
                 val durUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
-                VideoFrameReader(extractor, format, mime, ArrayDeque(softwareDecoders(mime) + DEFAULT), durUs / 1000, rotation)
+                fun key(k: String) = if (format.containsKey(k)) runCatching { format.getInteger(k) }.getOrNull() else null
+                // Vertical clips are at times stored squeezed into a landscape picture (e.g. 620x348
+                // shown 197x348): read as they are stored, their frames came out stretched sideways.
+                val aspect = YuvFrame.pixelAspect(key("sar-width"), key("sar-height"), key("display-width"), key("display-height"),
+                    key(MediaFormat.KEY_WIDTH), key(MediaFormat.KEY_HEIGHT))
+                VideoFrameReader(extractor, format, mime, ArrayDeque(softwareDecoders(mime) + DEFAULT), durUs / 1000, rotation, aspect)
             } catch (e: Exception) {
                 runCatching { extractor.release() }
                 null

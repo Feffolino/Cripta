@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -269,7 +270,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
     }
 }
 
-/** Face (tap: choose another), name (tap: rename) and how many media. */
+/** Face (tap: choose another), name (tap it or the pencil: rename) and how many media. */
 @Composable
 private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCover: () -> Unit, onRename: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically,
@@ -277,9 +278,14 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
         FaceAvatar(p.cover, { vm.faceCrop(it) }, 112.dp,
             Modifier.clip(CircleShape).clickable(onClickLabel = "Scegli il volto da mostrare", onClick = onCover))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(p.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.clickable(onClickLabel = "Rinomina", onClick = onRename))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(p.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false).clickable(onClickLabel = "Rinomina", onClick = onRename))
+                IconButton(onClick = onRename) {
+                    Icon(Icons.Filled.Edit, "Rinomina", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             val videos = p.media.count { VaultRepository.isVideo(it.mimeType) }
             Text(listOfNotNull(
                 "${p.media.size} media",
@@ -310,7 +316,7 @@ private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, on
             n == null -> "Cerco volti simili…"
             n == 0 -> "Nessun volto simile da controllare. Più media gli assegni, più i suggerimenti diventano precisi."
             n == 1 -> "1 volto potrebbe essere suo. Nulla viene aggiunto senza la tua conferma."
-            else -> "$n volti potrebbero essere suoi. Nulla viene aggiunto senza la tua conferma."
+            else -> "${com.cripta.app.ui.components.formatCount(n)} volti potrebbero essere suoi. Nulla viene aggiunto senza la tua conferma."
         }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if ((n ?: 0) > 0) FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onOpen) { com.cripta.app.ui.components.ButtonText("Controlla i suggerimenti") }
     }
@@ -478,7 +484,8 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
                     Column {
                         Text("Forse è ${p.title}?", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (list.isNotEmpty()) Text(if (answeredCount == list.size) "Fatto: hai risposto a tutti"
-                            else "${(pager.currentPage + 1).coerceAtMost(list.size)} di ${list.size}" + if (answeredCount > 0) " · $answeredCount risposte" else "",
+                            else "${com.cripta.app.ui.components.formatCount((pager.currentPage + 1).coerceAtMost(list.size))} di ${com.cripta.app.ui.components.formatCount(list.size)}" +
+                                if (answeredCount > 0) " · ${com.cripta.app.ui.components.formatCount(answeredCount)} risposte" else "",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
@@ -617,9 +624,13 @@ internal fun FrameWithFace(frame: Bitmap?, box: String, modifier: Modifier) {
         modifier = modifier.aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1), matchHeightConstraintsFirst = frame.height > frame.width).drawWithContent {
             drawContent()
             if (r != null) {
+                // Where the picture really is: letterboxed (Fit) when the space given has another shape.
+                val k = minOf(size.width / frame.width, size.height / frame.height.coerceAtLeast(1))
+                val fw = frame.width * k; val fh = frame.height * k
+                val ox = (size.width - fw) / 2; val oy = (size.height - fh) / 2
                 val pad = 0.15f
-                val x = (r[0] - r[2] * pad) * size.width; val y = (r[1] - r[3] * pad) * size.height
-                val w = r[2] * (1 + 2 * pad) * size.width; val h = r[3] * (1 + 2 * pad) * size.height
+                val x = ox + (r[0] - r[2] * pad) * fw; val y = oy + (r[1] - r[3] * pad) * fh
+                val w = r[2] * (1 + 2 * pad) * fw; val h = r[3] * (1 + 2 * pad) * fh
                 drawRoundRect(accent, Offset(x, y), Size(w, h), androidx.compose.ui.geometry.CornerRadius(12.dp.toPx()), style = Stroke(3.dp.toPx()))
             }
         })
