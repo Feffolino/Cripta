@@ -51,4 +51,22 @@ class YuvFrameTest {
         val back = YuvFrame.rotate(YuvFrame.rotate(up, 180), 90)
         assertTrue(back.argb.contentEquals(img.argb))
     }
+
+    @Test
+    fun aSqueezedVideoReadsAsShown() {
+        // A vertical clip stored squeezed in a landscape picture: 16x8 stored, each pixel a quarter as wide as tall.
+        val aspect = YuvFrame.pixelAspect(null, null, dispW = 4, dispH = 8, codedW = 16, codedH = 8)
+        assertEquals(0.25, aspect, 1e-9)
+        val p = nv12(16, 8) { i, _ -> if (i < 8) Triple(16, 128, 128) else Triple(235, 128, 128) }
+        val img = YuvFrame.toFace(p, 0, 0, 16, 8, 1280, aspect = aspect)
+        assertEquals(4, img.width); assertEquals(8, img.height)
+        assertEquals(Triple(0, 0, 0), rgb(img.argb[0]))
+        assertEquals(Triple(255, 255, 255), rgb(img.argb[3]))
+        // Within the longest side asked, the shape kept.
+        val small = YuvFrame.toFace(p, 0, 0, 16, 8, 4, aspect = aspect)
+        assertEquals(2, small.width); assertEquals(4, small.height)
+        // The sample aspect, when the track gives it, wins; nothing said: square.
+        assertEquals(2.0, YuvFrame.pixelAspect(4, 2, 100, 100, 100, 100), 1e-9)
+        assertEquals(1.0, YuvFrame.pixelAspect(null, null, null, null, 16, 8), 1e-9)
+    }
 }

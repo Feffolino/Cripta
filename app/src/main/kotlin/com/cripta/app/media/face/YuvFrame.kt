@@ -19,12 +19,14 @@ object YuvFrame {
      * The [width] x [height] region at ([left], [top]) of [p], scaled (bilinear on the luma, as
      * [FaceImage.fit]) so its longest side is at most [side], then turned [rotation] degrees
      * clockwise (the container's rotation). [full]: full-range samples (else video range 16-235);
-     * [bt709]: HD colours (else BT.601).
+     * [bt709]: HD colours (else BT.601). [aspect]: width of a stored pixel over its height
+     * ([pixelAspect]); the picture is widened or narrowed by it, so a squeezed video reads as shown.
      */
     fun toFace(p: Planes, left: Int, top: Int, width: Int, height: Int, side: Int, rotation: Int = 0,
-               full: Boolean = false, bt709: Boolean = false): FaceImage {
-        val k = minOf(1.0, side.toDouble() / maxOf(width, height))
-        val w = if (k < 1.0) maxOf(1, (width * k).roundToInt()) else width
+               full: Boolean = false, bt709: Boolean = false, aspect: Double = 1.0): FaceImage {
+        val shown = width * (if (aspect > 0.0 && kotlin.math.abs(aspect - 1.0) >= ASPECT_SLACK) aspect else 1.0)
+        val k = minOf(1.0, side.toDouble() / maxOf(shown, height.toDouble()))
+        val w = maxOf(1, (shown * k).roundToInt())
         val h = if (k < 1.0) maxOf(1, (height * k).roundToInt()) else height
         // Fixed point (x256): luma scale and offset, then V->R, U->G, V->G, U->B.
         val yMul = if (full) 256 else 298
@@ -72,6 +74,20 @@ object YuvFrame {
         }
         return rotate(FaceImage(w, h, out), rotation)
     }
+
+    /**
+     * Width of a video's stored pixel over its height, from its track's sample aspect ([sarW] /
+     * [sarH]) or else its display size against its stored size; 1 when it says neither.
+     */
+    fun pixelAspect(sarW: Int?, sarH: Int?, dispW: Int?, dispH: Int?, codedW: Int?, codedH: Int?): Double {
+        if (sarW != null && sarH != null && sarW > 0 && sarH > 0) return sarW.toDouble() / sarH
+        if (dispW != null && dispH != null && codedW != null && codedH != null && dispW > 0 && dispH > 0 && codedW > 0 && codedH > 0)
+            return (dispW.toDouble() / dispH) / (codedW.toDouble() / codedH)
+        return 1.0
+    }
+
+    /** Pixel aspects this close to 1 are square (rounding of the sizes). */
+    private const val ASPECT_SLACK = 0.02
 
     /** [img] turned [degrees] clockwise (multiples of 90; anything else counts as 0). */
     fun rotate(img: FaceImage, degrees: Int): FaceImage {

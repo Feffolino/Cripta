@@ -1748,7 +1748,9 @@ class ConversionService : Service() {
     /** The outcome [id] was answered or is no longer wanted: its notification goes, and from the island. */
     private fun cancelOutcome(id: Int) {
         synchronized(lock) { hold?.takeIf { it.id == id }?.let { endHold(it, moveOn = false) } }
-        getSystemService(NotificationManager::class.java).cancel(id)
+        val mgr = getSystemService(NotificationManager::class.java)
+        mgr.cancel(id)
+        refreshSummary(mgr, analysis = true); refreshSummary(mgr, analysis = false)
     }
 
     /**
@@ -1818,11 +1820,11 @@ class ConversionService : Service() {
      * [label]: its name next to the icon in the Hyper Island, one short word (the island widens
      * with every letter).
      */
-    private enum class ResultKind(val id: Int, val label: String) {
+    private enum class ResultKind(val id: Int, val label: String, val analysis: Boolean = false) {
         IMPORT(4220, "Import"), DOWNLOAD(4221, "Download"),
-        CONVERT(4222, "Converti"), SCAN(4223, "Duplicati"),
+        CONVERT(4222, "Converti"), SCAN(4223, "Duplicati", analysis = true),
         EXPORT(4224, "Export"), UPDATE(4225, "Aggiorna"),
-        INTRO(4226, "Analisi"), FACES(4227, "Volti"),
+        INTRO(4226, "Analisi", analysis = true), FACES(4227, "Volti", analysis = true),
         BACKUP(4228, "Backup"),
     }
 
@@ -1865,7 +1867,7 @@ class ConversionService : Service() {
             .setContentTitle(title)
             .build()
         fun base(channel: String) = NotificationCompat.Builder(this, channel)
-            .setGroup("cripta_result_${kind.name}")
+            .setGroup(resultGroup(kind.analysis))
             .setSmallIcon(icon)
             .setColor(BRAND_COLOR)
             .setContentTitle(title)
@@ -1878,7 +1880,7 @@ class ConversionService : Service() {
             .setAutoCancel(true)
             .apply { actions.forEach { addAction(it) } }
         val mgr = getSystemService(NotificationManager::class.java)
-        if (!island || !HyperFocus.isSupported(this)) { post(mgr, kind.id, base(RESULT_CHANNEL).build()); return }
+        if (!island || !HyperFocus.isSupported(this)) { postResult(mgr, kind, base(RESULT_CHANNEL).build()); return }
         // HyperOS: the result takes the progress's place in the island for a few seconds (chip
         // Fatto / Errore / Annullato, its buttons), then becomes the normal, dismissible result.
         val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
@@ -1899,7 +1901,51 @@ class ConversionService : Service() {
             .build()
         // Silent: the island popping open was the alert; a sound at the swap came seconds late.
         val normal = base(RESULT_CHANNEL).setSilent(true).build()
-        holdInIsland(kind.id, island, IslandDebug.get(this).resultSeconds) { post(mgr, kind.id, normal) }
+        holdInIsland(kind.id, island, IslandDebug.get(this).resultSeconds) { postResult(mgr, kind, normal) }
+    }
+
+    /** The results of the analyses (duplicates, intro, faces) and those of the other operations: two stacks, each folded on its own. */
+    private fun resultGroup(analysis: Boolean) = if (analysis) "cripta_results_analysis" else "cripta_results_actions"
+
+    private fun postResult(mgr: NotificationManager, kind: ResultKind, n: Notification) {
+        post(mgr, kind.id, n)
+        refreshSummary(mgr, kind.analysis)
+    }
+
+    /**
+     * The summary of one stack of results ([resultGroup]): with two or more of them they fold
+     * into it and collapse together, apart from the other stack. Without it they stayed loose
+     * (each its own group: Android's automatic summary showed a plain square on HyperOS), so
+     * they could not be collapsed at once. Gone with the last result of its stack; never
+     * cancelled while one is left (that would take the results with it).
+     */
+    private fun refreshSummary(mgr: NotificationManager, analysis: Boolean) {
+        val key = resultGroup(analysis)
+        val id = if (analysis) SUMMARY_ANALYSIS_ID else SUMMARY_ACTIONS_ID
+        val children = runCatching {
+            mgr.activeNotifications.filter { it.id != id && it.notification.group == key && it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+        }.getOrNull() ?: return
+        if (children.isEmpty()) { runCatching { mgr.cancel(id) }; return }
+        if (children.size < 2) return
+        val title = if (analysis) "Analisi" else "Operazioni"
+        val lines = children.sortedByDescending { it.postTime }.mapNotNull { it.notification.extras.getCharSequence(Notification.EXTRA_TITLE) }
+        val icon = R.drawable.ic_notification
+        val summary = NotificationCompat.Builder(this, RESULT_CHANNEL)
+            .setSmallIcon(icon)
+            .setColor(BRAND_COLOR)
+            .setContentTitle(title)
+            .setContentText(lines.joinToString(" · "))
+            .setStyle(NotificationCompat.InboxStyle().also { st -> lines.forEach { st.addLine(it) } })
+            .setGroup(key)
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setSilent(true)
+            .setAutoCancel(true)
+            .setContentIntent(openAppIntent())
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion(title, icon))
+            .build()
+        runCatching { mgr.notify(id, summary) }
     }
 
     /**
@@ -2076,6 +2122,9 @@ class ConversionService : Service() {
         private const val MODE_ORIGINALS_KEEP = "originals_keep"
         private const val EX_RETRY = "retry"
         private const val DONE_NOTIF_ID = 4212
+        /** The summaries of the two stacks of results ([refreshSummary]). */
+        private const val SUMMARY_ANALYSIS_ID = 4240
+        private const val SUMMARY_ACTIONS_ID = 4241
         /** How long the unanswered keep/delete choice stays in the notifications (10 min). */
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
         private const val RESULT_CHANNEL = "results"

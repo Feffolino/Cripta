@@ -431,14 +431,16 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                     androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 }
             }
-            // "Persone" asked for from Settings, Home or the scan's notification.
+            // "Persone" asked for from Settings, Home or the scan's notification. Kept until the
+            // unlock: a tap on the notification while locked opened the page under the lock
+            // screen, whose first read of the database threw "Vault locked".
             val peopleAsked by com.cripta.app.ui.people.PeopleNav.open.collectAsStateWithLifecycle()
-            LaunchedEffect(peopleAsked) {
-                if (peopleAsked) { com.cripta.app.ui.people.PeopleNav.consume(); nav.navigate("people") { launchSingleTop = true } }
+            LaunchedEffect(peopleAsked, locked) {
+                if (peopleAsked && !locked) { com.cripta.app.ui.people.PeopleNav.consume(); nav.navigate("people") { launchSingleTop = true } }
             }
             val personAsked by com.cripta.app.ui.people.PeopleNav.person.collectAsStateWithLifecycle()
-            LaunchedEffect(personAsked) {
-                personAsked?.let { id -> com.cripta.app.ui.people.PeopleNav.consumePerson(); nav.navigate("person/$id") }
+            LaunchedEffect(personAsked, locked) {
+                if (!locked) personAsked?.let { id -> com.cripta.app.ui.people.PeopleNav.consumePerson(); nav.navigate("person/$id") }
             }
             NavHost(
                 navController = nav,

@@ -100,7 +100,7 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   show their content: a light sheet with the first lines (the first in bold when it reads as a
   title); a PDF its first page. So do the folders holding them.
 - **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
-  to each person's **profile** page: face (tap to pick another among those found), name, star,
+  to each person's **profile** page: face (tap to pick another among those found), name (a pencil beside it renames), star,
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
   are one face at a time, full screen, swiped up like a feed (the frame takes the free space, the
   two faces side by side under it, "No" and "È …" across the width; an answer glides to the next
