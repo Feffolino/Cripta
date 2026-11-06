@@ -69,10 +69,13 @@ fun formatDuration(ms: Long?): String? {
     else String.format(java.util.Locale.getDefault(), "%d:%02d", m, s)
 }
 
-/** Caption line for a media item: "1:23 · 3.1 MB" for timed media, otherwise just the size. */
-fun fileMeta(file: FileEntity): String {
+/**
+ * Caption line for a media item: "1:23 · 3.1 MB" for timed media, otherwise just the size.
+ * [withDuration] false where the cover already carries the length badge.
+ */
+fun fileMeta(file: FileEntity, withDuration: Boolean = true): String {
     val size = formatBytes(file.sizeBytes)
-    val dur = formatDuration(file.durationMs)
+    val dur = if (withDuration) formatDuration(file.durationMs) else null
     return if (dur != null) "$dur · $size" else size
 }
 

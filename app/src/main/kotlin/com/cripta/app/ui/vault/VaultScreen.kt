@@ -1709,7 +1709,7 @@ private fun FileCell(
                 Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
                 if (display.showFileInfo) {
-                    Text(listMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    Text(listMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp))
                 }
@@ -1731,16 +1731,17 @@ private fun FileCell(
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
         if (display.showFileInfo) {
-            Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            Text(fileMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp, top = 1.dp))
         }
     }
 }
 
-/** Size · date (the length is on the cover itself in list mode). */
-private fun listMeta(f: com.cripta.app.data.db.FileEntity): String {
+/** Size · date (the length is on the cover itself in list mode, unless the badge is off). */
+private fun listMeta(f: com.cripta.app.data.db.FileEntity, withDuration: Boolean): String {
     val parts = mutableListOf<String>()
+    if (withDuration) com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { parts += it }
     parts += formatBytes(f.sizeBytes)
     parts += java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))
     return parts.joinToString(" · ")
@@ -2593,7 +2594,7 @@ private fun ReorderCell(
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
                     if (display.showFileInfo) {
-                        Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(fileMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp))
                     }
@@ -2618,7 +2619,7 @@ private fun ReorderCell(
             Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
             if (display.showFileInfo) {
-                Text(fileMeta(item.file), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                Text(fileMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 2.dp, top = 1.dp))
             }
