@@ -1,7 +1,10 @@
 package com.cripta.app.work
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 /**
- * Turns exceptions into short Italian messages for the user. Raw exception text (English, often
+ * Turns exceptions into short messages for the user, in their language. Raw exception text (often
  * a stack-trace fragment or a yt-dlp log line) must never reach the UI or a notification; the
  * technical detail is logged instead.
  */
@@ -12,22 +15,22 @@ object UserErrors {
         val chain = generateSequence(e) { it.cause }.take(6).toList()
         val text = chain.joinToString(" ") { (it.message ?: "") + " " + it.javaClass.simpleName }.lowercase()
         return when {
-            chain.any { it is OutOfMemoryError } -> "Memoria insufficiente per completare l'operazione"
-            "enospc" in text || "no space" in text -> "Spazio di archiviazione esaurito"
-            "vault locked" in text -> "Il vault è stato bloccato durante l'operazione"
-            chain.any { it is java.io.FileNotFoundException } -> "File non trovato o non più accessibile"
+            chain.any { it is OutOfMemoryError } -> str(R.string.err_out_of_memory)
+            "enospc" in text || "no space" in text -> str(R.string.err_no_space)
+            "vault locked" in text -> str(R.string.err_vault_locked_during)
+            chain.any { it is java.io.FileNotFoundException } -> str(R.string.err_file_not_found)
             chain.any { it is SecurityException } || "permission denial" in text ->
-                "Permesso negato dall'app di origine del file"
+                str(R.string.err_permission_denied)
             chain.any { it is java.net.UnknownHostException || it is java.net.ConnectException } ->
-                "Nessuna connessione a Internet"
-            chain.any { it is java.net.SocketTimeoutException } -> "La connessione è scaduta, riprova"
+                str(R.string.err_no_internet)
+            chain.any { it is java.net.SocketTimeoutException } -> str(R.string.err_timeout)
             chain.any { it is javax.crypto.AEADBadTagException } || "tag mismatch" in text ->
-                "Dati cifrati non validi o passphrase errata"
-            chain.any { it is java.security.GeneralSecurityException } -> "Errore di cifratura"
+                str(R.string.err_bad_encrypted)
+            chain.any { it is java.security.GeneralSecurityException } -> str(R.string.err_crypto)
             // Our own Italian messages (IOException("Impossibile ..."), require { "Formato ..." }).
-            e.message?.let { looksItalian(it) } == true -> e.message!!
-            chain.any { it is java.io.IOException } -> "Errore di lettura o scrittura del file"
-            else -> "Si è verificato un errore imprevisto"
+            e.message?.let { looksItalian(it) || isOwn(it) } == true -> e.message!!
+            chain.any { it is java.io.IOException } -> str(R.string.err_io)
+            else -> str(R.string.err_unexpected)
         }
     }
 
@@ -37,40 +40,56 @@ object UserErrors {
         val text = generateSequence(e) { it.cause }.take(6)
             .joinToString(" ") { it.message ?: "" }.lowercase()
         return when {
-            "no space" in text || "enospc" in text -> "Spazio di archiviazione esaurito"
-            "ssl" in text || "certificate verify failed" in text -> "Impossibile verificare il certificato del sito"
-            "requested format" in text || "no video formats" in text -> "Nessun formato video disponibile alla qualità scelta"
+            "no space" in text || "enospc" in text -> str(R.string.err_no_space)
+            "ssl" in text || "certificate verify failed" in text -> str(R.string.dl_err_certificate)
+            "requested format" in text || "no video formats" in text -> str(R.string.dl_err_no_format)
             "no supported javascript runtime" in text || "javascript challenge" in text || "nsig extraction failed" in text ->
-                "Il sito richiede un estrattore aggiornato. Riprova tra qualche minuto"
-            "unsupported url" in text -> "Link non supportato"
-            "drm" in text -> "Video protetto da DRM: non scaricabile"
+                str(R.string.dl_err_extractor)
+            "unsupported url" in text -> str(R.string.dl_err_unsupported)
+            "drm" in text -> str(R.string.dl_err_drm)
             "private video" in text || "sign in" in text || "login" in text || "members-only" in text ->
-                "Video privato o che richiede l'accesso"
+                str(R.string.dl_err_private)
             "not available" in text || "unavailable" in text || "removed" in text ->
-                "Video non disponibile"
-            "geo" in text && "restrict" in text -> "Video non disponibile nel tuo paese"
-            "429" in text || "too many requests" in text -> "Troppe richieste al sito, riprova più tardi"
-            "403" in text || "forbidden" in text -> "Accesso negato dal sito"
-            "404" in text || "not found" in text -> "Pagina o video non trovato"
+                str(R.string.dl_err_unavailable)
+            "geo" in text && "restrict" in text -> str(R.string.dl_err_geo)
+            "429" in text || "too many requests" in text -> str(R.string.dl_err_too_many)
+            "403" in text || "forbidden" in text -> str(R.string.dl_err_forbidden)
+            "404" in text || "not found" in text -> str(R.string.dl_err_not_found)
             "unable to download webpage" in text || "name or service not known" in text ||
                 "failed to resolve" in text || "network is unreachable" in text ||
-                "timed out" in text || "connection" in text -> "Connessione assente o sito non raggiungibile"
+                "timed out" in text || "connection" in text -> str(R.string.dl_err_connection)
             "non ha prodotto" in text || "nessun file completo" in text || "nessun video completo" in text ->
-                "Nessun file completo scaricato. Riprova"
-            else -> of(e).let { if (it == "Si è verificato un errore imprevisto") "Download non riuscito" else it }
+                str(R.string.dl_err_incomplete)
+            else -> of(e).let { if (it == str(R.string.err_unexpected)) str(R.string.dl_err_failed) else it }
         }
     }
 
     // Error text goes through this mapper both in the service and again in the queue UI.
     // Keep canonical messages intact instead of replacing useful errors with "Download failed".
-    private val downloadMessages = setOf(
-        "Link non supportato", "Video protetto da DRM: non scaricabile", "Video privato o che richiede l'accesso",
-        "Video non disponibile", "Video non disponibile nel tuo paese", "Troppe richieste al sito, riprova più tardi",
-        "Accesso negato dal sito", "Pagina o video non trovato", "Connessione assente o sito non raggiungibile",
-        "Nessun formato video disponibile alla qualità scelta", "Nessun file completo scaricato. Riprova",
-        "Il sito richiede un estrattore aggiornato. Riprova tra qualche minuto",
-        "Spazio di archiviazione esaurito", "Impossibile verificare il certificato del sito", "Download non riuscito",
+    private val downloadMessages get() = setOf(
+        str(R.string.dl_err_unsupported), str(R.string.dl_err_drm), str(R.string.dl_err_private),
+        str(R.string.dl_err_unavailable), str(R.string.dl_err_geo), str(R.string.dl_err_too_many),
+        str(R.string.dl_err_forbidden), str(R.string.dl_err_not_found), str(R.string.dl_err_connection),
+        str(R.string.dl_err_no_format), str(R.string.dl_err_incomplete),
+        str(R.string.dl_err_extractor),
+        str(R.string.err_no_space), str(R.string.dl_err_certificate), str(R.string.dl_err_failed),
     )
+
+    /** The app's own messages (thrown in the user's language), shown as they are. */
+    private val OWN = intArrayOf(
+        R.string.err_open_import, R.string.err_write_converted, R.string.err_write_destination, R.string.err_write_gallery,
+        R.string.err_create_in_folder, R.string.err_write_folder, R.string.err_write_backup, R.string.err_read_incomplete,
+        R.string.err_open_backup, R.string.err_bad_format, R.string.err_wrong_passphrase_or_corrupt, R.string.file_corrupt,
+        R.string.err_backup_truncated, R.string.err_wrong_passphrase_or_invalid, R.string.err_note_save, R.string.settings_invalid,
+        R.string.settings_unknown_kind, R.string.update_checksum_missing, R.string.update_checksum_invalid, R.string.update_checksum_mismatch,
+    )
+
+    private fun isOwn(msg: String): Boolean = OWN.any { id ->
+        // Unformatted: a placeholder stays as "%1$s", so a message with an argument matches by its start.
+        val raw = com.cripta.app.Strings.context.getString(id)
+        val head = raw.substringBefore('%')
+        if (head.length == raw.length) msg == raw else head.isNotEmpty() && msg.startsWith(head)
+    }
 
     private fun looksItalian(msg: String): Boolean {
         val m = msg.lowercase()

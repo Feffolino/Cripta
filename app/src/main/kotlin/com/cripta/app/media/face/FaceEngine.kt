@@ -7,10 +7,13 @@ import java.nio.FloatBuffer
 import kotlin.math.sqrt
 
 /** Why a detected face is not used for recognition; shown in the diagnostics. */
-enum class FaceReject(val label: String) {
-    LOW_SCORE("incerti"), SMALL("troppo piccoli"), PROFILE("di profilo"), BLURRY("sfocati"),
+enum class FaceReject(@androidx.annotation.StringRes private val labelRes: Int) {
+    LOW_SCORE(com.cripta.app.R.string.reject_low_score), SMALL(com.cripta.app.R.string.reject_small),
+    PROFILE(com.cripta.app.R.string.reject_profile), BLURRY(com.cripta.app.R.string.reject_blurry),
     /** Like a face the user deleted from this media, or marked as not a face. */
-    IGNORED("eliminati da te");
+    IGNORED(com.cripta.app.R.string.reject_ignored);
+
+    val label: String get() = com.cripta.app.str(labelRes)
 
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }

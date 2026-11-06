@@ -1,5 +1,8 @@
 package com.cripta.app.update
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -147,15 +150,15 @@ class AppUpdater @Inject constructor() {
                 Regex("[0-9a-fA-F]{64}").find(httpGet(checksumUrl, accept = null))?.value?.lowercase()
             } catch (e: Exception) {
                 out.delete()
-                throw java.io.IOException("Impossibile verificare l'aggiornamento: checksum non scaricabile", e)
+                throw java.io.IOException(str(R.string.update_checksum_missing), e)
             } ?: run {
                 out.delete()
-                throw java.io.IOException("Impossibile verificare l'aggiornamento: checksum non valido")
+                throw java.io.IOException(str(R.string.update_checksum_invalid))
             }
             val actual = md.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
             if (actual != expected) {
                 out.delete()
-                throw SecurityException("L'aggiornamento scaricato non corrisponde a quello pubblicato (SHA-256 diverso): installazione annullata")
+                throw SecurityException(str(R.string.update_checksum_mismatch))
             }
         }
         out

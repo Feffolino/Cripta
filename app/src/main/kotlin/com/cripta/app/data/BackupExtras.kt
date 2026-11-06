@@ -1,5 +1,8 @@
 package com.cripta.app.data
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
 import com.cripta.app.data.db.DupApartEntity
@@ -39,7 +42,7 @@ internal object BackupExtras {
     private fun DataOutputStream.blob(b: ByteArray) { writeInt(b.size); write(b) }
     private fun DataInputStream.blob(): ByteArray {
         val n = readInt()
-        require(n in 0..64_000_000) { "File corrotto" }
+        require(n in 0..64_000_000) { str(R.string.file_corrupt) }
         return ByteArray(n).also { readFully(it) }
     }
 

@@ -1,5 +1,9 @@
 package com.cripta.app.data.face
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -874,7 +878,7 @@ class FaceRepository @Inject constructor(
         // No name given: "Volto N", the next number free (the user can rename them later).
         val named = name.trim().ifBlank {
             val used = dao.persons().mapNotNull { VOLTO.matchEntire(it.name)?.groupValues?.get(1)?.toIntOrNull() }
-            "Volto ${(used.maxOrNull() ?: 0) + 1}"
+            str(R.string.face_n, (used.maxOrNull() ?: 0) + 1)
         }
         dao.addPerson(PersonEntity(name = named, createdAt = System.currentTimeMillis()))
     }
@@ -1111,15 +1115,13 @@ class FaceRepository @Inject constructor(
     suspend fun refineNoteNow(fileId: String): String? = dao.scanOf(fileId)?.let { FaceStats.refineOf(it.stats) }?.let(::refineText)
 
     private fun refineText(r: FaceStats.Refine): String {
-        if (r.frames == 0) return "Analizzato meglio: nessun altro volto da controllare."
+        if (r.frames == 0) return str(R.string.refine_nothing)
         val parts = ArrayList<String>()
-        if (r.joined == 1) parts += "1 volto era la persona confermata ed è stato unito al suo"
-        else if (r.joined > 1) parts += "${r.joined} volti erano la persona confermata e sono stati uniti al suo"
-        if (r.aside == 1) parts += "1 volto non è stato ritrovato ed è tra i poco chiari"
-        else if (r.aside > 1) parts += "${r.aside} volti non sono stati ritrovati e sono tra i poco chiari"
-        return "Analizzato meglio, ${r.frames} fotogrammi attorno a chi hai confermato: " +
-            (if (parts.isEmpty()) "nessun altro volto è di sicuro la stessa persona." else parts.joinToString("; ") + ".") +
-            (if (r.joined > 0) " Se un'unione è sbagliata, «Dividi» dal menu del volto." else "")
+        if (r.joined > 0) parts += plural(R.plurals.refine_joined, r.joined)
+        if (r.aside > 0) parts += plural(R.plurals.refine_aside, r.aside)
+        return str(R.string.refine_head, r.frames) +
+            (if (parts.isEmpty()) str(R.string.refine_none) else parts.joinToString("; ") + ".") +
+            (if (r.joined > 0) str(R.string.refine_split_hint) else "")
     }
 
     /**
@@ -1461,32 +1463,31 @@ class FaceRepository @Inject constructor(
         FaceReject.of(k)?.let { "$v ${it.label}" }
     }.joinToString(", ")
 
-    private fun nameOf(p: PersonEntity?) = p?.let { it.name.ifBlank { "persona senza nome" } } ?: "nessuno"
+    private fun nameOf(p: PersonEntity?) = p?.let { it.name.ifBlank { str(R.string.unnamed_person) } } ?: str(R.string.nobody)
 
     /** Why [fileId] has (no) faces: what was read, found and set aside, and where each face went. */
     suspend fun describe(fileId: String): String = withContext(Dispatchers.Default) {
-        val s = dao.scanOf(fileId) ?: return@withContext "Non ancora analizzato."
-        if (s.status == CLEARED) return@withContext "Hai eliminato i volti trovati qui (da «Elimina i volti non assegnati» o " +
-            "«Elimina volti trovati per errore»), quindi non viene analizzato da solo. «Analizza di nuovo» li cerca ancora."
-        if (s.status.startsWith(STALLED)) return@withContext s.status.removePrefix("skip:").replaceFirstChar { it.uppercase() }
-        if (s.status != "ok") return@withContext "Non analizzabile: " + s.status.removePrefix("skip:")
+        val s = dao.scanOf(fileId) ?: return@withContext str(R.string.faces_not_analysed)
+        if (s.status == CLEARED) return@withContext str(R.string.faces_cleared_here)
+        if (s.status.startsWith(STALLED)) return@withContext com.cripta.app.data.SkipReasons.text(s.status).replaceFirstChar { it.uppercase() }
+        if (s.status != "ok") return@withContext str(R.string.not_analysable, com.cripta.app.data.SkipReasons.text(s.status))
         val st = FaceStats.parse(s.stats)
         val cards = dao.cardsOf(fileId)
         val names = dao.persons().associateBy { it.id }
         val lines = ArrayList<String>()
-        lines += "Fotogrammi letti: ${s.framesRead}" + (if (s.framesFailed > 0) " (${s.framesFailed} non leggibili)" else "") +
-            (if (st.duplicates > 0) ", ${st.duplicates} uguali a quello prima saltati" else "") +
-            (if (st.extra > 0) ", ${st.extra} aggiunti vicino ai volti" else "") + "."
-        lines += "Volti trovati: ${s.faces}" + (if (s.rejects.isNotBlank()) ", scartati: ${rejectText(s.rejects)}" else "") + "."
-        if (s.faces == 0) lines += "Nessun volto rilevato nei fotogrammi analizzati: prova «Rianalizza» se ne vedi uno."
-        if (s.ms > 0) lines += "Analisi: %.1f s.".format(s.ms / 1000.0)
+        lines += str(R.string.faces_frames_read, s.framesRead) + (if (s.framesFailed > 0) str(R.string.faces_frames_unreadable, s.framesFailed) else "") +
+            (if (st.duplicates > 0) str(R.string.faces_frames_duplicates, st.duplicates) else "") +
+            (if (st.extra > 0) str(R.string.faces_frames_extra, st.extra) else "") + "."
+        lines += str(R.string.faces_found, s.faces) + (if (s.rejects.isNotBlank()) str(R.string.faces_set_aside, rejectText(s.rejects)) else "") + "."
+        if (s.faces == 0) lines += str(R.string.faces_none_detected)
+        if (s.ms > 0) lines += str(R.string.faces_analysis_time).format(s.ms / 1000.0)
         FaceStats.refineOf(s.stats)?.let { lines += refineText(it) }
         for (c in cards) {
             val who = c.personId?.let { names[it] }
             lines += "• " + when {
-                who == null -> "volto non assegnato"
-                c.state == "manual" -> "${nameOf(who)} (confermato)"
-                else -> "${nameOf(who)} (somiglianza %.2f)".format(c.similarity)
+                who == null -> str(R.string.face_unassigned)
+                c.state == "manual" -> str(R.string.face_confirmed, nameOf(who))
+                else -> str(R.string.face_similarity, nameOf(who)).format(c.similarity)
             }
         }
         lines.joinToString("\n")
@@ -1529,7 +1530,7 @@ class FaceRepository @Inject constructor(
 
     companion object {
         /** What an unnamed person is called on screen: faces found get no name, the user gives one. */
-        const val UNNAMED = "Senza nome"
+        val UNNAMED: String get() = str(R.string.unnamed)
         /** Status of a media whose faces the user cleared (analysed, nothing kept). */
         const val CLEARED = "skip:volti eliminati da te"
         /** Start of the status of a media whose reading got stuck and was left behind ([analyse]). */
@@ -1559,7 +1560,7 @@ class FaceRepository @Inject constructor(
         private const val LOW_QUALITY = 0.3f
         /** A face analysed again is the old one when this alike (same frames, same picture: near 1). */
         private const val CARRY = 0.6f
-        private val VOLTO = Regex("Volto (\\d+)")
+        private val VOLTO = Regex("(?:Volto|Face) (\\d+)")
         /** Frames and photos are read at most this large; detection runs on half of it. */
         const val FRAME_SIDE = 1280
         /** Where a sampled frame shows a face, the exact frame this much later is read too. */

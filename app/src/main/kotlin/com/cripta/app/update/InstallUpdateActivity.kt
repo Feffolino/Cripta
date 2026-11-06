@@ -1,5 +1,8 @@
 package com.cripta.app.update
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
@@ -17,7 +20,7 @@ class InstallUpdateActivity : Activity() {
         val apk = AppUpdater.apkFile(this)
         val opened = apk.exists() && runCatching { startActivity(AppUpdater.installerIntent(this, apk)) }.isSuccess
         if (!opened) {
-            Toast.makeText(this, "Aggiornamento non disponibile: scaricalo di nuovo da Impostazioni", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, str(R.string.update_missing), Toast.LENGTH_LONG).show()
         }
         finish()
     }

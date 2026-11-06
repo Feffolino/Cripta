@@ -1,5 +1,8 @@
 package com.cripta.app.data
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -103,7 +106,7 @@ class VaultRepository @Inject constructor(
     suspend fun resolveConvertedOriginal(id: String, deleted: Boolean) {
         deletePendingJob("original-$id")
         _convertStatus.update { it.resolved(id).copy(lastOk = true, lastResult = if (deleted)
-            "Originale eliminato. Resta la copia MP4." else "Originale mantenuto accanto alla copia MP4.") }
+            str(R.string.convert_original_deleted) else str(R.string.convert_original_kept)) }
     }
 
     private val _conversionProgress = MutableStateFlow(0)
@@ -466,7 +469,7 @@ class VaultRepository @Inject constructor(
         // (some providers report it wrong). The exact length is what the seekable player needs.
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val source = context.contentResolver.openInputStream(uri)
-            ?: throw java.io.IOException("Impossibile aprire il file da importare")
+            ?: throw java.io.IOException(str(R.string.err_open_import))
         // Failing halfway (a provider error, the vault locked before the insert) left the partial
         // ciphertext behind, taking space for good: removed on every failure.
         try {
@@ -663,7 +666,7 @@ class VaultRepository @Inject constructor(
             }
             // Never keep a short write: the vault copy must hold every byte of the verified MP4.
             if (written != mp4.length()) {
-                throw java.io.IOException("Scrittura incompleta della copia convertita")
+                throw java.io.IOException(str(R.string.err_write_converted))
             }
             val baseName = original.originalName.substringBeforeLast('.', original.originalName)
             val convertedRes = videoResolutionOf(mp4)
@@ -984,7 +987,7 @@ class VaultRepository @Inject constructor(
 
     suspend fun export(file: FileEntity, dest: Uri) = withContext(Dispatchers.IO) {
         val sink = context.contentResolver.openOutputStream(dest)
-            ?: throw java.io.IOException("Impossibile scrivere nella destinazione scelta")
+            ?: throw java.io.IOException(str(R.string.err_write_destination))
         sink.use { out ->
             FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
                 it.copyTo(out)
@@ -1023,7 +1026,7 @@ class VaultRepository @Inject constructor(
         val uri = resolver.insert(collection, values) ?: return@withContext null
         try {
             val sink = resolver.openOutputStream(uri)
-                ?: throw java.io.IOException("Impossibile scrivere nella galleria")
+                ?: throw java.io.IOException(str(R.string.err_write_gallery))
             sink.use { out ->
                 FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
                     it.copyTo(out)
@@ -1054,10 +1057,10 @@ class VaultRepository @Inject constructor(
         val note = isNote(file.mimeType)
         val doc = android.provider.DocumentsContract.createDocument(resolver, parent,
             if (note) MIME_MARKDOWN else file.mimeType, if (note) noteFileName(file.originalName) else file.originalName)
-            ?: throw java.io.IOException("Impossibile creare il file nella cartella scelta")
+            ?: throw java.io.IOException(str(R.string.err_create_in_folder))
         try {
             val sink = resolver.openOutputStream(doc)
-                ?: throw java.io.IOException("Impossibile scrivere nella cartella scelta")
+                ?: throw java.io.IOException(str(R.string.err_write_folder))
             sink.use { out ->
                 FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
                     it.copyTo(out)
@@ -1504,7 +1507,7 @@ class VaultRepository @Inject constructor(
         }.toString().toByteArray()
 
         val sink = context.contentResolver.openOutputStream(dest)
-            ?: throw java.io.IOException("Impossibile scrivere il file di backup")
+            ?: throw java.io.IOException(str(R.string.err_write_backup))
         sink.use { raw ->
             BackupCrypto.encryptingStream(raw, passphrase, header).use { cos ->
                 val out = java.io.DataOutputStream(java.io.BufferedOutputStream(cos, 256 * 1024))
@@ -1526,7 +1529,7 @@ class VaultRepository @Inject constructor(
                     if (compressDocs && compressibleInBackup(fwt.file.mimeType, len)) {
                         val plain = java.io.ByteArrayOutputStream(len.toInt())
                         val got = decryptingStream(fwt.file).use { copyAtMost(it, plain, len) }
-                        if (got != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
+                        if (got != len) throw java.io.IOException(str(R.string.err_read_incomplete, fwt.file.originalName))
                         val raw = plain.toByteArray()
                         val zipped = java.io.ByteArrayOutputStream().also { bos ->
                             java.util.zip.DeflaterOutputStream(bos, java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION)).use { it.write(raw) }
@@ -1540,7 +1543,7 @@ class VaultRepository @Inject constructor(
                     val copied = decryptingStream(fwt.file).use {
                         copyAtMost(it, out, len) { n -> written += n; onProgress(written.toFloat() / total) }
                     }
-                    if (copied != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
+                    if (copied != len) throw java.io.IOException(str(R.string.err_read_incomplete, fwt.file.originalName))
                 }
                 // People, faces and intro/outro analysis (an older app stops before this part).
                 BackupExtras.write(db, fileIndex, out, people = scope.people, analysis = scope.analysis)
@@ -1570,7 +1573,7 @@ class VaultRepository @Inject constructor(
 
     private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): RestoreReport {
         val opened = context.contentResolver.openInputStream(src)
-            ?: throw java.io.IOException("Impossibile aprire il file di backup")
+            ?: throw java.io.IOException(str(R.string.err_open_backup))
         // Progress = bytes of the archive read so far (its size from the provider, when known).
         val archiveSize = runCatching {
             context.contentResolver.openAssetFileDescriptor(src, "r")?.use { it.length }
@@ -1601,7 +1604,7 @@ class VaultRepository @Inject constructor(
                         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, iv))
                         javax.crypto.CipherInputStream(raw, cipher)
                     }
-                    else -> throw IllegalArgumentException("Formato non valido")
+                    else -> throw IllegalArgumentException(str(R.string.err_bad_format))
                 }
             } catch (e: Exception) {
                 // Too short, not a backup, or a key that can't even be derived.
@@ -1613,7 +1616,7 @@ class VaultRepository @Inject constructor(
                 // told apart from a failure later on (a full disk), which is not the passphrase.
                 val manifest = try {
                     val mLen = inp.readInt()
-                    require(mLen in 1..50_000_000) { "Passphrase errata o file corrotto" }
+                    require(mLen in 1..50_000_000) { str(R.string.err_wrong_passphrase_or_corrupt) }
                     val mBytes = ByteArray(mLen); inp.readFully(mBytes)
                     org.json.JSONObject(String(mBytes))
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1717,7 +1720,7 @@ class VaultRepository @Inject constructor(
             // Negative = deflated document (v3): -(compressed size) - 1.
             val zipped = stored < 0
             val storedLen = if (zipped) -(stored + 1) else stored
-            require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { "File corrotto" }
+            require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { str(R.string.file_corrupt) }
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
             written += uuid
@@ -1729,7 +1732,7 @@ class VaultRepository @Inject constructor(
                             java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { it.copyTo(enc) }
                         } else {
                             val copied = copyAtMost(inp, enc, storedLen)
-                            if (copied != storedLen) throw java.io.IOException("Backup troncato o corrotto")
+                            if (copied != storedLen) throw java.io.IOException(str(R.string.err_backup_truncated))
                             copied
                         }
                     }
@@ -1801,7 +1804,7 @@ class VaultRepository @Inject constructor(
                 }
                 f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
                 f.remove("tagNames"); f.remove("exNames")
-                db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", "Filtro"), json = f.toString()))
+                db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", str(R.string.default_filter_name)), json = f.toString()))
             }
         }
         val segments = (0 until fileArr.length()).any { (fileArr.getJSONObject(it).optJSONArray("segments")?.length() ?: 0) > 0 }
@@ -1810,7 +1813,7 @@ class VaultRepository @Inject constructor(
     }
 
     /** The backup could not be opened: wrong passphrase, or not a Cripta backup. */
-    class WrongPassphraseException(cause: Throwable) : Exception("Passphrase errata o file non valido", cause)
+    class WrongPassphraseException(cause: Throwable) : Exception(str(R.string.err_wrong_passphrase_or_invalid), cause)
 
     /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
     private fun copyAtMost(
@@ -1861,7 +1864,7 @@ class VaultRepository @Inject constructor(
             throw e
         }
         val e = FileEntity(
-            id = uuid, originalName = name.ifBlank { "Nota" }, mimeType = MIME_MARKDOWN,
+            id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
             sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
             createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
         )
@@ -1882,7 +1885,7 @@ class VaultRepository @Inject constructor(
             blobs.durableOutput(tmp).use { out ->
                 FileCrypto.encryptingStream(f.wrappedKeyset, dek, fileId, out).use { it.write(bytes) }
             }
-            if (!tmp.renameTo(blob)) throw java.io.IOException("Salvataggio della nota non riuscito")
+            if (!tmp.renameTo(blob)) throw java.io.IOException(str(R.string.err_note_save))
         } finally {
             if (tmp.exists()) tmp.delete()
         }
