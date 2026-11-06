@@ -38,6 +38,7 @@ class DownloadRequestsTest {
         assertTrue(request.getOption("-f")!!.split('/').all { "[height<=?720]" in it })
         assertTrue(request.hasOption("--abort-on-unavailable-fragments"))
         assertEquals("20", request.getOption("--socket-timeout"))
+        assertEquals("4", request.getOption("--concurrent-fragments"))
         val args = request.buildCommand()
         val index = args.indexOf("--print-to-file")
         assertEquals("after_move:filepath", args[index + 1])

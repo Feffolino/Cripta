@@ -1434,7 +1434,13 @@ class ConversionService : Service() {
             // stream); the download screen shows the same one.
             val eta = EtaEstimator()
             produced = withContext(Dispatchers.IO) {
+                var lastPct = -1
                 ytdlp.download(url, job.maxHeight, pid, isCancelled = { cancelRequested }) { pct, _ ->
+                    // yt-dlp prints a progress line for every block; this runs on the thread that
+                    // drains its output, so rebuilding the notification each time stalled yt-dlp
+                    // on a full pipe. Only when the percentage moves.
+                    if (pct == lastPct) return@download
+                    lastPct = pct
                     repo.setConversionProgress(pct)
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
                     set { it.copy(phase = com.cripta.app.data.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }

@@ -26,6 +26,8 @@ internal object DownloadRequests {
         addOption("-f", "bv*[ext=mp4]$cap+ba[ext=m4a]/b[ext=mp4]$cap/bv*$cap+ba/b$cap/bv*$cap")
         addOption("--merge-output-format", "mp4/mkv")
         addOption("-o", File(dir, "%(title).80s.%(ext)s").absolutePath)
+        // HLS/DASH: fetch fragments in parallel instead of one at a time.
+        addOption("--concurrent-fragments", 4)
         addOption("--no-mtime")
         addOption("--newline")
         addOption("--no-simulate")
