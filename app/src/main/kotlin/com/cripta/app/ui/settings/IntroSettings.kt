@@ -1,5 +1,9 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.heightIn
@@ -75,29 +79,27 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
-        PageIntro("Cripta riconosce sigle e finali confrontando l'audio dei video del vault, in qualunque cartella. " +
-            "Per segnarli a mano apri un video e scorri su: la sezione è sotto le etichette.") {
+        PageIntro(str(R.string.intro_page_intro)) {
             StatusCard(overview, progress, onStop = { vm.cancelIntroScan() }, onResults = { vm.introResultsOpen.value = true })
         }
-        Section("Salto") {
-            ToggleRow("Salta l'intro in automatico", s.introAutoSkip,
-                desc = if (s.introAutoSkip) "Il video salta da solo; «Annulla» torna indietro." else "Compare il pulsante «Salta intro».",
+        Section(str(R.string.skipping)) {
+            ToggleRow(str(R.string.skip_intro_auto), s.introAutoSkip,
+                desc = if (s.introAutoSkip) str(R.string.skip_intro_auto_on) else str(R.string.skip_intro_auto_off),
                 icon = CriptaIcons.SkipNext) { vm.setIntroAutoSkip(it) }
-            ToggleRow("Salta il finale in automatico", s.outroAutoSkip,
-                desc = "Passa al file successivo, se c'è, altrimenti va alla fine del video.",
+            ToggleRow(str(R.string.skip_ending_auto), s.outroAutoSkip,
+                desc = str(R.string.skip_ending_auto_desc),
                 icon = CriptaIcons.SkipNext) { vm.setOutroAutoSkip(it) }
         }
-        Section("Analisi") {
-            ToggleRow("Analizza i nuovi video", s.introAnalyzeNew,
-                desc = "Dopo ogni importazione, download o conversione, in background.",
+        Section(str(R.string.kind_analysis)) {
+            ToggleRow(str(R.string.analyse_new_videos), s.introAnalyzeNew,
+                desc = str(R.string.analyse_new_videos_desc),
                 icon = CriptaIcons.GraphicEq) { vm.setIntroAnalyzeNew(it) }
-            ToggleRow("Analisi rapida", s.introQuickScan,
-                desc = if (s.introQuickScan) "Solo il primo e l'ultimo minuto di ogni video: molto più veloce, " +
-                    "ma non trova le sigle che iniziano dopo il primo minuto."
-                    else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta.",
+            ToggleRow(str(R.string.quick_analysis), s.introQuickScan,
+                desc = if (s.introQuickScan) str(R.string.quick_analysis_on)
+                    else str(R.string.quick_analysis_off),
                 icon = CriptaIcons.Speed) { vm.setIntroQuickScan(it) }
             FilledTonalButton(onClick = { vm.startIntroScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza i video esistenti" else "Analisi in corso…")
+                com.cripta.app.ui.components.ButtonText(if (progress == null) str(R.string.analyse_existing) else str(R.string.analysis_running))
             }
         }
         Maintenance(vm, onOpenFile)
@@ -124,7 +126,7 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
                        onStop: () -> Unit, onResults: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (o == null) {
-            Text("Lettura dello stato…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(str(R.string.reading_state), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column
         }
         // One line per figure: any number fits ("Analizzati 1.234 di 5.678"), nothing is cut.
@@ -133,15 +135,15 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
             com.cripta.app.ui.components.CountRow(progress.phase, fmt(progress.done), of = fmt(progress.total),
                 progress = if (progress.total > 0) progress.done.toFloat() / progress.total else 0f)
         }
-        com.cripta.app.ui.components.CountRow("Analizzati", fmt(o.analysed), of = fmt(o.videos),
+        com.cripta.app.ui.components.CountRow(str(R.string.analysed), fmt(o.analysed), of = fmt(o.videos),
             progress = if (progress == null && o.videos > 0) o.analysed.toFloat() / o.videos else null)
-        com.cripta.app.ui.components.CountRow("Con intro", fmt(o.withIntro))
-        com.cripta.app.ui.components.CountRow("Con finale", fmt(o.withOutro))
-        if (progress == null && o.skipped > 0) Text("${fmt(o.skipped)} non analizzabili: il motivo è nei risultati.",
+        com.cripta.app.ui.components.CountRow(str(R.string.with_intro), fmt(o.withIntro))
+        com.cripta.app.ui.components.CountRow(str(R.string.with_ending), fmt(o.withOutro))
+        if (progress == null && o.skipped > 0) Text(str(R.string.n_not_analysable, fmt(o.skipped)),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            com.cripta.app.ui.components.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Risultati") }
-            if (progress != null) com.cripta.app.ui.components.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
+            com.cripta.app.ui.components.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText(str(R.string.results)) }
+            if (progress != null) com.cripta.app.ui.components.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText(str(R.string.stop)) }
         }
     }
 }
@@ -154,34 +156,34 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }
     // Like the people page: the rare actions as text, the one that throws work away a destructive button.
-    Section("Manutenzione") {
+    Section(str(R.string.maintenance)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (rejected.isNotEmpty()) TextButton(onClick = { showRejected = true }) {
-                com.cripta.app.ui.components.ButtonText("Segmenti scartati (${rejected.size})")
+                com.cripta.app.ui.components.ButtonText(str(R.string.discarded_segments_n, rejected.size))
             }
             Spacer(Modifier.weight(1f))
-            com.cripta.app.ui.components.DestructiveButton("Ricomincia da capo", onClick = { restartAll = false; askRestart = true })
+            com.cripta.app.ui.components.DestructiveButton(str(R.string.start_over), onClick = { restartAll = false; askRestart = true })
         }
     }
     if (showRejected) CriptaAlertDialog(
         onDismissRequest = { showRejected = false },
-        confirmButton = { TextButton(onClick = { showRejected = false }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
-        title = { Text("Segmenti scartati") },
+        confirmButton = { TextButton(onClick = { showRejected = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
+        title = { Text(str(R.string.discarded_segments)) },
         text = {
             LazyColumn(Modifier.height(360.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Text("Questi tratti audio non diventano mai intro o finali. «Togli» rimette subito i segmenti che bloccavano.",
+                    Text(str(R.string.discarded_segments_hint),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(rejected, key = { it.id }) { r ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).clickable { showRejected = false; onOpenFile(r.originFileId) }.padding(vertical = 4.dp)) {
                             Text(r.originName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text((if (r.kind == "intro") "Intro" else "Finale") +
-                                " · ${span(r.startMs, r.endMs)} · ${(r.endMs - r.startMs + 500) / 1000} s · tocca per aprire",
+                            Text((if (r.kind == "intro") str(R.string.intro) else str(R.string.ending)) +
+                                str(R.string.discarded_line, span(r.startMs, r.endMs), (r.endMs - r.startMs + 500) / 1000),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        TextButton(onClick = { vm.restoreRejected(r.id) }) { com.cripta.app.ui.components.ButtonText("Togli") }
+                        TextButton(onClick = { vm.restoreRejected(r.id) }) { com.cripta.app.ui.components.ButtonText(str(R.string.remove_short)) }
                     }
                 }
             }
@@ -189,30 +191,32 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     )
     if (askRestart) CriptaAlertDialog(
         onDismissRequest = { askRestart = false },
-        title = { Text("Ricominciare da capo?") },
+        title = { Text(str(R.string.start_over_q)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Ferma l'analisi in corso, cancella tutte le impronte audio e tutte le intro e i finali trovati, " +
-                    "poi analizza di nuovo ogni video. Con molti video richiede tempo.")
+                Text(str(R.string.start_over_text))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { restartAll = !restartAll }) {
                     Checkbox(checked = restartAll, onCheckedChange = { restartAll = it })
-                    Text("Cancella anche i segni fatti a mano e i segmenti scartati")
+                    Text(str(R.string.start_over_clear_marks))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { vm.restartIntroScan(restartAll); askRestart = false }) {
-                com.cripta.app.ui.components.ButtonText("Ricomincia", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText(str(R.string.start_over_btn), color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = { askRestart = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = { askRestart = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }
 
-private enum class ResultFilter(val label: String, val kind: SegmentKind? = null) {
-    WITH("Con intro o finale"), WITHOUT("Senza"), SKIPPED("Non analizzabili"),
+private enum class ResultFilter(private val labelRes: Int, val kind: SegmentKind? = null) {
+    WITH(R.string.filter_with_intro), WITHOUT(R.string.filter_without), SKIPPED(R.string.filter_skipped),
     // The signatures: videos grouped by the sound of their intro / outro.
-    BY_INTRO("Firme intro", SegmentKind.INTRO), BY_OUTRO("Firme finale", SegmentKind.OUTRO),
+    BY_INTRO(R.string.filter_sig_intro, SegmentKind.INTRO), BY_OUTRO(R.string.filter_sig_ending, SegmentKind.OUTRO),
+    ;
+
+    val label: String get() = str(labelRes)
 }
 
 /**
@@ -273,17 +277,17 @@ private fun IntroResultsPage(
             topBar = {
                 if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                    title = { Text("${selected.size} selezionate") },
-                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, "Annulla selezione") } },
+                    title = { Text(str(R.string.n_selected_f, selected.size)) },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, str(R.string.cancel_selection)) } },
                     actions = {
-                        TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText("Unisci") }
-                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { deleting = selectedSigs },
+                        TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText(str(R.string.merge)) }
+                        com.cripta.app.ui.components.DestructiveButton(str(R.string.delete), onClick = { deleting = selectedSigs },
                             modifier = Modifier.padding(end = 8.dp))
                     },
                 ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                    title = { Text("Risultati dell'analisi") },
-                    navigationIcon = { IconButton(onClick = onClose) { Icon(CriptaIcons.ArrowBack, "Indietro") } },
+                    title = { Text(str(R.string.analysis_results)) },
+                    navigationIcon = { IconButton(onClick = onClose) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } },
                 )
             },
             snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
@@ -292,7 +296,7 @@ private fun IntroResultsPage(
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     com.cripta.app.ui.components.CriptaTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                        leadingIcon = { Icon(CriptaIcons.Search, null) }, placeholder = { Text("Cerca per nome") },
+                        leadingIcon = { Icon(CriptaIcons.Search, null) }, placeholder = { Text(str(R.string.search_by_name)) },
                         modifier = Modifier.fillMaxWidth())
                 }
                 item {
@@ -305,19 +309,16 @@ private fun IntroResultsPage(
                 }
                 if (filter.kind != null) {
                     item {
-                        Text("Ogni firma raggruppa i video con lo stesso suono di " +
-                            (if (filter.kind == SegmentKind.INTRO) "intro" else "finale") +
-                            ". In cima quelle senza nome e con pochi video, i falsi positivi più probabili. " +
-                            "Dal menu ⋮ rinomina, unisci, dai una durata o elimina; tieni premuto per selezionarne più di una.",
+                        Text(str(if (filter.kind == SegmentKind.INTRO) R.string.signatures_hint_intro else R.string.signatures_hint_ending),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     when {
                         shownGroups == null -> item {
-                            Text("Confronto dei suoni…", style = MaterialTheme.typography.bodyMedium,
+                            Text(str(R.string.comparing_sounds), style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
                         }
                         shownGroups.isEmpty() -> item {
-                            Text("Nessuna firma.", style = MaterialTheme.typography.bodyMedium,
+                            Text(str(R.string.no_signatures), style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
                         }
                     }
@@ -335,7 +336,7 @@ private fun IntroResultsPage(
                                 seg.takeIf { filter.kind == SegmentKind.OUTRO }, null)
                             EntryRow(e, thumb, Modifier.padding(start = 12.dp), trailing = {
                                 IconButton(onClick = { actions.removeVideo(g, file.id) }) {
-                                    Icon(CriptaIcons.RemoveCircleOutline, "Togli ${file.originalName} da questa firma")
+                                    Icon(CriptaIcons.RemoveCircleOutline, str(R.string.remove_from_signature, file.originalName))
                                 }
                             }) { onOpen(g.entries.map { it.first.id }, file.id) }
                         }
@@ -345,10 +346,9 @@ private fun IntroResultsPage(
                 if (shown.isEmpty()) item {
                     Text(
                         when (filter) {
-                            ResultFilter.WITH -> "Nessun video con intro o finale. Servono almeno due video con lo stesso audio; " +
-                                "con l'analisi rapida la sigla deve stare nel primo minuto."
-                            ResultFilter.WITHOUT -> "Tutti i video analizzati hanno un'intro o un finale."
-                            ResultFilter.SKIPPED -> "Nessun video non analizzabile."
+                            ResultFilter.WITH -> str(R.string.results_none_with)
+                            ResultFilter.WITHOUT -> str(R.string.results_none_without)
+                            ResultFilter.SKIPPED -> str(R.string.results_none_skipped)
                             else -> ""
                         },
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -361,13 +361,13 @@ private fun IntroResultsPage(
             }
         }
         renaming?.let { s ->
-            NameDialog("Rinomina la firma", s.name.orEmpty(), confirm = "Rinomina", onDismiss = { renaming = null }) {
+            NameDialog(str(R.string.rename_signature), s.name.orEmpty(), confirm = str(R.string.rename), onDismiss = { renaming = null }) {
                 actions.rename(s, it); renaming = null
             }
         }
         merging?.let { sigs ->
-            NameDialog("Unire ${sigs.size} firme?", sigs.firstNotNullOfOrNull { it.name }.orEmpty(), confirm = "Unisci",
-                hint = "Diventano una sola firma che riconosce tutti i loro suoni (${sigs.sumOf { it.entries.size }} video). Nome:",
+            NameDialog(str(R.string.merge_signatures_q, sigs.size), sigs.firstNotNullOfOrNull { it.name }.orEmpty(), confirm = str(R.string.merge),
+                hint = str(R.string.merge_signatures_hint, sigs.sumOf { it.entries.size }),
                 allowBlank = true, onDismiss = { merging = null }) {
                 actions.merge(sigs, it.ifBlank { null }); merging = null; selected = emptySet()
             }
@@ -375,17 +375,16 @@ private fun IntroResultsPage(
         deleting?.let { sigs ->
             CriptaAlertDialog(
                 onDismissRequest = { deleting = null },
-                title = { Text(if (sigs.size == 1) "Non è una sigla?" else "${sigs.size} firme non sono sigle?") },
+                title = { Text(plural(R.plurals.not_a_theme_q, sigs.size)) },
                 text = {
-                    Text("${sigs.sumOf { it.entries.size }} video perdono questo segmento (quelli segnati a mano restano) e il suono " +
-                        "non verrà più rilevato. Si può annullare da Manutenzione › Segmenti scartati.")
+                    Text(str(R.string.not_a_theme_text, sigs.sumOf { it.entries.size }))
                 },
                 confirmButton = {
                     TextButton(onClick = { actions.delete(sigs); deleting = null; selected = emptySet() }) {
-                        com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
+                        com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                     }
                 },
-                dismissButton = { TextButton(onClick = { deleting = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+                dismissButton = { TextButton(onClick = { deleting = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )
         }
         timing?.let { s -> DurationDialog(s, onDismiss = { timing = null }) { ds, de -> actions.duration(s, ds, de); timing = null } }
@@ -412,11 +411,11 @@ private fun NameDialog(title: String, initial: String, confirm: String, hint: St
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 com.cripta.app.ui.components.CriptaTextField(value = text, onValueChange = { text = it }, singleLine = true,
-                    placeholder = { Text("Es. Sigla One Piece") }, modifier = Modifier.fillMaxWidth())
+                    placeholder = { Text(str(R.string.signature_name_hint)) }, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = allowBlank || text.isNotBlank()) { com.cripta.app.ui.components.ButtonText(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }
 
@@ -442,19 +441,17 @@ private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, 
     }
     CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Durata della sigla") },
+        title = { Text(str(R.string.theme_length)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Il suono riconosciuto dura circa " + "%.1f s".format(s.soundMs / 1000.0).replace('.', ',') +
-                    ". Sposta inizio e fine rispetto al suono: vale per i ${s.entries.size} video della firma e per quelli futuri " +
-                    "(i segni fatti a mano restano).", style = MaterialTheme.typography.bodySmall,
+                Text(str(R.string.theme_length_text, "%.1f s".format(s.soundMs / 1000.0).replace('.', ','), s.entries.size), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Stepper("Inizio", start) { start = it }
-                Stepper("Fine", end) { end = it }
+                Stepper(str(R.string.start), start) { start = it }
+                Stepper(str(R.string.end), end) { end = it }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(start, end) }) { com.cripta.app.ui.components.ButtonText("Applica") } },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(start, end) }) { com.cripta.app.ui.components.ButtonText(str(R.string.apply)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }
 
@@ -470,11 +467,11 @@ private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.da
             Text(e.file.originalName, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             when {
                 e.skipReason != null -> Text(e.skipReason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                e.intro == null && e.outro == null -> Text("Nessuna intro né finale", style = MaterialTheme.typography.bodySmall,
+                e.intro == null && e.outro == null -> Text(str(R.string.intro_none_nor_ending), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else -> {
-                    e.intro?.let { SegLine("Intro", it, MaterialTheme.colorScheme.primary) }
-                    e.outro?.let { SegLine("Finale", it, MaterialTheme.colorScheme.tertiary) }
+                    e.intro?.let { SegLine(str(R.string.intro), it, MaterialTheme.colorScheme.primary) }
+                    e.outro?.let { SegLine(str(R.string.ending), it, MaterialTheme.colorScheme.tertiary) }
                 }
             }
         }
@@ -506,16 +503,16 @@ private fun SignatureCard(
             .combinedClickable(
                 onClick = { if (selecting) onToggleSelect() else onToggleOpen() },
                 onLongClick = { if (!selecting) onToggleSelect() },
-                onLongClickLabel = "Seleziona",
+                onLongClickLabel = str(R.string.select),
             ),
     ) {
         Column(Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(g.name ?: "Firma senza nome ($n)", style = MaterialTheme.typography.titleSmall,
+                    Text(g.name ?: str(R.string.unnamed_signature, n), style = MaterialTheme.typography.titleSmall,
                         color = if (g.name == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                    Text("${g.entries.size} video · suono di circa " + "%.1f s".format(g.soundMs / 1000.0).replace('.', ',') +
-                        (if (g.startDeltaMs != 0L || g.endDeltaMs != 0L) " · inizio ${deltaText(g.startDeltaMs)}, fine ${deltaText(g.endDeltaMs)}" else ""),
+                    Text(str(R.string.signature_line, g.entries.size, "%.1f s".format(g.soundMs / 1000.0).replace('.', ',')) +
+                        (if (g.startDeltaMs != 0L || g.endDeltaMs != 0L) str(R.string.signature_deltas, deltaText(g.startDeltaMs), deltaText(g.endDeltaMs)) else ""),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (selecting) {
@@ -523,12 +520,12 @@ private fun SignatureCard(
                 } else {
                     Icon(if (open) CriptaIcons.ExpandLess else CriptaIcons.ExpandMore, null)
                     androidx.compose.foundation.layout.Box {
-                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Azioni per la firma") }
+                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.signature_actions)) }
                         DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
-                            androidx.compose.material3.DropdownMenuItem(text = { Text("Rinomina") }, onClick = { menu = false; onRename() })
-                            androidx.compose.material3.DropdownMenuItem(text = { Text("Unisci con altre…") }, onClick = { menu = false; onMerge() })
-                            androidx.compose.material3.DropdownMenuItem(text = { Text("Durata della sigla") }, onClick = { menu = false; onDuration() })
-                            androidx.compose.material3.DropdownMenuItem(text = { Text("Non è una sigla", color = MaterialTheme.colorScheme.error) },
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(str(R.string.rename)) }, onClick = { menu = false; onRename() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(str(R.string.merge_with_others)) }, onClick = { menu = false; onMerge() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(str(R.string.theme_length)) }, onClick = { menu = false; onDuration() })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(str(R.string.not_a_theme), color = MaterialTheme.colorScheme.error) },
                                 onClick = { menu = false; onDelete() })
                         }
                     }
@@ -549,7 +546,7 @@ private fun SignatureCard(
 @Composable
 private fun SegLine(label: String, seg: MediaSegmentEntity, color: androidx.compose.ui.graphics.Color) {
     if (seg.source == "none") return
-    Text("$label ${span(seg.startMs, seg.endMs)}" + if (seg.source == "auto") "" else " · segnata da te",
+    Text("$label ${span(seg.startMs, seg.endMs)}" + if (seg.source == "auto") "" else str(R.string.marked_by_you_f),
         style = MaterialTheme.typography.bodySmall, color = color)
 }
 
