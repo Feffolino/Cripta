@@ -80,20 +80,21 @@ data class TypeCounts(
     val others: Int = 0,
     val bytes: Long = 0,
     val videoDurationMs: Long = 0,
+    val notes: Int = 0,
 ) {
     companion object {
         fun of(list: List<FileWithTags>): TypeCounts {
-            var v = 0; var i = 0; var o = 0; var b = 0L; var d = 0L
+            var v = 0; var i = 0; var o = 0; var b = 0L; var d = 0L; var n = 0
             for (fwt in list) {
                 val m = fwt.file.mimeType
                 b += fwt.file.sizeBytes
                 when {
                     VaultRepository.isVideo(m) -> { v++; d += fwt.file.durationMs ?: 0L }
                     VaultRepository.isImage(m) -> i++
-                    else -> o++
+                    else -> { o++; if (VaultRepository.isNote(m)) n++ }
                 }
             }
-            return TypeCounts(list.size, v, i, o, b, d)
+            return TypeCounts(list.size, v, i, o, b, d, n)
         }
     }
 }
@@ -618,6 +619,9 @@ class VaultViewModel @Inject constructor(
      * "Elimina la nuova" for media that look like vault ones: the new files go where any deletion
      * goes (the trash when it is on), so a wrong answer can be undone.
      */
+    /** A file by id (the import conflicts page shows the new copy's cover). */
+    suspend fun fileFor(id: String): FileEntity? = repo.fileById(id)
+
     fun removeNewCopies(matches: List<VaultRepository.VersionMatch>) {
         repo.resolveNewVersions(matches.map { it.newId })
         launchBulk("removeNewCopies") {

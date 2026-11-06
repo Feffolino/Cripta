@@ -52,4 +52,21 @@ class BackupExtrasDupPrintsTest {
         assertEquals(listOf("new-a|new-b"), to.dupPrintDao().apartPairs().map { it.a + "|" + it.b })
         from.close(); to.close()
     }
+
+    @Test
+    fun analysisLeftOutWritesNoFingerprints() = runBlocking {
+        val from = db()
+        from.dupPrintDao().put(DupPrintEntity("old-a", 100, 1, byteArrayOf(1, 2)))
+        val bytes = ByteArrayOutputStream()
+        DataOutputStream(bytes).use { BackupExtras.write(from, mapOf("old-a" to 0), it, people = true, analysis = false) }
+        val to = db()
+        val contents = BackupExtras.Contents()
+        val read = DataInputStream(ByteArrayInputStream(bytes.toByteArray())).use {
+            BackupExtras.read(to, arrayOf("new-a"), it, contents)
+        }
+        assertTrue(read)
+        assertEquals(0, to.dupPrintDao().all().size)
+        assertEquals(false, contents.analysis)
+        from.close(); to.close()
+    }
 }

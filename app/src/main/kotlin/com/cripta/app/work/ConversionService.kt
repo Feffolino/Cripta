@@ -496,13 +496,14 @@ class ConversionService : Service() {
                 }
             }
             notify(build(title, 0, sub = "Preparazione…", indeterminate = true, kind = ResultKind.BACKUP))
-            val outcome = withContext(NonCancellable) {
-                if (req.restore) runCatching { repo.importBackup(req.uri, req.passphrase, progress) }
-                else runCatching { repo.exportBackup(req.uri, req.passphrase, req.compressDocs, progress) }
+            val outcome: Result<String> = withContext(NonCancellable) {
+                if (req.restore) runCatching { repo.importBackup(req.uri, req.passphrase, progress).describe() }
+                else runCatching {
+                    val n = repo.exportBackup(req.uri, req.passphrase, req.compressDocs, progress, req.scope)
+                    if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)"
+                }
             }
-            outcome.onSuccess { n ->
-                val text = if (req.restore) { if (n == 1) "Ripristinato 1 file" else "Ripristinati $n file" }
-                    else { if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)" }
+            outcome.onSuccess { text ->
                 backups.finish(text)
                 notifyResult(if (req.restore) "Ripristino completato" else "Backup completato", text, ResultKind.BACKUP)
             }.onFailure { e ->
@@ -741,7 +742,7 @@ class ConversionService : Service() {
                         }
                         // Not named like one: maybe the same photo or video re-saved or resized,
                         // found by its fingerprint (kept, so the next "approfondita" scan has it).
-                        if (!named && runCatching { settings.settingsOnce().similarOnImport }.getOrDefault(true)) {
+                        if (!named && runCatching { settings.settingsOnce().similarOnImport }.getOrDefault(false)) {
                             val like = try { dupScanner.similarTo(f) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { emptyList() }
                             like.firstOrNull()?.let { near ->
                                 repo.askNewVersion(VaultRepository.VersionMatch(f.id, f.originalName, listOf(near.id), near.originalName, similar = true))

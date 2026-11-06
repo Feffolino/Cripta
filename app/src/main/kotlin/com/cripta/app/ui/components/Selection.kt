@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.ui.theme.CriptaIcons
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -18,8 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -37,10 +36,12 @@ import androidx.compose.ui.unit.dp
 import com.cripta.app.ui.theme.Motion
 
 /**
- * Thumbnail frame that explains selection: a selected tile insets slightly (scale 1 -> 0.92) and a
- * primary border fades in. [content] is drawn inside the (scaled, clipped) frame; [overlay] is drawn
- * unscaled on top, e.g. the [SelectionCheck] in a corner.
+ * Thumbnail frame that explains selection (DS `cr-cover.is-selected`): a 3dp accent ring on the
+ * cover's own edge, the picture drawn 6dp inside it with smaller corners. [content] is drawn inside
+ * the (inset, clipped) frame; [overlay] on top, e.g. the [SelectionCheck] in a corner.
+ * [selectedScale] is kept for the call sites: the inset now does that job.
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SelectableThumbFrame(
     selected: Boolean,
@@ -50,21 +51,25 @@ fun SelectableThumbFrame(
     overlay: @Composable BoxScope.() -> Unit = {},
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val scale by animateFloatAsState(
-        if (selected) selectedScale else 1f,
-        tween(Motion.MEDIUM, 0, Motion.EaseOutQuart), label = "selScale",
+    val inset by androidx.compose.animation.core.animateDpAsState(
+        if (selected) 6.dp else 0.dp,
+        tween(Motion.MEDIUM, 0, Motion.EaseOutQuart), label = "selInset",
     )
-    val borderAlpha by animateFloatAsState(
+    val ringAlpha by animateFloatAsState(
         if (selected) 1f else 0f,
         tween(Motion.MEDIUM, 0, Motion.EaseOutQuart), label = "selBorder",
     )
     val primary = MaterialTheme.colorScheme.primary
+    // The picture's corners follow the inset (16 -> 11 on a cover), so the ring stays even.
+    val inner = if (inset > 0.dp) androidx.compose.foundation.shape.RoundedCornerShape(11.dp) else shape
     Box(modifier) {
+        if (ringAlpha > 0f) {
+            Box(Modifier.matchParentSize().clip(shape).border(3.dp, primary.copy(alpha = ringAlpha), shape))
+        }
         Box(
             Modifier.matchParentSize()
-                .graphicsLayer { scaleX = scale; scaleY = scale }
-                .clip(shape)
-                .then(if (borderAlpha > 0f) Modifier.border(2.dp, primary.copy(alpha = borderAlpha), shape) else Modifier),
+                .padding(inset)
+                .clip(inner),
             contentAlignment = Alignment.Center,
             content = content,
         )
@@ -103,13 +108,13 @@ fun SelectionCheck(
                 enter = scaleIn(Motion.enter(Motion.MEDIUM), initialScale = 0.4f) + fadeIn(Motion.enter(Motion.SHORT)),
                 exit = scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.4f) + fadeOut(Motion.exit(Motion.SHORT)),
             ) {
+                // DS `cr-check`: a plain accent disc with the tick, no rim.
                 Box(
-                    Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primary)
-                        .border(2.dp, Color.White, CircleShape),
+                    Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(size * 0.66f))
+                    Icon(CriptaIcons.Check, null, tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(size * 0.68f))
                 }
             }
         }
@@ -142,5 +147,5 @@ fun ThumbCrossfade(
 /** Convenience: [SelectionCheck] placed in the top-end corner of a frame. */
 @Composable
 fun BoxScope.CornerSelectionCheck(selected: Boolean, selectionMode: Boolean, size: Dp = 24.dp) {
-    SelectionCheck(selected, selectionMode, Modifier.align(Alignment.TopEnd).padding(4.dp), size)
+    SelectionCheck(selected, selectionMode, Modifier.align(Alignment.TopEnd).padding(8.dp), size)
 }

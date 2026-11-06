@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import kotlinx.coroutines.sync.withLock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
@@ -415,6 +416,14 @@ class ViewerViewModel @Inject constructor(
     suspend fun tagNamesOf(id: String): List<String> = repo.tagNamesOf(id)
 
     fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)
+
+    /** One save of a note at a time: two quick ticks wrote the same temporary file together. */
+    private val noteSave = kotlinx.coroutines.sync.Mutex()
+
+    /** A note's text changed in the viewer (a check-list box ticked): saved at once. */
+    fun saveNoteText(file: FileEntity, text: String) = viewModelScope.launch {
+        noteSave.withLock { runCatching { repo.updateNote(file.id, file.originalName, text) } }
+    }
 
     fun toggleFavorite(file: FileEntity) = viewModelScope.launch {
         repo.toggleFavorite(file.id, !file.isFavorite)

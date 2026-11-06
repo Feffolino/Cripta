@@ -112,3 +112,16 @@ fun readableOn(fg: Color, bg: Color, min: Double = 4.5): Color {
 
 /** A tag's colour: the one the user picked, else the global default, else the automatic one. */
 fun tagColor(tag: com.cripta.app.data.db.TagEntity): Color = tag.color?.let { Color(it) } ?: tagColor(tag.name)
+
+// Cripta Design System roles on top of the Material scheme (same original colours):
+// surface = background, surface-raised = surfaceContainer, surface-overlay = surfaceContainerHigh,
+// surface-control = secondaryContainer, surface-well = surface.
+private val AccentTintDark = Color(0xFF1E2A3D)
+private val AccentTintLight = Color(0xFFD6E4FF)
+
+/** DS `accent-tint`: quiet accent ground (navigation indicator, a selected row, empty-state disc). Text on it is ink. */
+val androidx.compose.material3.ColorScheme.accentTint: Color
+    get() = if (background.luminance() > 0.5f) AccentTintLight else AccentTintDark
+
+/** DS `glass`: dark glass under anything drawn on a picture. */
+val Glass = BadgeScrim

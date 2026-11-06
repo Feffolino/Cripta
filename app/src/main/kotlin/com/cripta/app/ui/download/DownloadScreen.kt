@@ -1,5 +1,7 @@
 package com.cripta.app.ui.download
 
+import com.cripta.app.ui.theme.CriptaIcons
+import com.cripta.app.ui.theme.accentTint
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -40,21 +42,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Button
+import com.cripta.app.ui.components.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,7 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -196,14 +184,17 @@ fun DownloadScreen(
         com.cripta.app.ui.components.CriptaTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text("Link del video") },
-            placeholder = { Text("https://…") },
-            leadingIcon = { Icon(Icons.Filled.Link, null) },
+            // DS cr-field: icon and link in one pill, no floating label.
+            placeholder = { Text("Link del video") },
+            leadingIcon = { Icon(CriptaIcons.Link, null) },
             trailingIcon = {
                 if (url.isBlank()) {
-                    TextButton(onClick = { paste() }, modifier = Modifier.padding(end = 4.dp)) { com.cripta.app.ui.components.ButtonText("Incolla") }
+                    // DS: the paste action as an accent icon at the field's end.
+                    IconButton(onClick = { paste() }) {
+                        Icon(CriptaIcons.ContentPaste, "Incolla", tint = MaterialTheme.colorScheme.primary)
+                    }
                 } else {
-                    IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(Icons.Filled.Clear, "Svuota il link") }
+                    IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(CriptaIcons.Clear, "Svuota il link") }
                 }
             },
             singleLine = true,
@@ -226,7 +217,7 @@ fun DownloadScreen(
             enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
             exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
         ) {
-            lastReady?.let { LinkPreview(it) }
+            lastReady?.let { LinkPreview(it, url) }
         }
         if (url.isBlank()) {
             Text("YouTube, Vimeo e molti altri siti. Il video finisce cifrato nel vault.",
@@ -235,18 +226,18 @@ fun DownloadScreen(
 
         // Already downloaded from this link? One notice, in a tonal slab of its own.
         existing?.let { f ->
-            Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium,
+            Surface(color = MaterialTheme.colorScheme.accentTint, shape = com.cripta.app.ui.theme.RadiusMd,
                 modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Info, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Icon(CriptaIcons.Info, null, tint = MaterialTheme.colorScheme.onSurface)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text("Già nel vault", style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            color = MaterialTheme.colorScheme.onSurface)
                         Text(f.originalName, style = MaterialTheme.typography.bodySmall, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
                     }
                     TextButton(onClick = { vm.prepareOpen(f.id); onOpenFile(f.id) }) {
-                        com.cripta.app.ui.components.ButtonText("Apri", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        com.cripta.app.ui.components.ButtonText("Apri", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -275,7 +266,6 @@ fun DownloadScreen(
         }
 
         // Destination (remembered): two plain rows, each opens its picker.
-        Heading("Destinazione", Modifier.padding(top = 8.dp))
         Column {
             val f = folders.firstOrNull { it.id == effectiveFolder }
             DestinationRow(
@@ -289,7 +279,7 @@ fun DownloadScreen(
             }
             if (tags.isNotEmpty()) {
                 DestinationRow(
-                    icon = { Icon(Icons.AutoMirrored.Filled.Label, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    icon = { Icon(CriptaIcons.Label, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     title = "Etichette",
                     onClick = { pickTags = true },
                     onClickLabel = "Scegli etichette",
@@ -312,8 +302,8 @@ fun DownloadScreen(
             enabled = urlValid,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 56.dp),
         ) {
-            Icon(Icons.Filled.Download, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Icon(CriptaIcons.Download, null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 if (downloads.any { it.active }) "Aggiungi alla coda" else if (existing != null) "Scarica comunque" else "Scarica",
                 style = MaterialTheme.typography.titleSmall,
@@ -344,8 +334,8 @@ fun DownloadScreen(
         if (downloads.isEmpty()) {
             // An empty queue says what will happen here, quietly.
             Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Filled.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
-                Text("Nessun download in coda", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                Icon(CriptaIcons.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                Text("Nessun download in coda", style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(top = 8.dp))
                 Text("I link si scaricano uno alla volta, anche con l'app chiusa.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
@@ -374,7 +364,7 @@ fun DownloadScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
-                title = { Text("Download") },
+                title = { com.cripta.app.ui.components.HeaderTitle("Download") },
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
             )
@@ -383,7 +373,7 @@ fun DownloadScreen(
         if (landscape) {
             // Landscape: the form on the left, the queue on the right, each scrolling on its own.
             Row(
-                Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().padding(horizontal = 20.dp),
+                Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Column(
@@ -402,7 +392,7 @@ fun DownloadScreen(
                 // imePadding keeps the field and the "Scarica" button reachable above the keyboard.
                 Modifier.padding(pad).consumeWindowInsets(pad).imePadding()
                     .fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth()
-                    .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 form()
@@ -426,7 +416,7 @@ fun DownloadScreen(
 /** Section heading of this screen: the app's accent `titleSmall`, marked as a heading. */
 @Composable
 private fun Heading(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+    Text(text, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
         modifier = modifier.semantics { heading() })
 }
 
@@ -447,10 +437,10 @@ private fun DestinationRow(
     ) {
         Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { icon() }
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Box(Modifier.padding(top = 2.dp)) { value() }
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(CriptaIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -473,16 +463,16 @@ private fun QualitySelector(
                     val on = selected == h
                     val fg = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                     Column(
-                        Modifier.weight(1f).heightIn(min = 60.dp).clip(MaterialTheme.shapes.medium)
-                            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+                        Modifier.weight(1f).heightIn(min = 60.dp).clip(com.cripta.app.ui.theme.RadiusMd)
+                            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer)
                             .clickable(role = Role.RadioButton, onClick = { onSelect(h) })
                             .semantics { this.selected = on }
-                            .padding(vertical = 8.dp, horizontal = 6.dp),
+                            .padding(vertical = 12.dp, horizontal = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (on) Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(16.dp))
+                            if (on) Icon(CriptaIcons.Check, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(16.dp))
                             Text(label, style = MaterialTheme.typography.titleSmall, color = fg, maxLines = 1)
                         }
                         SizeHint(estimate, h, if (on) fg else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -515,7 +505,8 @@ private fun SizeHint(estimate: DownloadViewModel.Estimate, height: Int?, color: 
                 val bytes = e.bytesByHeight[height]
                 Text(
                     if (bytes != null) formatBytes(bytes) else "—",
-                    style = MaterialTheme.typography.labelSmall,
+                    // DS cr-option caption: 12sp medium, 2dp under the name.
+                    style = MaterialTheme.typography.bodySmall,
                     color = color,
                     maxLines = 1,
                     modifier = if (bytes == null) Modifier.semantics { contentDescription = "dimensione non stimabile" } else Modifier,
@@ -561,10 +552,10 @@ private fun FolderRow(name: String, color: Int?, icon: String?, emoji: String?, 
             .padding(start = (14 * depth).dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (color == null && icon == null && emoji == null) Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        if (color == null && icon == null && emoji == null) Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         else com.cripta.app.ui.components.FolderGlyph(color, icon, emoji, 22.dp)
         Text(name, Modifier.weight(1f).padding(start = 14.dp))
-        if (selected) Icon(Icons.Filled.CheckCircle, "Selezionata", tint = MaterialTheme.colorScheme.primary)
+        if (selected) Icon(CriptaIcons.CheckCircle, "Selezionata", tint = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -613,11 +604,11 @@ private fun JobRow(
     onOpen: (String) -> Unit,
 ) {
     val (icon, tint) = when (job.phase) {
-        DownloadPhase.DONE -> Icons.Filled.CheckCircle to MaterialTheme.colorScheme.primary
-        DownloadPhase.FAILED -> Icons.Filled.ErrorOutline to MaterialTheme.colorScheme.error
-        DownloadPhase.CANCELLED -> Icons.Filled.ErrorOutline to MaterialTheme.colorScheme.onSurfaceVariant
-        DownloadPhase.QUEUED -> Icons.Filled.Schedule to MaterialTheme.colorScheme.onSurfaceVariant
-        else -> Icons.Filled.Download to MaterialTheme.colorScheme.primary
+        DownloadPhase.DONE -> CriptaIcons.CheckCircle to MaterialTheme.colorScheme.primary
+        DownloadPhase.FAILED -> CriptaIcons.ErrorOutline to MaterialTheme.colorScheme.error
+        DownloadPhase.CANCELLED -> CriptaIcons.ErrorOutline to MaterialTheme.colorScheme.onSurfaceVariant
+        DownloadPhase.QUEUED -> CriptaIcons.Schedule to MaterialTheme.colorScheme.onSurfaceVariant
+        else -> CriptaIcons.Download to MaterialTheme.colorScheme.primary
     }
     val group = phaseGroup(job.phase)
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -628,7 +619,7 @@ private fun JobRow(
                 AnimatedContent(
                     targetState = icon to tint,
                     transitionSpec = {
-                        val settle = targetState.first == Icons.Filled.CheckCircle || targetState.first == Icons.Filled.ErrorOutline
+                        val settle = targetState.first == CriptaIcons.CheckCircle || targetState.first == CriptaIcons.ErrorOutline
                         (fadeIn(Motion.enter()) + (if (settle) scaleIn(Motion.enter(Motion.LONG), initialScale = 0.6f)
                             else androidx.compose.animation.EnterTransition.None)) togetherWith fadeOut(Motion.exit())
                     },
@@ -638,7 +629,7 @@ private fun JobRow(
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
                     if (job.phase == DownloadPhase.DONE && job.message != null) job.message else job.url,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 val status = when (job.phase) {
@@ -670,11 +661,11 @@ private fun JobRow(
                     g == PhaseGroup.STOPPED -> Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText("Riprova") }
                         IconButton(onClick = onRemove) {
-                            Icon(Icons.Filled.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(CriptaIcons.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     else -> IconButton(onClick = onRemove) {
-                        Icon(Icons.Filled.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(CriptaIcons.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -715,13 +706,13 @@ private fun phaseGroup(p: DownloadPhase): PhaseGroup = when (p) {
  * disk cache.
  */
 @Composable
-private fun LinkPreview(e: DownloadViewModel.Estimate.Ready) {
+private fun LinkPreview(e: DownloadViewModel.Estimate.Ready, link: String) {
     Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(CoverShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(com.cripta.app.ui.theme.RadiusLg).background(MaterialTheme.colorScheme.surfaceContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(CriptaIcons.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             e.thumbnailUrl?.let { url ->
                 val ctx = LocalContext.current
                 coil.compose.AsyncImage(
@@ -733,14 +724,20 @@ private fun LinkPreview(e: DownloadViewModel.Estimate.Ready) {
                     modifier = Modifier.matchParentSize(),
                 )
             }
+            // DS: the length on the glass, top right of the cover.
+            com.cripta.app.ui.components.formatDuration(e.durationSec * 1000L)?.let { d ->
+                com.cripta.app.ui.components.CoverBadge(d, Modifier.align(Alignment.TopEnd).padding(8.dp))
+            }
         }
         Text(
             e.title ?: "Video trovato",
             style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 10.dp),
         )
-        com.cripta.app.ui.components.formatDuration(e.durationSec * 1000L)?.let { d ->
-            Text("Durata $d", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // DS caption: the site, then the length.
+        val host = runCatching { android.net.Uri.parse(link.trim()).host?.removePrefix("www.") }.getOrNull()
+        listOfNotNull(host, com.cripta.app.ui.components.formatDuration(e.durationSec * 1000L)).joinToString(" · ").takeIf { it.isNotEmpty() }?.let { d ->
+            Text(d, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp))
         }
     }

@@ -2,8 +2,10 @@
 
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.theme.CriptaIcons
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.onLongClick
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.widthIn
@@ -18,13 +20,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.semantics.heading
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.derivedStateOf
@@ -82,43 +80,8 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.SdStorage
-import androidx.compose.material.icons.filled.ScreenLockRotation
-import androidx.compose.material.icons.filled.PictureInPictureAlt
-import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.BrightnessHigh
-import androidx.compose.material.icons.filled.BrightnessLow
-import androidx.compose.material.icons.filled.BrightnessMedium
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.automirrored.filled.VolumeDown
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -128,7 +91,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -157,6 +120,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.AudioAttributes
@@ -448,10 +412,13 @@ fun ViewerScreen(
                         val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Final)
                         if (ev.changes.size > 1) { valid = false }
                         val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                        if (ch.isConsumed) valid = false
                         dx += ch.position.x - ch.previousPosition.x
                         dy += ch.position.y - ch.previousPosition.y
                         if (!ch.pressed) break
+                        // Only a consumed MOVE means the page took the drag (pager, zoom, scroll).
+                        // The lift is consumed by the page's tap detector (a photo's, a message
+                        // page's) even after a drag: checking it made swipe up / down dead on photos.
+                        if (ch.isConsumed) valid = false
                     }
                     if (valid && dy < -size.height * 0.12f && kotlin.math.abs(dy) > 2 * kotlin.math.abs(dx)) showTags = true
                     // Swipe down closes the viewer.
@@ -502,6 +469,7 @@ fun ViewerScreen(
                 setChrome = { if (!holdControls || !it) chromeVisible = it },
                 onToggleChrome = { chromeVisible = !chromeVisible },
                 onOpenDetails = { showTags = true },
+                onEditNote = onEditNote,
                 onClose = closeOrLeaveSplit,
                 nextId = ids.getOrNull(page + 1),
                 // Split view: no top bar or filmstrip over the media, so nothing to keep clear of.
@@ -538,13 +506,15 @@ fun ViewerScreen(
         // Also a button: the way in where a swipe up can't be used (a note or PDF that scrolls, TalkBack).
         val detailsHint: @Composable () -> Unit = {
             Row(
-                Modifier.padding(top = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f))
+                // DS cr-hint: a glass pill, 26dp.
+                Modifier.padding(top = 4.dp).heightIn(min = 26.dp).clip(CircleShape).background(com.cripta.app.ui.theme.Glass)
                     .clickable(onClickLabel = "Apri etichette, dettagli e azioni") { chromeTouch++; showTags = true }
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                    .padding(start = 8.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.ExpandLess, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
-                Text(" Scorri su per i dettagli", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+                Icon(CriptaIcons.ExpandLess, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Text(" Scorri su per i dettagli", color = Color.White,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
             }
         }
         if (landscape) {
@@ -615,7 +585,7 @@ fun ViewerScreen(
                         }
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, "Indietro") } },
                 // Bar background reaches the top edge; only its content is inset below the camera.
                 windowInsets = chromeInsets.union(com.cripta.app.ui.LocalSideCutout.current.let {
                     WindowInsets(left = it.start, right = it.end)
@@ -676,7 +646,7 @@ fun ViewerScreen(
                                 state = if (on) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
                                 onImage = true,
                                 tagIcon = t.icon,
-                                leadingIcon = if (t.pinned) Icons.Filled.PushPin else null,
+                                leadingIcon = if (t.pinned) CriptaIcons.PushPin else null,
                                 onClick = { chromeTouch++; vm.toggleTag(qf.id, t.id) },
                                 onClickLabel = if (on) "Togli" else "Aggiungi",
                                 stateLabel = if (on) "Assegnata" else "Non assegnata",
@@ -798,21 +768,22 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var text by remember(value) { mutableStateOf(value.orEmpty()) }
     fun save() { val t = text.trim(); if (t != value.orEmpty()) onSet(t.ifBlank { null }) }
+    // DS: on the sheet the field is a well (surface-well), its end action in accent.
+    androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.components.LocalFieldContainer provides MaterialTheme.colorScheme.surface) {
     com.cripta.app.ui.components.CriptaTextField(
         value = text, onValueChange = { text = it }, singleLine = true,
-        label = { Text("Link") },
         placeholder = { Text("Scrivi o incolla il link") },
-        leadingIcon = { Icon(Icons.Filled.Link, null) },
+        leadingIcon = { Icon(CriptaIcons.Link, null) },
         trailingIcon = {
             if (text.isBlank()) IconButton(onClick = {
                 val clip = clipboard.getText()?.text?.trim().orEmpty()
                 if (clip.isBlank()) android.widget.Toast.makeText(ctx, "Appunti vuoti", android.widget.Toast.LENGTH_SHORT).show()
                 else { text = clip; onSet(clip) }
-            }) { Icon(Icons.Filled.ContentPaste, "Incolla il link copiato") }
+            }) { Icon(CriptaIcons.ContentPaste, "Incolla il link copiato", tint = MaterialTheme.colorScheme.primary) }
             else IconButton(onClick = {
                 clipboard.setText(androidx.compose.ui.text.AnnotatedString(text.trim()))
                 android.widget.Toast.makeText(ctx, "Link copiato", android.widget.Toast.LENGTH_SHORT).show()
-            }) { Icon(Icons.Filled.ContentCopy, "Copia il link") }
+            }) { Icon(CriptaIcons.ContentCopy, "Copia il link", tint = MaterialTheme.colorScheme.primary) }
         },
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
             keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
@@ -820,6 +791,7 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             .onFocusChanged { if (!it.isFocused) save() },
     )
+    }
 }
 
 @Composable
@@ -845,6 +817,7 @@ private fun MediaPage(
     selfManagedControls: Boolean = false,
     controlsHeld: Boolean = false,
     onMissing: () -> Unit,
+    onEditNote: (String) -> Unit = {},
 ) {
     var retry by remember(id) { mutableIntStateOf(0) }
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey, retry) {
@@ -870,16 +843,16 @@ private fun MediaPage(
         when (s) {
             is ViewerState.Loading -> CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Error -> CenteredPage(onTap = onToggleChrome) {
-                Icon(Icons.Filled.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
+                Icon(CriptaIcons.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
                 Text(s.message, color = Color.White, textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
                 if (!s.missing) {
-                    androidx.compose.material3.FilledTonalButton(
+                    com.cripta.app.ui.components.FilledTonalButton(
                         onClick = { retry++ },
                         colors = ButtonDefaults.filledTonalButtonColors(contentColor = Color.White),
                         modifier = Modifier.padding(top = 20.dp).heightIn(min = 48.dp),
                     ) {
-                        Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Icon(CriptaIcons.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                         Text("Riprova")
                     }
@@ -888,7 +861,9 @@ private fun MediaPage(
             is ViewerState.Photo -> ZoomableImage(s.bytes, s.file.originalName, onSingleTap = onToggleChrome)
             is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls, controlsHeld = controlsHeld)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
-            is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome)
+            is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome,
+                onTextChange = { vm.saveNoteText(s.file, it) },
+                onEdit = { onEditNote(s.file.id) }, editShown = chromeVisible, bottomInset = bottomInset)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
             is ViewerState.Other -> CenteredPage(onTap = onToggleChrome) {
                 Text("Nessuna anteprima per questo tipo di file.", color = Color.White, textAlign = TextAlign.Center,
@@ -945,6 +920,10 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
     val scale = remember { Animatable(1f) }
     val offX = remember { Animatable(0f) }
     val offY = remember { Animatable(0f) }
+    // The tap detector reads a drag that nobody consumed (a swipe up / down at 1x) as a tap: when
+    // the last gesture dragged, its tap and a quick second tap are not a tap / double tap.
+    var dragEndedAt by remember { mutableStateOf(0L) }
+    val afterDrag = { android.os.SystemClock.uptimeMillis() - dragEndedAt < 600L }
 
     AsyncImage(
         model = ImageRequest.Builder(ctx).data(bytes).diskCachePolicy(CachePolicy.DISABLED).build(),
@@ -958,10 +937,15 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                 // so the HorizontalPager can swipe between media (fixes swipe stuck on a page).
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
+                    var moved = 0f
                     do {
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()
                         val pan = event.calculatePan()
+                        moved += pan.getDistance()
+                        if (moved > viewConfiguration.touchSlop && event.changes.none { it.pressed }) {
+                            dragEndedAt = android.os.SystemClock.uptimeMillis()
+                        }
                         val newScale = (scale.value * zoom).coerceIn(1f, 6f)
                         if (newScale != scale.value) scope.launch { scale.snapTo(newScale) }
                         if (newScale > 1f) {
@@ -986,9 +970,9 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
             }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { onSingleTap() },
+                    onTap = { if (!afterDrag()) onSingleTap() },
                     onDoubleTap = { tap ->
-                        scope.launch {
+                        if (!afterDrag()) scope.launch {
                             if (scale.value > 1f) {
                                 launch { scale.animateTo(1f) }
                                 launch { offX.animateTo(0f) }
@@ -1012,22 +996,92 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
     )
 }
 
+/**
+ * A note as you read it: its Markdown drawn (headings, bold, lists…, no markers). A check-list box
+ * ticks with a tap, saved at once; "Modifica" opens the editor, so a note is always editable from here.
+ */
 @Composable
-private fun NoteView(text: String, onSingleTap: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0A0C10))
-            .verticalScroll(rememberScrollState())
-            .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }
-            .padding(20.dp),
-    ) {
-        // Long-press selects text to copy; a single tap still toggles the chrome.
-        SelectionContainer {
-            Text(text.ifBlank { "(nota vuota)" }, color = Color.White)
+private fun NoteView(
+    text: String,
+    onSingleTap: () -> Unit,
+    onTextChange: (String) -> Unit,
+    onEdit: () -> Unit,
+    editShown: Boolean,
+    bottomInset: androidx.compose.ui.unit.Dp,
+) {
+    var current by remember(text) { mutableStateOf(text) }
+    val palette = com.cripta.app.ui.note.NoteMarkdown.Palette(
+        muted = Color.White.copy(alpha = 0.6f), accent = MaterialTheme.colorScheme.primary,
+        codeBackground = Color.White.copy(alpha = 0.1f),
+    )
+    // Lines grouped into runs of plain Markdown and single check-list items (those get a tap target).
+    val blocks = remember(current) {
+        val out = mutableListOf<Pair<Int, String>>()   // (line index or -1, text)
+        val run = StringBuilder()
+        var fence = false
+        current.split('\n').forEachIndexed { i, line ->
+            if (com.cripta.app.ui.note.NoteMarkdown.isFence(line)) fence = !fence
+            if (!fence && com.cripta.app.ui.note.NoteMarkdown.checkState(line) != null) {
+                if (run.isNotEmpty()) { out += -1 to run.toString().removeSuffix("\n"); run.clear() }
+                out += i to line
+            } else run.append(line).append('\n')
+        }
+        if (run.isNotEmpty()) out += -1 to run.toString().removeSuffix("\n")
+        out
+    }
+    Box(Modifier.fillMaxSize().background(Color(0xFF0A0C10))) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 96.dp),
+        ) {
+            if (current.isBlank()) Text("(nota vuota)", color = Color.White.copy(alpha = 0.6f))
+            // Long-press selects text to copy; a single tap still toggles the chrome.
+            SelectionContainer {
+                Column {
+                    blocks.forEach { (index, part) ->
+                        if (index < 0) {
+                            Text(com.cripta.app.ui.note.NoteMarkdown.render(part, palette, keepMarkers = false),
+                                color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                        } else {
+                            val done = com.cripta.app.ui.note.NoteMarkdown.checkState(part) == true
+                            Row(
+                                Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(MaterialTheme.shapes.small)
+                                    .toggleableRow(done) { current = com.cripta.app.ui.note.NoteMarkdown.toggleCheck(current, index); onTextChange(current) },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(if (done) CriptaIcons.CheckCircle else CriptaIcons.FormatChecklist, null,
+                                    tint = if (done) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.padding(end = 10.dp).size(22.dp))
+                                Text(com.cripta.app.ui.note.NoteMarkdown.render(com.cripta.app.ui.note.NoteMarkdown.checkText(part), palette, keepMarkers = false),
+                                    color = if (done) Color.White.copy(alpha = 0.55f) else Color.White,
+                                    textDecoration = if (done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                                    style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = editShown,
+            enter = fadeIn(Motion.enter(Motion.SHORT)), exit = fadeOut(Motion.exit(Motion.SHORT)),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = bottomInset + 16.dp),
+        ) {
+            androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = onEdit,
+                containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
+                icon = { Icon(CriptaIcons.Edit, null) }, text = { Text("Modifica") },
+            )
         }
     }
 }
+
+/** A check-list row: the whole row ticks the box (and says so to TalkBack). */
+private fun Modifier.toggleableRow(checked: Boolean, onToggle: () -> Unit): Modifier =
+    this.then(Modifier.toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Checkbox) { onToggle() })
 
 /** Keeps a PDF open and renders pages on demand (one visible page at a time), so a large
  *  document doesn't rasterize every page into RAM up front. Render calls are serialized. */
@@ -1056,7 +1110,7 @@ private fun PdfView(bytes: ByteArray, onSingleTap: () -> Unit) {
     when {
         result == null -> CenteredPage(onTap = onSingleTap) { DelayedSpinner(color = Color.White) }
         doc == null -> CenteredPage(onTap = onSingleTap) {
-            Icon(Icons.Filled.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
+            Icon(CriptaIcons.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
             Text("Impossibile aprire il PDF: il documento potrebbe essere danneggiato o protetto.",
                 color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
             Text("Puoi esportarlo sul dispositivo (⋮) e aprirlo con un'altra app.",
@@ -1588,6 +1642,7 @@ private fun VideoPlayer(
                 }
             },
     ) {
+        val controllerAccent = MaterialTheme.colorScheme.primary.toArgb()
         AndroidView(
             factory = {
                 // Inflated for its TextureView surface (see the layout): a SurfaceView ignored the
@@ -1639,6 +1694,7 @@ private fun VideoPlayer(
                             override fun onScrubMove(timeBar: androidx.media3.ui.TimeBar, position: Long) {}
                             override fun onScrubStop(timeBar: androidx.media3.ui.TimeBar, position: Long, canceled: Boolean) { scrubbing = false }
                         })
+                    styleCriptaController(controllerAccent)
                     playerViewRef = this
                 }
             },
@@ -1682,7 +1738,7 @@ private fun VideoPlayer(
                 val before = player.playbackParameters.speed
                 val sp = latestPrefs.holdSpeed
                 player.setPlaybackSpeed(sp)
-                gestureLabel = GestureHud(Icons.Filled.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "×", null)
+                gestureLabel = GestureHud(CriptaIcons.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "× finché tieni premuto", null)
                 try { kotlinx.coroutines.awaitCancellation() } finally {
                     player.setPlaybackSpeed(before)
                     gestureLabel = null
@@ -1712,14 +1768,14 @@ private fun VideoPlayer(
                     if (brightness) {
                         activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = level.coerceAtLeast(0.01f) } }
                         gestureLabel = GestureHud(
-                            when { level < 0.34f -> Icons.Filled.BrightnessLow; level < 0.67f -> Icons.Filled.BrightnessMedium; else -> Icons.Filled.BrightnessHigh },
+                            when { level < 0.34f -> CriptaIcons.BrightnessLow; level < 0.67f -> CriptaIcons.BrightnessMedium; else -> CriptaIcons.BrightnessHigh },
                             "${(level * 100).toInt()}%", level,
                         )
                     } else {
                         val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
                         audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (level * max).toInt(), 0)
                         gestureLabel = GestureHud(
-                            when { level <= 0f -> Icons.AutoMirrored.Filled.VolumeOff; level < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown; else -> Icons.AutoMirrored.Filled.VolumeUp },
+                            when { level <= 0f -> CriptaIcons.VolumeOff; level < 0.5f -> CriptaIcons.VolumeDown; else -> CriptaIcons.VolumeUp },
                             "${(level * 100).toInt()}%", level,
                         )
                     }
@@ -1771,7 +1827,8 @@ private fun VideoPlayer(
             // the filmstrip (and handle) instead of overlapping them.
             Surface(
                 onClick = onNext,
-                color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
+                // DS cr-card-glass: stage at 78%, radius-lg.
+                color = Color.Black.copy(alpha = 0.78f), shape = com.cripta.app.ui.theme.RadiusLg,
                 modifier = Modifier.align(Alignment.BottomEnd).then(holdStill)
                     .padding(end = 12.dp + sideCut.end, bottom = cardBottom)
                     .widthIn(max = 300.dp),
@@ -1791,7 +1848,7 @@ private fun VideoPlayer(
                         }
                     }
                     IconButton(onClick = { nextCancelled = true }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Close, "Annulla prossimo", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(CriptaIcons.Close, "Annulla prossimo", tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -1801,26 +1858,26 @@ private fun VideoPlayer(
         if (skipSeg != null && skippedChip == null && !(nextCardShown && skipSeg.kind == SegmentSkipper.Kind.OUTRO)) {
             Surface(
                 onClick = { skipSegment(skipSeg) },
-                color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
+                color = Color.Black.copy(alpha = 0.78f), shape = com.cripta.app.ui.theme.RadiusLg,
                 modifier = Modifier.align(Alignment.BottomEnd).then(holdStill).padding(end = 12.dp + sideCut.end, bottom = cardBottom),
             ) {
                 Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.SkipNext, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(CriptaIcons.SkipNext, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Text(if (skipSeg.kind == SegmentSkipper.Kind.INTRO) "Salta intro" else "Salta finale",
                         color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
                     IconButton(onClick = { skipper.dismiss(skipSeg.kind); skipAction = SegmentSkipper.Action.None }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Close, "Nascondi", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(CriptaIcons.Close, "Nascondi", tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
         }
         skippedChip?.let { s ->
-            Surface(color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.medium,
+            Surface(color = Color.Black.copy(alpha = 0.78f), shape = com.cripta.app.ui.theme.RadiusLg,
                 modifier = Modifier.align(Alignment.BottomEnd).then(holdStill).padding(end = 12.dp + sideCut.end, bottom = cardBottom)) {
                 Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (s.kind == SegmentSkipper.Kind.INTRO) "Intro saltata" else "Finale saltato",
                         color = Color.White, style = MaterialTheme.typography.labelLarge)
-                    androidx.compose.material3.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
+                    com.cripta.app.ui.components.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
                         com.cripta.app.ui.components.ButtonText("Annulla")
                     }
                 }
@@ -1829,20 +1886,21 @@ private fun VideoPlayer(
         gestureLabel?.let { hud ->
             Surface(color = Color.Black.copy(alpha = 0.6f), shape = CircleShape,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = if (vLandscape) maxOf(168.dp, topInset + 64.dp) else maxOf(120.dp, topInset + 12.dp))) {
-                Row(Modifier.padding(start = 14.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+                // DS cr-hud: 8/16 padding, an 18dp icon, the value in `label`.
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     // Level gauge for brightness / volume: reads at a glance while the finger moves.
                     hud.level?.let { lv ->
-                        Box(Modifier.padding(start = 10.dp).width(72.dp).height(4.dp).clip(CircleShape)
+                        Box(Modifier.padding(start = 8.dp).width(72.dp).height(4.dp).clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.25f))) {
                             Box(Modifier.fillMaxHeight().fillMaxWidth(lv.coerceIn(0f, 1f)).background(Color.White))
                         }
                     }
                     // Fixed width for the digits so the pill doesn't wobble as the value changes.
-                    Text(hud.text, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.padding(start = 10.dp).widthIn(min = 44.dp))
+                    Text(hud.text, color = Color.White, style = MaterialTheme.typography.labelLarge,
+                        textAlign = if (hud.level != null) TextAlign.End else TextAlign.Start,
+                        modifier = Modifier.padding(start = 8.dp).then(if (hud.level != null) Modifier.widthIn(min = 40.dp) else Modifier))
                 }
             }
         }
@@ -1883,7 +1941,7 @@ private fun VideoPlayer(
             label = "gestureHint",
         ) {
             Surface(
-                color = Color.Black.copy(alpha = 0.72f), shape = MaterialTheme.shapes.large,
+                color = Color.Black.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large,
                 modifier = Modifier.clickable { showGestureHint = false },
             ) {
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1918,7 +1976,7 @@ private fun VideoPlayer(
                 .padding(end = 12.dp + sideCut.end),
         ) {
           val sideButtons: @Composable () -> Unit = {
-                Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                Surface(color = com.cripta.app.ui.theme.Glass, shape = CircleShape) {
                     // Names the current mode and the one a tap switches to (TalkBack read a fixed
                     // "Adatta/riempi" across all five modes).
                     IconButton(onClick = {
@@ -1926,13 +1984,13 @@ private fun VideoPlayer(
                         modeTick++
                         modeLabel = modes[modeIdx].second
                     }) {
-                        Icon(Icons.Filled.AspectRatio,
+                        Icon(CriptaIcons.AspectRatio,
                             "Formato video: ${modes[modeIdx].second}. Tocca per: ${modes[(modeIdx + 1) % modes.size].second}",
                             tint = Color.White)
                     }
                 }
                 // Rotation lock: keeps the current orientation (auto-rotate resumes when unlocked).
-                Surface(color = if (rotationLocked) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                Surface(color = if (rotationLocked) MaterialTheme.colorScheme.primary else com.cripta.app.ui.theme.Glass, shape = CircleShape) {
                     IconButton(onClick = {
                         val lock = !rotationLocked
                         // Keeps the orientation on screen now (either way up) and remembers it as a preference.
@@ -1946,14 +2004,15 @@ private fun VideoPlayer(
                         modeTick++
                         modeLabel = if (lock) "Rotazione bloccata" else "Rotazione libera"
                     }) {
-                        Icon(if (rotationLocked) Icons.Filled.ScreenLockRotation else Icons.Filled.ScreenRotation,
-                            if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione", tint = Color.White)
+                        Icon(if (rotationLocked) CriptaIcons.ScreenLockRotation else CriptaIcons.ScreenRotation,
+                            if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione",
+                            tint = if (rotationLocked) MaterialTheme.colorScheme.onPrimary else Color.White)
                     }
                 }
                 // Picture-in-Picture on demand (the automatic one on leaving the app is a setting).
                 if (activity != null &&
                     activity.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-                    Surface(color = Color.Black.copy(alpha = 0.45f), shape = CircleShape) {
+                    Surface(color = com.cripta.app.ui.theme.Glass, shape = CircleShape) {
                         IconButton(onClick = {
                             runCatching {
                                 activity.enterPictureInPictureMode(
@@ -1962,7 +2021,7 @@ private fun VideoPlayer(
                                 )
                             }.onFailure { modeLabel = "Picture-in-Picture non disponibile" }
                         }) {
-                            Icon(Icons.Filled.PictureInPictureAlt, "Picture-in-Picture", tint = Color.White)
+                            Icon(CriptaIcons.PictureInPictureAlt, "Picture-in-Picture", tint = Color.White)
                         }
                     }
                 }
@@ -2079,12 +2138,14 @@ private fun Filmstrip(
                 }
             }
             val aspect by animateFloatAsState(aspectOf(id), Motion.enter(Motion.MEDIUM), label = "stripAspect")
+            val accentRing = MaterialTheme.colorScheme.primary
             val shown by animateFloatAsState(if (bmp != null) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripLoad")
             Box(
                 Modifier.height(h).aspectRatio(aspect)
                     .clip(shape)
                     .background(Color.White.copy(alpha = 0.12f))
-                    .border(2.dp, Color.White.copy(alpha = ring), shape)
+                    // DS filmstrip: the current item ringed in accent.
+                    .border(2.dp, accentRing.copy(alpha = ring), shape)
                     .clickable(onClickLabel = "Apri") { onPick(i) }
                     .semantics {
                         this.contentDescription = "File ${i + 1} di ${ids.size}"
@@ -2178,11 +2239,11 @@ private fun DetailsSheet(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 when (kind) {
-                                    "Video" -> Icons.Filled.Movie
-                                    "Foto" -> Icons.Filled.Photo
-                                    "Nota" -> Icons.Filled.Description
-                                    "PDF" -> Icons.Filled.PictureAsPdf
-                                    else -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                    "Video" -> CriptaIcons.Movie
+                                    "Foto" -> CriptaIcons.Photo
+                                    "Nota" -> CriptaIcons.Description
+                                    "PDF" -> CriptaIcons.PictureAsPdf
+                                    else -> CriptaIcons.InsertDriveFile
                                 },
                                 null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -2217,7 +2278,7 @@ private fun DetailsSheet(
                 val leave: (() -> Unit) -> () -> Unit = { act -> { close(); act() } }
                 Row(Modifier.fillMaxWidth()) {
                     SheetActionButton(
-                        if (file.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        if (file.isFavorite) CriptaIcons.Star else CriptaIcons.StarBorder,
                         if (file.isFavorite) "Preferito" else "Preferiti",
                         a.onFavorite,
                         tint = if (file.isFavorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurface,
@@ -2225,10 +2286,10 @@ private fun DetailsSheet(
                             stateDescription = if (file.isFavorite) "Nei preferiti" else "Non nei preferiti"
                         },
                     )
-                    a.onEditNote?.let { SheetActionButton(Icons.Filled.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
-                    SheetActionButton(Icons.Filled.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
-                    a.onConvert?.let { SheetActionButton(Icons.Filled.Autorenew, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
-                    SheetActionButton(Icons.Filled.Delete, "Elimina", leave(a.onDelete),
+                    a.onEditNote?.let { SheetActionButton(CriptaIcons.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(CriptaIcons.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
+                    a.onConvert?.let { SheetActionButton(CriptaIcons.Autorenew, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(CriptaIcons.Delete, "Elimina", leave(a.onDelete),
                         tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 }
             }
@@ -2239,25 +2300,26 @@ private fun DetailsSheet(
     // name ("Full HD"), a photo's in megapixels, the exact pixels under it: "1920 × 1080" as the
     // figure took two lines in its column.
     val tiles: @Composable () -> Unit = {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.large,
+        // DS cr-figures: on the sheet, a darker well (surface-well), radius-lg.
+        Surface(color = MaterialTheme.colorScheme.surface, shape = com.cripta.app.ui.theme.RadiusLg,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
             Row(Modifier.padding(vertical = 4.dp)) {
                 val size = com.cripta.app.ui.components.formatBytes(file.sizeBytes)
                 DetailFigure(size.substringBeforeLast(' '), size.substringAfterLast(' ', ""), "Dimensione",
-                    Icons.Filled.SdStorage, "Dimensione $size", Modifier.weight(1f))
+                    CriptaIcons.SdStorage, "Dimensione $size", Modifier.weight(1f))
                 com.cripta.app.ui.components.formatDuration(file.durationMs)?.let {
-                    DetailFigure(it, null, "Durata", Icons.Filled.Schedule, "Durata $it", Modifier.weight(1f))
+                    DetailFigure(it, null, "Durata", CriptaIcons.Schedule, "Durata $it", Modifier.weight(1f))
                 }
                 val w = file.width; val h = file.height
                 if (w != null && h != null && w > 0 && h > 0) {
                     val pixels = "$w × $h"
                     if (isVid) {
                         val name = quality(w, h) ?: "${minOf(w, h)}p"
-                        DetailFigure(name, null, pixels, Icons.Filled.AspectRatio, "Risoluzione $name, $w per $h", Modifier.weight(1f))
+                        DetailFigure(name, null, pixels, CriptaIcons.AspectRatio, "Risoluzione $name, $w per $h", Modifier.weight(1f))
                     } else {
                         val mp = w.toLong() * h / 1_000_000.0
                         val value = if (mp < 10) String.format(java.util.Locale.getDefault(), "%.1f", mp) else "${mp.roundToLong()}"
-                        DetailFigure(value, "MP", pixels, Icons.Filled.AspectRatio, "Risoluzione $value megapixel, $w per $h", Modifier.weight(1f))
+                        DetailFigure(value, "MP", pixels, CriptaIcons.AspectRatio, "Risoluzione $value megapixel, $w per $h", Modifier.weight(1f))
                     }
                 }
             }
@@ -2267,7 +2329,7 @@ private fun DetailsSheet(
         Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
             PanelHeading("Etichette", "Tocca per aggiungere o togliere, tieni premuto per alias, colore e icona.") {
                 TextButton(onClick = { creating = true }) {
-                    Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
+                    Icon(CriptaIcons.Add, null, Modifier.size(18.dp))
                     com.cripta.app.ui.components.ButtonText("Nuova", modifier = Modifier.padding(start = 6.dp))
                 }
             }
@@ -2293,7 +2355,7 @@ private fun DetailsSheet(
     }
     val info: @Composable () -> Unit = {
         Column {
-            PanelHeading("Informazioni")
+            // DS: the link right under the figures, no heading of its own.
             LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Column {
@@ -2306,7 +2368,7 @@ private fun DetailsSheet(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text("Dettagli tecnici", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                            Icon(if (showTech) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null,
+                            Icon(if (showTech) CriptaIcons.ExpandLess else CriptaIcons.ExpandMore, null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         androidx.compose.animation.AnimatedVisibility(showTech,
@@ -2327,11 +2389,11 @@ private fun DetailsSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
         ) {
-            header(); tiles()
-            if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
+            // DS order: header and actions, the figures, the link, Etichette, Intro e finale; then people.
+            header(); tiles(); info()
             SectionGap(); tags()
             if (isVid) { SectionGap(); IntroSection(file, vm) }
-            SectionGap(); info()
+            if (isVid || com.cripta.app.data.VaultRepository.isImage(file.mimeType)) { SectionGap(); PeopleSection(file, vm) }
         }
     }
     if (inSplit) {
@@ -2409,7 +2471,7 @@ private fun DetailFigure(value: String, unit: String?, label: String, icon: andr
                          spoken: String, modifier: Modifier = Modifier) {
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
     val unitSize = MaterialTheme.typography.titleSmall.fontSize
-    Column(modifier.clearAndSetSemantics { contentDescription = spoken }.padding(horizontal = 14.dp, vertical = 12.dp)) {
+    Column(modifier.clearAndSetSemantics { contentDescription = spoken }.padding(horizontal = 10.dp, vertical = 12.dp)) {
         // Two lines at most, balanced, only when a large font makes the value wider than its column.
         Text(
             androidx.compose.ui.text.buildAnnotatedString {
@@ -2422,7 +2484,13 @@ private fun DetailFigure(value: String, unit: String?, label: String, icon: andr
         )
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
             Icon(icon, null, tint = quiet, modifier = Modifier.size(14.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, color = quiet, maxLines = 2, modifier = Modifier.padding(start = 4.dp))
+            // One line, a little smaller when the column is narrow (landscape panel): on two lines it
+            // broke the word itself ("Dimension" / "e").
+            val base = MaterialTheme.typography.labelMedium
+            var shrink by remember(label) { mutableFloatStateOf(1f) }
+            Text(label, style = base.copy(fontSize = base.fontSize * shrink), color = quiet, maxLines = 1, softWrap = false,
+                onTextLayout = { if (it.hasVisualOverflow && shrink > 0.7f) shrink -= 0.1f },
+                modifier = Modifier.padding(start = 4.dp))
         }
     }
 }
@@ -2453,16 +2521,20 @@ private fun SheetActionButton(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurface,
 ) {
+    // DS cr-action: the icon on a 48dp surface-control disc, its name under it.
     Column(
-        modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 8.dp, horizontal = 2.dp),
+        modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 6.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, null, tint = tint)
+        Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = if (tint == MaterialTheme.colorScheme.onSurface) MaterialTheme.colorScheme.onSurface else tint)
+        }
         // Up to two lines, balanced: "Converti in MP4" reads in full instead of a cryptic short label.
-        Text(label, style = MaterialTheme.typography.labelMedium.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
+        Text(label, style = MaterialTheme.typography.bodySmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                lineHeight = 15.sp, lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
             color = tint, maxLines = 2,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

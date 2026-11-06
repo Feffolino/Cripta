@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
@@ -23,23 +24,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.GraphicEq
 import com.cripta.app.media.intro.SegmentKind
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import com.cripta.app.ui.components.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -92,20 +82,20 @@ internal fun IntroSettings(s: Settings, vm: SettingsViewModel, onOpenFile: (Stri
         Section("Salto") {
             ToggleRow("Salta l'intro in automatico", s.introAutoSkip,
                 desc = if (s.introAutoSkip) "Il video salta da solo; «Annulla» torna indietro." else "Compare il pulsante «Salta intro».",
-                icon = Icons.Filled.SkipNext) { vm.setIntroAutoSkip(it) }
+                icon = CriptaIcons.SkipNext) { vm.setIntroAutoSkip(it) }
             ToggleRow("Salta il finale in automatico", s.outroAutoSkip,
                 desc = "Passa al file successivo, se c'è, altrimenti va alla fine del video.",
-                icon = Icons.Filled.SkipNext) { vm.setOutroAutoSkip(it) }
+                icon = CriptaIcons.SkipNext) { vm.setOutroAutoSkip(it) }
         }
         Section("Analisi") {
             ToggleRow("Analizza i nuovi video", s.introAnalyzeNew,
                 desc = "Dopo ogni importazione, download o conversione, in background.",
-                icon = Icons.Filled.GraphicEq) { vm.setIntroAnalyzeNew(it) }
+                icon = CriptaIcons.GraphicEq) { vm.setIntroAnalyzeNew(it) }
             ToggleRow("Analisi rapida", s.introQuickScan,
                 desc = if (s.introQuickScan) "Solo il primo e l'ultimo minuto di ogni video: molto più veloce, " +
                     "ma non trova le sigle che iniziano dopo il primo minuto."
                     else "Primi 10 e ultimi 5 minuti di ogni video: trova più sigle, ma è molto più lenta.",
-                icon = Icons.Filled.Speed) { vm.setIntroQuickScan(it) }
+                icon = CriptaIcons.Speed) { vm.setIntroQuickScan(it) }
             FilledTonalButton(onClick = { vm.startIntroScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza i video esistenti" else "Analisi in corso…")
             }
@@ -150,8 +140,8 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
         if (progress == null && o.skipped > 0) Text("${fmt(o.skipped)} non analizzabili: il motivo è nei risultati.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Risultati") }
-            if (progress != null) androidx.compose.material3.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
+            com.cripta.app.ui.components.FilledTonalButton(onClick = onResults, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Risultati") }
+            if (progress != null) com.cripta.app.ui.components.FilledTonalButton(onClick = onStop, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { com.cripta.app.ui.components.ButtonText("Interrompi") }
         }
     }
 }
@@ -284,7 +274,7 @@ private fun IntroResultsPage(
                 if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("${selected.size} selezionate") },
-                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, "Annulla selezione") } },
                     actions = {
                         TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText("Unisci") }
                         com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { deleting = selectedSigs },
@@ -293,7 +283,7 @@ private fun IntroResultsPage(
                 ) else TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text("Risultati dell'analisi") },
-                    navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
+                    navigationIcon = { IconButton(onClick = onClose) { Icon(CriptaIcons.ArrowBack, "Indietro") } },
                 )
             },
             snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
@@ -302,7 +292,7 @@ private fun IntroResultsPage(
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     com.cripta.app.ui.components.CriptaTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                        leadingIcon = { Icon(Icons.Filled.Search, null) }, placeholder = { Text("Cerca per nome") },
+                        leadingIcon = { Icon(CriptaIcons.Search, null) }, placeholder = { Text("Cerca per nome") },
                         modifier = Modifier.fillMaxWidth())
                 }
                 item {
@@ -345,7 +335,7 @@ private fun IntroResultsPage(
                                 seg.takeIf { filter.kind == SegmentKind.OUTRO }, null)
                             EntryRow(e, thumb, Modifier.padding(start = 12.dp), trailing = {
                                 IconButton(onClick = { actions.removeVideo(g, file.id) }) {
-                                    Icon(Icons.Filled.RemoveCircleOutline, "Togli ${file.originalName} da questa firma")
+                                    Icon(CriptaIcons.RemoveCircleOutline, "Togli ${file.originalName} da questa firma")
                                 }
                             }) { onOpen(g.entries.map { it.first.id }, file.id) }
                         }
@@ -531,9 +521,9 @@ private fun SignatureCard(
                 if (selecting) {
                     Checkbox(checked = selected, onCheckedChange = { onToggleSelect() })
                 } else {
-                    Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
+                    Icon(if (open) CriptaIcons.ExpandLess else CriptaIcons.ExpandMore, null)
                     androidx.compose.foundation.layout.Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Azioni per la firma") }
+                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Azioni per la firma") }
                         DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Rinomina") }, onClick = { menu = false; onRename() })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Unisci con altre…") }, onClick = { menu = false; onMerge() })

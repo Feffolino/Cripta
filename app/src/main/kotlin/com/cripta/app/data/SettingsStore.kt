@@ -58,7 +58,7 @@ data class DisplayPrefs(
     /** Colour (ARGB) of every tag without its own colour; null = automatic, one per name. */
     val defaultTagColor: Int? = null,
     val showDurationBadge: Boolean = true, // "3:12" on video covers
-    val showStatsStrip: Boolean = true,    // the counts strip above the grid
+    val showStatsStrip: Boolean = false,    // the counts strip above the grid (off in the DS look)
     /** Resume videos where they were left, with a progress bar on their cover. */
     val resumePlayback: Boolean = true,
     /** Tag pickers: show a "Recenti" row with the last used tags. */
@@ -169,9 +169,13 @@ data class Settings(
     /** Deleting moves files to a trash instead of shredding at once. Off = previous behaviour. */
     val trashEnabled: Boolean = false,
     /** Import: fingerprint each new photo/video and ask when it looks like one in the vault. */
-    val similarOnImport: Boolean = true,
+    // Off by default: a look-alike with another name is not a new version, so an import should not
+    // stop to offer replacing it (Duplicati e cestino › Simili finds them when wanted).
+    val similarOnImport: Boolean = false,
     /** Backup: deflate documents (notes, PDF, text) losslessly; media is always stored as is. */
     val backupCompressDocs: Boolean = false,
+    /** Backup: what goes in it (remembered between backups). */
+    val backupScope: BackupScope = BackupScope(),
     /** Days a trashed file is kept before being crypto-shredded. */
     val trashDays: Int = 7,
     val downloadDefaults: DownloadDefaults = DownloadDefaults(),
@@ -258,6 +262,14 @@ class SettingsStore @Inject constructor(
     private val introQuickKey = booleanPreferencesKey("intro_quick_scan")
     private val introAutoKey = booleanPreferencesKey("intro_auto_skip")
     private val outroAutoKey = booleanPreferencesKey("outro_auto_skip")
+    private val bkFilesKey = booleanPreferencesKey("backup_files")
+    private val bkRootFilesKey = booleanPreferencesKey("backup_root_files")
+    private val bkExcludedFoldersKey = stringPreferencesKey("backup_excluded_folders")
+    private val bkTagsKey = booleanPreferencesKey("backup_tags")
+    private val bkPeopleKey = booleanPreferencesKey("backup_people")
+    private val bkAnalysisKey = booleanPreferencesKey("backup_analysis")
+    private val bkSettingsKey = booleanPreferencesKey("backup_settings")
+    private val bkCoversKey = booleanPreferencesKey("backup_covers")
 
     val settings: Flow<Settings> = context.dataStore.data
         // A read error (storage trouble) gives the defaults instead of crashing whoever collects.
@@ -291,15 +303,25 @@ class SettingsStore @Inject constructor(
                 showDurationBadge = p[durationBadgeKey] ?: true,
                 coverPeople = p[coverPeopleKey] ?: true,
                 coverPeopleSize = (p[coverPeopleSizeKey] ?: 1).coerceIn(0, 2),
-                showStatsStrip = p[statsStripKey] ?: true,
+                showStatsStrip = p[statsStripKey] ?: false,
                 resumePlayback = p[resumeKey] ?: true,
                 showRecentTags = p[recentTagsKey] ?: true,
                 recentTagsCount = (p[recentTagsCountKey] ?: 6).coerceIn(1, 20),
                 viewerQuickTags = p[quickTagsKey] ?: true,
             ),
             trashEnabled = p[trashKey] ?: false,
-            similarOnImport = p[similarOnImportKey] ?: true,
+            similarOnImport = p[similarOnImportKey] ?: false,
             backupCompressDocs = p[backupCompressKey] ?: false,
+            backupScope = BackupScope(
+                files = p[bkFilesKey] ?: true,
+                excludedFolders = BackupScope.parseIds(p[bkExcludedFoldersKey]),
+                rootFiles = p[bkRootFilesKey] ?: true,
+                tags = p[bkTagsKey] ?: true,
+                people = p[bkPeopleKey] ?: true,
+                analysis = p[bkAnalysisKey] ?: true,
+                settings = p[bkSettingsKey] ?: true,
+                covers = p[bkCoversKey] ?: true,
+            ),
             trashDays = (p[trashDaysKey] ?: 7).coerceIn(1, 90),
             convertAfter = ConvertAfter.entries.getOrElse(p[convertAfterKey] ?: 0) { ConvertAfter.REPLACE },
             convertAfterChosen = p[convertAfterChosenKey] ?: false,
@@ -399,6 +421,45 @@ class SettingsStore @Inject constructor(
     suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setBackupCompressDocs(v: Boolean) { context.dataStore.edit { it[backupCompressKey] = v } }
+    suspend fun setBackupScope(v: BackupScope) {
+        context.dataStore.edit {
+            it[bkFilesKey] = v.files
+            it[bkRootFilesKey] = v.rootFiles
+            it[bkExcludedFoldersKey] = BackupScope.formatIds(v.excludedFolders)
+            it[bkTagsKey] = v.tags
+            it[bkPeopleKey] = v.people
+            it[bkAnalysisKey] = v.analysis
+            it[bkSettingsKey] = v.settings
+            it[bkCoversKey] = v.covers
+        }
+    }
+
+    /** Every stored preference for a backup ([BackupSettings] leaves out the device's own). */
+    suspend fun exportForBackup(): ByteArray =
+        BackupSettings.encode(context.dataStore.data.first().asMap().mapKeys { it.key.name })
+
+    /**
+     * Put back the preferences of a backup: each one in it replaces this device's value, the others
+     * (and the excluded ones, see [BackupSettings]) stay as they are.
+     */
+    suspend fun importFromBackup(bytes: ByteArray) {
+        val values = BackupSettings.decode(bytes)
+        context.dataStore.edit { p ->
+            for ((k, v) in values) {
+                @Suppress("UNCHECKED_CAST")
+                when (v) {
+                    is Boolean -> p[booleanPreferencesKey(k)] = v
+                    is Int -> p[intPreferencesKey(k)] = v
+                    is Long -> p[androidx.datastore.preferences.core.longPreferencesKey(k)] = v
+                    is Float -> p[androidx.datastore.preferences.core.floatPreferencesKey(k)] = v
+                    is Double -> p[androidx.datastore.preferences.core.doublePreferencesKey(k)] = v
+                    is String -> p[stringPreferencesKey(k)] = v
+                    is Set<*> -> p[androidx.datastore.preferences.core.stringSetPreferencesKey(k)] = v as Set<String>
+                }
+            }
+        }
+    }
+
     suspend fun setRecentTagsCount(v: Int) { context.dataStore.edit { it[recentTagsCountKey] = v.coerceIn(1, 20) } }
     suspend fun setViewerQuickTags(v: Boolean) { context.dataStore.edit { it[quickTagsKey] = v } }
     suspend fun setConvertAfter(v: ConvertAfter) { context.dataStore.edit { it[convertAfterKey] = v.ordinal; it[convertAfterChosenKey] = true } }

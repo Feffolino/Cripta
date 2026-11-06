@@ -2,6 +2,10 @@
 
 package com.cripta.app.ui.components
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -150,6 +154,16 @@ fun CriptaSheet(
         properties = androidx.compose.material3.ModalBottomSheetProperties(shouldDismissOnBackPress = false),
         // Landscape content panels: the full width (as in Impostazioni and Scarica).
         sheetMaxWidth = if (landscape && wideInLandscape) 1400.dp else BottomSheetDefaults.SheetMaxWidth,
+        // DS: sheets on surface-overlay, 28dp top corners, a muted 32x4 handle.
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = {
+            androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier.padding(top = 10.dp, bottom = 16.dp).size(32.dp, 4.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+            )
+        },
     ) {
         BoxWithConstraints {
             val limit = (maxHeight - topGap).coerceAtLeast(0.dp)

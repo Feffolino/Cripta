@@ -440,8 +440,14 @@ class SettingsViewModel @Inject constructor(
     val backupProgress: StateFlow<Float?> = backups.running.map { it?.progress }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.progress)
     /** What a backup made now would contain: (files, bytes). Live, always shown in its section. */
-    val backupEstimate: StateFlow<Pair<Int, Long>?> = repo.backupEstimate(store.settings.map { it.backupCompressDocs }.distinctUntilChanged())
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), null)
+    val backupEstimate: StateFlow<Pair<Int, Long>?> = repo.backupEstimate(
+        store.settings.map { it.backupCompressDocs }.distinctUntilChanged(),
+        store.settings.map { it.backupScope }.distinctUntilChanged(),
+    ).stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), null)
+    /** Top-level folders, each one a choice of the backup (with everything under it). */
+    val backupFolders: StateFlow<List<com.cripta.app.data.db.FolderEntity>> = repo.folders(null)
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+    fun setBackupScope(v: com.cripta.app.data.BackupScope) = viewModelScope.launch { store.setBackupScope(v) }
 
     init {
         // The outcome of a backup / restore run by the service, shown when Settings is open.
@@ -455,8 +461,9 @@ class SettingsViewModel @Inject constructor(
      * the background, the process could be killed halfway (a truncated archive, a half restore).
      */
     fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
-        val compress = runCatching { store.settingsOnce().backupCompressDocs }.getOrDefault(false)
-        startBackup(com.cripta.app.data.BackupJobs.Request(restore = false, uri = uri, passphrase = passphrase.toCharArray(), compressDocs = compress))
+        val s = runCatching { store.settingsOnce() }.getOrNull()
+        startBackup(com.cripta.app.data.BackupJobs.Request(restore = false, uri = uri, passphrase = passphrase.toCharArray(),
+            compressDocs = s?.backupCompressDocs ?: false, scope = s?.backupScope ?: com.cripta.app.data.BackupScope()))
     }
 
     fun importBackup(uri: android.net.Uri, passphrase: String) =

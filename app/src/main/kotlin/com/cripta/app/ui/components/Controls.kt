@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 
@@ -13,8 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Top bar colours of every page: the bar is the page itself (same background, no band) until the
@@ -62,8 +62,8 @@ val criptaTopBarInsets: androidx.compose.foundation.layout.WindowInsets
         androidx.compose.foundation.layout.WindowInsetsSides.Horizontal + androidx.compose.foundation.layout.WindowInsetsSides.Top,
     )
 
-/** Shape of multi-line text fields: a soft filled slab, no outline. */
-val FieldShape = RoundedCornerShape(18.dp)
+/** Shape of multi-line text fields: a soft filled slab (radius-md), no outline. */
+val FieldShape = RoundedCornerShape(14.dp)
 
 /** Shape of every single-line field (search, link, name): a full pill, the same everywhere. */
 val PillFieldShape = RoundedCornerShape(28.dp)
@@ -74,7 +74,7 @@ val PillFieldShape = RoundedCornerShape(28.dp)
  * and the message under the field.
  */
 @Composable
-fun criptaFieldColors(): TextFieldColors = criptaFieldColors(LocalFieldContainer.current ?: MaterialTheme.colorScheme.surfaceContainerHigh)
+fun criptaFieldColors(): TextFieldColors = criptaFieldColors(LocalFieldContainer.current ?: MaterialTheme.colorScheme.surfaceContainer)
 
 /**
  * The fill of [CriptaTextField] where the surface behind it is not the page: a dialog is itself
@@ -103,7 +103,7 @@ fun CriptaTextField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    textStyle: TextStyle = androidx.compose.material3.LocalTextStyle.current,
+    textStyle: TextStyle = FieldTextStyle,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
@@ -118,7 +118,7 @@ fun CriptaTextField(
     minLines: Int = 1,
 ) {
     TextField(
-        value = value, onValueChange = onValueChange, modifier = modifier, enabled = enabled, readOnly = readOnly,
+        value = value, onValueChange = onValueChange, modifier = modifier.heightIn(min = if (singleLine) 52.dp else 56.dp), enabled = enabled, readOnly = readOnly,
         textStyle = textStyle, label = label, placeholder = placeholder, leadingIcon = leadingIcon,
         trailingIcon = trailingIcon, supportingText = supportingText, isError = isError,
         visualTransformation = visualTransformation, keyboardOptions = keyboardOptions,
@@ -126,6 +126,10 @@ fun CriptaTextField(
         shape = if (singleLine) PillFieldShape else FieldShape, colors = criptaFieldColors(),
     )
 }
+
+/** DS `cr-field` text: 15sp medium, in fields and their placeholders. */
+val FieldTextStyle: TextStyle
+    @Composable get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
 
 /** [CriptaTextField] for a [TextFieldValue] (keeps the selection, e.g. a pre-selected name). */
 @Composable
@@ -146,7 +150,7 @@ fun CriptaTextField(
 ) {
     TextField(
         value = value, onValueChange = onValueChange, modifier = modifier, enabled = enabled,
-        label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
+        textStyle = FieldTextStyle, label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
         supportingText = supportingText, isError = isError, keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions, singleLine = singleLine,
         shape = if (singleLine) PillFieldShape else FieldShape, colors = criptaFieldColors(),
@@ -167,11 +171,11 @@ fun ChoiceChip(
     enabled: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh
+    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
     val fg = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     Row(
         modifier.minimumInteractiveComponentSize()
-            .heightIn(min = 34.dp)
+            .heightIn(min = 36.dp)
             .clip(CircleShape)
             .background(bg)
             .clickable(enabled = enabled, role = Role.Checkbox, onClick = onClick)
@@ -182,14 +186,18 @@ fun ChoiceChip(
     ) {
         CompositionLocalProvider(LocalContentColor provides fg) {
             if (selected) {
-                Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.padding(end = 6.dp).size(16.dp))
+                Icon(CriptaIcons.Check, null, tint = fg, modifier = Modifier.padding(end = 6.dp).size(18.dp))
             } else if (leadingIcon != null) {
                 Row(Modifier.padding(end = 6.dp)) { leadingIcon() }
             }
-            ProvideTextStyle(MaterialTheme.typography.labelLarge.copy(color = fg)) { label() }
+            ProvideTextStyle(ChipTextStyle.copy(color = fg)) { label() }
         }
     }
 }
+
+/** Chip labels (DS `cr-chip`): 13sp bold. */
+private val ChipTextStyle: TextStyle
+    @Composable get() = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 18.sp, letterSpacing = 0.sp)
 
 /** A one-shot action in chip form (e.g. "Salva questi filtri", a time to jump to): tonal, round. */
 @Composable
@@ -203,7 +211,7 @@ fun ActionChip(
     val fg = MaterialTheme.colorScheme.onSecondaryContainer
     Row(
         modifier.minimumInteractiveComponentSize()
-            .heightIn(min = 34.dp)
+            .heightIn(min = 36.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.secondaryContainer)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -213,7 +221,7 @@ fun ActionChip(
     ) {
         CompositionLocalProvider(LocalContentColor provides fg) {
             if (leadingIcon != null) Row(Modifier.padding(end = 6.dp)) { leadingIcon() }
-            ProvideTextStyle(MaterialTheme.typography.labelLarge.copy(color = fg)) { label() }
+            ProvideTextStyle(ChipTextStyle.copy(color = fg)) { label() }
         }
     }
 }
@@ -242,8 +250,8 @@ fun DestructiveButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
 ) {
-    androidx.compose.material3.FilledTonalButton(
-        onClick = onClick, modifier = modifier.heightIn(min = 48.dp), enabled = enabled,
+    com.cripta.app.ui.components.FilledTonalButton(
+        onClick = onClick, modifier = modifier, enabled = enabled,
         colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
         contentPadding = if (icon != null) androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding
             else androidx.compose.material3.ButtonDefaults.ContentPadding,
@@ -255,3 +263,31 @@ fun DestructiveButton(
         ButtonText(text)
     }
 }
+
+/**
+ * DS `cr-switch`: off = surface-control track with a 2dp ink-muted ring and a muted thumb (a
+ * control boundary, 3:1); on = accent track, on-accent thumb.
+ */
+@Composable
+fun criptaSwitchColors(): androidx.compose.material3.SwitchColors = androidx.compose.material3.SwitchDefaults.colors(
+    checkedTrackColor = MaterialTheme.colorScheme.primary,
+    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+    checkedBorderColor = Color.Transparent,
+    uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+)
+
+/**
+ * Segmented choices without outlines (DS: no borders as structure): the chosen segment is the
+ * accent with on-accent text and its tick, the others surface-control.
+ */
+@Composable
+fun criptaSegmentedColors(): androidx.compose.material3.SegmentedButtonColors = androidx.compose.material3.SegmentedButtonDefaults.colors(
+    activeContainerColor = MaterialTheme.colorScheme.primary,
+    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+    activeBorderColor = Color.Transparent,
+    inactiveContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+    inactiveBorderColor = Color.Transparent,
+)

@@ -61,8 +61,9 @@ class NoteEditorViewModel @Inject constructor(
                     error = "Impossibile aprire la nota."
                 } else {
                     val t = repo.noteText(f)
-                    name = f.originalName; text = t
-                    savedName = f.originalName; savedText = t
+                    // An imported "x.md" is titled "x": the extension comes back on export.
+                    name = f.originalName.replace(Regex("\\.(md|markdown)$", RegexOption.IGNORE_CASE), ""); text = t
+                    savedName = name; savedText = t
                 }
             } catch (e: CancellationException) {
                 loadedFor = null; throw e
