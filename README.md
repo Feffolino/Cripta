@@ -1,116 +1,116 @@
 # Cripta
 
-Cripta è una cassaforte cifrata per Android. Tieni foto, video, note e PDF sul telefono, fuori dalla
-galleria di sistema, e li apri solo dentro l'app dopo lo sblocco. Nessun file lascia il dispositivo.
+Cripta is an encrypted vault for Android. You keep photos, videos, notes and PDFs on your phone,
+out of the system gallery, and open them only inside the app once you unlock it. No file leaves
+the device.
 
-> App scritta per intero con [Claude](https://claude.ai) (Claude Code), conversando: nessuna riga a mano.
-> Progetto personale, distribuito così com'è, senza garanzie.
+> Written entirely with [Claude](https://claude.ai) (Claude Code), through conversation: no line typed by hand.
+> A personal project, shared as is, with no warranty. The interface is in Italian.
 
-## Cosa fa
+## What it does
 
-### Cassaforte
+### Vault
 
-- Cifra ogni file con una chiave propria (Tink StreamingAead) e il database con SQLCipher; le chiavi
-  stanno nel Keystore del telefono.
-- Sblocchi con lo sblocco del telefono (impronta, volto o codice), con un PIN o una password di
-  Cripta, con l'uno o l'altro, o con entrambi in due passaggi.
-- Si blocca da sola dopo il tempo che scegli. Gli screenshot restano bloccati e l'app sparisce
-  dall'elenco delle recenti, a meno che tu non li permetta.
-- Eliminare un file ne distrugge la chiave (crypto-shredding). Con il cestino attivo il file resta
-  recuperabile per i giorni che imposti, da 1 a 90.
+- Each file gets its own key (Tink StreamingAead) and the database uses SQLCipher; the keys live
+  in the phone's Keystore.
+- You unlock with the phone's own lock (fingerprint, face or device code), with a Cripta PIN or
+  password, with either one, or with both in two steps.
+- It locks itself after the time you pick. Screenshots stay blocked and the app hides from the
+  recents screen unless you allow them.
+- Deleting a file destroys its key (crypto-shredding). With the trash on, you can get the file back
+  for the number of days you set, from 1 to 90.
 
-### Importare e scaricare
+### Importing and downloading
 
-- Importi dalla galleria o condividendo file e link a Cripta da qualsiasi app. A fine import scegli
-  se eliminare gli originali.
-- Se importi un file con lo stesso nome di uno già nel vault, o identico byte per byte, Cripta te lo
-  chiede alla fine: sostituire (la nuova versione eredita cartella ed etichette), scartare la copia,
-  tenere entrambi.
-- Scarichi video da un link con yt-dlp: scegli la qualità vedendo il peso di ciascuna, la cartella e
-  le etichette. La coda riprova dopo un errore di rete e gli estrattori si aggiornano ogni giorno.
-- Converti in MP4 i video che non si riescono a scorrere; puoi far prendere al file convertito il
-  posto dell'originale, che finisce nel cestino.
+- Import from the gallery, or share files and links to Cripta from any app. After an import you
+  choose whether to delete the originals.
+- When you import a file with the same name as one in the vault, or identical byte for byte, Cripta
+  asks at the end: replace it (the new version keeps the folder and tags), drop the copy, or keep
+  both.
+- Download videos from a link with yt-dlp: you pick the quality with each one's size shown, the
+  folder and the tags. The queue retries after network errors and the extractors update every day.
+- Convert videos you can't seek through to MP4; the converted file can take the original's place,
+  and the original goes to the trash.
 
-### Ordinare e ritrovare
+### Organising and finding
 
-- Cartelle e sottocartelle, con copertina a scelta, colore, icona, preferite in cima, esclusione dal
-  file casuale. Ogni cartella ricorda il proprio ordinamento.
-- Etichette con nome, sigla, colore e icona. Sulla copertina compare solo il simbolo o la sigla.
-- Ricerca, filtri per tipo, etichette, persone e preferiti, filtri salvati da riusare con un tocco.
-- La Home riassume foto, video e note, mostra i video da continuare e le persone.
+- Folders and subfolders with a cover you choose, colour, icon, favourites on top and an opt-out
+  from the random pick. Each folder remembers its own sort order.
+- Tags with a name, short alias, colour and icon. A cover shows only the tag's symbol or alias.
+- Search, filters by type, tag, person and favourite, and saved filters you reuse with one tap.
+- Home sums up your photos, videos and notes, lists the videos to resume and shows your people.
 
-### Persone
+### People
 
-- Cripta trova i volti in foto e video sul telefono (YuNet e SFace, nessun servizio esterno) e li
-  raggruppa. Tu dai un nome, unisci, dividi o scarti: nessun volto finisce a una persona senza il
-  tuo sì.
-- Le proposte «Forse è …» arrivano una alla volta, a tutto schermo. I volti senza nome li sistemi a
-  gruppi in «Da sistemare».
-- Ogni persona ha un profilo con foto, note, link e i suoi media; sulla barra di un video vedi i
-  momenti in cui compare.
+- Cripta finds faces in photos and videos on the phone (YuNet and SFace, no outside service) and
+  groups them. You name, merge, split or discard them: no face goes to a person without your yes.
+- Suggestions ("Forse è …") come one at a time, full screen. You sort unnamed faces a group at a
+  time in "Da sistemare".
+- Each person has a profile with a photo, notes, links and their media; a video's progress bar marks
+  the moments they appear.
 
-### Guardare
+### Watching
 
-- Visualizzatore per foto, video (Media3), note in Markdown e PDF, con le anteprime dei file vicini.
-- Nei video: riprendi da dove eri rimasto, doppio tocco per saltare, luminosità e volume con il
-  dito, tieni premuto per accelerare (1,5×, 2× o 3×), passaggio al file successivo,
-  Picture-in-Picture.
-- Intro e finali: Cripta li riconosce confrontando l'audio dei video del vault e ti offre «Salta
-  intro» o li salta da sola. Puoi segnarli a mano e ritoccarli al decimo di secondo.
-- Il pannello dei dettagli mostra persone, etichette, intro e finale, link e dati del file; in
-  verticale può dividere lo schermo con il video.
+- A viewer for photos, videos (Media3), Markdown notes and PDFs, with a strip of the neighbouring
+  files.
+- In videos: resume where you stopped, double tap to skip, brightness and volume with a swipe, hold
+  to speed up (1.5×, 2× or 3×), move on to the next file, Picture-in-Picture.
+- Intros and outros: Cripta spots them by comparing the audio of the videos in the vault, then
+  offers "Salta intro" or skips them for you. You can mark them by hand and trim them to a tenth of
+  a second.
+- The details panel shows people, tags, intro and outro, the link and the file's figures; in
+  portrait it can share the screen with the video.
 
-### Spazio
+### Space
 
-- Trova i duplicati esatti e, con la ricerca approfondita, i media simili (stessa foto ridotta,
-  stesso video ricodificato). Li confronti uno accanto all'altro e scegli quale tenere; le etichette
-  delle copie eliminate passano a quella tenuta.
-- Nel cestino apri anche le cartelle eliminate e ripristini o elimini un file alla volta o una
-  selezione.
+- Finds exact duplicates and, with the deep search, similar media (a smaller copy of a photo, a
+  re-encoded video). You compare them side by side and pick the one to keep; tags from the deleted
+  copies move to it.
+- In the trash you open deleted folders too, and restore or delete one file or a selection.
 
 ### Backup
 
-- Crei un archivio cifrato con una passphrase e lo ripristini anche su un altro telefono. Il
-  ripristino aggiunge, non sostituisce nulla di ciò che hai già.
-- Scegli cosa mettere nell'archivio: file (tutte le cartelle o solo alcune), etichette e filtri
-  salvati, persone e volti, analisi di intro e simili, impostazioni, copertine scelte a mano. Cripta
-  ricorda la scelta e ti mostra la dimensione stimata.
-- Le impostazioni viaggiano tranne blocco automatico, screenshot e rotazione bloccata, che
-  riguardano il telefono su cui apri il vault. Il cestino resta fuori.
-- Puoi comprimere note, PDF e testi senza perdita; foto e video restano come sono.
+- You create an archive encrypted with a passphrase and restore it on this or another phone. A
+  restore adds to what you have and replaces nothing.
+- You choose what goes in: files (every folder or only some), tags and saved filters, people and
+  faces, intro and similar-media analysis, settings, hand-picked covers. Cripta remembers the choice
+  and shows the estimated size.
+- Settings travel except auto-lock, screenshots and rotation lock, which belong to the phone you
+  open the vault on. The trash stays out.
+- You can compress notes, PDFs and text losslessly; photos and videos stay as they are.
 
-### Aggiornamenti
+### Updates
 
-Cripta controlla le nuove versioni pubblicate su GitHub, le scarica in background e apre
-l'installazione di sistema. Puoi ricevere anche le pre-release, una per ogni build della CI.
+Cripta checks for new versions published on GitHub, downloads them in the background and opens the
+system installer. You can opt into pre-releases too, one for every CI build.
 
-## Limiti di sicurezza
+## Security limits
 
-Cripta ti protegge dai curiosi: chi prende il telefono sbloccato, chi guarda la galleria. Non regge
-un'analisi forense né un telefono con root. Il crypto-shredding rende illeggibile il file, ma la
-memoria flash non garantisce la cancellazione fisica dei blocchi. L'app usa la rete solo per
-scaricare video e aggiornamenti.
+Cripta keeps out the curious: someone holding your unlocked phone, someone browsing your gallery.
+It does not stand up to forensic analysis or a rooted phone. Crypto-shredding makes a file
+unreadable, but flash storage does not guarantee that the blocks are physically erased. The app
+uses the network only to download videos and updates.
 
 ## Build
 
-La CI (GitHub Actions, `.github/workflows/build-apk.yml`) compila l'APK a ogni push su `main` e la
-pubblica come release. In locale:
+CI (GitHub Actions, `.github/workflows/build-apk.yml`) builds the APK on every push to `main` and
+publishes it as a release. Locally:
 
 ```bash
 gradle :app:assembleDebug :app:testDebugUnitTest
 ```
 
-Servono JDK 17 e Android SDK 34. Senza `keystore.properties` l'APK usa la chiave di debug di Android
-e non aggiorna una Cripta installata dalla CI.
+You need JDK 17 and Android SDK 34. Without `keystore.properties` the APK is signed with Android's
+debug key and won't update a Cripta installed from CI.
 
 ## Stack
 
 Kotlin · Jetpack Compose (Material 3) · Hilt · Room + SQLCipher · Tink · Media3 · ONNX Runtime
 (YuNet, SFace) · youtubedl-android (yt-dlp) · Coil · PdfBox.
 
-Aspetto: [DESIGN.md](DESIGN.md) (Manrope, Tabler Icons). Prodotto: [PRODUCT.md](PRODUCT.md).
+Look and feel: [DESIGN.md](DESIGN.md) (Manrope, Tabler Icons). Product: [PRODUCT.md](PRODUCT.md).
 
-## Licenza
+## Licence
 
-Uso personale. Nessuna garanzia. Font e icone hanno le proprie licenze in
+Personal use. No warranty. Fonts and icons carry their own licences in
 `app/src/main/assets/licenses/`.
