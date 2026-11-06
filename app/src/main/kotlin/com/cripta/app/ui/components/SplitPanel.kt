@@ -1,5 +1,8 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
@@ -160,7 +163,7 @@ fun SplitPanel(
                 // The handle: drag it, or tap it (TalkBack: "Chiudi pannello") to close.
                 Box(
                     Modifier.fillMaxWidth()
-                        .clickable(onClickLabel = "Chiudi pannello", role = androidx.compose.ui.semantics.Role.Button) { state.close() }
+                        .clickable(onClickLabel = str(R.string.close_panel), role = androidx.compose.ui.semantics.Role.Button) { state.close() }
                         .draggable(
                             state = drag,
                             orientation = Orientation.Vertical,

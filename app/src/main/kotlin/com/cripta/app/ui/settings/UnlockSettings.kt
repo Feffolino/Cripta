@@ -1,5 +1,9 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -68,13 +72,13 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
         }
         val cipher = vm.cipherForModeChange()
         if (activity == null || cipher == null) {
-            pin?.fill('0'); reset(); toast("Impossibile preparare la chiave di sicurezza. Riprova."); return
+            pin?.fill('0'); reset(); toast(str(R.string.keystore_prepare_failed)); return
         }
         BiometricAuth.authenticate(
             activity = activity,
             cipher = cipher,
-            title = "Conferma la modifica",
-            subtitle = "Sblocco: ${m.label}",
+            title = str(R.string.confirm_change),
+            subtitle = str(R.string.unlock_with, m.label),
             onSuccess = { c -> vm.applyUnlockMode(m, pin, kind, if (m.usesSystem) c else null); reset() },
             onError = { msg -> pin?.fill('0'); reset(); msg?.let(::toast) },
         )
@@ -92,16 +96,16 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
             mode == UnlockMode.SYSTEM_AND_PIN -> {
                 val cipher = vm.cipherForSystemStep()
                 if (activity == null || cipher == null) {
-                    reset(); toast("Impossibile preparare la chiave di sicurezza. Riprova."); return
+                    reset(); toast(str(R.string.keystore_prepare_failed)); return
                 }
                 BiometricAuth.authenticate(
                     activity = activity,
                     cipher = cipher,
-                    title = "Conferma la modifica",
-                    subtitle = "Poi il codice attuale di Cripta",
+                    title = str(R.string.confirm_change),
+                    subtitle = str(R.string.then_current_code),
                     onSuccess = { c ->
                         val layer = vm.unwrapSystemLayer(c)
-                        if (layer == null) { reset(); toast("Verifica non riuscita. Riprova.") }
+                        if (layer == null) { reset(); toast(str(R.string.verify_failed)) }
                         else { systemLayer = layer; askCurrentPin = true }
                     },
                     onError = { msg -> reset(); msg?.let(::toast) },
@@ -128,7 +132,7 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
             }
         }
         if (mode.usesPin) {
-            TextButton(onClick = { start(mode) }) { com.cripta.app.ui.components.ButtonText("Cambia codice (PIN o password)") }
+            TextButton(onClick = { start(mode) }) { com.cripta.app.ui.components.ButtonText(str(R.string.change_code)) }
         }
     }
 
@@ -144,10 +148,10 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
                             afterCurrentCheck(t)
                         }
                         is KeyVault.PinResult.Wrong -> {
-                            val what = if (vm.secretKind == SecretKind.PIN) "PIN errato" else "Password errata"
-                            onWrong(if (r.waitSeconds > 0) "$what. Riprova tra ${waitText(r.waitSeconds)}." else "$what.")
+                            val what = if (vm.secretKind == SecretKind.PIN) str(R.string.pin_wrong) else str(R.string.password_wrong)
+                            onWrong(if (r.waitSeconds > 0) str(R.string.wrong_retry_in, what, waitText(r.waitSeconds)) else str(R.string.wrong_dot, what))
                         }
-                        is KeyVault.PinResult.Wait -> onWrong("Troppi tentativi: riprova tra ${waitText(r.seconds)}.")
+                        is KeyVault.PinResult.Wait -> onWrong(str(R.string.unlock_wait, waitText(r.seconds)))
                     }
                 }
             },
@@ -165,7 +169,7 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
     }
 }
 
-private fun waitText(seconds: Long): String = if (seconds < 60) "$seconds secondi" else "${(seconds + 59) / 60} minuti"
+private fun waitText(seconds: Long): String = if (seconds < 60) plural(R.plurals.wait_seconds, seconds.toInt()) else plural(R.plurals.wait_minutes, ((seconds + 59) / 60).toInt())
 
 private tailrec fun android.content.Context.findFragmentActivity(): FragmentActivity? = when (this) {
     is FragmentActivity -> this
@@ -198,12 +202,12 @@ private fun CurrentPinDialog(kind: SecretKind, onCheck: (CharArray, (String) -> 
     val noun = kind.noun
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (kind == SecretKind.PIN) "PIN attuale" else "Password attuale") },
+        title = { Text(if (kind == SecretKind.PIN) str(R.string.current_pin) else str(R.string.current_password)) },
         text = {
             // Scrolls on a short (landscape) screen with the keyboard open.
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Inserisci il $noun di Cripta per confermare la modifica.")
-                PinField(pin, { pin = it; error = null }, if (kind == SecretKind.PIN) "PIN attuale" else "Password attuale",
+                Text(str(R.string.enter_code_to_confirm, noun))
+                PinField(pin, { pin = it; error = null }, if (kind == SecretKind.PIN) str(R.string.current_pin) else str(R.string.current_password),
                     kind, isError = error != null, supporting = error)
             }
         },
@@ -211,9 +215,9 @@ private fun CurrentPinDialog(kind: SecretKind, onCheck: (CharArray, (String) -> 
             TextButton(
                 onClick = { onCheck(pin.toCharArray()) { error = it }; pin = "" },
                 enabled = pin.length >= PinCrypto.MIN_LENGTH,
-            ) { com.cripta.app.ui.components.ButtonText("Continua") }
+            ) { com.cripta.app.ui.components.ButtonText(str(R.string.continue_)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }
 
@@ -234,7 +238,7 @@ private fun NewPinDialog(
     val mismatch = again.isNotEmpty() && again != pin
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (changing) "Nuovo codice" else "Scegli il codice di Cripta") },
+        title = { Text(if (changing) str(R.string.new_code) else str(R.string.choose_code)) },
         text = {
             // Scrolls on a short (landscape) screen with the keyboard open.
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -244,30 +248,29 @@ private fun NewPinDialog(
                         com.cripta.app.ui.components.ChoiceChip(
                             selected = kind == k,
                             onClick = { if (kind != k) { kind = k; pin = ""; again = "" } },
-                            label = { Text(if (k == SecretKind.PIN) "PIN numerico" else "Password") },
+                            label = { Text(if (k == SecretKind.PIN) str(R.string.numeric_pin) else str(R.string.password_cap)) },
                         )
                     }
                 }
                 Text(
-                    (if (isPin) "Da ${PinCrypto.MIN_LENGTH} a ${PinCrypto.MAX_PIN_LENGTH} cifre, diverso da quello del telefono. "
-                    else "Da ${PinCrypto.MIN_LENGTH} a ${PinCrypto.MAX_PASSWORD_LENGTH} caratteri: lettere, numeri e simboli. ") +
-                        if (onlyPin) "Se lo dimentichi il vault non si apre più: resta solo un backup cifrato."
-                        else "Dopo 5 tentativi errati serve un'attesa, che cresce a ogni errore.",
+                    (if (isPin) str(R.string.pin_rules, PinCrypto.MIN_LENGTH, PinCrypto.MAX_PIN_LENGTH)
+                    else str(R.string.password_rules, PinCrypto.MIN_LENGTH, PinCrypto.MAX_PASSWORD_LENGTH)) +
+                        if (onlyPin) str(R.string.code_forget_warning)
+                        else str(R.string.code_wait_warning),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                PinField(pin, { pin = it }, if (isPin) "PIN" else "Password", kind,
-                    supporting = if (tooShort) "Almeno ${PinCrypto.MIN_LENGTH} ${if (isPin) "cifre" else "caratteri"} " +
-                        "(${pin.length}/${PinCrypto.MIN_LENGTH})" else null)
-                PinField(again, { again = it }, if (isPin) "Ripeti il PIN" else "Ripeti la password", kind,
-                    isError = mismatch, supporting = if (mismatch) "Non coincidono" else null)
+                PinField(pin, { pin = it }, if (isPin) "PIN" else str(R.string.password_cap), kind,
+                    supporting = if (tooShort) str(if (isPin) R.string.pin_too_short else R.string.password_too_short, PinCrypto.MIN_LENGTH, pin.length) else null)
+                PinField(again, { again = it }, if (isPin) str(R.string.repeat_pin) else str(R.string.repeat_password), kind,
+                    isError = mismatch, supporting = if (mismatch) str(R.string.no_match) else null)
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(pin.toCharArray(), kind); pin = ""; again = "" },
                 enabled = !tooShort && again == pin,
-            ) { com.cripta.app.ui.components.ButtonText("Conferma") }
+            ) { com.cripta.app.ui.components.ButtonText(str(R.string.confirm)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }

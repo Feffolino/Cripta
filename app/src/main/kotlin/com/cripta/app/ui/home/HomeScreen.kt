@@ -1,5 +1,8 @@
 package com.cripta.app.ui.home
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.theme.accentTint
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -151,9 +154,9 @@ fun HomeScreen(
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { com.cripta.app.ui.components.HeaderTitle("Home") },
+                title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.tab_home)) },
                 actions = {
-                    IconButton(onClick = onLock) { Icon(CriptaIcons.Lock, "Blocca") }
+                    IconButton(onClick = onLock) { Icon(CriptaIcons.Lock, str(R.string.lock)) }
                 },
             )
         },
@@ -191,7 +194,7 @@ fun HomeScreen(
                 var q by remember { mutableStateOf("") }
                 com.cripta.app.ui.components.CriptaTextField(
                     value = q, onValueChange = { q = it },
-                    placeholder = { Text("Cerca nel vault") },
+                    placeholder = { Text(str(R.string.search_vault)) },
                     leadingIcon = { Icon(CriptaIcons.Search, null) },
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
@@ -218,7 +221,7 @@ fun HomeScreen(
                 }
             }
             if (continueWatching.isNotEmpty()) {
-                item { ShelfHeader("Continua a guardare", onSeeAll = { vm.showType(TypeFilter.VIDEO); onOpenFolders() }) }
+                item { ShelfHeader(str(R.string.continue_watching), onSeeAll = { vm.showType(TypeFilter.VIDEO); onOpenFolders() }) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(continueWatching, key = { it.file.id }) { fwt ->
@@ -228,7 +231,7 @@ fun HomeScreen(
                 }
             }
             if (homePeople.isNotEmpty()) {
-                item { ShelfHeader("Persone", onSeeAll = { vm.openPeople() }) }
+                item { ShelfHeader(str(R.string.people), onSeeAll = { vm.openPeople() }) }
                 item {
                     val hidden = peopleBlurred && !peopleRevealed
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -238,8 +241,8 @@ fun HomeScreen(
                                 Modifier.width(72.dp).clip(MaterialTheme.shapes.small)
                                     .combinedClickable(
                                         role = Role.Button,
-                                        onClickLabel = if (hidden) "Mostra i volti" else "Apri il profilo di ${p.title}",
-                                        onLongClickLabel = if (p.entity.favorite) "Togli dai preferiti" else "Aggiungi ai preferiti",
+                                        onClickLabel = if (hidden) str(R.string.show_faces) else str(R.string.open_profile_of, p.title),
+                                        onLongClickLabel = if (p.entity.favorite) str(R.string.unfavorite_short) else str(R.string.favorite_add),
                                         onClick = { if (hidden) peopleRevealed = true else com.cripta.app.ui.people.PeopleNav.openPerson(p.id) },
                                         onLongClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) },
                                     )
@@ -275,15 +278,15 @@ fun HomeScreen(
                 }
             }
             if (recents.isNotEmpty()) {
-                item { ShelfHeader("Aggiunti di recente", onSeeAll = onOpenFolders) }
+                item { ShelfHeader(str(R.string.recently_added), onSeeAll = onOpenFolders) }
                 item { CoverShelf(recents, display, coverVersions, vm::thumb) { id -> open(recents, id) } }
             }
             if (favorites.isNotEmpty()) {
-                item { ShelfHeader("Preferiti", onSeeAll = onOpenFavorites) }
+                item { ShelfHeader(str(R.string.favorites), onSeeAll = onOpenFavorites) }
                 item { CoverShelf(favorites, display, coverVersions, vm::thumb) { id -> open(favorites, id) } }
             }
             if (folders.isNotEmpty()) {
-                item { ShelfHeader("Cartelle", onSeeAll = onOpenFolders) }
+                item { ShelfHeader(str(R.string.tab_folders), onSeeAll = onOpenFolders) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(folders, key = { it.id }) { folder ->
@@ -295,7 +298,7 @@ fun HomeScreen(
                                 thumb = vm::thumb,
                                 modifier = Modifier.width(128.dp).pressScale(source)
                                     .clickable(source, LocalIndication.current, role = Role.Button,
-                                        onClickLabel = "Apri cartella") { vm.openFolder(folder.id); onOpenFolders() },
+                                        onClickLabel = str(R.string.open_folder)) { vm.openFolder(folder.id); onOpenFolders() },
                             )
                         }
                     }
@@ -324,11 +327,11 @@ private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolea
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(horizontal = 4.dp)) {
-            SummaryTile(CriptaIcons.Image, com.cripta.app.ui.components.formatCount(photos), "Foto", Modifier.weight(1f), onPhotos, compact)
-            SummaryTile(CriptaIcons.Movie, com.cripta.app.ui.components.formatCount(videos), "Video", Modifier.weight(1f), onVideos, compact)
+            SummaryTile(CriptaIcons.Image, com.cripta.app.ui.components.formatCount(photos), str(R.string.photos), Modifier.weight(1f), onPhotos, compact)
+            SummaryTile(CriptaIcons.Movie, com.cripta.app.ui.components.formatCount(videos), str(R.string.videos), Modifier.weight(1f), onVideos, compact)
             // The third tile opens the "Altro" filter (notes, PDFs, any other file): it counts all of
             // them, so the number matches what opens. Named "Note" while notes are all there is.
-            SummaryTile(CriptaIcons.Description, com.cripta.app.ui.components.formatCount(others), if (onlyNotes) "Note" else "Altro",
+            SummaryTile(CriptaIcons.Description, com.cripta.app.ui.components.formatCount(others), if (onlyNotes) str(R.string.notes) else str(R.string.other),
                 Modifier.weight(1f), onNotes, compact)
         }
     }
@@ -339,7 +342,7 @@ private fun SummaryTile(icon: ImageVector, value: String, label: String, modifie
     val source = remember { MutableInteractionSource() }
     Column(
         modifier.heightIn(min = 48.dp).clip(com.cripta.app.ui.theme.RadiusLg)
-            .clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = "Mostra", onClick = onClick)
+            .clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = str(R.string.show), onClick = onClick)
             .padding(horizontal = 4.dp, vertical = if (compact) 10.dp else 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -358,7 +361,7 @@ private fun ShelfHeader(title: String, onSeeAll: (() -> Unit)? = null) {
     // Whole row is the "Vedi tutti" button (48dp tall); the title is a heading for TalkBack.
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .then(if (onSeeAll != null) Modifier.clickable(role = Role.Button, onClickLabel = "Vedi tutti", onClick = onSeeAll) else Modifier)
+            .then(if (onSeeAll != null) Modifier.clickable(role = Role.Button, onClickLabel = str(R.string.see_all), onClick = onSeeAll) else Modifier)
             // Space above the heading, little below: it belongs to the row under it.
             .padding(start = 16.dp, end = 16.dp, top = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -366,7 +369,7 @@ private fun ShelfHeader(title: String, onSeeAll: (() -> Unit)? = null) {
         Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f).semantics { heading() })
         if (onSeeAll != null) {
-            Text("Vedi tutti", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(str(R.string.see_all), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -385,7 +388,7 @@ private fun CoverShelf(
             val bmp by produceState<android.graphics.Bitmap?>(null, fwt.file.id, coverVersions[fwt.file.id] ?: 0) { value = thumb(fwt.file) }
             val source = remember { MutableInteractionSource() }
             Column(Modifier.width(128.dp).pressScale(source).clip(com.cripta.app.ui.theme.CoverShape)
-                .clickable(source, LocalIndication.current, onClickLabel = "Apri") { onOpen(fwt.file.id) }
+                .clickable(source, LocalIndication.current, onClickLabel = str(R.string.open)) { onOpen(fwt.file.id) }
                 .padding(bottom = 6.dp)) {
                 CoverThumb(fwt.file, fwt.tags, display, bmp, Modifier.fillMaxWidth().aspectRatio(1f))
                 Text(fwt.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -408,7 +411,7 @@ private fun ContinueCard(
     val bmp by produceState<android.graphics.Bitmap?>(null, f.id, coverVersion) { value = thumb(f) }
     val source = remember { MutableInteractionSource() }
     Column(Modifier.width(128.dp).pressScale(source).clip(com.cripta.app.ui.theme.CoverShape)
-        .clickable(source, LocalIndication.current, onClickLabel = "Riprendi", onClick = onClick)
+        .clickable(source, LocalIndication.current, onClickLabel = str(R.string.resume), onClick = onClick)
         .padding(bottom = 6.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(com.cripta.app.ui.theme.CoverShape)) {
             CoverThumb(f, emptyList(), display.copy(resumePlayback = true, showDurationBadge = true), bmp, Modifier.fillMaxSize())
@@ -417,7 +420,7 @@ private fun ContinueCard(
             style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp, start = 2.dp))
         val left = (f.durationMs ?: 0L) - (f.playbackPosMs ?: 0L)
         formatDuration(left.takeIf { it > 0 })?.let {
-            Text("Mancano $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(str(R.string.time_left, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp))
         }
     }
@@ -499,46 +502,46 @@ private fun EmptyHome(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     fun go(page: Int) = scope.launch { pager.animateScrollToPage(page, animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart)) }
     val lock = when (autoLockMinutes) {
-        -1 -> "Ora il vault non si blocca da solo."
-        0 -> "Ora si blocca appena esci dall'app."
-        else -> "Ora si blocca dopo $autoLockMinutes min che l'app è in background."
+        -1 -> str(R.string.lock_never)
+        0 -> str(R.string.lock_on_leave)
+        else -> str(R.string.lock_after_minutes, autoLockMinutes)
     }
     Column(modifier) {
         HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { page ->
             when (page) {
-                0 -> StartPage(CriptaIcons.PhotoLibrary, "Metti al sicuro le prime foto",
-                    "Foto, video e PDF dalla galleria o da altre app, anche con Condividi. Restano cifrati su questo telefono.") {
+                0 -> StartPage(CriptaIcons.PhotoLibrary, str(R.string.start_secure_title),
+                    str(R.string.start_secure_text)) {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(modifier = Modifier.fillMaxWidth(), onClick = onImport) {
                             Icon(CriptaIcons.Upload, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Importa file", maxLines = 1)
+                            Text(str(R.string.import_files), maxLines = 1)
                         }
                         com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onDownload) {
                             Icon(CriptaIcons.Link, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Da un link", maxLines = 1)
+                            Text(str(R.string.from_link), maxLines = 1)
                         }
                     }
                 }
-                1 -> StartPage(CriptaIcons.Folder, "Mettili in ordine",
-                    "Crea cartelle con il + in Cartelle. Le etichette si danno da ogni file; tieni premuto per selezionarne più insieme.") {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { Text("Apri Cartelle", maxLines = 1) }
+                1 -> StartPage(CriptaIcons.Folder, str(R.string.start_order_title),
+                    str(R.string.start_order_text)) {
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { Text(str(R.string.open_folders), maxLines = 1) }
                 }
-                else -> StartPage(CriptaIcons.Lock, "Scegli quando si blocca",
-                    "$lock Lo cambi in Sicurezza e privacy, insieme al modo di sbloccarlo.") {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { Text("Apri Sicurezza", maxLines = 1) }
+                else -> StartPage(CriptaIcons.Lock, str(R.string.start_lock_title),
+                    str(R.string.start_lock_text, lock)) {
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { Text(str(R.string.open_security), maxLines = 1) }
                 }
             }
         }
         // Indietro / dots / Avanti. Fixed slots so the dots never shift when a button hides.
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (pager.currentPage > 0) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage - 1) }) { Text("Indietro", maxLines = 1) }
+                if (pager.currentPage > 0) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage - 1) }) { Text(str(R.string.back), maxLines = 1) }
             }
             PageDots(pager.currentPage, 3)
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                if (pager.currentPage < 2) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage + 1) }) { Text("Avanti", maxLines = 1) }
+                if (pager.currentPage < 2) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage + 1) }) { Text(str(R.string.next), maxLines = 1) }
             }
         }
     }
@@ -572,7 +575,7 @@ private fun StartPage(icon: ImageVector, title: String, text: String, action: @C
 /** Where the carousel is: the current dot is a wider accent pill, so it never relies on colour alone. */
 @Composable
 private fun PageDots(current: Int, count: Int) {
-    Row(Modifier.semantics { contentDescription = "Passo ${current + 1} di $count" },
+    Row(Modifier.semantics { contentDescription = str(R.string.step_of, current + 1, count) },
         horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(count) { i ->
             val on = i == current

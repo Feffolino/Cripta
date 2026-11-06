@@ -1,5 +1,9 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import androidx.compose.ui.graphics.toArgb
 
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -61,13 +65,13 @@ class SettingsViewModel @Inject constructor(
         val rel = try {
             updater.latest(includePrerelease = pre)
         } catch (e: java.io.IOException) {
-            _update.value = UpdateState.Error("Nessuna connessione: impossibile raggiungere il server degli aggiornamenti. Riprova più tardi.")
+            _update.value = UpdateState.Error(str(R.string.update_no_connection))
             return@launch
         }
         _update.value = when {
             rel == null -> UpdateState.Error(
-                if (pre) "Nessuna versione disponibile."
-                else "Nessuna versione stabile disponibile (prova ad attivare le pre-release)."
+                if (pre) str(R.string.update_none)
+                else str(R.string.update_none_stable)
             )
             rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
             else -> UpdateState.Available(rel)
@@ -104,7 +108,7 @@ class SettingsViewModel @Inject constructor(
                     }
                     is com.cripta.app.update.AppUpdater.Download.Failed -> {
                         watchingDownload = false
-                        _update.value = UpdateState.Error(networkError(d.error, "Download dell'aggiornamento non riuscito."))
+                        _update.value = UpdateState.Error(networkError(d.error, str(R.string.update_download_failed)))
                     }
                     is com.cripta.app.update.AppUpdater.Download.Cancelled -> {
                         watchingDownload = false
@@ -124,16 +128,16 @@ class SettingsViewModel @Inject constructor(
 
     private fun openInstaller(ctx: android.content.Context, apk: java.io.File) {
         runCatching { updater.install(ctx, apk) }
-            .onFailure { _message.value = "Impossibile aprire il programma di installazione." }
+            .onFailure { _message.value = str(R.string.installer_open_failed) }
     }
 
     /** Italian, user-facing text for a network/IO failure (never the raw exception message). */
     private fun networkError(t: Throwable, fallback: String): String = when (t) {
         is java.net.UnknownHostException, is java.net.ConnectException ->
-            "Nessuna connessione a Internet. Controlla la rete e riprova."
-        is java.net.SocketTimeoutException -> "Il server non risponde. Riprova più tardi."
-        is java.io.IOException -> "$fallback Controlla la connessione e lo spazio libero, poi riprova."
-        else -> "$fallback Riprova."
+            str(R.string.no_internet_check)
+        is java.net.SocketTimeoutException -> str(R.string.server_not_responding)
+        is java.io.IOException -> str(R.string.fallback_check_connection, fallback)
+        else -> str(R.string.fallback_retry, fallback)
     }
 
     val settings: StateFlow<Settings> =
@@ -274,21 +278,20 @@ class SettingsViewModel @Inject constructor(
     private fun signatureAction(kind: com.cripta.app.media.intro.SegmentKind, done: String, block: suspend () -> Unit) =
         viewModelScope.launch {
             val ok = runCatching { block() }.isSuccess
-            introMessage.value = if (ok) done else "Operazione non riuscita"
+            introMessage.value = if (ok) done else str(R.string.operation_failed_short)
             runCatching { intro.signatures(kind) }.getOrNull()?.let { introGroups.value = kind to it }
             refreshIntro()
         }
     fun renameSignature(s: com.cripta.app.data.intro.IntroRepository.Signature, name: String) =
-        signatureAction(s.kind, "Firma rinominata") { intro.renameSignature(s, name) }
+        signatureAction(s.kind, str(R.string.signature_renamed)) { intro.renameSignature(s, name) }
     fun mergeSignatures(sigs: List<com.cripta.app.data.intro.IntroRepository.Signature>, name: String?) =
-        signatureAction(sigs.first().kind, "${sigs.size} firme unite") { intro.mergeSignatures(sigs, name) }
+        signatureAction(sigs.first().kind, str(R.string.signatures_merged, sigs.size)) { intro.mergeSignatures(sigs, name) }
     fun deleteSignatures(sigs: List<com.cripta.app.data.intro.IntroRepository.Signature>) =
-        signatureAction(sigs.first().kind, if (sigs.size == 1) "Firma eliminata: il suono è tra i segmenti scartati"
-            else "${sigs.size} firme eliminate: i suoni sono tra i segmenti scartati") { sigs.forEach { intro.deleteSignature(it) } }
+        signatureAction(sigs.first().kind, plural(R.plurals.signatures_deleted, sigs.size)) { sigs.forEach { intro.deleteSignature(it) } }
     fun setSignatureDuration(s: com.cripta.app.data.intro.IntroRepository.Signature, startDelta: Long, endDelta: Long) =
-        signatureAction(s.kind, "Durata applicata a ${s.entries.size} video") { intro.setSignatureDuration(s, startDelta, endDelta) }
+        signatureAction(s.kind, str(R.string.duration_applied, s.entries.size)) { intro.setSignatureDuration(s, startDelta, endDelta) }
     fun removeFromSignature(s: com.cripta.app.data.intro.IntroRepository.Signature, fileId: String) =
-        signatureAction(s.kind, "Video tolto dalla firma") { intro.setNone(fileId, s.kind) }
+        signatureAction(s.kind, str(R.string.video_removed_from_signature)) { intro.setNone(fileId, s.kind) }
     /** A video opened from the results: the viewer swipes through the same filtered list. */
     fun openFromResults(ids: List<String>) = viewerQueue.set(ids)
 
@@ -310,9 +313,9 @@ class SettingsViewModel @Inject constructor(
         try {
             val u = faces.keepFacesApart(a, b)
             groupsVersion.value++
-            faceUndo.value = "Gruppo diviso" to suspend { u(); groupsVersion.value += 1 }
+            faceUndo.value = str(R.string.group_split) to suspend { u(); groupsVersion.value += 1 }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
-            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+            faceMessage.value = str(R.string.operation_failed_prefix) + com.cripta.app.work.UserErrors.of(e)
         }
     }
     fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
@@ -342,7 +345,7 @@ class SettingsViewModel @Inject constructor(
     suspend fun faceStats() = faces.stats()
     private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
-            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+            faceMessage.value = str(R.string.operation_failed_prefix) + com.cripta.app.work.UserErrors.of(e)
         }
     }
     /** Run [block] and offer its undo as "[message] · Annulla". */
@@ -351,16 +354,16 @@ class SettingsViewModel @Inject constructor(
     fun renamePerson(id: Long, name: String) = faceAction { faces.rename(id, name) }
     fun setPersonFavorite(id: Long, favorite: Boolean) = faceAction { faces.setFavorite(id, favorite) }
     fun mergePeople(into: Long, others: Collection<Long>) =
-        undoable(if (others.size == 1) "Persone unite" else "${others.size + 1} persone unite") { faces.merge(into, others) }
+        undoable(plural(R.plurals.people_merged, others.size + 1)) { faces.merge(into, others) }
     fun keepApart(a: Long, b: Long) = faceAction { faces.keepApart(a, b) }
-    fun ignorePerson(id: Long) = undoable("Persona nascosta") { faces.ignore(id) }
+    fun ignorePerson(id: Long) = undoable(str(R.string.person_hidden)) { faces.ignore(id) }
     fun deleteEmptyPerson(id: Long) = faceAction { faces.deleteEmpty(id) }
     fun restorePerson(id: Long) = faceAction { faces.restore(id) }
     fun removeFromPerson(personId: Long, fileIds: Collection<String>) =
-        undoable(if (fileIds.size == 1) "Media tolto" else "${fileIds.size} media tolti") { faces.removeMedia(personId, fileIds) }
+        undoable(plural(R.plurals.media_removed, fileIds.size)) { faces.removeMedia(personId, fileIds) }
     /** "Sposta a…" ([to] a person) or "Dividi" ([to] null: a new person named [newName]). */
     fun moveToPerson(from: Long, fileIds: Collection<String>, to: Long?, newName: String = "") = faceAction { faces.moveMedia(from, fileIds, to, newName) }
-    fun confirmFace(trackId: Long, personId: Long) = undoable("Confermato") { faces.assign(trackId, personId).also { lookCloser(listOf(trackId)) } }
+    fun confirmFace(trackId: Long, personId: Long) = undoable(str(R.string.confirmed)) { faces.assign(trackId, personId).also { lookCloser(listOf(trackId)) } }
     /** Faces confirmed: their videos are looked at closer in the background ([com.cripta.app.data.face.FaceRepository.refine]). */
     private suspend fun lookCloser(trackIds: Collection<Long>) =
         com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.videosOf(trackIds))
@@ -372,17 +375,17 @@ class SettingsViewModel @Inject constructor(
     fun refineAll() = faceAction {
         com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.refineWanted(), manual = true)
     }
-    fun rejectFace(trackId: Long, personId: Long) = undoable("Rifiutato") { faces.reject(trackId, personId) }
+    fun rejectFace(trackId: Long, personId: Long) = undoable(str(R.string.rejected)) { faces.reject(trackId, personId) }
     fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
     /** "Da sistemare": the unassigned faces grouped by likeness. */
     suspend fun unsortedGroups() = faces.unsortedGroups()
     fun deleteFaces(trackIds: Collection<Long>, everywhere: Boolean) =
-        undoable((if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati") + if (everywhere) " ovunque" else "") {
+        undoable(plural(R.plurals.faces_deleted, trackIds.size) + if (everywhere) str(R.string.everywhere_suffix) else "") {
             faces.deleteFaces(trackIds, everywhere)
         }
     /** A group of faces to [personId], or to a new person named [newName]. */
     fun assignFaces(trackIds: Collection<Long>, personId: Long?, newName: String) =
-        undoable(if (trackIds.size == 1) "Volto assegnato" else "${trackIds.size} volti assegnati") {
+        undoable(plural(R.plurals.faces_assigned, trackIds.size)) {
             faces.assignAll(trackIds, personId ?: faces.newPerson(newName)).also { lookCloser(trackIds) }
         }
     /** Faces the user deleted, left out of new analyses. */
@@ -405,7 +408,7 @@ class SettingsViewModel @Inject constructor(
     suspend fun detectedSince(since: Long) = faces.detectedSince(since)
     fun clearDetected(fileIds: Collection<String>) = faceAction {
         val n = faces.clearDetected(fileIds)
-        faceMessage.value = if (n == 1) "Eliminato 1 volto." else "Eliminati $n volti."
+        faceMessage.value = plural(R.plurals.faces_deleted_n, n)
     }
     fun openPerson(personId: Long) = com.cripta.app.ui.people.PeopleNav.openPerson(personId)
     /** Cartelle filtered on [personId]. */
@@ -474,7 +477,7 @@ class SettingsViewModel @Inject constructor(
         runCatching { com.cripta.app.work.ConversionService.startBackup(appContext) }.onFailure {
             android.util.Log.e("SettingsViewModel", "backup service not started", it)
             backups.take()?.passphrase?.fill('\u0000')
-            backups.finish(if (request.restore) "Ripristino non avviato. Riprova." else "Backup non avviato. Riprova.")
+            backups.finish(if (request.restore) str(R.string.restore_not_started) else str(R.string.backup_not_started))
         }
     }
 
@@ -510,7 +513,7 @@ class SettingsViewModel @Inject constructor(
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            _message.value = "Esiste già un'etichetta chiamata \"${name.trim()}\"."
+            _message.value = str(R.string.tag_exists, name.trim())
         }
     }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
@@ -527,7 +530,7 @@ class SettingsViewModel @Inject constructor(
             throw e
         } catch (e: Exception) {
             // SQLCipher's own constraint exception, not android.database.sqlite's: caught broadly.
-            _message.value = "Esiste già un'etichetta chiamata \"$n\"."
+            _message.value = str(R.string.tag_exists, n)
             return@launch
         }
         repo.setTagAlias(n, alias)
@@ -593,10 +596,10 @@ class SettingsViewModel @Inject constructor(
             }
             r.onSuccess {
                 _unlockMode.value = keyVault.unlockMode
-                _message.value = "Sblocco: ${mode.label.replaceFirstChar { it.lowercase() }}."
+                _message.value = str(R.string.unlock_mode_set, mode.label.replaceFirstChar { it.lowercase() })
             }.onFailure {
                 android.util.Log.e("SettingsVM", "unlock mode change failed", it)
-                _message.value = "Modifica non riuscita: la modalità di sblocco è rimasta com'era."
+                _message.value = str(R.string.unlock_mode_failed)
             }
         }
 
@@ -685,19 +688,19 @@ class SettingsViewModel @Inject constructor(
         val r = mutableListOf<String>()
         if (!exact) {
             if (best.pixels > 0 && others.all { it.pixels < best.pixels }) {
-                r += "risoluzione più alta (${best.resolution!!.first}×${best.resolution.second})"
+                r += str(R.string.dup_reason_resolution, best.resolution!!.first, best.resolution.second)
             }
             if (best.file.mimeType == "video/mp4" && others.any { com.cripta.app.data.VaultRepository.isVideo(it.file.mimeType) && it.file.mimeType != "video/mp4" }) {
-                r += "MP4 scorribile"
+                r += str(R.string.dup_reason_mp4)
             }
-            if (r.isEmpty() && others.all { it.file.sizeBytes < best.file.sizeBytes }) r += "qualità/bitrate maggiore"
+            if (r.isEmpty() && others.all { it.file.sizeBytes < best.file.sizeBytes }) r += str(R.string.dup_reason_quality)
         } else {
-            r += "copie identiche"
+            r += str(R.string.dup_reason_identical)
         }
-        if (best.file.isFavorite && others.none { it.file.isFavorite }) r += "è tra i preferiti"
-        if (best.tags.isNotEmpty() && others.all { it.tags.size < best.tags.size }) r += "ha più etichette"
-        if (!best.file.sourceUrl.isNullOrBlank() && others.all { it.file.sourceUrl.isNullOrBlank() }) r += "ha il link di origine"
-        if (others.all { it.file.importedAt > best.file.importedAt }) r += "importato per primo"
+        if (best.file.isFavorite && others.none { it.file.isFavorite }) r += str(R.string.dup_reason_favorite)
+        if (best.tags.isNotEmpty() && others.all { it.tags.size < best.tags.size }) r += str(R.string.dup_reason_tags)
+        if (!best.file.sourceUrl.isNullOrBlank() && others.all { it.file.sourceUrl.isNullOrBlank() }) r += str(R.string.dup_reason_link)
+        if (others.all { it.file.importedAt > best.file.importedAt }) r += str(R.string.dup_reason_first)
         return r
     }
 
@@ -756,7 +759,7 @@ class SettingsViewModel @Inject constructor(
                 if (st.error != null && openWhenDone) {
                     openWhenDone = false
                     android.util.Log.w("SettingsViewModel", "duplicate scan failed: ${st.error}")
-                    _message.value = "Scansione non riuscita. Riprova; se il problema continua, riavvia l'app."
+                    _message.value = str(R.string.scan_failed)
                 }
             }
         }
@@ -789,7 +792,7 @@ class SettingsViewModel @Inject constructor(
         val kept = repo.fileById(keepId)
         if (kept == null || kept.deletedAt != null) {
             dropFromResults(setOf(keepId))
-            _dupNotice.value = "La copia da tenere non è più nel vault: nessuna copia eliminata"
+            _dupNotice.value = str(R.string.dup_keep_gone)
             return@launchHeld
         }
         val remove = unchangedSinceScan(group.candidates.filter { it.file.id !in keepIds })
@@ -806,10 +809,10 @@ class SettingsViewModel @Inject constructor(
         dropFromResults(remove.toSet())
         val name = group.candidates.first { it.file.id == keepId }.file.originalName
         _dupNotice.value = buildString {
-            append(if (keepIds.size > 1) "Tenute ${keepIds.size} copie, " else "Tenuto \"$name\", ")
-            append(if (remove.size == 1) "eliminata 1 copia" else "eliminate ${remove.size} copie")
-            if (trash) append(" (nel cestino)")
-            if (moved.isNotEmpty()) append(" · spostate ${moved.size} etichette")
+            append(if (keepIds.size > 1) str(R.string.dup_kept_n, keepIds.size) else str(R.string.dup_kept_name, name))
+            append(plural(R.plurals.dup_deleted, remove.size))
+            if (trash) append(str(R.string.in_trash_paren))
+            if (moved.isNotEmpty()) append(str(R.string.dup_tags_moved_n, moved.size))
         }
     }
 
@@ -829,7 +832,7 @@ class SettingsViewModel @Inject constructor(
         _dupApart.value += 1
         _dupUndo.value = emptyList()
         dropFromResults(fileIds.toSet())
-        _dupNotice.value = "Segnati come non simili: non verranno più proposti insieme"
+        _dupNotice.value = str(R.string.dup_marked_not_similar)
     }
 
     /** The results as they were before the last resolution, put back by [undoDuplicates]. */
@@ -865,7 +868,7 @@ class SettingsViewModel @Inject constructor(
             dropFromResults(emptySet())
         }
         beforeResolution = null
-        _dupNotice.value = if (ids.size == 1) "Copia ripristinata" else "Ripristinate ${ids.size} copie"
+        _dupNotice.value = plural(R.plurals.dup_restored, ids.size)
     }
 
     /**
@@ -888,8 +891,8 @@ class SettingsViewModel @Inject constructor(
         beforeResolution = if (trash) snapshotResults() else null
         dropFromResults(setOf(fileId))
         _dupNotice.value = buildString {
-            append(if (trash) "Copia spostata nel cestino" else "Copia eliminata")
-            if (moved.isNotEmpty()) append(" · etichette spostate: ${moved.joinToString(", ") { "#$it" }}")
+            append(if (trash) str(R.string.copy_to_trash) else str(R.string.copy_deleted))
+            if (moved.isNotEmpty()) append(str(R.string.dup_tags_moved_list, moved.joinToString(", ") { "#$it" }))
         }
     }
 

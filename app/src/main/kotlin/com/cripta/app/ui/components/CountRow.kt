@@ -1,5 +1,8 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,7 +57,7 @@ fun CountRow(
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
                     withStyle(androidx.compose.ui.text.SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)) { append(value) }
-                    if (of != null) { append(" di "); append(of) }
+                    if (of != null) { append(str(R.string.count_of_sep)); append(of) }
                     if (after != null) append(after)
                 },
                 style = MaterialTheme.typography.bodyMedium,

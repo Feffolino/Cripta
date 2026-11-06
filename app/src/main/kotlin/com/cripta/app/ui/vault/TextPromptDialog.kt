@@ -1,5 +1,8 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -69,6 +72,6 @@ fun TextPromptDialog(
         confirmButton = {
             TextButton(onClick = { confirm() }, enabled = canConfirm) { com.cripta.app.ui.components.ButtonText(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }

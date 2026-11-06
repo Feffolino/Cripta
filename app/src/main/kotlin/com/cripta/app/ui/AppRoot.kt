@@ -1,5 +1,8 @@
 package com.cripta.app.ui
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import kotlinx.coroutines.launch
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,11 +101,11 @@ val LocalSideCutout = androidx.compose.runtime.compositionLocalOf { SideCutout()
  */
 val LocalVaultLocked = androidx.compose.runtime.staticCompositionLocalOf { false }
 
-private val tabs = listOf(
-    Tab("home", "Home", CriptaIcons.HomeFilled, CriptaIcons.Home),
-    Tab("folders", "Cartelle", CriptaIcons.FolderFilled, CriptaIcons.Folder),
-    Tab("download", "Download", CriptaIcons.DownloadFilled, CriptaIcons.Download),
-    Tab("settings", "Impostazioni", CriptaIcons.SettingsFilled, CriptaIcons.Settings),
+private val tabs get() = listOf(
+    Tab("home", str(R.string.tab_home), CriptaIcons.HomeFilled, CriptaIcons.Home),
+    Tab("folders", str(R.string.tab_folders), CriptaIcons.FolderFilled, CriptaIcons.Folder),
+    Tab("download", str(R.string.tab_download), CriptaIcons.DownloadFilled, CriptaIcons.Download),
+    Tab("settings", str(R.string.tab_settings), CriptaIcons.SettingsFilled, CriptaIcons.Settings),
 )
 private val tabRoutes = tabs.map { it.route }.toSet()
 
@@ -340,7 +343,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 runCatching {
                     com.cripta.app.work.ConversionService.startImport(ctx, uris, folderId = null, fromShare = true)
                 }.onFailure {
-                    android.widget.Toast.makeText(ctx, "Impossibile avviare l'importazione dei file condivisi", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(ctx, str(R.string.share_import_failed), android.widget.Toast.LENGTH_LONG).show()
                 }
                 if (currentRoute != "folders") onTab("folders")
             }

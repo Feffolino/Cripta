@@ -128,13 +128,19 @@ class AppUpdater @Inject constructor() {
             conn.inputStream.use { input ->
                 val total = conn.contentLengthLong.takeIf { it > 0 }
                 out.outputStream().use { output ->
-                    val buf = ByteArray(64 * 1024); var read: Int; var done = 0L
+                    val buf = ByteArray(64 * 1024); var read: Int; var done = 0L; var lastPct = -1
                     while (input.read(buf).also { read = it } >= 0) {
                         // Annulla: the blocking read loop never looked at the cancellation, so the
                         // whole APK kept downloading and "annullato" only came at the end.
                         ensureActive()
                         output.write(buf, 0, read); md.update(buf, 0, read); done += read
-                        if (total != null) onProgress((done * 100 / total).toInt().coerceIn(0, 100))
+                        // Only when the percentage moves: a read returns ~8 KB, and the callback
+                        // rebuilds the notification (binder calls) on this thread, which capped
+                        // the download speed far below the browser's.
+                        if (total != null) {
+                            val pct = (done * 100 / total).toInt().coerceIn(0, 100)
+                            if (pct != lastPct) { lastPct = pct; onProgress(pct) }
+                        }
                     }
                 }
             }

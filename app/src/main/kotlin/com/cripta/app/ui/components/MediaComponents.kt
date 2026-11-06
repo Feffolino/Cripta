@@ -1,5 +1,8 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -138,7 +141,7 @@ fun CoverBadge(text: String, modifier: Modifier = Modifier) {
 
 /** The favourite star on a cover, on the dark glass so it reads on light pictures too. */
 @Composable
-fun CoverStar(modifier: Modifier = Modifier, size: Dp = 28.dp, description: String? = "Preferito") {
+fun CoverStar(modifier: Modifier = Modifier, size: Dp = 28.dp, description: String? = str(R.string.favorite)) {
     // DS `cr-glass--round` 28dp with an 18dp filled star.
     Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
         Icon(CriptaIcons.Star, description, tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(size * 0.64f))
@@ -149,7 +152,7 @@ fun CoverStar(modifier: Modifier = Modifier, size: Dp = 28.dp, description: Stri
 @Composable
 fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
     Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
-        Icon(CriptaIcons.PlayArrow, "Video", tint = Color.White, modifier = Modifier.size(size * 0.62f))
+        Icon(CriptaIcons.PlayArrow, str(R.string.video), tint = Color.White, modifier = Modifier.size(size * 0.62f))
     }
 }
 
@@ -218,7 +221,7 @@ fun MediaThumbCell(
     coverVersion: Int = 0,
     showFavoriteBadge: Boolean = true,
 ) {
-    Column(modifier.clip(CoverShape).clickable(onClickLabel = "Apri", onClick = onClick).padding(bottom = 6.dp)) {
+    Column(modifier.clip(CoverShape).clickable(onClickLabel = str(R.string.open), onClick = onClick).padding(bottom = 6.dp)) {
         MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion,
             showFavoriteBadge = showFavoriteBadge)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,

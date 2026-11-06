@@ -1,5 +1,8 @@
 package com.cripta.app.data.dedup
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -25,33 +28,33 @@ internal object CopyComparison {
         val out = ArrayList<Reason>()
         val sharper = best.pixels > 0 && other.pixels > 0 && best.pixels > other.pixels * 1.05
         if (sharper) {
-            out += Reason(true, "Più nitida", "${label(best)} contro ${label(other)}: ${times(best.pixels.toDouble() / other.pixels, "i pixel")}.")
+            out += Reason(true, str(R.string.cmp_sharper), str(R.string.cmp_sharper_detail, label(best), label(other), times(best.pixels.toDouble() / other.pixels, pixels = true)))
         } else if (best.pixels > 0 && best.pixels == other.pixels) {
-            out += Reason(false, "Stessa risoluzione", "${label(best)}, come l'altra.")
+            out += Reason(false, str(R.string.cmp_same_resolution), str(R.string.cmp_same_as_other, label(best)))
         }
         // Data per pixel (and per second for a video): more of it for the same picture is less compression.
         val a = density(best)
         val b = density(other)
         if (a != null && b != null && a > b * 1.3) {
             val sameLength = !best.video || sameLength(best, other)
-            out += Reason(true, "Meno compressa",
-                (if (best.video && sameLength) "Stessa durata, " else "") + "${times(a / b, "dati per pixel")}: più dettagli.")
+            out += Reason(true, str(R.string.cmp_less_compressed),
+                str(if (best.video && sameLength) R.string.cmp_less_compressed_same_length else R.string.cmp_less_compressed_detail, times(a / b, pixels = false)))
         } else if (a == null && best.bytes > other.bytes * 1.3) {
-            out += Reason(false, "Più pesante", "${mb(best.bytes)} contro ${mb(other.bytes)}: di solito vuol dire meno compressa.")
+            out += Reason(false, str(R.string.cmp_heavier), str(R.string.cmp_heavier_detail, mb(best.bytes), mb(other.bytes)))
         }
         if (best.video && best.durationMs != null && other.durationMs != null) {
             val d = best.durationMs - other.durationMs
             out += when {
-                d > 1_000 -> Reason(true, "Più lunga", "${duration(best.durationMs)} contro ${duration(other.durationMs)}: l'altra è tagliata.")
-                d < -1_000 -> Reason(false, "Più corta", "${duration(best.durationMs)} contro ${duration(other.durationMs)}.")
-                else -> Reason(false, "Durata intera", "${duration(best.durationMs)}, come l'altra.")
+                d > 1_000 -> Reason(true, str(R.string.cmp_longer), str(R.string.cmp_longer_detail, duration(best.durationMs), duration(other.durationMs)))
+                d < -1_000 -> Reason(false, str(R.string.cmp_shorter), str(R.string.cmp_shorter_detail, duration(best.durationMs), duration(other.durationMs)))
+                else -> Reason(false, str(R.string.cmp_full_length), str(R.string.cmp_same_as_other, duration(best.durationMs)))
             }
         }
-        if (best.video && best.mp4 && other.video && !other.mp4) out += Reason(false, "MP4", "Si scorre e si riproduce ovunque.")
-        if (best.favorite && !other.favorite) out += Reason(false, "Tra i preferiti", "L'altra non lo è.")
-        if (best.hasLink && !other.hasLink) out += Reason(false, "Link di origine", "Sai da dove viene; l'altra no.")
+        if (best.video && best.mp4 && other.video && !other.mp4) out += Reason(false, "MP4", str(R.string.cmp_mp4_detail))
+        if (best.favorite && !other.favorite) out += Reason(false, str(R.string.cmp_favorite), str(R.string.cmp_favorite_detail))
+        if (best.hasLink && !other.hasLink) out += Reason(false, str(R.string.cmp_link), str(R.string.cmp_link_detail))
         if (best.importedAt < other.importedAt) {
-            out += Reason(false, "Importata prima", "${date(best.importedAt)}; l'altra il ${date(other.importedAt)}.")
+            out += Reason(false, str(R.string.cmp_imported_first), str(R.string.cmp_imported_first_detail, date(best.importedAt), date(other.importedAt)))
         }
         return out.sortedByDescending { it.major }
     }
@@ -59,7 +62,7 @@ internal object CopyComparison {
     /** "Full HD", "4K", "480p" for a video; "12,2 MP" for a photo. */
     fun label(f: Facts): String {
         if (f.pixels <= 0) return "?"
-        if (!f.video) return String.format(Locale.ITALY, "%.1f MP", f.pixels / 1_000_000.0)
+        if (!f.video) return String.format(com.cripta.app.Strings.locale, "%.1f MP", f.pixels / 1_000_000.0)
         val short = minOf(f.width!!, f.height!!)
         return when {
             short >= 2160 -> "4K"
@@ -83,9 +86,9 @@ internal object CopyComparison {
     }
 
     /** "5 volte i pixel" from 2x on, "+40% di pixel" below. */
-    private fun times(ratio: Double, what: String): String =
-        if (ratio >= 1.95) "${ratio.roundToInt()} volte $what"
-        else "+${((ratio - 1) * 100).roundToInt()}% di ${what.removePrefix("i ")}"
+    private fun times(ratio: Double, pixels: Boolean): String =
+        if (ratio >= 1.95) str(if (pixels) R.string.cmp_times_pixels else R.string.cmp_times_data, ratio.roundToInt())
+        else str(if (pixels) R.string.cmp_more_pixels else R.string.cmp_more_data, ((ratio - 1) * 100).roundToInt())
 
-    private fun mb(bytes: Long) = String.format(Locale.ITALY, "%.1f MB", bytes / 1_048_576.0)
+    private fun mb(bytes: Long) = String.format(com.cripta.app.Strings.locale, "%.1f MB", bytes / 1_048_576.0)
 }

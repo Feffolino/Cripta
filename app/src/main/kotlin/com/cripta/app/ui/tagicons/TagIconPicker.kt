@@ -1,5 +1,8 @@
 package com.cripta.app.ui.tagicons
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -53,7 +56,7 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
         Modifier.size(size).clip(CircleShape)
             .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .clickable(role = Role.RadioButton, onClick = onClick)
-            .semantics { this.selected = selected; contentDescription = name?.let { spoken(it) } ?: "Nessuna icona" },
+            .semantics { this.selected = selected; contentDescription = name?.let { spoken(it) } ?: str(R.string.icon_none) },
         contentAlignment = Alignment.Center,
     ) {
         when {
@@ -74,7 +77,7 @@ fun TagIconField(name: String, icon: String?, onPick: (String?) -> Unit, onBrows
         value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.DEFAULTS.take(10) }
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Icona", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             IconCell(null, icon == null) { onPick(null) }
@@ -82,7 +85,7 @@ fun TagIconField(name: String, icon: String?, onPick: (String?) -> Unit, onBrows
             (listOfNotNull(icon) + suggested.filter { it != icon }).forEach { n -> IconCell(n, n == icon) { onPick(n) } }
         }
         TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
-            com.cripta.app.ui.components.ButtonText("Tutte le icone")
+            com.cripta.app.ui.components.ButtonText(str(R.string.icon_all))
         }
     }
 }
@@ -102,13 +105,13 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
     }
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Icona") },
+        title = { Text(str(R.string.icon)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 com.cripta.app.ui.components.CriptaTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                    placeholder = { Text("Cerca: cuore, mare, gatto, pizza…") }, modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(str(R.string.icon_search_hint)) }, modifier = Modifier.fillMaxWidth(),
                 )
                 LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(380.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -119,26 +122,26 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
                     val f = found
                     if (f != null) {
                         if (f.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                            Text("Nessuna icona per «${query.trim()}». Prova un'altra parola.",
+                            Text(str(R.string.icon_none_for, query.trim()),
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         items(f, key = { "s-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
                     } else {
                         item(key = "none") { IconCell(null, selected == null) { onPick(null) } }
                         if (forName.isNotEmpty()) {
-                            header("Per «${tagName.trim()}»")
+                            header(str(R.string.icon_for, tagName.trim()))
                             items(forName, key = { "n-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
                         }
-                        header("Le più usate")
+                        header(str(R.string.icon_most_used))
                         items(TagIcons.DEFAULTS, key = { "d-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
-                        header("Tutte")
+                        header(str(R.string.icon_all_short))
                         items(all, key = { "a-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
                     }
                 }
-                Text("Fluent Emoji di Microsoft, licenza MIT.", style = MaterialTheme.typography.labelSmall,
+                Text(str(R.string.icon_credit), style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
+        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
     )
 }

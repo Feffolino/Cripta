@@ -1,5 +1,9 @@
 package com.cripta.app.ui.note
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -96,17 +100,17 @@ fun NoteEditorScreen(
                 // DS Nota: no title in the bar (the note's own title leads the page); the rarer
                 // actions in the menu, "Fatto" as the floating button.
                 title = {},
-                navigationIcon = { IconButton(onClick = leave) { Icon(CriptaIcons.ArrowBack, "Salva e chiudi") } },
+                navigationIcon = { IconButton(onClick = leave) { Icon(CriptaIcons.ArrowBack, str(R.string.note_save_close)) } },
                 actions = {
                     if (fileId != null) {
                         var menu by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = { menu = true }, enabled = vm.loaded && !vm.saving) {
-                                Icon(CriptaIcons.MoreVert, "Altre azioni")
+                                Icon(CriptaIcons.MoreVert, str(R.string.more_actions))
                             }
                             androidx.compose.material3.DropdownMenu(expanded = menu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { menu = false }) {
                                 androidx.compose.material3.DropdownMenuItem(
-                                    text = { Text("Elimina nota", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(str(R.string.note_delete), color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = { Icon(CriptaIcons.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                     onClick = { menu = false; confirmDelete = true },
                                 )
@@ -131,7 +135,7 @@ fun NoteEditorScreen(
                     .size(60.dp),
             ) {
                 if (vm.saving) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                else Icon(CriptaIcons.Check, "Fatto", Modifier.size(28.dp))
+                else Icon(CriptaIcons.Check, str(R.string.done), Modifier.size(28.dp))
             }
         },
         snackbarHost = { SnackbarHost(snackbar, Modifier.imePadding()) },
@@ -164,16 +168,16 @@ fun NoteEditorScreen(
                         if (!(compact && contentFocused)) {
                             TextField(
                                 value = vm.name, onValueChange = { vm.name = it },
-                                placeholder = { Text("Titolo") }, singleLine = true,
+                                placeholder = { Text(str(R.string.note_title)) }, singleLine = true,
                                 // DS Nota: the title in headline, the word count under it.
                                 textStyle = MaterialTheme.typography.headlineSmall,
                                 colors = plain,
                                 // Not editable when the note couldn't be read (nothing typed could be saved).
                                 enabled = !vm.loadFailed,
-                                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Titolo" },
+                                modifier = Modifier.fillMaxWidth().semantics { contentDescription = str(R.string.note_title) },
                             )
                             val words = vm.text.split(Regex("\\s+")).count { it.isNotBlank() }
-                            Text(if (words == 1) "1 parola" else "${com.cripta.app.ui.components.formatCount(words)} parole",
+                            Text(plural(R.plurals.note_words, words, com.cripta.app.ui.components.formatCount(words)),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 16.dp))
                         }
@@ -197,14 +201,14 @@ fun NoteEditorScreen(
                             value = body,
                             // Enter on a list item starts the next one (or ends an empty list).
                             onValueChange = { edit(NoteMarkdown.continueList(body, it)) },
-                            placeholder = { Text("Scrivi qui… # titolo, **grassetto**, - elenco, - [ ] da fare") },
+                            placeholder = { Text(str(R.string.note_placeholder)) },
                             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
                             visualTransformation = styled,
                             colors = plain,
                             enabled = !vm.loadFailed,
                             modifier = Modifier.fillMaxWidth().weight(1f)
                                 .onFocusChanged { contentFocused = it.isFocused }
-                                .semantics { contentDescription = "Contenuto" },
+                                .semantics { contentDescription = str(R.string.note_content) },
                         )
                         // The formatting bar, above the keyboard; the right end left to "Fatto".
                         if (!vm.loadFailed) Row(
@@ -215,12 +219,12 @@ fun NoteEditorScreen(
                             @Composable
                             fun tool(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, act: () -> Unit) =
                                 IconButton(onClick = act) { Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            tool(CriptaIcons.FormatHeading, "Titolo") { edit(NoteMarkdown.linePrefix(body, null)) }
-                            tool(CriptaIcons.FormatBold, "Grassetto") { edit(NoteMarkdown.wrap(body, "**")) }
-                            tool(CriptaIcons.FormatItalic, "Corsivo") { edit(NoteMarkdown.wrap(body, "*")) }
-                            tool(CriptaIcons.FormatChecklist, "Da fare") { edit(NoteMarkdown.linePrefix(body, "- [ ] ")) }
-                            tool(CriptaIcons.ViewList, "Elenco puntato") { edit(NoteMarkdown.linePrefix(body, "- ")) }
-                            tool(CriptaIcons.FormatNumbered, "Elenco numerato") { edit(NoteMarkdown.linePrefix(body, "1. ")) }
+                            tool(CriptaIcons.FormatHeading, str(R.string.note_title)) { edit(NoteMarkdown.linePrefix(body, null)) }
+                            tool(CriptaIcons.FormatBold, str(R.string.fmt_bold)) { edit(NoteMarkdown.wrap(body, "**")) }
+                            tool(CriptaIcons.FormatItalic, str(R.string.fmt_italic)) { edit(NoteMarkdown.wrap(body, "*")) }
+                            tool(CriptaIcons.FormatChecklist, str(R.string.fmt_todo)) { edit(NoteMarkdown.linePrefix(body, "- [ ] ")) }
+                            tool(CriptaIcons.ViewList, str(R.string.fmt_bullets)) { edit(NoteMarkdown.linePrefix(body, "- ")) }
+                            tool(CriptaIcons.FormatNumbered, str(R.string.fmt_numbered)) { edit(NoteMarkdown.linePrefix(body, "1. ")) }
                         }
                     }
                 }
@@ -231,14 +235,14 @@ fun NoteEditorScreen(
     if (confirmDelete && fileId != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Eliminare la nota?") },
-            text = { Text("\"${vm.name.ifBlank { "Nota" }}\" verrà eliminata (nel cestino se attivo in Impostazioni).") },
+            title = { Text(str(R.string.note_delete_q)) },
+            text = { Text(str(R.string.note_delete_text, vm.name.ifBlank { str(R.string.default_note_name) })) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; vm.delete(fileId) { onDeleted() } }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
 }

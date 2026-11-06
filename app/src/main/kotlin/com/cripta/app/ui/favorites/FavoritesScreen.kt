@@ -1,5 +1,8 @@
 package com.cripta.app.ui.favorites
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContent
@@ -75,22 +78,22 @@ fun FavoritesScreen(
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
+                title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.favorites)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CriptaIcons.ArrowBack, "Indietro")
+                        Icon(CriptaIcons.ArrowBack, str(R.string.back))
                     }
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, "Ordinamento preferiti") }
+                        IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, str(R.string.favorites_sort)) }
                         DropdownMenu(expanded = sortMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { sortMenu = false }) {
-                            listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale").forEach { (key, label) ->
+                            listOf(SortKey.DATE to str(R.string.sort_date), SortKey.NAME to str(R.string.sort_name), SortKey.SIZE to str(R.string.sort_size), SortKey.MANUAL to str(R.string.sort_manual)).forEach { (key, label) ->
                                 DropdownMenuItem(text = { Text((if (sort.first == key) "✓ " else "") + label) },
                                     onClick = { vm.setSort(key, sort.second); sortMenu = false })
                             }
                             if (sort.first != SortKey.MANUAL) DropdownMenuItem(
-                                text = { Text(if (sort.second) "Ordine decrescente" else "Ordine crescente") },
+                                text = { Text(if (sort.second) str(R.string.sort_descending) else str(R.string.sort_ascending)) },
                                 onClick = { vm.setSort(sort.first, !sort.second); sortMenu = false },
                             )
                         }
@@ -118,8 +121,8 @@ fun FavoritesScreen(
                 FavPhase.Empty -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(CriptaIcons.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
-                        Text("Nessun preferito", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                        Text("Segna i file o le cartelle con la stella per trovarli qui.", style = MaterialTheme.typography.bodyMedium,
+                        Text(str(R.string.favorites_empty), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+                        Text(str(R.string.favorites_empty_hint), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -144,7 +147,7 @@ fun FavoritesScreen(
                                     vm.setFolderFavorite(folder.id, false)
                                     scope.launch {
                                         snackbar.currentSnackbarData?.dismiss()
-                                        if (snackbar.showSnackbar("Cartella rimossa dai preferiti", "Annulla",
+                                        if (snackbar.showSnackbar(str(R.string.folder_unfavorited), str(R.string.undo),
                                                 duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
                                             vm.setFolderFavorite(folder.id, true)
                                         }
@@ -176,7 +179,7 @@ fun FavoritesScreen(
                                             scope.launch {
                                                 snackbar.currentSnackbarData?.dismiss()
                                                 val r = snackbar.showSnackbar(
-                                                    "Rimosso dai preferiti", actionLabel = "Annulla",
+                                                    str(R.string.unfavorited), actionLabel = str(R.string.undo),
                                                     duration = SnackbarDuration.Short,
                                                 )
                                                 if (r == SnackbarResult.ActionPerformed) vm.setFavorite(file.id, true)
@@ -184,7 +187,7 @@ fun FavoritesScreen(
                                         },
                                         modifier = Modifier.size(40.dp),
                                     ) {
-                                        Icon(CriptaIcons.Star, "Rimuovi dai preferiti",
+                                        Icon(CriptaIcons.Star, str(R.string.unfavorite),
                                             tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(20.dp))
                                     }
                                 }

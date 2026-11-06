@@ -16,6 +16,9 @@ object Strings {
     fun init(context: Context) { app = context.applicationContext }
 
     val context: Context get() = app ?: error("Strings.init was not called")
+
+    /** The language the texts are in, for numbers and dates written next to them. */
+    val locale: java.util.Locale get() = context.resources.configuration.locales[0]
 }
 
 fun str(@StringRes id: Int): String = Strings.context.getString(id)
