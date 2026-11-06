@@ -2,6 +2,7 @@ package com.cripta.app.media
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.toArgb
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Matrix
@@ -128,8 +129,11 @@ class ThumbnailLoader @Inject constructor(
         cache.get(file.id)?.let { return it }
         // A user-chosen cover always wins over the automatic one.
         readSealed(File(customDir, file.id))?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
-        // Persistent sealed cache.
-        readDisk(file.id)?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
+        // Persistent sealed cache. Not for notes: their cover is cheap to draw and must follow
+        // every edit (and a cover from an older drawing style must not stay).
+        val note = VaultRepository.isNote(file.mimeType)
+        if (note) runCatching { File(diskDir, file.id).delete() }
+        else readDisk(file.id)?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
         // Skip files already known to yield nothing this session.
         if (file.id in failed) return null
         val bmp = runCatching {
@@ -137,12 +141,13 @@ class ThumbnailLoader @Inject constructor(
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
                 VaultRepository.isVideo(file.mimeType) -> videoDecoders.withPermit { videoFrame(file, null) }
                 VaultRepository.isPdf(file.mimeType) -> pdfPages.withPermit { pdfCover(file) }
+                note -> noteCover(file)
                 else -> documentText(file)?.let { textCover(it) }
             }
         }.getOrNull()
         if (bmp != null) {
             if (!remember(file.id, bmp, epoch)) return null
-            runCatching { writeDisk(file.id, bmp) }
+            if (!note) runCatching { writeDisk(file.id, bmp) }
         } else if (repo.hasKey) {
             // Only a real failure: one caused by the vault locking meanwhile would stick.
             failed.add(file.id)
@@ -485,6 +490,73 @@ class ThumbnailLoader @Inject constructor(
         val body = if (titled) { block(first, bold, 2); y += side * 0.03f; rest } else lines.joinToString("\n").trim()
         block(body.take(TEXT_COVER_BYTES), plain, ((side - pad - y) / (plain.fontSpacing * 1.2f)).toInt())
         return bmp
+    }
+
+    /** Manrope, as in the app; the platform font if it can't be read. */
+    private val coverFont: android.graphics.Typeface by lazy {
+        runCatching { context.resources.getFont(com.cripta.app.R.font.manrope_medium) }.getOrDefault(android.graphics.Typeface.DEFAULT)
+    }
+    private val coverFontBold: android.graphics.Typeface by lazy { android.graphics.Typeface.create(coverFont, 700, false) }
+
+    /**
+     * A note's cover: its title, then its text as it reads (headings, bold, lists, check boxes),
+     * not the Markdown markers. An empty note shows its title alone.
+     */
+    private fun noteCover(file: FileEntity): Bitmap {
+        val text = repo.decryptingStream(file).use { String(readUpTo(it, TEXT_COVER_BYTES), Charsets.UTF_8) }
+        val title = file.originalName.replace(Regex("\\.(md|markdown|txt)$", RegexOption.IGNORE_CASE), "").trim()
+        val side = target
+        val bmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(PAPER)
+        val pad = side * 0.085f
+        val width = (side - 2 * pad).toInt()
+        var y = pad
+        fun block(s: CharSequence, paint: android.text.TextPaint, maxLines: Int, spacing: Float) {
+            if (s.isEmpty() || maxLines <= 0) return
+            val layout = android.text.StaticLayout.Builder.obtain(s, 0, s.length, paint, width)
+                .setLineSpacing(0f, spacing).setMaxLines(maxLines).setEllipsize(android.text.TextUtils.TruncateAt.END).build()
+            canvas.save(); canvas.translate(pad, y); layout.draw(canvas); canvas.restore()
+            y += layout.height
+        }
+        if (title.isNotEmpty()) {
+            val head = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = INK; textSize = side * 0.078f; typeface = coverFontBold
+            }
+            block(title, head, 2, 1.1f)
+            y += side * 0.035f
+        }
+        val plain = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = INK_SOFT; textSize = side * 0.058f; typeface = coverFont
+        }
+        val body = noteSpans(text.replace("\r", "").trim('\n', ' '))
+        block(body, plain, ((side - pad - y) / (plain.fontSpacing * 1.25f)).toInt(), 1.25f)
+        return bmp
+    }
+
+    /** The note's Markdown in its reading form (the viewer's), as platform spans for a [android.text.StaticLayout]. */
+    private fun noteSpans(text: String): CharSequence {
+        val palette = com.cripta.app.ui.note.NoteMarkdown.Palette(
+            muted = androidx.compose.ui.graphics.Color(INK_MUTED),
+            accent = androidx.compose.ui.graphics.Color(INK_ACCENT),
+            codeBackground = androidx.compose.ui.graphics.Color(CODE_PAPER),
+        )
+        val a = com.cripta.app.ui.note.NoteMarkdown.render(text, palette, keepMarkers = false)
+        val out = android.text.SpannableString(a.text)
+        for (r in a.spanStyles) {
+            val st = r.item
+            fun put(span: Any) = out.setSpan(span, r.start, r.end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val bold = (st.fontWeight?.weight ?: 0) >= 600
+            if (bold) put(android.text.style.TypefaceSpan(coverFontBold))
+            if (bold) put(android.text.style.ForegroundColorSpan(INK))
+            if (st.fontStyle == androidx.compose.ui.text.font.FontStyle.Italic) put(android.text.style.StyleSpan(android.graphics.Typeface.ITALIC))
+            if (st.fontSize.isEm) put(android.text.style.RelativeSizeSpan(st.fontSize.value))
+            if (st.color != androidx.compose.ui.graphics.Color.Unspecified) put(android.text.style.ForegroundColorSpan(st.color.toArgb()))
+            if (st.background != androidx.compose.ui.graphics.Color.Unspecified) put(android.text.style.BackgroundColorSpan(st.background.toArgb()))
+            if (st.textDecoration?.contains(androidx.compose.ui.text.style.TextDecoration.LineThrough) == true) put(android.text.style.StrikethroughSpan())
+            if (st.fontFamily == androidx.compose.ui.text.font.FontFamily.Monospace) put(android.text.style.TypefaceSpan("monospace"))
+        }
+        return out
     }
 
     /** Which frame of a video to use as its cover, chosen by the user when regenerating. */
@@ -891,5 +963,9 @@ class ThumbnailLoader @Inject constructor(
         const val PAPER = 0xFFF7F8FA.toInt()
         const val INK = 0xFF0F172A.toInt()
         const val INK_SOFT = 0xFF475467.toInt()
+        /** Note covers: markers and done items, list bullets and boxes, code. */
+        const val INK_MUTED = 0xFF98A2B3.toInt()
+        const val INK_ACCENT = 0xFF2563EB.toInt()
+        const val CODE_PAPER = 0xFFE9ECF1.toInt()
     }
 }
