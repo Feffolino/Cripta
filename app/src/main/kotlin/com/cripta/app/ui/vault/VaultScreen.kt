@@ -810,10 +810,38 @@ fun VaultScreen(
             val folderBounds = remember { androidx.compose.runtime.mutableStateMapOf<Long, androidx.compose.ui.geometry.Rect>() }
             var gridCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
+            val foldersCollapsed by vm.foldersCollapsed.collectAsStateWithLifecycle()
             val folderRow: @Composable () -> Unit = {
                 val perRow = if (landscape) 4 else 2
-                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    folders.chunked(perRow).forEach { rowFolders ->
+                val anim = animationsEnabled()
+                Column(
+                    (if (anim) Modifier.animateContentSize(Motion.enter(Motion.MEDIUM)) else Modifier),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    // The folders group folds down to its heading (remembered across launches).
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable(onClickLabel = if (foldersCollapsed) "Mostra le cartelle" else "Nascondi le cartelle") {
+                                vm.setFoldersCollapsed(!foldersCollapsed)
+                            }
+                            .padding(top = 14.dp)
+                            .semantics { heading() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Cartelle · " + com.cripta.app.ui.components.formatCount(folders.size),
+                            style = com.cripta.app.ui.theme.HeadingStyle,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(
+                            if (foldersCollapsed) CriptaIcons.ExpandMore else CriptaIcons.ExpandLess,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    if (!foldersCollapsed) folders.chunked(perRow).forEach { rowFolders ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         rowFolders.forEach { folder ->
                           androidx.compose.runtime.key(folder.id) {
