@@ -2,6 +2,9 @@
 
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.sp
@@ -508,12 +511,12 @@ fun ViewerScreen(
             Row(
                 // DS cr-hint: a glass pill, 26dp.
                 Modifier.padding(top = 4.dp).heightIn(min = 26.dp).clip(CircleShape).background(com.cripta.app.ui.theme.Glass)
-                    .clickable(onClickLabel = "Apri etichette, dettagli e azioni") { chromeTouch++; showTags = true }
+                    .clickable(onClickLabel = str(R.string.viewer_open_panel)) { chromeTouch++; showTags = true }
                     .padding(start = 8.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(CriptaIcons.ExpandLess, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Text(" Scorri su per i dettagli", color = Color.White,
+                Text(str(R.string.viewer_swipe_up), color = Color.White,
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
             }
         }
@@ -585,7 +588,7 @@ fun ViewerScreen(
                         }
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, "Indietro") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } },
                 // Bar background reaches the top edge; only its content is inset below the camera.
                 windowInsets = chromeInsets.union(com.cripta.app.ui.LocalSideCutout.current.let {
                     WindowInsets(left = it.start, right = it.end)
@@ -648,8 +651,8 @@ fun ViewerScreen(
                                 tagIcon = t.icon,
                                 leadingIcon = if (t.pinned) CriptaIcons.PushPin else null,
                                 onClick = { chromeTouch++; vm.toggleTag(qf.id, t.id) },
-                                onClickLabel = if (on) "Togli" else "Aggiungi",
-                                stateLabel = if (on) "Assegnata" else "Non assegnata",
+                                onClickLabel = if (on) str(R.string.remove_short) else str(R.string.add),
+                                stateLabel = if (on) str(R.string.assigned) else str(R.string.not_assigned),
                             )
                         }
                     }
@@ -673,31 +676,29 @@ fun ViewerScreen(
     if (delTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Eliminare il file?") },
+            title = { Text(str(R.string.delete_file_q)) },
             text = {
-                Text(if (trashOn) "\"${delTarget.originalName}\" verrà spostato nel cestino (ripristinabile da Impostazioni › Duplicati e cestino)."
-                    else "\"${delTarget.originalName}\" verrà eliminato in modo sicuro. Irreversibile.")
+                Text(if (trashOn) str(R.string.delete_file_trash, delTarget.originalName)
+                    else str(R.string.delete_file_secure, delTarget.originalName))
             },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = null; val id = delTarget.id; vm.delete(id) { removePage(id) } }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
     val exportTarget = confirmDownload
     if (exportTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDownload = null },
-            title = { Text("Esportare sul dispositivo?") },
+            title = { Text(str(R.string.export_q)) },
             text = {
-                Text("Una copia NON cifrata di \"${exportTarget.originalName}\" verrà salvata in " +
-                    "${ViewerViewModel.exportFolder(exportTarget.mimeType)}, visibile alle altre app. " +
-                    "Il file resta anche nel vault.")
+                Text(str(R.string.export_text, exportTarget.originalName, ViewerViewModel.exportFolder(exportTarget.mimeType)))
             },
-            confirmButton = { TextButton(onClick = { confirmDownload = null; vm.download(exportTarget) }) { com.cripta.app.ui.components.ButtonText("Esporta") } },
-            dismissButton = { TextButton(onClick = { confirmDownload = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmDownload = null; vm.download(exportTarget) }) { com.cripta.app.ui.components.ButtonText(str(R.string.export)) } },
+            dismissButton = { TextButton(onClick = { confirmDownload = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
     val convertSettings by vm.convertSettings.collectAsStateWithLifecycle()
@@ -713,34 +714,31 @@ fun ViewerScreen(
     } else if (convertTarget != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmConvert = null },
-            title = { Text("Convertire in MP4?") },
+            title = { Text(str(R.string.convert_q_single)) },
             text = {
                 Text(
-                    "Crea una copia MP4 (H.264) scorribile, con le stesse etichette e cartella. Prosegue in " +
-                        "background; la copia viene verificata prima di essere salvata e l'originale non viene " +
-                        "mai distrutto (al massimo va nel cestino). Cosa fare dell'originale si sceglie in " +
-                        "Impostazioni › Import e conversione."
+                    str(R.string.convert_text)
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { com.cripta.app.ui.components.ButtonText("Converti") } },
-            dismissButton = { TextButton(onClick = { confirmConvert = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            confirmButton = { TextButton(onClick = { confirmConvert = null; vm.convertToMp4(convertTarget) }) { com.cripta.app.ui.components.ButtonText(str(R.string.convert)) } },
+            dismissButton = { TextButton(onClick = { confirmConvert = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsStateWithLifecycle()
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.clearConverted() },
-            title = { Text("Video convertito") },
-            text = { Text("La copia MP4 scorribile è nella stessa cartella. Vuoi eliminare l'originale?") },
+            title = { Text(str(R.string.video_converted)) },
+            text = { Text(str(R.string.video_converted_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     // The original's page leaves the list (the viewer moves on instead of closing).
                     val orig = originalId
                     vm.resolveConvertedOriginal(delete = true)
                     if (orig != null && orig in vm.liveIds) removePage(orig)
-                }) { Text("Elimina originale", color = MaterialTheme.colorScheme.error) }
+                }) { Text(str(R.string.n_delete_original), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { com.cripta.app.ui.components.ButtonText("Mantieni") } },
+            dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { com.cripta.app.ui.components.ButtonText(str(R.string.keep)) } },
         )
     }
 }
@@ -772,18 +770,18 @@ private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
     androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.components.LocalFieldContainer provides MaterialTheme.colorScheme.surface) {
     com.cripta.app.ui.components.CriptaTextField(
         value = text, onValueChange = { text = it }, singleLine = true,
-        placeholder = { Text("Scrivi o incolla il link") },
+        placeholder = { Text(str(R.string.link_hint)) },
         leadingIcon = { Icon(CriptaIcons.Link, null) },
         trailingIcon = {
             if (text.isBlank()) IconButton(onClick = {
                 val clip = clipboard.getText()?.text?.trim().orEmpty()
-                if (clip.isBlank()) android.widget.Toast.makeText(ctx, "Appunti vuoti", android.widget.Toast.LENGTH_SHORT).show()
+                if (clip.isBlank()) android.widget.Toast.makeText(ctx, str(R.string.clipboard_empty), android.widget.Toast.LENGTH_SHORT).show()
                 else { text = clip; onSet(clip) }
-            }) { Icon(CriptaIcons.ContentPaste, "Incolla il link copiato", tint = MaterialTheme.colorScheme.primary) }
+            }) { Icon(CriptaIcons.ContentPaste, str(R.string.paste_copied_link), tint = MaterialTheme.colorScheme.primary) }
             else IconButton(onClick = {
                 clipboard.setText(androidx.compose.ui.text.AnnotatedString(text.trim()))
-                android.widget.Toast.makeText(ctx, "Link copiato", android.widget.Toast.LENGTH_SHORT).show()
-            }) { Icon(CriptaIcons.ContentCopy, "Copia il link", tint = MaterialTheme.colorScheme.primary) }
+                android.widget.Toast.makeText(ctx, str(R.string.link_copied), android.widget.Toast.LENGTH_SHORT).show()
+            }) { Icon(CriptaIcons.ContentCopy, str(R.string.copy_link), tint = MaterialTheme.colorScheme.primary) }
         },
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
             keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
@@ -854,7 +852,7 @@ private fun MediaPage(
                     ) {
                         Icon(CriptaIcons.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text("Riprova")
+                        Text(str(R.string.retry))
                     }
                 }
             }
@@ -866,9 +864,9 @@ private fun MediaPage(
                 onEdit = { onEditNote(s.file.id) }, editShown = chromeVisible, bottomInset = bottomInset)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
             is ViewerState.Other -> CenteredPage(onTap = onToggleChrome) {
-                Text("Nessuna anteprima per questo tipo di file.", color = Color.White, textAlign = TextAlign.Center,
+                Text(str(R.string.no_preview), color = Color.White, textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge)
-                Text("Per aprirlo con un'altra app: ⋮ › Esporta sul dispositivo.", color = Color.White.copy(alpha = 0.75f),
+                Text(str(R.string.no_preview_hint), color = Color.White.copy(alpha = 0.75f),
                     textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
             }
         }
@@ -1037,7 +1035,7 @@ private fun NoteView(
                 .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap() }) }
                 .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 96.dp),
         ) {
-            if (current.isBlank()) Text("(nota vuota)", color = Color.White.copy(alpha = 0.6f))
+            if (current.isBlank()) Text(str(R.string.note_empty), color = Color.White.copy(alpha = 0.6f))
             // Long-press selects text to copy; a single tap still toggles the chrome.
             SelectionContainer {
                 Column {
@@ -1073,7 +1071,7 @@ private fun NoteView(
             androidx.compose.material3.ExtendedFloatingActionButton(
                 onClick = onEdit,
                 containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
-                icon = { Icon(CriptaIcons.Edit, null) }, text = { Text("Modifica") },
+                icon = { Icon(CriptaIcons.Edit, null) }, text = { Text(str(R.string.edit)) },
             )
         }
     }
@@ -1111,9 +1109,9 @@ private fun PdfView(bytes: ByteArray, onSingleTap: () -> Unit) {
         result == null -> CenteredPage(onTap = onSingleTap) { DelayedSpinner(color = Color.White) }
         doc == null -> CenteredPage(onTap = onSingleTap) {
             Icon(CriptaIcons.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
-            Text("Impossibile aprire il PDF: il documento potrebbe essere danneggiato o protetto.",
+            Text(str(R.string.pdf_open_failed),
                 color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
-            Text("Puoi esportarlo sul dispositivo (⋮) e aprirlo con un'altra app.",
+            Text(str(R.string.pdf_export_hint),
                 color = Color.White.copy(alpha = 0.75f), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         }
         else -> {
@@ -1173,7 +1171,7 @@ private fun PdfView(bytes: ByteArray, onSingleTap: () -> Unit) {
                     items(doc.pageCount) { index ->
                         val bmp by produceState<Bitmap?>(initialValue = null, index, doc) { value = doc.render(index) }
                         val b = bmp
-                        val desc = "Pagina ${index + 1} di ${doc.pageCount}"
+                        val desc = str(R.string.page_of, index + 1, doc.pageCount)
                         if (b != null) {
                             Image(b.asImageBitmap(), desc, Modifier.fillMaxWidth().padding(vertical = 4.dp))
                         } else {
@@ -1281,11 +1279,11 @@ private fun VideoPlayer(
     // surface. "Altezza (taglio ridotto)" fills more than Adatta while cropping the sides less than
     // Riempi/Altezza piena.
     val modes = listOf<Triple<Int, String, Float>>(
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Adatta", 1f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Altezza (taglio ridotto)", 1.3f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "Larghezza piena", 1f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Riempi (ritaglia)", 1f),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Allarga (deforma)", 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, str(R.string.fit_fit), 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, str(R.string.fit_height), 1.3f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, str(R.string.fit_width), 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, str(R.string.fit_fill), 1f),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, str(R.string.fit_stretch), 1f),
     )
     var modeIdx by remember { mutableIntStateOf(0) }
     // Pinch-to-zoom factor applied on top of the current resize mode (1x..5x). Reset when the mode
@@ -1738,7 +1736,7 @@ private fun VideoPlayer(
                 val before = player.playbackParameters.speed
                 val sp = latestPrefs.holdSpeed
                 player.setPlaybackSpeed(sp)
-                gestureLabel = GestureHud(CriptaIcons.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + "× finché tieni premuto", null)
+                gestureLabel = GestureHud(CriptaIcons.Speed, (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp").replace('.', ',') + str(R.string.speed_while_held), null)
                 try { kotlinx.coroutines.awaitCancellation() } finally {
                     player.setPlaybackSpeed(before)
                     gestureLabel = null
@@ -1839,7 +1837,7 @@ private fun VideoPlayer(
                         nextThumb?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                     }
                     Column(Modifier.padding(horizontal = 10.dp).weight(1f, fill = false)) {
-                        Text("Prossimo tra ${(rem + 999) / 1000} s", color = Color.White.copy(alpha = 0.8f),
+                        Text(str(R.string.next_in, (rem + 999) / 1000), color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.labelMedium)
                         Text(nextFile?.originalName ?: "", color = Color.White, style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -1848,7 +1846,7 @@ private fun VideoPlayer(
                         }
                     }
                     IconButton(onClick = { nextCancelled = true }, modifier = Modifier.size(32.dp)) {
-                        Icon(CriptaIcons.Close, "Annulla prossimo", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(CriptaIcons.Close, str(R.string.cancel_next), tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -1863,10 +1861,10 @@ private fun VideoPlayer(
             ) {
                 Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(CriptaIcons.SkipNext, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Text(if (skipSeg.kind == SegmentSkipper.Kind.INTRO) "Salta intro" else "Salta finale",
+                    Text(if (skipSeg.kind == SegmentSkipper.Kind.INTRO) str(R.string.skip_intro) else str(R.string.skip_ending),
                         color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
                     IconButton(onClick = { skipper.dismiss(skipSeg.kind); skipAction = SegmentSkipper.Action.None }, modifier = Modifier.size(32.dp)) {
-                        Icon(CriptaIcons.Close, "Nascondi", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(CriptaIcons.Close, str(R.string.hide), tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -1875,10 +1873,10 @@ private fun VideoPlayer(
             Surface(color = Color.Black.copy(alpha = 0.78f), shape = com.cripta.app.ui.theme.RadiusLg,
                 modifier = Modifier.align(Alignment.BottomEnd).then(holdStill).padding(end = 12.dp + sideCut.end, bottom = cardBottom)) {
                 Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (s.kind == SegmentSkipper.Kind.INTRO) "Intro saltata" else "Finale saltato",
+                    Text(if (s.kind == SegmentSkipper.Kind.INTRO) str(R.string.intro_skipped) else str(R.string.ending_skipped),
                         color = Color.White, style = MaterialTheme.typography.labelLarge)
                     com.cripta.app.ui.components.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
-                        com.cripta.app.ui.components.ButtonText("Annulla")
+                        com.cripta.app.ui.components.ButtonText(str(R.string.cancel))
                     }
                 }
             }
@@ -1945,13 +1943,13 @@ private fun VideoPlayer(
                 modifier = Modifier.clickable { showGestureHint = false },
             ) {
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Gesti del player", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                    Text(str(R.string.player_gestures), color = Color.White, style = MaterialTheme.typography.titleSmall)
                     val lines = buildList {
-                        add("Doppio tocco a sinistra/destra: −/+ ${prefs.seekStepSec} s")
-                        add("Pizzica con due dita: ingrandisci")
-                        if (prefs.holdForSpeed) add("Tieni premuto ai lati: velocità ${(if (prefs.holdSpeed % 1f == 0f) "${prefs.holdSpeed.toInt()}" else "${prefs.holdSpeed}").replace('.', ',')}×")
-                        if (prefs.gestures) add("Scorri in verticale a sinistra: luminosità")
-                        if (prefs.volumeGesture) add("Scorri in verticale a destra: volume")
+                        add(str(R.string.gesture_double_tap, prefs.seekStepSec))
+                        add(str(R.string.gesture_pinch))
+                        if (prefs.holdForSpeed) add(str(R.string.gesture_hold_speed, (if (prefs.holdSpeed % 1f == 0f) "${prefs.holdSpeed.toInt()}" else "${prefs.holdSpeed}").replace('.', ',')))
+                        if (prefs.gestures) add(str(R.string.gesture_brightness))
+                        if (prefs.volumeGesture) add(str(R.string.gesture_volume))
                     }
                     lines.forEach {
                         Text(it, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
@@ -1985,7 +1983,7 @@ private fun VideoPlayer(
                         modeLabel = modes[modeIdx].second
                     }) {
                         Icon(CriptaIcons.AspectRatio,
-                            "Formato video: ${modes[modeIdx].second}. Tocca per: ${modes[(modeIdx + 1) % modes.size].second}",
+                            str(R.string.video_format_tap, modes[modeIdx].second, modes[(modeIdx + 1) % modes.size].second),
                             tint = Color.White)
                     }
                 }
@@ -2002,10 +2000,10 @@ private fun VideoPlayer(
                         activity?.requestedOrientation = if (lock) orientation
                             else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                         modeTick++
-                        modeLabel = if (lock) "Rotazione bloccata" else "Rotazione libera"
+                        modeLabel = if (lock) str(R.string.rotation_locked) else str(R.string.rotation_free)
                     }) {
                         Icon(if (rotationLocked) CriptaIcons.ScreenLockRotation else CriptaIcons.ScreenRotation,
-                            if (rotationLocked) "Sblocca rotazione" else "Blocca rotazione",
+                            if (rotationLocked) str(R.string.rotation_unlock) else str(R.string.rotation_lock),
                             tint = if (rotationLocked) MaterialTheme.colorScheme.onPrimary else Color.White)
                     }
                 }
@@ -2019,7 +2017,7 @@ private fun VideoPlayer(
                                     android.app.PictureInPictureParams.Builder()
                                         .setAspectRatio(videoAspect ?: android.util.Rational(16, 9)).build()
                                 )
-                            }.onFailure { modeLabel = "Picture-in-Picture non disponibile" }
+                            }.onFailure { modeLabel = str(R.string.pip_unavailable) }
                         }) {
                             Icon(CriptaIcons.PictureInPictureAlt, "Picture-in-Picture", tint = Color.White)
                         }
@@ -2146,9 +2144,9 @@ private fun Filmstrip(
                     .background(Color.White.copy(alpha = 0.12f))
                     // DS filmstrip: the current item ringed in accent.
                     .border(2.dp, accentRing.copy(alpha = ring), shape)
-                    .clickable(onClickLabel = "Apri") { onPick(i) }
+                    .clickable(onClickLabel = str(R.string.open)) { onPick(i) }
                     .semantics {
-                        this.contentDescription = "File ${i + 1} di ${ids.size}"
+                        this.contentDescription = str(R.string.file_x_of_y, i + 1, ids.size)
                         this.selected = sel
                     },
             ) {
@@ -2219,11 +2217,11 @@ private fun DetailsSheet(
 
     val thumb by produceState<Bitmap?>(initialValue = null, file.id, refresh) { value = vm.thumbOf(file.id) }
     val kind = when {
-        isVid -> "Video"
-        com.cripta.app.data.VaultRepository.isImage(file.mimeType) -> "Foto"
-        com.cripta.app.data.VaultRepository.isNote(file.mimeType) -> "Nota"
+        isVid -> str(R.string.video)
+        com.cripta.app.data.VaultRepository.isImage(file.mimeType) -> str(R.string.photo)
+        com.cripta.app.data.VaultRepository.isNote(file.mimeType) -> str(R.string.default_note_name)
         file.mimeType == "application/pdf" -> "PDF"
-        else -> "File"
+        else -> str(R.string.file_)
     }
     val ext = file.originalName.substringAfterLast('.', "").uppercase().takeIf { it.isNotBlank() && it.length <= 5 && it != kind }
     // Header: preview + name, date and type; then the file's actions when the top bar hands them over.
@@ -2239,9 +2237,9 @@ private fun DetailsSheet(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 when (kind) {
-                                    "Video" -> CriptaIcons.Movie
-                                    "Foto" -> CriptaIcons.Photo
-                                    "Nota" -> CriptaIcons.Description
+                                    str(R.string.video) -> CriptaIcons.Movie
+                                    str(R.string.photo) -> CriptaIcons.Photo
+                                    str(R.string.default_note_name) -> CriptaIcons.Description
                                     "PDF" -> CriptaIcons.PictureAsPdf
                                     else -> CriptaIcons.InsertDriveFile
                                 },
@@ -2257,13 +2255,13 @@ private fun DetailsSheet(
                     val ctx = LocalContext.current
                     val copyName = {
                         clipboard.setText(androidx.compose.ui.text.AnnotatedString(file.originalName))
-                        android.widget.Toast.makeText(ctx, "Titolo copiato", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(ctx, str(R.string.title_copied), android.widget.Toast.LENGTH_SHORT).show()
                     }
                     Text(file.originalName, style = MaterialTheme.typography.titleMedium, maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier
                             .pointerInput(file.originalName) { detectTapGestures(onLongPress = { copyName() }) }
-                            .semantics { onLongClick(label = "Copia il titolo") { copyName(); true } })
+                            .semantics { onLongClick(label = str(R.string.copy_title)) { copyName(); true } })
                     // Type and date on one quiet line: no chip around the type.
                     Text(
                         kind + (ext?.let { " · $it" } ?: "") + " · " +
@@ -2279,17 +2277,17 @@ private fun DetailsSheet(
                 Row(Modifier.fillMaxWidth()) {
                     SheetActionButton(
                         if (file.isFavorite) CriptaIcons.Star else CriptaIcons.StarBorder,
-                        if (file.isFavorite) "Preferito" else "Preferiti",
+                        if (file.isFavorite) str(R.string.favorite) else str(R.string.favorites),
                         a.onFavorite,
                         tint = if (file.isFavorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f).semantics {
-                            stateDescription = if (file.isFavorite) "Nei preferiti" else "Non nei preferiti"
+                            stateDescription = if (file.isFavorite) str(R.string.in_favorites) else str(R.string.not_in_favorites)
                         },
                     )
-                    a.onEditNote?.let { SheetActionButton(CriptaIcons.Edit, "Modifica", leave(it), modifier = Modifier.weight(1f)) }
-                    SheetActionButton(CriptaIcons.Download, "Esporta", leave(a.onExport), modifier = Modifier.weight(1f))
-                    a.onConvert?.let { SheetActionButton(CriptaIcons.Autorenew, "Converti in MP4", leave(it), modifier = Modifier.weight(1f)) }
-                    SheetActionButton(CriptaIcons.Delete, "Elimina", leave(a.onDelete),
+                    a.onEditNote?.let { SheetActionButton(CriptaIcons.Edit, str(R.string.edit), leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(CriptaIcons.Download, str(R.string.export), leave(a.onExport), modifier = Modifier.weight(1f))
+                    a.onConvert?.let { SheetActionButton(CriptaIcons.Autorenew, str(R.string.convert_to_mp4), leave(it), modifier = Modifier.weight(1f)) }
+                    SheetActionButton(CriptaIcons.Delete, str(R.string.delete), leave(a.onDelete),
                         tint = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 }
             }
@@ -2305,21 +2303,21 @@ private fun DetailsSheet(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
             Row(Modifier.padding(vertical = 4.dp)) {
                 val size = com.cripta.app.ui.components.formatBytes(file.sizeBytes)
-                DetailFigure(size.substringBeforeLast(' '), size.substringAfterLast(' ', ""), "Dimensione",
-                    CriptaIcons.SdStorage, "Dimensione $size", Modifier.weight(1f))
+                DetailFigure(size.substringBeforeLast(' '), size.substringAfterLast(' ', ""), str(R.string.size_label),
+                    CriptaIcons.SdStorage, str(R.string.size_x, size), Modifier.weight(1f))
                 com.cripta.app.ui.components.formatDuration(file.durationMs)?.let {
-                    DetailFigure(it, null, "Durata", CriptaIcons.Schedule, "Durata $it", Modifier.weight(1f))
+                    DetailFigure(it, null, str(R.string.duration), CriptaIcons.Schedule, str(R.string.duration_x, it), Modifier.weight(1f))
                 }
                 val w = file.width; val h = file.height
                 if (w != null && h != null && w > 0 && h > 0) {
                     val pixels = "$w × $h"
                     if (isVid) {
                         val name = quality(w, h) ?: "${minOf(w, h)}p"
-                        DetailFigure(name, null, pixels, CriptaIcons.AspectRatio, "Risoluzione $name, $w per $h", Modifier.weight(1f))
+                        DetailFigure(name, null, pixels, CriptaIcons.AspectRatio, str(R.string.resolution_desc, name, w, h), Modifier.weight(1f))
                     } else {
                         val mp = w.toLong() * h / 1_000_000.0
                         val value = if (mp < 10) String.format(java.util.Locale.getDefault(), "%.1f", mp) else "${mp.roundToLong()}"
-                        DetailFigure(value, "MP", pixels, CriptaIcons.AspectRatio, "Risoluzione $value megapixel, $w per $h", Modifier.weight(1f))
+                        DetailFigure(value, "MP", pixels, CriptaIcons.AspectRatio, str(R.string.resolution_mp_desc, value, w, h), Modifier.weight(1f))
                     }
                 }
             }
@@ -2327,10 +2325,10 @@ private fun DetailsSheet(
     }
     val tags: @Composable () -> Unit = {
         Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-            PanelHeading("Etichette", "Tocca per aggiungere o togliere, tieni premuto per alias, colore e icona.") {
+            PanelHeading(str(R.string.tags), str(R.string.tags_panel_hint)) {
                 TextButton(onClick = { creating = true }) {
                     Icon(CriptaIcons.Add, null, Modifier.size(18.dp))
-                    com.cripta.app.ui.components.ButtonText("Nuova", modifier = Modifier.padding(start = 6.dp))
+                    com.cripta.app.ui.components.ButtonText(str(R.string.new_short), modifier = Modifier.padding(start = 6.dp))
                 }
             }
             // Short form unless there is nothing quick to show (no tags on the file, pinned or recent).
@@ -2349,7 +2347,7 @@ private fun DetailsSheet(
                 onLongPress = { editTag = it },
             )
             if (hasQuick && allTags.isNotEmpty()) TextButton(onClick = { vm.setDetailsAllTags(!allTagsOpen) }) {
-                com.cripta.app.ui.components.ButtonText(if (allTagsOpen) "Mostra meno" else "Mostra tutte (${allTags.size})")
+                com.cripta.app.ui.components.ButtonText(if (allTagsOpen) str(R.string.show_less) else str(R.string.show_all_n, allTags.size))
             }
         }
     }
@@ -2359,15 +2357,15 @@ private fun DetailsSheet(
             LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Column {
-                    InfoLine("Tipo", file.mimeType)
+                    InfoLine(str(R.string.type), file.mimeType)
                     if (isVid && videoDiag.isNotBlank()) {
                         // A plain row that opens the figures in place: rarely needed, so it starts closed.
                         Row(
                             Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
-                                .clickable(onClickLabel = if (showTech) "Comprimi" else "Espandi") { showTech = !showTech },
+                                .clickable(onClickLabel = if (showTech) str(R.string.collapse) else str(R.string.expand)) { showTech = !showTech },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Dettagli tecnici", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text(str(R.string.technical_details), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                             Icon(if (showTech) CriptaIcons.ExpandLess else CriptaIcons.ExpandMore, null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -2433,7 +2431,7 @@ private fun DetailsSheet(
     editTag?.let { name ->
         val t = byName[name]
         com.cripta.app.ui.vault.LabelEditorDialog(
-            title = "Modifica #$name",
+            title = str(R.string.tag_edit_title, name),
             initialName = name,
             nameEditable = false,
             initialAlias = t?.alias ?: "",
@@ -2450,7 +2448,7 @@ private fun DetailsSheet(
     if (creating) {
         var newIcon by remember { mutableStateOf<String?>(null) }
         com.cripta.app.ui.vault.LabelEditorDialog(
-            title = "Nuova etichetta",
+            title = str(R.string.new_tag),
             onIcon = { newIcon = it },
             onConfirm = { name, alias ->
                 vm.createTag(name, alias, newIcon)
