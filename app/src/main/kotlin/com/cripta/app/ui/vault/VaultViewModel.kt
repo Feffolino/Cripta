@@ -238,6 +238,11 @@ class VaultViewModel @Inject constructor(
         settings.settings.map { it.display }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DisplayPrefs())
 
+    val foldersCollapsed: StateFlow<Boolean> =
+        settings.settings.map { it.foldersCollapsed }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    fun setFoldersCollapsed(collapsed: Boolean) = viewModelScope.launch { settings.setFoldersCollapsed(collapsed) }
+
     fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
     fun setGridColumns(cols: Int, landscape: Boolean = false) = viewModelScope.launch { settings.setGridColumns(cols, landscape) }
 
