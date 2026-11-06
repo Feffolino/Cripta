@@ -18,12 +18,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +57,7 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
         contentAlignment = Alignment.Center,
     ) {
         when {
-            name == null -> Icon(Icons.Filled.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
+            name == null -> Icon(Icons.Rounded.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
             icon != null -> Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(size * 0.58f))
         }
     }
@@ -107,7 +107,7 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 com.cripta.app.ui.components.CriptaTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    leadingIcon = { Icon(Icons.Filled.Search, null) },
+                    leadingIcon = { Icon(Icons.Rounded.Search, null) },
                     placeholder = { Text("Cerca: cuore, mare, gatto, pizza…") }, modifier = Modifier.fillMaxWidth(),
                 )
                 LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(380.dp),

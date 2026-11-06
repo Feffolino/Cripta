@@ -24,7 +24,7 @@ internal fun PanelHeading(title: String, description: String? = null, action: (@
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().then(if (action != null) Modifier.heightIn(min = 48.dp) else Modifier),
             verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+            Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f).semantics { heading() })
             action?.invoke()
         }

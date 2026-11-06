@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tabler Icons v3.49.0 (filled/player-skip-forward.svg), MIT: assets/licenses/tabler-icons-LICENSE.txt -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <!-- Glyph at the size of Media3's own (about half the button): full-size it looked huge. -->
+    <group android:translateX="8" android:translateY="8">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M3 5v14a1 1 0 0 0 1.504 .864l12 -7a1 1 0 0 0 0 -1.728l-12 -7a1 1 0 0 0 -1.504 .864z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M20 4a1 1 0 0 1 .993 .883l.007 .117v14a1 1 0 0 1 -1.993 .117l-.007 -.117v-14a1 1 0 0 1 1 -1z" />
+    </group>
+</vector>

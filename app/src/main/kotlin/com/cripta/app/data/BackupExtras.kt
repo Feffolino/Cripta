@@ -31,6 +31,9 @@ import java.io.DataOutputStream
 internal object BackupExtras {
     const val MAGIC = 0x43524558 // "CREX"
 
+    /** What [read] found: people restored, and whether any analysis came with them. */
+    class Contents { var people = 0; var analysis = false }
+
     private fun JSONObject.optLongOrNull(k: String): Long? = if (!has(k) || isNull(k)) null else optLong(k)
     private fun JSONObject.optStrOrNull(k: String): String? = if (!has(k) || isNull(k)) null else optString(k)
     private fun DataOutputStream.blob(b: ByteArray) { writeInt(b.size); write(b) }
@@ -40,20 +43,24 @@ internal object BackupExtras {
         return ByteArray(n).also { readFully(it) }
     }
 
-    suspend fun write(db: CriptaDatabase, fileIndex: Map<String, Int>, out: DataOutputStream) {
+    /**
+     * [people]: persons, faces and their choices; [analysis]: intro/outro and similar-media
+     * fingerprints. A group left out is written as empty lists (same layout, older apps read it).
+     */
+    suspend fun write(db: CriptaDatabase, fileIndex: Map<String, Int>, out: DataOutputStream, people: Boolean = true, analysis: Boolean = true) {
         val faces = db.faceDao()
         val intro = db.introDao()
-        val persons = faces.persons()
+        val persons = if (people) faces.persons() else emptyList()
         val tracks = ArrayList<FaceTrackEntity>()
-        for (id in fileIndex.keys) tracks += faces.tracksOfFile(id)
+        if (people) for (id in fileIndex.keys) tracks += faces.tracksOfFile(id)
         val trackIds = tracks.map { it.id }.toSet()
-        val prints = intro.backupPrints().filter { it.fileId in fileIndex }
-        val signatures = intro.backupSignatures()
-        val sounds = intro.backupSignatureSounds()
-        val rules = intro.backupRules()
-        val rejected = intro.backupRejected()
-        val dupPrints = db.dupPrintDao().all().filter { it.fileId in fileIndex }
-        val dupApart = db.dupPrintDao().apartPairs().filter { it.a in fileIndex && it.b in fileIndex }
+        val prints = if (analysis) intro.backupPrints().filter { it.fileId in fileIndex } else emptyList()
+        val signatures = if (analysis) intro.backupSignatures() else emptyList()
+        val sounds = if (analysis) intro.backupSignatureSounds() else emptyList()
+        val rules = if (analysis) intro.backupRules() else emptyList()
+        val rejected = if (analysis) intro.backupRejected() else emptyList()
+        val dupPrints = if (analysis) db.dupPrintDao().all().filter { it.fileId in fileIndex } else emptyList()
+        val dupApart = if (analysis) db.dupPrintDao().apartPairs().filter { it.a in fileIndex && it.b in fileIndex } else emptyList()
         fun origin(id: String): Any = fileIndex[id] ?: id
 
         val index = JSONObject()
@@ -65,10 +72,10 @@ internal object BackupExtras {
                 }
             })
             .put("personMedia", JSONArray().apply {
-                faces.allPersonMedia().forEach { m -> fileIndex[m.fileId]?.let { put(JSONObject().put("p", m.personId).put("f", it)) } }
+                if (people) faces.allPersonMedia().forEach { m -> fileIndex[m.fileId]?.let { put(JSONObject().put("p", m.personId).put("f", it)) } }
             })
             .put("scans", JSONArray().apply {
-                faces.allScans().forEach { s ->
+                if (people) faces.allScans().forEach { s ->
                     val f = fileIndex[s.fileId] ?: return@forEach
                     put(JSONObject().put("f", f).put("status", s.status).put("read", s.framesRead).put("failed", s.framesFailed)
                         .put("faces", s.faces).put("rejects", s.rejects).put("version", s.version).put("at", s.scannedAt)
@@ -85,14 +92,14 @@ internal object BackupExtras {
                 }
             })
             .put("ignored", JSONArray().apply {
-                faces.allIgnored().forEach { g ->
+                if (people) faces.allIgnored().forEach { g ->
                     val f = g.fileId?.let { fileIndex[it] ?: return@forEach }
                     put(JSONObject().put("f", f ?: JSONObject.NULL).put("at", g.createdAt)
                         .put("emb", java.util.Base64.getEncoder().encodeToString(g.embeddings)))
                 }
             })
             .put("rejections", JSONArray().apply {
-                faces.rejections().filter { it.trackId in trackIds }.forEach {
+                if (people) faces.rejections().filter { it.trackId in trackIds }.forEach {
                     put(JSONObject().put("t", it.trackId).put("p", it.personId).put("sim", it.similarity.toDouble()))
                 }
             })
@@ -136,7 +143,7 @@ internal object BackupExtras {
      * Read what [write] stored, after the files: [newIds] are the restored files by archive
      * position. Returns false when the archive has no such part (older backups).
      */
-    suspend fun read(db: CriptaDatabase, newIds: Array<String?>, inp: DataInputStream): Boolean {
+    suspend fun read(db: CriptaDatabase, newIds: Array<String?>, inp: DataInputStream, contents: Contents? = null): Boolean {
         val magic = try { inp.readInt() } catch (e: java.io.EOFException) { return false }
         if (magic != MAGIC) return false
         val o = JSONObject(String(inp.blob()))
@@ -145,6 +152,9 @@ internal object BackupExtras {
         fun file(i: Any?): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) }
         fun originOf(v: Any?): String = file(v) ?: (v as? String).orEmpty()
 
+        contents?.people = o.optJSONArray("persons")?.length() ?: 0
+        contents?.analysis = listOf("prints", "signatures", "rules", "rejected", "dupPrints", "dupApart")
+            .any { (o.optJSONArray(it)?.length() ?: 0) > 0 }
         val personIds = HashMap<Long, Long>()
         val covers = HashMap<Long, Long>()
         o.optJSONArray("persons")?.let { a ->

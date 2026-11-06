@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.ui.theme.CriptaIcons
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
@@ -11,18 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -80,11 +73,11 @@ fun fileMeta(file: FileEntity, withDuration: Boolean = true): String {
 }
 
 fun typeIconFor(mime: String): ImageVector = when {
-    VaultRepository.isImage(mime) -> Icons.Filled.Image
-    VaultRepository.isVideo(mime) -> Icons.Filled.Movie
-    mime == MIME_NOTE -> Icons.Filled.Description
-    mime == "application/pdf" -> Icons.Filled.PictureAsPdf
-    else -> Icons.AutoMirrored.Filled.InsertDriveFile
+    VaultRepository.isImage(mime) -> CriptaIcons.Image
+    VaultRepository.isVideo(mime) -> CriptaIcons.Movie
+    VaultRepository.isNote(mime) -> CriptaIcons.Description
+    mime == "application/pdf" -> CriptaIcons.PictureAsPdf
+    else -> CriptaIcons.InsertDriveFile
 }
 
 /**
@@ -110,27 +103,27 @@ fun MediaThumb(
         selected = selected,
         shape = shape,
         modifier = modifier,
-        overlay = { CornerSelectionCheck(selected, selectionMode, size = 22.dp) },
+        overlay = { CornerSelectionCheck(selected, selectionMode, size = 24.dp) },
     ) {
         CoverPlaceholderBackground()
         ThumbCrossfade(bmp, contentDescription = null, modifier = Modifier.fillMaxSize()) {
             CoverPlaceholder(icon, 28.dp)
         }
         if (isVideo) CoverPlayMark(Modifier.align(Alignment.Center))
-        if (file.isFavorite && showFavoriteBadge) CoverStar(Modifier.align(Alignment.TopStart).padding(6.dp))
+        if (file.isFavorite && showFavoriteBadge) CoverStar(Modifier.align(Alignment.TopStart).padding(8.dp))
     }
 }
 
 /** Neutral tile behind a cover while it loads (and around images with transparency). */
 @Composable
 fun CoverPlaceholderBackground() {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
 }
 
 /** A cover without an image: the file type's icon on the neutral tile. */
 @Composable
 fun CoverPlaceholder(icon: ImageVector, size: Dp) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size))
     }
 }
@@ -138,16 +131,17 @@ fun CoverPlaceholder(icon: ImageVector, size: Dp) {
 /** Short text on a cover (a video's length): white on the dark glass, round. */
 @Composable
 fun CoverBadge(text: String, modifier: Modifier = Modifier) {
-    Box(modifier.clip(CircleShape).background(OnImageGlass).padding(horizontal = 7.dp, vertical = 2.dp)) {
+    Box(modifier.heightIn(min = 22.dp).clip(CircleShape).background(OnImageGlass).padding(horizontal = 8.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = Color.White, maxLines = 1)
     }
 }
 
 /** The favourite star on a cover, on the dark glass so it reads on light pictures too. */
 @Composable
-fun CoverStar(modifier: Modifier = Modifier, size: Dp = 22.dp, description: String? = "Preferito") {
+fun CoverStar(modifier: Modifier = Modifier, size: Dp = 28.dp, description: String? = "Preferito") {
+    // DS `cr-glass--round` 28dp with an 18dp filled star.
     Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
-        Icon(Icons.Filled.Star, description, tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(size * 0.68f))
+        Icon(CriptaIcons.Star, description, tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(size * 0.64f))
     }
 }
 
@@ -155,7 +149,7 @@ fun CoverStar(modifier: Modifier = Modifier, size: Dp = 22.dp, description: Stri
 @Composable
 fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
     Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
-        Icon(Icons.Filled.PlayArrow, "Video", tint = Color.White, modifier = Modifier.size(size * 0.62f))
+        Icon(CriptaIcons.PlayArrow, "Video", tint = Color.White, modifier = Modifier.size(size * 0.62f))
     }
 }
 
@@ -185,7 +179,7 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp) {
             val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
-            Icon(Icons.Filled.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
+            Icon(CriptaIcons.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
         }
     }
 }
@@ -197,15 +191,17 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp) {
 @Composable
 fun HeaderTitle(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painterResource(com.cripta.app.R.drawable.ic_launcher_foreground),
+        // DS: the keyhole mark in accent, 28dp, beside the headline.
+        Icon(
+            painterResource(com.cripta.app.R.drawable.ic_cripta_logo),
             contentDescription = null,
-            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp),
         )
         val glide = com.cripta.app.ui.theme.animationsEnabled()
         Text(text, maxLines = 1, overflow = if (glide) TextOverflow.Clip else TextOverflow.Ellipsis,
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = 6.dp).then(
+            modifier = Modifier.padding(start = 12.dp).then(
                 if (glide) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1200, repeatDelayMillis = 2000)
                 else Modifier,
             ))
@@ -226,9 +222,15 @@ fun MediaThumbCell(
         MediaThumb(file, thumb, Modifier.fillMaxWidth().aspectRatio(1f), coverVersion = coverVersion,
             showFavoriteBadge = showFavoriteBadge)
         Text(file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp, start = 2.dp))
         Text(fileMeta(file), maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 2.dp))
     }
+}
+
+/** Title of a pushed page (an open folder): DS `title-lg`, one line. */
+@Composable
+fun PageTitle(text: String) {
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
 }

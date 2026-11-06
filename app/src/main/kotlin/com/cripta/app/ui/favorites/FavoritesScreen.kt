@@ -1,5 +1,6 @@
 package com.cripta.app.ui.favorites
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -17,11 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -82,12 +78,12 @@ fun FavoritesScreen(
                 title = { com.cripta.app.ui.components.HeaderTitle("Preferiti") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                        Icon(CriptaIcons.ArrowBack, "Indietro")
                     }
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.Filled.Sort, "Ordinamento preferiti") }
+                        IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, "Ordinamento preferiti") }
                         DropdownMenu(expanded = sortMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { sortMenu = false }) {
                             listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale").forEach { (key, label) ->
                                 DropdownMenuItem(text = { Text((if (sort.first == key) "✓ " else "") + label) },
@@ -121,7 +117,7 @@ fun FavoritesScreen(
                 }
                 FavPhase.Empty -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
+                        Icon(CriptaIcons.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
                         Text("Nessun preferito", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
                         Text("Segna i file o le cartelle con la stella per trovarli qui.", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -188,7 +184,7 @@ fun FavoritesScreen(
                                         },
                                         modifier = Modifier.size(40.dp),
                                     ) {
-                                        Icon(Icons.Filled.Star, "Rimuovi dai preferiti",
+                                        Icon(CriptaIcons.Star, "Rimuovi dai preferiti",
                                             tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(20.dp))
                                     }
                                 }

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.auth
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -15,21 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.cripta.app.ui.components.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -136,9 +133,10 @@ fun AuthScreen(
                 val align = if (compact) TextAlign.Start else TextAlign.Center
                 Text(
                     if (state.firstRun) "Crea il tuo vault" else "Cripta",
-                    style = MaterialTheme.typography.headlineMedium,
+                    // DS: the name on the lock screen in `display`.
+                    style = if (state.firstRun) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displayMedium,
                     textAlign = align,
-                    modifier = Modifier.padding(top = if (compact) 0.dp else 20.dp).semantics { heading() }.entrance({ textIn.value }),
+                    modifier = Modifier.padding(top = if (compact) 0.dp else 24.dp).semantics { heading() }.entrance({ textIn.value }),
                 )
                 Column(Modifier.entrance({ textIn.value })) {
                     when {
@@ -162,7 +160,7 @@ fun AuthScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = align,
-                            modifier = Modifier.padding(top = 6.dp),
+                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                 }
@@ -185,21 +183,27 @@ fun AuthScreen(
                     }
                     if (state.noDeviceCredential) {
                         Button(onClick = onOpenSecuritySettings, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
-                            Icon(Icons.Filled.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Icon(CriptaIcons.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                             com.cripta.app.ui.components.ButtonText("Apri impostazioni di sicurezza")
                         }
                         TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { com.cripta.app.ui.components.ButtonText("Riprova") }
                     } else {
-                        if (withCode && hasCode) {
-                            code(compact)
-                            if (!pinOnly) Spacer(Modifier.size(12.dp))
-                        }
+                        // DS Sblocco: the one filled action first, the app code under it as a text button.
                         if (!pinOnly) {
-                            Button(onClick = onAuthenticate, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
-                                com.cripta.app.ui.components.ButtonText(if (state.firstRun) "Crea vault" else "Sblocca", style = MaterialTheme.typography.titleSmall)
+                            Button(onClick = onAuthenticate, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
+                                if (!state.firstRun) {
+                                    Icon(CriptaIcons.Fingerprint, null, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.size(8.dp))
+                                }
+                                com.cripta.app.ui.components.ButtonText(if (state.firstRun) "Crea vault" else "Sblocca")
                             }
                         }
+                        if (withCode && hasCode) {
+                            if (!pinOnly) Spacer(Modifier.size(8.dp))
+                            code(compact)
+                        }
+                        if (!compact) Spacer(Modifier.size(24.dp))
                     }
                 }
             }
@@ -237,7 +241,9 @@ fun AuthScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Column(Modifier.padding(top = screenH * 0.12f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // DS position (a quarter down) only when the way in is one button: with the app
+                    // code's keypad or field below, that much room pushed the keypad off the screen.
+                    Column(Modifier.padding(top = screenH * (if (hasCode) 0.12f else 0.24f)), horizontalAlignment = Alignment.CenterHorizontally) {
                         logo(72)
                         header(false)
                     }
@@ -319,11 +325,11 @@ private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> 
             KeypadKey(key, enabled = !busy && digits.isNotEmpty(), tonal = false,
                 onClick = { tap(); digits = digits.dropLast(1) }, onLongClick = { tap(); digits = "" },
                 label = "Cancella") {
-                Icon(Icons.AutoMirrored.Filled.Backspace, null)
+                Icon(CriptaIcons.Backspace, null)
             }
             KeypadKey(key, enabled = !busy, onClick = { add('0') }) { Text("0", style = MaterialTheme.typography.headlineMedium) }
             KeypadKey(key, enabled = ready, primary = true, onClick = { submit() }, label = "Sblocca") {
-                Icon(Icons.Filled.Check, null)
+                Icon(CriptaIcons.Check, null)
             }
         }
     }
@@ -389,7 +395,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { submit() }),
             modifier = Modifier.widthIn(max = 280.dp).focusRequester(focus),
         )
-        androidx.compose.material3.FilledTonalButton(onClick = submit, enabled = ready, modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp)) {
+        com.cripta.app.ui.components.FilledTonalButton(onClick = submit, enabled = ready, modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp)) {
             if (busy) {
                 androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))

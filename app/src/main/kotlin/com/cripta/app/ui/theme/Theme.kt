@@ -117,6 +117,11 @@ fun CriptaTheme(
         dark -> DarkColors
         else -> LightColors
     }
+    // Manrope comes from res/font and Compose loads each weight the first time it is drawn, on the
+    // UI thread: the first media opened (new weights in the viewer and its panel) stuttered on it.
+    // All five weights are loaded once here instead, while the lock screen is up.
+    val fontResolver = androidx.compose.ui.platform.LocalFontFamilyResolver.current
+    androidx.compose.runtime.LaunchedEffect(fontResolver) { runCatching { fontResolver.preload(Manrope) } }
     MaterialTheme(
         colorScheme = colors,
         typography = CriptaTypography,

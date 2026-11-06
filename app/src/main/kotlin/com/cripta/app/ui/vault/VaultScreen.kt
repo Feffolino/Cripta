@@ -1,5 +1,7 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.theme.CriptaIcons
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.layout
 
@@ -8,12 +10,6 @@ import com.cripta.app.ui.components.vaultUnlocked
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material.icons.automirrored.filled.LabelOff
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.BookmarkAdd
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,46 +52,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.DriveFileMove
-import androidx.compose.material.icons.filled.DriveFileRenameOutline
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EnhancedEncryption
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -107,10 +64,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Button
+import com.cripta.app.ui.components.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -143,10 +100,6 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -211,7 +164,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -249,7 +201,7 @@ import java.util.Locale
 
 private fun typeLabel(t: TypeFilter) = when (t) {
     TypeFilter.ALL -> "Tutti"
-    TypeFilter.IMAGE -> "Immagini"
+    TypeFilter.IMAGE -> "Foto"
     TypeFilter.VIDEO -> "Video"
     TypeFilter.OTHER -> "Altro"
 }
@@ -291,6 +243,9 @@ fun VaultScreen(
     val portraitColumns by vm.gridColumns.collectAsStateWithLifecycle()
     val landscapeColumns by vm.gridColumnsLandscape.collectAsStateWithLifecycle()
     val allFolders by vm.allFolders.collectAsStateWithLifecycle()
+    // The folders' names as they are now: path keeps the rows as they were when entered, so a rename
+    // from the open folder's ⋮ left the old name in the title, the breadcrumb and the captions.
+    val pathNames = remember(path, allFolders) { path.map { p -> allFolders.firstOrNull { it.id == p.id }?.name ?: p.name } }
     val sortKey by vm.sortKey.collectAsStateWithLifecycle()
     val sortAscending by vm.sortAscending.collectAsStateWithLifecycle()
     val folderStats by vm.folderStats.collectAsStateWithLifecycle()
@@ -345,7 +300,7 @@ fun VaultScreen(
     compareResult?.let { text ->
         CriptaAlertDialog(
             onDismissRequest = { compareResult = null },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { compareResult = null }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
+            confirmButton = { com.cripta.app.ui.components.TextButton(onClick = { compareResult = null }) { com.cripta.app.ui.components.ButtonText("Chiudi") } },
             title = { Text(compareTitle) },
             text = { Text(text) },
         )
@@ -508,14 +463,19 @@ fun VaultScreen(
                         label = "title",
                     ) { sel ->
                         if (sel) SelectionCountTitle(shownSelCount)
-                        else com.cripta.app.ui.components.HeaderTitle(path.lastOrNull()?.name ?: "Cripta")
+                        // DS: the tab's root carries the mark and the headline; an open folder is a
+                        // pushed page with its name in title-lg.
+                        else if (path.isEmpty()) com.cripta.app.ui.components.HeaderTitle("Cartelle")
+                        // The live row: path holds the entities as they were when entered, so a
+                        // rename from the folder's own ⋮ left the old name here.
+                        else com.cripta.app.ui.components.PageTitle(pathNames.last())
                     }
                 },
                 navigationIcon = {
                     if (inSelection) {
-                        IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
+                        IconButton(onClick = { selection = emptySet() }) { Icon(CriptaIcons.Close, "Esci dalla selezione") }
                     } else if (path.isNotEmpty()) {
-                        IconButton(onClick = { vm.goUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Su") }
+                        IconButton(onClick = { vm.goUp() }) { Icon(CriptaIcons.ArrowBack, "Su") }
                     }
                 },
                 actions = {
@@ -523,40 +483,37 @@ fun VaultScreen(
                         val allIds = files.map { it.file.id }.toSet()
                         val allSelected = allIds.isNotEmpty() && selection.containsAll(allIds)
                         IconButton(onClick = { selection = if (allSelected) emptySet() else allIds }) {
-                            Icon(Icons.Filled.SelectAll, if (allSelected) "Deseleziona tutto" else "Seleziona tutto",
+                            Icon(CriptaIcons.SelectAll, if (allSelected) "Deseleziona tutto" else "Seleziona tutto",
                                 tint = if (allSelected) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                         }
                     } else {
-                        // Search is an icon that opens the field (it stays open while a query is typed);
-                        // tapping it again closes the field and clears the query.
-                        val searchShown = searchExpanded || filters.query.isNotBlank()
-                        IconButton(onClick = {
-                            if (searchShown) { searchExpanded = false; vm.setQuery("") } else searchExpanded = true
-                        }) {
-                            Icon(Icons.Filled.Search, if (searchShown) "Chiudi ricerca" else "Cerca",
-                                tint = if (searchShown) MaterialTheme.colorScheme.primary else LocalContentColor.current)
-                        }
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Filled.Tune, "Filtri e ordinamento",
-                                tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        // DS Cartella: inside a folder the search is an icon in the bar (the root keeps
+                        // the field); tapping it again closes the field and clears the query.
+                        if (path.isNotEmpty()) {
+                            IconButton(onClick = {
+                                if (searchExpanded) { searchExpanded = false; vm.setQuery("") } else searchExpanded = true
+                            }) {
+                                Icon(CriptaIcons.Search, if (searchExpanded) "Chiudi la ricerca" else "Cerca",
+                                    tint = if (searchExpanded) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                            }
                         }
                         // One "Vista" menu: grid / list and the number of columns.
                         var viewMenu by remember { mutableStateOf(false) }
                         IconButton(onClick = { viewMenu = true }) {
-                            Icon(if (viewMode == ViewMode.GRID) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
+                            Icon(if (viewMode == ViewMode.GRID) CriptaIcons.GridView else CriptaIcons.ViewList,
                                 if (viewMode == ViewMode.GRID) "Vista: griglia, $gridColumns colonne" else "Vista: lista")
                         }
                         DropdownMenu(expanded = viewMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { viewMenu = false }) {
                             DropdownMenuItem(
                                 text = { Text("Griglia") },
-                                leadingIcon = { Icon(Icons.Filled.GridView, null) },
-                                trailingIcon = { if (viewMode == ViewMode.GRID) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(CriptaIcons.GridView, null) },
+                                trailingIcon = { if (viewMode == ViewMode.GRID) Icon(CriptaIcons.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
                                 onClick = { vm.setViewMode(ViewMode.GRID) },
                             )
                             DropdownMenuItem(
                                 text = { Text("Lista") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ViewList, null) },
-                                trailingIcon = { if (viewMode == ViewMode.LIST) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(CriptaIcons.ViewList, null) },
+                                trailingIcon = { if (viewMode == ViewMode.LIST) Icon(CriptaIcons.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
                                 onClick = { vm.setViewMode(ViewMode.LIST); viewMenu = false },
                             )
                             if (viewMode == ViewMode.GRID) {
@@ -576,10 +533,19 @@ fun VaultScreen(
                             // A way into selection mode besides long-press.
                             DropdownMenuItem(
                                 text = { Text("Seleziona tutto") },
-                                leadingIcon = { Icon(Icons.Filled.SelectAll, null) },
+                                leadingIcon = { Icon(CriptaIcons.SelectAll, null) },
                                 enabled = files.isNotEmpty(),
                                 onClick = { viewMenu = false; selection = files.map { it.file.id }.toSet() },
                             )
+                        }
+                        // DS order: the view, then filters and sort.
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            Icon(CriptaIcons.Tune, "Filtri e ordinamento",
+                                tint = if (filters.active) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        }
+                        // DS Cartella: the open folder's actions behind ⋮, last (as a long press on its card).
+                        if (path.isNotEmpty()) {
+                            IconButton(onClick = { folderMenu = path.last() }) { Icon(CriptaIcons.MoreVert, "Azioni cartella") }
                         }
                     }
                 },
@@ -602,16 +568,16 @@ fun VaultScreen(
                 val convertibleSel = convertibleIds intersect selection
                 val convertible = convertibleSel.size
                 val actions = buildList {
-                    add(SelAction(Icons.Filled.Star, if (allFav) "Togli preferito" else "Preferito") {
+                    add(SelAction(CriptaIcons.Star, if (allFav) "Togli preferito" else "Preferito") {
                         favoriteWithUndo(selection.toList(), !allFav); selection = emptySet()
                     })
-                    add(SelAction(Icons.Filled.Label, "Etichette") {
+                    add(SelAction(CriptaIcons.Label, "Etichette") {
                         if (selection.size == 1) tagTargetId = selection.first() else batchTag = true
                     })
-                    add(SelAction(Icons.Filled.DriveFileMove, "Sposta") { showMove = true })
-                    add(SelAction(Icons.Filled.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
-                    add(SelAction(Icons.Filled.Download, "Esporta") { downloadAsk = selection.toList() })
-                    if (convertible > 0) add(SelAction(Icons.Filled.Autorenew, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
+                    add(SelAction(CriptaIcons.DriveFileMove, "Sposta") { showMove = true })
+                    add(SelAction(CriptaIcons.Delete, "Elimina", destructive = true) { confirmMultiDelete = true })
+                    add(SelAction(CriptaIcons.Download, "Esporta") { downloadAsk = selection.toList() })
+                    if (convertible > 0) add(SelAction(CriptaIcons.Autorenew, if (convertible == 1) "Converti MP4" else "Converti ($convertible)") {
                         // Re-read at tap time: both states may have moved on since this bar was built.
                         val ids = (convertibleIds intersect selection).toList()
                         if (ids.isNotEmpty()) {
@@ -624,11 +590,11 @@ fun VaultScreen(
                             selection = emptySet()
                         }
                     })
-                    if (videoCount > 0) add(SelAction(Icons.Filled.Image, if (videoCount == 1) "Copertina" else "Copertine ($videoCount)") {
+                    if (videoCount > 0) add(SelAction(CriptaIcons.Image, if (videoCount == 1) "Copertina" else "Copertine ($videoCount)") {
                         showRegenCover = true
                     })
                     // Intro and outro of the selected videos now, again even if analysed before.
-                    if (videoCount > 0) add(SelAction(Icons.Filled.GraphicEq, if (videoCount == 1) "Analizza intro" else "Analizza ($videoCount)") {
+                    if (videoCount > 0) add(SelAction(CriptaIcons.GraphicEq, if (videoCount == 1) "Analizza intro" else "Analizza ($videoCount)") {
                         val ids = files.filter { it.file.id in selection && VaultRepository.isVideo(it.file.mimeType) }.map { it.file.id }
                         if (ids.isNotEmpty()) {
                             com.cripta.app.work.ConversionService.startIntroScan(ctx, manual = true, fileIds = ids)
@@ -637,13 +603,13 @@ fun VaultScreen(
                         }
                     })
                     // Two analysed videos: how much audio their starts share (to check the recognition).
-                    if (videoCount == 2 && selection.size == 2) add(SelAction(Icons.Filled.GraphicEq, "Confronta audio") {
+                    if (videoCount == 2 && selection.size == 2) add(SelAction(CriptaIcons.GraphicEq, "Confronta audio") {
                         val (a, b) = selection.toList()
                         vm.compareAudio(a, b) { compareTitle = "Confronto audio"; compareResult = it }
                     })
                     // Two photos or videos: why their faces are (not) the same person.
                     val visual = files.count { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
-                    if (visual > 0) add(SelAction(Icons.Filled.Face, if (visual == 1) "Analizza volti" else "Analizza volti ($visual)") {
+                    if (visual > 0) add(SelAction(CriptaIcons.Face, if (visual == 1) "Analizza volti" else "Analizza volti ($visual)") {
                         val ids = files.filter { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
                             .map { it.file.id }
                         if (ids.isNotEmpty()) {
@@ -651,7 +617,7 @@ fun VaultScreen(
                             selection = emptySet()
                         }
                     })
-                    if (selection.size == 1) add(SelAction(Icons.Filled.Edit, "Rinomina") { renameTargetId = selection.first() })
+                    if (selection.size == 1) add(SelAction(CriptaIcons.Edit, "Rinomina") { renameTargetId = selection.first() })
                 }
                 SelectionBar(actions)
             }
@@ -668,13 +634,13 @@ fun VaultScreen(
                     // the actions are open (they take its place).
                     // Centred column: the small "a caso" button sits exactly over the middle of the "+".
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        val here = path.lastOrNull()?.name
+                        val here = pathNames.lastOrNull()
                         val actions = buildList {
-                            add(FabAction("Importa", Icons.Filled.EnhancedEncryption,
+                            add(FabAction("Importa", CriptaIcons.Upload,
                                 "Importa file " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; startImport() })
-                            add(FabAction("Cartella", Icons.Filled.CreateNewFolder,
+                            add(FabAction("Cartella", CriptaIcons.CreateNewFolder,
                                 "Nuova cartella " + (here?.let { "dentro $it" } ?: "nella radice")) { fabExpanded = false; showNewFolder = true })
-                            if (display.showNoteFab) add(FabAction("Nota", Icons.Filled.Description,
+                            if (display.showNoteFab) add(FabAction("Nota", CriptaIcons.Description,
                                 "Nuova nota " + (here?.let { "in $it" } ?: "nella radice")) { fabExpanded = false; onNewNote(path.lastOrNull()?.id) })
                         }
                         if (display.showRandomFab) {
@@ -686,13 +652,15 @@ fun VaultScreen(
                             // Kept in place (only faded) while the actions are open: removed, the
                             // column would shrink and the "+" jump down under the finger.
                             val randomAlpha by animateFloatAsState(if (fabExpanded) 0f else 1f, Motion.enter(Motion.SHORT), label = "randomFab")
+                            // DS cr-fab--small: 44dp, radius 14, surface-overlay, ink icon, the one float shadow.
                             androidx.compose.material3.SmallFloatingActionButton(
                                 onClick = { if (!fabExpanded) vm.randomShuffleOpen(onOpenFile) },
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                contentColor = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.graphicsLayer { alpha = randomAlpha }
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                shape = com.cripta.app.ui.theme.RadiusMd,
+                                modifier = Modifier.size(44.dp).graphicsLayer { alpha = randomAlpha }
                                     .then(if (fabExpanded) Modifier.clearAndSetSemantics { } else Modifier),
-                            ) { Icon(Icons.Filled.Shuffle, randomLabel) }
+                            ) { Icon(CriptaIcons.Shuffle, randomLabel) }
                         }
                         Box {
                             // The actions stand above the "+", right edges aligned, and take no room in
@@ -700,7 +668,7 @@ fun VaultScreen(
                             // to match the button's (a row beside it was taller than the "+": centred
                             // it reached the navigation bar, lifted it looked off-centre).
                             val gap = with(LocalDensity.current) { 16.dp.roundToPx() }
-                            val fabW = with(LocalDensity.current) { 56.dp.roundToPx() }
+                            val fabW = with(LocalDensity.current) { 60.dp.roundToPx() }
                             Box(Modifier.align(Alignment.TopStart).layout { m, c ->
                                 val p = m.measure(c.copy(minWidth = 0, minHeight = 0,
                                     maxWidth = androidx.compose.ui.unit.Constraints.Infinity,
@@ -720,14 +688,18 @@ fun VaultScreen(
                             }
                             // "+" turns 45 degrees into an "x" while the actions are open.
                             val fabRotation by animateFloatAsState(if (fabExpanded) 45f else 0f, Motion.enter(Motion.MEDIUM), label = "fabRot")
+                            // DS cr-fab: 60dp, radius 20, accent with on-accent icon.
                             FloatingActionButton(
                                 onClick = { fabExpanded = !fabExpanded },
-                                modifier = Modifier.semantics { this.stateDescription = if (fabExpanded) "Aperto" else "Chiuso" },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(60.dp).semantics { this.stateDescription = if (fabExpanded) "Aperto" else "Chiuso" },
                             ) {
                                 Icon(
-                                    Icons.Filled.Add,
+                                    CriptaIcons.Add,
                                     if (fabExpanded) "Chiudi azioni" else "Aggiungi",
-                                    Modifier.graphicsLayer { rotationZ = fabRotation },
+                                    Modifier.size(28.dp).graphicsLayer { rotationZ = fabRotation },
                                 )
                             }
                         }
@@ -738,8 +710,9 @@ fun VaultScreen(
     ) { pad ->
       Box(Modifier.fillMaxSize().padding(pad)) {
         Column(Modifier.fillMaxSize().nestedScroll(fabScroll)) {
-            // Search field, revealed from the top-bar icon; it stays while a query is typed.
-            val showSearch = searchExpanded || filters.query.isNotBlank()
+            // Search field: always at the root (DS Cartelle); inside a folder revealed from the
+            // top-bar icon, and it stays while a query is typed.
+            val showSearch = path.isEmpty() || searchExpanded || filters.query.isNotEmpty()
             val searchFocus = remember { FocusRequester() }
             val focusManager = LocalFocusManager.current
             LaunchedEffect(searchExpanded) {
@@ -757,15 +730,15 @@ fun VaultScreen(
                     value = filters.query,
                     onValueChange = vm::setQuery,
                     placeholder = { Text("Cerca nome o etichetta") },
-                    leadingIcon = { Icon(Icons.Filled.Search, null) },
+                    leadingIcon = { Icon(CriptaIcons.Search, null) },
                     trailingIcon = if (filters.query.isNotEmpty()) ({
-                        IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Filled.Close, "Cancella ricerca") }
+                        IconButton(onClick = { vm.setQuery("") }) { Icon(CriptaIcons.Close, "Cancella ricerca") }
                     }) else null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = if (landscape) 2.dp else 6.dp)
+                        .padding(horizontal = 16.dp, vertical = if (landscape) 2.dp else 4.dp)
                         .focusRequester(searchFocus),
                 )
             }
@@ -777,12 +750,17 @@ fun VaultScreen(
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
                 people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors)
-            if (path.isNotEmpty() && !filters.active) {
-                Breadcrumb(path.map { it.name }, onGo = vm::goToDepth)
+            if (path.size >= 2 && !filters.active) {
+                Breadcrumb(pathNames, onGo = vm::goToDepth)
             }
             ImportBanner(importState, onDismiss = vm::dismissImportResult)
             ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult,
                 onResolveOriginal = vm::resolveOriginal)
+            QuickChips(
+                atRoot = path.isEmpty(), filters = filters, sortLabel = sortChipLabel(sortKey, sortAscending),
+                onType = vm::setType, onFavorites = { vm.setFavoritesOnly(!filters.favoritesOnly) },
+                onUntagged = { vm.setUntaggedOnly(!filters.untaggedOnly) }, onSort = { showFilterSheet = true },
+            )
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
             }
@@ -833,14 +811,12 @@ fun VaultScreen(
             var gridCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
             val folderRow: @Composable () -> Unit = {
-                Column {
-                    SectionLabel("Cartelle", folders.size)
-                    androidx.compose.foundation.lazy.LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(vertical = 4.dp),
-                    ) {
-                        items(folders.size, key = { folders[it].id }) { i ->
-                            val folder = folders[i]
+                val perRow = if (landscape) 4 else 2
+                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    folders.chunked(perRow).forEach { rowFolders ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        rowFolders.forEach { folder ->
+                          androidx.compose.runtime.key(folder.id) {
                             androidx.compose.runtime.DisposableEffect(folder.id) {
                                 onDispose { folderBounds.remove(folder.id) }
                             }
@@ -856,7 +832,7 @@ fun VaultScreen(
                                 thumb = { vm.thumb(it) },
                                 showInfo = display.showFolderInfo,
                                 highlighted = hoverFolder == folder.id,
-                                modifier = Modifier.width(if (landscape) 110.dp else 124.dp)
+                                modifier = Modifier.weight(1f)
                                     .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
                                     .combinedClickable(
                                         onClickLabel = "Apri",
@@ -873,7 +849,10 @@ fun VaultScreen(
                                         )
                                     },
                             )
+                          }
                         }
+                        repeat(perRow - rowFolders.size) { Spacer(Modifier.weight(1f)) }
+                    }
                     }
                 }
             }
@@ -933,7 +912,7 @@ fun VaultScreen(
                 files.isEmpty() && !showFolders ->
                     EmptyState(filters.active, Modifier.fillMaxSize(),
                         onImport = { startImport() },
-                        folderName = path.lastOrNull()?.name,
+                        folderName = pathNames.lastOrNull(),
                         // Where the filters actually looked: the vault, this folder, or the root's own files.
                         searchedWhere = when {
                             !filterLocalOnly -> "in tutto il vault"
@@ -1050,14 +1029,15 @@ fun VaultScreen(
                                 dragAnchor = null; hoverFolder = null
                             }
                         },
-                    contentPadding = PaddingValues(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     // Grid: a little more air between rows than between columns, the name sits under each cover.
                     verticalArrangement = Arrangement.spacedBy(if (viewMode == ViewMode.GRID) 14.dp else 4.dp),
                 ) {
                     if (showFolders) {
                         // Folders in their own scrollable row, so the files below stay a uniform grid.
                         item(key = FOLDERS_KEY, span = { GridItemSpan(maxLineSpan) }) { folderRow() }
+                        if (files.isNotEmpty() && grouped.firstOrNull()?.first.isNullOrEmpty()) header("File")
                     }
                     grouped.forEach { (label, group) ->
                         if (label.isNotEmpty()) header(label, group.size)
@@ -1194,7 +1174,10 @@ fun VaultScreen(
         )
     }
 
-    folderMenu?.let { folder ->
+    folderMenu?.let { opened ->
+        // Read live: the open folder's ⋮ passes path.last(), a copy taken on entering it, which kept
+        // showing "Aggiungi ai preferiti" (and set it again) after the folder had become a favourite.
+        val folder = allFolders.firstOrNull { it.id == opened.id } ?: opened
         com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { folderMenu = null }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium,
@@ -1206,23 +1189,25 @@ fun VaultScreen(
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 10.dp),
                 )
-                SheetAction(Icons.Filled.Folder, "Apri") {
+                // The open folder's own menu (its ⋮ in the bar) has no "Apri" nor "Elimina" (Back first).
+                val current = folder.id == path.lastOrNull()?.id
+                if (!current) SheetAction(CriptaIcons.Folder, "Apri") {
                     folderMenu = null
                     if (inSelection) notify("Esci dalla selezione per aprire una cartella") else vm.enterFolder(folder)
                 }
-                SheetAction(Icons.Filled.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
-                SheetAction(if (folder.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                SheetAction(CriptaIcons.DriveFileRenameOutline, "Rinomina") { folderToRename = folder; folderMenu = null }
+                SheetAction(if (folder.isFavorite) CriptaIcons.Star else CriptaIcons.StarBorder,
                     if (folder.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti") {
                     vm.setFolderFavorite(folder.id, !folder.isFavorite); folderMenu = null
                 }
-                SheetAction(Icons.Filled.Casino,
+                SheetAction(CriptaIcons.Casino,
                     if (folder.excludedFromRandom) "Includi nel casuale" else "Escludi dal casuale (anche sottocartelle)") {
                     vm.setFolderRandomExcluded(folder.id, !folder.excludedFromRandom); folderMenu = null
                     notify(if (folder.excludedFromRandom) "Cartella inclusa nel casuale" else "Cartella e sottocartelle escluse dal casuale")
                 }
-                SheetAction(Icons.Filled.Palette, "Personalizza colore e icona") { folderToStyle = folder; folderMenu = null }
-                SheetAction(Icons.Filled.Image, "Scegli la copertina") { folderToCover = folder; folderMenu = null }
-                SheetAction(Icons.Filled.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
+                SheetAction(CriptaIcons.Palette, "Personalizza colore e icona") { folderToStyle = folder; folderMenu = null }
+                SheetAction(CriptaIcons.Image, "Scegli la copertina") { folderToCover = folder; folderMenu = null }
+                if (!current) SheetAction(CriptaIcons.Delete, "Elimina", destructive = true) { folderToDelete = folder; folderMenu = null }
             }
         }
     }
@@ -1301,7 +1286,7 @@ fun VaultScreen(
     }
 
     if (showStats) {
-        StatsSheet(stats, filters.active, path.lastOrNull()?.name, subtree = path.lastOrNull()?.let { folderStats[it.id] }, onDismiss = { showStats = false })
+        StatsSheet(stats, filters.active, pathNames.lastOrNull(), subtree = path.lastOrNull()?.let { folderStats[it.id] }, onDismiss = { showStats = false })
     }
 
     downloadAsk?.let { ids ->
@@ -1416,74 +1401,17 @@ fun VaultScreen(
         )
     }
 
-    // Imports named like a vault file, or identical to one: never replaced or removed on their own.
-    // Asked one at a time once the import is over, after the originals question; "tutti" answers the
-    // rest of the same kind the same way. Dismissed, nothing changes for that file.
-    val versionAsk = pendingVersions.firstOrNull()
-    if (versionAsk != null && !importState.active && pendingOriginals.isEmpty()) {
-        val sameKind = pendingVersions.filter { it.identical == versionAsk.identical && it.similar == versionAsk.similar }
-        val more = sameKind.size - 1
-        val single = versionAsk.previousIds.size == 1
-        com.cripta.app.ui.components.CriptaAlertDialog(
-            onDismissRequest = { vm.keepVersionsSeparate(listOf(versionAsk)) },
-            title = { Text(when {
-                versionAsk.identical -> "Già nel vault?"
-                versionAsk.similar -> "Simile a uno del vault"
-                else -> "Nuova versione?"
-            }) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        when {
-                            versionAsk.identical ->
-                                "\"${versionAsk.newName}\" è identico a \"${versionAsk.previousName}\", già nel vault. " +
-                                    (if (trashEnabled) "La copia appena importata va nel cestino." else "La copia appena importata viene eliminata.")
-                            versionAsk.similar ->
-                                "\"${versionAsk.newName}\" sembra lo stesso contenuto di \"${versionAsk.previousName}\", già nel vault " +
-                                    "(salvato di nuovo, ricompresso o ridimensionato). «Sostituisci»: il nuovo ne prende etichette, cartella, " +
-                                    "preferito e posizione; " + (if (trashEnabled) "il vecchio va nel cestino." else "il vecchio resta nel vault.")
-                            single ->
-                                "\"${versionAsk.newName}\" ha lo stesso nome di \"${versionAsk.previousName}\", già nel vault, " +
-                                    "ma un contenuto diverso. Se ne è la nuova versione, ne prende etichette, cartella, preferito e posizione; " +
-                                    (if (trashEnabled) "la vecchia va nel cestino." else "la vecchia resta nel vault.")
-                            else ->
-                                "\"${versionAsk.newName}\" ha lo stesso nome di ${versionAsk.previousIds.size} file del vault, " +
-                                    "con contenuti diversi. Se ne è una nuova versione, ne prende le etichette."
-                        },
-                    )
-                    if (more > 0) {
-                        Text(
-                            when {
-                                versionAsk.identical && more == 1 -> "Dopo questo c'è un'altra copia identica di un file del vault."
-                                versionAsk.identical -> "Dopo questo ci sono altre $more copie identiche di file del vault."
-                                versionAsk.similar && more == 1 -> "Dopo questo c'è un altro media simile a uno del vault."
-                                versionAsk.similar -> "Dopo questo ci sono altri $more media simili a quelli del vault."
-                                more == 1 -> "Dopo questo c'è un altro file con lo stesso nome di uno del vault."
-                                else -> "Dopo questo ci sono altri $more file con lo stesso nome di file del vault."
-                            },
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { vm.keepVersionsSeparate(sameKind) }) { com.cripta.app.ui.components.ButtonText("Tieni tutti") }
-                            TextButton(onClick = { vm.replaceVersions(sameKind) }) {
-                                com.cripta.app.ui.components.ButtonText(if (versionAsk.identical) "Rimuovi tutte" else "Sostituisci tutti")
-                            }
-                        }
-                    }
-                    // Look-alikes may simply be unwanted: the new one can go instead.
-                    if (versionAsk.similar) TextButton(onClick = { vm.removeNewCopies(listOf(versionAsk)) }) {
-                        com.cripta.app.ui.components.ButtonText(if (trashEnabled) "Sposta il nuovo nel cestino" else "Elimina il nuovo",
-                            color = MaterialTheme.colorScheme.error)
-                    }
-                }
+    // Imports named like a vault file, or identical / similar to one: never replaced or removed on
+    // their own. DS "Già nel vault": once the import is over (after the originals question) one page
+    // lists them all, each with its choice; closing it keeps every file as it is.
+    if (pendingVersions.isNotEmpty() && !importState.active && pendingOriginals.isEmpty()) {
+        ImportConflictsPage(pendingVersions, trashEnabled, thumbOf = { id -> vm.fileFor(id)?.let { vm.thumb(it) } },
+            onApply = { replace, keep, remove ->
+                if (replace.isNotEmpty()) vm.replaceVersions(replace)
+                if (remove.isNotEmpty()) vm.removeNewCopies(remove)
+                if (keep.isNotEmpty()) vm.keepVersionsSeparate(keep)
             },
-            confirmButton = {
-                TextButton(onClick = { vm.replaceVersions(listOf(versionAsk)) }) {
-                    com.cripta.app.ui.components.ButtonText(if (versionAsk.identical) "Rimuovi la copia" else if (single) "Sostituisci" else "Prendi le etichette")
-                }
-            },
-            dismissButton = { TextButton(onClick = { vm.keepVersionsSeparate(listOf(versionAsk)) }) { com.cripta.app.ui.components.ButtonText("Tieni entrambi") } },
-        )
+            onDismiss = { vm.keepVersionsSeparate(pendingVersions) })
     }
 }
 
@@ -1513,10 +1441,11 @@ private fun LazyGridScope.header(text: String, count: Int? = null) {
 @Composable
 private fun SectionLabel(text: String, count: Int? = null) {
     Text(
-        text.uppercase() + (count?.let { " · $it" } ?: ""),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 2.dp).semantics { heading() },
+        text + (count?.let { " · " + com.cripta.app.ui.components.formatCount(it) } ?: ""),
+        style = com.cripta.app.ui.theme.HeadingStyle,
+        color = MaterialTheme.colorScheme.primary,
+        // DS: 28dp above a section heading (14 here + the grid's row gap), 10 under it.
+        modifier = Modifier.padding(top = 14.dp).semantics { heading() },
     )
 }
 
@@ -1565,9 +1494,10 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     // Where the finger put the thumb: while dragging the thumb follows the finger exactly instead
     // of the list, whose position moves in whole rows (with few files that made it jump in steps).
     var dragFraction by remember { mutableFloatStateOf(0f) }
-    // Scroll position as a continuous 0..1: the first visible item plus how far its row is scrolled,
-    // against the first index reachable at the very end (not the last index, which is never at the
-    // top: with a short list the thumb stopped halfway and then snapped to the bottom).
+    // Scroll position as a continuous 0..1: the items (rows) above the screen against those above
+    // plus those below, each counting the part of its edge row already scrolled. Normalising by how
+    // many items are visible made the thumb jump: that number changes as rows and full-width headers
+    // (the folders, the dates) come and go.
     val listFraction by remember(state) {
         derivedStateOf {
             val info = state.layoutInfo
@@ -1577,20 +1507,36 @@ private fun androidx.compose.foundation.layout.BoxScope.FastScroller(
                 !state.canScrollForward -> 1f
                 else -> {
                     val first = vis.first()
-                    val cols = vis.count { it.offset.y == first.offset.y }.coerceAtLeast(1)
-                    val pos = first.index + state.firstVisibleItemScrollOffset.toFloat() / first.size.height.coerceAtLeast(1) * cols
-                    val maxPos = (info.totalItemsCount - vis.size).coerceAtLeast(1)
-                    (pos / maxPos).coerceIn(0f, 1f)
+                    val firstCols = vis.count { it.offset.y == first.offset.y }.coerceAtLeast(1)
+                    val before = first.index + (-first.offset.y).coerceAtLeast(0).toFloat() / first.size.height.coerceAtLeast(1) * firstCols
+                    val last = vis.last()
+                    val lastCols = vis.count { it.offset.y == last.offset.y }.coerceAtLeast(1)
+                    val hidden = (last.offset.y + last.size.height - info.viewportEndOffset).coerceAtLeast(0)
+                    val after = (info.totalItemsCount - 1 - last.index) + hidden.toFloat() / last.size.height.coerceAtLeast(1) * lastCols
+                    (before / (before + after).coerceAtLeast(0.001f)).coerceIn(0f, 1f)
                 }
             }
         }
     }
     val fraction = if (dragging) dragFraction else listFraction
     val active = state.isScrollInProgress || dragging
-    val alpha by animateFloatAsState(if (active) 1f else 0f, label = "fastscroll")
+    // Stays a moment after the list stops, so it can be caught: it used to fade the instant the
+    // fling ended.
+    var linger by remember { mutableStateOf(false) }
+    LaunchedEffect(active) { if (active) linger = true else { kotlinx.coroutines.delay(1500); linger = false } }
+    // Only for a list worth jumping through (two screens or more): on a short one it popped up for
+    // nothing over the covers.
+    val worth by remember(state) {
+        derivedStateOf {
+            val info = state.layoutInfo
+            info.visibleItemsInfo.isNotEmpty() && info.totalItemsCount >= info.visibleItemsInfo.size * 2 &&
+                (state.canScrollForward || state.canScrollBackward)
+        }
+    }
+    val alpha by animateFloatAsState(if ((active || linger) && (worth || dragging)) 1f else 0f, label = "fastscroll")
     // The strip only takes drags while the scroller is visible: when hidden, touches on the right
     // edge go to the grid (select, open, scroll) instead of an invisible control.
-    val visible = active || alpha > 0.05f
+    val visible = alpha > 0.05f || dragging
     val thumbW by animateDpAsState(if (dragging) 10.dp else 6.dp, Motion.enter(Motion.SHORT), label = "thumbW")
     val density = LocalDensity.current
     val thumbH = 48.dp
@@ -1689,9 +1635,9 @@ private fun FileCell(
     val mime = item.file.mimeType
     val isVideo = VaultRepository.isVideo(mime)
     val fallbackIcon = when {
-        VaultRepository.isImage(mime) -> Icons.Filled.Image
-        isVideo -> Icons.Filled.Movie
-        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+        VaultRepository.isImage(mime) -> CriptaIcons.Image
+        isVideo -> CriptaIcons.Movie
+        else -> CriptaIcons.InsertDriveFile
     }
     val loaded by produceState<android.graphics.Bitmap?>(initialValue = null, item.file.id, coverVersion) { value = thumb() }
     // A freshly regenerated cover (override) wins over the cached/loaded one so it shows at once.
@@ -1707,7 +1653,7 @@ private fun FileCell(
                 selectionMode = selectionMode)
             Column(Modifier.padding(start = 14.dp).weight(1f)) {
                 Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+                    style = MaterialTheme.typography.bodyLarge)
                 if (display.showFileInfo) {
                     Text(listMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1729,11 +1675,12 @@ private fun FileCell(
             if (display.showTagsOnCover) item.tags else emptyList(),
             Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display, selectionMode = selectionMode)
         Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp, start = 2.dp))
         if (display.showFileInfo) {
+            // DS cr-cover-item__meta: caption, muted, 2dp under the name.
             Text(fileMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 2.dp, top = 1.dp))
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 2.dp, top = 2.dp))
         }
     }
 }
@@ -1751,8 +1698,8 @@ private fun listMeta(f: com.cripta.app.data.db.FileEntity, withDuration: Boolean
  * Text a tag shows on a cover badge, per the user's style choice. Short style with an icon and no
  * alias: the icon alone (it replaces the two letters).
  */
-private fun badgeText(tag: TagEntity, display: DisplayPrefs?): String = when {
-    display?.coverTagStyle == com.cripta.app.data.CoverTagStyle.NAME -> tag.name
+// On a cover a tag shows only its symbol or its acronym, never the full name.
+internal fun badgeText(tag: TagEntity, @Suppress("UNUSED_PARAMETER") display: DisplayPrefs?): String = when {
     tag.icon != null && tag.alias.isNullOrBlank() -> ""
     else -> tagAlias(tag)
 }
@@ -1814,16 +1761,16 @@ private fun ThumbBox(
             )
         }
         if (shownWatched != null) {
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.28f))) {
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(com.cripta.app.ui.theme.Glass)) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(shownWatched).background(MaterialTheme.colorScheme.primary))
             }
         }
         val people = if (!compact && display?.coverPeople != false && file != null) LocalCoverPeople.current else null
         val faces = people?.byFile?.get(file?.id).orEmpty()
         if (favorite || faces.isNotEmpty()) {
-            Row(Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (favorite) com.cripta.app.ui.components.CoverStar(Modifier, size = if (compact) 18.dp else 22.dp)
+            Row(Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (favorite) com.cripta.app.ui.components.CoverStar(Modifier, size = if (compact) 20.dp else 28.dp)
                 if (people != null && faces.isNotEmpty()) CoverFaces(faces, display?.coverPeopleSize ?: 1, people.blurred, people.crop)
             }
         }
@@ -1833,7 +1780,7 @@ private fun ThumbBox(
             }
         } else if (!selectionMode && !selected && duration != null) {
             // Top-right (the selection check's corner in selection mode), so the bottom stays free for tags.
-            com.cripta.app.ui.components.CoverBadge(duration, Modifier.align(Alignment.TopEnd).padding(6.dp))
+            com.cripta.app.ui.components.CoverBadge(duration, Modifier.align(Alignment.TopEnd).padding(8.dp))
         }
     }
 }
@@ -1845,7 +1792,7 @@ private fun CoverFaces(ids: List<Long>, sizeStep: Int, blurred: Boolean, crop: s
     ids.take(3).forEach { id ->
         val bmp by produceState<android.graphics.Bitmap?>(null, id) { value = crop(id) }
         Box(Modifier.size(size).clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass).padding(1.5.dp)
-            .clip(CircleShape).then(if (blurred) Modifier.blur(size / 4) else Modifier)) {
+            .clip(CircleShape).then(if (blurred) Modifier.blur(size / 4, androidx.compose.ui.draw.BlurredEdgeTreatment(CircleShape)) else Modifier)) {
             bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
         }
     }
@@ -1876,11 +1823,13 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
-        val outerPad = 5.dp
+        // DS cr-cover__bl: 8dp from the edges, 4dp between pills.
+        val outerPad = 8.dp
         val availDp = maxWidth - outerPad * 2
         val availPx = with(density) { availDp.toPx() }
-        val hPadPx = with(density) { 14.dp.toPx() }   // 7dp padding on each side of a pill
-        val spacingPx = with(density) { 3.dp.toPx() }
+        val hPadPx = with(density) { 16.dp.toPx() }   // 8dp padding on each side of a pill
+        val dotPx = with(density) { 10.dp.toPx() }    // a pill without its own icon leads with a 6dp dot + 4dp
+        val spacingPx = with(density) { 4.dp.toPx() }
         val rowsWanted = when (val r = display?.coverTagRows ?: 0) {
             0 -> when {
                 maxWidth >= 150.dp -> 3
@@ -1896,7 +1845,7 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
         val widths = remember(texts, availPx, tags) {
             texts.mapIndexed { i, t ->
                 val text = if (t.isEmpty()) 0f else measurer.measure(t, style).size.width.toFloat()
-                val icon = if (tags[i].icon == null) 0f else iconPx + if (t.isEmpty()) 0f else iconGapPx
+                val icon = if (tags[i].icon == null) dotPx else iconPx + if (t.isEmpty()) 0f else iconGapPx
                 minOf(text + icon + hPadPx, availPx)
             }
         }
@@ -1930,12 +1879,12 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
         val extra = tags.size - shown
         Column(
             Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // Filled from the bottom: the full rows sit on the cover's edge and the shorter
             // last row (plus the "+N" pill) goes on top, so it hides less of the image.
             rows.asReversed().forEachIndexed { r, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEach { i ->
                         com.cripta.app.ui.components.TagPill(
                             texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp, tagIcon = tags[i].icon,
@@ -2021,7 +1970,7 @@ private fun TagDismissChip(tag: TagEntity, excluded: Boolean, tagColors: Boolean
         size = com.cripta.app.ui.components.TagPillSize.Medium,
         state = if (excluded) com.cripta.app.ui.components.TagPillState.Excluded else com.cripta.app.ui.components.TagPillState.On,
         base = MaterialTheme.colorScheme.background,
-        trailingIcon = Icons.Filled.Close,
+        trailingIcon = CriptaIcons.Close,
         onClick = onClear,
         onClickLabel = "Rimuovi filtro",
         stateLabel = if (excluded) "Esclusa" else "Inclusa",
@@ -2038,7 +1987,7 @@ private fun DismissChip(label: String, description: String = label, onClear: () 
         ) {
             Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1, modifier = Modifier.clearAndSetSemantics { this.contentDescription = "Rimuovi filtro $description" })
-            Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            Icon(CriptaIcons.Close, null, tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(start = 4.dp).size(16.dp))
         }
     }
@@ -2108,167 +2057,27 @@ private fun FilterSortSheet(
     var naming by remember { mutableStateOf(false) }
     // The chip's X used to delete a saved filter at once (easy to hit by mistake): ask first.
     var savedToDelete by remember { mutableStateOf<com.cripta.app.data.db.SavedFilterEntity?>(null) }
-    val activeCount = (if (filters.type != TypeFilter.ALL) 1 else 0) + (if (filters.favoritesOnly) 1 else 0) +
-        (if (filters.untaggedOnly) 1 else 0) + filters.tagIds.size + filters.excludedTagIds.size + filters.personIds.size
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
-        // ---- Header: what the filters give, and the way back.
+        // ---- Header (DS): the title and "Azzera"; the result count is on the main button below.
         Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("Filtri e ordine", style = MaterialTheme.typography.titleLarge)
-                val summary = listOfNotNull(
-                    resultCount.takeIf { it >= 0 }?.let { if (it == 1) "1 file" else "$it file" },
-                    activeCount.takeIf { it > 0 }?.let { if (it == 1) "1 filtro attivo" else "$it filtri attivi" },
-                ).joinToString(" · ").ifEmpty { "Nessun filtro attivo" }
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-            }
+            Text("Filtri e ordine", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = onClear, enabled = filters.active) { com.cripta.app.ui.components.ButtonText("Azzera") }
         }
 
+        // DS order: what to show (type, tags, people, favourites), then the order and saved sets.
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // ---- Saved filters: one tap applies; the current set can be saved from here. Always
-            // shown (the save chip is just disabled without filters): appearing with the first
-            // filter pushed everything below it down under the finger.
-            run {
-                FilterGroup("Filtri salvati") {
-                    Row(
-                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        saved.forEach { sf ->
-                            androidx.compose.material3.InputChip(
-                                selected = false,
-                                onClick = { onApplySaved(sf.json) },
-                                label = { Text(sf.name, maxLines = 1) },
-                                trailingIcon = {
-                                    Icon(Icons.Filled.Close, "Elimina filtro salvato ${sf.name}",
-                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { savedToDelete = sf })
-                                },
-                            )
-                        }
-                        com.cripta.app.ui.components.ActionChip(
-                            onClick = { naming = true },
-                            enabled = filters.active,
-                            label = { Text("Salva questi filtri") },
-                            leadingIcon = { Icon(Icons.Filled.BookmarkAdd, null, Modifier.size(18.dp)) },
-                        )
-                    }
-                }
-            }
-
-            // ---- Order: key as one segmented control, direction spelled out.
-            FilterGroup("Ordina per") {
-                val keys = listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale")
-                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    keys.forEachIndexed { i, (k, lbl) ->
-                        SegmentedButton(
-                            selected = sortKey == k,
-                            onClick = { onSort(k, sortAscending) },
-                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
-                            icon = {},
-                            label = { Text(lbl, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        )
-                    }
-                }
-                // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
-                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = sortKey == SortKey.MANUAL,
-                        transitionSpec = { fadeIn(Motion.enter(Motion.SHORT)) togetherWith fadeOut(Motion.exit(Motion.SHORT)) },
-                        label = "sortDirection",
-                    ) { manual ->
-                        if (manual) {
-                            Text("Tieni premuto un file e trascinalo per riordinarlo.",
-                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            val (descLabel, ascLabel) = when (sortKey) {
-                                SortKey.DATE -> "Più recenti" to "Meno recenti"
-                                SortKey.NAME -> "Z → A" to "A → Z"
-                                SortKey.SIZE -> "Più grandi" to "Più piccoli"
-                                else -> "Decrescente" to "Crescente"
-                            }
-                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                                SegmentedButton(
-                                    selected = !sortAscending, onClick = { onSort(sortKey, false) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
-                                    icon = { Icon(Icons.Filled.ArrowDownward, null, Modifier.size(18.dp)) },
-                                    label = { Text(descLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                )
-                                SegmentedButton(
-                                    selected = sortAscending, onClick = { onSort(sortKey, true) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
-                                    icon = { Icon(Icons.Filled.ArrowUpward, null, Modifier.size(18.dp)) },
-                                    label = { Text(ascLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ---- What to show: type, then two quick narrowing switches as chips.
-            FilterGroup("Mostra") {
-                val types = TypeFilter.entries
-                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    types.forEachIndexed { i, t ->
-                        SegmentedButton(
-                            selected = filters.type == t,
-                            onClick = { onType(t) },
-                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, types.size),
-                            icon = {},
-                            label = { Text(typeLabel(t), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        )
-                    }
-                }
+            FilterGroup("Tipo") {
                 com.cripta.app.ui.components.ChipFlowRow {
-                    com.cripta.app.ui.components.ChoiceChip(
-                        selected = filters.favoritesOnly, onClick = onFav,
-                        label = { Text("Solo preferiti") },
-                        leadingIcon = {
-                            Icon(if (filters.favoritesOnly) Icons.Filled.Star else Icons.Filled.StarBorder, null,
-                                Modifier.size(FilterChipDefaults.IconSize))
-                        },
-                    )
-                    com.cripta.app.ui.components.ChoiceChip(
-                        selected = filters.untaggedOnly, onClick = onUntagged,
-                        label = { Text("Senza etichette") },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.LabelOff, null, Modifier.size(FilterChipDefaults.IconSize)) },
-                    )
-                }
-            }
-
-            // ---- People: faces in a row, a tap adds or removes; a file must show everyone chosen.
-            if (people.isNotEmpty()) {
-                FilterGroup(
-                    "Persone",
-                    trailing = {
-                        val n = filters.personIds.size
-                        if (n > 0) Text(if (n == 1) "1 scelta" else "$n scelte", style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary)
-                    },
-                ) {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        people.forEach { p ->
-                            val on = p.id in filters.personIds
-                            Column(
-                                Modifier.width(72.dp).clip(MaterialTheme.shapes.small)
-                                    .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
-                                    .padding(vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 56.dp, selected = on)
-                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
+                    TypeFilter.entries.forEach { t ->
+                        com.cripta.app.ui.components.ChoiceChip(selected = filters.type == t, onClick = { onType(t) },
+                            label = { Text(typeLabel(t)) })
                     }
                 }
             }
@@ -2295,12 +2104,12 @@ private fun FilterSortSheet(
                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.padding(end = 12.dp))
                         androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                            SegmentedButton(
+                            SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
                                 selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, enabled = canMatch,
                                 shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
                                 icon = {}, label = { Text("tutte") },
                             )
-                            SegmentedButton(
+                            SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
                                 selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, enabled = canMatch,
                                 shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
                                 icon = {}, label = { Text("almeno una") },
@@ -2313,9 +2122,9 @@ private fun FilterSortSheet(
                             value = query, onValueChange = { query = it },
                             singleLine = true,
                             placeholder = { Text("Cerca un'etichetta") },
-                            leadingIcon = { Icon(Icons.Filled.Search, null) },
+                            leadingIcon = { Icon(CriptaIcons.Search, null) },
                             trailingIcon = {
-                                if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Svuota ricerca") }
+                                if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(CriptaIcons.Close, "Svuota ricerca") }
                             },
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -2348,6 +2157,131 @@ private fun FilterSortSheet(
                     }
                 }
             }
+
+            // ---- People: faces in a row, a tap adds or removes; a file must show everyone chosen.
+            if (people.isNotEmpty()) {
+                FilterGroup(
+                    "Persone",
+                    trailing = {
+                        val n = filters.personIds.size
+                        if (n > 0) Text(if (n == 1) "1 scelta" else "$n scelte", style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                    },
+                ) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        people.forEach { p ->
+                            val on = p.id in filters.personIds
+                            Column(
+                                Modifier.width(64.dp).clip(MaterialTheme.shapes.small)
+                                    .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 44.dp, selected = on)
+                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Two quick narrowing switches (DS: "Solo preferiti" as a switch row).
+            Column {
+                com.cripta.app.ui.settings.ToggleRow("Solo preferiti", filters.favoritesOnly, icon = CriptaIcons.StarBorder) { onFav() }
+                com.cripta.app.ui.settings.ToggleRow("Senza etichette", filters.untaggedOnly, icon = CriptaIcons.LabelOff) { onUntagged() }
+            }
+
+            // ---- Order: key as one segmented control, direction spelled out.
+            FilterGroup("Ordina per") {
+                val keys = listOf(SortKey.DATE to "Data", SortKey.NAME to "Nome", SortKey.SIZE to "Peso", SortKey.MANUAL to "Manuale")
+                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    keys.forEachIndexed { i, (k, lbl) ->
+                        SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+                            selected = sortKey == k,
+                            onClick = { onSort(k, sortAscending) },
+                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
+                            icon = {},
+                            label = { Text(lbl, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        )
+                    }
+                }
+                // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
+                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = sortKey == SortKey.MANUAL,
+                        transitionSpec = { fadeIn(Motion.enter(Motion.SHORT)) togetherWith fadeOut(Motion.exit(Motion.SHORT)) },
+                        label = "sortDirection",
+                    ) { manual ->
+                        if (manual) {
+                            Text("Tieni premuto un file e trascinalo per riordinarlo.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            val (descLabel, ascLabel) = when (sortKey) {
+                                SortKey.DATE -> "Più recenti" to "Meno recenti"
+                                SortKey.NAME -> "Z → A" to "A → Z"
+                                SortKey.SIZE -> "Più grandi" to "Più piccoli"
+                                else -> "Decrescente" to "Crescente"
+                            }
+                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+                                    selected = !sortAscending, onClick = { onSort(sortKey, false) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
+                                    icon = { Icon(CriptaIcons.ArrowDownward, null, Modifier.size(18.dp)) },
+                                    label = { Text(descLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                )
+                                SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+                                    selected = sortAscending, onClick = { onSort(sortKey, true) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
+                                    icon = { Icon(CriptaIcons.ArrowUpward, null, Modifier.size(18.dp)) },
+                                    label = { Text(ascLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (saved.isNotEmpty()) {
+                FilterGroup("Filtri salvati") {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        saved.forEach { sf ->
+                            androidx.compose.material3.InputChip(
+                                selected = false,
+                                onClick = { onApplySaved(sf.json) },
+                                label = { Text(sf.name, maxLines = 1) },
+                                trailingIcon = {
+                                    Icon(CriptaIcons.Close, "Elimina filtro salvato ${sf.name}",
+                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { savedToDelete = sf })
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- Fixed at the bottom (DS): the result count as the one filled action, then "Salva".
+        val closeSheet = com.cripta.app.ui.components.rememberSheetAction()
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 4.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            com.cripta.app.ui.components.Button(onClick = { closeSheet {} }, modifier = Modifier.fillMaxWidth()
+                .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) {
+                com.cripta.app.ui.components.ButtonText(when {
+                    resultCount < 0 -> "Mostra i file"
+                    resultCount == 1 -> "Mostra 1 file"
+                    else -> "Mostra ${com.cripta.app.ui.components.formatCount(resultCount)} file"
+                })
+            }
+            TextButton(onClick = { naming = true }, enabled = filters.active, modifier = Modifier.padding(top = 4.dp)) {
+                com.cripta.app.ui.components.ButtonText("Salva questi filtri")
+            }
         }
     }
     if (naming) {
@@ -2377,9 +2311,9 @@ private fun FilterGroup(
     trailing: @Composable () -> Unit = {},
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().semantics { heading() }, verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
             trailing()
         }
         content()
@@ -2574,9 +2508,9 @@ private fun ReorderCell(
     val mime = item.file.mimeType
     val isVideo = VaultRepository.isVideo(mime)
     val fallbackIcon = when {
-        VaultRepository.isImage(mime) -> Icons.Filled.Image
-        isVideo -> Icons.Filled.Movie
-        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+        VaultRepository.isImage(mime) -> CriptaIcons.Image
+        isVideo -> CriptaIcons.Movie
+        else -> CriptaIcons.InsertDriveFile
     }
     if (asList) {
         // A plain row like the regular list; only the row being dragged lifts onto a tonal slab.
@@ -2592,14 +2526,14 @@ private fun ReorderCell(
                     file = item.file, display = display, compact = true)
                 Column(Modifier.padding(start = 14.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+                        style = MaterialTheme.typography.bodyLarge)
                     if (display.showFileInfo) {
                         Text(fileMeta(item.file, withDuration = !(isVideo && display.showDurationBadge)), maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp))
                     }
                 }
-                Icon(Icons.Filled.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(CriptaIcons.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 8.dp).size(22.dp))
             }
         }
@@ -2612,7 +2546,7 @@ private fun ReorderCell(
                 if (dragged) {
                     Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape)
                         .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.DragHandle, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Icon(CriptaIcons.DragHandle, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -2645,7 +2579,7 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
                 Modifier.fillMaxWidth().clickable { afterSheet { onPick(null) } }.padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
                 Text("Radice", Modifier.padding(start = 16.dp))
             }
             folders.forEach { f ->
@@ -2654,7 +2588,7 @@ private fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> U
                         .padding(horizontal = 20.dp, vertical = 12.dp).padding(start = (12 * depth(f)).dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     Text(f.name, Modifier.padding(start = 16.dp))
                 }
             }
@@ -2692,7 +2626,7 @@ private fun CoverOptionDialog(
                         Modifier.fillMaxWidth().clickable { onPick(cover) }.padding(vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Filled.Image, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Icon(CriptaIcons.Image, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                         Text(label, Modifier.padding(start = 16.dp), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -2763,8 +2697,8 @@ private fun ColorSwatch(color: Int?, selected: Boolean, name: String, onClick: (
         contentAlignment = Alignment.Center,
     ) {
         when {
-            color == null -> Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-            selected -> Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            color == null -> Icon(CriptaIcons.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            selected -> Icon(CriptaIcons.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -2802,7 +2736,7 @@ private fun EmptyState(
         Column(outer, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), shape = CircleShape, modifier = Modifier.size(badge)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(glyph))
+                    Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(glyph))
                 }
             }
             Text("\"$folderName\" è vuota", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp),
@@ -2811,7 +2745,7 @@ private fun EmptyState(
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp).heightIn(min = 56.dp)) {
-                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Icon(CriptaIcons.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 com.cripta.app.ui.components.ButtonText("Importa qui")
             }
@@ -2826,7 +2760,7 @@ private fun EmptyState(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    if (filtering) Icons.Filled.Search else Icons.Filled.EnhancedEncryption,
+                    if (filtering) CriptaIcons.Search else CriptaIcons.EnhancedEncryption,
                     null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(glyph),
                 )
             }
@@ -2838,12 +2772,12 @@ private fun EmptyState(
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         if (filtering) {
-            androidx.compose.material3.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp).heightIn(min = 48.dp)) {
+            com.cripta.app.ui.components.FilledTonalButton(onClick = onClearFilters, modifier = Modifier.padding(top = 20.dp).heightIn(min = 48.dp)) {
                 com.cripta.app.ui.components.ButtonText("Azzera filtri")
             }
         } else {
             Button(onClick = onImport, modifier = Modifier.padding(top = 20.dp).heightIn(min = 56.dp)) {
-                Icon(Icons.Filled.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Icon(CriptaIcons.EnhancedEncryption, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 com.cripta.app.ui.components.ButtonText("Importa file")
             }
@@ -2857,22 +2791,27 @@ private fun EmptyState(
  */
 @Composable
 private fun FabMenu(actions: List<FabAction>, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        actions.asReversed().forEach { a ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                shadowElevation = 6.dp,
-            ) {
-                Row(
-                    Modifier.clickable(role = Role.Button, onClickLabel = a.caption, onClick = a.onClick)
-                        .heightIn(min = 52.dp).padding(start = 16.dp, end = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    // DS cr-fab-pill: one floating pill (surface-overlay, radius-lg) holding the actions side by
+    // side, each an accent disc with its name under it.
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = com.cripta.app.ui.theme.RadiusLg,
+        shadowElevation = 8.dp,
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            actions.forEach { a ->
+                Column(
+                    Modifier.width(64.dp).clip(com.cripta.app.ui.theme.RadiusMd)
+                        .clickable(role = Role.Button, onClickLabel = a.caption, onClick = a.onClick),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Icon(a.icon, null, modifier = Modifier.size(22.dp))
-                    Text(a.label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
-                        modifier = Modifier.padding(start = 12.dp))
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                        Icon(a.icon, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(22.dp))
+                    }
+                    Text(a.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -2912,7 +2851,7 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                         androidx.compose.material3.CircularProgressIndicator(
                             strokeWidth = 2.dp, color = onContainer, modifier = Modifier.size(18.dp))
                     } else {
-                        Icon(if (ok) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline, null,
+                        Icon(if (ok) CriptaIcons.CheckCircle else CriptaIcons.ErrorOutline, null,
                             tint = onContainer, modifier = Modifier.size(20.dp))
                     }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
@@ -2936,7 +2875,7 @@ private fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> Un
                     }
                     if (!state.active) {
                         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Filled.Close, "Chiudi", tint = onContainer, modifier = Modifier.size(18.dp))
+                            Icon(CriptaIcons.Close, "Chiudi", tint = onContainer, modifier = Modifier.size(18.dp))
                         }
                     } else {
                         Text("${(state.fraction * 100).roundToInt()}%", style = MaterialTheme.typography.labelLarge,
@@ -2996,14 +2935,14 @@ private fun StatsStrip(stats: VaultStats, filtering: Boolean, type: TypeFilter, 
         Text(lead, style = MaterialTheme.typography.labelLarge,
             color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = "Riepilogo", onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
-        CountPill(Icons.Filled.Movie, shown.videos, "video", type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
-        CountPill(Icons.Filled.Image, shown.images, "foto", type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
+        CountPill(CriptaIcons.Movie, shown.videos, "video", type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
+        CountPill(CriptaIcons.Image, shown.images, "foto", type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
         if (shown.others > 0 || type == TypeFilter.OTHER) {
-            CountPill(Icons.AutoMirrored.Filled.InsertDriveFile, shown.others, "altri file", type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
+            CountPill(CriptaIcons.InsertDriveFile, shown.others, "altri file", type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
         }
         Box(Modifier.weight(1f))
         IconButton(onClick = onOpen, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Filled.ExpandMore, "Riepilogo", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            Icon(CriptaIcons.ExpandMore, "Riepilogo", tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp))
         }
     }
@@ -3083,7 +3022,7 @@ private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String
             val fmt: (Number) -> String = { com.cripta.app.ui.components.formatCount(it) }
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Movie, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Icon(CriptaIcons.Movie, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                     Text(fmt(stats.shown.videos), style = MaterialTheme.typography.displaySmall,
                         modifier = Modifier.padding(start = 12.dp))
                 }
@@ -3107,12 +3046,12 @@ private fun StatsSheet(stats: VaultStats, filtering: Boolean, folderName: String
             }
             Column {
                 val of: (Int) -> String? = { if (stats.filtered) fmt(it) else null }
-                com.cripta.app.ui.components.CountRow("Foto", fmt(stats.shown.images), of = of(stats.scope.images), icon = Icons.Filled.Image)
+                com.cripta.app.ui.components.CountRow("Foto", fmt(stats.shown.images), of = of(stats.scope.images), icon = CriptaIcons.Image)
                 com.cripta.app.ui.components.CountRow("Altri file", fmt(stats.shown.others), of = of(stats.scope.others),
-                    icon = Icons.AutoMirrored.Filled.InsertDriveFile)
-                com.cripta.app.ui.components.CountRow("Totale", fmt(stats.shown.total), of = of(stats.scope.total), icon = Icons.Filled.GridView)
+                    icon = CriptaIcons.InsertDriveFile)
+                com.cripta.app.ui.components.CountRow("Totale", fmt(stats.shown.total), of = of(stats.scope.total), icon = CriptaIcons.GridView)
                 com.cripta.app.ui.components.CountRow("Spazio occupato", formatBytes(stats.shown.bytes),
-                    of = if (stats.filtered) formatBytes(stats.scope.bytes) else null, icon = Icons.Filled.EnhancedEncryption)
+                    of = if (stats.filtered) formatBytes(stats.scope.bytes) else null, icon = CriptaIcons.EnhancedEncryption)
             }
             if (!filtering) {
                 Text("Conteggi degli elementi in questa cartella (le sottocartelle non sono incluse). Con un filtro attivo la ricerca copre tutto il vault.",
@@ -3140,7 +3079,7 @@ fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier) {
             durationMs = 192_000, width = 1920, height = 1080,
         )
     }
-    ThumbBox(null, Icons.Filled.Movie, isVideo = true, name = "Anteprima", selected = false, favorite = true,
+    ThumbBox(null, CriptaIcons.Movie, isVideo = true, name = "Anteprima", selected = false, favorite = true,
         tags = if (display.showTagsOnCover) sample else emptyList(), modifier = modifier, file = file, display = display)
 }
 
@@ -3171,7 +3110,7 @@ fun ConvertBanner(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (state.active) Icons.Filled.Movie else if (state.lastOk) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+                    Icon(if (state.active) CriptaIcons.Movie else if (state.lastOk) CriptaIcons.CheckCircle else CriptaIcons.ErrorOutline,
                         null, tint = on, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         if (state.active) {
@@ -3193,7 +3132,7 @@ fun ConvertBanner(
                     else IconButton(onClick = {
                         state.pendingOriginals.firstOrNull()?.let { onResolveOriginal(it.id, false) } ?: onDismiss()
                     }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Close, if (state.pendingOriginals.isEmpty()) "Chiudi" else "Chiudi e mantieni questo originale", tint = on, modifier = Modifier.size(18.dp))
+                        Icon(CriptaIcons.Close, if (state.pendingOriginals.isEmpty()) "Chiudi" else "Chiudi e mantieni questo originale", tint = on, modifier = Modifier.size(18.dp))
                     }
                 }
                 if (!state.lastOk && state.lastResult != null && state.pendingOriginals.isNotEmpty()) {
@@ -3244,9 +3183,9 @@ fun CoverThumb(
 ) {
     val isVideo = VaultRepository.isVideo(file.mimeType)
     val icon = when {
-        VaultRepository.isImage(file.mimeType) -> Icons.Filled.Image
-        isVideo -> Icons.Filled.Movie
-        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+        VaultRepository.isImage(file.mimeType) -> CriptaIcons.Image
+        isVideo -> CriptaIcons.Movie
+        else -> CriptaIcons.InsertDriveFile
     }
     // Decorative: every caller shows the file name as text next to the cover.
     ThumbBox(bmp, icon, isVideo, null, selected = false, favorite = file.isFavorite,
@@ -3278,7 +3217,7 @@ fun FolderMosaic(
     val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
     val primary = MaterialTheme.colorScheme.primary
     val shape = com.cripta.app.ui.theme.CoverShape
-    val tile = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tile = MaterialTheme.colorScheme.surfaceContainer
     // Sheets without a picture of their own (folders with 1-2 files) take the folder's colour.
     val farSheet = remember(accent, tile) { accent.copy(alpha = 0.30f).compositeOver(tile) }
     val nearSheet = remember(accent, tile) { accent.copy(alpha = 0.55f).compositeOver(tile) }
@@ -3289,18 +3228,18 @@ fun FolderMosaic(
         bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, alpha = dim, modifier = Modifier.fillMaxSize()) }
     }
     // Scale outermost, so the caller's clip/click area scales with the card.
+    // DS FolderStack: the cover in front (4:3), the next two peeking above it, dimmed.
     Column(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.then(modifier)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            // The two sheets behind: narrower and higher the further back they are.
-            // The pictures behind are slightly dimmed, so the front cover reads as the folder's face.
-            Box(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).clip(shape).background(farSheet)) {
-                sheetPicture(previews.getOrNull(2), 0.55f)
+        Box(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+            Box(Modifier.offset(y = (-12).dp).padding(horizontal = 24.dp).fillMaxWidth().height(40.dp).clip(shape)
+                .background(farSheet)) {
+                sheetPicture(previews.getOrNull(2), 0.3f)
             }
-            Box(Modifier.fillMaxSize().padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp).clip(shape).background(nearSheet)) {
-                sheetPicture(previews.getOrNull(1), 0.75f)
+            Box(Modifier.offset(y = (-6).dp).padding(horizontal = 16.dp).fillMaxWidth().height(40.dp).clip(shape).background(nearSheet)) {
+                sheetPicture(previews.getOrNull(1), 0.45f)
             }
             Box(
-                Modifier.fillMaxSize().padding(top = 12.dp).clip(shape)
+                Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(shape)
                     .background(accent.copy(alpha = 0.16f).compositeOver(tile))
                     .then(if (hl > 0f) Modifier.border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
                 contentAlignment = Alignment.Center,
@@ -3313,32 +3252,39 @@ fun FolderMosaic(
                     bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
                 if (hl > 0f) Box(Modifier.matchParentSize().background(primary.copy(alpha = 0.18f * hl)))
-                // Favourite: the same star as on file covers, in the cover's corner.
-                if (folder.isFavorite && onRemoveFavorite == null) {
-                    com.cripta.app.ui.components.CoverStar(Modifier.align(Alignment.TopStart).padding(6.dp), description = "Cartella preferita")
-                }
             }
         }
-        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 22.dp)
+        // DS: the folder's colour as a small square (or its own icon), the name in `title`, the star
+        // after it when favourite, the count as a caption under.
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (folder.icon.isNullOrBlank() && folder.emoji.isNullOrBlank()) {
+                Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(accent))
+            } else {
+                com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 20.dp)
+            }
             Column(Modifier.weight(1f).padding(start = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.weight(1f, fill = false))
-                }
-                if (showInfo) {
-                    val n = stat?.count ?: 0
-                    Text(if (n == 0) "Vuota" else if (n == 1) "1 elemento" else "$n elementi",
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // DS: the name takes the row, the star sits at its end.
+                    Text(folder.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f))
+                    if (folder.isFavorite && onRemoveFavorite == null) {
+                        Icon(CriptaIcons.Star, "Cartella preferita", tint = com.cripta.app.ui.theme.Favorite,
+                            modifier = Modifier.padding(start = 4.dp).size(18.dp))
+                    }
                 }
             }
             if (onRemoveFavorite != null) {
                 IconButton(onClick = onRemoveFavorite, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Filled.Star, "Rimuovi cartella dai preferiti", tint = com.cripta.app.ui.theme.Favorite,
+                    Icon(CriptaIcons.Star, "Rimuovi cartella dai preferiti", tint = com.cripta.app.ui.theme.Favorite,
                         modifier = Modifier.size(20.dp))
                 }
             }
+        }
+        if (showInfo) {
+            val n = stat?.count ?: 0
+            Text(if (n == 0) "Vuota" else "${com.cripta.app.ui.components.formatCount(n)} file",
+                maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -3459,10 +3405,10 @@ private fun SelectionBar(actions: List<SelAction>) {
             // Chevrons at the edges while there is more that way.
             val fwd by animateFloatAsState(if (scroll.canScrollForward) 1f else 0f, label = "selFwd")
             val back by animateFloatAsState(if (scroll.canScrollBackward) 1f else 0f, label = "selBack")
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (scroll.canScrollForward) "Altre azioni" else null,
+            Icon(CriptaIcons.KeyboardArrowRight, if (scroll.canScrollForward) "Altre azioni" else null,
                 Modifier.align(Alignment.CenterEnd).size(20.dp).graphicsLayer { alpha = fwd },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null,
+            Icon(CriptaIcons.KeyboardArrowLeft, null,
                 Modifier.align(Alignment.CenterStart).size(20.dp).graphicsLayer { alpha = back },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -3482,5 +3428,141 @@ private fun SelectionAction(icon: ImageVector, label: String, modifier: Modifier
         Icon(icon, null, tint = tint)
         Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1, softWrap = false,
             modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** The sort as a chip label: "Più recenti", "A → Z"… */
+private fun sortChipLabel(key: com.cripta.app.data.SortKey, ascending: Boolean): String = when (key) {
+    com.cripta.app.data.SortKey.DATE -> if (ascending) "Meno recenti" else "Più recenti"
+    com.cripta.app.data.SortKey.NAME -> if (ascending) "A → Z" else "Z → A"
+    com.cripta.app.data.SortKey.SIZE -> if (ascending) "Più piccoli" else "Più grandi"
+    com.cripta.app.data.SortKey.MANUAL -> "Ordine manuale"
+}
+
+/**
+ * DS chip row under the search pill. The tab's root: "Solo preferiti", "Senza etichette" and the
+ * sort; inside a folder: the type ("Tutti", "Foto", "Video") and "Preferiti". On = accent with a tick.
+ */
+@Composable
+private fun QuickChips(
+    atRoot: Boolean,
+    filters: Filters,
+    sortLabel: String,
+    onType: (TypeFilter) -> Unit,
+    onFavorites: () -> Unit,
+    onUntagged: () -> Unit,
+    onSort: () -> Unit,
+) {
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // The chips' 48dp touch area adds 6dp above and below: 12dp from the search, 20 to the grid (DS).
+        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp),
+    ) {
+        if (atRoot) {
+            item {
+                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { Text("Solo preferiti") },
+                    leadingIcon = { Icon(if (filters.favoritesOnly) CriptaIcons.Star else CriptaIcons.StarBorder, null, Modifier.size(18.dp)) })
+            }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.untaggedOnly, onUntagged, { Text("Senza etichette") }) }
+            item {
+                com.cripta.app.ui.components.ActionChip(onSort, { Text(sortLabel) },
+                    leadingIcon = { Icon(CriptaIcons.Sort, null, Modifier.size(18.dp)) })
+            }
+        } else {
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.ALL, { onType(TypeFilter.ALL) }, { Text("Tutti") }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.IMAGE, { onType(TypeFilter.IMAGE) }, { Text("Foto") }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.VIDEO, { onType(TypeFilter.VIDEO) }, { Text("Video") }) }
+            // Notes, PDFs and other files: the sheet's fourth type, reachable here too.
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.OTHER, { onType(TypeFilter.OTHER) }, { Text("Altro") }) }
+            item {
+                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { Text("Preferiti") },
+                    leadingIcon = { Icon(if (filters.favoritesOnly) CriptaIcons.Star else CriptaIcons.StarBorder, null, Modifier.size(18.dp)) })
+            }
+        }
+    }
+}
+
+
+/** What to do with one import that matches a vault file (DS Import chips). */
+private enum class ConflictChoice { REPLACE, KEEP, REMOVE }
+
+/**
+ * DS "Già nel vault": every import that matches a vault file, one row each (cover, name, why) with
+ * its choice as chips, then one filled button for all. Identical copies: remove the new one or keep
+ * both. Same name or look-alike: replace (the new one takes labels, folder, favourite and place),
+ * keep both, or remove the new one.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ImportConflictsPage(
+    matches: List<VaultRepository.VersionMatch>,
+    trashEnabled: Boolean,
+    thumbOf: suspend (String) -> android.graphics.Bitmap?,
+    onApply: (replace: List<VaultRepository.VersionMatch>, keep: List<VaultRepository.VersionMatch>, remove: List<VaultRepository.VersionMatch>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val choices = remember { androidx.compose.runtime.mutableStateMapOf<String, ConflictChoice>() }
+    fun choiceOf(m: VaultRepository.VersionMatch) = choices[m.newId] ?: when {
+        m.identical -> ConflictChoice.REMOVE
+        m.similar || m.previousIds.size > 1 -> ConflictChoice.KEEP
+        else -> ConflictChoice.REPLACE
+    }
+    com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Scaffold(topBar = {
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                title = { com.cripta.app.ui.components.PageTitle("Già nel vault") },
+                navigationIcon = { IconButton(onClick = onDismiss) { Icon(CriptaIcons.Close, "Chiudi: tieni tutto com'è") } })
+        }) { pad ->
+            Column(Modifier.fillMaxSize().padding(pad).padding(horizontal = 16.dp)) {
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)) {
+                    item {
+                        Text((if (matches.size == 1) "1 file ha" else "${matches.size} file hanno") +
+                            " lo stesso nome o lo stesso contenuto di file che hai già. Sostituendo, la nuova versione prende " +
+                            "etichette e cartella della precedente" + (if (trashEnabled) "; la vecchia va nel cestino." else "."),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    items(matches.size, key = { matches[it].newId }) { i ->
+                        val m = matches[i]
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val bmp by produceState<android.graphics.Bitmap?>(null, m.newId) { value = thumbOf(m.newId) }
+                                Box(Modifier.size(48.dp).clip(com.cripta.app.ui.theme.CoverShapeSmall).background(MaterialTheme.colorScheme.surfaceContainer)) {
+                                    bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                                }
+                                Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                                    Text(m.newName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(when {
+                                        m.identical -> "Identico a \"${m.previousName}\""
+                                        m.similar -> "Simile a \"${m.previousName}\""
+                                        m.previousIds.size > 1 -> "Stesso nome di ${m.previousIds.size} file · contenuto diverso"
+                                        else -> "Stesso nome · contenuto diverso"
+                                    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                                }
+                            }
+                            val options = buildList {
+                                if (!m.identical) add(ConflictChoice.REPLACE to if (m.previousIds.size > 1) "Prendi le etichette" else "Sostituisci")
+                                add(ConflictChoice.KEEP to "Tieni entrambi")
+                                add(ConflictChoice.REMOVE to "Rimuovi")
+                            }
+                            com.cripta.app.ui.components.ChipFlowRow(Modifier.padding(top = 10.dp)) {
+                                options.forEach { (c, label) ->
+                                    com.cripta.app.ui.components.ChoiceChip(selected = choiceOf(m) == c, onClick = { choices[m.newId] = c }, label = { Text(label) })
+                                }
+                            }
+                        }
+                    }
+                }
+                Button(onClick = {
+                    val by = matches.groupBy { choiceOf(it) }
+                    onApply(by[ConflictChoice.REPLACE].orEmpty(), by[ConflictChoice.KEEP].orEmpty(), by[ConflictChoice.REMOVE].orEmpty())
+                }, modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                    com.cripta.app.ui.components.ButtonText(if (matches.size == 1) "Applica a 1 file" else "Applica a ${matches.size} file")
+                }
+            }
+        }
     }
 }

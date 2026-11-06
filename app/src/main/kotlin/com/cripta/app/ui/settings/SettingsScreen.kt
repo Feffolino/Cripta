@@ -1,7 +1,8 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.theme.CriptaIcons
+import androidx.compose.foundation.selection.selectable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.material.icons.filled.PushPin
 
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.only
@@ -10,9 +11,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,8 +20,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -32,20 +28,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.cripta.app.ui.theme.Motion
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.filled.PictureInPictureAlt
-import androidx.compose.material.icons.filled.ViewCarousel
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -66,40 +48,18 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.items as staggeredItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.border
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.material.icons.filled.Face
 import kotlinx.coroutines.launch
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.cripta.app.ui.components.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Switch
@@ -109,7 +69,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -177,6 +137,7 @@ fun SettingsScreen(
     val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
     val backupEstimate by vm.backupEstimate.collectAsStateWithLifecycle()
+    val backupFolders by vm.backupFolders.collectAsStateWithLifecycle()
 
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
@@ -212,12 +173,12 @@ fun SettingsScreen(
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { Text(current?.label ?: "Impostazioni") },
+                title = { if (current == null) com.cripta.app.ui.components.HeaderTitle("Impostazioni") else com.cripta.app.ui.components.PageTitle(current.label) },
                 // Impostazioni is a tab root: the back arrow only appears inside a category page.
                 navigationIcon = {
                     if (current != null) {
                         IconButton(onClick = { page = null }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Torna alle impostazioni")
+                            Icon(CriptaIcons.ArrowBack, "Torna alle impostazioni")
                         }
                     }
                 },
@@ -226,7 +187,7 @@ fun SettingsScreen(
                         TextButton(onClick = { confirmReset = current }) { com.cripta.app.ui.components.ButtonText("Predefiniti") }
                     }
                     // Quick lock, always at hand.
-                    IconButton(onClick = { vm.lockNow(); onBack() }) { Icon(Icons.Filled.Lock, "Blocca ora") }
+                    IconButton(onClick = { vm.lockNow(); onBack() }) { Icon(CriptaIcons.Lock, "Blocca ora") }
                 },
             )
         },
@@ -340,21 +301,21 @@ fun SettingsScreen(
                                                 size = com.cripta.app.ui.components.TagPillSize.Medium,
                                                 base = MaterialTheme.colorScheme.background,
                                                 tagIcon = tag.icon,
-                                                leadingIcon = if (tag.pinned) androidx.compose.material.icons.Icons.Filled.PushPin else null,
+                                                leadingIcon = if (tag.pinned) CriptaIcons.PushPin else null,
                                                 onClick = { editTag = tag },
                                                 onClickLabel = "Modifica nome, alias e colore",
                                             )
                                         }
                                         if (custom) {
                                             IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                                Icon(Icons.Filled.KeyboardArrowUp, "Su")
+                                                Icon(CriptaIcons.KeyboardArrowUp, "Su")
                                             }
                                             IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                                Icon(Icons.Filled.KeyboardArrowDown, "Giù")
+                                                Icon(CriptaIcons.KeyboardArrowDown, "Giù")
                                             }
                                         }
-                                        IconButton(onClick = { editTag = tag }) { Icon(Icons.Filled.Edit, "Modifica") }
-                                        IconButton(onClick = { deleteTag = tag }) { Icon(Icons.Filled.Delete, "Elimina") }
+                                        IconButton(onClick = { editTag = tag }) { Icon(CriptaIcons.Edit, "Modifica") }
+                                        IconButton(onClick = { deleteTag = tag }) { Icon(CriptaIcons.Delete, "Elimina") }
                                     }
                                 }
                                 if (tags.size > 8) {
@@ -363,11 +324,11 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-                            androidx.compose.material3.FilledTonalButton(
+                            com.cripta.app.ui.components.FilledTonalButton(
                                 onClick = { addTag = true },
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             ) {
-                                Icon(Icons.Filled.Add, null, Modifier.size(ButtonDefaults.IconSize))
+                                Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                                 Text("Aggiungi etichetta")
                             }
@@ -379,10 +340,6 @@ fun SettingsScreen(
                             if (s.display.showTagsOnCover) {
                                 ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
                                     indent = 0.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
-                                ChoiceRow("Testo", indent = 0.dp, options = listOf(
-                                    com.cripta.app.data.CoverTagStyle.ALIAS to "Icona o sigla",
-                                    com.cripta.app.data.CoverTagStyle.NAME to "Nome intero",
-                                ), selected = s.display.coverTagStyle) { vm.setCoverTagStyle(it) }
                             }
                         }
                     },
@@ -390,7 +347,7 @@ fun SettingsScreen(
                         Section("Colori") {
                             ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
                             if (s.display.tagColors) {
-                                Text("Colore predefinito", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                                Text("Colore predefinito", style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.padding(top = 4.dp))
                                 com.cripta.app.ui.vault.TagColorPicker(
                                     selected = s.display.defaultTagColor,
@@ -404,9 +361,9 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 if (tags.isNotEmpty()) {
-                                    androidx.compose.material3.FilledTonalButton(onClick = { confirmRandomColors = true },
+                                    com.cripta.app.ui.components.FilledTonalButton(onClick = { confirmRandomColors = true },
                                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
-                                        Icon(Icons.Filled.Palette, null, Modifier.size(ButtonDefaults.IconSize))
+                                        Icon(CriptaIcons.Palette, null, Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                                         Text("Colori casuali a tutte le etichette")
                                     }
@@ -456,13 +413,13 @@ fun SettingsScreen(
                         Section("Riproduzione", "Come parte e si comporta ogni video.") {
                             ToggleRow("Riprendi da dove eri rimasto", s.display.resumePlayback,
                                 desc = "Riapre il video al punto lasciato; la copertina mostra quanto hai visto.",
-                                icon = Icons.Filled.History) { vm.setResumePlayback(it) }
+                                icon = CriptaIcons.History) { vm.setResumePlayback(it) }
                             ToggleRow("Ripeti in loop", s.videoLoop,
                                 desc = "Il video ricomincia da capo quando finisce.",
-                                icon = Icons.Filled.Repeat) { vm.setVideoLoop(it) }
+                                icon = CriptaIcons.Repeat) { vm.setVideoLoop(it) }
                             ToggleRow("Avvia senza audio", s.videoStartMuted,
                                 desc = "Ogni video parte muto; l'audio si riattiva dai comandi.",
-                                icon = Icons.AutoMirrored.Filled.VolumeOff) { vm.setVideoStartMuted(it) }
+                                icon = CriptaIcons.VolumeOff) { vm.setVideoStartMuted(it) }
                         }
                     },
                     sec("Fine video") {
@@ -470,7 +427,7 @@ fun SettingsScreen(
                             ToggleRow("Passa al file successivo", s.autoNext,
                                 desc = if (s.videoLoop) "Non si attiva finché la ripetizione in loop è accesa."
                                     else "Negli ultimi secondi compare «Prossimo» con il conto alla rovescia.",
-                                icon = Icons.Filled.SkipNext) { vm.setAutoNext(it) }
+                                icon = CriptaIcons.SkipNext) { vm.setAutoNext(it) }
                             if (s.autoNext) {
                                 ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
                                     s.autoNextSec) { vm.setAutoNextSec(it) }
@@ -481,22 +438,22 @@ fun SettingsScreen(
                         Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
                             ToggleRow("Scorri giù per chiudere", s.swipeToClose,
                                 desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
-                                icon = Icons.Filled.KeyboardArrowDown) { vm.setSwipeToClose(it) }
+                                icon = CriptaIcons.KeyboardArrowDown) { vm.setSwipeToClose(it) }
                             ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
                                 desc = "Trascina in su o in giù sul lato sinistro del video.",
-                                icon = Icons.Filled.LightMode) { vm.setGestureControls(it) }
+                                icon = CriptaIcons.LightMode) { vm.setGestureControls(it) }
                             ToggleRow("Volume sul lato destro", s.gestureVolume,
                                 desc = "Trascina in su o in giù sul lato destro del video.",
-                                icon = Icons.AutoMirrored.Filled.VolumeUp) { vm.setGestureVolume(it) }
+                                icon = CriptaIcons.VolumeUp) { vm.setGestureVolume(it) }
                             ToggleRow("Tieni premuto per accelerare", s.holdForSpeed,
                                 desc = "Tieni il dito su un lato: il video va più veloce finché non lo alzi.",
-                                icon = Icons.Filled.FastForward) { vm.setHoldForSpeed(it) }
+                                icon = CriptaIcons.FastForward) { vm.setHoldForSpeed(it) }
                             if (s.holdForSpeed) {
                                 ChoiceRow("Velocità tenendo premuto", listOf(15 to "1,5×", 20 to "2×", 30 to "3×"),
                                     s.holdSpeedX10) { vm.setHoldSpeed(it) }
                             }
                             ChoiceRow("Doppio tocco sui lati: salta di", listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
-                                s.seekStepSec, icon = Icons.Filled.FastRewind) { vm.setSeekStep(it) }
+                                s.seekStepSec, icon = CriptaIcons.FastRewind) { vm.setSeekStep(it) }
                         }
                     },
                     sec("Schermo") {
@@ -504,14 +461,14 @@ fun SettingsScreen(
                             ToggleRow("Segui l'orientamento del video", s.autoRotate,
                                 desc = if (s.autoRotate) "I video orizzontali si girano in orizzontale, quelli verticali in verticale."
                                     else "Lo schermo ruota liberamente con il telefono.",
-                                icon = Icons.Filled.ScreenRotation) { vm.setAutoRotate(it) }
+                                icon = CriptaIcons.ScreenRotation) { vm.setAutoRotate(it) }
                             ChoiceRow("I comandi restano visibili per", listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
-                                s.controlsTimeoutSec, icon = Icons.Filled.Timer) { vm.setControlsTimeout(it) }
+                                s.controlsTimeoutSec, icon = CriptaIcons.Timer) { vm.setControlsTimeout(it) }
                         }
                     },
                     sec("Anteprime dei file vicini") {
                         Section("Anteprime dei file vicini", "Piccole copertine dei file prima e dopo, insieme ai comandi del visualizzatore.") {
-                            ToggleRow("Mostra le anteprime", s.viewerFilmstrip, icon = Icons.Filled.ViewCarousel) { vm.setViewerFilmstrip(it) }
+                            ToggleRow("Mostra le anteprime", s.viewerFilmstrip, icon = CriptaIcons.ViewCarousel) { vm.setViewerFilmstrip(it) }
                             if (s.viewerFilmstrip) {
                                 ChoiceRow("Forma", listOf(
                                     com.cripta.app.data.StripShape.RECT to "Rettangolo",
@@ -545,10 +502,10 @@ fun SettingsScreen(
                         Section("Uscendo dall'app") {
                             ToggleRow("Metti in pausa il video", s.pauseOnLeave,
                                 desc = "Il video si ferma quando l'app va in background. Continua se è in Picture-in-Picture o a schermo diviso.",
-                                icon = Icons.Filled.Pause) { vm.setPauseOnLeave(it) }
+                                icon = CriptaIcons.Pause) { vm.setPauseOnLeave(it) }
                             ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
                                 desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
-                                icon = Icons.Filled.PictureInPictureAlt) { vm.setPictureInPicture(it) }
+                                icon = CriptaIcons.PictureInPictureAlt) { vm.setPictureInPicture(it) }
                         }
                     },
                 )
@@ -667,6 +624,11 @@ fun SettingsScreen(
                     },
                 )
                 SettingsPage.BACKUP -> listOf(
+                    sec("Cosa includere") {
+                        Section("Cosa includere", "La scelta vale per i prossimi backup. Il ripristino riporta tutto quello che l'archivio contiene.") {
+                            BackupScopeChoice(s.backupScope, backupFolders) { vm.setBackupScope(it) }
+                        }
+                    },
                     sec("Backup cifrato") {
                         Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
                             // Always visible: how big the archive would be if made now.
@@ -708,15 +670,17 @@ fun SettingsScreen(
                                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Button(
                                             onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
+                                            enabled = !s.backupScope.isEmpty,
                                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                                         ) { com.cripta.app.ui.components.ButtonText("Crea backup") }
-                                        androidx.compose.material3.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                        com.cripta.app.ui.components.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                             com.cripta.app.ui.components.ButtonText("Ripristina da un backup")
                                         }
                                     }
                                 }
                             }
-                            Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito.",
+                            Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito. " +
+                                "Solo le impostazioni salvate nel backup prendono il posto di quelle attuali.",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
@@ -750,7 +714,7 @@ fun SettingsScreen(
                                 }
                                 Text("Puoi uscire dall'app: la ricerca continua in background e ti avvisa con una notifica.",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                androidx.compose.material3.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                     com.cripta.app.ui.components.ButtonText("Interrompi la ricerca")
                                 }
                             } else {
@@ -767,7 +731,7 @@ fun SettingsScreen(
                                     Text("Ricerca rapida", style = MaterialTheme.typography.titleSmall)
                                     Text("Copie identiche byte per byte, di qualsiasi tipo di file. Pochi secondi: usa l'impronta calcolata all'importazione.",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                    com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Ricerca rapida")
                                     }
                                 }
@@ -781,12 +745,12 @@ fun SettingsScreen(
                                         known.first == 0 -> "La prima volta analizza tutti i ${known.second} media: qualche minuto, anche in background."
                                         else -> "${known.first} di ${known.second} media già analizzati: legge solo i ${known.second - known.first} nuovi."
                                     }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    androidx.compose.material3.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                    com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                         com.cripta.app.ui.components.ButtonText("Ricerca approfondita")
                                     }
                                 }
                                 ToggleRow("Controlla i simili all'importazione", s.similarOnImport,
-                                    desc = "Ogni foto o video nuovo è confrontato con i media già analizzati: se somiglia a uno, ti chiede cosa fare. Circa un secondo in più per video.") {
+                                    desc = "Anche con un nome diverso: se una foto o un video nuovo somiglia a uno già nel vault, ti chiede cosa fare. Spento, i simili li trovi in Duplicati e cestino › Simili. Circa un secondo in più per video.") {
                                     vm.setSimilarOnImport(it)
                                 }
                             }
@@ -802,7 +766,7 @@ fun SettingsScreen(
                                 ChoiceRow("Conserva per", listOf(3 to "3 giorni", 7 to "7 giorni", 30 to "30 giorni"), s.trashDays,
                                     indent = 0.dp) { vm.setTrashDays(it) }
                             }
-                            androidx.compose.material3.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
+                            com.cripta.app.ui.components.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                                 com.cripta.app.ui.components.ButtonText(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
                                     else "Apri il cestino (${trashed.size + trashedFolders.size})")
                             }
@@ -867,7 +831,7 @@ fun SettingsScreen(
                             }
                             ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                             if (updateState !is SettingsViewModel.UpdateState.Downloading) {
-                                androidx.compose.material3.FilledTonalButton(
+                                com.cripta.app.ui.components.FilledTonalButton(
                                     onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                     Text("Controlla aggiornamenti")
                                 }
@@ -897,14 +861,14 @@ fun SettingsScreen(
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    androidx.compose.material3.FilledTonalButton(
+                                    com.cripta.app.ui.components.FilledTonalButton(
                                         onClick = {
                                             clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
                                             android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                     ) { com.cripta.app.ui.components.ButtonText("Copia dettagli") }
-                                    androidx.compose.material3.FilledTonalButton(
+                                    com.cripta.app.ui.components.FilledTonalButton(
                                         onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
                                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                     ) { com.cripta.app.ui.components.ButtonText("Elimina") }
@@ -1107,7 +1071,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
     val toggle: @Composable () -> Unit = {
         IconButton(onClick = { visible = !visible }) {
             Icon(
-                if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                if (visible) CriptaIcons.VisibilityOff else CriptaIcons.Visibility,
                 if (visible) "Nascondi passphrase" else "Mostra passphrase",
             )
         }
@@ -1172,15 +1136,15 @@ enum class SettingsPage(
     val group: SettingsGroup,
     val resettable: Boolean = true,
 ) {
-    ASPETTO("Aspetto e cartelle", Icons.Filled.Palette, SettingsGroup.PREFERENCES),
-    ETICHETTE("Etichette", Icons.AutoMirrored.Filled.Label, SettingsGroup.PREFERENCES),
-    VISUALIZZATORE("Visualizzatore", Icons.Filled.PlayCircle, SettingsGroup.PREFERENCES),
-    ANALISI("Persone e intro", Icons.Filled.Face, SettingsGroup.PREFERENCES),
-    SICUREZZA("Sicurezza e privacy", Icons.Filled.Lock, SettingsGroup.DATA),
-    IMPORT("Import e conversione", Icons.Filled.Download, SettingsGroup.DATA),
-    BACKUP("Backup", Icons.Filled.Inventory2, SettingsGroup.DATA, resettable = false),
-    SPAZIO("Duplicati e cestino", Icons.Filled.Delete, SettingsGroup.DATA, resettable = false),
-    INFO("Info e aggiornamenti", Icons.Filled.Info, SettingsGroup.APP, resettable = false),
+    ASPETTO("Aspetto e cartelle", CriptaIcons.Palette, SettingsGroup.PREFERENCES),
+    ETICHETTE("Etichette", CriptaIcons.Label, SettingsGroup.PREFERENCES),
+    VISUALIZZATORE("Visualizzatore", CriptaIcons.PlayCircle, SettingsGroup.PREFERENCES),
+    ANALISI("Persone e intro", CriptaIcons.Face, SettingsGroup.PREFERENCES),
+    SICUREZZA("Sicurezza e privacy", CriptaIcons.Lock, SettingsGroup.DATA),
+    IMPORT("Import e conversione", CriptaIcons.Download, SettingsGroup.DATA),
+    BACKUP("Backup", CriptaIcons.Backup, SettingsGroup.DATA, resettable = false),
+    SPAZIO("Duplicati e cestino", CriptaIcons.DeleteSweep, SettingsGroup.DATA, resettable = false),
+    INFO("Info e aggiornamenti", CriptaIcons.SystemUpdate, SettingsGroup.APP, resettable = false),
 }
 
 /** "1 elemento" / "N elementi": what the trash counts. Files and folders alike are elements. */
@@ -1263,6 +1227,7 @@ private val SEARCH_INDEX: List<SearchEntry> = listOf(
     SearchEntry("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT, "Originale dopo import"),
     SearchEntry("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.IMPORT, "Conversione in MP4"),
     SearchEntry("Backup cifrato", "backup esporta ripristina passphrase archivio copia", SettingsPage.BACKUP, "Backup cifrato"),
+    SearchEntry("Cosa includere nel backup", "backup scegli includi cartelle etichette persone analisi impostazioni copertine", SettingsPage.BACKUP, "Cosa includere"),
     SearchEntry("File duplicati / media simili", "duplicati simili doppioni spazio ricerca rapida approfondita importazione", SettingsPage.SPAZIO, "File duplicati"),
     SearchEntry("Cestino", "cestino eliminati ripristina", SettingsPage.SPAZIO, "Cestino"),
     SearchEntry("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO, "Aggiornamenti"),
@@ -1295,8 +1260,8 @@ private fun MainSettingsList(
             com.cripta.app.ui.components.CriptaTextField(
                 value = query, onValueChange = onQuery,
                 placeholder = { Text("Cerca un'impostazione") },
-                leadingIcon = { Icon(Icons.Filled.Search, null) },
-                trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "Cancella") } }) else null,
+                leadingIcon = { Icon(CriptaIcons.Search, null) },
+                trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(CriptaIcons.Close, "Cancella") } }) else null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
@@ -1320,6 +1285,8 @@ private fun MainSettingsList(
                     val p = pages[i]
                     PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, null) }
                 }
+                // DS Impostazioni: the space used, as a counted row, closes "I tuoi dati".
+                if (g == SettingsGroup.DATA) item(span = full) { SpaceUsedRow() }
             }
         }
     }
@@ -1327,8 +1294,9 @@ private fun MainSettingsList(
 
 @Composable
 private fun GroupLabel(text: String) {
-    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 4.dp).semantics { heading() })
+    Text(text, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
+        // DS: 32dp between groups, 10 from a heading to its rows.
+        modifier = Modifier.padding(top = 32.dp, bottom = 10.dp).semantics { heading() })
 }
 
 /** Calm swap between two states of a panel: crossfade while the height follows. */
@@ -1344,19 +1312,42 @@ private fun backupStamp(): String =
 @Composable
 private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(p.icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        Column(Modifier.weight(1f).padding(start = 20.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+        Column(Modifier.weight(1f).padding(start = 16.dp, end = 8.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             if (summary.isNotBlank()) {
                 Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             }
         }
+        Icon(CriptaIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
     }
+}
+
+/** "Spazio usato: 18,4 GB di 64 GB": what the vault takes on this phone, against the phone's storage. */
+@Composable
+private fun SpaceUsedRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val space by androidx.compose.runtime.produceState<Pair<Long, Long>?>(null) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val dir = ctx.filesDir
+                val used = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } +
+                    (ctx.getDatabasePath("x").parentFile?.walkTopDown()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L)
+                used to android.os.StatFs(dir.path).totalBytes
+            }.getOrNull()
+        }
+    }
+    val s = space ?: return
+    com.cripta.app.ui.components.CountRow(
+        "Spazio usato", com.cripta.app.ui.components.formatBytes(s.first),
+        of = com.cripta.app.ui.components.formatBytes(s.second),
+        progress = if (s.second > 0) s.first.toFloat() / s.second else 0f,
+    )
 }
 
 /**
@@ -1367,7 +1358,7 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
 internal fun Section(title: String, description: String? = null, content: @Composable () -> Unit) {
     // The explanation sits close under its heading (it belongs to it), the options a step further.
     Column(Modifier.fillMaxWidth()) {
-        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+        Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.semantics { heading() })
         if (description != null) {
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1418,23 +1409,90 @@ internal fun ToggleRow(
 ) {
     // The whole row is one switch (label included) for touch and TalkBack; the Switch only draws.
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(MaterialTheme.shapes.small)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp).size(22.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp).size(24.dp))
         }
         Column(Modifier.weight(1f).padding(end = 8.dp)) {
             // Title in medium weight, its caption close under it: the pair reads as one item.
-            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+            Text(label, style = MaterialTheme.typography.bodyLarge)
             if (desc != null) {
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp))
             }
         }
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
+    }
+}
+
+/**
+ * What the next backup carries: one switch per group, and for the files the top-level folders
+ * (each with everything under it) and the files in no folder, folded until asked for.
+ */
+@Composable
+private fun BackupScopeChoice(
+    scope: com.cripta.app.data.BackupScope,
+    folders: List<com.cripta.app.data.db.FolderEntity>,
+    onChange: (com.cripta.app.data.BackupScope) -> Unit,
+) {
+    var showFolders by remember { mutableStateOf(false) }
+    ToggleRow("File", scope.files, desc = "Foto, video, note e altri documenti, con le loro cartelle.") {
+        onChange(scope.copy(files = it))
+    }
+    if (scope.files && folders.isNotEmpty()) {
+        val ids = folders.map { it.id }.toSet()
+        val chosen = ids.count { it !in scope.excludedFolders }
+        val all = chosen == ids.size && scope.rootFiles
+        TextButton(onClick = { showFolders = !showFolders }) {
+            com.cripta.app.ui.components.ButtonText(
+                when {
+                    showFolders -> "Nascondi le cartelle"
+                    all -> "Scegli le cartelle (tutte)"
+                    else -> "Scegli le cartelle ($chosen di ${ids.size})"
+                }
+            )
+        }
+        if (showFolders) {
+            Column(Modifier.padding(start = 16.dp)) {
+                folders.forEach { f ->
+                    ToggleRow(f.name, f.id !in scope.excludedFolders) { on ->
+                        // Ids of folders gone since are dropped on the way.
+                        val ex = scope.excludedFolders.filter { it in ids }.toSet()
+                        onChange(scope.copy(excludedFolders = if (on) ex - f.id else ex + f.id))
+                    }
+                }
+                ToggleRow("File fuori dalle cartelle", scope.rootFiles) { onChange(scope.copy(rootFiles = it)) }
+                Text("Una cartella entra con tutte le sue sottocartelle.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    if (scope.files) {
+        ToggleRow("Copertine scelte a mano", scope.covers, desc = "Le copertine dei video cambiate da te; le altre si rifanno da sole.") {
+            onChange(scope.copy(covers = it))
+        }
+    }
+    ToggleRow("Etichette e filtri salvati", scope.tags, desc = "Nomi, sigle, colori e icone, e quali file le hanno. Senza, i file arrivano senza etichette.") {
+        onChange(scope.copy(tags = it))
+    }
+    ToggleRow("Persone e volti", scope.people, desc = "Le persone, i loro volti nei file e le tue scelte su chi è chi.") {
+        onChange(scope.copy(people = it))
+    }
+    ToggleRow("Analisi di intro, finali e simili", scope.analysis, desc = "Così dopo il ripristino non vanno rifatte.") {
+        onChange(scope.copy(analysis = it))
+    }
+    ToggleRow("Impostazioni", scope.settings,
+        desc = "Aspetto, visualizzatore, analisi e le altre. Restano fuori blocco automatico, screenshot e rotazione bloccata: valgono per questo dispositivo.") {
+        onChange(scope.copy(settings = it))
+    }
+    Text("Il cestino non entra mai nel backup: i file eliminati restano solo su questo dispositivo fino alla scadenza.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (scope.isEmpty) {
+        Text("Scegli almeno una cosa da includere.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }
 
@@ -1454,12 +1512,12 @@ internal fun <T> ChoiceRow(
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
         if (icon != null) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp, top = 2.dp).size(22.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp, top = 2.dp).size(24.dp))
         } else {
             androidx.compose.foundation.layout.Spacer(Modifier.width(indent))
         }
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+            Text(label, style = MaterialTheme.typography.bodyLarge)
             com.cripta.app.ui.components.ChipFlowRow {
                 options.forEach { (v, l) -> com.cripta.app.ui.components.ChoiceChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
             }
@@ -1484,16 +1542,17 @@ private fun InfoRow(label: String, value: String) {
 private fun androidx.compose.foundation.layout.BoxScope.TrashSelectionMark(selecting: Boolean, selected: Boolean) {
     if (!selecting) return
     if (selected) {
+        // DS cr-cover.is-selected: a 3dp accent ring on the cover's edge.
         Box(Modifier.matchParentSize().clip(com.cripta.app.ui.theme.CoverShape)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)))
+            .border(3.dp, MaterialTheme.colorScheme.primary, com.cripta.app.ui.theme.CoverShape))
     }
     Box(
-        Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(androidx.compose.foundation.shape.CircleShape)
+        Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.35f))
             .then(if (selected) Modifier else Modifier.border(2.dp, Color.White, androidx.compose.foundation.shape.CircleShape)),
         contentAlignment = Alignment.Center,
     ) {
-        if (selected) Icon(Icons.Filled.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+        if (selected) Icon(CriptaIcons.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -1581,17 +1640,19 @@ private fun TrashDialog(
             contentWindowInsets = safe,
             topBar = {
                 androidx.compose.material3.TopAppBar(
-                    colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                    // DS: while selecting, the bar lifts one tier (surface-raised).
+                    colors = if (inSel) androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer) else com.cripta.app.ui.components.criptaTopBarColors(),
                     windowInsets = safe.only(
                         androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
                             androidx.compose.foundation.layout.WindowInsetsSides.Top
                     ),
                     navigationIcon = {
                         if (inSel) {
-                            IconButton(onClick = { clearSel() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
+                            IconButton(onClick = { clearSel() }) { Icon(CriptaIcons.Close, "Esci dalla selezione") }
                         } else {
                             IconButton(onClick = { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
+                                Icon(CriptaIcons.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
                             }
                         }
                     },
@@ -1601,22 +1662,21 @@ private fun TrashDialog(
                             Text(if (n == 1) "1 selezionato" else "$n selezionati", maxLines = 1)
                         } else Column {
                             Text(if (openId == null) "Cestino" else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            val sub = if (openId == null) {
-                                // One count (files and folders are both elements), short enough for one line.
-                                "${elementsLabel(items.size + folders.size)} · distrutti dopo $days giorni"
-                            } else {
-                                (listOf("Cestino") + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › ")
-                            }
-                            Text(sub, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            // The top level says its count and rule in the page (DS); a folder shows where it was.
+                            if (openId != null) Text((listOf("Cestino") + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › "),
+                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     },
                     actions = {
                         if (inSel) {
                             val all = selF.size == shownFileIds.size && selD.size == shownFolderIds.size
-                            TextButton(onClick = {
+                            IconButton(onClick = {
                                 if (all) clearSel() else { selFiles = shownFileIds; selFolders = shownFolderIds }
-                            }) { Text(if (all) "Nessuno" else "Tutti") }
+                            }) {
+                                Icon(CriptaIcons.SelectAll, if (all) "Deseleziona tutto" else "Seleziona tutto",
+                                    tint = if (all) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current)
+                            }
                         } else if (openId != null) {
                             TextButton(onClick = { onRestoreFolder(openId) }) { com.cripta.app.ui.components.ButtonText("Ripristina tutto") }
                         }
@@ -1628,18 +1688,22 @@ private fun TrashDialog(
                 // 56dp, as in the faces' pages): "Svuota il cestino", or those of the selection.
                 val top = openId == null && (items.isNotEmpty() || folders.isNotEmpty())
                 if (inSel || top) {
+                    // DS cr-bottombar: surface-raised, both buttons 56dp, the destructive one tonal in danger.
                     androidx.compose.material3.BottomAppBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         windowInsets = safe.only(
                             androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
                                 androidx.compose.foundation.layout.WindowInsetsSides.Bottom
                         ),
                     ) {
                         if (!inSel) com.cripta.app.ui.components.DestructiveButton("Svuota il cestino", onClick = { confirmEmpty = true },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).heightIn(min = 56.dp))
-                        else Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = 56.dp), icon = CriptaIcons.Delete)
+                        else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { confirmDeleteSel = true },
-                                modifier = Modifier.weight(1f).heightIn(min = 56.dp))
-                            Button(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp), icon = CriptaIcons.Delete)
+                            com.cripta.app.ui.components.FilledTonalButton(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                                Icon(CriptaIcons.RestoreFromTrash, null, Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
                                 com.cripta.app.ui.components.ButtonText("Ripristina")
                             }
                         }
@@ -1650,20 +1714,33 @@ private fun TrashDialog(
             if (shownFolders.isEmpty() && shownFiles.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
+                        Icon(CriptaIcons.Delete, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
                         Text(if (openId == null) "Il cestino è vuoto." else "Nient'altro di questa cartella è nel cestino.",
                             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 12.dp))
                     }
                 }
             } else {
+                val phone = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
                 androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(112.dp),
+                    columns = if (phone) androidx.compose.foundation.lazy.grid.GridCells.Fixed(3)
+                        else androidx.compose.foundation.lazy.grid.GridCells.Adaptive(112.dp),
                     modifier = Modifier.fillMaxSize().padding(pad),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (openId == null) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        // DS Cestino: the rule in one line, then what the trash holds.
+                        Column {
+                            Text("I file restano qui $days giorni, poi spariscono per sempre.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            com.cripta.app.ui.components.CountRow("Nel cestino", com.cripta.app.ui.components.formatCount(items.size + folders.size),
+                                after = (if (items.size + folders.size == 1) " elemento" else " elementi") + " · " +
+                                    com.cripta.app.ui.components.formatBytes(items.sumOf { it.sizeBytes }),
+                                modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
                     items(shownFolders.size, key = { "d" + shownFolders[it].id }) { i ->
                         val fo = shownFolders[i]
                         val under = filesUnder(fo.id)
@@ -1710,8 +1787,8 @@ private fun TrashDialog(
                                     androidx.compose.foundation.Image(b.asImageBitmap(), f.originalName,
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 } else {
-                                    Icon(if (com.cripta.app.data.VaultRepository.isVideo(f.mimeType)) Icons.Filled.Movie
-                                        else Icons.AutoMirrored.Filled.InsertDriveFile, null,
+                                    Icon(if (com.cripta.app.data.VaultRepository.isVideo(f.mimeType)) CriptaIcons.Movie
+                                        else CriptaIcons.InsertDriveFile, null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                                 }
                                 if (!inSel) com.cripta.app.ui.components.formatDuration(f.durationMs)?.let {
@@ -1840,6 +1917,24 @@ private fun TrashDialog(
                 },
                 dismissButton = { TextButton(onClick = { confirmEmpty = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
             )
+        }
+    }
+}
+
+/** DS radio row: the ring (accent with its dot when chosen), the title, its caption under it. The whole row is the choice. */
+@Composable
+internal fun RadioRow(title: String, caption: String?, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(MaterialTheme.shapes.small)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(end = 16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (caption != null) Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 }

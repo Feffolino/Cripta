@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -12,9 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.FilledTonalButton
+import com.cripta.app.ui.components.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
@@ -38,17 +37,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,7 +104,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         val confirmed = isVideo && shown.any { it.personId != null && it.state == "manual" }
         PanelHeading("Persone", if (chosen.isEmpty() && clear.size >= 2) "Tocca un volto per dire chi è, tienilo premuto per unirlo a un altro o eliminarlo." else null) {
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni sui volti") }
+                IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Altre azioni sui volti") }
                 DropdownMenu(menu && com.cripta.app.ui.components.vaultUnlocked(), { menu = false }) {
                     DropdownMenuItem(text = { Text(if (shown.isEmpty()) "Perché nessun volto?" else "Come sono stati trovati") },
                         onClick = { menu = false; vm.describeFaces(file.id) })
@@ -130,7 +124,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         }
         if (chosen.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Esci dalla selezione") }
+                IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, "Esci dalla selezione") }
                 Text(if (chosen.size == 1) "1 volto" else "${chosen.size} volti", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f))
             }
@@ -297,20 +291,20 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
         if (suggested && p != null) {
             // One tap answers the suggestion; nothing is added without this yes.
             IconButton(onClick = { vm.confirmFace(t.id, p.id) }) {
-                Icon(Icons.Filled.Check, "Sì, è ${p.title}", tint = MaterialTheme.colorScheme.primary)
+                Icon(CriptaIcons.Check, "Sì, è ${p.title}", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = { vm.rejectFace(t.id, p.id) }) {
-                Icon(Icons.Filled.Close, "No, non è ${p.title}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(CriptaIcons.Close, "No, non è ${p.title}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Row
         }
         if (p != null) IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
-            Icon(if (p.entity.favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+            Icon(if (p.entity.favorite) CriptaIcons.Star else CriptaIcons.StarBorder,
                 if (p.entity.favorite) "Togli ${p.title} dai preferiti" else "Aggiungi ${p.title} ai preferiti",
                 tint = if (p.entity.favorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni su questo volto") }
+            IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Altre azioni su questo volto") }
             DropdownMenu(menu && com.cripta.app.ui.components.vaultUnlocked(), { menu = false }) {
                 if (p != null) DropdownMenuItem(text = { Text("Non è ${p.title}") }, onClick = { menu = false; vm.rejectFace(t.id, p.id) })
                 if (isVideo) DropdownMenuItem(text = { Text("Dividi…") }, onClick = { menu = false; onSplit() })
@@ -412,7 +406,7 @@ private fun FaceEditor(
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(CriptaIcons.Add, null, tint = MaterialTheme.colorScheme.primary)
                             }
                             Text(if (query.isBlank()) "Nuova persona" else "Nuova persona «${query.trim()}»", color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -424,7 +418,7 @@ private fun FaceEditor(
                             FaceAvatar(q.cover, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                            if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = com.cripta.app.ui.theme.Favorite)
+                            if (q.entity.favorite) Icon(CriptaIcons.Star, "Preferita", tint = com.cripta.app.ui.theme.Favorite)
                         }
                     }
                 }

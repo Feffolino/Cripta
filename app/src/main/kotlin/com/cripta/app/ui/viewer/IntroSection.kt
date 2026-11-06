@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.heading
@@ -22,19 +23,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
+import com.cripta.app.ui.components.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -241,7 +238,7 @@ private fun SegmentBlock(
                 }
                 if (active != null) {
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altre azioni per $name") }
+                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Altre azioni per $name") }
                         DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
                             // Bounds moved away from the detected sound: the same move for the whole series.
                             if (active.source == "manual" && active.autoStartMs != null && active.autoEndMs != null &&
@@ -266,14 +263,14 @@ private fun SegmentBlock(
                         FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                             com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
                         }
-                        IconButton(onClick = onCancelMark) { Icon(Icons.Filled.Close, "Annulla il segno") }
+                        IconButton(onClick = onCancelMark) { Icon(CriptaIcons.Close, "Annulla il segno") }
                     }
                     active == null -> FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onMarkStart) {
                         com.cripta.app.ui.components.ButtonText("$name da qui (${clock(positionMs)})")
                     }
                     else -> {
                         FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { onTry(active) }) {
-                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                            Icon(CriptaIcons.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
                             com.cripta.app.ui.components.ButtonText("Prova")
                         }
                         Spacer(Modifier.width(4.dp))

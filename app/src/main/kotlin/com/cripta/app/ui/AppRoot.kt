@@ -1,5 +1,6 @@
 package com.cripta.app.ui
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
@@ -30,12 +31,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.union
 import androidx.compose.material3.Icon
+import com.cripta.app.ui.theme.accentTint
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -83,7 +82,8 @@ import com.cripta.app.ui.theme.Motion
 import com.cripta.app.ui.vault.VaultScreen
 import com.cripta.app.ui.viewer.ViewerScreen
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
+// DS: outline icon at rest, filled for the current tab.
+private data class Tab(val route: String, val label: String, val icon: ImageVector, val iconRest: ImageVector)
 
 /** Real left/right camera-cutout widths (Compose's displayCutout insets can report 0 here), for
  *  fullscreen screens such as the player that lay out their own chrome. */
@@ -98,10 +98,10 @@ val LocalSideCutout = androidx.compose.runtime.compositionLocalOf { SideCutout()
 val LocalVaultLocked = androidx.compose.runtime.staticCompositionLocalOf { false }
 
 private val tabs = listOf(
-    Tab("home", "Home", Icons.Filled.Home),
-    Tab("folders", "Cartelle", Icons.Filled.Folder),
-    Tab("download", "Download", Icons.Filled.Download),
-    Tab("settings", "Impostazioni", Icons.Filled.Settings),
+    Tab("home", "Home", CriptaIcons.HomeFilled, CriptaIcons.Home),
+    Tab("folders", "Cartelle", CriptaIcons.FolderFilled, CriptaIcons.Folder),
+    Tab("download", "Download", CriptaIcons.DownloadFilled, CriptaIcons.Download),
+    Tab("settings", "Impostazioni", CriptaIcons.SettingsFilled, CriptaIcons.Settings),
 )
 private val tabRoutes = tabs.map { it.route }.toSet()
 
@@ -359,18 +359,20 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             ) {
                 // Flat bar one tier above the page, the current tab marked by an accent pill + accent
                 // label (shape and colour together, never colour alone).
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp, modifier = Modifier) {
                     tabs.forEach { tab ->
                         val selected = backStack?.destination?.hierarchy?.any { it.route == tab.route } == true
                         NavigationBarItem(
                             selected = selected,
                             onClick = { onTab(tab.route) },
-                            icon = { Icon(tab.icon, tab.label) },
-                            label = { Text(tab.label, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else null) },
+                            icon = { Icon(if (selected) tab.icon else tab.iconRest, tab.label) },
+                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                            // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
                             colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primary,
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                indicatorColor = MaterialTheme.colorScheme.accentTint,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
@@ -389,7 +391,10 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 // Keep the tab screens (rail + content) clear of the side camera cutout; the
                 // fullscreen player handles its own insets.
                 // (Every non-player route: favourites and notes have top bars under the camera too.)
-                if (currentRoute?.startsWith("viewer") != true) Modifier.padding(start = cutoutStart, end = cutoutEnd) else Modifier,
+                // With the side rail shown, the rail itself covers the start cutout (in its colour):
+                // padded here, that strip stayed the page's dark blue next to the rail.
+                if (currentRoute?.startsWith("viewer") != true)
+                    Modifier.padding(start = if (showBar && landscape) 0.dp else cutoutStart, end = cutoutEnd) else Modifier,
             ),
         ) {
           CompositionLocalProvider(LocalSideCutout provides SideCutout(cutoutStart, cutoutEnd)) {
@@ -404,9 +409,10 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             ) {
                 // Inset the rail from the left edge / status bar so its labels don't touch it.
                 NavigationRail(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     // Top only (not the bottom gesture inset): 4 labelled items must fit a short screen.
-                    windowInsets = WindowInsets.systemBars.only(
+                    // The camera cutout too, so the rail's colour fills the strip beside the camera.
+                    windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
                         WindowInsetsSides.Start + WindowInsetsSides.Top,
                     ),
                 ) {
@@ -417,12 +423,14 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                         NavigationRailItem(
                             selected = selected,
                             onClick = { onTab(tab.route) },
-                            icon = { Icon(tab.icon, tab.label) },
-                            label = { Text(tab.label, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else null) },
+                            icon = { Icon(if (selected) tab.icon else tab.iconRest, tab.label) },
+                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                            // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
                             colors = androidx.compose.material3.NavigationRailItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primary,
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                indicatorColor = MaterialTheme.colorScheme.accentTint,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
@@ -448,7 +456,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 // With the rail shown it already took the start system-bar inset: consume it so the
                 // screens' own Scaffolds don't add the same gap again.
                 modifier = Modifier.weight(1f).then(
-                    if (showBar && landscape) Modifier.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Start))
+                    if (showBar && landscape) Modifier.consumeWindowInsets(WindowInsets.systemBars.union(WindowInsets.displayCutout).only(WindowInsetsSides.Start))
                     else Modifier,
                 ),
                 // Tabs are siblings (fade-through with a drift); the player moves in depth (Z-axis);

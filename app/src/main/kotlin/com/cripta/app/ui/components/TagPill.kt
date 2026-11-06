@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +33,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.ui.theme.readableOn
 
@@ -48,8 +48,11 @@ enum class TagPillSize { Small, Medium, Large }
  */
 enum class TagPillState { Plain, Off, On, Excluded }
 
-/** Dark glass behind tags and badges drawn over an image: readable on any picture, in either theme. */
-val OnImageGlass = Color(0xEB14171E)
+/**
+ * DS `glass`: see-through black behind tags and badges drawn over an image. The DS draws 40% black
+ * over a blur; without the blur 55% keeps white text >= 4.5:1 even over a white picture.
+ */
+val OnImageGlass = Color(0x8C000000)
 
 /** How much of a tag's colour fills its pill over a picture (the rim is stronger). */
 private const val TINT_ON_IMAGE = 0.45f
@@ -105,8 +108,9 @@ fun TagPill(
     val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
     val on = state == TagPillState.On
     val colored = on || state == TagPillState.Plain
-    val neutral = if (onImage) OnImageGlass else MaterialTheme.colorScheme.surfaceContainerHigh
+    val neutral = if (onImage) OnImageGlass else MaterialTheme.colorScheme.secondaryContainer
     val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val ink = MaterialTheme.colorScheme.onSurface
     // Over a picture the pill lets it through a little; the text is judged against the tag's own
     // colour over a dark backdrop, the darkest tone that pill can take.
     val bg = when {
@@ -117,23 +121,27 @@ fun TagPill(
         else -> color.copy(alpha = 0.35f).compositeOver(base)
     }
     val rim = if (colored && onImage) color.copy(alpha = 0.85f) else null
-    val fg = remember(color, bg, colored, on, onImage, muted) {
+    val fg = remember(color, bg, colored, on, onImage, muted, ink) {
         when {
             !colored -> muted
-            // The full colour: white or black, whichever reads better on it.
-            on -> if (bg.luminance() < 0.18f) Color.White else Color.Black
+            // The full colour: on-tag (black, >= 4.5:1 on the whole palette); white only on a
+            // darker colour of the user's own.
+            on -> if (bg.luminance() >= 0.175f) Color.Black else Color.White
             // Judged on the darkest backdrop the see-through pill can take.
             onImage -> readableOn(Color.White, color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass))
-            else -> readableOn(color, bg, 4.8)
+            // DS: the name in ink on the tag's tint; the dot carries the colour.
+            else -> ink
         }
     }
+    // DS cr-tag: sm 22dp / 11sp bold, md 32dp / 13sp, lg 40dp / 14sp.
     val style = when (size) {
         TagPillSize.Small -> MaterialTheme.typography.labelSmall
-        else -> MaterialTheme.typography.labelLarge
+        TagPillSize.Medium -> MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp)
+        TagPillSize.Large -> MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp)
     }
-    val hPad = when (size) { TagPillSize.Small -> 7.dp; TagPillSize.Medium -> 12.dp; TagPillSize.Large -> 14.dp }
+    val hPad = when (size) { TagPillSize.Small -> 8.dp; TagPillSize.Medium -> 12.dp; TagPillSize.Large -> 16.dp }
     val vPad = when (size) { TagPillSize.Small -> 2.dp; TagPillSize.Medium -> 6.dp; TagPillSize.Large -> 8.dp }
-    val minH = when (size) { TagPillSize.Small -> 0.dp; TagPillSize.Medium -> 32.dp; TagPillSize.Large -> 36.dp }
+    val minH = when (size) { TagPillSize.Small -> 22.dp; TagPillSize.Medium -> 32.dp; TagPillSize.Large -> 40.dp }
     val iconSize = if (size == TagPillSize.Small) 12.dp else 16.dp
 
     var m = modifier
@@ -166,15 +174,16 @@ fun TagPill(
     ) {
         // The tick (or the "no" sign) takes the place of what leads when off (the pin, else the
         // tag's icon, else the dot), in a slot of one size: a tap never changes the pill's width.
-        val mark = when (state) { TagPillState.On -> Icons.Filled.Check; TagPillState.Excluded -> Icons.Filled.Block; else -> null }
+        val mark = when (state) { TagPillState.On -> CriptaIcons.Check; TagPillState.Excluded -> CriptaIcons.Block; else -> null }
         val markOnIcon = mark != null && tagIcon != null && leadingIcon == null
         val lead: ImageVector? = if (markOnIcon) null else mark ?: leadingIcon
         if (lead != null) {
             Icon(lead, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(iconSize))
-        } else if (tagIcon == null && (size != TagPillSize.Small || state == TagPillState.Off)) {
-            // The tag's own colour as a dot, so every tag is recognisable even when it is off.
-            Box(Modifier.padding(end = 4.dp).size(iconSize), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(if (colored) fg else color))
+        } else if (tagIcon == null) {
+            // The tag's own colour as a dot (DS cr-tag__dot: 6dp small, 8dp otherwise), so every
+            // tag is recognisable even when it is off.
+            Box(Modifier.padding(end = 4.dp).size(if (size == TagPillSize.Small) 6.dp else iconSize), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (on) fg else color))
             }
         }
         if (tagIcon != null) {
@@ -204,9 +213,9 @@ fun TagPill(
 /** Neutral "+N" pill in the same shape, for tags that didn't fit. */
 @Composable
 fun MoreTagsPill(count: Int, onImage: Boolean, modifier: Modifier = Modifier) {
-    val bg = if (onImage) OnImageGlass else MaterialTheme.colorScheme.surfaceContainerHigh
+    val bg = if (onImage) OnImageGlass else MaterialTheme.colorScheme.secondaryContainer
     val fg = if (onImage) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(modifier.clip(CircleShape).background(bg).padding(horizontal = 7.dp, vertical = 2.dp)) {
+    Box(modifier.heightIn(min = 22.dp).clip(CircleShape).background(bg).padding(horizontal = 8.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
         Text("+$count", style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1)
     }
 }

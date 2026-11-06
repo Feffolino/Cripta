@@ -18,3 +18,14 @@ keystore.properties
 *.jks
 __pycache__/
 .kotlin/
+
+# Logs and heap dumps
+*.log
+*.hprof
+
+# Editor and agent tool state (local to each machine)
+.vscode/
+.claude/worktrees/
+.claude/settings.local.json
+.claude/launch.json
+graphify-out/

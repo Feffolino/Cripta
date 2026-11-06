@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -36,19 +37,28 @@ fun CountRow(
     value: String,
     modifier: Modifier = Modifier,
     of: String? = null,
+    /** Said after the figure as it is (" file · 2,1 GB"), in place of " di [of]". */
+    after: String? = null,
     icon: ImageVector? = null,
     progress: Float? = null,
 ) {
-    Column(modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 14.dp).size(22.dp))
+                Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp).size(24.dp))
             }
-            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                modifier = Modifier.weight(1f).padding(end = 12.dp))
+            // DS cr-count: the label in `body`, the figure beside it.
+            Text(label, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).padding(end = 16.dp))
+            // DS cr-count__value: the figure bold in ink, " di <total>" muted.
             Text(
-                buildString { append(value); if (of != null) append(" di ").append(of) },
-                style = MaterialTheme.typography.titleMedium,
+                androidx.compose.ui.text.buildAnnotatedString {
+                    withStyle(androidx.compose.ui.text.SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)) { append(value) }
+                    if (of != null) { append(" di "); append(of) }
+                    if (after != null) append(after)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
             )
         }
@@ -56,7 +66,9 @@ fun CountRow(
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                trackColor = MaterialTheme.colorScheme.secondaryContainer,
+                drawStopIndicator = {},
+                gapSize = 0.dp,
             )
         }
     }

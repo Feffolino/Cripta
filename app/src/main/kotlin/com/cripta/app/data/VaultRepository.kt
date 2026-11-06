@@ -23,6 +23,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -450,7 +451,10 @@ class VaultRepository @Inject constructor(
 
     suspend fun import(uri: Uri, folderId: Long?, onBytes: ((Long) -> Unit)? = null): FileEntity = withContext(Dispatchers.IO) {
         val (name, _) = queryNameSize(uri)
-        val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        val reported = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        // A Markdown file often comes as text/plain or octet-stream: by its name it is a note.
+        val mime = if ((name.endsWith(".md", true) || name.endsWith(".markdown", true)) &&
+            (reported == "application/octet-stream" || reported.startsWith("text/"))) MIME_MARKDOWN else reported
         // Read media duration from the still-plaintext source before it is encrypted.
         val duration = if (isPlayable(mime)) durationOf(uri) else null
         // Resolution too (drives the HD/4K badge on covers), also read before encryption.
@@ -1046,7 +1050,10 @@ class VaultRepository @Inject constructor(
         val parent = android.provider.DocumentsContract.buildDocumentUriUsingTree(
             tree, android.provider.DocumentsContract.getTreeDocumentId(tree),
         )
-        val doc = android.provider.DocumentsContract.createDocument(resolver, parent, file.mimeType, file.originalName)
+        // A note leaves as a .md file (it had no extension, and a type no other app knew).
+        val note = isNote(file.mimeType)
+        val doc = android.provider.DocumentsContract.createDocument(resolver, parent,
+            if (note) MIME_MARKDOWN else file.mimeType, if (note) noteFileName(file.originalName) else file.originalName)
             ?: throw java.io.IOException("Impossibile creare il file nella cartella scelta")
         try {
             val sink = resolver.openOutputStream(doc)
@@ -1372,9 +1379,10 @@ class VaultRepository @Inject constructor(
         passphrase: CharArray,
         compressDocs: Boolean = false,
         onProgress: (Float) -> Unit = {},
+        scope: BackupScope = BackupScope(),
     ): Int = withContext(Dispatchers.IO) {
         try {
-            exportBackupInner(dest, passphrase, compressDocs, onProgress)
+            exportBackupInner(dest, passphrase, compressDocs, scope, onProgress)
         } catch (e: Throwable) {
             // Closed on the way out, a half-written archive ends like a whole one: removed, so it
             // is never kept (or restored, failing halfway) as the backup.
@@ -1383,42 +1391,62 @@ class VaultRepository @Inject constructor(
         } finally { java.util.Arrays.fill(passphrase, '\u0000') }
     }
 
+    /** Covers picked by hand ([com.cripta.app.media.ThumbnailLoader]), sealed with the DEK. */
+    private val customCoverDir get() = java.io.File(context.filesDir, "covers")
+
     /**
-     * Size a backup of the vault would take right now: (file count, bytes). The archive is every
-     * file's plaintext (re-encrypted, no compression: media doesn't shrink) plus an 8-byte length
-     * each, the manifest (names, tags, folders: estimated per entry) and header + GCM tag.
+     * Size a backup with the chosen scope would take right now: (file count, bytes). The archive is
+     * every chosen file's plaintext (re-encrypted, no compression: media doesn't shrink) plus an
+     * 8-byte length each, the manifest (names, tags, folders: estimated per entry), the people and
+     * analysis parts, the settings and covers, and the encryption's overhead.
      */
-    fun backupEstimate(compressDocs: kotlinx.coroutines.flow.Flow<Boolean>): kotlinx.coroutines.flow.Flow<Pair<Int, Long>> =
+    fun backupEstimate(
+        compressDocs: kotlinx.coroutines.flow.Flow<Boolean>,
+        scope: kotlinx.coroutines.flow.Flow<BackupScope>,
+    ): kotlinx.coroutines.flow.Flow<Pair<Int, Long>> =
         kotlinx.coroutines.flow.combine(
             // live(): follows the session. Bound to `db` directly this kept querying the closed
             // database after a lock, Room reopened it with the wiped key and the app crashed.
-            live { it.fileDao().allWithTags() }, live { it.tagDao().all() }, live { it.folderDao().all() }, compressDocs,
-            // People, faces and intro/outro analysis, written after the files ([BackupExtras]).
-            kotlinx.coroutines.flow.combine(live { it.faceDao().observeBackupBytes() }, live { it.introDao().observeBackupBytes() }) { a, b -> a + b },
-        ) { files, tags, folders, compress, extras ->
+            live { it.fileDao().allWithTags() }, live { it.tagDao().all() }, live { it.folderDao().all() },
+            kotlinx.coroutines.flow.combine(compressDocs, scope) { c, sc -> c to sc },
+            // People and faces, intro/outro analysis: written after the files ([BackupExtras]).
+            kotlinx.coroutines.flow.combine(live { it.faceDao().observeBackupBytes() }, live { it.introDao().observeBackupBytes() }) { a, b -> a to b },
+        ) { all, tags, folders, (compress, sc), (faceBytes, introBytes) ->
+            val parents = folders.associate { it.id to it.parentId }
+            val files = all.filter { sc.includesFile(it.file.folderId, parents) }
             // Compressed documents: ~60% of their size is a typical guess for text / PDF.
             val data = files.sumOf {
                 val sz = it.file.sizeBytes
                 8L + if (compress && compressibleInBackup(it.file.mimeType, sz)) sz * 6 / 10 else sz
             }
-            val manifest = 4L + files.sumOf { 300L + it.file.originalName.length * 2L + (it.file.sourceUrl?.length ?: 0) + it.tags.size * 16L } +
-                tags.size * 90L + folders.size * 120L
-            files.size to (manifest + data + extras).let { it + BackupCrypto.overhead(it) }
-        }
+            val manifest = 4L + files.sumOf { 300L + it.file.originalName.length * 2L + (it.file.sourceUrl?.length ?: 0) + (if (sc.tags) it.tags.size * 16L else 0L) } +
+                (if (sc.tags) tags.size * 90L else 0L) + folders.count { sc.includesFolder(it.id, parents) } * 120L
+            val extras = (if (sc.people) faceBytes else 0L) + (if (sc.analysis) introBytes else 0L)
+            val more = (if (sc.settings) 4096L else 0L) +
+                (if (sc.covers) files.sumOf { java.io.File(customCoverDir, it.file.id).length().let { n -> if (n > 0) n + 8 else 0L } } else 0L)
+            files.size to (manifest + data + extras + more).let { it + BackupCrypto.overhead(it) }
+        }.flowOn(Dispatchers.IO)
 
-    private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray, compressDocs: Boolean, onProgress: (Float) -> Unit): Int {
-        val folders = db.folderDao().all().first()
-        val tags = db.tagDao().all().first()
-        val files = db.fileDao().allWithTags().first()
+    private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray, compressDocs: Boolean, scope: BackupScope, onProgress: (Float) -> Unit): Int {
+        val allFolders = db.folderDao().all().first()
+        val parents = allFolders.associate { it.id to it.parentId }
+        // Only the chosen folders and the files in them (a whole top-level folder at a time, so a
+        // chosen folder's parent is always in the archive too).
+        val folders = allFolders.filter { scope.includesFolder(it.id, parents) }
+        val tags = if (scope.tags) db.tagDao().all().first() else emptyList()
+        val files = db.fileDao().allWithTags().first().filter { scope.includesFile(it.file.folderId, parents) }
 
         // Format v4 (BackupCrypto): authenticated 1 MB segments instead of one GCM message.
         val header = BackupCrypto.newHeader()
         // File ids change on restore: a folder's cover is stored as its file's position in the archive.
-        val fileIndex = files.withIndex().associate { (i, fwt) -> fwt.file.id to i }
+        val fileIndex = BackupScope.positions(files.map { it.file.id })
 
         val manifest = org.json.JSONObject().apply {
             // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
             put("v", if (compressDocs) 3 else 2)
+            // What the user chose to put in (absent in older backups, which hold everything).
+            put("contents", org.json.JSONObject().put("files", scope.files).put("tags", scope.tags).put("people", scope.people)
+                .put("analysis", scope.analysis).put("settings", scope.settings).put("covers", scope.covers && scope.files))
             put("folders", org.json.JSONArray().apply {
                 folders.forEach {
                     put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("parentId", it.parentId ?: org.json.JSONObject.NULL)
@@ -1451,9 +1479,9 @@ class VaultRepository @Inject constructor(
                         .put("width", fwt.file.width ?: org.json.JSONObject.NULL)
                         .put("height", fwt.file.height ?: org.json.JSONObject.NULL)
                         .put("contentHash", fwt.file.contentHash ?: org.json.JSONObject.NULL)
-                        .put("tags", org.json.JSONArray().apply { fwt.tags.forEach { put(it.name) } })
+                        .put("tags", org.json.JSONArray().apply { if (scope.tags) fwt.tags.forEach { put(it.name) } })
                         .put("segments", org.json.JSONArray().apply {
-                            db.introDao().segmentsOf(fwt.file.id).forEach {
+                            if (scope.analysis) db.introDao().segmentsOf(fwt.file.id).forEach {
                                 put(org.json.JSONObject().put("kind", it.kind).put("start", it.startMs).put("end", it.endMs).put("source", it.source)
                                     .put("autoStart", it.autoStartMs ?: org.json.JSONObject.NULL).put("autoEnd", it.autoEndMs ?: org.json.JSONObject.NULL))
                             }
@@ -1463,7 +1491,7 @@ class VaultRepository @Inject constructor(
             // Saved filters reference tags by id, which change on restore: store names instead.
             val tagNameById = tags.associate { it.id to it.name }
             put("savedFilters", org.json.JSONArray().apply {
-                db.savedFilterDao().all().first().forEach { sf ->
+                if (scope.tags) db.savedFilterDao().all().first().forEach { sf ->
                     val f = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: return@forEach
                     fun names(key: String) = org.json.JSONArray().apply {
                         f.optJSONArray(key)?.let { a -> for (i in 0 until a.length()) tagNameById[a.getLong(i)]?.let { put(it) } }
@@ -1515,7 +1543,16 @@ class VaultRepository @Inject constructor(
                     if (copied != len) throw java.io.IOException("Lettura incompleta di ${fwt.file.originalName}")
                 }
                 // People, faces and intro/outro analysis (an older app stops before this part).
-                BackupExtras.write(db, fileIndex, out)
+                BackupExtras.write(db, fileIndex, out, people = scope.people, analysis = scope.analysis)
+                // Settings and hand-picked covers, by archive position (an app older than this part
+                // stops before it).
+                BackupMore.begin(out)
+                if (scope.settings) BackupMore.record(out, BackupMore.SETTINGS, settings.exportForBackup())
+                if (scope.covers) for ((idx, fwt) in files.withIndex()) {
+                    val sealed = java.io.File(customCoverDir, fwt.file.id).takeIf { it.isFile }?.readBytes() ?: continue
+                    openThumb(sealed)?.let { BackupMore.cover(out, idx, it) }
+                }
+                BackupMore.end(out)
                 out.flush()
             }
         }
@@ -1527,11 +1564,11 @@ class VaultRepository @Inject constructor(
      * is removed). Files are streamed straight into the vault, never held whole in RAM.
      * [passphrase] is wiped when this returns.
      */
-    suspend fun importBackup(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit = {}): Int = withContext(Dispatchers.IO) {
+    suspend fun importBackup(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit = {}): RestoreReport = withContext(Dispatchers.IO) {
         try { importBackupInner(src, passphrase, onProgress) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
     }
 
-    private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): Int {
+    private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): RestoreReport {
         val opened = context.contentResolver.openInputStream(src)
             ?: throw java.io.IOException("Impossibile aprire il file di backup")
         // Progress = bytes of the archive read so far (its size from the provider, when known).
@@ -1588,20 +1625,36 @@ class VaultRepository @Inject constructor(
                 // Stopped halfway (a full disk, a damaged archive), a restore left a half-merged
                 // vault, and trying again duplicated what had come in.
                 val written = ArrayList<String>()
+                val covers = ArrayList<java.io.File>()
+                var settingsBytes: ByteArray? = null
                 val restored = try {
-                    db.withTransaction { restoreArchive(manifest, inp, written) }
+                    db.withTransaction { restoreArchive(manifest, inp, written, covers) { settingsBytes = it } }
                 } catch (e: Throwable) {
-                    withContext(kotlinx.coroutines.NonCancellable) { written.forEach { runCatching { blobs.shred(it) } } }
+                    withContext(kotlinx.coroutines.NonCancellable) {
+                        written.forEach { runCatching { blobs.shred(it) } }
+                        covers.forEach { runCatching { it.delete() } }
+                    }
                     throw e
                 }
+                // Settings only once the vault part is in: a failed restore changes nothing.
+                val settingsOk = settingsBytes?.let { b ->
+                    runCatching { settings.importFromBackup(b) }
+                        .onFailure { android.util.Log.w("VaultRepository", "backup settings not restored", it) }.isSuccess
+                } ?: false
                 notifyChanged()
-                restored
+                restored.copy(settings = settingsOk)
             }
         }
     }
 
     /** The manifest's content and the files after it, into the vault (see [importBackupInner]). */
-    private suspend fun restoreArchive(manifest: org.json.JSONObject, inp: java.io.DataInputStream, written: MutableList<String>): Int {
+    private suspend fun restoreArchive(
+        manifest: org.json.JSONObject,
+        inp: java.io.DataInputStream,
+        written: MutableList<String>,
+        coverFiles: MutableList<java.io.File>,
+        onSettings: (ByteArray) -> Unit,
+    ): RestoreReport {
         // Folders: remap old ids to new, inserting parents before children.
         val fArr = manifest.getJSONArray("folders")
         val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
@@ -1640,7 +1693,9 @@ class VaultRepository @Inject constructor(
         for (i in 0 until tArr.length()) {
             val o = tArr.getJSONObject(i)
             val name = o.getString("name")
-            db.tagDao().insert(TagEntity(name = name))
+            // A tag already in the vault keeps its own alias, colour, icon, pin and place: the
+            // restore only adds ("nothing that is there is replaced"). Files still get linked to it.
+            if (db.tagDao().insert(TagEntity(name = name)) == -1L) continue
             // v2: pin and custom order.
             if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
             if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
@@ -1719,7 +1774,16 @@ class VaultRepository @Inject constructor(
             }
         }
         // People, faces and intro/outro analysis, when the archive has them.
-        BackupExtras.read(db, newIds, inp)
+        val extras = BackupExtras.Contents()
+        val hasExtras = BackupExtras.read(db, newIds, inp, extras)
+        // Then settings and hand-picked covers (newer archives). Covers go to the restored files'
+        // new ids; removed again by the caller if the restore fails.
+        if (hasExtras) BackupMore.read(inp, onSettings = onSettings, onCover = cover@{ pos, jpeg ->
+            val id = newIds.getOrNull(pos) ?: return@cover
+            val f = java.io.File(customCoverDir.apply { mkdirs() }, id)
+            coverFiles += f
+            f.writeBytes(sealThumb(jpeg))
+        })
         // Folder covers chosen by the user (by the file's position in the archive).
         for (k in 0 until fArr.length()) {
             val o = fArr.getJSONObject(k)
@@ -1740,7 +1804,9 @@ class VaultRepository @Inject constructor(
                 db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", "Filtro"), json = f.toString()))
             }
         }
-        return fileArr.length()
+        val segments = (0 until fileArr.length()).any { (fileArr.getJSONObject(it).optJSONArray("segments")?.length() ?: 0) > 0 }
+        return RestoreReport(files = fileArr.length(), tags = tArr.length(), people = extras.people,
+            analysis = extras.analysis || segments, covers = coverFiles.size)
     }
 
     /** The backup could not be opened: wrong passphrase, or not a Cripta backup. */
@@ -1795,7 +1861,7 @@ class VaultRepository @Inject constructor(
             throw e
         }
         val e = FileEntity(
-            id = uuid, originalName = name.ifBlank { "Nota" }, mimeType = MIME_NOTE,
+            id = uuid, originalName = name.ifBlank { "Nota" }, mimeType = MIME_MARKDOWN,
             sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
             createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
         )
@@ -1822,7 +1888,9 @@ class VaultRepository @Inject constructor(
         }
         // The content changed: its old hash would make a file matching the old text look like a
         // copy of this note ("già presente").
-        db.fileDao().update(f.copy(originalName = name.ifBlank { f.originalName }, sizeBytes = bytes.size.toLong(), contentHash = null))
+        // Saved as Markdown from now on (a note from before keeps its text: plain text is Markdown).
+        db.fileDao().update(f.copy(originalName = name.ifBlank { f.originalName }, mimeType = MIME_MARKDOWN,
+            sizeBytes = bytes.size.toLong(), contentHash = null))
         notifyChanged()
     }
 
@@ -1841,11 +1909,18 @@ class VaultRepository @Inject constructor(
                 "android.package-archive", "epub", "openxmlformats", "opendocument")
             return packed.none { mime.contains(it, ignoreCase = true) }
         }
+        /** Notes made before they were Markdown: still notes, saved as Markdown on their next edit. */
         const val MIME_NOTE = "text/cripta-note"
+        /** Notes are Markdown files (.md once exported); an imported .md is a note too. */
+        const val MIME_MARKDOWN = "text/markdown"
         fun isImage(mime: String) = mime.startsWith("image/")
         fun isVideo(mime: String) = mime.startsWith("video/")
         fun isPlayable(mime: String) = isVideo(mime) || mime.startsWith("audio/")
-        fun isNote(mime: String) = mime == MIME_NOTE
+        fun isNote(mime: String) = mime == MIME_NOTE || mime == MIME_MARKDOWN || mime == "text/x-markdown"
+
+        /** The file name a note gets outside the vault: its title with ".md". */
+        fun noteFileName(name: String): String =
+            if (name.endsWith(".md", true) || name.endsWith(".markdown", true)) name else "$name.md"
         fun isPdf(mime: String) = mime == "application/pdf"
     }
 }

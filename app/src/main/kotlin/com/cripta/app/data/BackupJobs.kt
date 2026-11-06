@@ -18,7 +18,14 @@ import javax.inject.Singleton
 @Singleton
 class BackupJobs @Inject constructor() {
 
-    class Request(val restore: Boolean, val uri: Uri, val passphrase: CharArray, val compressDocs: Boolean)
+    class Request(
+        val restore: Boolean,
+        val uri: Uri,
+        val passphrase: CharArray,
+        val compressDocs: Boolean,
+        /** What a backup carries (ignored by a restore, which takes what the archive has). */
+        val scope: BackupScope = BackupScope(),
+    )
 
     /** What runs now: its label and progress (0..1, null while unknown). */
     data class Running(val label: String, val progress: Float?)

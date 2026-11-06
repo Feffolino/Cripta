@@ -6,7 +6,10 @@ How the app looks and why. Product context is in [PRODUCT.md](PRODUCT.md); token
 ## World
 
 Calm, discreet, dark-first. A private safe for one owner, used in short sessions, often in public.
-The look stays close to the original Cripta: near-black layered surfaces, one calm blue accent.
+Since November 2026 the app follows the **Cripta Design System** (the separate
+`Cripta-design-system` project: tokens, components, the 19 example screens); this file describes
+that look as built, and it is the official one. It keeps the original colours (near-black layered
+surfaces, one calm blue accent) with new type (Manrope), shapes, icons (Tabler) and screens.
 The app icon (keyhole cut out of a circle, `ic_cripta_logo`) is `#5B8DEF` on `#0E1116`; the lock
 screen shows the same mark tinted with the theme accent. If the palette changes, change only those two icon colours.
 
@@ -29,20 +32,39 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   stage and tag colours.
 - Tag colours ([TagPalette]) are the user's. Text on a tag tint goes through `readableOn()` so it
   reaches 4.5:1 in both themes and with custom colours.
-- Anything drawn over a picture (length, star, play mark, people's faces) sits on the dark glass
-  `OnImageGlass`, never on a gradient over the whole cover. Tags over a picture are the one
+- Anything drawn over a picture (length, star, play mark, people's faces, the watched bar) sits on
+  the dark glass `OnImageGlass` (black at 55%: the design system's 40% plus blur, darker here so
+  white text keeps 4.5:1 without the blur), never on a gradient over the whole cover. Tags over a picture are the one
   exception: a see-through tint of their own colour (see Components).
 
 ## Type
 
-System sans, tabular figures in every style (counts, sizes and durations line up).
+Manrope (OFL, licence in `assets/licenses/`), as static instances 400 / 500 / 600 / 700 / 800 in
+`res/font/` (the variable file rendered its 200 default instance: thin text). Tabular figures in
+every style (counts, sizes and durations line up). The scale (`Type.kt`):
 
-- Section heading: `titleSmall`, accent colour, marked as heading.
-- Row title: `bodyLarge` medium weight. Its caption: `bodySmall` (12/15), secondary colour, 2dp
-  under the title, so a title and its caption read as one item.
-- Figures that summarise (Home counts): `headlineMedium`.
-- Page titles of the tabs: `headlineSmall` next to the app mark (`HeaderTitle`).
+| Style | Size / line | Weight | Use |
+|---|---|---|---|
+| `DisplayStyle` | 34 / 40 | 800 | name on the lock screen, empty states |
+| `HeadlineStyle` | 26 / 32 | 700 | tab titles next to the app mark (`HeaderTitle`) |
+| `FigureStyle` | 26 / 30 | 700 | summary figures (Home strip, details panel) |
+| `HeadingStyle` | 13 / 18 | 700 | section headings, accent colour, marked as heading |
+| `titleLarge` | 20 / 26 | 700 | dialog titles, a pushed page's top bar |
+| `titleMedium` | 16 / 22 | 700 | sheet headings, a large cover's title |
+| `bodyLarge` | 16 / 22 | 600 | row titles |
+| `bodyMedium` | 14 / 20 | 500 | running text, page intros, dialog bodies |
+| `bodySmall` | 12 / 16 | 500 | captions under a row title and under covers |
+
+- A row title's caption sits 2dp under it, secondary colour: the pair reads as one item.
 - Counts are written with thousands separators (`formatCount`: 1.234).
+
+## Icons
+
+Tabler Icons v3.49.0 (MIT, licence in `assets/licenses/`), outline, converted to vector drawables
+`res/drawable/tabler_*.xml` and reached only through `ui/theme/CriptaIcons.kt` (properties keep the
+Material names). The navigation bar shows the outline at rest and the filled glyph on the current
+tab. The player's Media3 transport icons are Tabler too (`res/values/exo_controls_tabler.xml`).
+Tag icons are a separate set (see Components) and are not Tabler.
 
 ## Structure
 
@@ -69,10 +91,11 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 
 ## Shape
 
-- Radii: 10 / 14 / 20 / 26 / 32 dp (`CriptaShapes`). Chips, pills, badges and the navigation
-  indicator are fully round.
-- Covers: `CoverShape` (18dp) in grids, shelves and pickers; `CoverShapeSmall` (12dp) in list rows
-  and small previews.
+- Radii: sm 10, md 14, cover 16, lg 22, sheet 28 dp (`CriptaShapes`, `RadiusSm`…`RadiusSheet`).
+  Buttons, chips, tags, single-line fields, badges and the navigation indicator are fully round.
+- Covers: `CoverShape` (16dp) in grids, shelves, pickers and folder stacks; `CoverShapeSmall`
+  (10dp) in list rows and small previews.
+- Selected cover: a 3dp accent ring 6dp inside the cover's edge and a plain check.
 
 ## Components
 
@@ -89,8 +112,8 @@ System sans, tabular figures in every style (counts, sizes and durations line up
 - **Tag icons** (`ui/tagicons/`): Microsoft's Fluent Emoji, high-contrast set (MIT, licence in
   `assets/tagicons/`), one colour, drawn in the pill's text colour before the name (in place of
   the colour dot). The editor offers icons fitting the tag's name (Italian or English words), the
-  common ones, and a searchable list of all. On a cover, the short style with an icon and no
-  alias shows the icon alone.
+  common ones, and a searchable list of all. On a cover a tag shows only its symbol or its
+  acronym (the icon, else the alias, else a short form of the name), never the full name.
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
@@ -142,7 +165,14 @@ System sans, tabular figures in every style (counts, sizes and durations line up
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
   with the name underneath, never on the picture. No "more" button: actions are on long-press,
-  so the name keeps the whole width.
+  so the name keeps the whole width. In Cartelle and inside a folder the folders are a grid
+  (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
+  Video, Altro, Preferiti); the files follow under a "File" heading.
+- **Home**: search pill, the summary strip (Foto, Video and Note or Altro), "Continua" (videos
+  left halfway), Persone, then the saved filters as chips. The space used is in
+  Impostazioni › Dati ("Spazio usato"), not on Home.
+- **Buttons** (`ui/components/Buttons.kt`, the only buttons screens use): pills; the page's one
+  filled button 56dp tall, tonal and destructive ones 48dp.
 - **Start carousel** (Home with an empty vault): three pages to swipe, one step each (add,
   organise, lock): a tonal disc with the step's icon in the accent, a `headlineSmall` title, one
   or two lines of why, then the step's own buttons, so each page works without the others. Under
@@ -194,7 +224,12 @@ System sans, tabular figures in every style (counts, sizes and durations line up
     only then); marking it again is in ⋮. Plain words: trovata, segnata da te, sigla.
 - **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
   the current one larger, full opacity and ringed.
-- **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (32dp).
+- **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (sheet, 28dp).
+- **Backup** (Impostazioni › Backup): "Cosa includere" first, one switch per group (File, with
+  the top-level folders folded behind "Scegli le cartelle"; Copertine scelte a mano; Etichette e
+  filtri salvati; Persone e volti; Analisi; Impostazioni), the remembered choice; then the size
+  estimate that follows it, "Comprimi i documenti" and the buttons. The trash never goes in, and
+  the page says so.
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as a grid of three options per row with the size under each, destination as two plain rows
   opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti.

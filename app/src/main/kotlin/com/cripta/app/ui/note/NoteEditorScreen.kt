@@ -1,5 +1,6 @@
 package com.cripta.app.ui.note
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -10,14 +11,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,7 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,26 +93,46 @@ fun NoteEditorScreen(
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { Text(if (fileId == null) "Nuova nota" else "Modifica nota") },
-                navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Salva e chiudi") } },
+                // DS Nota: no title in the bar (the note's own title leads the page); the rarer
+                // actions in the menu, "Fatto" as the floating button.
+                title = {},
+                navigationIcon = { IconButton(onClick = leave) { Icon(CriptaIcons.ArrowBack, "Salva e chiudi") } },
                 actions = {
                     if (fileId != null) {
-                        IconButton(onClick = { confirmDelete = true }, enabled = vm.loaded && !vm.saving) {
-                            Icon(Icons.Filled.Delete, "Elimina nota")
-                        }
-                    }
-                    if (vm.saving) {
-                        // Saving: the check turns into progress, so the wait reads as work, not as a dead button.
-                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                        }
-                    } else {
-                        IconButton(onClick = { vm.save(fileId, folderId) { onBack() } }, enabled = vm.loaded && !vm.loadFailed) {
-                            Icon(Icons.Filled.Check, "Salva")
+                        var menu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { menu = true }, enabled = vm.loaded && !vm.saving) {
+                                Icon(CriptaIcons.MoreVert, "Altre azioni")
+                            }
+                            androidx.compose.material3.DropdownMenu(expanded = menu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { menu = false }) {
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Elimina nota", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(CriptaIcons.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                    onClick = { menu = false; confirmDelete = true },
+                                )
+                            }
                         }
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            // DS cr-fab "Fatto": saves and closes. While saving, the tick turns into progress.
+            if (vm.loaded && !vm.loadFailed) androidx.compose.material3.FloatingActionButton(
+                onClick = { if (!vm.saving) vm.save(fileId, folderId) { onBack() } },
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                // Above the keyboard: the padding goes OUTSIDE the 60dp (inside it, it squeezed the
+                // icon and left the button under the keyboard while typing). The Scaffold already
+                // keeps the FAB above the navigation bar, so only the keyboard's extra height counts.
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
+                    .size(60.dp),
+            ) {
+                if (vm.saving) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                else Icon(CriptaIcons.Check, "Fatto", Modifier.size(28.dp))
+            }
         },
         snackbarHost = { SnackbarHost(snackbar, Modifier.imePadding()) },
     ) { pad ->
@@ -140,23 +165,63 @@ fun NoteEditorScreen(
                             TextField(
                                 value = vm.name, onValueChange = { vm.name = it },
                                 placeholder = { Text("Titolo") }, singleLine = true,
-                                textStyle = MaterialTheme.typography.titleLarge,
+                                // DS Nota: the title in headline, the word count under it.
+                                textStyle = MaterialTheme.typography.headlineSmall,
                                 colors = plain,
                                 // Not editable when the note couldn't be read (nothing typed could be saved).
                                 enabled = !vm.loadFailed,
                                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Titolo" },
                             )
+                            val words = vm.text.split(Regex("\\s+")).count { it.isNotBlank() }
+                            Text(if (words == 1) "1 parola" else "${com.cripta.app.ui.components.formatCount(words)} parole",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 16.dp))
+                        }
+                        // The text with its selection, for the formatting bar; vm.text follows it.
+                        var body by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(vm.text)) }
+                        LaunchedEffect(vm.text) { if (vm.text != body.text) body = androidx.compose.ui.text.input.TextFieldValue(vm.text) }
+                        fun edit(v: androidx.compose.ui.text.input.TextFieldValue) { body = v; vm.text = v.text }
+                        // Markdown styled as it is typed: headings larger, bold, lists, the markers dimmed.
+                        val palette = NoteMarkdown.Palette(
+                            muted = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            accent = MaterialTheme.colorScheme.primary,
+                            codeBackground = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        )
+                        val styled = remember(palette) {
+                            androidx.compose.ui.text.input.VisualTransformation { t ->
+                                androidx.compose.ui.text.input.TransformedText(NoteMarkdown.render(t.text, palette, keepMarkers = true),
+                                    androidx.compose.ui.text.input.OffsetMapping.Identity)
+                            }
                         }
                         TextField(
-                            value = vm.text, onValueChange = { vm.text = it },
-                            placeholder = { Text("Scrivi qui…") },
-                            textStyle = MaterialTheme.typography.bodyLarge,
+                            value = body,
+                            // Enter on a list item starts the next one (or ends an empty list).
+                            onValueChange = { edit(NoteMarkdown.continueList(body, it)) },
+                            placeholder = { Text("Scrivi qui… # titolo, **grassetto**, - elenco, - [ ] da fare") },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                            visualTransformation = styled,
                             colors = plain,
                             enabled = !vm.loadFailed,
                             modifier = Modifier.fillMaxWidth().weight(1f)
                                 .onFocusChanged { contentFocused = it.isFocused }
                                 .semantics { contentDescription = "Contenuto" },
                         )
+                        // The formatting bar, above the keyboard; the right end left to "Fatto".
+                        if (!vm.loadFailed) Row(
+                            Modifier.fillMaxWidth().padding(start = 8.dp, end = 84.dp, bottom = 12.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            @Composable
+                            fun tool(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, act: () -> Unit) =
+                                IconButton(onClick = act) { Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            tool(CriptaIcons.FormatHeading, "Titolo") { edit(NoteMarkdown.linePrefix(body, null)) }
+                            tool(CriptaIcons.FormatBold, "Grassetto") { edit(NoteMarkdown.wrap(body, "**")) }
+                            tool(CriptaIcons.FormatItalic, "Corsivo") { edit(NoteMarkdown.wrap(body, "*")) }
+                            tool(CriptaIcons.FormatChecklist, "Da fare") { edit(NoteMarkdown.linePrefix(body, "- [ ] ")) }
+                            tool(CriptaIcons.ViewList, "Elenco puntato") { edit(NoteMarkdown.linePrefix(body, "- ")) }
+                            tool(CriptaIcons.FormatNumbered, "Elenco numerato") { edit(NoteMarkdown.linePrefix(body, "1. ")) }
+                        }
                     }
                 }
             }

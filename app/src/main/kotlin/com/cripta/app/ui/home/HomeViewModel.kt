@@ -216,5 +216,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /** Open Cartelle filtered to one type (from the summary card). */
+    /** The Home search pill: the query opens in Cartelle, over the whole vault. */
+    fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query))
+
     fun showType(type: com.cripta.app.ui.vault.TypeFilter) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type))
 }

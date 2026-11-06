@@ -26,6 +26,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        com.cripta.app.ui.theme.CriptaIcons.init(resources)
         CrashLog.install(this)
         TinkInit.ensureInitialized()
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)

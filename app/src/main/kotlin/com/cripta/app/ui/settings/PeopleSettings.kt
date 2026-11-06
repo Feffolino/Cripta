@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.theme.CriptaIcons
+import androidx.compose.foundation.layout.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.CriptaDialog
@@ -35,15 +37,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,17 +50,12 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material3.Button
+import com.cripta.app.ui.components.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import com.cripta.app.ui.components.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,7 +69,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,6 +100,7 @@ import com.cripta.app.work.ConversionService
  * statistics. The people themselves live on their own page ([PeopleScreen]).
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     val overview by vm.people.collectAsStateWithLifecycle()
     val progress by vm.faceProgress.collectAsStateWithLifecycle()
@@ -125,22 +114,24 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     PageIntro("Cripta trova i volti di foto e video, in qualunque cartella; sei tu a dire chi sono, dai dettagli di ogni media. " +
         "Tutto avviene sul telefono: volti e persone restano nel database cifrato.") {
         ScanStatus(overview, progress, onStop = { vm.cancelFaceScan() })
-        FilledTonalButton(onClick = { vm.openPeople() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            com.cripta.app.ui.components.ButtonText("Vedi le persone")
+        // DS Impostazioni › Persone: the state, then "Analizza ora" as the page's tonal action.
+        // Wraps: side by side "Analisi in corso…" and "Vedi le persone" ran off a narrow screen.
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null) {
+                Icon(CriptaIcons.Face, null, Modifier.size(20.dp))
+                Spacer(Modifier.size(8.dp))
+                com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza ora" else "Analisi in corso…")
+            }
+            FilledTonalButton(onClick = { vm.openPeople() }) {
+                com.cripta.app.ui.components.ButtonText("Vedi le persone")
+            }
         }
     }
-    Section("Analisi") {
+    Section("Riconoscimento") {
+        RadioRow("Tutti i volti", "I volti sconosciuti vanno in «Da sistemare», raggruppati per somiglianza.", s.facesMode == "all") { vm.setFacesMode("all") }
+        RadioRow("Solo persone note", "Simili a chi ha volti in almeno 2 media; gli altri restano nei dettagli di ogni media.", s.facesMode == "known") { vm.setFacesMode("known") }
         ToggleRow("Analizza i nuovi media", s.facesAnalyzeNew, desc = "Dopo ogni importazione, download o conversione, in background.",
-            icon = Icons.Filled.Face) { vm.setFacesAnalyzeNew(it) }
-        ChoiceRow("Riconoscimento", listOf("all" to "Tutti i volti", "known" to "Solo persone note"), s.facesMode,
-            icon = Icons.Filled.Groups,
-            desc = if (s.facesMode == "all") "Ti chiede chi sono tutti i volti trovati, raggruppati per somiglianza in «Da sistemare»."
-                else "Ti propone, in «Da confermare», solo volti simili a persone che hanno volti in almeno 2 media. Gli altri restano nei dettagli di ogni media.") {
-            vm.setFacesMode(it)
-        }
-        FilledTonalButton(onClick = { vm.startFaceScan() }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            com.cripta.app.ui.components.ButtonText(if (progress == null) "Analizza foto e video mancanti" else "Analisi in corso…")
-        }
+            icon = CriptaIcons.Face) { vm.setFacesAnalyzeNew(it) }
         // Videos with someone confirmed that the closer look has not seen as they are now (counted again after each scan).
         val wanted by produceState(0, progress == null) { value = if (progress == null) runCatching { vm.refineWanted().size }.getOrDefault(0) else value }
         if (wanted > 0) {
@@ -156,9 +147,9 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
     Section("Visualizzazione") {
         ToggleRow("Momenti nel lettore", s.faceMoments,
             desc = "Segni sulla barra del video dove compaiono le persone; nei dettagli ogni volto elenca i suoi momenti.",
-            icon = Icons.Filled.Timeline) { vm.setFaceMoments(it) }
+            icon = CriptaIcons.Timeline) { vm.setFaceMoments(it) }
         ChoiceRow("Persone in Home", listOf("off" to "Nascoste", "blur" to "Sfocate", "on" to "Visibili"), s.peopleOnHome,
-            icon = Icons.Filled.Home,
+            icon = CriptaIcons.Home,
             desc = when (s.peopleOnHome) {
                 "off" -> "La Home non mostra volti."
                 "blur" -> "Sfocati finché non tocchi la riga: utile in pubblico."
@@ -166,7 +157,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
             }) { vm.setPeopleOnHome(it) }
     }
     Section("Manutenzione") {
-        FilledTonalButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+        TextButton(onClick = { clearing = true }, enabled = progress == null, modifier = Modifier.offset(x = (-12).dp)) {
             com.cripta.app.ui.components.ButtonText("Elimina volti trovati per errore…")
         }
         val ignored by vm.ignoredFaces.collectAsStateWithLifecycle()
@@ -175,11 +166,9 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             TextButton(onClick = { vm.forgetIgnoredFaces() }) { com.cripta.app.ui.components.ButtonText("Dimentica") }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { showStats = true }) { com.cripta.app.ui.components.ButtonText("Statistiche") }
-            Spacer(Modifier.weight(1f))
-            com.cripta.app.ui.components.DestructiveButton("Ricomincia da capo", onClick = { askRestart = true }, enabled = progress == null)
-        }
+        TextButton(onClick = { showStats = true }, modifier = Modifier.offset(x = (-12).dp)) { com.cripta.app.ui.components.ButtonText("Statistiche") }
+        com.cripta.app.ui.components.DestructiveButton("Ricomincia da capo", onClick = { askRestart = true }, enabled = progress == null,
+            icon = CriptaIcons.Delete, modifier = Modifier.fillMaxWidth())
     }
     }
     if (askRestart) {
@@ -354,11 +343,11 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
                         /** Changes when the face's picture does (a face split keeps its id). */
                         key: Any? = null, selected: Boolean = false) {
     val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { load(it) } }
-    Box(modifier.size(size).then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+    Box(modifier.size(size).then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(5.dp) else Modifier)
         .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        else Icon(Icons.Filled.Face, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        else Icon(CriptaIcons.Face, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -366,7 +355,7 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
 @Composable
 internal fun FavoriteStar(on: Boolean, name: String, modifier: Modifier = Modifier, onToggle: () -> Unit) {
     IconButton(onClick = onToggle, modifier = modifier.size(36.dp)) {
-        Icon(if (on) Icons.Filled.Star else Icons.Filled.StarBorder, if (on) "Togli $name dai preferiti" else "Aggiungi $name ai preferiti",
+        Icon(if (on) CriptaIcons.Star else CriptaIcons.StarBorder, if (on) "Togli $name dai preferiti" else "Aggiungi $name ai preferiti",
             tint = if (on) com.cripta.app.ui.theme.Favorite else androidx.compose.ui.graphics.Color.White,
             modifier = Modifier.size(26.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
     }
@@ -375,7 +364,7 @@ internal fun FavoriteStar(on: Boolean, name: String, modifier: Modifier = Modifi
 /** The mark of a favourite person where it cannot be changed (Home): the same star as everywhere. */
 @Composable
 internal fun FavoriteBadge(modifier: Modifier = Modifier) {
-    Icon(Icons.Filled.Star, "Preferita", tint = com.cripta.app.ui.theme.Favorite,
+    Icon(CriptaIcons.Star, "Preferita", tint = com.cripta.app.ui.theme.Favorite,
         modifier = modifier.size(24.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
 }
 
@@ -457,23 +446,23 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 val chosen = overview?.people.orEmpty().filter { it.id in selected }
                 TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { Text(if (selected.size == 1) "1 selezionata" else "${selected.size} selezionate") },
-                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Annulla selezione") } },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, "Annulla selezione") } },
                     actions = {
                         val allFav = chosen.isNotEmpty() && chosen.all { it.entity.favorite }
                         IconButton(onClick = { chosen.forEach { vm.setPersonFavorite(it.id, !allFav) }; selected = emptySet() }) {
-                            Icon(if (allFav) Icons.Filled.Star else Icons.Filled.StarBorder, if (allFav) "Togli dai preferiti" else "Aggiungi ai preferiti")
+                            Icon(if (allFav) CriptaIcons.Star else CriptaIcons.StarBorder, if (allFav) "Togli dai preferiti" else "Aggiungi ai preferiti")
                         }
                         if (selected.size >= 2) TextButton(onClick = { askMerge = true }) { com.cripta.app.ui.components.ButtonText("Unisci") }
                         IconButton(onClick = { chosen.forEach { vm.ignorePerson(it.id) }; selected = emptySet() }) {
-                            Icon(Icons.Filled.VisibilityOff, "Nascondi")
+                            Icon(CriptaIcons.VisibilityOff, "Nascondi")
                         }
                     })
             } else
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text("Persone") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, "Indietro") } },
                 actions = {
                     Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, "Ordina") }
+                        IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, "Ordina") }
                         DropdownMenu(sortMenu && vaultUnlocked(), { sortMenu = false }) {
                             com.cripta.app.data.PeopleSort.entries.forEach { k ->
                                 DropdownMenuItem(text = { Text(sortLabel(k)) },
@@ -491,7 +480,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         }
                     }
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Altro") }
+                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Altro") }
                         DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
                             DropdownMenuItem(text = { Text("Diagnostica") }, onClick = { menu = false; showStats = true })
                             DropdownMenuItem(text = { Text("Analizza i media mancanti") }, enabled = progress == null, onClick = { menu = false; vm.startFaceScan() })
@@ -532,7 +521,9 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         fun personAt(pos: androidx.compose.ui.geometry.Offset): Long? = gridState.layoutInfo.visibleItemsInfo.firstOrNull { i ->
             pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
         }?.key as? Long
-        LazyVerticalGrid(GridCells.Adaptive(104.dp), Modifier.fillMaxSize().padding(pad)
+        // DS Persone: three faces a row on a phone (more on a wide screen).
+        val peopleCols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600) GridCells.Fixed(3) else GridCells.Adaptive(104.dp)
+        LazyVerticalGrid(peopleCols, Modifier.fillMaxSize().padding(pad)
             // As in Cartelle: tap opens (or toggles while selecting); a long press selects, and
             // dragging from it picks (or drops, if it started on a picked one) everyone in between.
             .pointerInput(Unit) {
@@ -578,14 +569,15 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     onDragCancel = { anchor = null },
                 )
             },
+            // DS cr-people: 24dp between rows, 8 between columns.
             state = gridState, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             if (progress != null || o.scans.size < o.media) item(span = { GridItemSpan(maxLineSpan) }) {
                 ScanStatus(o, progress, onStop = { vm.cancelFaceScan() })
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 com.cripta.app.ui.components.CriptaTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                    leadingIcon = { Icon(Icons.Filled.Search, null) }, placeholder = { Text("Cerca per nome") }, modifier = Modifier.fillMaxWidth())
+                    leadingIcon = { Icon(CriptaIcons.Search, null) }, placeholder = { Text("Cerca per nome") }, modifier = Modifier.fillMaxWidth())
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -594,7 +586,10 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         val todo = f == PeopleFilter.TODO
                         val label = if (todo && known) "Da confermare" else f.label
                         val count = if (todo && known) knownList?.size ?: 0 else n
-                        if (count > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.label} · $n") })
+                        // DS Persone: chips with their count; "Preferite" leads with the star.
+                        if (count > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f },
+                            label = { Text("$label · $count") },
+                            leadingIcon = if (f == PeopleFilter.FAVORITE) ({ Icon(CriptaIcons.StarBorder, null, Modifier.size(18.dp)) }) else null)
                     }
                 }
             }
@@ -706,16 +701,17 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         onLongClick(label = "Seleziona") { selected = selected + p.id; true }
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
-                            FaceAvatar(p.cover, { vm.faceCrop(it) }, 96.dp, selected = on)
+                            FaceAvatar(p.cover, { vm.faceCrop(it) }, 88.dp, selected = on)
                             if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
-                        Text(p.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(p.title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp),
                             color = if (on) MaterialTheme.colorScheme.primary
                                 else if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                        Text("${p.media.size} media",
-                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Text("${com.cripta.app.ui.components.formatCount(p.media.size)} media",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
             }
@@ -790,7 +786,7 @@ private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } })
+                navigationIcon = { IconButton(onClick = close) { Icon(CriptaIcons.ArrowBack, "Indietro") } })
         }, bottomBar = {
             // The snackbar of the page is under this screen: "Annulla" lives here instead.
             androidx.compose.animation.AnimatedVisibility(undo != null,
@@ -858,7 +854,7 @@ private fun TodoPage(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onName:
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                androidx.compose.material3.Button(enabled = picked.isNotEmpty(), onClick = { onName(picked) },
+                com.cripta.app.ui.components.Button(enabled = picked.isNotEmpty(), onClick = { onName(picked) },
                     modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Chi è?") }
                 if (many) FilledTonalButton(enabled = off.isNotEmpty() && picked.isNotEmpty(), onClick = { vm.keepFacesApart(picked, off.toList()) },
                     modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Dividi") }
@@ -907,7 +903,7 @@ private fun WhoDialog(ids: List<Long>, o: FaceRepository.Overview, vm: SettingsV
                             FaceAvatar(q.cover, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                            if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
+                            if (q.entity.favorite) Icon(CriptaIcons.Star, "Preferita", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -945,7 +941,7 @@ internal fun PeoplePicker(title: String, o: FaceRepository.Overview, exclude: Lo
                             Checkbox(on, null)
                             FaceAvatar(q.cover, { vm.faceCrop(it) }, 40.dp)
                             Text("${q.title} · ${q.media.size}", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            if (q.entity.favorite) Icon(Icons.Filled.Star, "Preferita", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            if (q.entity.favorite) Icon(CriptaIcons.Star, "Preferita", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
                 }

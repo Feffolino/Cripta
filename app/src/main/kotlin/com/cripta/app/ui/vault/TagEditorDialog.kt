@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.clip
@@ -19,11 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -38,7 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -227,7 +223,7 @@ fun LabelEditorDialog(
                             Text("Sempre tra le prime, in posizione fissa.", style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null)
+                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
                     }
                 }
                 if (onColor != null) {
@@ -316,7 +312,7 @@ fun TagEditorDialog(
                     onLongPress = { editTarget = it },
                 )
                 TextButton(onClick = { creating = true }) {
-                    Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
+                    Icon(CriptaIcons.Add, null, modifier = Modifier.padding(end = 4.dp))
                     com.cripta.app.ui.components.ButtonText("Nuova etichetta")
                 }
             }
@@ -428,7 +424,7 @@ fun BatchTagDialog(
                 )
                 if (!removing) {
                     TextButton(onClick = { creating = true }) {
-                        Icon(Icons.Filled.Add, null, modifier = Modifier.padding(end = 4.dp))
+                        Icon(CriptaIcons.Add, null, modifier = Modifier.padding(end = 4.dp))
                         com.cripta.app.ui.components.ButtonText("Nuova etichetta")
                     }
                 }
@@ -466,9 +462,9 @@ private fun TagSearchField(query: String, onChange: (String) -> Unit) {
         value = query,
         onValueChange = onChange,
         placeholder = { Text("Cerca etichetta") },
-        leadingIcon = { Icon(Icons.Filled.Search, null) },
+        leadingIcon = { Icon(CriptaIcons.Search, null) },
         trailingIcon = if (query.isNotEmpty()) ({
-            androidx.compose.material3.IconButton(onClick = { onChange("") }) { Icon(Icons.Filled.Close, "Cancella ricerca") }
+            androidx.compose.material3.IconButton(onClick = { onChange("") }) { Icon(CriptaIcons.Close, "Cancella ricerca") }
         }) else null,
         singleLine = true,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
@@ -529,6 +525,6 @@ private fun ColorDot(
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
         if (label != null) Text(label, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelLarge)
-        else if (selected) Icon(Icons.Filled.Check, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
+        else if (selected) Icon(CriptaIcons.Check, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
     }
 }
