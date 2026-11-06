@@ -1,5 +1,6 @@
 package com.cripta.app.ui
 
+import kotlinx.coroutines.launch
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -306,6 +307,15 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             ctx.applicationContext, com.cripta.app.CriptaApp.AppEntryPoint::class.java,
         )
     }
+    // A note opens straight in its editor (no read-only page first); any other file in the player.
+    val vaultRepo = remember { entryPoints.vaultRepository() }
+    val openScope = androidx.compose.runtime.rememberCoroutineScope()
+    val openFile: (androidx.navigation.NavBackStackEntry, String) -> Unit = { from, id ->
+        openScope.launch {
+            val note = vaultRepo.fileById(id)?.let { com.cripta.app.data.VaultRepository.isNote(it.mimeType) } == true
+            if (note) nav.openNote(from, id) else nav.openViewer(from, id)
+        }
+    }
     // A link shared into the app: jump to the Download tab so the user can pick a resolution.
     // (DownloadScreen reads and clears the pending link.) Waits for the unlock.
     val sharedLinks = remember { entryPoints.sharedLinkStore() }
@@ -468,7 +478,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             ) {
             composable("home") { entry ->
                 HomeScreen(
-                    onOpenFile = { nav.openViewer(entry, it) },
+                    onOpenFile = { openFile(entry, it) },
                     onOpenFolders = {
                         // Switch to the Cartelle tab with the same semantics as the bottom bar,
                         // so the back stack stays consistent and the Home tab keeps working.
@@ -482,31 +492,31 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
             }
             composable("folders") { entry ->
                 VaultScreen(
-                    onOpenFile = { nav.openViewer(entry, it) },
+                    onOpenFile = { openFile(entry, it) },
                     onNewNote = { folder -> nav.navigate(if (folder != null) "note/new?folder=$folder" else "note/new") },
                 )
             }
             composable("favorites") { entry ->
                 FavoritesScreen(
-                    onOpenFile = { nav.openViewer(entry, it) },
+                    onOpenFile = { openFile(entry, it) },
                     onOpenFolders = { onTab("folders") },
                     onBack = { nav.popBackStack() },
                 )
             }
             composable("download") { entry ->
-                com.cripta.app.ui.download.DownloadScreen(onOpenFile = { nav.openViewer(entry, it) })
+                com.cripta.app.ui.download.DownloadScreen(onOpenFile = { openFile(entry, it) })
             }
             composable("settings") { entry ->
-                SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.openViewer(entry, it) })
+                SettingsScreen(onBack = { nav.popBackStack() }, onOpenFile = { openFile(entry, it) })
             }
             composable("people") { entry ->
-                com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { nav.openViewer(entry, it) })
+                com.cripta.app.ui.settings.PeopleScreen(onBack = { nav.popBackStack() }, onOpenFile = { openFile(entry, it) })
             }
             composable("person/{id}") { entry ->
                 com.cripta.app.ui.people.PersonProfileScreen(
                     personId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
                     onBack = { nav.popBackStack() },
-                    onOpenFile = { nav.openViewer(entry, it) },
+                    onOpenFile = { openFile(entry, it) },
                     onShowInVault = { onTab("folders") },
                 )
             }
@@ -578,4 +588,9 @@ private class GatedLifecycleOwner(private val parent: LifecycleOwner) : Lifecycl
  */
 private fun androidx.navigation.NavController.openViewer(from: androidx.navigation.NavBackStackEntry, fileId: String) {
     if (from.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) navigate("viewer/$fileId")
+}
+
+/** Open the note [fileId] in its editor from the page [from], under the same rule as [openViewer]. */
+private fun androidx.navigation.NavController.openNote(from: androidx.navigation.NavBackStackEntry, fileId: String) {
+    if (from.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) navigate("note/$fileId")
 }
