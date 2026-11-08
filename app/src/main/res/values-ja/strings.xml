@@ -155,6 +155,8 @@
     <string name="update_checksum_missing">更新を検証できません。チェックサムをダウンロードできません</string>
     <string name="update_checksum_invalid">更新を検証できません。無効なチェックサムです</string>
     <string name="update_checksum_mismatch">ダウンロードした更新が公開ファイルと一致しません（SHA-256 が異なります）。インストールを中止しました</string>
+    <string name="update_checksum_required">このバージョンには公開されたチェックサムがありません。更新はインストールされません</string>
+    <string name="update_wrong_package">ダウンロードしたファイルは Cripta の更新ではありません。インストールを中止しました</string>
     <string name="update_missing">更新ファイルを利用できません。設定から再度ダウンロードしてください</string>
     <string name="diag_resolution">"解像度： "</string>
     <string name="diag_rotation">"回転： "</string>

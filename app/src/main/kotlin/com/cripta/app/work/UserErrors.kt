@@ -82,6 +82,7 @@ object UserErrors {
         R.string.err_open_backup, R.string.err_bad_format, R.string.err_wrong_passphrase_or_corrupt, R.string.file_corrupt,
         R.string.err_backup_truncated, R.string.err_wrong_passphrase_or_invalid, R.string.err_note_save, R.string.settings_invalid,
         R.string.settings_unknown_kind, R.string.update_checksum_missing, R.string.update_checksum_invalid, R.string.update_checksum_mismatch,
+        R.string.update_checksum_required, R.string.update_wrong_package,
         R.string.dl_err_analyse_downloaded,
     )
 

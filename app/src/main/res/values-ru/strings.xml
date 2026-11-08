@@ -182,6 +182,8 @@
     <string name="update_checksum_missing">Не удаётся проверить обновление: контрольная сумма не скачивается</string>
     <string name="update_checksum_invalid">Не удаётся проверить обновление: неверная контрольная сумма</string>
     <string name="update_checksum_mismatch">Скачанное обновление не совпадает с опубликованным (другой SHA-256): установка отменена</string>
+    <string name="update_checksum_required">У этой версии нет опубликованной контрольной суммы: обновление не установлено</string>
+    <string name="update_wrong_package">Скачанный файл не является обновлением Cripta: установка отменена</string>
     <string name="update_missing">Обновление недоступно: скачайте его заново в настройках</string>
     <string name="diag_resolution">"Разрешение: "</string>
     <string name="diag_rotation">"Поворот: "</string>

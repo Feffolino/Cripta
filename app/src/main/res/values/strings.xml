@@ -164,6 +164,8 @@
     <string name="update_checksum_missing">Cannot verify the update: the checksum can\'t be downloaded</string>
     <string name="update_checksum_invalid">Cannot verify the update: invalid checksum</string>
     <string name="update_checksum_mismatch">The downloaded update doesn\'t match the published one (different SHA-256): installation cancelled</string>
+    <string name="update_checksum_required">This release has no published checksum: update not installed</string>
+    <string name="update_wrong_package">The downloaded file is not a Cripta update: installation cancelled</string>
     <string name="update_missing">Update not available: download it again from Settings</string>
     <string name="diag_resolution">"Resolution: "</string>
     <string name="diag_rotation">"Rotation: "</string>

@@ -200,6 +200,8 @@
     <string name="update_checksum_missing">تعذر التحقق من التحديث: لا يمكن تنزيل المجموع الاختباري</string>
     <string name="update_checksum_invalid">تعذر التحقق من التحديث: مجموع اختباري غير صالح</string>
     <string name="update_checksum_mismatch">التحديث المنزّل لا يطابق المنشور (SHA-256 مختلف): أُلغي التثبيت</string>
+    <string name="update_checksum_required">لا يتضمن هذا الإصدار مجموعًا اختباريًا منشورًا: لم يُثبَّت التحديث</string>
+    <string name="update_wrong_package">الملف المنزّل ليس تحديثًا لـ Cripta: أُلغي التثبيت</string>
     <string name="update_missing">التحديث غير متاح: نزّله مجدداً من الإعدادات</string>
     <string name="diag_resolution">"الدقة: "</string>
     <string name="diag_rotation">"التدوير: "</string>

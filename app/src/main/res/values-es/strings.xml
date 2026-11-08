@@ -173,6 +173,8 @@
     <string name="update_checksum_missing">No se puede verificar la actualización: no se puede descargar la suma de comprobación</string>
     <string name="update_checksum_invalid">No se puede verificar la actualización: suma de comprobación no válida</string>
     <string name="update_checksum_mismatch">La actualización descargada no coincide con la publicada (SHA-256 distinto): instalación cancelada</string>
+    <string name="update_checksum_required">Esta versión no tiene una suma de comprobación publicada: actualización no instalada</string>
+    <string name="update_wrong_package">El archivo descargado no es una actualización de Cripta: instalación cancelada</string>
     <string name="update_missing">Actualización no disponible: descárgala de nuevo desde Ajustes</string>
     <string name="diag_resolution">"Resolución: "</string>
     <string name="diag_rotation">"Rotación: "</string>

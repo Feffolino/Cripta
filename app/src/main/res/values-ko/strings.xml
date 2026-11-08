@@ -155,6 +155,8 @@
     <string name="update_checksum_missing">업데이트를 검증할 수 없습니다. 체크섬을 다운로드할 수 없습니다</string>
     <string name="update_checksum_invalid">업데이트를 검증할 수 없습니다. 유효하지 않은 체크섬입니다</string>
     <string name="update_checksum_mismatch">다운로드한 업데이트가 배포된 파일과 다릅니다(SHA-256 불일치). 설치를 취소했습니다</string>
+    <string name="update_checksum_required">이 버전에는 게시된 체크섬이 없습니다. 업데이트를 설치하지 않았습니다</string>
+    <string name="update_wrong_package">다운로드한 파일은 Cripta 업데이트가 아닙니다. 설치를 취소했습니다</string>
     <string name="update_missing">업데이트 파일이 없습니다. 설정에서 다시 다운로드하세요</string>
     <string name="diag_resolution">"해상도: "</string>
     <string name="diag_rotation">"회전: "</string>

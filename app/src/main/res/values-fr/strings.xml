@@ -173,6 +173,8 @@
     <string name="update_checksum_missing">Impossible de vérifier la mise à jour : téléchargement de la somme de contrôle impossible</string>
     <string name="update_checksum_invalid">Impossible de vérifier la mise à jour : somme de contrôle invalide</string>
     <string name="update_checksum_mismatch">La mise à jour téléchargée diffère de celle publiée (SHA-256 différent) : installation annulée</string>
+    <string name="update_checksum_required">Cette version n\'a pas de somme de contrôle publiée : mise à jour non installée</string>
+    <string name="update_wrong_package">Le fichier téléchargé n\'est pas une mise à jour de Cripta : installation annulée</string>
     <string name="update_missing">Mise à jour indisponible : téléchargez-la à nouveau depuis les paramètres</string>
     <string name="diag_resolution">"Résolution : "</string>
     <string name="diag_rotation">"Rotation : "</string>

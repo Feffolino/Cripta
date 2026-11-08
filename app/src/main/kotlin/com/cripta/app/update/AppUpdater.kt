@@ -26,6 +26,8 @@ import javax.inject.Singleton
 @Singleton
 class AppUpdater @Inject constructor() {
 
+    class Rejected(message: String) : SecurityException(message)
+
     /** [sha256Url] = the release's "<apk>.sha256" asset, when CI published one (older releases: null). */
     data class Release(
         val versionName: String,
@@ -109,9 +111,8 @@ class AppUpdater @Inject constructor() {
     /**
      * Download [url] to app cache as update.apk, reporting 0..100 progress. Call off the main thread.
      *
-     * When the release publishes a SHA-256 checksum ([sha256Url], or the one found by [latest]) the
-     * file is verified before it is handed to the installer; a mismatch deletes it and throws. A
-     * release without a checksum asset (older builds) is accepted as before.
+     * A published SHA-256 checksum ([sha256Url], or the one found by [latest]) is required.
+     * Verify the checksum and package before handing the APK to the system installer.
      */
     suspend fun download(
         ctx: Context,
@@ -119,6 +120,8 @@ class AppUpdater @Inject constructor() {
         sha256Url: String? = null,
         onProgress: (Int) -> Unit,
     ): File = withContext(Dispatchers.IO) {
+        val checksumUrl = (sha256Url ?: checksumFor[url])?.takeIf { it.isNotBlank() }
+            ?: throw Rejected(str(R.string.update_checksum_required))
         val out = apkFile(ctx).apply { parentFile?.mkdirs(); if (exists()) delete() }
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -149,23 +152,21 @@ class AppUpdater @Inject constructor() {
         } finally {
             conn.disconnect()
         }
-        val checksumUrl = sha256Url ?: checksumFor[url]
-        if (checksumUrl != null) {
+        try {
             val expected = try {
                 // "sha256sum" format: "<64 hex>  <file name>"; take the first hex token.
-                Regex("[0-9a-fA-F]{64}").find(httpGet(checksumUrl, accept = null))?.value?.lowercase()
-            } catch (e: Exception) {
-                out.delete()
+                Regex("\\b[0-9a-fA-F]{64}\\b").find(httpGet(checksumUrl, accept = null))?.value
+            } catch (e: java.io.IOException) {
                 throw java.io.IOException(str(R.string.update_checksum_missing), e)
-            } ?: run {
-                out.delete()
-                throw java.io.IOException(str(R.string.update_checksum_invalid))
             }
             val actual = md.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
-            if (actual != expected) {
-                out.delete()
-                throw SecurityException(str(R.string.update_checksum_mismatch))
-            }
+            // Verify integrity before asking Android to parse the downloaded APK.
+            refusal(expected, actual, ctx.packageName, ctx.packageName)?.let { throw Rejected(str(it)) }
+            @Suppress("DEPRECATION")
+            val apkPackage = ctx.packageManager.getPackageArchiveInfo(out.path, 0)?.packageName
+            refusal(expected, actual, apkPackage, ctx.packageName)?.let { throw Rejected(str(it)) }
+        } catch (e: Throwable) {
+            out.delete(); throw e
         }
         out
     }
@@ -189,6 +190,13 @@ class AppUpdater @Inject constructor() {
     }
 
     companion object {
+        internal fun refusal(expectedSha: String?, actualSha: String, apkPackage: String?, ownPackage: String): Int? = when {
+            expectedSha == null || !expectedSha.matches(Regex("[0-9a-fA-F]{64}")) -> R.string.update_checksum_invalid
+            !expectedSha.equals(actualSha, ignoreCase = true) -> R.string.update_checksum_mismatch
+            apkPackage != ownPackage -> R.string.update_wrong_package
+            else -> null
+        }
+
         // The app checks this repo's public GitHub releases (the repo is public; the signing key is
         // kept out of it via CI secrets, so making it public never exposes the key).
         const val REPO = "Feffolino/Cripta"

@@ -155,6 +155,8 @@
     <string name="update_checksum_missing">无法验证更新：无法下载校验和</string>
     <string name="update_checksum_invalid">无法验证更新：校验和无效</string>
     <string name="update_checksum_mismatch">下载的更新与发布文件不一致（SHA-256 不同），已取消安装</string>
+    <string name="update_checksum_required">此版本没有发布校验和，未安装更新</string>
+    <string name="update_wrong_package">下载的文件不是 Cripta 更新，已取消安装</string>
     <string name="update_missing">更新文件不可用，请从设置中重新下载</string>
     <string name="diag_resolution">"分辨率： "</string>
     <string name="diag_rotation">"旋转： "</string>

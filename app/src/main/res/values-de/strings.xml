@@ -164,6 +164,8 @@
     <string name="update_checksum_missing">Update kann nicht geprüft werden: Prüfsumme nicht herunterladbar</string>
     <string name="update_checksum_invalid">Update kann nicht geprüft werden: ungültige Prüfsumme</string>
     <string name="update_checksum_mismatch">Das heruntergeladene Update weicht vom veröffentlichten ab (andere SHA-256): Installation abgebrochen</string>
+    <string name="update_checksum_required">Diese Version hat keine veröffentlichte Prüfsumme: Update nicht installiert</string>
+    <string name="update_wrong_package">Die heruntergeladene Datei ist kein Cripta-Update: Installation abgebrochen</string>
     <string name="update_missing">Update nicht verfügbar: In den Einstellungen erneut herunterladen</string>
     <string name="diag_resolution">"Auflösung: "</string>
     <string name="diag_rotation">"Drehung: "</string>

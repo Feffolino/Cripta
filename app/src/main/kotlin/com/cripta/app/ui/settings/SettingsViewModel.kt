@@ -139,6 +139,7 @@ class SettingsViewModel @Inject constructor(
 
     /** Italian, user-facing text for a network/IO failure (never the raw exception message). */
     private fun networkError(t: Throwable, fallback: String): String = when (t) {
+        is com.cripta.app.update.AppUpdater.Rejected -> t.message ?: fallback
         is java.net.UnknownHostException, is java.net.ConnectException ->
             str(R.string.no_internet_check)
         is java.net.SocketTimeoutException -> str(R.string.server_not_responding)
