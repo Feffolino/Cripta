@@ -1,5 +1,8 @@
 package com.cripta.app.work
 
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -156,8 +159,8 @@ class ConversionService : Service() {
             // Started as a foreground service (the button's PendingIntent): it must go foreground
             // before leaving, even to do nothing.
             // On HyperOS the answer then shows in the island in its place.
-            startForeground(NOTIF_ID, build("Download", 0, indeterminate = true, kind = ResultKind.DOWNLOAD))
-            notifyResult("Download non riuscito", "Sblocca Cripta, poi tocca Riprova", ResultKind.DOWNLOAD, state = ResultState.FAILED,
+            startForeground(NOTIF_ID, build(str(R.string.n_download), 0, indeterminate = true, kind = ResultKind.DOWNLOAD))
+            notifyResult(str(R.string.dl_err_failed), str(R.string.n_unlock_then_retry), ResultKind.DOWNLOAD, state = ResultState.FAILED,
                 actions = listOf(retryAction(intent)))
             stopIfIdle(startId)
             return START_NOT_STICKY
@@ -183,11 +186,11 @@ class ConversionService : Service() {
         if (mode == MODE_DEBUG_CHOICE) {
             ensureChannel()
             // Foreground, as a real choice: HyperOS only puts the service's own notification in the island.
-            startForeground(NOTIF_ID, build("Prova scelta", 0, indeterminate = true, kind = ResultKind.CONVERT))
+            startForeground(NOTIF_ID, build(str(R.string.n_test_choice), 0, indeterminate = true, kind = ResultKind.CONVERT))
             postChoice(
-                DEBUG_NOTIF_ID, ResultKind.CONVERT, "Prova scelta", "Due tasti di prova",
-                serviceAction("Elimina", MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
-                serviceAction("Mantieni", MODE_DEBUG_DISMISS, 21, icon = R.drawable.ic_action_keep),
+                DEBUG_NOTIF_ID, ResultKind.CONVERT, str(R.string.n_test_choice), str(R.string.n_test_two_buttons),
+                serviceAction(str(R.string.delete), MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
+                serviceAction(str(R.string.keep), MODE_DEBUG_DISMISS, 21, icon = R.drawable.ic_action_keep),
             )
             stopIfIdle(startId); return START_NOT_STICKY
         }
@@ -209,7 +212,7 @@ class ConversionService : Service() {
             val oid = intent.getStringExtra(EX_ID)
             if (oid == null) { stopIfIdle(startId); return START_NOT_STICKY }
             if (session.locked.value) {
-                notifyResult("Originale non modificato", "Sblocca Cripta, poi scegli di nuovo", ResultKind.CONVERT,
+                notifyResult(str(R.string.n_original_unchanged), str(R.string.n_unlock_then_choose), ResultKind.CONVERT,
                     state = ResultState.FAILED, island = false)
                 stopIfIdle(startId)
                 return START_NOT_STICKY
@@ -225,7 +228,7 @@ class ConversionService : Service() {
                         val delete = mode == MODE_DELETE_ORIG
                         if (delete) {
                             val copy = choice.copyId.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
-                            check(copy != null && copy.deletedAt == null) { "Copia MP4 non disponibile: originale conservato" }
+                            check(copy != null && copy.deletedAt == null) { str(R.string.n_mp4_copy_missing) }
                         }
                         if (delete) repo.deleteOrTrash(oid)
                         repo.resolveConvertedOriginal(oid, deleted = delete)
@@ -235,7 +238,7 @@ class ConversionService : Service() {
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    repo.updateConvertStatus { it.copy(lastOk = false, lastResult = "Impossibile completare la scelta. L'originale resta da gestire.") }
+                    repo.updateConvertStatus { it.copy(lastOk = false, lastResult = str(R.string.n_choice_failed)) }
                     android.util.Log.e("ConversionService", "Resolving original failed (${e.javaClass.simpleName})")
                 } finally {
                     if (held) session.endWork()
@@ -254,7 +257,7 @@ class ConversionService : Service() {
         }
         // Already running: go foreground with the progress on show (a link added to the queue
         // put "Preparazione…" over the running download, without its Annulla).
-        startForeground(NOTIF_ID, lastProgress.takeIf { running } ?: build("Preparazione…", 0, indeterminate = true,
+        startForeground(NOTIF_ID, lastProgress.takeIf { running } ?: build(str(R.string.n_preparing), 0, indeterminate = true,
             kind = when (mode) {
                 MODE_IMPORT -> ResultKind.IMPORT
                 MODE_DOWNLOAD -> ResultKind.EXPORT // "download" here is the export to the device
@@ -406,23 +409,23 @@ class ConversionService : Service() {
         fun step(p: Int): Notification {
             val left = eta.left(p / 100f)
             return when (kind) {
-                "download", "download_fail" -> build("Download", p, sub = "Scaricamento del video · $p%",
-                    eta = left, header = "1 in coda", cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.DOWNLOAD)
+                "download", "download_fail" -> build(str(R.string.n_download), p, sub = str(R.string.n_downloading_pct, p),
+                    eta = left, header = str(R.string.n_one_queued), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.DOWNLOAD)
                 "import" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
-                    build("Importazione", p, sub = "File ${n + 1} di $files · cifrato al ${(p * files) % 100}%", chip = "$n/$files",
+                    build(str(R.string.n_import), p, sub = str(R.string.n_import_file_pct, n + 1, files, (p * files) % 100), chip = "$n/$files",
                         eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.IMPORT)
                 }
                 "export" -> {
                     val n = (p * files / 100).coerceAtMost(files - 1)
-                    build("Esportazione in galleria", p, sub = "File ${n + 1} di $files", chip = "$n/$files",
+                    build(str(R.string.n_export_gallery), p, sub = str(R.string.n_file_of, n + 1, files), chip = "$n/$files",
                         eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.EXPORT)
                 }
-                "scan" -> build("Ricerca duplicati", p, sub = "${p * 2} di 200 elementi confrontati",
+                "scan" -> build(str(R.string.n_dup_search), p, sub = str(R.string.n_dup_compared_test, p * 2),
                     eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.SCAN)
-                "update" -> build("Aggiornamento di Cripta", p, sub = "Versione di prova · $p%",
+                "update" -> build(str(R.string.n_update), p, sub = str(R.string.n_update_test, p),
                     eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.UPDATE)
-                else -> build("Conversione in MP4", p, sub = "Codifica del video · $p%", eta = left, header = "1 in coda",
+                else -> build(str(R.string.n_convert), p, sub = str(R.string.n_encoding_pct, p), eta = left, header = str(R.string.n_one_queued),
                     cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.CONVERT)
             }
         }
@@ -430,8 +433,8 @@ class ConversionService : Service() {
         // Debug isola › Durata prova: the whole sample in about this many seconds.
         val stepMs = (IslandDebug.get(this).sampleSeconds * 1000L / 25).coerceAtLeast(120L)
         try {
-            notify(build(if (kind == "download" || kind == "download_fail") "Download" else "Preparazione…", 0,
-                sub = "Avvio della prova…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
+            notify(build(if (kind == "download" || kind == "download_fail") str(R.string.n_download) else str(R.string.n_preparing), 0,
+                sub = str(R.string.n_test_starting), indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
                 kind = when (kind) {
                     "download", "download_fail" -> ResultKind.DOWNLOAD
                     "import" -> ResultKind.IMPORT
@@ -447,21 +450,21 @@ class ConversionService : Service() {
                 kotlinx.coroutines.delay(stepMs)
             }
             when (kind) {
-                "import" -> postChoice(DEBUG_NOTIF_ID, ResultKind.IMPORT, "$files file importati", "Eliminare gli originali?",
-                    closeOnly("Elimina originali", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
-                "export" -> notifyResult("Esportazione completata", "$files file salvati nella galleria", ResultKind.EXPORT)
-                "scan" -> notifyResult("Duplicati trovati", "3 gruppi su 200 elementi", ResultKind.SCAN, openDuplicates = true,
-                    actions = listOf(closeOnly("Vedi risultati", 23, R.drawable.ic_action_open)))
-                "update" -> notifyResult("Aggiornamento pronto", "Prova: nessun file da installare", ResultKind.UPDATE,
-                    actions = listOf(closeOnly("Installa", 24, R.drawable.ic_action_install)))
-                "download" -> notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
-                "download_fail" -> notifyResult("Download non riuscito", "Prova di errore: link non raggiungibile", ResultKind.DOWNLOAD,
-                    state = ResultState.FAILED, actions = listOf(closeOnly("Riprova", 22, R.drawable.ic_action_retry)))
-                else -> postChoice(DEBUG_NOTIF_ID, ResultKind.CONVERT, "Copia MP4 creata", "Eliminare l'originale?",
-                    closeOnly("Elimina originale", 20, R.drawable.ic_action_delete), closeOnly("Mantieni", 21, R.drawable.ic_action_keep))
+                "import" -> postChoice(DEBUG_NOTIF_ID, ResultKind.IMPORT, plural(R.plurals.imported_n, files), str(R.string.n_delete_originals_q),
+                    closeOnly(str(R.string.n_delete_originals), 20, R.drawable.ic_action_delete), closeOnly(str(R.string.keep), 21, R.drawable.ic_action_keep))
+                "export" -> notifyResult(str(R.string.n_export_done), str(R.string.n_export_saved_test, files), ResultKind.EXPORT)
+                "scan" -> notifyResult(str(R.string.n_dups_found), str(R.string.n_dups_found_test), ResultKind.SCAN, openDuplicates = true,
+                    actions = listOf(closeOnly(str(R.string.n_see_results), 23, R.drawable.ic_action_open)))
+                "update" -> notifyResult(str(R.string.n_update_ready), str(R.string.n_update_ready_test), ResultKind.UPDATE,
+                    actions = listOf(closeOnly(str(R.string.install), 24, R.drawable.ic_action_install)))
+                "download" -> notifyResult(str(R.string.n_download_done), str(R.string.n_video_encrypted), ResultKind.DOWNLOAD)
+                "download_fail" -> notifyResult(str(R.string.dl_err_failed), str(R.string.n_download_failed_test), ResultKind.DOWNLOAD,
+                    state = ResultState.FAILED, actions = listOf(closeOnly(str(R.string.retry), 22, R.drawable.ic_action_retry)))
+                else -> postChoice(DEBUG_NOTIF_ID, ResultKind.CONVERT, str(R.string.n_mp4_created), str(R.string.n_delete_original_q),
+                    closeOnly(str(R.string.n_delete_original), 20, R.drawable.ic_action_delete), closeOnly(str(R.string.keep), 21, R.drawable.ic_action_keep))
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult("Prova annullata", null, ResultKind.CONVERT, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_test_cancelled), null, ResultKind.CONVERT, state = ResultState.CANCELLED)
             throw e
         } finally {
             debugJob = null
@@ -480,10 +483,10 @@ class ConversionService : Service() {
      */
     private suspend fun runBackup(holdsSession: Boolean) {
         val req = backups.take() ?: return
-        val title = if (req.restore) "Ripristino del backup" else "Creazione del backup"
+        val title = if (req.restore) str(R.string.n_restoring) else str(R.string.n_backing_up)
         try {
             if (!holdsSession) {
-                backups.finish(if (req.restore) "Ripristino non riuscito: sblocca Cripta e riprova." else "Backup non riuscito: sblocca Cripta e riprova.")
+                backups.finish(if (req.restore) str(R.string.n_restore_failed_unlock) else str(R.string.n_backup_failed_unlock))
                 return
             }
             var lastPct = -1
@@ -495,26 +498,26 @@ class ConversionService : Service() {
                     notify(build(title, pct, sub = "$pct%", kind = ResultKind.BACKUP))
                 }
             }
-            notify(build(title, 0, sub = "Preparazione…", indeterminate = true, kind = ResultKind.BACKUP))
+            notify(build(title, 0, sub = str(R.string.n_preparing), indeterminate = true, kind = ResultKind.BACKUP))
             val outcome: Result<String> = withContext(NonCancellable) {
                 if (req.restore) runCatching { repo.importBackup(req.uri, req.passphrase, progress).describe() }
                 else runCatching {
                     val n = repo.exportBackup(req.uri, req.passphrase, req.compressDocs, progress, req.scope)
-                    if (n == 1) "Backup creato (1 file)" else "Backup creato ($n file)"
+                    plural(R.plurals.backup_created, n)
                 }
             }
             outcome.onSuccess { text ->
                 backups.finish(text)
-                notifyResult(if (req.restore) "Ripristino completato" else "Backup completato", text, ResultKind.BACKUP)
+                notifyResult(if (req.restore) str(R.string.n_restore_done) else str(R.string.n_backup_done), text, ResultKind.BACKUP)
             }.onFailure { e ->
                 android.util.Log.e("ConversionService", "backup failed (restore=${req.restore})", e)
                 val text = when {
-                    !req.restore -> "Backup non riuscito. Controlla lo spazio libero nella destinazione e riprova."
-                    e is VaultRepository.WrongPassphraseException -> "Ripristino non riuscito: passphrase errata o file di backup non valido. Il vault non è cambiato."
-                    else -> "Ripristino non riuscito (${UserErrors.of(e)}). Il vault non è cambiato."
+                    !req.restore -> str(R.string.n_backup_failed_space)
+                    e is VaultRepository.WrongPassphraseException -> str(R.string.n_restore_failed_passphrase)
+                    else -> str(R.string.n_restore_failed_reason, UserErrors.of(e))
                 }
                 backups.finish(text)
-                notifyResult(if (req.restore) "Ripristino non riuscito" else "Backup non riuscito", text, ResultKind.BACKUP, state = ResultState.FAILED)
+                notifyResult(if (req.restore) str(R.string.n_restore_failed) else str(R.string.n_backup_failed), text, ResultKind.BACKUP, state = ResultState.FAILED)
             }
         } finally {
             req.passphrase.fill('\u0000')
@@ -529,15 +532,15 @@ class ConversionService : Service() {
             sizeBytes = intent.getLongExtra(EX_UPD_SIZE, 0L),
             sha256Url = intent.getStringExtra(EX_UPD_SHA),
         )
-        val title = "Aggiornamento di Cripta"
+        val title = str(R.string.n_update)
         updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, 0))
-        notify(build(title, 0, sub = "Versione ${rel.versionName}", indeterminate = true,
+        notify(build(title, 0, sub = str(R.string.n_version, rel.versionName), indeterminate = true,
             cancelable = true, cancelMode = MODE_CANCEL_UPDATE, kind = ResultKind.UPDATE))
         val eta = EtaEstimator()
         try {
             val apk = updater.download(this, rel.apkUrl, rel.sha256Url) { pct ->
                 updater.publish(com.cripta.app.update.AppUpdater.Download.Running(rel, pct))
-                notify(build(title, pct, sub = "Versione ${rel.versionName} · $pct%", eta = eta.left(pct / 100f),
+                notify(build(title, pct, sub = str(R.string.n_version_pct, rel.versionName, pct), eta = eta.left(pct / 100f),
                     cancelable = true, cancelMode = MODE_CANCEL_UPDATE, kind = ResultKind.UPDATE))
             }
             updater.publish(com.cripta.app.update.AppUpdater.Download.Ready(rel, apk))
@@ -547,17 +550,17 @@ class ConversionService : Service() {
                 this, 12, Intent(this, com.cripta.app.update.InstallUpdateActivity::class.java),
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
-            notifyResult("Aggiornamento pronto", "Cripta ${rel.versionName} è stato scaricato: tocca per installarlo",
+            notifyResult(str(R.string.n_update_ready), str(R.string.n_update_downloaded, rel.versionName),
                 ResultKind.UPDATE, contentIntent = install,
-                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_install, "Installa", install)))
+                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_install, str(R.string.install), install)))
         } catch (e: kotlinx.coroutines.CancellationException) {
             updater.publish(com.cripta.app.update.AppUpdater.Download.Cancelled(rel))
-            notifyResult("Aggiornamento annullato", null, ResultKind.UPDATE, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_update_cancelled), null, ResultKind.UPDATE, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "update download failed", e)
             updater.publish(com.cripta.app.update.AppUpdater.Download.Failed(rel, e))
-            notifyResult("Aggiornamento non riuscito", "Riprova da Impostazioni › Info e aggiornamenti",
+            notifyResult(str(R.string.n_update_failed), str(R.string.n_update_retry_from),
                 ResultKind.UPDATE, state = ResultState.FAILED)
         } finally {
             updateJob = null
@@ -633,8 +636,8 @@ class ConversionService : Service() {
         var weightDone = 0L
         val eta = EtaEstimator()
         var saved = 0; var failed = 0; var done = 0
-        val title = if (tree != null) "Esportazione nella cartella" else "Esportazione in galleria"
-        notify(build(title, 0, sub = "File 1 di $total", chip = "0/$total",
+        val title = if (tree != null) str(R.string.n_export_folder) else str(R.string.n_export_gallery)
+        notify(build(title, 0, sub = str(R.string.n_file_first_of, total), chip = "0/$total",
             cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
         // Starts the measurement at 0, so the end of the first file already gives a speed.
         eta.left(0f)
@@ -654,19 +657,19 @@ class ConversionService : Service() {
             weightDone += batchWeight(f?.sizeBytes ?: 0L)
             val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
             val left = if (done < total) eta.left(fraction) else null
-            notify(build(title, (fraction * 100).toInt(), sub = if (done < total) "File ${done + 1} di $total" else "Completamento…",
+            notify(build(title, (fraction * 100).toInt(), sub = if (done < total) str(R.string.n_file_of, done + 1, total) else str(R.string.n_finishing),
                 chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
         }
         val cancelled = done < total
         val text = buildString {
-            val where = if (tree != null) "nella cartella scelta" else "nella galleria"
-            append(if (saved == 1) "1 file salvato $where" else "$saved file salvati $where")
-            if (failed > 0) append(" · $failed non esportati")
+            val where = if (tree != null) str(R.string.n_in_chosen_folder) else str(R.string.n_in_gallery)
+            append(plural(R.plurals.export_saved, saved, saved, where))
+            if (failed > 0) append(str(R.string.n_not_exported, failed))
         }
         when {
-            cancelled -> notifyResult("Esportazione annullata", text, ResultKind.EXPORT, state = ResultState.CANCELLED)
-            saved == 0 -> notifyResult("Esportazione non riuscita", text, ResultKind.EXPORT, state = ResultState.FAILED)
-            else -> notifyResult(if (failed == 0) "Esportazione completata" else "Esportazione completata con errori", text, ResultKind.EXPORT)
+            cancelled -> notifyResult(str(R.string.n_export_cancelled), text, ResultKind.EXPORT, state = ResultState.CANCELLED)
+            saved == 0 -> notifyResult(str(R.string.n_export_failed), text, ResultKind.EXPORT, state = ResultState.FAILED)
+            else -> notifyResult(if (failed == 0) str(R.string.n_export_done) else str(R.string.n_export_done_errors), text, ResultKind.EXPORT)
         }
     }
 
@@ -693,7 +696,7 @@ class ConversionService : Service() {
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(importNote(st.done + 1, st.total, st.fraction, "cifratura in corso", eta, cancelGen))
+                notify(importNote(st.done + 1, st.total, st.fraction, str(R.string.n_encrypting), eta, cancelGen))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -703,7 +706,7 @@ class ConversionService : Service() {
                         if (now - lastNotify > 500) {
                             lastNotify = now
                             val cur = repo.importState.value
-                            val filePct = if (size > 0) "cifrato al ${(bytes * 100 / size).coerceAtMost(100)}%" else "cifratura in corso"
+                            val filePct = if (size > 0) str(R.string.n_encrypted_pct, (bytes * 100 / size).coerceAtMost(100)) else str(R.string.n_encrypting)
                             notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta, cancelGen))
                         }
                     }
@@ -758,16 +761,16 @@ class ConversionService : Service() {
                 repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size))
                 if (ok && complete) done += uri
                 val cur = repo.importState.value
-                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, "in coda", eta, cancelGen))
+                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, str(R.string.n_queued_lower), eta, cancelGen))
             }
         } finally {
             withContext(NonCancellable) {
                 repo.importEnd()?.let { fin ->
                     val title = when {
-                        cancelled -> "Importazione annullata"
-                        fin.succeeded == 0 && fin.failed > 0 -> "Importazione non riuscita"
-                        fin.failed == 0 -> "Importazione completata"
-                        else -> "Importazione completata con errori"
+                        cancelled -> str(R.string.n_import_cancelled)
+                        fin.succeeded == 0 && fin.failed > 0 -> str(R.string.n_import_failed)
+                        fin.failed == 0 -> str(R.string.n_import_done)
+                        else -> str(R.string.n_import_done_errors)
                     }
                     val text = importSummary(fin)
                     lastImportSummary = text
@@ -785,12 +788,12 @@ class ConversionService : Service() {
 
     /** "3 file cifrati nel vault · 1 non importato · 2 erano già presenti · 1 omonimi da confermare". */
     private fun importSummary(fin: VaultRepository.ImportState) = buildString {
-        append(if (fin.succeeded == 1) "1 file cifrato nel vault" else "${fin.succeeded} file cifrati nel vault")
-        if (fin.failed > 0) append(" · ${fin.failed} non importati")
-        if (fin.duplicates.isNotEmpty()) append(" · ${fin.duplicates.size} erano già presenti")
+        append(plural(R.plurals.import_encrypted, fin.succeeded))
+        if (fin.failed > 0) append(str(R.string.n_not_imported, fin.failed))
+        if (fin.duplicates.isNotEmpty()) append(str(R.string.n_already_there, fin.duplicates.size))
         // Short: the same text is the Hyper Island's line.
-        if (fin.versionAsks > 0) append(" · ${fin.versionAsks} omonimi da confermare")
-        if (fin.similarAsks > 0) append(" · ${fin.similarAsks} simili da confermare")
+        if (fin.versionAsks > 0) append(str(R.string.n_same_name_confirm, fin.versionAsks))
+        if (fin.similarAsks > 0) append(str(R.string.n_similar_confirm, fin.similarAsks))
     }
     /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
     @Volatile private var lastImportSummary: String? = null
@@ -805,7 +808,7 @@ class ConversionService : Service() {
         val done = n - 1
         val left = eta.left(fraction)
         val stopping = batchCancels.get() != cancelGen
-        return build("Importazione", (fraction * 100).toInt(), sub = "File $n di $total · " + if (stopping) "annullamento dopo questo file" else what,
+        return build(str(R.string.n_import), (fraction * 100).toInt(), sub = str(R.string.n_file_of_sep, n, total) + if (stopping) str(R.string.n_cancel_after_file) else what,
             chip = "$done/$total", eta = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.IMPORT)
     }
@@ -838,9 +841,9 @@ class ConversionService : Service() {
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
         // No file names in notifications (the in-app banner shows it, behind the lock).
-        val queued = { convertWaiting.get().let { if (it > 0) "$it in coda" else null } }
+        val queued = { convertWaiting.get().let { if (it > 0) str(R.string.n_n_queued, it) else null } }
         val eta = EtaEstimator()
-        notify(build("Conversione in MP4", 0, sub = "Preparazione del video…", indeterminate = true, header = queued(),
+        notify(build(str(R.string.n_convert), 0, sub = str(R.string.n_preparing_video), indeterminate = true, header = queued(),
             cancelable = true, cancelMode = MODE_CANCEL_CONVERT, kind = ResultKind.CONVERT))
         var src: java.io.File? = null
         var out: java.io.File? = null
@@ -856,7 +859,7 @@ class ConversionService : Service() {
                 converter.toMp4(src!!, out!!, bitrate) { pct ->
                     repo.setConversionProgress(pct)
                     repo.updateConvertStatus { it.copy(pct = pct, waiting = convertWaiting.get()) }
-                    notify(build("Conversione in MP4", pct, sub = "Codifica del video · $pct%", eta = eta.left(pct / 100f), header = queued(),
+                    notify(build(str(R.string.n_convert), pct, sub = str(R.string.n_encoding_pct, pct), eta = eta.left(pct / 100f), header = queued(),
                         cancelable = true, cancelMode = MODE_CANCEL_CONVERT, kind = ResultKind.CONVERT))
                 }
             }
@@ -864,8 +867,8 @@ class ConversionService : Service() {
             // the good original). Verify it thoroughly first.
             val problem = verifyConversion(out!!, src!!, file.durationMs)
             if (problem != null) {
-                result = false to "Conversione scartata: $problem. Originale intatto."
-                notifyResult("Conversione non riuscita", "${problem.replaceFirstChar { it.uppercase() }} · originale intatto", state = ResultState.FAILED)
+                result = false to str(R.string.n_convert_discarded, problem)
+                notifyResult(str(R.string.n_convert_failed), str(R.string.n_original_untouched_sep, problem.replaceFirstChar { it.uppercase() }), state = ResultState.FAILED)
                 return
             }
             val mode = afterOverride
@@ -880,27 +883,27 @@ class ConversionService : Service() {
                 }
                 com.cripta.app.data.ConvertAfter.REPLACE -> {
                     val days = runCatching { settings.settingsOnce().trashDays }.getOrDefault(7)
-                    notifyResult("Conversione completata", "Copia MP4 creata · originale nel cestino per $days giorni")
+                    notifyResult(str(R.string.n_convert_done), str(R.string.n_mp4_created_trash, days))
                 }
-                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult("Conversione completata", "Copia MP4 aggiunta accanto all'originale")
+                com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult(str(R.string.n_convert_done), str(R.string.n_mp4_added))
             }
             repo.emitConvertResult(
                 VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
             )
             result = true to when {
-                replace -> "Convertito: ${newFile.originalName} (originale nel cestino)"
-                mode == com.cripta.app.data.ConvertAfter.ASK -> "Convertito: ${newFile.originalName}. Eliminare l'originale?"
-                else -> "Convertito: ${newFile.originalName}"
+                replace -> str(R.string.n_converted_trash, newFile.originalName)
+                mode == com.cripta.app.data.ConvertAfter.ASK -> str(R.string.n_converted_ask, newFile.originalName)
+                else -> str(R.string.n_converted, newFile.originalName)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
-            result = false to "Conversione annullata. Originale intatto."
-            notifyResult("Conversione annullata", "File originale intatto", state = ResultState.CANCELLED)
+            result = false to str(R.string.n_convert_cancelled_long)
+            notifyResult(str(R.string.n_convert_cancelled), str(R.string.n_original_file_untouched), state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "convert failed: $id", e)
             val msg = convertErrorText(e)
-            result = false to "Conversione fallita: $msg. Originale intatto."
-            notifyResult("Conversione non riuscita", "${msg.replaceFirstChar { it.uppercase() }} · originale intatto", state = ResultState.FAILED)
+            result = false to str(R.string.n_convert_failed_long, msg)
+            notifyResult(str(R.string.n_convert_failed), str(R.string.n_original_untouched_sep, msg.replaceFirstChar { it.uppercase() }), state = ResultState.FAILED)
         } finally {
             withContext(NonCancellable) {
                 src?.let { repo.shredTempFile(it) }
@@ -928,7 +931,7 @@ class ConversionService : Service() {
      * or frames that can't be decoded at the start, middle and end.
      */
     private fun verifyConversion(out: java.io.File, src: java.io.File, knownDurMs: Long?): String? {
-        if (!out.exists() || out.length() <= 0L) return "file vuoto"
+        if (!out.exists() || out.length() <= 0L) return str(R.string.conv_empty_file)
         val srcR = MediaMetadataRetriever()
         val (srcDur, srcAudio) = try {
             srcR.setDataSource(src.absolutePath)
@@ -942,22 +945,22 @@ class ConversionService : Service() {
         val r = MediaMetadataRetriever()
         return try {
             r.setDataSource(out.absolutePath)
-            if (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != "yes") return "nessuna traccia video"
+            if (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != "yes") return str(R.string.conv_no_video_track)
             val dur = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-            if (dur <= 0) return "durata non valida"
+            if (dur <= 0) return str(R.string.conv_bad_duration)
             if (srcDur != null && srcDur > 0 && (dur < srcDur * 9 / 10 || dur > srcDur * 11 / 10)) {
-                return "durata diversa dall'originale"
+                return str(R.string.conv_duration_differs)
             }
-            if (srcAudio && r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != "yes") return "audio perso"
+            if (srcAudio && r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != "yes") return str(R.string.conv_audio_lost)
             for (frac in listOf(0.1, 0.5, 0.9)) {
                 val us = (dur * frac * 1000).toLong()
                 val frame = runCatching { r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
-                    ?: return "fotogrammi illeggibili"
+                    ?: return str(R.string.conv_unreadable_frames)
                 frame.recycle()
             }
             null
         } catch (e: Exception) {
-            "file non leggibile"
+            str(R.string.conv_unreadable_file)
         } finally {
             runCatching { r.release() }
         }
@@ -996,7 +999,7 @@ class ConversionService : Service() {
         } catch (e: java.util.concurrent.ExecutionException) {
             false
         } catch (e: java.util.concurrent.TimeoutException) {
-            throw IllegalStateException("Impossibile analizzare il video scaricato", e)
+            throw IllegalStateException(str(R.string.dl_err_analyse_downloaded), e)
         } finally { metadata.cancel(true) }
     }
 
@@ -1007,9 +1010,9 @@ class ConversionService : Service() {
      */
     private suspend fun scanDuplicates(similar: Boolean) {
         val mode = if (similar) com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR else com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
-        val label = if (similar) "Ricerca approfondita" else "Ricerca rapida"
+        val label = if (similar) str(R.string.n_deep_search) else str(R.string.n_quick_search)
         dupStore.start(mode)
-        notify(build(label, 0, sub = "Preparazione…", indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
+        notify(build(label, 0, sub = str(R.string.n_preparing), indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
         var last = 0L
         val eta = EtaEstimator()
         val onProgress: (Int, Int) -> Unit = { done, total ->
@@ -1018,7 +1021,7 @@ class ConversionService : Service() {
             if (now - last > 400 || done == total) {
                 last = now
                 val pct = if (total > 0) done * 100 / total else 0
-                notify(build(label, pct, sub = if (total > 0) "$done di $total elementi confrontati" else "Preparazione…",
+                notify(build(label, pct, sub = if (total > 0) str(R.string.n_items_compared, done, total) else str(R.string.n_preparing),
                     eta = if (total > 0) eta.left(done.toFloat() / total) else null,
                     indeterminate = total == 0, cancelable = true, cancelMode = MODE_CANCEL_SCAN, kind = ResultKind.SCAN))
             }
@@ -1032,21 +1035,21 @@ class ConversionService : Service() {
                 r.groups.map { it.files } to r.filesScanned
             }
             dupStore.finish(com.cripta.app.data.dedup.DupScanStore.Result(mode, groups, scanned))
-            val title = if (groups.isEmpty()) "$label completata" else if (similar) "Media simili trovati" else "Copie identiche trovate"
-            val text = if (groups.isEmpty()) "Nessun risultato su $scanned elementi"
-                else "${groups.size} gruppi su $scanned elementi"
+            val title = if (groups.isEmpty()) str(R.string.n_x_done, label) else if (similar) str(R.string.n_similar_found) else str(R.string.n_identical_found)
+            val text = if (groups.isEmpty()) str(R.string.n_no_results_of, scanned)
+                else str(R.string.n_groups_of, groups.size, scanned)
             notifyResult(title, text, ResultKind.SCAN, openDuplicates = true,
                 actions = if (groups.isEmpty()) emptyList()
-                    else listOf(NotificationCompat.Action(R.drawable.ic_action_open, "Vedi risultati", openAppIntent(openDuplicates = true))))
+                    else listOf(NotificationCompat.Action(R.drawable.ic_action_open, str(R.string.n_see_results), openAppIntent(openDuplicates = true))))
         } catch (e: kotlinx.coroutines.CancellationException) {
             dupStore.cancelled()
-            notifyResult("$label annullata", null, ResultKind.SCAN, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_x_cancelled, label), null, ResultKind.SCAN, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "duplicate scan failed", e)
             val msg = UserErrors.of(e)
             dupStore.fail(msg)
-            notifyResult("$label non riuscita", msg, ResultKind.SCAN, state = ResultState.FAILED)
+            notifyResult(str(R.string.n_x_failed, label), msg, ResultKind.SCAN, state = ResultState.FAILED)
         } finally {
             scanJob = null
         }
@@ -1081,14 +1084,14 @@ class ConversionService : Service() {
 
     private suspend fun runIntroScan() {
         introJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
-        val label = "Analisi intro e finali"
+        val label = str(R.string.n_intro_analysis)
         val analysedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
         var found = 0
         var anyFull = false
         var rematched = 0
         fun summary() = introSummary(analysedCount.get(), skippedCount.get(), found) +
-            (if (rematched > 0) " · $rematched già analizzati confrontati di nuovo" else "")
+            (if (rematched > 0) str(R.string.n_rematched, rematched) else "")
         try {
             do {
                 introRerun = false
@@ -1104,9 +1107,9 @@ class ConversionService : Service() {
                         val eta = EtaEstimator()
                         var done = 0
                         for (part in backlog.chunked(50)) {
-                            introProgress.value = IntroProgress(done, backlog.size, "Confronto dei video già analizzati")
+                            introProgress.value = IntroProgress(done, backlog.size, str(R.string.n_comparing_analysed))
                             notifyScan(ResultKind.INTRO, done * 100 / backlog.size) { others ->
-                                build(label, done * 100 / backlog.size, sub = "Confronto dei video già analizzati: $done di ${backlog.size}",
+                                build(label, done * 100 / backlog.size, sub = str(R.string.n_comparing_analysed_n, done, backlog.size),
                                     eta = if (done > 0) eta.left(done.toFloat() / backlog.size) else null, header = others,
                                     cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO)
                             }
@@ -1126,10 +1129,10 @@ class ConversionService : Service() {
                 fun progress() = synchronized(introNoteLock) {
                     val d = finished.get()
                     val total = maxOf(1, todo.size + askedIds.size)
-                    introProgress.value = IntroProgress(d, total, "Analisi dei video")
-                    val last = lastSec.get().takeIf { it >= 0 }?.let { " · ultimo $it s" }.orEmpty()
+                    introProgress.value = IntroProgress(d, total, str(R.string.n_analysing_videos))
+                    val last = lastSec.get().takeIf { it >= 0 }?.let { str(R.string.n_last_secs, it) }.orEmpty()
                     notifyScan(ResultKind.INTRO, d * 100 / total) { others ->
-                        build(label, d * 100 / total, sub = "$d di $total video analizzati$last",
+                        build(label, d * 100 / total, sub = str(R.string.n_videos_analysed, d, total, last),
                             eta = if (d > 0) eta.left(d.toFloat() / total) else null, header = others,
                             cancelable = true, cancelMode = MODE_CANCEL_INTRO, kind = ResultKind.INTRO)
                     }
@@ -1167,18 +1170,18 @@ class ConversionService : Service() {
                     found += intro.matchNew(newIds)
                     // The answer to "Analizza": what the chosen videos have now.
                     if (askedNow.isNotEmpty()) {
-                        notifyResult(if (askedNow.size == 1) "Analisi del video completata" else "Analisi di ${askedNow.size} video completata",
+                        notifyResult(plural(R.plurals.intro_done_n, askedNow.size),
                             intro.describe(askedNow), ResultKind.INTRO)
                     }
                 }
             } while (introRerun)
-            if (anyFull && (introManual || found > 0)) notifyResult("Analisi completata", summary(), ResultKind.INTRO)
+            if (anyFull && (introManual || found > 0)) notifyResult(str(R.string.n_analysis_done), summary(), ResultKind.INTRO)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult("$label annullata", summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "intro scan failed", e)
-            notifyResult("$label non riuscita", UserErrors.of(e), ResultKind.INTRO, state = ResultState.FAILED)
+            notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.INTRO, state = ResultState.FAILED)
         } finally {
             releaseScan(ResultKind.INTRO)
             introJob = null
@@ -1236,14 +1239,14 @@ class ConversionService : Service() {
     /** False when the scan failed. */
     private suspend fun runFaceScan(): Boolean {
         faceJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
-        val label = "Analisi dei volti"
+        val label = str(R.string.n_face_analysis)
         val analysed = java.util.concurrent.atomic.AtomicInteger(0)
         val skipped = java.util.concurrent.atomic.AtomicInteger(0)
         val stalled = java.util.concurrent.atomic.AtomicInteger(0)
         val refined = java.util.concurrent.atomic.AtomicInteger(0)
-        fun summary() = "${analysed.get()} analizzati" + (if (refined.get() > 0) ", ${refined.get()} video analizzati meglio" else "") +
-            (if (skipped.get() > 0) ", ${skipped.get()} non leggibili" else "") +
-            (if (stalled.get() > 0) ", ${stalled.get()} bloccati (riprova dai dettagli di ciascuno)" else "")
+        fun summary() = str(R.string.n_analysed_n, analysed.get()) + (if (refined.get() > 0) str(R.string.n_refined_n, refined.get()) else "") +
+            (if (skipped.get() > 0) str(R.string.n_unreadable_n, skipped.get()) else "") +
+            (if (stalled.get() > 0) str(R.string.n_stalled_n, stalled.get()) else "")
         try {
             // Faces of media deleted for good go; media analysed by a scan that stopped before placing them are placed.
             faces.purgeDeleted()
@@ -1281,9 +1284,9 @@ class ConversionService : Service() {
                     // hand first); the notification only how far the whole scan is.
                     val hands = running.entries.sortedBy { it.value.second }.map { it.value.first to partial[it.key] }
                     val current = hands.firstOrNull()?.first
-                    faceProgress.value = IntroProgress(d, total, "Analisi dei volti", stopping, current, done / total, hands)
+                    faceProgress.value = IntroProgress(d, total, str(R.string.n_face_analysis), stopping, current, done / total, hands)
                     notifyScan(ResultKind.FACES, pct) { others ->
-                        build(label, pct, sub = if (stopping) "Annullamento in corso…" else chip,
+                        build(label, pct, sub = if (stopping) str(R.string.n_cancelling) else chip,
                             eta = if (done > 0f && !stopping) eta.left(done / total) else null, header = others, chip = chip,
                             cancelable = !stopping, cancelMode = MODE_CANCEL_FACES, kind = ResultKind.FACES)
                     }
@@ -1357,25 +1360,25 @@ class ConversionService : Service() {
                     // The answer to "Analizza meglio": what the closer look did.
                     if (forcedNow.isNotEmpty()) {
                         val notes = forcedNow.take(3).mapNotNull { faces.refineNoteNow(it) }
-                        notifyResult(if (forcedNow.size == 1) "Video analizzato meglio" else "${forcedNow.size} video analizzati meglio",
-                            notes.joinToString("\n").ifEmpty { "Nessun volto da unire o da mettere da parte." }, ResultKind.FACES)
+                        notifyResult(plural(R.plurals.refined_n, forcedNow.size),
+                            notes.joinToString("\n").ifEmpty { str(R.string.n_nothing_to_join) }, ResultKind.FACES)
                     }
                     // The answer to "Analizza volti": what the chosen media have now.
                     if (askedNow.isNotEmpty()) {
-                        notifyResult(if (askedNow.size == 1) "Volti analizzati" else "Volti di ${askedNow.size} media analizzati",
+                        notifyResult(plural(R.plurals.faces_done_n, askedNow.size),
                             askedNow.take(3).map { faces.describe(it).lineSequence().first() }.joinToString("\n"), ResultKind.FACES)
                     }
                 }
             } while (faceRerun)
-            if (faceManual || analysed.get() > 0) notifyResult("Analisi dei volti completata", summary(), ResultKind.FACES,
-                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_open, "Vedi persone", openAppIntent(openPeople = true))))
+            if (faceManual || analysed.get() > 0) notifyResult(str(R.string.n_face_analysis_done), summary(), ResultKind.FACES,
+                actions = listOf(NotificationCompat.Action(R.drawable.ic_action_open, str(R.string.n_see_people), openAppIntent(openPeople = true))))
             return true
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult("$label annullata", summary(), ResultKind.FACES, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.FACES, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ConversionService", "face scan failed", e)
-            notifyResult("$label non riuscita", UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
+            notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
             return false
         } finally {
             synchronized(faceNoteLock) { faceRepost = null }
@@ -1389,8 +1392,8 @@ class ConversionService : Service() {
     }
 
     private fun introSummary(analysed: Int, skipped: Int, found: Int): String =
-        "$analysed analizzati" + (if (skipped > 0) ", $skipped saltati" else "") +
-            (if (found > 0) " · intro o finali in $found video" else "")
+        str(R.string.n_analysed_n, analysed) + (if (skipped > 0) str(R.string.n_skipped_n, skipped) else "") +
+            (if (found > 0) str(R.string.n_intros_in, found) else "")
 
     /** Process the downloader queue one link at a time until it is empty. */
     private suspend fun downloadWorker() {
@@ -1428,8 +1431,8 @@ class ConversionService : Service() {
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.PREPARING) }
             // First download extracts the yt-dlp/Python payload; keep the notification indeterminate
             // until real progress arrives.
-            val queued = { waiting().let { if (it > 0) "$it in coda" else null } }
-            notify(build("Download", 0, sub = "Analisi del link…", indeterminate = true, header = queued(), cancelable = true, kind = ResultKind.DOWNLOAD))
+            val queued = { waiting().let { if (it > 0) str(R.string.n_n_queued, it) else null } }
+            notify(build(str(R.string.n_download), 0, sub = str(R.string.n_analysing_link), indeterminate = true, header = queued(), cancelable = true, kind = ResultKind.DOWNLOAD))
             // The time left by our own estimate, not yt-dlp's (it swings on every fragment of a
             // stream); the download screen shows the same one.
             val eta = EtaEstimator()
@@ -1444,15 +1447,15 @@ class ConversionService : Service() {
                     repo.setConversionProgress(pct)
                     val leftMs = eta.update(pct / 100f, SystemClock.elapsedRealtime())
                     set { it.copy(phase = com.cripta.app.data.DownloadPhase.DOWNLOADING, pct = pct, etaSec = (leftMs ?: 0L) / 1000) }
-                    notify(build("Download", pct, sub = "Scaricamento del video · $pct%", eta = leftMs?.let(::formatEtaShort), header = queued(),
+                    notify(build(str(R.string.n_download), pct, sub = str(R.string.n_downloading_pct, pct), eta = leftMs?.let(::formatEtaShort), header = queued(),
                         cancelable = true, kind = ResultKind.DOWNLOAD))
                 }
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             if (!isDownloadedVideo(produced)) {
-                val msg = "Formato del video non leggibile dal player"
+                val msg = str(R.string.dl_err_player_format)
                 set { it.copy(phase = com.cripta.app.data.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
+                notifyResult(str(R.string.dl_err_failed), msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
                     actions = listOf(retryAction(job)))
                 return
             }
@@ -1461,22 +1464,22 @@ class ConversionService : Service() {
             val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             // The title stays inside the app (queue, vault): the notification only says it is done.
-            notifyResult("Download completato", "Video cifrato nel vault", ResultKind.DOWNLOAD)
+            notifyResult(str(R.string.n_download_done), str(R.string.n_video_encrypted), ResultKind.DOWNLOAD)
         } catch (e: kotlinx.coroutines.CancellationException) {
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.CANCELLED) }
-            notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
+            notifyResult(str(R.string.n_download_cancelled), null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
             // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
                 set { it.copy(phase = com.cripta.app.data.DownloadPhase.CANCELLED) }
-                notifyResult("Download annullato", null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
+                notifyResult(str(R.string.n_download_cancelled), null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             } else {
                 android.util.Log.e("ConversionService", "Download failed (${e.javaClass.simpleName})")
                 val msg = UserErrors.ofDownload(e)
                 set { it.copy(phase = com.cripta.app.data.DownloadPhase.FAILED, message = msg) }
-                notifyResult("Download non riuscito", msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
+                notifyResult(str(R.string.dl_err_failed), msg, ResultKind.DOWNLOAD, state = ResultState.FAILED,
                     actions = listOf(retryAction(job)))
             }
         } finally {
@@ -1522,9 +1525,9 @@ class ConversionService : Service() {
         val export = generateSequence(e) { it.cause }.filterIsInstance<androidx.media3.transformer.ExportException>().firstOrNull()
         return when {
             export == null -> UserErrors.of(e).replaceFirstChar { it.lowercase() }
-            export.errorCode in 3000..3999 -> "formato del video non supportato dal dispositivo"
-            export.errorCode in 4000..4999 -> "codec del dispositivo non disponibile"
-            else -> "errore durante la codifica"
+            export.errorCode in 3000..3999 -> str(R.string.conv_format_unsupported)
+            export.errorCode in 4000..4999 -> str(R.string.conv_codec_unavailable)
+            else -> str(R.string.conv_encode_error)
         }
     }
 
@@ -1540,7 +1543,7 @@ class ConversionService : Service() {
             val mgr = getSystemService(NotificationManager::class.java)
             if (mgr.getNotificationChannel(CHANNEL) == null) {
                 mgr.createNotificationChannel(
-                    NotificationChannel(CHANNEL, "Operazioni in corso", NotificationManager.IMPORTANCE_LOW)
+                    NotificationChannel(CHANNEL, str(R.string.ch_ongoing), NotificationManager.IMPORTANCE_LOW)
                 )
             }
             // HyperOS focus notifications (Hyper Island): the island skips low-importance channels,
@@ -1548,7 +1551,7 @@ class ConversionService : Service() {
             // vibration, no pop-up: those need high importance), and only on Xiaomi phones.
             if (HyperFocus.isSupported(this) && mgr.getNotificationChannel(LIVE_CHANNEL) == null) {
                 mgr.createNotificationChannel(
-                    NotificationChannel(LIVE_CHANNEL, "Operazioni in corso (isola)", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    NotificationChannel(LIVE_CHANNEL, str(R.string.ch_ongoing_island), NotificationManager.IMPORTANCE_DEFAULT).apply {
                         setSound(null, null)
                         enableVibration(false)
                         setShowBadge(false)
@@ -1559,7 +1562,7 @@ class ConversionService : Service() {
             // ongoing progress stays silent.
             if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
                 mgr.createNotificationChannel(
-                    NotificationChannel(RESULT_CHANNEL, "Operazioni completate", NotificationManager.IMPORTANCE_DEFAULT)
+                    NotificationChannel(RESULT_CHANNEL, str(R.string.ch_done), NotificationManager.IMPORTANCE_DEFAULT)
                 )
             }
         }
@@ -1608,7 +1611,7 @@ class ConversionService : Service() {
             .setContentIntent(openAppIntent())
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(publicVersion(title, icon))
-        val chipText = chip ?: if (indeterminate) "Avvio" else "$pct%"
+        val chipText = chip ?: if (indeterminate) str(R.string.n_chip_start) else "$pct%"
         b.addExtras(liveUpdate(chipText))
         var cancelPi: android.app.PendingIntent? = null
         if (cancelable) {
@@ -1620,17 +1623,17 @@ class ConversionService : Service() {
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
-            b.addAction(0, "Annulla", pi)
+            b.addAction(0, str(R.string.cancel), pi)
             cancelPi = pi
         }
         // HyperOS: the Hyper Island's own template on top (large rounded buttons); ignored elsewhere.
         // Its expanded text also carries the time left and the [header], which the template has
         // no place for otherwise; the time left first, as the line is cut at the end when long.
         b.addExtras(HyperFocus.extras(
-            this, "cripta_progress", title, joinParts(eta, sub, header), chipText, kind?.label ?: "Cripta",
+            this, "cripta_progress", title, joinParts(eta, sub, header), chipText, kind?.label ?: str(R.string.app_name),
             // Not started yet (no percentage): no ring or bar, which stood at 0 as if stuck.
             progress = if (indeterminate) null else pct,
-            buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", "Annulla", it, icon = R.drawable.ic_action_cancel) }),
+            buttons = listOfNotNull(cancelPi?.let { HyperFocus.Button("cancel", str(R.string.cancel), it, icon = R.drawable.ic_action_cancel) }),
             float = false,
         ))
         return b.build()
@@ -1644,7 +1647,7 @@ class ConversionService : Service() {
         val mgr = getSystemService(NotificationManager::class.java)
         if (mgr.getNotificationChannel(LIVE_CHANNEL_HIGH) == null) {
             mgr.createNotificationChannel(
-                NotificationChannel(LIVE_CHANNEL_HIGH, "Operazioni in corso (isola, prova)", NotificationManager.IMPORTANCE_HIGH).apply {
+                NotificationChannel(LIVE_CHANNEL_HIGH, str(R.string.ch_ongoing_island_test), NotificationManager.IMPORTANCE_HIGH).apply {
                     setSound(null, null); enableVibration(false); setShowBadge(false)
                 }
             )
@@ -1736,8 +1739,8 @@ class ConversionService : Service() {
                 .setGroup(GROUP_ONGOING)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(BRAND_COLOR)
-                .setContentTitle("Cripta")
-                .setContentText("Completamento…")
+                .setContentTitle(str(R.string.app_name))
+                .setContentText(str(R.string.n_finishing))
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
@@ -1827,12 +1830,15 @@ class ConversionService : Service() {
      * [label]: its name next to the icon in the Hyper Island, one short word (the island widens
      * with every letter).
      */
-    private enum class ResultKind(val id: Int, val label: String, val analysis: Boolean = false) {
-        IMPORT(4220, "Import"), DOWNLOAD(4221, "Download"),
-        CONVERT(4222, "Converti"), SCAN(4223, "Duplicati", analysis = true),
-        EXPORT(4224, "Export"), UPDATE(4225, "Aggiorna"),
-        INTRO(4226, "Analisi", analysis = true), FACES(4227, "Volti", analysis = true),
-        BACKUP(4228, "Backup"),
+    private enum class ResultKind(val id: Int, private val labelRes: Int, val analysis: Boolean = false) {
+        IMPORT(4220, R.string.kind_import), DOWNLOAD(4221, R.string.n_download),
+        CONVERT(4222, R.string.kind_convert), SCAN(4223, R.string.kind_duplicates, analysis = true),
+        EXPORT(4224, R.string.kind_export), UPDATE(4225, R.string.kind_update),
+        INTRO(4226, R.string.kind_analysis, analysis = true), FACES(4227, R.string.kind_faces, analysis = true),
+        BACKUP(4228, R.string.kind_backup),
+        ;
+
+        val label: String get() = str(labelRes)
     }
 
     /** How an operation ended (the island's chip: Fatto, Errore, Annullato). */
@@ -1890,7 +1896,7 @@ class ConversionService : Service() {
         if (!island || !HyperFocus.isSupported(this)) { postResult(mgr, kind, base(RESULT_CHANNEL).build()); return }
         // HyperOS: the result takes the progress's place in the island for a few seconds (chip
         // Fatto / Errore / Annullato, its buttons), then becomes the normal, dismissible result.
-        val chip = when (state) { ResultState.DONE -> "Fatto"; ResultState.FAILED -> "Errore"; ResultState.CANCELLED -> "Annullato" }
+        val chip = when (state) { ResultState.DONE -> str(R.string.chip_done); ResultState.FAILED -> str(R.string.chip_error); ResultState.CANCELLED -> str(R.string.chip_cancelled) }
         val island = base(ongoingChannel())
             .setGroup(GROUP_ONGOING)
             .setOngoing(true)
@@ -1934,7 +1940,7 @@ class ConversionService : Service() {
         }.getOrNull() ?: return
         if (children.isEmpty()) { runCatching { mgr.cancel(id) }; return }
         if (children.size < 2) return
-        val title = if (analysis) "Analisi" else "Operazioni"
+        val title = if (analysis) str(R.string.kind_analysis) else str(R.string.n_operations)
         val lines = children.sortedByDescending { it.postTime }.mapNotNull { it.notification.extras.getCharSequence(Notification.EXTRA_TITLE) }
         val icon = R.drawable.ic_notification
         val summary = NotificationCompat.Builder(this, RESULT_CHANNEL)
@@ -1977,7 +1983,7 @@ class ConversionService : Service() {
         val pi = android.app.PendingIntent.getForegroundService(
             this, 7, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        return NotificationCompat.Action(R.drawable.ic_action_retry, "Riprova", pi)
+        return NotificationCompat.Action(R.drawable.ic_action_retry, str(R.string.retry), pi)
     }
 
     /**
@@ -2004,7 +2010,7 @@ class ConversionService : Service() {
         val shade = base(ongoingChannel())
             .setGroup("cripta_choice_$id")
             .setTimeoutAfter(DONE_TIMEOUT_MS)
-            .addExtras(liveUpdate("Scegli"))
+            .addExtras(liveUpdate(str(R.string.choose)))
             .build()
         val mgr = getSystemService(NotificationManager::class.java)
         if (!HyperFocus.isSupported(this)) { post(mgr, id, shade); return }
@@ -2014,9 +2020,9 @@ class ConversionService : Service() {
         // until answered.
         val island = base(ongoingChannel())
             .setGroup(GROUP_ONGOING)
-            .addExtras(liveUpdate("Scegli"))
+            .addExtras(liveUpdate(str(R.string.choose)))
             .addExtras(HyperFocus.extras(
-                this, "cripta_progress", title, text, "Scegli", kind.label, progress = null,
+                this, "cripta_progress", title, text, str(R.string.choose), kind.label, progress = null,
                 buttons = actions.mapIndexedNotNull { i, a ->
                     a.actionIntent?.let {
                         val res = a.iconCompat?.resId?.takeIf { r -> r != 0 }
@@ -2046,10 +2052,10 @@ class ConversionService : Service() {
         val original = pending.firstOrNull() ?: return
         postChoice(
             DONE_NOTIF_ID, ResultKind.CONVERT,
-            if (pending.size == 1) "Copia MP4 creata" else "${pending.size} originali da gestire",
-            "Eliminare l'originale?",
-            serviceAction("Elimina originale", MODE_DELETE_ORIG, 2, original.id, R.drawable.ic_action_delete),
-            serviceAction("Mantieni", MODE_DISMISS, 3, original.id, R.drawable.ic_action_keep),
+            plural(R.plurals.originals_pending, pending.size),
+            str(R.string.n_delete_original_q),
+            serviceAction(str(R.string.n_delete_original), MODE_DELETE_ORIG, 2, original.id, R.drawable.ic_action_delete),
+            serviceAction(str(R.string.keep), MODE_DISMISS, 3, original.id, R.drawable.ic_action_keep),
         )
     }
 
@@ -2057,12 +2063,12 @@ class ConversionService : Service() {
     private fun postOriginalsChoice(n: Int) {
         if (n <= 0) return
         // Short lines: the island's template shows one line each (the counts become the title).
-        val title = lastImportCount?.let { if (it == 1) "1 file importato" else "$it file importati" } ?: "Importazione completata"
+        val title = lastImportCount?.let { plural(R.plurals.imported_n, it) } ?: str(R.string.n_import_done)
         postChoice(
             ResultKind.IMPORT.id, ResultKind.IMPORT, title,
-            if (n == 1) "Eliminare l'originale?" else "Eliminare gli originali?",
-            serviceAction(if (n == 1) "Elimina originale" else "Elimina originali", MODE_ORIGINALS_DELETE, 8, icon = R.drawable.ic_action_delete),
-            serviceAction("Mantieni", MODE_ORIGINALS_KEEP, 9, icon = R.drawable.ic_action_keep),
+            plural(R.plurals.delete_original_q, n),
+            serviceAction(plural(R.plurals.delete_original_btn, n), MODE_ORIGINALS_DELETE, 8, icon = R.drawable.ic_action_delete),
+            serviceAction(str(R.string.keep), MODE_ORIGINALS_KEEP, 9, icon = R.drawable.ic_action_keep),
         )
     }
 

@@ -1,5 +1,8 @@
 package com.cripta.app.security
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -36,7 +39,7 @@ object BiometricAuth {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     val c = result.cryptoObject?.cipher
-                    if (c != null) onSuccess(c) else onError("Autenticazione non riuscita. Riprova.")
+                    if (c != null) onSuccess(c) else onError(str(R.string.bio_failed))
                 }
 
                 override fun onAuthenticationError(code: Int, msg: CharSequence) {
@@ -59,17 +62,17 @@ object BiometricAuth {
         BiometricPrompt.ERROR_NEGATIVE_BUTTON,
         BiometricPrompt.ERROR_CANCELED -> null
         BiometricPrompt.ERROR_LOCKOUT ->
-            "Troppi tentativi non riusciti. Attendi circa 30 secondi e riprova, oppure usa PIN, sequenza o password."
+            str(R.string.bio_lockout)
         BiometricPrompt.ERROR_LOCKOUT_PERMANENT ->
-            "Biometria bloccata dopo troppi tentativi. Sblocca il telefono con PIN, sequenza o password, poi riprova."
+            str(R.string.bio_lockout_permanent)
         BiometricPrompt.ERROR_NO_BIOMETRICS,
         BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL ->
-            "Nessun blocco schermo configurato sul dispositivo."
+            str(R.string.bio_no_lock)
         BiometricPrompt.ERROR_HW_UNAVAILABLE,
         BiometricPrompt.ERROR_HW_NOT_PRESENT ->
-            "Sensore biometrico non disponibile al momento. Riprova."
-        BiometricPrompt.ERROR_TIMEOUT -> "Tempo scaduto. Tocca Sblocca per riprovare."
-        BiometricPrompt.ERROR_NO_SPACE -> "Spazio insufficiente sul dispositivo per completare l'autenticazione."
-        else -> "Autenticazione non riuscita. Riprova."
+            str(R.string.bio_unavailable)
+        BiometricPrompt.ERROR_TIMEOUT -> str(R.string.bio_timeout)
+        BiometricPrompt.ERROR_NO_SPACE -> str(R.string.bio_no_space)
+        else -> str(R.string.bio_failed)
     }
 }

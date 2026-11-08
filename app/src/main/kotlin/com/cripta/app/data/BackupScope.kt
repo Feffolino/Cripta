@@ -1,5 +1,9 @@
 package com.cripta.app.data
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -119,9 +123,9 @@ object BackupSettings {
     fun decode(bytes: ByteArray): Map<String, Any> {
         val inp = DataInputStream(ByteArrayInputStream(bytes))
         val version = inp.readInt()
-        require(version >= 1) { "Impostazioni non valide" }
+        require(version >= 1) { str(R.string.settings_invalid) }
         val n = inp.readInt()
-        require(n in 0..10_000) { "Impostazioni non valide" }
+        require(n in 0..10_000) { str(R.string.settings_invalid) }
         val out = LinkedHashMap<String, Any>()
         repeat(n) {
             val k = inp.readUTF()
@@ -134,10 +138,10 @@ object BackupSettings {
                 T_STRING -> inp.readUTF()
                 T_STRINGS -> {
                     val c = inp.readInt()
-                    require(c in 0..10_000) { "Impostazioni non valide" }
+                    require(c in 0..10_000) { str(R.string.settings_invalid) }
                     (0 until c).map { inp.readUTF() }.toSet()
                 }
-                else -> throw IllegalArgumentException("Tipo di impostazione sconosciuto: $t")
+                else -> throw IllegalArgumentException(str(R.string.settings_unknown_kind, t))
             }
             if (k !in EXCLUDED) out[k] = v
         }
@@ -181,11 +185,11 @@ internal object BackupMore {
             val kind = inp.readInt()
             if (kind == END) return true
             val len = inp.readInt()
-            require(len in 0..MAX_RECORD) { "File corrotto" }
+            require(len in 0..MAX_RECORD) { str(R.string.file_corrupt) }
             when (kind) {
                 SETTINGS -> onSettings(ByteArray(len).also { inp.readFully(it) })
                 COVER -> {
-                    require(len >= 4) { "File corrotto" }
+                    require(len >= 4) { str(R.string.file_corrupt) }
                     val pos = inp.readInt()
                     onCover(pos, ByteArray(len - 4).also { inp.readFully(it) })
                 }
@@ -206,13 +210,13 @@ data class RestoreReport(
 ) {
     fun describe(): String {
         val parts = buildList {
-            add(if (files == 1) "1 file" else "$files file")
-            if (tags > 0) add(if (tags == 1) "1 etichetta" else "$tags etichette")
-            if (people > 0) add(if (people == 1) "1 persona" else "$people persone")
-            if (analysis) add("analisi")
-            if (covers > 0) add(if (covers == 1) "1 copertina" else "$covers copertine")
-            if (settings) add("impostazioni")
+            add(plural(R.plurals.restored_files, files))
+            if (tags > 0) add(plural(R.plurals.restored_tags, tags))
+            if (people > 0) add(plural(R.plurals.restored_people, people))
+            if (analysis) add(str(R.string.restored_analysis))
+            if (covers > 0) add(plural(R.plurals.restored_covers, covers))
+            if (settings) add(str(R.string.restored_settings))
         }
-        return "Ripristinati: " + parts.joinToString(", ")
+        return str(R.string.restored_list, parts.joinToString(", "))
     }
 }

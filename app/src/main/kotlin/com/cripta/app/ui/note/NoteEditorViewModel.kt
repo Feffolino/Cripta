@@ -1,5 +1,8 @@
 package com.cripta.app.ui.note
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -58,7 +61,7 @@ class NoteEditorViewModel @Inject constructor(
                 if (f == null) {
                     // Gone (deleted elsewhere): nothing to edit, and an update would have no target.
                     loadFailed = true
-                    error = "Impossibile aprire la nota."
+                    error = str(R.string.note_open_failed)
                 } else {
                     val t = repo.noteText(f)
                     // An imported "x.md" is titled "x": the extension comes back on export.
@@ -69,7 +72,7 @@ class NoteEditorViewModel @Inject constructor(
                 loadedFor = null; throw e
             } catch (_: Exception) {
                 loadFailed = true
-                error = "Impossibile aprire la nota."
+                error = str(R.string.note_open_failed)
             }
         }
         loaded = true
@@ -86,7 +89,7 @@ class NoteEditorViewModel @Inject constructor(
         saving = true
         viewModelScope.launch {
             try {
-                val n = name.ifBlank { "Nota" }
+                val n = name.ifBlank { str(R.string.default_note_name) }
                 if (id == null) repo.createNote(folderId ?: routeFolderId, n, text)
                 else {
                     repo.updateNote(id, n, text)
@@ -98,7 +101,7 @@ class NoteEditorViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                error = "Impossibile salvare la nota. Riprova."
+                error = str(R.string.note_save_failed)
             } finally {
                 saving = false
             }
@@ -114,7 +117,7 @@ class NoteEditorViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            error = "Impossibile eliminare la nota."
+            error = str(R.string.note_delete_failed)
         }
     }
 }

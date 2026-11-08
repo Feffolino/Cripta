@@ -1,5 +1,8 @@
 package com.cripta.app.ui.auth
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -132,7 +135,7 @@ fun AuthScreen(
             val header: @Composable (Boolean) -> Unit = { compact ->
                 val align = if (compact) TextAlign.Start else TextAlign.Center
                 Text(
-                    if (state.firstRun) "Crea il tuo vault" else "Cripta",
+                    if (state.firstRun) str(R.string.auth_create_title) else str(R.string.app_name),
                     // DS: the name on the lock screen in `display`.
                     style = if (state.firstRun) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displayMedium,
                     textAlign = align,
@@ -141,9 +144,7 @@ fun AuthScreen(
                 Column(Modifier.entrance({ textIn.value })) {
                     when {
                         state.noDeviceCredential -> Text(
-                            "Per proteggere il vault Cripta usa il blocco schermo del telefono. " +
-                                "Imposta un PIN, una sequenza o una password (e, se vuoi, l'impronta o il " +
-                                "volto) nelle impostazioni di sicurezza, poi torna qui.",
+                            str(R.string.auth_need_lock),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = align,
@@ -152,10 +153,10 @@ fun AuthScreen(
                         state.firstRun -> FirstRunExplanation(compact)
                         else -> Text(
                             when (state.pin) {
-                                PinStep.REQUIRED -> "Bloccato. Inserisci il ${state.secretKind.noun} di Cripta."
-                                PinStep.SECOND -> "Identità confermata. Ora inserisci il ${state.secretKind.noun} di Cripta."
-                                PinStep.OPTIONAL -> "Bloccato. Usa l'impronta oppure il ${state.secretKind.noun} di Cripta."
-                                PinStep.NONE -> "Bloccato. Sblocca per accedere."
+                                PinStep.REQUIRED -> str(R.string.auth_locked_enter, state.secretKind.noun)
+                                PinStep.SECOND -> str(R.string.auth_confirmed_enter, state.secretKind.noun)
+                                PinStep.OPTIONAL -> str(R.string.auth_locked_optional, state.secretKind.noun)
+                                PinStep.NONE -> str(R.string.auth_locked)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -185,9 +186,9 @@ fun AuthScreen(
                         Button(onClick = onOpenSecuritySettings, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().heightIn(min = 52.dp)) {
                             Icon(CriptaIcons.Settings, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            com.cripta.app.ui.components.ButtonText("Apri impostazioni di sicurezza")
+                            com.cripta.app.ui.components.ButtonText(str(R.string.auth_open_security))
                         }
-                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { com.cripta.app.ui.components.ButtonText("Riprova") }
+                        TextButton(onClick = onAuthenticate, modifier = Modifier.padding(top = 4.dp)) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
                     } else {
                         // DS Sblocco: the one filled action first, the app code under it as a text button.
                         if (!pinOnly) {
@@ -196,7 +197,7 @@ fun AuthScreen(
                                     Icon(CriptaIcons.Fingerprint, null, modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.size(8.dp))
                                 }
-                                com.cripta.app.ui.components.ButtonText(if (state.firstRun) "Crea vault" else "Sblocca")
+                                com.cripta.app.ui.components.ButtonText(if (state.firstRun) str(R.string.auth_create_vault) else str(R.string.unlock))
                             }
                         }
                         if (withCode && hasCode) {
@@ -269,7 +270,7 @@ private fun CodeEntry(
 ) {
     var open by remember(alternative) { mutableStateOf(!alternative) }
     if (!open) {
-        TextButton(onClick = { open = true }) { com.cripta.app.ui.components.ButtonText("Usa il ${kind.noun} di Cripta") }
+        TextButton(onClick = { open = true }) { com.cripta.app.ui.components.ButtonText(str(R.string.auth_use_code, kind.noun)) }
         return
     }
     if (kind == com.cripta.app.security.SecretKind.PIN) PinKeypad(busy, compact, onSubmit)
@@ -299,13 +300,13 @@ private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> 
         androidx.compose.foundation.layout.Box(
             Modifier.size(width = 240.dp, height = 28.dp).semantics {
                 liveRegion = LiveRegionMode.Polite
-                contentDescription = if (busy) "Verifica del PIN" else "${digits.length} cifre inserite"
+                contentDescription = if (busy) str(R.string.auth_checking_pin) else str(R.string.auth_digits_entered, digits.length)
             },
             contentAlignment = Alignment.Center,
         ) {
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-                digits.isEmpty() -> Text("Inserisci il PIN", style = MaterialTheme.typography.labelLarge,
+                digits.isEmpty() -> Text(str(R.string.auth_enter_pin), style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     repeat(digits.length) {
@@ -324,11 +325,11 @@ private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> 
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             KeypadKey(key, enabled = !busy && digits.isNotEmpty(), tonal = false,
                 onClick = { tap(); digits = digits.dropLast(1) }, onLongClick = { tap(); digits = "" },
-                label = "Cancella") {
+                label = str(R.string.auth_delete_digit)) {
                 Icon(CriptaIcons.Backspace, null)
             }
             KeypadKey(key, enabled = !busy, onClick = { add('0') }) { Text("0", style = MaterialTheme.typography.headlineMedium) }
-            KeypadKey(key, enabled = ready, primary = true, onClick = { submit() }, label = "Sblocca") {
+            KeypadKey(key, enabled = ready, primary = true, onClick = { submit() }, label = str(R.string.unlock)) {
                 Icon(CriptaIcons.Check, null)
             }
         }
@@ -384,7 +385,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
         com.cripta.app.ui.components.CriptaTextField(
             value = text,
             onValueChange = { v -> if (com.cripta.app.security.PinCrypto.accepts(v, kind)) text = v },
-            label = { Text("Password di Cripta") },
+            label = { Text(str(R.string.auth_password_label)) },
             singleLine = true,
             enabled = !busy,
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -400,7 +401,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
                 androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             }
-            Text(if (busy) "Verifica…" else "Sblocca")
+            Text(if (busy) str(R.string.auth_checking) else str(R.string.unlock))
         }
     }
 }
@@ -409,12 +410,9 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
 @Composable
 private fun FirstRunExplanation(compact: Boolean) {
     val points = listOf(
-        "I file vengono cifrati sul telefono con una chiave protetta dal blocco schermo " +
-            "(impronta, volto, PIN o sequenza). Nessuno, nemmeno Cripta, può leggerli senza di te.",
-        "Se rimuovi il blocco schermo, ripristini il telefono o disinstalli l'app, i file del " +
-            "vault non saranno più recuperabili.",
-        "Crea regolarmente un backup cifrato da Impostazioni: è l'unico modo per ritrovare i " +
-            "file su un altro telefono.",
+        str(R.string.auth_info_encryption),
+        str(R.string.auth_info_loss),
+        str(R.string.auth_info_backup),
     )
     Column(
         Modifier.padding(top = 12.dp).widthIn(max = 480.dp),
@@ -454,22 +452,17 @@ private fun Modifier.entrance(progress: () -> Float, fromScale: Float = 1f): Mod
 fun KeyInvalidatedDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Impossibile sbloccare") },
+        title = { Text(str(R.string.auth_cannot_unlock)) },
         text = {
             Text(
-                "La chiave di sicurezza non è più valida perché la biometria del dispositivo è " +
-                    "cambiata o il blocco schermo è stato rimosso. I dati protetti non sono più " +
-                    "recuperabili. Puoi reimpostare il vault per ricominciare da capo. " +
-                    "L'operazione è irreversibile ed elimina tutti i file cifrati.\n\n" +
-                    "Se avevi creato un backup cifrato, dopo la reimpostazione potrai ripristinarlo " +
-                    "da Impostazioni → Backup con la sua passphrase."
+                str(R.string.auth_key_invalid)
             )
         },
         confirmButton = {
             TextButton(onClick = onReset) {
-                com.cripta.app.ui.components.ButtonText("Reimposta vault", color = MaterialTheme.colorScheme.error)
+                com.cripta.app.ui.components.ButtonText(str(R.string.auth_reset_vault), color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }

@@ -1,5 +1,8 @@
 package com.cripta.app.util
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
@@ -102,13 +105,13 @@ fun batchWeight(bytes: Long): Long = bytes.coerceAtLeast(0L) + PER_FILE_BYTES
 private const val PER_FILE_BYTES = 4L shl 20
 
 /** "circa 3 min rimanenti": the screens' form, rounded so it reads as an estimate, not a countdown. */
-fun formatEta(ms: Long): String = etaAmount(ms)?.let { "circa $it rimanenti" } ?: "pochi secondi rimanenti"
+fun formatEta(ms: Long): String = etaAmount(ms)?.let { str(R.string.eta_about, it) } ?: str(R.string.eta_few_seconds)
 
 /**
  * "ancora 3 min": the short form of the notifications and the Hyper Island, whose line is cut
  * when long ("resta circa 3 min" came out cut).
  */
-fun formatEtaShort(ms: Long): String = etaAmount(ms)?.let { "ancora $it" } ?: "quasi finito"
+fun formatEtaShort(ms: Long): String = etaAmount(ms)?.let { str(R.string.eta_short, it) } ?: str(R.string.eta_almost_done)
 
 /** "45 s" (by 5 s), "3 min", "1 h 20 min", rounded up; null under 10 s. */
 internal fun etaAmount(ms: Long): String? {

@@ -1,5 +1,8 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -158,9 +161,9 @@ fun TagPill(
             .semantics {
                 if (toggle) selected = on
                 stateDescription = stateLabel ?: when (state) {
-                    TagPillState.On -> "Attiva"
-                    TagPillState.Off -> "Non attiva"
-                    TagPillState.Excluded -> "Esclusa"
+                    TagPillState.On -> str(R.string.tag_state_on)
+                    TagPillState.Off -> str(R.string.tag_state_off)
+                    TagPillState.Excluded -> str(R.string.tag_state_excluded)
                     TagPillState.Plain -> ""
                 }
             }

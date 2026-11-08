@@ -5,7 +5,7 @@ out of the system gallery, and open them only inside the app once you unlock it.
 the device.
 
 > Written entirely with [Claude](https://claude.ai) (Claude Code), through conversation: no line typed by hand.
-> A personal project, shared as is, with no warranty. The interface is in Italian.
+> A personal project, shared as is, with no warranty. The interface is in English and Italian.
 
 ## What it does
 
@@ -44,8 +44,8 @@ the device.
 
 - Cripta finds faces in photos and videos on the phone (YuNet and SFace, no outside service) and
   groups them. You name, merge, split or discard them: no face goes to a person without your yes.
-- Suggestions ("Forse è …") come one at a time, full screen. You sort unnamed faces a group at a
-  time in "Da sistemare".
+- Suggestions ("Maybe it's …?") come one at a time, full screen. You sort unnamed faces a group at a
+  time in "To sort".
 - Each person has a profile with a photo, notes, links and their media; a video's progress bar marks
   the moments they appear.
 
@@ -56,7 +56,7 @@ the device.
 - In videos: resume where you stopped, double tap to skip, brightness and volume with a swipe, hold
   to speed up (1.5×, 2× or 3×), move on to the next file, Picture-in-Picture.
 - Intros and outros: Cripta spots them by comparing the audio of the videos in the vault, then
-  offers "Salta intro" or skips them for you. You can mark them by hand and trim them to a tenth of
+  offers "Skip intro" or skips them for you. You can mark them by hand and trim them to a tenth of
   a second.
 - The details panel shows people, tags, intro and outro, the link and the file's figures; in
   portrait it can share the screen with the video.
@@ -78,6 +78,12 @@ the device.
 - Settings travel except auto-lock, screenshots and rotation lock, which belong to the phone you
   open the vault on. The trash stays out.
 - You can compress notes, PDFs and text losslessly; photos and videos stay as they are.
+
+### Language
+
+Cripta is in English and Italian. It follows the phone's language (English for any language other
+than Italian); on Android 13 and later you can pick it for Cripta alone, from Settings › Appearance and
+folders › Language or the system's Settings › Apps › Cripta › Language.
 
 ### Updates
 

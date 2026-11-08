@@ -1,5 +1,8 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.graphics.Bitmap
@@ -399,7 +402,7 @@ class VaultViewModel @Inject constructor(
     /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
     /** "Confronta audio": what the starts of two analysed videos share, for [onResult]. */
     fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
-        onResult(runCatching { intro.compare(idA, idB) }.getOrElse { "Confronto non riuscito" })
+        onResult(runCatching { intro.compare(idA, idB) }.getOrElse { str(R.string.compare_failed) })
     }
 
 
@@ -732,7 +735,7 @@ class VaultViewModel @Inject constructor(
         } else eligible
         val order = ids.shuffled()
         if (order.isEmpty()) {
-            android.widget.Toast.makeText(appContext, "Nessun file disponibile per il casuale. Verifica i filtri e le cartelle escluse.", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(appContext, str(R.string.random_none), android.widget.Toast.LENGTH_SHORT).show()
             return@launch
         }
         viewerQueue.set(order)

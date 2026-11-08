@@ -26,6 +26,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        Strings.init(this)
         com.cripta.app.ui.theme.CriptaIcons.init(resources)
         CrashLog.install(this)
         TinkInit.ensureInitialized()

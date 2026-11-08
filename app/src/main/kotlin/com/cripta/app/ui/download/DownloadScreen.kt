@@ -1,5 +1,8 @@
 package com.cripta.app.ui.download
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.theme.accentTint
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -114,7 +117,7 @@ fun DownloadScreen(
     val ctx = LocalContext.current
     val clipboard = LocalClipboardManager.current
     var url by remember { mutableStateOf(initialUrl.orEmpty()) }
-    val qualities = listOf<Pair<Int?, String>>(null to "Auto", 1080 to "1080p", 720 to "720p", 480 to "480p", 360 to "360p")
+    val qualities = listOf<Pair<Int?, String>>(null to str(R.string.quality_auto), 1080 to "1080p", 720 to "720p", 480 to "480p", 360 to "360p")
     val heights = qualities.map { it.first }
     val downloads by vm.downloads.collectAsStateWithLifecycle()
     val estimate by vm.estimate.collectAsStateWithLifecycle()
@@ -156,7 +159,7 @@ fun DownloadScreen(
     fun paste() {
         val clip = clipboard.getText()?.text?.trim().orEmpty()
         if (clip.isNotBlank()) url = extractUrl(clip)
-        else Toast.makeText(ctx, "Appunti vuoti", Toast.LENGTH_SHORT).show()
+        else Toast.makeText(ctx, str(R.string.clipboard_empty), Toast.LENGTH_SHORT).show()
     }
 
     val urlValid = looksLikeUrl(url)
@@ -166,7 +169,7 @@ fun DownloadScreen(
         val u = url.trim()
         if (!looksLikeUrl(u)) return
         if (vm.isQueued(u)) {
-            Toast.makeText(ctx, "Questo link è già in coda", Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, str(R.string.dl_already_queued), Toast.LENGTH_SHORT).show()
         } else {
             vm.enqueue(ctx, u, quality, effectiveFolder, effectiveTags)
             url = ""; vm.resetEstimate()
@@ -185,21 +188,21 @@ fun DownloadScreen(
             value = url,
             onValueChange = { url = it },
             // DS cr-field: icon and link in one pill, no floating label.
-            placeholder = { Text("Link del video") },
+            placeholder = { Text(str(R.string.dl_link_hint)) },
             leadingIcon = { Icon(CriptaIcons.Link, null) },
             trailingIcon = {
                 if (url.isBlank()) {
                     // DS: the paste action as an accent icon at the field's end.
                     IconButton(onClick = { paste() }) {
-                        Icon(CriptaIcons.ContentPaste, "Incolla", tint = MaterialTheme.colorScheme.primary)
+                        Icon(CriptaIcons.ContentPaste, str(R.string.paste), tint = MaterialTheme.colorScheme.primary)
                     }
                 } else {
-                    IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(CriptaIcons.Clear, "Svuota il link") }
+                    IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(CriptaIcons.Clear, str(R.string.dl_clear_link)) }
                 }
             },
             singleLine = true,
             isError = urlError,
-            supportingText = if (urlError) ({ Text("Non sembra un link: deve iniziare con http:// o https://") }) else null,
+            supportingText = if (urlError) ({ Text(str(R.string.dl_not_a_link)) }) else null,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
                 imeAction = androidx.compose.ui.text.input.ImeAction.Go,
@@ -220,7 +223,7 @@ fun DownloadScreen(
             lastReady?.let { LinkPreview(it, url) }
         }
         if (url.isBlank()) {
-            Text("YouTube, Vimeo e molti altri siti. Il video finisce cifrato nel vault.",
+            Text(str(R.string.dl_sites_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -231,25 +234,25 @@ fun DownloadScreen(
                 Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(CriptaIcons.Info, null, tint = MaterialTheme.colorScheme.onSurface)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text("Già nel vault", style = MaterialTheme.typography.titleSmall,
+                        Text(str(R.string.dl_already_in_vault), style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface)
                         Text(f.originalName, style = MaterialTheme.typography.bodySmall, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
                     }
                     TextButton(onClick = { vm.prepareOpen(f.id); onOpenFile(f.id) }) {
-                        com.cripta.app.ui.components.ButtonText("Apri", color = MaterialTheme.colorScheme.onSurface)
+                        com.cripta.app.ui.components.ButtonText(str(R.string.open), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
         }
 
-        Heading("Qualità", Modifier.padding(top = 8.dp))
+        Heading(str(R.string.quality), Modifier.padding(top = 8.dp))
         QualitySelector(qualities, quality, estimate) { quality = it }
         // Estimate line: takes no space while idle, crossfades between "computing" / result / error.
         val estimateText = when (val e = estimate) {
-            is DownloadViewModel.Estimate.Error -> "Dimensioni non stimabili: ${e.message}"
-            DownloadViewModel.Estimate.Loading -> "Calcolo delle dimensioni…"
-            is DownloadViewModel.Estimate.Ready -> "Auto prende la migliore qualità disponibile. «—»: dimensione non stimabile."
+            is DownloadViewModel.Estimate.Error -> str(R.string.dl_size_unknown_err, e.message)
+            DownloadViewModel.Estimate.Loading -> str(R.string.dl_size_computing)
+            is DownloadViewModel.Estimate.Ready -> str(R.string.dl_size_hint)
             else -> null
         }
         var lastEstimateText by remember { mutableStateOf("") }
@@ -270,23 +273,23 @@ fun DownloadScreen(
             val f = folders.firstOrNull { it.id == effectiveFolder }
             DestinationRow(
                 icon = { com.cripta.app.ui.components.FolderGlyph(f?.color, f?.icon, f?.emoji, 26.dp) },
-                title = "Cartella",
+                title = str(R.string.folder),
                 onClick = { pickFolder = true },
-                onClickLabel = "Cambia cartella",
+                onClickLabel = str(R.string.change_folder),
             ) {
-                Text(f?.let { folderLabel(it, folders) } ?: "Radice del vault", style = MaterialTheme.typography.bodySmall,
+                Text(f?.let { folderLabel(it, folders) } ?: str(R.string.vault_root), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (tags.isNotEmpty()) {
                 DestinationRow(
                     icon = { Icon(CriptaIcons.Label, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    title = "Etichette",
+                    title = str(R.string.tags),
                     onClick = { pickTags = true },
-                    onClickLabel = "Scegli etichette",
+                    onClickLabel = str(R.string.choose_tags),
                 ) {
                     val chosen = tags.filter { it.id in effectiveTags }
                     if (chosen.isEmpty()) {
-                        Text("Nessuna", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(str(R.string.none_f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -305,7 +308,7 @@ fun DownloadScreen(
             Icon(CriptaIcons.Download, null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                if (downloads.any { it.active }) "Aggiungi alla coda" else if (existing != null) "Scarica comunque" else "Scarica",
+                if (downloads.any { it.active }) str(R.string.dl_add_to_queue) else if (existing != null) str(R.string.dl_download_anyway) else str(R.string.dl_download),
                 style = MaterialTheme.typography.titleSmall,
             )
         }
@@ -316,7 +319,7 @@ fun DownloadScreen(
         val waiting = downloads.filter { phaseGroup(it.phase) == PhaseGroup.WAITING }
         val finished = downloads.filter { it.finished }
         fun dest(job: DownloadJob) =
-            job.folderId?.let { id -> folders.firstOrNull { it.id == id } }?.let { folderLabel(it, folders) } ?: "Radice"
+            job.folderId?.let { id -> folders.firstOrNull { it.id == id } }?.let { folderLabel(it, folders) } ?: str(R.string.root)
         val jobs: @Composable (List<DownloadJob>) -> Unit = { list ->
             list.forEach { job ->
                 androidx.compose.runtime.key(job.id) {
@@ -335,25 +338,24 @@ fun DownloadScreen(
             // An empty queue says what will happen here, quietly.
             Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(CriptaIcons.CloudDownload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
-                Text("Nessun download in coda", style = MaterialTheme.typography.bodyLarge,
+                Text(str(R.string.dl_queue_empty), style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(top = 8.dp))
-                Text("I link si scaricano uno alla volta, anche con l'app chiusa.", style = MaterialTheme.typography.bodySmall,
+                Text(str(R.string.dl_queue_hint), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 2.dp))
             }
         }
-        if (running.isNotEmpty()) { Heading("In corso"); jobs(running) }
-        if (waiting.isNotEmpty()) { Heading("In attesa · ${waiting.size}", Modifier.padding(top = 8.dp)); jobs(waiting) }
+        if (running.isNotEmpty()) { Heading(str(R.string.in_progress)); jobs(running) }
+        if (waiting.isNotEmpty()) { Heading(str(R.string.dl_waiting_n, waiting.size), Modifier.padding(top = 8.dp)); jobs(waiting) }
         if (finished.isNotEmpty()) {
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Heading("Finiti", Modifier.weight(1f))
-                TextButton(onClick = { vm.clearFinished() }) { com.cripta.app.ui.components.ButtonText("Pulisci") }
+                Heading(str(R.string.dl_finished), Modifier.weight(1f))
+                TextButton(onClick = { vm.clearFinished() }) { com.cripta.app.ui.components.ButtonText(str(R.string.clear)) }
             }
             jobs(finished)
         }
         Text(
-            "Il primo download può richiedere qualche secondo in più. I video protetti (es. piattaforme " +
-                "a pagamento) non si possono scaricare.",
+            str(R.string.dl_first_slow),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
@@ -364,7 +366,7 @@ fun DownloadScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
-                title = { com.cripta.app.ui.components.HeaderTitle("Download") },
+                title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download)) },
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
             )
@@ -509,7 +511,7 @@ private fun SizeHint(estimate: DownloadViewModel.Estimate, height: Int?, color: 
                     style = MaterialTheme.typography.bodySmall,
                     color = color,
                     maxLines = 1,
-                    modifier = if (bytes == null) Modifier.semantics { contentDescription = "dimensione non stimabile" } else Modifier,
+                    modifier = if (bytes == null) Modifier.semantics { contentDescription = str(R.string.dl_size_unknown) } else Modifier,
                 )
             }
             else -> {}
@@ -532,8 +534,8 @@ private fun FolderPickerSheet(folders: List<FolderEntity>, selected: Long?, onPi
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
-            Text("Salva in…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
-            FolderRow("Radice del vault", null, null, null, selected == null, 0) { afterSheet { onPick(null) } }
+            Text(str(R.string.save_in), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+            FolderRow(str(R.string.vault_root), null, null, null, selected == null, 0) { afterSheet { onPick(null) } }
             // Tree order: each folder under its parent, indented by depth.
             val children = folders.groupBy { it.parentId }
             fun walk(parent: Long?, depth: Int, out: MutableList<Pair<FolderEntity, Int>>) {
@@ -555,7 +557,7 @@ private fun FolderRow(name: String, color: Int?, icon: String?, emoji: String?, 
         if (color == null && icon == null && emoji == null) Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         else com.cripta.app.ui.components.FolderGlyph(color, icon, emoji, 22.dp)
         Text(name, Modifier.weight(1f).padding(start = 14.dp))
-        if (selected) Icon(CriptaIcons.CheckCircle, "Selezionata", tint = MaterialTheme.colorScheme.primary)
+        if (selected) Icon(CriptaIcons.CheckCircle, str(R.string.selected_f), tint = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -567,10 +569,10 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
         Column(Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Etichette dei download", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (chosen.isNotEmpty()) TextButton(onClick = onClear) { com.cripta.app.ui.components.ButtonText("Togli tutte") }
+                Text(str(R.string.dl_tags_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (chosen.isNotEmpty()) TextButton(onClick = onClear) { com.cripta.app.ui.components.ButtonText(str(R.string.remove_all)) }
             }
-            Text("Vanno su ogni video scaricato da qui in poi.", style = MaterialTheme.typography.bodySmall,
+            Text(str(R.string.dl_tags_hint), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp))
             com.cripta.app.ui.components.ChipFlowRow {
                 tags.forEach { t ->
@@ -581,8 +583,8 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
                         state = if (sel) TagPillState.On else TagPillState.Off,
                         base = MaterialTheme.colorScheme.surfaceContainerLow,
                         onClick = { onToggle(t.id) },
-                        onClickLabel = if (sel) "Togli" else "Aggiungi",
-                        stateLabel = if (sel) "Scelta" else "Non scelta",
+                        onClickLabel = if (sel) str(R.string.remove_short) else str(R.string.add),
+                        stateLabel = if (sel) str(R.string.chosen) else str(R.string.not_chosen),
                     )
                 }
             }
@@ -633,14 +635,14 @@ private fun JobRow(
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 val status = when (job.phase) {
-                    DownloadPhase.QUEUED -> "In attesa · in $destination"
-                    DownloadPhase.PREPARING -> "Preparazione…"
+                    DownloadPhase.QUEUED -> str(R.string.dl_waiting_in, destination)
+                    DownloadPhase.PREPARING -> str(R.string.n_preparing)
                     DownloadPhase.DOWNLOADING ->
                         "${job.pct}%" + (if (job.etaSec > 0) " · " + com.cripta.app.util.formatEtaShort(job.etaSec * 1000) else "") +
-                            " · in $destination"
-                    DownloadPhase.DONE -> "Salvato in $destination"
+                            str(R.string.dl_in_dest, destination)
+                    DownloadPhase.DONE -> str(R.string.dl_saved_in, destination)
                     DownloadPhase.FAILED -> friendlyDownloadError(job.message)
-                    DownloadPhase.CANCELLED -> "Annullato"
+                    DownloadPhase.CANCELLED -> str(R.string.chip_cancelled)
                 }
                 Text(status, style = MaterialTheme.typography.bodySmall,
                     color = if (job.phase == DownloadPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -656,16 +658,16 @@ private fun JobRow(
                 label = "jobAction",
             ) { g ->
                 when {
-                    g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText("Annulla") }
-                    g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { com.cripta.app.ui.components.ButtonText("Apri") }
+                    g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
+                    g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { com.cripta.app.ui.components.ButtonText(str(R.string.open)) }
                     g == PhaseGroup.STOPPED -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText("Riprova") }
+                        TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
                         IconButton(onClick = onRemove) {
-                            Icon(CriptaIcons.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(CriptaIcons.Close, str(R.string.dl_remove_from_queue), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     else -> IconButton(onClick = onRemove) {
-                        Icon(CriptaIcons.Close, "Rimuovi dalla coda", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(CriptaIcons.Close, str(R.string.dl_remove_from_queue), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -719,7 +721,7 @@ private fun LinkPreview(e: DownloadViewModel.Estimate.Ready, link: String) {
                     model = coil.request.ImageRequest.Builder(ctx).data(url)
                         .diskCachePolicy(coil.request.CachePolicy.DISABLED)
                         .crossfade(true).build(),
-                    contentDescription = "Copertina",
+                    contentDescription = str(R.string.cover),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.matchParentSize(),
                 )
@@ -730,7 +732,7 @@ private fun LinkPreview(e: DownloadViewModel.Estimate.Ready, link: String) {
             }
         }
         Text(
-            e.title ?: "Video trovato",
+            e.title ?: str(R.string.dl_video_found),
             style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 10.dp),
         )

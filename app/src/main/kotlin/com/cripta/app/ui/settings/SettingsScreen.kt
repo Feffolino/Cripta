@@ -1,5 +1,10 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.plural
+
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.selection.selectable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -173,21 +178,21 @@ fun SettingsScreen(
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { if (current == null) com.cripta.app.ui.components.HeaderTitle("Impostazioni") else com.cripta.app.ui.components.PageTitle(current.label) },
+                title = { if (current == null) com.cripta.app.ui.components.HeaderTitle(str(R.string.tab_settings)) else com.cripta.app.ui.components.PageTitle(current.label) },
                 // Impostazioni is a tab root: the back arrow only appears inside a category page.
                 navigationIcon = {
                     if (current != null) {
                         IconButton(onClick = { page = null }) {
-                            Icon(CriptaIcons.ArrowBack, "Torna alle impostazioni")
+                            Icon(CriptaIcons.ArrowBack, str(R.string.back_to_settings))
                         }
                     }
                 },
                 actions = {
                     if (current != null && current.resettable) {
-                        TextButton(onClick = { confirmReset = current }) { com.cripta.app.ui.components.ButtonText("Predefiniti") }
+                        TextButton(onClick = { confirmReset = current }) { com.cripta.app.ui.components.ButtonText(str(R.string.defaults)) }
                     }
                     // Quick lock, always at hand.
-                    IconButton(onClick = { vm.lockNow(); onBack() }) { Icon(CriptaIcons.Lock, "Blocca ora") }
+                    IconButton(onClick = { vm.lockNow(); onBack() }) { Icon(CriptaIcons.Lock, str(R.string.lock_now)) }
                 },
             )
         },
@@ -226,15 +231,15 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.Bottom) {
                     com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
                     com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
-                    Text("Anteprima dal vivo", style = MaterialTheme.typography.labelMedium,
+                    Text(str(R.string.live_preview), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             // Each page is a list of named sections: a search result scrolls to its section and marks it.
             val sections: List<Pair<String, @Composable () -> Unit>> = when (current) {
                 SettingsPage.ASPETTO -> listOf(
-                    sec("Tema") {
-                        Section("Tema") {
+                    sec(str(R.string.sec_theme)) {
+                        Section(str(R.string.sec_theme)) {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 com.cripta.app.data.ThemeMode.entries.forEach { m ->
                                     com.cripta.app.ui.components.ChoiceChip(
@@ -242,49 +247,52 @@ fun SettingsScreen(
                                         onClick = { vm.setThemeMode(m) },
                                         label = {
                                             Text(when (m) {
-                                                com.cripta.app.data.ThemeMode.SYSTEM -> "Sistema"
-                                                com.cripta.app.data.ThemeMode.LIGHT -> "Chiaro"
-                                                com.cripta.app.data.ThemeMode.DARK -> "Scuro"
+                                                com.cripta.app.data.ThemeMode.SYSTEM -> str(R.string.theme_system)
+                                                com.cripta.app.data.ThemeMode.LIGHT -> str(R.string.theme_light)
+                                                com.cripta.app.data.ThemeMode.DARK -> str(R.string.theme_dark)
                                             })
                                         },
                                     )
                                 }
                             }
-                            ToggleRow("Colori dinamici (Material You)", s.dynamicColor) { vm.setDynamicColor(it) }
+                            ToggleRow(str(R.string.dynamic_colours), s.dynamicColor) { vm.setDynamicColor(it) }
                         }
                     },
-                    sec("Cartelle") {
-                        Section("Cartelle", "Vista, colonne e ordinamento si cambiano direttamente dalle Cartelle (icone in alto e pannello filtri).") {
-                            ToggleRow("Filtri solo nella cartella corrente", s.filterCurrentFolderOnly,
-                                desc = "Alla radice i filtri escludono i file dentro le cartelle; dentro una cartella cercano solo tra i suoi file.") {
+                    sec(str(R.string.sec_language)) {
+                        Section(str(R.string.sec_language), str(R.string.language_hint)) { LanguageRow() }
+                    },
+                    sec(str(R.string.tab_folders)) {
+                        Section(str(R.string.tab_folders), str(R.string.folders_sec_hint)) {
+                            ToggleRow(str(R.string.filters_current_folder), s.filterCurrentFolderOnly,
+                                desc = str(R.string.filters_current_folder_desc)) {
                                 vm.setFilterCurrentFolderOnly(it)
                             }
-                            ToggleRow("Riepilogo conteggi sopra la griglia", s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
-                            ToggleRow("Intestazioni per data", s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
-                            ToggleRow("Dimensione e durata sotto i file", s.display.showFileInfo) { vm.setShowFileInfo(it) }
-                            ToggleRow("Numero di elementi sotto le cartelle", s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
-                            ToggleRow("Durata sulle copertine dei video", s.display.showDurationBadge,
-                                desc = "In alto a destra, es. 3:12.") { vm.setShowDurationBadge(it) }
-                            ToggleRow("Persone sulle copertine", s.display.coverPeople,
-                                desc = "In alto a sinistra, i volti delle persone che compaiono nel media (fino a 3).") { vm.setCoverPeople(it) }
+                            ToggleRow(str(R.string.summary_above_grid), s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
+                            ToggleRow(str(R.string.date_headers), s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
+                            ToggleRow(str(R.string.size_length_under), s.display.showFileInfo) { vm.setShowFileInfo(it) }
+                            ToggleRow(str(R.string.count_under_folders), s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
+                            ToggleRow(str(R.string.length_on_video_covers), s.display.showDurationBadge,
+                                desc = str(R.string.length_on_covers_desc)) { vm.setShowDurationBadge(it) }
+                            ToggleRow(str(R.string.people_on_covers), s.display.coverPeople,
+                                desc = str(R.string.people_on_covers_desc)) { vm.setCoverPeople(it) }
                             if (s.display.coverPeople) {
-                                ChoiceRow("Grandezza dei volti", listOf(0 to "Piccoli", 1 to "Medi", 2 to "Grandi"),
+                                ChoiceRow(str(R.string.face_size), listOf(0 to str(R.string.small_pl), 1 to str(R.string.medium_pl), 2 to str(R.string.large_pl)),
                                     s.display.coverPeopleSize, indent = 0.dp) { vm.setCoverPeopleSize(it) }
                             }
                         }
                     },
-                    sec("Pulsanti") {
-                        Section("Pulsanti") {
-                            ToggleRow("Pulsante nuova nota", s.display.showNoteFab) { vm.setShowNoteFab(it) }
-                            ToggleRow("Pulsante casuale", s.display.showRandomFab) { vm.setShowRandomFab(it) }
+                    sec(str(R.string.sec_buttons)) {
+                        Section(str(R.string.sec_buttons)) {
+                            ToggleRow(str(R.string.new_note_button), s.display.showNoteFab) { vm.setShowNoteFab(it) }
+                            ToggleRow(str(R.string.random_button), s.display.showRandomFab) { vm.setShowRandomFab(it) }
                         }
                     },
                 )
                 SettingsPage.ETICHETTE -> listOf(
-                    sec("Libreria etichette") {
-                        Section("Libreria etichette", "${tags.size} etichette · tocca un'etichetta per nome, alias, colore e per fissarla.") {
+                    sec(str(R.string.sec_tag_library)) {
+                        Section(str(R.string.sec_tag_library), str(R.string.tag_library_hint, tags.size)) {
                             if (tags.isEmpty()) {
-                                Text("Nessuna etichetta.", style = MaterialTheme.typography.bodyMedium,
+                                Text(str(R.string.no_tags_dot), style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
@@ -303,24 +311,24 @@ fun SettingsScreen(
                                                 tagIcon = tag.icon,
                                                 leadingIcon = if (tag.pinned) CriptaIcons.PushPin else null,
                                                 onClick = { editTag = tag },
-                                                onClickLabel = "Modifica nome, alias e colore",
+                                                onClickLabel = str(R.string.edit_name_alias_colour),
                                             )
                                         }
                                         if (custom) {
                                             IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                                Icon(CriptaIcons.KeyboardArrowUp, "Su")
+                                                Icon(CriptaIcons.KeyboardArrowUp, str(R.string.up))
                                             }
                                             IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                                Icon(CriptaIcons.KeyboardArrowDown, "Giù")
+                                                Icon(CriptaIcons.KeyboardArrowDown, str(R.string.down))
                                             }
                                         }
-                                        IconButton(onClick = { editTag = tag }) { Icon(CriptaIcons.Edit, "Modifica") }
-                                        IconButton(onClick = { deleteTag = tag }) { Icon(CriptaIcons.Delete, "Elimina") }
+                                        IconButton(onClick = { editTag = tag }) { Icon(CriptaIcons.Edit, str(R.string.edit)) }
+                                        IconButton(onClick = { deleteTag = tag }) { Icon(CriptaIcons.Delete, str(R.string.delete)) }
                                     }
                                 }
                                 if (tags.size > 8) {
                                     TextButton(onClick = { showAllTags = !showAllTags }) {
-                                        com.cripta.app.ui.components.ButtonText(if (showAllTags) "Mostra meno" else "Mostra tutte (${tags.size})")
+                                        com.cripta.app.ui.components.ButtonText(if (showAllTags) str(R.string.show_less) else str(R.string.show_all_n, tags.size))
                                     }
                                 }
                             }
@@ -330,34 +338,34 @@ fun SettingsScreen(
                             ) {
                                 Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Aggiungi etichetta")
+                                Text(str(R.string.add_tag))
                             }
                         }
                     },
-                    sec("Sulle copertine") {
-                        Section("Sulle copertine") {
-                            ToggleRow("Mostra le etichette", s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
+                    sec(str(R.string.sec_on_covers)) {
+                        Section(str(R.string.sec_on_covers)) {
+                            ToggleRow(str(R.string.show_tags), s.display.showTagsOnCover) { vm.setShowTagsOnCover(it) }
                             if (s.display.showTagsOnCover) {
-                                ChoiceRow("Righe di etichette", listOf(0 to "Auto", 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
-                                    indent = 0.dp, desc = "Auto: fino a 3 righe sulle copertine grandi, 1 su quelle piccole.") { vm.setCoverTagRows(it) }
+                                ChoiceRow(str(R.string.tag_rows), listOf(0 to str(R.string.quality_auto), 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
+                                    indent = 0.dp, desc = str(R.string.tag_rows_desc)) { vm.setCoverTagRows(it) }
                             }
                         }
                     },
-                    sec("Colori") {
-                        Section("Colori") {
-                            ToggleRow("Etichette colorate", s.display.tagColors) { vm.setTagColors(it) }
+                    sec(str(R.string.sec_colours)) {
+                        Section(str(R.string.sec_colours)) {
+                            ToggleRow(str(R.string.coloured_tags), s.display.tagColors) { vm.setTagColors(it) }
                             if (s.display.tagColors) {
-                                Text("Colore predefinito", style = MaterialTheme.typography.bodyLarge,
+                                Text(str(R.string.default_colour), style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.padding(top = 4.dp))
                                 com.cripta.app.ui.vault.TagColorPicker(
                                     selected = s.display.defaultTagColor,
                                     autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
-                                    autoDescription = "Automatico: un colore diverso per ogni nome",
+                                    autoDescription = str(R.string.auto_colour_per_name),
                                     onPick = { vm.setDefaultTagColor(it) },
                                 )
                                 Text(
-                                    if (s.display.defaultTagColor == null) "Automatico: ogni etichetta ha un colore suo, ricavato dal nome. Il colore scelto su una singola etichetta vale sempre."
-                                    else "Tutte le etichette senza un colore scelto singolarmente usano questo.",
+                                    if (s.display.defaultTagColor == null) str(R.string.default_colour_auto_desc)
+                                    else str(R.string.default_colour_set_desc),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 if (tags.isNotEmpty()) {
@@ -365,192 +373,186 @@ fun SettingsScreen(
                                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                                         Icon(CriptaIcons.Palette, null, Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text("Colori casuali a tutte le etichette")
+                                        Text(str(R.string.random_colours_all))
                                     }
                                 }
                             }
                         }
                     },
-                    sec("Assegnazione rapida") {
-                        Section("Assegnazione rapida", "La libreria resta sempre nello stesso ordine; cambiano solo le righe in alto.") {
-                            ToggleRow("Etichette recenti", s.display.showRecentTags,
-                                desc = if (s.display.showRecentTags) "Una riga con le ultime ${s.display.recentTagsCount} usate, nelle " +
-                                    "etichette di un file (anche nel pannello info del visualizzatore) e nella barra del visualizzatore."
-                                    else "Spento: nessuna riga \"Recenti\"; la barra del visualizzatore mostra tutte le etichette.") {
+                    sec(str(R.string.sec_quick_assign)) {
+                        Section(str(R.string.sec_quick_assign), str(R.string.quick_assign_hint)) {
+                            ToggleRow(str(R.string.recent_tags), s.display.showRecentTags,
+                                desc = if (s.display.showRecentTags) str(R.string.recent_tags_on, s.display.recentTagsCount)
+                                    else str(R.string.recent_tags_off)) {
                                 vm.setShowRecentTags(it)
                             }
                             if (s.display.showRecentTags) {
                                 // Also how many recent tags the viewer's bar adds after the pinned ones.
-                                ChoiceRow("Quante recenti", listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
+                                ChoiceRow(str(R.string.how_many_recent), listOf(3 to "3", 6 to "6", 9 to "9", 12 to "12"),
                                     s.display.recentTagsCount, indent = 0.dp) { vm.setRecentTagsCount(it) }
                             }
-                            ToggleRow("Barra etichette nel visualizzatore", s.display.viewerQuickTags,
+                            ToggleRow(str(R.string.viewer_tag_bar), s.display.viewerQuickTags,
                                 desc = when {
-                                    !s.display.viewerQuickTags -> "Spenta: le etichette si cambiano dal pannello info (scorri su)."
-                                    s.display.showRecentTags -> "Sotto il nome del file: le fissate e le ultime ${s.display.recentTagsCount} usate, un tocco le aggiunge o le toglie."
-                                    else -> "Sotto il nome del file: le fissate, poi tutte le altre (scorri di lato); un tocco le aggiunge o le toglie."
+                                    !s.display.viewerQuickTags -> str(R.string.viewer_tag_bar_off)
+                                    s.display.showRecentTags -> str(R.string.viewer_tag_bar_recent, s.display.recentTagsCount)
+                                    else -> str(R.string.viewer_tag_bar_all)
                                 }) { vm.setViewerQuickTags(it) }
                         }
                     },
-                    sec("Ordine della libreria") {
-                        Section("Ordine della libreria") {
+                    sec(str(R.string.sec_library_order)) {
+                        Section(str(R.string.sec_library_order)) {
                             val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 com.cripta.app.ui.components.ChoiceChip(selected = !custom,
                                     onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                                    label = { Text("Alfabetico") })
+                                    label = { Text(str(R.string.alphabetical)) })
                                 com.cripta.app.ui.components.ChoiceChip(selected = custom,
                                     onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                                    label = { Text("Personalizzato") })
+                                    label = { Text(str(R.string.custom)) })
                             }
-                            Text("Con \"Personalizzato\" compaiono le frecce per spostare le etichette.",
+                            Text(str(R.string.custom_order_hint),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                 )
                 SettingsPage.VISUALIZZATORE -> listOf(
-                    sec("Riproduzione") {
-                        Section("Riproduzione", "Come parte e si comporta ogni video.") {
-                            ToggleRow("Riprendi da dove eri rimasto", s.display.resumePlayback,
-                                desc = "Riapre il video al punto lasciato; la copertina mostra quanto hai visto.",
+                    sec(str(R.string.sec_playback)) {
+                        Section(str(R.string.sec_playback), str(R.string.playback_hint)) {
+                            ToggleRow(str(R.string.resume_where_left), s.display.resumePlayback,
+                                desc = str(R.string.resume_desc),
                                 icon = CriptaIcons.History) { vm.setResumePlayback(it) }
-                            ToggleRow("Ripeti in loop", s.videoLoop,
-                                desc = "Il video ricomincia da capo quando finisce.",
+                            ToggleRow(str(R.string.loop), s.videoLoop,
+                                desc = str(R.string.loop_desc),
                                 icon = CriptaIcons.Repeat) { vm.setVideoLoop(it) }
-                            ToggleRow("Avvia senza audio", s.videoStartMuted,
-                                desc = "Ogni video parte muto; l'audio si riattiva dai comandi.",
+                            ToggleRow(str(R.string.start_muted), s.videoStartMuted,
+                                desc = str(R.string.start_muted_desc),
                                 icon = CriptaIcons.VolumeOff) { vm.setVideoStartMuted(it) }
                         }
                     },
-                    sec("Fine video") {
-                        Section("Fine video") {
-                            ToggleRow("Passa al file successivo", s.autoNext,
-                                desc = if (s.videoLoop) "Non si attiva finché la ripetizione in loop è accesa."
-                                    else "Negli ultimi secondi compare «Prossimo» con il conto alla rovescia.",
+                    sec(str(R.string.sec_video_end)) {
+                        Section(str(R.string.sec_video_end)) {
+                            ToggleRow(str(R.string.auto_next), s.autoNext,
+                                desc = if (s.videoLoop) str(R.string.auto_next_loop_on)
+                                    else str(R.string.auto_next_desc),
                                 icon = CriptaIcons.SkipNext) { vm.setAutoNext(it) }
                             if (s.autoNext) {
-                                ChoiceRow("Mostra «Prossimo» negli ultimi", listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
+                                ChoiceRow(str(R.string.show_next_in_last), listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
                                     s.autoNextSec) { vm.setAutoNextSec(it) }
                             }
                         }
                     },
-                    sec("Gesti") {
-                        Section("Gesti", "Cosa succede toccando e trascinando sullo schermo del visualizzatore.") {
-                            ToggleRow("Scorri giù per chiudere", s.swipeToClose,
-                                desc = "Trascina verso il basso per uscire dal visualizzatore (video, foto e note).",
+                    sec(str(R.string.sec_gestures)) {
+                        Section(str(R.string.sec_gestures), str(R.string.gestures_hint)) {
+                            ToggleRow(str(R.string.swipe_down_close), s.swipeToClose,
+                                desc = str(R.string.swipe_down_close_desc),
                                 icon = CriptaIcons.KeyboardArrowDown) { vm.setSwipeToClose(it) }
-                            ToggleRow("Luminosità sul lato sinistro", s.gestureControls,
-                                desc = "Trascina in su o in giù sul lato sinistro del video.",
+                            ToggleRow(str(R.string.brightness_left), s.gestureControls,
+                                desc = str(R.string.brightness_left_desc),
                                 icon = CriptaIcons.LightMode) { vm.setGestureControls(it) }
-                            ToggleRow("Volume sul lato destro", s.gestureVolume,
-                                desc = "Trascina in su o in giù sul lato destro del video.",
+                            ToggleRow(str(R.string.volume_right), s.gestureVolume,
+                                desc = str(R.string.volume_right_desc),
                                 icon = CriptaIcons.VolumeUp) { vm.setGestureVolume(it) }
-                            ToggleRow("Tieni premuto per accelerare", s.holdForSpeed,
-                                desc = "Tieni il dito su un lato: il video va più veloce finché non lo alzi.",
+                            ToggleRow(str(R.string.hold_to_speed), s.holdForSpeed,
+                                desc = str(R.string.hold_to_speed_desc),
                                 icon = CriptaIcons.FastForward) { vm.setHoldForSpeed(it) }
                             if (s.holdForSpeed) {
-                                ChoiceRow("Velocità tenendo premuto", listOf(15 to "1,5×", 20 to "2×", 30 to "3×"),
+                                ChoiceRow(str(R.string.speed_while_holding), listOf(15 to str(R.string.speed_1_5), 20 to "2×", 30 to "3×"),
                                     s.holdSpeedX10) { vm.setHoldSpeed(it) }
                             }
-                            ChoiceRow("Doppio tocco sui lati: salta di", listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
+                            ChoiceRow(str(R.string.double_tap_skip), listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
                                 s.seekStepSec, icon = CriptaIcons.FastRewind) { vm.setSeekStep(it) }
                         }
                     },
-                    sec("Schermo") {
-                        Section("Schermo") {
-                            ToggleRow("Segui l'orientamento del video", s.autoRotate,
-                                desc = if (s.autoRotate) "I video orizzontali si girano in orizzontale, quelli verticali in verticale."
-                                    else "Lo schermo ruota liberamente con il telefono.",
+                    sec(str(R.string.sec_screen)) {
+                        Section(str(R.string.sec_screen)) {
+                            ToggleRow(str(R.string.follow_video_orientation), s.autoRotate,
+                                desc = if (s.autoRotate) str(R.string.follow_orientation_on)
+                                    else str(R.string.follow_orientation_off),
                                 icon = CriptaIcons.ScreenRotation) { vm.setAutoRotate(it) }
-                            ChoiceRow("I comandi restano visibili per", listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
+                            ChoiceRow(str(R.string.controls_visible_for), listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
                                 s.controlsTimeoutSec, icon = CriptaIcons.Timer) { vm.setControlsTimeout(it) }
                         }
                     },
-                    sec("Anteprime dei file vicini") {
-                        Section("Anteprime dei file vicini", "Piccole copertine dei file prima e dopo, insieme ai comandi del visualizzatore.") {
-                            ToggleRow("Mostra le anteprime", s.viewerFilmstrip, icon = CriptaIcons.ViewCarousel) { vm.setViewerFilmstrip(it) }
+                    sec(str(R.string.sec_nearby_previews)) {
+                        Section(str(R.string.sec_nearby_previews), str(R.string.nearby_previews_hint)) {
+                            ToggleRow(str(R.string.show_previews), s.viewerFilmstrip, icon = CriptaIcons.ViewCarousel) { vm.setViewerFilmstrip(it) }
                             if (s.viewerFilmstrip) {
-                                ChoiceRow("Forma", listOf(
-                                    com.cripta.app.data.StripShape.RECT to "Rettangolo",
-                                    com.cripta.app.data.StripShape.SQUARE to "Quadrato",
-                                    com.cripta.app.data.StripShape.CIRCLE to "Cerchio",
+                                ChoiceRow(str(R.string.shape), listOf(
+                                    com.cripta.app.data.StripShape.RECT to str(R.string.rectangle),
+                                    com.cripta.app.data.StripShape.SQUARE to str(R.string.square),
+                                    com.cripta.app.data.StripShape.CIRCLE to str(R.string.circle),
                                 ), s.filmstripShape) { vm.setFilmstripShape(it) }
                                 // Stored per side; shown as the whole strip, current file included.
-                                ChoiceRow("Copertine al massimo", listOf(1 to "3", 2 to "5", 3 to "7", 4 to "9"),
+                                ChoiceRow(str(R.string.covers_at_most), listOf(1 to "3", 2 to "5", 3 to "7", 4 to "9"),
                                     s.filmstripSpan) { vm.setFilmstripSpan(it) }
-                                ChoiceRow("Dimensione", listOf(0 to "Piccola", 1 to "Media", 2 to "Grande"),
+                                ChoiceRow(str(R.string.size_label), listOf(0 to str(R.string.small_f), 1 to str(R.string.medium_f), 2 to str(R.string.large_f)),
                                     s.filmstripSize) { vm.setFilmstripSize(it) }
                                 if (s.filmstripShape == com.cripta.app.data.StripShape.RECT) {
-                                    ToggleRow("Copertine verticali intere", s.filmstripTrueAspect,
-                                        desc = "Le anteprime di foto e video verticali restano verticali invece di essere ritagliate in 16:9.") {
+                                    ToggleRow(str(R.string.full_portrait_covers), s.filmstripTrueAspect,
+                                        desc = str(R.string.full_portrait_covers_desc)) {
                                         vm.setFilmstripTrueAspect(it)
                                     }
                                 }
                             }
                         }
                     },
-                    sec("Pannello dettagli") {
-                        Section("Pannello dettagli", "Il pannello che si apre scorrendo su nel visualizzatore: etichette, dettagli, azioni.") {
-                            ToggleRow("Schermo diviso con i dettagli", s.splitDetails,
-                                desc = if (s.splitDetails) "In verticale la foto o il video restano in alto (il video continua a riprodursi, con i suoi " +
-                                    "comandi) e il pannello sta sotto. Per chiudere trascina giù il pannello, scorri giù sul file o premi Indietro. " +
-                                    "Mentre è aperto, la barra etichette del visualizzatore si nasconde: le etichette sono nel pannello."
-                                    else "Il pannello copre il file, che resta dietro oscurato.") { vm.setSplitDetails(it) }
+                    sec(str(R.string.sec_details_panel)) {
+                        Section(str(R.string.sec_details_panel), str(R.string.details_panel_hint)) {
+                            ToggleRow(str(R.string.split_with_details), s.splitDetails,
+                                desc = if (s.splitDetails) str(R.string.split_details_on)
+                                    else str(R.string.split_details_off)) { vm.setSplitDetails(it) }
                         }
                     },
-                    sec("Uscendo dall'app") {
-                        Section("Uscendo dall'app") {
-                            ToggleRow("Metti in pausa il video", s.pauseOnLeave,
-                                desc = "Il video si ferma quando l'app va in background. Continua se è in Picture-in-Picture o a schermo diviso.",
+                    sec(str(R.string.sec_leaving_app)) {
+                        Section(str(R.string.sec_leaving_app)) {
+                            ToggleRow(str(R.string.pause_video), s.pauseOnLeave,
+                                desc = str(R.string.pause_video_desc),
                                 icon = CriptaIcons.Pause) { vm.setPauseOnLeave(it) }
-                            ToggleRow("Picture-in-Picture automatico", s.pictureInPicture,
-                                desc = "Uscendo dall'app il video continua in una finestrella (visibile a chi guarda lo schermo). Da spento resta il pulsante nel player.",
+                            ToggleRow(str(R.string.auto_pip), s.pictureInPicture,
+                                desc = str(R.string.auto_pip_desc),
                                 icon = CriptaIcons.PictureInPictureAlt) { vm.setPictureInPicture(it) }
                         }
                     },
                 )
                 SettingsPage.ANALISI -> listOf(
-                    sec("Persone") {
+                    sec(str(R.string.people)) {
                         PeopleSettings(s, vm)
                     },
-                    sec("Intro e finale") {
+                    sec(str(R.string.intro_and_ending)) {
                         IntroSettings(s, vm, onOpenFile)
                     },
                 )
                 SettingsPage.SICUREZZA -> listOf(
-                    sec("Sblocco") {
-                        Section("Sblocco", "Come si apre il vault. Il PIN dell'app è solo di Cripta e cifra la chiave del vault insieme alla sicurezza del telefono.") {
+                    sec(str(R.string.sec_unlock)) {
+                        Section(str(R.string.sec_unlock), str(R.string.unlock_hint)) {
                             UnlockModeOptions(vm)
                         }
                     },
-                    sec("Blocco automatico") {
-                        Section("Blocco automatico", "Blocca il vault quando l'app resta in background per il tempo scelto.") {
+                    sec(str(R.string.sec_auto_lock)) {
+                        Section(str(R.string.sec_auto_lock), str(R.string.auto_lock_hint)) {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 listOf(-1, 0, 1, 5, 15, 30).forEach { m ->
                                     com.cripta.app.ui.components.ChoiceChip(
                                         selected = s.autoLockMinutes == m,
                                         onClick = { vm.setAutoLock(m) },
-                                        label = { Text(when (m) { -1 -> "Mai"; 0 -> "Subito"; else -> "$m min" }) },
+                                        label = { Text(when (m) { -1 -> str(R.string.never); 0 -> str(R.string.immediately); else -> str(R.string.n_min, m) }) },
                                     )
                                 }
                             }
                         }
                     },
-                    sec("Privacy") {
-                        Section("Privacy") {
-                            ToggleRow("Consenti screenshot", s.allowScreenshots,
-                                desc = "Se disattivato, blocca gli screenshot e nasconde l'app nelle app recenti.") {
+                    sec(str(R.string.sec_privacy)) {
+                        Section(str(R.string.sec_privacy)) {
+                            ToggleRow(str(R.string.allow_screenshots), s.allowScreenshots,
+                                desc = str(R.string.allow_screenshots_desc)) {
                                 vm.setAllowScreenshots(it)
                             }
                         }
                     },
-                    sec("Limiti di sicurezza") {
-                        Section("Limiti di sicurezza") {
+                    sec(str(R.string.sec_security_limits)) {
+                        Section(str(R.string.sec_security_limits)) {
                             Text(
-                                "Cripta protegge da curiosi occasionali. Non è pensato contro analisi forense o " +
-                                    "dispositivi con root. L'eliminazione usa crypto-shredding (distrugge la chiave del file); " +
-                                    "la cancellazione fisica su memoria flash non è garantita dal sistema. Internet è usato solo per " +
-                                    "scaricare i video dai link e controllare gli aggiornamenti: i file del vault non lasciano mai il dispositivo.",
+                                str(R.string.security_limits_text),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -558,8 +560,8 @@ fun SettingsScreen(
                     },
                 )
                 SettingsPage.IMPORT -> listOf(
-                    sec("Originale dopo import") {
-                        Section("Originale dopo import", "Cosa fare del file originale sul dispositivo dopo averlo cifrato nel vault.") {
+                    sec(str(R.string.sec_original_after_import)) {
+                        Section(str(R.string.sec_original_after_import), str(R.string.original_after_import_hint)) {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 DeleteOriginalPolicy.entries.forEach { p ->
                                     com.cripta.app.ui.components.ChoiceChip(
@@ -567,9 +569,9 @@ fun SettingsScreen(
                                         onClick = { vm.setDeletePolicy(p) },
                                         label = {
                                             Text(when (p) {
-                                                DeleteOriginalPolicy.ASK -> "Chiedi"
-                                                DeleteOriginalPolicy.ALWAYS -> "Elimina"
-                                                DeleteOriginalPolicy.NEVER -> "Mantieni"
+                                                DeleteOriginalPolicy.ASK -> str(R.string.ask)
+                                                DeleteOriginalPolicy.ALWAYS -> str(R.string.delete)
+                                                DeleteOriginalPolicy.NEVER -> str(R.string.keep)
                                             })
                                         },
                                     )
@@ -587,26 +589,25 @@ fun SettingsScreen(
                             ) { p ->
                                 Text(
                                     when (p) {
-                                        DeleteOriginalPolicy.ASK -> "A fine import ti viene chiesto se eliminare gli originali dal dispositivo."
-                                        DeleteOriginalPolicy.ALWAYS -> "Attenzione: gli originali vengono eliminati dal dispositivo dopo l'import e non si " +
-                                            "possono recuperare. Resta solo la copia cifrata nel vault."
-                                        DeleteOriginalPolicy.NEVER -> "Gli originali restano sul dispositivo: eliminali tu se non vuoi che siano visibili fuori dal vault."
+                                        DeleteOriginalPolicy.ASK -> str(R.string.original_ask_desc)
+                                        DeleteOriginalPolicy.ALWAYS -> str(R.string.original_always_desc)
+                                        DeleteOriginalPolicy.NEVER -> str(R.string.original_never_desc)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (p == DeleteOriginalPolicy.ALWAYS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Text("Vengono toccati solo gli originali dei file importati con successo.",
+                            Text(str(R.string.original_only_successful),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
-                    sec("Conversione in MP4") {
-                        Section("Conversione in MP4", "La scelta viene chiesta alla prima conversione; qui puoi cambiarla.") {
+                    sec(str(R.string.sec_mp4_conversion)) {
+                        Section(str(R.string.sec_mp4_conversion), str(R.string.mp4_conversion_hint)) {
                             com.cripta.app.ui.components.ChipFlowRow {
                                 listOf(
-                                    com.cripta.app.data.ConvertAfter.REPLACE to "Sostituisci l'originale",
-                                    com.cripta.app.data.ConvertAfter.ASK to "Chiedi",
-                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH to "Tieni entrambi",
+                                    com.cripta.app.data.ConvertAfter.REPLACE to str(R.string.convert_replace),
+                                    com.cripta.app.data.ConvertAfter.ASK to str(R.string.ask),
+                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH to str(R.string.convert_keep_both),
                                 ).forEach { (v, l) ->
                                     com.cripta.app.ui.components.ChoiceChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
                                 }
@@ -614,9 +615,9 @@ fun SettingsScreen(
                             Text(
                                 when (s.convertAfter) {
                                     com.cripta.app.data.ConvertAfter.REPLACE ->
-                                        "L'MP4 prende il posto dell'originale (cartella, etichette, posizione, copertina); l'originale va nel cestino per ${s.trashDays} giorni."
-                                    com.cripta.app.data.ConvertAfter.ASK -> "A fine conversione ti viene chiesto se eliminare l'originale."
-                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "Restano sia l'originale sia la copia MP4."
+                                        str(R.string.convert_replace_setting_desc, s.trashDays)
+                                    com.cripta.app.data.ConvertAfter.ASK -> str(R.string.convert_ask_desc)
+                                    com.cripta.app.data.ConvertAfter.KEEP_BOTH -> str(R.string.convert_keep_both_setting_desc)
                                 },
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -624,24 +625,24 @@ fun SettingsScreen(
                     },
                 )
                 SettingsPage.BACKUP -> listOf(
-                    sec("Cosa includere") {
-                        Section("Cosa includere", "La scelta vale per i prossimi backup. Il ripristino riporta tutto quello che l'archivio contiene.") {
+                    sec(str(R.string.sec_what_to_include)) {
+                        Section(str(R.string.sec_what_to_include), str(R.string.what_to_include_hint)) {
                             BackupScopeChoice(s.backupScope, backupFolders) { vm.setBackupScope(it) }
                         }
                     },
-                    sec("Backup cifrato") {
-                        Section("Backup cifrato", "Archivio del vault protetto da passphrase, ripristinabile anche su un altro dispositivo. La sicurezza dipende dalla passphrase.") {
+                    sec(str(R.string.sec_encrypted_backup)) {
+                        Section(str(R.string.sec_encrypted_backup), str(R.string.encrypted_backup_hint)) {
                             // Always visible: how big the archive would be if made now.
                             backupEstimate?.let { (n, bytes) ->
-                                com.cripta.app.ui.components.CountRow("Dimensione stimata",
+                                com.cripta.app.ui.components.CountRow(str(R.string.estimated_size),
                                     com.cripta.app.ui.components.formatBytes(bytes) + " · " +
-                                        (if (n == 1) "1 file" else "${com.cripta.app.ui.components.formatCount(n)} file"))
-                                Text(if (s.backupCompressDocs) "Stima approssimata: quanto rendono i documenti compressi si sa solo creando il backup."
-                                    else "Serve almeno questo spazio libero nella destinazione (i file multimediali non si comprimono).",
+                                        plural(R.plurals.files_n, n, com.cripta.app.ui.components.formatCount(n)))
+                                Text(if (s.backupCompressDocs) str(R.string.backup_estimate_compressed)
+                                    else str(R.string.backup_estimate_space),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            ToggleRow("Comprimi i documenti", s.backupCompressDocs,
-                                desc = "Note, PDF e testi compressi senza perdita (identici al ripristino). Foto e video restano come sono: sono già compressi. Il ripristino richiede questa versione di Cripta o successive.") {
+                            ToggleRow(str(R.string.compress_documents), s.backupCompressDocs,
+                                desc = str(R.string.compress_documents_desc)) {
                                 vm.setBackupCompressDocs(it)
                             }
                             androidx.compose.animation.AnimatedContent(
@@ -662,8 +663,8 @@ fun SettingsScreen(
                                         } else {
                                             androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                                         }
-                                        Text(eta?.replaceFirstChar { it.uppercase() }?.let { "$it. Tieni l'app aperta." }
-                                                ?: "Può richiedere qualche minuto con molti file. Tieni l'app aperta.",
+                                        Text(eta?.replaceFirstChar { it.uppercase() }?.let { str(R.string.eta_keep_open, it) }
+                                                ?: str(R.string.may_take_minutes),
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 } else {
@@ -672,22 +673,21 @@ fun SettingsScreen(
                                             onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
                                             enabled = !s.backupScope.isEmpty,
                                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                                        ) { com.cripta.app.ui.components.ButtonText("Crea backup") }
+                                        ) { com.cripta.app.ui.components.ButtonText(str(R.string.create_backup)) }
                                         com.cripta.app.ui.components.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                            com.cripta.app.ui.components.ButtonText("Ripristina da un backup")
+                                            com.cripta.app.ui.components.ButtonText(str(R.string.restore_from_backup))
                                         }
                                     }
                                 }
                             }
-                            Text("Il ripristino aggiunge i file del backup a quelli già nel vault: nulla di ciò che c'è viene cancellato o sostituito. " +
-                                "Solo le impostazioni salvate nel backup prendono il posto di quelle attuali.",
+                            Text(str(R.string.restore_adds_hint),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                 )
                 SettingsPage.SPAZIO -> listOf(
-                    sec("File duplicati") {
-                        Section("File duplicati", "Trova le copie e i media simili, confrontali e libera spazio. Tutto avviene sul dispositivo.") {
+                    sec(str(R.string.sec_duplicate_files)) {
+                        Section(str(R.string.sec_duplicate_files), str(R.string.duplicates_hint)) {
                             // How much of the vault the deep search already knows (it only reads the rest).
                             val prints by androidx.compose.runtime.produceState<Pair<Int, Int>?>(null, dupScanning, dupLast) { value = vm.printStats() }
                             androidx.compose.animation.AnimatedContent(
@@ -700,7 +700,7 @@ fun SettingsScreen(
                                 val (done, total) = dupProgress
                                 val scanEta = com.cripta.app.ui.components.rememberEta(
                                     if (total > 0) done.toFloat() / total else 0f, total > 0)
-                                Text((if (total > 0) "Ricerca in corso… $done/$total" else "Ricerca in corso…") + (scanEta?.let { " · $it" } ?: ""),
+                                Text((if (total > 0) str(R.string.searching_n, done, total) else str(R.string.searching)) + (scanEta?.let { " · $it" } ?: ""),
                                     style = MaterialTheme.typography.bodyMedium)
                                 if (total > 0) {
                                     val smooth by animateFloatAsState(
@@ -712,45 +712,44 @@ fun SettingsScreen(
                                 } else {
                                     androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                                 }
-                                Text("Puoi uscire dall'app: la ricerca continua in background e ti avvisa con una notifica.",
+                                Text(str(R.string.search_continues),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.cancelScan() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                    com.cripta.app.ui.components.ButtonText("Interrompi la ricerca")
+                                    com.cripta.app.ui.components.ButtonText(str(R.string.stop_search))
                                 }
                             } else {
                                 dupLast?.let { r ->
                                     val deep = r.mode == com.cripta.app.data.dedup.DupScanStore.Mode.SIMILAR
-                                    Text("Ultima ricerca ${if (deep) "approfondita" else "rapida"}: " +
-                                        (if (r.groups.isEmpty()) "nessun gruppo" else if (r.groups.size == 1) "1 gruppo" else "${r.groups.size} gruppi") +
-                                        " su ${r.scanned} elementi.", style = MaterialTheme.typography.bodyMedium)
+                                    Text(str(if (deep) R.string.last_search_deep else R.string.last_search_quick,
+                                        if (r.groups.isEmpty()) str(R.string.no_groups) else plural(R.plurals.groups_n, r.groups.size), r.scanned), style = MaterialTheme.typography.bodyMedium)
                                     if (r.groups.isNotEmpty()) Button(onClick = { vm.openScanResult() }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                                        com.cripta.app.ui.components.ButtonText(if (r.groups.size == 1) "Apri il gruppo trovato" else "Apri i ${r.groups.size} gruppi trovati")
+                                        com.cripta.app.ui.components.ButtonText(plural(R.plurals.open_groups_found, r.groups.size))
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("Ricerca rapida", style = MaterialTheme.typography.titleSmall)
-                                    Text("Copie identiche byte per byte, di qualsiasi tipo di file. Pochi secondi: usa l'impronta calcolata all'importazione.",
+                                    Text(str(R.string.n_quick_search), style = MaterialTheme.typography.titleSmall)
+                                    Text(str(R.string.quick_search_desc),
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.scanExact() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                        com.cripta.app.ui.components.ButtonText("Ricerca rapida")
+                                        com.cripta.app.ui.components.ButtonText(str(R.string.n_quick_search))
                                     }
                                 }
                                 Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("Ricerca approfondita", style = MaterialTheme.typography.titleSmall)
+                                    Text(str(R.string.n_deep_search), style = MaterialTheme.typography.titleSmall)
                                     val known = prints
-                                    Text("Anche foto e video uguali ma salvati di nuovo, ricompressi o ridimensionati. " + when {
+                                    Text(str(R.string.deep_search_desc) + when {
                                         known == null -> ""
-                                        known.second == 0 -> "Nessuna foto o video nel vault."
-                                        known.first >= known.second -> "Tutti i ${known.second} media sono già analizzati: pochi secondi."
-                                        known.first == 0 -> "La prima volta analizza tutti i ${known.second} media: qualche minuto, anche in background."
-                                        else -> "${known.first} di ${known.second} media già analizzati: legge solo i ${known.second - known.first} nuovi."
+                                        known.second == 0 -> str(R.string.no_photo_video)
+                                        known.first >= known.second -> str(R.string.all_media_analysed, known.second)
+                                        known.first == 0 -> str(R.string.first_time_all, known.second)
+                                        else -> str(R.string.some_media_analysed, known.first, known.second, known.second - known.first)
                                     }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     com.cripta.app.ui.components.FilledTonalButton(onClick = { vm.scanSimilar() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                        com.cripta.app.ui.components.ButtonText("Ricerca approfondita")
+                                        com.cripta.app.ui.components.ButtonText(str(R.string.n_deep_search))
                                     }
                                 }
-                                ToggleRow("Controlla i simili all'importazione", s.similarOnImport,
-                                    desc = "Anche con un nome diverso: se una foto o un video nuovo somiglia a uno già nel vault, ti chiede cosa fare. Spento, i simili li trovi in Duplicati e cestino › Simili. Circa un secondo in più per video.") {
+                                ToggleRow(str(R.string.check_similar_import), s.similarOnImport,
+                                    desc = str(R.string.check_similar_import_desc)) {
                                     vm.setSimilarOnImport(it)
                                 }
                             }
@@ -758,24 +757,24 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    sec("Cestino") {
-                        Section("Cestino", "Se attivo, gli elementi eliminati restano recuperabili per qualche giorno; poi vengono distrutti in modo sicuro.") {
-                            ToggleRow("Usa il cestino quando elimini", s.trashEnabled,
-                                desc = "Accoglie anche gli originali sostituiti da una conversione in MP4.") { vm.setTrashEnabled(it) }
+                    sec(str(R.string.sec_trash)) {
+                        Section(str(R.string.sec_trash), str(R.string.trash_hint)) {
+                            ToggleRow(str(R.string.use_trash), s.trashEnabled,
+                                desc = str(R.string.use_trash_desc)) { vm.setTrashEnabled(it) }
                             if (s.trashEnabled) {
-                                ChoiceRow("Conserva per", listOf(3 to "3 giorni", 7 to "7 giorni", 30 to "30 giorni"), s.trashDays,
+                                ChoiceRow(str(R.string.keep_for), listOf(3 to str(R.string.days_3), 7 to str(R.string.days_7), 30 to str(R.string.days_30)), s.trashDays,
                                     indent = 0.dp) { vm.setTrashDays(it) }
                             }
                             com.cripta.app.ui.components.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
-                                com.cripta.app.ui.components.ButtonText(if (trashed.isEmpty() && trashedFolders.isEmpty()) "Cestino vuoto"
-                                    else "Apri il cestino (${trashed.size + trashedFolders.size})")
+                                com.cripta.app.ui.components.ButtonText(if (trashed.isEmpty() && trashedFolders.isEmpty()) str(R.string.trash_empty)
+                                    else str(R.string.open_trash_n, trashed.size + trashedFolders.size))
                             }
                         }
                     },
                 )
                 SettingsPage.INFO -> listOf(
-                    sec("Aggiornamenti") {
-                        Section("Aggiornamenti", "Scarica l'ultima versione pubblicata.") {
+                    sec(str(R.string.sec_updates)) {
+                        Section(str(R.string.sec_updates), str(R.string.updates_hint)) {
                             // Phases swap in place (keyed by phase, so progress ticks don't re-animate).
                             androidx.compose.animation.AnimatedContent(
                                 targetState = updateState,
@@ -788,16 +787,16 @@ fun SettingsScreen(
                             when (u) {
                                 SettingsViewModel.UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
                                     androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                    Text("Controllo in corso…", style = MaterialTheme.typography.bodyMedium,
+                                    Text(str(R.string.checking), style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(start = 12.dp))
                                 }
                                 SettingsViewModel.UpdateState.UpToDate ->
-                                    Text("Sei alla versione più recente.", style = MaterialTheme.typography.bodyMedium)
+                                    Text(str(R.string.up_to_date), style = MaterialTheme.typography.bodyMedium)
                                 is SettingsViewModel.UpdateState.Available -> {
-                                    Text("Disponibile: ${u.release.versionName} (${com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)})",
+                                    Text(str(R.string.update_available, u.release.versionName, com.cripta.app.ui.components.formatBytes(u.release.sizeBytes)),
                                         style = MaterialTheme.typography.bodyMedium)
                                     Button(onClick = { vm.downloadUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                                        com.cripta.app.ui.components.ButtonText("Installa aggiornamento")
+                                        com.cripta.app.ui.components.ButtonText(str(R.string.install_update))
                                     }
                                 }
                                 is SettingsViewModel.UpdateState.Downloading -> {
@@ -805,21 +804,21 @@ fun SettingsScreen(
                                     val pct = (updateState as? SettingsViewModel.UpdateState.Downloading)?.pct ?: u.pct
                                     val smooth by animateFloatAsState(pct / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "updatePct")
                                     val updEta = com.cripta.app.ui.components.rememberEta(pct / 100f)
-                                    Text("Download dell'aggiornamento: $pct%" + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
+                                    Text(str(R.string.update_downloading_pct, pct) + (updEta?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
                                     androidx.compose.material3.LinearProgressIndicator(
                                         progress = { smooth }, modifier = Modifier.fillMaxWidth())
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Continua anche se chiudi l'app: ti avvisa una notifica.",
+                                        Text(str(R.string.update_continues),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                        TextButton(onClick = { vm.cancelUpdateDownload(ctx) }) { com.cripta.app.ui.components.ButtonText("Annulla") }
+                                        TextButton(onClick = { vm.cancelUpdateDownload(ctx) }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
                                     }
                                 }
                                 is SettingsViewModel.UpdateState.ReadyToInstall -> {
-                                    Text("Pronto: ${u.release.versionName}. Se hai chiuso l'installazione, puoi riaprirla da qui.",
+                                    Text(str(R.string.update_ready_reopen, u.release.versionName),
                                         style = MaterialTheme.typography.bodyMedium)
                                     Button(onClick = { vm.installUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                                        com.cripta.app.ui.components.ButtonText("Installa aggiornamento")
+                                        com.cripta.app.ui.components.ButtonText(str(R.string.install_update))
                                     }
                                 }
                                 is SettingsViewModel.UpdateState.Error ->
@@ -829,29 +828,29 @@ fun SettingsScreen(
                             }
                             }
                             }
-                            ToggleRow("Includi pre-release (build di prova)", s.updatePrerelease) { vm.setUpdatePrerelease(it) }
+                            ToggleRow(str(R.string.include_prerelease), s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                             if (updateState !is SettingsViewModel.UpdateState.Downloading) {
                                 com.cripta.app.ui.components.FilledTonalButton(
                                     onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                    Text("Controlla aggiornamenti")
+                                    Text(str(R.string.check_updates))
                                 }
                             }
                         }
                     },
-                    sec("Informazioni") {
-                        Section("Informazioni") {
-                            InfoRow("Versione", pkgInfo?.versionName ?: "—")
+                    sec(str(R.string.sec_about)) {
+                        Section(str(R.string.sec_about)) {
+                            InfoRow(str(R.string.version), pkgInfo?.versionName ?: "—")
                             InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
-                            InfoRow("Pacchetto", ctx.packageName)
+                            InfoRow(str(R.string.package_), ctx.packageName)
                             InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                         }
                     },
-                    sec("Ultimo arresto anomalo") {
+                    sec(str(R.string.sec_last_crash)) {
                         var crash by remember { mutableStateOf(com.cripta.app.CrashLog.read(ctx)) }
-                        Section("Ultimo arresto anomalo", "Salvato in automatico quando l'app si chiude per un errore. Contiene solo dati tecnici, nessun nome di file.") {
+                        Section(str(R.string.sec_last_crash), str(R.string.last_crash_hint)) {
                             val c = crash
                             if (c == null) {
-                                Text("Nessun arresto registrato.", style = MaterialTheme.typography.bodyMedium,
+                                Text(str(R.string.no_crash), style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 val lines = c.lines()
@@ -864,14 +863,14 @@ fun SettingsScreen(
                                     com.cripta.app.ui.components.FilledTonalButton(
                                         onClick = {
                                             clipboard.setText(androidx.compose.ui.text.AnnotatedString(c))
-                                            android.widget.Toast.makeText(ctx, "Dettagli copiati", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(ctx, str(R.string.details_copied), android.widget.Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                                    ) { com.cripta.app.ui.components.ButtonText("Copia dettagli") }
+                                    ) { com.cripta.app.ui.components.ButtonText(str(R.string.copy_details)) }
                                     com.cripta.app.ui.components.FilledTonalButton(
                                         onClick = { com.cripta.app.CrashLog.clear(ctx); crash = null },
                                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                                    ) { com.cripta.app.ui.components.ButtonText("Elimina") }
+                                    ) { com.cripta.app.ui.components.ButtonText(str(R.string.delete)) }
                                 }
                             }
                         }
@@ -910,10 +909,10 @@ fun SettingsScreen(
     confirmReset?.let { p ->
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmReset = null },
-            title = { Text("Ripristinare i predefiniti?") },
-            text = { Text("Le opzioni di \"${p.label}\" tornano ai valori iniziali. I file e le etichette non vengono toccati.") },
-            confirmButton = { TextButton(onClick = { vm.resetPage(p.name); confirmReset = null }) { com.cripta.app.ui.components.ButtonText("Ripristina") } },
-            dismissButton = { TextButton(onClick = { confirmReset = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            title = { Text(str(R.string.restore_defaults_q)) },
+            text = { Text(str(R.string.restore_defaults_text, p.label)) },
+            confirmButton = { TextButton(onClick = { vm.resetPage(p.name); confirmReset = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.restore)) } },
+            dismissButton = { TextButton(onClick = { confirmReset = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
 
@@ -937,7 +936,7 @@ fun SettingsScreen(
         var newColor by remember { mutableStateOf<Int?>(null) }
         var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
-            title = "Nuova etichetta",
+            title = str(R.string.new_tag),
             onColor = { newColor = it },
             onIcon = { newIcon = it },
             onConfirm = { name, alias -> vm.createTag(name, alias, newColor, newIcon); addTag = false },
@@ -946,7 +945,7 @@ fun SettingsScreen(
     }
     if (pendingExport != null || pendingImport != null) {
         PassphraseDialog(
-            title = if (pendingExport != null) "Passphrase del backup" else "Passphrase del ripristino",
+            title = if (pendingExport != null) str(R.string.backup_passphrase) else str(R.string.restore_passphrase),
             creating = pendingExport != null,
             onConfirm = { pass ->
                 pendingExport?.let { vm.exportBackup(it, pass) }
@@ -958,7 +957,7 @@ fun SettingsScreen(
     }
     editTag?.let { tag ->
         LabelEditorDialog(
-            title = "Modifica etichetta",
+            title = str(R.string.edit_tag),
             initialName = tag.name,
             initialAlias = tag.alias ?: "",
             initialColor = tag.color,
@@ -973,15 +972,15 @@ fun SettingsScreen(
     }
     when (dupMode) {
         SettingsViewModel.DupMode.EXACT -> DuplicatesCompare(
-            title = "Duplicati esatti",
+            title = str(R.string.exact_duplicates),
             groups = dupGroups,
             summary = buildString {
-                append("Scansionati $dupScannedCount file.")
+                append(str(R.string.scanned_n, dupScannedCount))
                 val waste = exactGroups.sumOf { it.sizeBytes * (it.files.size - 1) }
-                if (waste > 0) append(" Recuperabili ${com.cripta.app.ui.components.formatBytes(waste)} eliminando le copie in eccesso.")
-                append(" Le etichette delle copie eliminate passano a quella tenuta.")
+                if (waste > 0) append(str(R.string.reclaim_extra, com.cripta.app.ui.components.formatBytes(waste)))
+                append(str(R.string.tags_pass_to_kept))
             },
-            emptyText = "Scansionati $dupScannedCount file. Nessun duplicato esatto trovato.",
+            emptyText = str(R.string.scanned_no_dups, dupScannedCount),
             notice = dupNotice,
             thumb = { vm.thumb(it) },
             channelFor = { vm.channelFor(it) },
@@ -995,9 +994,9 @@ fun SettingsScreen(
             onUndo = { vm.undoDuplicates() },
         )
         SettingsViewModel.DupMode.SIMILAR -> SimilarPager(
-            title = "Media simili",
+            title = str(R.string.similar_media),
             groups = dupGroups,
-            emptyText = "Analizzati $dupScannedCount elementi. Nessun media simile trovato.",
+            emptyText = str(R.string.analysed_no_similar, dupScannedCount),
             notice = dupNotice,
             thumb = { vm.thumb(it) },
             imageBytes = { vm.imageBytes(it) },
@@ -1020,28 +1019,26 @@ fun SettingsScreen(
     if (confirmRandomColors) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmRandomColors = false },
-            title = { Text("Colori casuali?") },
+            title = { Text(str(R.string.random_colours_q)) },
             text = {
-                Text("Ognuna delle ${tags.size} etichette riceve un colore sobrio a caso dalla tavolozza, " +
-                    "al posto di quello che ha ora (anche se l'avevi scelto tu). Non si può annullare: " +
-                    "i colori si possono poi cambiare una per una.")
+                Text(str(R.string.random_colours_text, tags.size))
             },
-            confirmButton = { TextButton(onClick = { vm.randomizeTagColors(); confirmRandomColors = false }) { com.cripta.app.ui.components.ButtonText("Assegna") } },
-            dismissButton = { TextButton(onClick = { confirmRandomColors = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            confirmButton = { TextButton(onClick = { vm.randomizeTagColors(); confirmRandomColors = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.assign)) } },
+            dismissButton = { TextButton(onClick = { confirmRandomColors = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
 
     deleteTag?.let { tag ->
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { deleteTag = null },
-            title = { Text("Eliminare l'etichetta?") },
-            text = { Text("\"#${tag.name}\" verrà rimossa da tutti i file.") },
+            title = { Text(str(R.string.delete_tag_q)) },
+            text = { Text(str(R.string.delete_tag_text, tag.name)) },
             confirmButton = {
                 TextButton(onClick = { vm.deleteTag(tag.id); deleteTag = null }) {
-                    com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { deleteTag = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+            dismissButton = { TextButton(onClick = { deleteTag = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
 }
@@ -1072,7 +1069,7 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
         IconButton(onClick = { visible = !visible }) {
             Icon(
                 if (visible) CriptaIcons.VisibilityOff else CriptaIcons.Visibility,
-                if (visible) "Nascondi passphrase" else "Mostra passphrase",
+                if (visible) str(R.string.hide_passphrase) else str(R.string.show_passphrase),
             )
         }
     }
@@ -1082,18 +1079,18 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (creating) "Servirà per ripristinare il backup: senza di essa l'archivio non si può aprire in alcun modo."
-                    else "I file del backup vengono aggiunti a quelli già nel vault; nulla viene cancellato.",
+                    if (creating) str(R.string.passphrase_create_hint)
+                    else str(R.string.passphrase_restore_hint),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 com.cripta.app.ui.components.CriptaTextField(
                     value = pass, onValueChange = { pass = it },
-                    label = { Text("Passphrase") },
+                    label = { Text(str(R.string.passphrase)) },
                     singleLine = true,
                     visualTransformation = transformation,
                     trailingIcon = toggle,
                     supportingText = {
-                        Text(if (tooShort) "Almeno $minLen caratteri (${pass.length}/$minLen)" else "Lunghezza ok")
+                        Text(if (tooShort) str(R.string.passphrase_too_short, minLen, pass.length, minLen) else str(R.string.length_ok))
                     },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
@@ -1105,11 +1102,11 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
                 if (creating) {
                     com.cripta.app.ui.components.CriptaTextField(
                         value = confirm, onValueChange = { confirm = it },
-                        label = { Text("Ripeti la passphrase") },
+                        label = { Text(str(R.string.repeat_passphrase)) },
                         singleLine = true,
                         visualTransformation = transformation,
                         isError = mismatch,
-                        supportingText = if (mismatch) ({ Text("Le passphrase non coincidono") }) else null,
+                        supportingText = if (mismatch) ({ Text(str(R.string.passphrase_mismatch)) }) else null,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
                             imeAction = androidx.compose.ui.text.input.ImeAction.Done,
@@ -1121,116 +1118,129 @@ private fun PassphraseDialog(title: String, creating: Boolean, onConfirm: (Strin
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(pass) }, enabled = valid) { com.cripta.app.ui.components.ButtonText(if (creating) "Crea backup" else "Ripristina") }
+            TextButton(onClick = { onConfirm(pass) }, enabled = valid) { com.cripta.app.ui.components.ButtonText(if (creating) str(R.string.create_backup) else str(R.string.restore)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }
 
-enum class SettingsGroup(val label: String) { PREFERENCES("Preferenze"), DATA("I tuoi dati"), APP("App") }
+enum class SettingsGroup(private val labelRes: Int) {
+    PREFERENCES(R.string.group_preferences), DATA(R.string.group_data), APP(R.string.group_app);
+
+    val label: String get() = str(labelRes)
+}
 
 /** Settings pages, in list order, grouped by what the user wants to do. */
 enum class SettingsPage(
-    val label: String,
+    private val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val group: SettingsGroup,
     val resettable: Boolean = true,
 ) {
-    ASPETTO("Aspetto e cartelle", CriptaIcons.Palette, SettingsGroup.PREFERENCES),
-    ETICHETTE("Etichette", CriptaIcons.Label, SettingsGroup.PREFERENCES),
-    VISUALIZZATORE("Visualizzatore", CriptaIcons.PlayCircle, SettingsGroup.PREFERENCES),
-    ANALISI("Persone e intro", CriptaIcons.Face, SettingsGroup.PREFERENCES),
-    SICUREZZA("Sicurezza e privacy", CriptaIcons.Lock, SettingsGroup.DATA),
-    IMPORT("Import e conversione", CriptaIcons.Download, SettingsGroup.DATA),
-    BACKUP("Backup", CriptaIcons.Backup, SettingsGroup.DATA, resettable = false),
-    SPAZIO("Duplicati e cestino", CriptaIcons.DeleteSweep, SettingsGroup.DATA, resettable = false),
-    INFO("Info e aggiornamenti", CriptaIcons.SystemUpdate, SettingsGroup.APP, resettable = false),
+    ASPETTO(R.string.page_appearance, CriptaIcons.Palette, SettingsGroup.PREFERENCES),
+    ETICHETTE(R.string.tags, CriptaIcons.Label, SettingsGroup.PREFERENCES),
+    VISUALIZZATORE(R.string.page_viewer, CriptaIcons.PlayCircle, SettingsGroup.PREFERENCES),
+    ANALISI(R.string.page_analysis, CriptaIcons.Face, SettingsGroup.PREFERENCES),
+    SICUREZZA(R.string.page_security, CriptaIcons.Lock, SettingsGroup.DATA),
+    IMPORT(R.string.page_import, CriptaIcons.Download, SettingsGroup.DATA),
+    BACKUP(R.string.kind_backup, CriptaIcons.Backup, SettingsGroup.DATA, resettable = false),
+    SPAZIO(R.string.page_space, CriptaIcons.DeleteSweep, SettingsGroup.DATA, resettable = false),
+    INFO(R.string.page_info, CriptaIcons.SystemUpdate, SettingsGroup.APP, resettable = false),
+    ;
+
+    val label: String get() = str(labelRes)
 }
 
 /** "1 elemento" / "N elementi": what the trash counts. Files and folders alike are elements. */
-private fun elementsLabel(n: Int): String = if (n == 1) "1 elemento" else "$n elementi"
+private fun elementsLabel(n: Int): String = plural(R.plurals.items_n, n)
 
 /** One-line summary of a page's current state, shown under its name in the list. */
 private fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCount: Int, trashCount: Int, dupGroups: Int?): String = when (p) {
-    SettingsPage.ASPETTO -> when (s.themeMode) {
-        com.cripta.app.data.ThemeMode.SYSTEM -> "Tema di sistema"
-        com.cripta.app.data.ThemeMode.LIGHT -> "Tema chiaro"
-        com.cripta.app.data.ThemeMode.DARK -> "Tema scuro"
-    } + (if (s.dynamicColor) " · colori dinamici" else "") + (if (s.filterCurrentFolderOnly) " · filtri nella cartella" else "")
-    SettingsPage.ETICHETTE -> "$tagCount etichette" + (if (s.display.showTagsOnCover) " · sulle copertine" else "") +
-        if (s.display.showRecentTags) " · recenti" else ""
+    SettingsPage.ASPETTO -> str(when (s.themeMode) {
+        com.cripta.app.data.ThemeMode.SYSTEM -> R.string.sum_theme_system
+        com.cripta.app.data.ThemeMode.LIGHT -> R.string.sum_theme_light
+        com.cripta.app.data.ThemeMode.DARK -> R.string.sum_theme_dark
+    }) + (if (s.dynamicColor) str(R.string.sum_dynamic) else "") + (if (s.filterCurrentFolderOnly) str(R.string.sum_filters_folder) else "")
+    SettingsPage.ETICHETTE -> plural(R.plurals.tags_n, tagCount) + (if (s.display.showTagsOnCover) str(R.string.sum_on_covers) else "") +
+        if (s.display.showRecentTags) str(R.string.sum_recent) else ""
     SettingsPage.VISUALIZZATORE -> listOfNotNull(
-        if (s.display.resumePlayback) "Riprendi" else null,
-        if (s.videoLoop) "loop" else null,
-        if (s.autoNext) "prossimo file" else null,
-        if (s.splitDetails) "schermo diviso" else null,
-    ).joinToString(" · ").ifEmpty { "Riproduzione, gesti e schermo" }
-    SettingsPage.ANALISI -> "Volti: " + (if (s.facesAnalyzeNew) "analisi automatica" else "analisi a mano") +
-        " · intro: " + if (s.introAnalyzeNew) "automatica" else "a mano"
-    SettingsPage.SICUREZZA -> when (s.autoLockMinutes) { -1 -> "Blocco mai"; 0 -> "Blocco subito"; else -> "Blocco dopo ${s.autoLockMinutes} min" } +
-        if (s.allowScreenshots) " · screenshot consentiti" else " · screenshot bloccati"
-    SettingsPage.IMPORT -> "Originale: " + when (s.deleteOriginalPolicy) {
-        DeleteOriginalPolicy.ASK -> "chiedi"; DeleteOriginalPolicy.ALWAYS -> "elimina"; DeleteOriginalPolicy.NEVER -> "mantieni"
-    } + " · MP4: " + when (s.convertAfter) {
-        com.cripta.app.data.ConvertAfter.REPLACE -> "sostituisce"
-        com.cripta.app.data.ConvertAfter.ASK -> "chiedi"
-        com.cripta.app.data.ConvertAfter.KEEP_BOTH -> "tieni entrambi"
-    }
-    SettingsPage.BACKUP -> "Archivio cifrato con passphrase, da creare o ripristinare"
+        if (s.display.resumePlayback) str(R.string.sum_resume) else null,
+        if (s.videoLoop) str(R.string.sum_loop) else null,
+        if (s.autoNext) str(R.string.sum_next_file) else null,
+        if (s.splitDetails) str(R.string.sum_split) else null,
+    ).joinToString(" · ").ifEmpty { str(R.string.sum_viewer_default) }
+    SettingsPage.ANALISI -> str(R.string.sum_analysis,
+        str(if (s.facesAnalyzeNew) R.string.sum_auto_analysis else R.string.sum_manual_analysis),
+        str(if (s.introAnalyzeNew) R.string.sum_auto else R.string.sum_manual))
+    SettingsPage.SICUREZZA -> when (s.autoLockMinutes) {
+        -1 -> str(R.string.sum_lock_never); 0 -> str(R.string.sum_lock_now); else -> str(R.string.sum_lock_after, s.autoLockMinutes)
+    } + str(if (s.allowScreenshots) R.string.sum_shots_allowed else R.string.sum_shots_blocked)
+    SettingsPage.IMPORT -> str(R.string.sum_import,
+        str(when (s.deleteOriginalPolicy) {
+            DeleteOriginalPolicy.ASK -> R.string.sum_ask; DeleteOriginalPolicy.ALWAYS -> R.string.sum_delete; DeleteOriginalPolicy.NEVER -> R.string.sum_keep
+        }),
+        str(when (s.convertAfter) {
+            com.cripta.app.data.ConvertAfter.REPLACE -> R.string.sum_replaces
+            com.cripta.app.data.ConvertAfter.ASK -> R.string.sum_ask
+            com.cripta.app.data.ConvertAfter.KEEP_BOTH -> R.string.sum_keep_both
+        }))
+    SettingsPage.BACKUP -> str(R.string.sum_backup)
     SettingsPage.SPAZIO -> listOfNotNull(
-        "Duplicati",
-        if (trashCount > 0) "cestino (${elementsLabel(trashCount)})" else if (s.trashEnabled) "cestino vuoto" else "cestino spento",
-        dupGroups?.let { "risultati pronti ($it)" },
+        str(R.string.kind_duplicates),
+        if (trashCount > 0) str(R.string.sum_trash_n, elementsLabel(trashCount)) else str(if (s.trashEnabled) R.string.sum_trash_empty else R.string.sum_trash_off),
+        dupGroups?.let { str(R.string.sum_results_ready, it) },
     ).joinToString(" · ")
-    SettingsPage.INFO -> "Versione e aggiornamenti"
+    SettingsPage.INFO -> str(R.string.sum_info)
 }
 
 /** A searchable option: what it is called, extra words people may type, where it lives (page + section). */
 private class SearchEntry(val label: String, val keywords: String, val page: SettingsPage, val section: String)
 
-private val SEARCH_INDEX: List<SearchEntry> = listOf(
-    SearchEntry("Tema chiaro / scuro", "tema scuro chiaro dark light sistema", SettingsPage.ASPETTO, "Tema"),
-    SearchEntry("Colori dinamici", "material you colori dinamici", SettingsPage.ASPETTO, "Tema"),
-    SearchEntry("Filtri solo nella cartella corrente", "filtri ricerca cartelle contenuto escludere cartella corrente", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Riepilogo conteggi", "statistiche conteggi video riepilogo", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Intestazioni per data", "data oggi ieri gruppi", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Dimensione e durata sotto i file", "info dimensione durata", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Dettagli cartelle", "cartelle peso conteggio", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Durata sui video", "badge durata copertina", SettingsPage.ASPETTO, "Cartelle"),
-    SearchEntry("Pulsanti nuova nota / casuale", "fab pulsante nota casuale random", SettingsPage.ASPETTO, "Pulsanti"),
-    SearchEntry("Libreria etichette", "etichette tag crea rinomina elimina colore fissa pin", SettingsPage.ETICHETTE, "Libreria etichette"),
-    SearchEntry("Etichette sulla copertina", "tag copertina badge righe sigla alias nome", SettingsPage.ETICHETTE, "Sulle copertine"),
-    SearchEntry("Colore delle etichette", "colori tag predefinito", SettingsPage.ETICHETTE, "Colori"),
-    SearchEntry("Etichette recenti", "recenti ultime usate riga", SettingsPage.ETICHETTE, "Assegnazione rapida"),
-    SearchEntry("Barra etichette nel visualizzatore", "rapide visualizzatore quick barra player tutte", SettingsPage.ETICHETTE, "Assegnazione rapida"),
-    SearchEntry("Ordine delle etichette", "ordine alfabetico personalizzato", SettingsPage.ETICHETTE, "Ordine della libreria"),
-    SearchEntry("Riprendi da dove eri rimasto", "riprendi posizione resume", SettingsPage.VISUALIZZATORE, "Riproduzione"),
-    SearchEntry("Ripeti in loop", "loop ripeti", SettingsPage.VISUALIZZATORE, "Riproduzione"),
-    SearchEntry("Avvia senza audio", "muto audio", SettingsPage.VISUALIZZATORE, "Riproduzione"),
-    SearchEntry("Prossimo file a fine video", "successivo automatico fine video prossimo coda autoplay", SettingsPage.VISUALIZZATORE, "Fine video"),
-    SearchEntry("Salto con doppio tocco", "doppio tocco salta secondi avanti indietro", SettingsPage.VISUALIZZATORE, "Gesti"),
-    SearchEntry("Luminosità con il gesto", "gesti luminosità trascina sinistra", SettingsPage.VISUALIZZATORE, "Gesti"),
-    SearchEntry("Volume con il gesto", "gesti volume trascina destra", SettingsPage.VISUALIZZATORE, "Gesti"),
-    SearchEntry("Scorri giù per chiudere", "swipe chiudi chiusura scorri giù gesto", SettingsPage.VISUALIZZATORE, "Gesti"),
-    SearchEntry("Tieni premuto per accelerare", "velocità veloce 2x premi tieni", SettingsPage.VISUALIZZATORE, "Gesti"),
-    SearchEntry("Rotazione automatica", "rotazione orizzontale verticale orientamento", SettingsPage.VISUALIZZATORE, "Schermo"),
-    SearchEntry("Durata dei comandi a schermo", "comandi controlli timeout nascondi visibili", SettingsPage.VISUALIZZATORE, "Schermo"),
-    SearchEntry("Anteprime dei file vicini", "filmstrip striscia copertine successivi precedenti verticali", SettingsPage.VISUALIZZATORE, "Anteprime dei file vicini"),
-    SearchEntry("Schermo diviso con i dettagli", "pannello info dettagli diviso instagram commenti in alto split", SettingsPage.VISUALIZZATORE, "Pannello dettagli"),
-    SearchEntry("Picture-in-Picture", "pip finestra finestrella", SettingsPage.VISUALIZZATORE, "Uscendo dall'app"),
-    SearchEntry("Pausa uscendo dall'app", "pausa background esci", SettingsPage.VISUALIZZATORE, "Uscendo dall'app"),
-    SearchEntry("Persone e volti", "persone volti facce riconoscimento analisi momenti home", SettingsPage.ANALISI, "Persone"),
-    SearchEntry("Intro e finale", "salta intro sigla finale titoli coda skip analizza scartati", SettingsPage.ANALISI, "Intro e finale"),
-    SearchEntry("Modalità di sblocco", "sblocco pin codice impronta biometria due fattori password accesso", SettingsPage.SICUREZZA, "Sblocco"),
-    SearchEntry("Blocco automatico", "blocco lock timeout", SettingsPage.SICUREZZA, "Blocco automatico"),
-    SearchEntry("Screenshot", "screenshot recenti privacy", SettingsPage.SICUREZZA, "Privacy"),
-    SearchEntry("Originale dopo import", "originale elimina mantieni import", SettingsPage.IMPORT, "Originale dopo import"),
-    SearchEntry("Conversione in MP4", "converti mp4 originale sostituisci", SettingsPage.IMPORT, "Conversione in MP4"),
-    SearchEntry("Backup cifrato", "backup esporta ripristina passphrase archivio copia", SettingsPage.BACKUP, "Backup cifrato"),
-    SearchEntry("Cosa includere nel backup", "backup scegli includi cartelle etichette persone analisi impostazioni copertine", SettingsPage.BACKUP, "Cosa includere"),
-    SearchEntry("File duplicati / media simili", "duplicati simili doppioni spazio ricerca rapida approfondita importazione", SettingsPage.SPAZIO, "File duplicati"),
-    SearchEntry("Cestino", "cestino eliminati ripristina", SettingsPage.SPAZIO, "Cestino"),
-    SearchEntry("Aggiornamenti", "aggiorna versione update pre-release beta", SettingsPage.INFO, "Aggiornamenti"),
+// A getter: the texts are read in the current language each time the search runs.
+private val SEARCH_INDEX: List<SearchEntry> get() = listOf(
+    SearchEntry(str(R.string.si_00), str(R.string.si_00_kw), SettingsPage.ASPETTO, str(R.string.sec_theme)),
+    SearchEntry(str(R.string.si_01), str(R.string.si_01_kw), SettingsPage.ASPETTO, str(R.string.sec_theme)),
+    SearchEntry(str(R.string.si_42), str(R.string.si_42_kw), SettingsPage.ASPETTO, str(R.string.sec_language)),
+    SearchEntry(str(R.string.si_02), str(R.string.si_02_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_03), str(R.string.si_03_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_04), str(R.string.si_04_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_05), str(R.string.si_05_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_06), str(R.string.si_06_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_07), str(R.string.si_07_kw), SettingsPage.ASPETTO, str(R.string.tab_folders)),
+    SearchEntry(str(R.string.si_08), str(R.string.si_08_kw), SettingsPage.ASPETTO, str(R.string.sec_buttons)),
+    SearchEntry(str(R.string.si_09), str(R.string.si_09_kw), SettingsPage.ETICHETTE, str(R.string.sec_tag_library)),
+    SearchEntry(str(R.string.si_10), str(R.string.si_10_kw), SettingsPage.ETICHETTE, str(R.string.sec_on_covers)),
+    SearchEntry(str(R.string.si_11), str(R.string.si_11_kw), SettingsPage.ETICHETTE, str(R.string.sec_colours)),
+    SearchEntry(str(R.string.si_12), str(R.string.si_12_kw), SettingsPage.ETICHETTE, str(R.string.sec_quick_assign)),
+    SearchEntry(str(R.string.si_13), str(R.string.si_13_kw), SettingsPage.ETICHETTE, str(R.string.sec_quick_assign)),
+    SearchEntry(str(R.string.si_14), str(R.string.si_14_kw), SettingsPage.ETICHETTE, str(R.string.sec_library_order)),
+    SearchEntry(str(R.string.si_15), str(R.string.si_15_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_playback)),
+    SearchEntry(str(R.string.si_16), str(R.string.si_16_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_playback)),
+    SearchEntry(str(R.string.si_17), str(R.string.si_17_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_playback)),
+    SearchEntry(str(R.string.si_18), str(R.string.si_18_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_video_end)),
+    SearchEntry(str(R.string.si_19), str(R.string.si_19_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_gestures)),
+    SearchEntry(str(R.string.si_20), str(R.string.si_20_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_gestures)),
+    SearchEntry(str(R.string.si_21), str(R.string.si_21_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_gestures)),
+    SearchEntry(str(R.string.si_22), str(R.string.si_22_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_gestures)),
+    SearchEntry(str(R.string.si_23), str(R.string.si_23_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_gestures)),
+    SearchEntry(str(R.string.si_24), str(R.string.si_24_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_screen)),
+    SearchEntry(str(R.string.si_25), str(R.string.si_25_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_screen)),
+    SearchEntry(str(R.string.si_26), str(R.string.si_26_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_nearby_previews)),
+    SearchEntry(str(R.string.si_27), str(R.string.si_27_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_details_panel)),
+    SearchEntry(str(R.string.si_28), str(R.string.si_28_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_leaving_app)),
+    SearchEntry(str(R.string.si_29), str(R.string.si_29_kw), SettingsPage.VISUALIZZATORE, str(R.string.sec_leaving_app)),
+    SearchEntry(str(R.string.si_30), str(R.string.si_30_kw), SettingsPage.ANALISI, str(R.string.people)),
+    SearchEntry(str(R.string.si_31), str(R.string.si_31_kw), SettingsPage.ANALISI, str(R.string.intro_and_ending)),
+    SearchEntry(str(R.string.si_32), str(R.string.si_32_kw), SettingsPage.SICUREZZA, str(R.string.sec_unlock)),
+    SearchEntry(str(R.string.si_33), str(R.string.si_33_kw), SettingsPage.SICUREZZA, str(R.string.sec_auto_lock)),
+    SearchEntry(str(R.string.si_34), str(R.string.si_34_kw), SettingsPage.SICUREZZA, str(R.string.sec_privacy)),
+    SearchEntry(str(R.string.si_35), str(R.string.si_35_kw), SettingsPage.IMPORT, str(R.string.sec_original_after_import)),
+    SearchEntry(str(R.string.si_36), str(R.string.si_36_kw), SettingsPage.IMPORT, str(R.string.sec_mp4_conversion)),
+    SearchEntry(str(R.string.si_37), str(R.string.si_37_kw), SettingsPage.BACKUP, str(R.string.sec_encrypted_backup)),
+    SearchEntry(str(R.string.si_38), str(R.string.si_38_kw), SettingsPage.BACKUP, str(R.string.sec_what_to_include)),
+    SearchEntry(str(R.string.si_39), str(R.string.si_39_kw), SettingsPage.SPAZIO, str(R.string.sec_duplicate_files)),
+    SearchEntry(str(R.string.si_40), str(R.string.si_40_kw), SettingsPage.SPAZIO, str(R.string.sec_trash)),
+    SearchEntry(str(R.string.si_41), str(R.string.si_41_kw), SettingsPage.INFO, str(R.string.sec_updates)),
 )
 
 /** First level: search + preference pages + tools, each with a live summary. */
@@ -1259,9 +1269,9 @@ private fun MainSettingsList(
             // The app's single-line field: the same filled pill as every other search.
             com.cripta.app.ui.components.CriptaTextField(
                 value = query, onValueChange = onQuery,
-                placeholder = { Text("Cerca un'impostazione") },
+                placeholder = { Text(str(R.string.search_setting)) },
                 leadingIcon = { Icon(CriptaIcons.Search, null) },
-                trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(CriptaIcons.Close, "Cancella") } }) else null,
+                trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { onQuery("") }) { Icon(CriptaIcons.Close, str(R.string.clear_short)) } }) else null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
@@ -1270,7 +1280,7 @@ private fun MainSettingsList(
         if (q.isNotEmpty()) {
             val hits = SEARCH_INDEX.filter { e -> e.label.lowercase().contains(q) || e.keywords.contains(q) }
             if (hits.isEmpty()) {
-                item(span = full) { Text("Nessuna impostazione trovata.", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                item(span = full) { Text(str(R.string.no_setting_found), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(8.dp)) }
             }
             items(hits.size) { i ->
@@ -1344,7 +1354,7 @@ private fun SpaceUsedRow() {
     }
     val s = space ?: return
     com.cripta.app.ui.components.CountRow(
-        "Spazio usato", com.cripta.app.ui.components.formatBytes(s.first),
+        str(R.string.space_used_short), com.cripta.app.ui.components.formatBytes(s.first),
         of = com.cripta.app.ui.components.formatBytes(s.second),
         progress = if (s.second > 0) s.first.toFloat() / s.second else 0f,
     )
@@ -1440,7 +1450,7 @@ private fun BackupScopeChoice(
     onChange: (com.cripta.app.data.BackupScope) -> Unit,
 ) {
     var showFolders by remember { mutableStateOf(false) }
-    ToggleRow("File", scope.files, desc = "Foto, video, note e altri documenti, con le loro cartelle.") {
+    ToggleRow(str(R.string.files_cap), scope.files, desc = str(R.string.backup_files_desc)) {
         onChange(scope.copy(files = it))
     }
     if (scope.files && folders.isNotEmpty()) {
@@ -1450,9 +1460,9 @@ private fun BackupScopeChoice(
         TextButton(onClick = { showFolders = !showFolders }) {
             com.cripta.app.ui.components.ButtonText(
                 when {
-                    showFolders -> "Nascondi le cartelle"
-                    all -> "Scegli le cartelle (tutte)"
-                    else -> "Scegli le cartelle ($chosen di ${ids.size})"
+                    showFolders -> str(R.string.hide_folders)
+                    all -> str(R.string.choose_folders_all)
+                    else -> str(R.string.choose_folders_n, chosen, ids.size)
                 }
             )
         }
@@ -1465,34 +1475,34 @@ private fun BackupScopeChoice(
                         onChange(scope.copy(excludedFolders = if (on) ex - f.id else ex + f.id))
                     }
                 }
-                ToggleRow("File fuori dalle cartelle", scope.rootFiles) { onChange(scope.copy(rootFiles = it)) }
-                Text("Una cartella entra con tutte le sue sottocartelle.",
+                ToggleRow(str(R.string.files_outside_folders), scope.rootFiles) { onChange(scope.copy(rootFiles = it)) }
+                Text(str(R.string.folder_with_subfolders),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
     if (scope.files) {
-        ToggleRow("Copertine scelte a mano", scope.covers, desc = "Le copertine dei video cambiate da te; le altre si rifanno da sole.") {
+        ToggleRow(str(R.string.covers_by_hand), scope.covers, desc = str(R.string.covers_by_hand_desc)) {
             onChange(scope.copy(covers = it))
         }
     }
-    ToggleRow("Etichette e filtri salvati", scope.tags, desc = "Nomi, sigle, colori e icone, e quali file le hanno. Senza, i file arrivano senza etichette.") {
+    ToggleRow(str(R.string.tags_saved_filters), scope.tags, desc = str(R.string.tags_saved_filters_desc)) {
         onChange(scope.copy(tags = it))
     }
-    ToggleRow("Persone e volti", scope.people, desc = "Le persone, i loro volti nei file e le tue scelte su chi è chi.") {
+    ToggleRow(str(R.string.people_and_faces), scope.people, desc = str(R.string.people_and_faces_desc)) {
         onChange(scope.copy(people = it))
     }
-    ToggleRow("Analisi di intro, finali e simili", scope.analysis, desc = "Così dopo il ripristino non vanno rifatte.") {
+    ToggleRow(str(R.string.analysis_backup), scope.analysis, desc = str(R.string.analysis_backup_desc)) {
         onChange(scope.copy(analysis = it))
     }
-    ToggleRow("Impostazioni", scope.settings,
-        desc = "Aspetto, visualizzatore, analisi e le altre. Restano fuori blocco automatico, screenshot e rotazione bloccata: valgono per questo dispositivo.") {
+    ToggleRow(str(R.string.tab_settings), scope.settings,
+        desc = str(R.string.settings_backup_desc)) {
         onChange(scope.copy(settings = it))
     }
-    Text("Il cestino non entra mai nel backup: i file eliminati restano solo su questo dispositivo fino alla scadenza.",
+    Text(str(R.string.trash_never_backup),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (scope.isEmpty) {
-        Text("Scegli almeno una cosa da includere.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        Text(str(R.string.choose_one_thing), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }
 
@@ -1529,6 +1539,39 @@ internal fun <T> ChoiceRow(
     }
 }
 
+/**
+ * The language Cripta is in. On Android 13+ the row opens the system's per-app language page;
+ * before that the app follows the phone's language and the row only says so.
+ */
+@Composable
+private fun LanguageRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val locale = com.cripta.app.Strings.locale
+    val current = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }
+    val perApp = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(MaterialTheme.shapes.small)
+            .then(if (perApp) Modifier.clickable(onClickLabel = str(R.string.language_pick)) {
+                runCatching {
+                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_LOCALE_SETTINGS,
+                        android.net.Uri.fromParts("package", ctx.packageName, null)))
+                }
+            } else Modifier)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(current, style = MaterialTheme.typography.bodyLarge)
+            Text(str(if (perApp) R.string.language_pick else R.string.language_follows_system),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp))
+        }
+        if (perApp) {
+            Icon(CriptaIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1552,7 +1595,7 @@ private fun androidx.compose.foundation.layout.BoxScope.TrashSelectionMark(selec
             .then(if (selected) Modifier else Modifier.border(2.dp, Color.White, androidx.compose.foundation.shape.CircleShape)),
         contentAlignment = Alignment.Center,
     ) {
-        if (selected) Icon(CriptaIcons.Check, "Selezionato", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+        if (selected) Icon(CriptaIcons.Check, str(R.string.selected_m), tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -1600,7 +1643,7 @@ private fun TrashDialog(
     val shownFolders = folders.filter { if (openId == null) it.parentId == null || it.parentId !in trashedIds else it.parentId == openId }
     val shownFiles = items.filter { if (openId == null) it.folderId == null || it.folderId !in trashedIds else it.folderId == openId }
     fun left(at: Long?) = at?.let { days - ((System.currentTimeMillis() - it) / 86_400_000L).toInt() } ?: days
-    fun leftText(at: Long?): String { val l = left(at); return if (l <= 1) "distrutto entro oggi" else "ancora $l giorni" }
+    fun leftText(at: Long?): String { val l = left(at); return if (l <= 1) str(R.string.destroyed_today) else str(R.string.days_left, l) }
     fun subtree(id: Long): Set<Long> {
         val ids = HashSet<Long>(); val todo = ArrayDeque(listOf(id))
         while (todo.isNotEmpty()) { val x = todo.removeFirst(); if (ids.add(x)) folders.filter { it.parentId == x }.forEach { todo.add(it.id) } }
@@ -1649,21 +1692,21 @@ private fun TrashDialog(
                     ),
                     navigationIcon = {
                         if (inSel) {
-                            IconButton(onClick = { clearSel() }) { Icon(CriptaIcons.Close, "Esci dalla selezione") }
+                            IconButton(onClick = { clearSel() }) { Icon(CriptaIcons.Close, str(R.string.exit_selection)) }
                         } else {
                             IconButton(onClick = { if (path.isNotEmpty()) path.removeAt(path.lastIndex) else onDismiss() }) {
-                                Icon(CriptaIcons.ArrowBack, if (path.isNotEmpty()) "Indietro" else "Chiudi cestino")
+                                Icon(CriptaIcons.ArrowBack, if (path.isNotEmpty()) str(R.string.back) else str(R.string.close_trash))
                             }
                         }
                     },
                     title = {
                         if (inSel) {
                             val n = selF.size + selD.size
-                            Text(if (n == 1) "1 selezionato" else "$n selezionati", maxLines = 1)
+                            Text(plural(R.plurals.n_selected_m, n), maxLines = 1)
                         } else Column {
-                            Text(if (openId == null) "Cestino" else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(if (openId == null) str(R.string.sec_trash) else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             // The top level says its count and rule in the page (DS); a folder shows where it was.
-                            if (openId != null) Text((listOf("Cestino") + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › "),
+                            if (openId != null) Text((listOf(str(R.string.sec_trash)) + path.dropLast(1).mapNotNull { byId[it]?.name }).joinToString(" › "),
                                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -1674,11 +1717,11 @@ private fun TrashDialog(
                             IconButton(onClick = {
                                 if (all) clearSel() else { selFiles = shownFileIds; selFolders = shownFolderIds }
                             }) {
-                                Icon(CriptaIcons.SelectAll, if (all) "Deseleziona tutto" else "Seleziona tutto",
+                                Icon(CriptaIcons.SelectAll, if (all) str(R.string.deselect_all) else str(R.string.select_all),
                                     tint = if (all) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current)
                             }
                         } else if (openId != null) {
-                            TextButton(onClick = { onRestoreFolder(openId) }) { com.cripta.app.ui.components.ButtonText("Ripristina tutto") }
+                            TextButton(onClick = { onRestoreFolder(openId) }) { com.cripta.app.ui.components.ButtonText(str(R.string.restore_all)) }
                         }
                     },
                 )
@@ -1696,15 +1739,15 @@ private fun TrashDialog(
                                 androidx.compose.foundation.layout.WindowInsetsSides.Bottom
                         ),
                     ) {
-                        if (!inSel) com.cripta.app.ui.components.DestructiveButton("Svuota il cestino", onClick = { confirmEmpty = true },
+                        if (!inSel) com.cripta.app.ui.components.DestructiveButton(str(R.string.empty_trash), onClick = { confirmEmpty = true },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = 56.dp), icon = CriptaIcons.Delete)
                         else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { confirmDeleteSel = true },
+                            com.cripta.app.ui.components.DestructiveButton(str(R.string.delete), onClick = { confirmDeleteSel = true },
                                 modifier = Modifier.weight(1f).heightIn(min = 56.dp), icon = CriptaIcons.Delete)
                             com.cripta.app.ui.components.FilledTonalButton(onClick = { onRestoreMany(selF.toList(), selD.toList()); clearSel() }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
                                 Icon(CriptaIcons.RestoreFromTrash, null, Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                com.cripta.app.ui.components.ButtonText("Ripristina")
+                                com.cripta.app.ui.components.ButtonText(str(R.string.restore))
                             }
                         }
                     }
@@ -1715,7 +1758,7 @@ private fun TrashDialog(
                 Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(CriptaIcons.Delete, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
-                        Text(if (openId == null) "Il cestino è vuoto." else "Nient'altro di questa cartella è nel cestino.",
+                        Text(if (openId == null) str(R.string.trash_is_empty) else str(R.string.nothing_else_folder),
                             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 12.dp))
                     }
@@ -1733,9 +1776,9 @@ private fun TrashDialog(
                     if (openId == null) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         // DS Cestino: the rule in one line, then what the trash holds.
                         Column {
-                            Text("I file restano qui $days giorni, poi spariscono per sempre.",
+                            Text(str(R.string.trash_days_hint, days),
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            com.cripta.app.ui.components.CountRow("Nel cestino", com.cripta.app.ui.components.formatCount(items.size + folders.size),
+                            com.cripta.app.ui.components.CountRow(str(R.string.in_trash), com.cripta.app.ui.components.formatCount(items.size + folders.size),
                                 after = (if (items.size + folders.size == 1) " elemento" else " elementi") + " · " +
                                     com.cripta.app.ui.components.formatBytes(items.sumOf { it.sizeBytes }),
                                 modifier = Modifier.padding(top = 8.dp))
@@ -1755,8 +1798,8 @@ private fun TrashDialog(
                                     thumb = thumb,
                                     // Tap: its details and actions (restore, delete, open), like a file here.
                                     modifier = Modifier.combinedClickable(
-                                        onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Dettagli",
-                                        onLongClickLabel = "Seleziona",
+                                        onClickLabel = if (inSel) (if (selected) str(R.string.deselect) else str(R.string.select)) else str(R.string.details),
+                                        onLongClickLabel = str(R.string.select),
                                         onClick = { if (inSel) toggle() else folderSheet = fo }, onLongClick = { toggle() },
                                     ),
                                 )
@@ -1774,8 +1817,8 @@ private fun TrashDialog(
                         fun toggle() { selFiles = if (selected) selFiles - f.id else selFiles + f.id }
                         Column(Modifier.clip(com.cripta.app.ui.theme.CoverShape)
                             .combinedClickable(
-                                onClickLabel = if (inSel) (if (selected) "Deseleziona" else "Seleziona") else "Dettagli",
-                                onLongClickLabel = "Seleziona",
+                                onClickLabel = if (inSel) (if (selected) str(R.string.deselect) else str(R.string.select)) else str(R.string.details),
+                                onLongClickLabel = str(R.string.select),
                                 onClick = { if (inSel) toggle() else fileSheet = f }, onLongClick = { toggle() },
                             )
                             .padding(bottom = 8.dp)) {
@@ -1818,23 +1861,23 @@ private fun TrashDialog(
                         // Original path: trashed folders by name (live ones are not in this list).
                         generateSequence(byId[id]) { it.parentId?.let(byId::get) }.map { it.name }.toList().reversed()
                             .joinToString(" › ").ifEmpty { null }
-                    } ?: "Vault"
+                    } ?: str(R.string.vault)
                     listOfNotNull(
-                        "Dimensione" to com.cripta.app.ui.components.formatBytes(f.sizeBytes),
-                        com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { "Durata" to it },
-                        if (f.width != null && f.height != null) "Risoluzione" to "${f.width}×${f.height}" else null,
-                        "Posizione" to where,
-                        "Eliminato il" to (f.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—"),
-                        "Distruzione" to leftText(f.deletedAt).replaceFirstChar { it.uppercase() },
+                        str(R.string.size_label) to com.cripta.app.ui.components.formatBytes(f.sizeBytes),
+                        com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { str(R.string.duration) to it },
+                        if (f.width != null && f.height != null) str(R.string.resolution) to "${f.width}×${f.height}" else null,
+                        str(R.string.location) to where,
+                        str(R.string.deleted_on_m) to (f.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—"),
+                        str(R.string.destruction) to leftText(f.deletedAt).replaceFirstChar { it.uppercase() },
                     ).forEach { (k, v) -> InfoRow(k, v) }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Asked first, as for folders and several files: this destroys it for good.
-                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFile = f } },
+                        com.cripta.app.ui.components.DestructiveButton(str(R.string.delete), onClick = { afterSheet { confirmFile = f } },
                             modifier = Modifier.weight(1f).heightIn(min = 56.dp))
-                        Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
+                        Button(onClick = { afterSheet { onRestore(f.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText(str(R.string.restore)) }
                     }
                     if (f.folderId != null && f.folderId in trashedIds) {
-                        Text("Torna nella sua cartella, che viene ricreata se serve.", style = MaterialTheme.typography.bodySmall,
+                        Text(str(R.string.restore_to_folder_hint), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -1848,74 +1891,72 @@ private fun TrashDialog(
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(fo.name, style = MaterialTheme.typography.titleMedium)
-                    InfoRow("Contenuto", elementsLabel(elementsUnder(fo.id)) +
+                    InfoRow(str(R.string.contents), elementsLabel(elementsUnder(fo.id)) +
                         " · " + com.cripta.app.ui.components.formatBytes(under.sumOf { it.sizeBytes }))
-                    InfoRow("Eliminata il", fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
-                    InfoRow("Distruzione", leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
+                    InfoRow(str(R.string.deleted_on_f), fo.deletedAt?.let { fmt.format(java.util.Date(it)) } ?: "—")
+                    InfoRow(str(R.string.destruction), leftText(fo.deletedAt).replaceFirstChar { it.uppercase() })
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        com.cripta.app.ui.components.DestructiveButton("Elimina", onClick = { afterSheet { confirmFolder = fo } },
+                        com.cripta.app.ui.components.DestructiveButton(str(R.string.delete), onClick = { afterSheet { confirmFolder = fo } },
                             modifier = Modifier.weight(1f).heightIn(min = 56.dp))
-                        Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText("Ripristina") }
+                        Button(onClick = { afterSheet { onRestoreFolder(fo.id) } }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) { com.cripta.app.ui.components.ButtonText(str(R.string.restore)) }
                     }
-                    TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { com.cripta.app.ui.components.ButtonText("Apri e scegli gli elementi") }
+                    TextButton(onClick = { afterSheet { path.add(fo.id) } }, modifier = Modifier.fillMaxWidth()) { com.cripta.app.ui.components.ButtonText(str(R.string.open_choose_items)) }
                 }
             }
         }
         confirmFile?.let { cf ->
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmFile = null },
-                title = { Text("Eliminare definitivamente?") },
-                text = { Text("\"${cf.originalName}\" verrà distrutto in modo sicuro. Irreversibile.") },
+                title = { Text(str(R.string.delete_forever_q)) },
+                text = { Text(str(R.string.file_destroy_secure, cf.originalName)) },
                 confirmButton = {
-                    TextButton(onClick = { onDelete(cf.id); confirmFile = null }) { com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { onDelete(cf.id); confirmFile = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { confirmFile = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+                dismissButton = { TextButton(onClick = { confirmFile = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )
         }
         confirmFolder?.let { fo ->
             val n = elementsUnder(fo.id)
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmFolder = null },
-                title = { Text("Eliminare definitivamente?") },
+                title = { Text(str(R.string.delete_forever_q)) },
                 text = {
-                    Text(if (n == 0) "\"${fo.name}\" verrà distrutta in modo sicuro. Irreversibile."
-                        else "\"${fo.name}\" e ${elementsLabel(n)} al suo interno verranno distrutti in modo sicuro. Irreversibile.")
+                    Text(if (n == 0) str(R.string.folder_destroy_secure, fo.name)
+                        else str(R.string.folder_items_destroy, fo.name, elementsLabel(n)))
                 },
                 confirmButton = {
-                    TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { com.cripta.app.ui.components.ButtonText("Elimina", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { onDeleteFolder(fo.id); confirmFolder = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { confirmFolder = null }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+                dismissButton = { TextButton(onClick = { confirmFolder = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )
         }
         if (confirmDeleteSel && inSel) {
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmDeleteSel = false },
-                title = { Text("Eliminare definitivamente?") },
+                title = { Text(str(R.string.delete_forever_q)) },
                 text = {
-                    Text(elementsLabel(selElements) + (if (selElements == 1) " verrà distrutto" else " verranno distrutti") +
-                        " in modo sicuro. Irreversibile.")
+                    Text(plural(R.plurals.items_destroyed, selElements, elementsLabel(selElements)))
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteMany(selF.toList(), selD.toList()); clearSel(); confirmDeleteSel = false
-                    }) { Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                    }) { Text(str(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { confirmDeleteSel = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+                dismissButton = { TextButton(onClick = { confirmDeleteSel = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )
         }
         if (confirmEmpty) {
             com.cripta.app.ui.components.CriptaAlertDialog(
                 onDismissRequest = { confirmEmpty = false },
-                title = { Text("Svuotare il cestino?") },
+                title = { Text(str(R.string.empty_trash_q)) },
                 text = {
                     val total = items.size + folders.size
-                    Text(elementsLabel(total) + (if (total == 1) " verrà distrutto" else " verranno distrutti") +
-                        " in modo sicuro. Irreversibile.")
+                    Text(plural(R.plurals.items_destroyed, total, elementsLabel(total)))
                 },
                 confirmButton = {
-                    TextButton(onClick = { onEmpty(); confirmEmpty = false }) { com.cripta.app.ui.components.ButtonText("Svuota", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { onEmpty(); confirmEmpty = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.empty_short), color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { confirmEmpty = false }) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+                dismissButton = { TextButton(onClick = { confirmEmpty = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )
         }
     }

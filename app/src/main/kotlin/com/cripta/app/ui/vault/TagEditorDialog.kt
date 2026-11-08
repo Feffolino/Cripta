@@ -1,5 +1,9 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.toArgb
@@ -66,9 +70,9 @@ private fun TagChip(
         base = MaterialTheme.colorScheme.surfaceContainerLow,
         onClick = onClick,
         onLongClick = onLongClick,
-        onClickLabel = if (selected) "Rimuovi" else "Assegna",
-        onLongClickLabel = if (onLongClick != null) "Modifica alias, colore e fissa" else null,
-        stateLabel = if (selected) "Assegnata" else "Non assegnata",
+        onClickLabel = if (selected) str(R.string.remove) else str(R.string.assign),
+        onLongClickLabel = if (onLongClick != null) str(R.string.tag_edit_hint) else null,
+        stateLabel = if (selected) str(R.string.assigned) else str(R.string.not_assigned),
     )
 }
 
@@ -137,19 +141,19 @@ internal fun TagSections(
             n.contains(q, ignoreCase = true) || byName[n]?.alias?.contains(q, ignoreCase = true) == true
         }
         if (matches.isEmpty()) {
-            Text("Nessuna etichetta corrisponde a \"$q\".", style = MaterialTheme.typography.bodySmall,
+            Text(str(R.string.tag_no_match, q), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else row("Risultati", matches)
+        } else row(str(R.string.results), matches)
         return
     }
     if (!showLibrary) {
         val quick = (pinned.map { it.name } + if (showRecents) recents.map { it.name } else emptyList()).toSet()
         val onFile = library.filter { isSelected(it) && it !in quick }
-        if (onFile.isNotEmpty()) row("Su questo file", onFile)
+        if (onFile.isNotEmpty()) row(str(R.string.on_this_file), onFile)
     }
-    if (pinned.isNotEmpty()) row("Fissate", pinned.map { it.name })
-    if (showRecents && recents.isNotEmpty()) row("Recenti", recents.map { it.name })
-    if (showLibrary && library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) "Etichette" else "Tutte", library)
+    if (pinned.isNotEmpty()) row(str(R.string.pinned), pinned.map { it.name })
+    if (showRecents && recents.isNotEmpty()) row(str(R.string.recent), recents.map { it.name })
+    if (showLibrary && library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) str(R.string.tags) else str(R.string.icon_all_short), library)
 }
 
 private fun chipLabel(name: String, alias: String?): String =
@@ -197,11 +201,11 @@ fun LabelEditorDialog(
                 if (nameEditable) {
                     com.cripta.app.ui.components.CriptaTextField(
                         value = name, onValueChange = { name = it },
-                        label = { Text("Nome") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        label = { Text(str(R.string.sort_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
                 } else {
                     Text("#$name", style = MaterialTheme.typography.titleMedium)
-                    Text("Il nome si cambia da Impostazioni › Etichette.", style = MaterialTheme.typography.bodySmall,
+                    Text(str(R.string.tag_rename_hint), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (onIcon != null) {
@@ -210,8 +214,8 @@ fun LabelEditorDialog(
                 com.cripta.app.ui.components.CriptaTextField(
                     // At most 6 visible characters, counted as graphemes.
                     value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
-                    label = { Text("Sigla (opzionale)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("Al posto dell'icona sulle copertine, oppure accanto.") },
+                    label = { Text(str(R.string.tag_alias)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Text(str(R.string.tag_alias_hint)) },
                 )
                 if (onPinned != null) {
                     Row(
@@ -219,20 +223,20 @@ fun LabelEditorDialog(
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("📌 Fissa in alto")
-                            Text("Sempre tra le prime, in posizione fissa.", style = MaterialTheme.typography.bodySmall,
+                            Text(str(R.string.tag_pin_top))
+                            Text(str(R.string.tag_pin_top_hint), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
                     }
                 }
                 if (onColor != null) {
-                    Text("Colore", style = MaterialTheme.typography.labelMedium,
+                    Text(str(R.string.colour), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     // "A" = the colour every uncoloured tag gets (Settings › Etichette, else one
                     // colour per name), then the palette.
                     val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
-                    TagColorPicker(selected = color, autoColor = auto, autoDescription = "Colore predefinito") { color = it }
+                    TagColorPicker(selected = color, autoColor = auto, autoDescription = str(R.string.default_colour)) { color = it }
                     // Live preview of the badge as it will look on covers.
                     val preview = color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto
                     // As on a cover: the acronym, else the icon alone, else the first two letters.
@@ -252,9 +256,9 @@ fun LabelEditorDialog(
                     onIcon?.invoke(icon)
                     onConfirm(name.trim(), alias.trim().ifEmpty { null })
                 },
-            ) { com.cripta.app.ui.components.ButtonText("Salva") }
+            ) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
     if (pickingIcon) {
         com.cripta.app.ui.tagicons.TagIconPicker(tagName = name, selected = icon,
@@ -290,13 +294,13 @@ fun TagEditorDialog(
 
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Etichette") },
+        title = { Text(str(R.string.tags)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                Text("Tocca per assegnare. Tieni premuto per alias, colore e 📌.",
+                Text(str(R.string.tag_assign_hint),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (allTags.size > SEARCH_THRESHOLD) TagSearchField(query) { query = it }
                 TagSections(
@@ -313,18 +317,18 @@ fun TagEditorDialog(
                 )
                 TextButton(onClick = { creating = true }) {
                     Icon(CriptaIcons.Add, null, modifier = Modifier.padding(end = 4.dp))
-                    com.cripta.app.ui.components.ButtonText("Nuova etichetta")
+                    com.cripta.app.ui.components.ButtonText(str(R.string.new_tag))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(selected.toList()) }) { com.cripta.app.ui.components.ButtonText("Salva") } },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(selected.toList()) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 
     editTarget?.let { name ->
         val t = byName[name]
         LabelEditorDialog(
-            title = "Modifica #$name",
+            title = str(R.string.tag_edit_title, name),
             initialName = name,
             initialAlias = t?.alias ?: "",
             onConfirm = { _, alias ->
@@ -346,7 +350,7 @@ fun TagEditorDialog(
     if (creating) {
         var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
-            title = "Nuova etichetta",
+            title = str(R.string.new_tag),
             onIcon = { newIcon = it },
             onConfirm = { name, alias ->
                 onCreateTag(name, alias, newIcon)
@@ -378,11 +382,11 @@ fun BatchTagDialog(
     var creating by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    val items = if (count == 1) "1 elemento" else "$count elementi"
+    val items = plural(R.plurals.items_n, count)
 
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Etichette per $items") },
+        title = { Text(str(R.string.tags_for, items)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -393,20 +397,20 @@ fun BatchTagDialog(
                         com.cripta.app.ui.components.ChoiceChip(
                             // Only a real switch of mode clears the choice: tapping the active one keeps it.
                             selected = !removing, onClick = { if (removing) { removing = false; chosen.clear() } },
-                            label = { Text("Aggiungi") },
+                            label = { Text(str(R.string.add)) },
                         )
                         com.cripta.app.ui.components.ChoiceChip(
                             selected = removing, onClick = { if (!removing) { removing = true; chosen.clear() } },
-                            label = { Text("Rimuovi") },
+                            label = { Text(str(R.string.remove)) },
                         )
                     }
                 }
                 Text(
-                    if (removing) "Le etichette scelte vengono tolte da tutti gli elementi selezionati."
-                    else "Le etichette scelte vengono aggiunte a tutti gli elementi selezionati.",
+                    if (removing) str(R.string.tags_remove_hint)
+                    else str(R.string.tags_add_hint),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (allTags.isEmpty() && chosen.isEmpty()) {
-                    Text("Nessuna etichetta. Creane una qui sotto.",
+                    Text(str(R.string.tags_none_create),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (allTags.size > SEARCH_THRESHOLD) TagSearchField(query) { query = it }
@@ -425,7 +429,7 @@ fun BatchTagDialog(
                 if (!removing) {
                     TextButton(onClick = { creating = true }) {
                         Icon(CriptaIcons.Add, null, modifier = Modifier.padding(end = 4.dp))
-                        com.cripta.app.ui.components.ButtonText("Nuova etichetta")
+                        com.cripta.app.ui.components.ButtonText(str(R.string.new_tag))
                     }
                 }
             }
@@ -433,15 +437,15 @@ fun BatchTagDialog(
         confirmButton = {
             TextButton(enabled = chosen.isNotEmpty(), onClick = {
                 if (removing) onRemove?.invoke(chosen.toList()) else onConfirm(chosen.toList())
-            }) { Text(if (removing) "Rimuovi" else "Aggiungi") }
+            }) { Text(if (removing) str(R.string.remove) else str(R.string.add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 
     if (creating) {
         var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
-            title = "Nuova etichetta",
+            title = str(R.string.new_tag),
             onIcon = { newIcon = it },
             onConfirm = { name, alias ->
                 onCreateTag(name, alias, newIcon)
@@ -461,10 +465,10 @@ private fun TagSearchField(query: String, onChange: (String) -> Unit) {
     com.cripta.app.ui.components.CriptaTextField(
         value = query,
         onValueChange = onChange,
-        placeholder = { Text("Cerca etichetta") },
+        placeholder = { Text(str(R.string.search_tag)) },
         leadingIcon = { Icon(CriptaIcons.Search, null) },
         trailingIcon = if (query.isNotEmpty()) ({
-            androidx.compose.material3.IconButton(onClick = { onChange("") }) { Icon(CriptaIcons.Close, "Cancella ricerca") }
+            androidx.compose.material3.IconButton(onClick = { onChange("") }) { Icon(CriptaIcons.Close, str(R.string.clear_search)) }
         }) else null,
         singleLine = true,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
@@ -501,7 +505,7 @@ internal fun TagColorPicker(
         ColorDot(autoColor, selected = selected == null, label = "A", description = autoDescription) { onPick(null) }
         com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
             val argb = c.toArgb()
-            ColorDot(c, selected = selected == argb, description = "Colore ${i + 1}") { onPick(argb) }
+            ColorDot(c, selected = selected == argb, description = str(R.string.colour_n, i + 1)) { onPick(argb) }
         }
     }
 }

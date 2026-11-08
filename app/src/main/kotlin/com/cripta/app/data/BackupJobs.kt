@@ -1,5 +1,8 @@
 package com.cripta.app.data
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +47,7 @@ class BackupJobs @Inject constructor() {
             return false
         }
         _pending.value = request
-        _running.value = Running(if (request.restore) "Ripristino del backup…" else "Creazione del backup…", null)
+        _running.value = Running(if (request.restore) str(R.string.backup_restoring) else str(R.string.backup_creating), null)
         return true
     }
 

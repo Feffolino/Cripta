@@ -143,13 +143,13 @@ class MainActivity : FragmentActivity() {
                 is com.cripta.app.data.SharedContent.WebLink -> {
                     sharedLinks.set(payload.url)
                     if (session.locked.value) Toast.makeText(this@MainActivity,
-                        "Sblocca Cripta per preparare il download", Toast.LENGTH_LONG).show()
+                        str(R.string.share_unlock_for_download), Toast.LENGTH_LONG).show()
                 }
                 is com.cripta.app.data.SharedContent.Files -> {
                     sharedFiles.add(payload.uris)
                     val n = payload.uris.size
-                    val message = if (session.locked.value) "Sblocca Cripta per importare i file condivisi"
-                        else if (n == 1) "Importazione di 1 file nel vault…" else "Importazione di $n file nel vault…"
+                    val message = if (session.locked.value) str(R.string.share_unlock_for_import)
+                        else plural(R.plurals.share_importing, n)
                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                 }
                 com.cripta.app.data.SharedContent.None -> Unit
@@ -246,19 +246,17 @@ class MainActivity : FragmentActivity() {
                 if (askNotif) {
                     AlertDialog(
                         onDismissRequest = { notificationRationaleAnswered(allow = false) },
-                        title = { Text("Avanzamento in background") },
+                        title = { Text(str(R.string.notif_rationale_title)) },
                         text = {
                             Text(
-                                "Consenti le notifiche per seguire importazioni, download e conversioni " +
-                                    "anche quando Cripta è in background, e sapere quando sono finite. " +
-                                    "Sulla schermata di blocco non compaiono i nomi dei file."
+                                str(R.string.notif_rationale_text)
                             )
                         },
                         confirmButton = {
-                            TextButton(onClick = { notificationRationaleAnswered(allow = true) }) { Text("Consenti") }
+                            TextButton(onClick = { notificationRationaleAnswered(allow = true) }) { Text(str(R.string.allow)) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { notificationRationaleAnswered(allow = false) }) { Text("Non ora") }
+                            TextButton(onClick = { notificationRationaleAnswered(allow = false) }) { Text(str(R.string.not_now)) }
                         },
                     )
                 }
@@ -356,23 +354,23 @@ class MainActivity : FragmentActivity() {
                             pin = pinStepFor(keyVault.unlockMode))
                     }
                     is KeyVault.PinResult.Wrong -> {
-                        val what = if (keyVault.secretKind == com.cripta.app.security.SecretKind.PIN) "PIN errato" else "Password errata"
+                        val what = if (keyVault.secretKind == com.cripta.app.security.SecretKind.PIN) str(R.string.pin_wrong) else str(R.string.password_wrong)
                         authUi.value = authUi.value.copy(pinBusy = false,
-                            error = if (res.waitSeconds > 0) "$what. Troppi tentativi: riprova tra ${waitText(res.waitSeconds)}."
-                            else "$what. Riprova.")
+                            error = if (res.waitSeconds > 0) str(R.string.unlock_wrong_wait, what, waitText(res.waitSeconds))
+                            else str(R.string.unlock_wrong_retry, what))
                     }
                     is KeyVault.PinResult.Wait -> authUi.value = authUi.value.copy(pinBusy = false,
-                        error = "Troppi tentativi: riprova tra ${waitText(res.seconds)}.")
+                        error = str(R.string.unlock_wait, waitText(res.seconds)))
                 }
             }.onFailure {
                 android.util.Log.e("MainActivity", "PIN unlock failed", it)
-                authUi.value = authUi.value.copy(pinBusy = false, error = "Sblocco non riuscito. Riprova.")
+                authUi.value = authUi.value.copy(pinBusy = false, error = str(R.string.unlock_failed))
             }
         }
     }
 
     private fun waitText(seconds: Long): String =
-        if (seconds < 60) "$seconds secondi" else "${(seconds + 59) / 60} minuti"
+        if (seconds < 60) plural(R.plurals.wait_seconds, seconds.toInt()) else plural(R.plurals.wait_minutes, ((seconds + 59) / 60).toInt())
 
     /** Runs setup on first launch, otherwise unlock. */
     private fun authenticate() {
@@ -409,13 +407,12 @@ class MainActivity : FragmentActivity() {
             android.util.Log.e("MainActivity", "cipher init failed", it)
             if (keyVault.isKeyInvalidated(it) && mode == com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN) {
                 // The PIN still opens the vault: no reset needed.
-                authUi.value = authUi.value.copy(error = "L'impronta non è più utilizzabile: sblocca con il codice di Cripta.")
+                authUi.value = authUi.value.copy(error = str(R.string.fingerprint_invalidated))
             } else if (keyVault.isKeyInvalidated(it)) {
                 keyInvalidated.value = true
             } else {
                 authUi.value = authUi.value.copy(
-                    error = "Impossibile preparare la chiave di sicurezza. Riprova; se il problema " +
-                        "continua, riavvia il telefono.",
+                    error = str(R.string.keystore_failed),
                 )
             }
             return
@@ -424,8 +421,8 @@ class MainActivity : FragmentActivity() {
         BiometricAuth.authenticate(
             activity = this,
             cipher = cipher,
-            title = if (setup) "Configura Cripta" else "Sblocca Cripta",
-            subtitle = if (setup) "Conferma per creare il vault" else "Autenticati per accedere",
+            title = if (setup) str(R.string.bio_setup_title) else str(R.string.bio_unlock_title),
+            subtitle = if (setup) str(R.string.bio_setup_subtitle) else str(R.string.bio_unlock_subtitle),
             onSuccess = { authed ->
                 authInFlight = false
                 lifecycleScope.launch {
@@ -448,8 +445,8 @@ class MainActivity : FragmentActivity() {
                             keyInvalidated.value = true
                         } else {
                             authUi.value = authUi.value.copy(
-                                error = if (setup) "Creazione del vault non riuscita. Riprova."
-                                else "Sblocco non riuscito. Riprova.",
+                                error = if (setup) str(R.string.setup_failed)
+                                else str(R.string.unlock_failed),
                             )
                         }
                     }

@@ -1,5 +1,8 @@
 package com.cripta.app.media
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.toArgb
@@ -322,14 +325,14 @@ class ThumbnailLoader @Inject constructor(
                         val h = if (f.containsKey(MediaFormat.KEY_HEIGHT)) f.getInteger(MediaFormat.KEY_HEIGHT) else -1
                         val rot = if (f.containsKey(MediaFormat.KEY_ROTATION)) f.getInteger(MediaFormat.KEY_ROTATION) else 0
                         sb.append("Codec: ").append(mime).append('\n')
-                        sb.append("Risoluzione: ").append(w).append("x").append(h).append('\n')
-                        sb.append("Rotazione: ").append(rot).append("°\n")
+                        sb.append(str(R.string.diag_resolution)).append(w).append("x").append(h).append('\n')
+                        sb.append(str(R.string.diag_rotation)).append(rot).append("°\n")
                         sb.append("Track format:\n").append(f.toString()).append('\n')
                         break
                     }
                 }
             } catch (e: Exception) {
-                sb.append("Probe extractor fallito: ").append(e.javaClass.simpleName).append('\n')
+                sb.append(str(R.string.diag_probe_failed)).append(e.javaClass.simpleName).append('\n')
             } finally {
                 runCatching { extractor.release() }
                 runCatching { channel?.close() }

@@ -1,5 +1,9 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -41,17 +45,17 @@ fun ConvertChoiceDialog(
     var choice by remember { mutableStateOf(initial) }
     var rememberIt by remember { mutableStateOf(true) }
     val options = listOf(
-        ConvertAfter.REPLACE to ("Sostituisci l'originale" to
-            "L'MP4 prende il suo posto (cartella, etichette, copertina); l'originale va nel cestino per $trashDays giorni."),
-        ConvertAfter.KEEP_BOTH to ("Tieni entrambi" to "Restano l'originale e la copia MP4."),
-        ConvertAfter.ASK to ("Chiedimi alla fine" to "A conversione finita scegli se eliminare l'originale."),
+        ConvertAfter.REPLACE to (str(R.string.convert_replace) to
+            str(R.string.convert_replace_desc, trashDays)),
+        ConvertAfter.KEEP_BOTH to (str(R.string.convert_keep_both) to str(R.string.convert_keep_both_desc)),
+        ConvertAfter.ASK to (str(R.string.convert_ask_at_end) to str(R.string.convert_ask_at_end_desc)),
     )
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (count == 1) "Convertire in MP4?" else "Convertire $count video in MP4?") },
+        title = { Text(plural(R.plurals.convert_q, count)) },
         text = {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Crea una copia MP4 scorribile, verificata prima di essere salvata. Prosegue in background. Dopo la conversione:",
+                Text(str(R.string.convert_intro),
                     style = MaterialTheme.typography.bodyMedium)
                 options.forEach { (v, t) ->
                     Row(
@@ -72,11 +76,11 @@ fun ConvertChoiceDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(checked = rememberIt, onCheckedChange = null, modifier = Modifier.padding(12.dp))
-                    Text("Ricorda la scelta (modificabile in Impostazioni › Import e conversione)", style = MaterialTheme.typography.bodyMedium)
+                    Text(str(R.string.convert_remember), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(choice, rememberIt) }) { com.cripta.app.ui.components.ButtonText("Converti") } },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText("Annulla") } },
+        confirmButton = { TextButton(onClick = { onConfirm(choice, rememberIt) }) { com.cripta.app.ui.components.ButtonText(str(R.string.convert)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }

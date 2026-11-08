@@ -1,5 +1,8 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.heightIn
@@ -75,11 +78,11 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     val outroColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelHeading("Intro e finale", "Il video le salta. Tocca la barra per spostarti.")
+        PanelHeading(str(R.string.intro_and_ending), str(R.string.intro_skip_hint))
         when (status) {
-            null -> StatusLine("Non ancora analizzato.", "Analizza ora") { vm.analyzeIntro(file) }
+            null -> StatusLine(str(R.string.faces_not_analysed), str(R.string.analyse_now)) { vm.analyzeIntro(file) }
             "ok" -> {}
-            else -> StatusLine("Non analizzabile: $status.", null) {}
+            else -> StatusLine(str(R.string.not_analysable_dot, status), null) {}
         }
         Timeline(
             durationMs = duration, positionMs = position,
@@ -89,14 +92,14 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
         )
         // Nothing found or marked: one line and the two marks, instead of two empty blocks.
         if (segments.active(SegmentKind.INTRO) == null && segments.active(SegmentKind.OUTRO) == null && pending.isEmpty()) {
-            if (status == "ok") Text("Nessuna intro né finale trovati.", style = MaterialTheme.typography.bodyMedium,
+            if (status == "ok") Text(str(R.string.intro_none_found), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { pending[SegmentKind.INTRO] = position }) {
-                    com.cripta.app.ui.components.ButtonText("Intro da qui (${clock(position)})")
+                    com.cripta.app.ui.components.ButtonText(str(R.string.intro_from_here, clock(position)))
                 }
                 FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { pending[SegmentKind.OUTRO] = position }) {
-                    com.cripta.app.ui.components.ButtonText("Finale da qui (${clock(position)})")
+                    com.cripta.app.ui.components.ButtonText(str(R.string.ending_from_here, clock(position)))
                 }
             }
         } else for (kind in SegmentKind.entries) {
@@ -123,10 +126,10 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     rejecting?.let { (kind, seg) ->
         CriptaAlertDialog(
             onDismissRequest = { rejecting = null },
-            title = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro" else "Non è un finale") },
-            text = { Text("Scartare questo tratto solo in questo video, o in tutti i video in cui compare (anche in quelli futuri)?") },
-            confirmButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, true); rejecting = null }) { com.cripta.app.ui.components.ButtonText("In tutti i video") } },
-            dismissButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, false); rejecting = null }) { com.cripta.app.ui.components.ButtonText("Solo qui") } },
+            title = { Text(if (kind == SegmentKind.INTRO) str(R.string.not_an_intro) else str(R.string.not_an_ending)) },
+            text = { Text(str(R.string.discard_stretch_q)) },
+            confirmButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, true); rejecting = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.in_all_videos)) } },
+            dismissButton = { TextButton(onClick = { vm.rejectSegment(file, kind, seg, false); rejecting = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.only_here)) } },
         )
     }
 }
@@ -158,10 +161,10 @@ private fun Timeline(
     val track = MaterialTheme.colorScheme.surfaceVariant
     val head = MaterialTheme.colorScheme.onSurface
     val desc = buildString {
-        append("Barra del video, posizione ${clock(positionMs)} di ${clock(durationMs)}")
-        intro?.let { append(", intro ${clock(it.startMs)}–${clock(it.endMs)}") }
-        outro?.let { append(", finale ${clock(it.startMs)}–${clock(it.endMs)}") }
-        append(". Tocca per spostare il video.")
+        append(str(R.string.seek_bar_desc, clock(positionMs), clock(durationMs)))
+        intro?.let { append(str(R.string.seek_bar_intro, clock(it.startMs), clock(it.endMs))) }
+        outro?.let { append(str(R.string.seek_bar_ending, clock(it.startMs), clock(it.endMs))) }
+        append(str(R.string.seek_bar_tap))
     }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Canvas(
@@ -204,7 +207,7 @@ private fun SegmentBlock(
     onSearch: (MediaSegmentEntity) -> Unit, onApplyToAll: () -> Unit,
     onReject: (MediaSegmentEntity) -> Unit, onRemove: () -> Unit,
 ) {
-    val name = if (kind == SegmentKind.INTRO) "Intro" else "Finale"
+    val name = if (kind == SegmentKind.INTRO) str(R.string.intro) else str(R.string.ending)
     // Intro is feminine, finale masculine: "trovata" / "trovato".
     val a = if (kind == SegmentKind.INTRO) "a" else "o"
     val active = seg?.takeIf { it.source != "none" && it.endMs > it.startMs }
@@ -222,35 +225,35 @@ private fun SegmentBlock(
                     Text(
                         when {
                             active != null -> "${clock(active.startMs)}–${clock(active.endMs)} · " + when {
-                                active.source == "auto" && active.autoStartMs != null -> "trovat$a e allungat$a"
-                                active.source == "auto" -> "trovat$a"
-                                active.autoStartMs != null -> "spostat$a da te (il suono era ${clock(active.autoStartMs)}–${clock(active.autoEndMs ?: 0)})"
-                                else -> "segnat$a da te"
+                                active.source == "auto" && active.autoStartMs != null -> str(if (a == "a") R.string.seg_found_extended_f else R.string.seg_found_extended_m)
+                                active.source == "auto" -> str(if (a == "a") R.string.seg_found_f else R.string.seg_found_m)
+                                active.autoStartMs != null -> str(if (a == "a") R.string.seg_moved_f else R.string.seg_moved_m, clock(active.autoStartMs), clock(active.autoEndMs ?: 0))
+                                else -> str(if (a == "a") R.string.seg_marked_f else R.string.seg_marked_m)
                             }
-                            seg?.source == "none" -> "Nessun$a (scelta tua)"
-                            else -> "Non trovat$a"
+                            seg?.source == "none" -> str(if (a == "a") R.string.seg_none_f else R.string.seg_none_m)
+                            else -> str(if (a == "a") R.string.seg_not_found_f else R.string.seg_not_found_m)
                         },
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (active != null && signature != null) {
-                        Text("Sigla: $signature", style = MaterialTheme.typography.labelMedium, color = color)
+                        Text(str(R.string.signature_is, signature), style = MaterialTheme.typography.labelMedium, color = color)
                     }
                 }
                 if (active != null) {
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, "Altre azioni per $name") }
+                        IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.more_actions_for, name)) }
                         DropdownMenu(expanded = menu && vaultUnlocked(), onDismissRequest = { menu = false }) {
                             // Bounds moved away from the detected sound: the same move for the whole series.
                             if (active.source == "manual" && active.autoStartMs != null && active.autoEndMs != null &&
                                 (active.startMs != active.autoStartMs || active.endMs != active.autoEndMs)) DropdownMenuItem(
-                                text = { Text("Applica a tutti i video con la stessa sigla") },
+                                text = { Text(str(R.string.apply_same_signature)) },
                                 onClick = { menu = false; onApplyToAll() })
-                            DropdownMenuItem(text = { Text("Segna di nuovo da ${clock(positionMs)}") }, onClick = { menu = false; onMarkStart() })
-                            DropdownMenuItem(text = { Text("Cerca negli altri video") }, onClick = { menu = false; onSearch(active) })
+                            DropdownMenuItem(text = { Text(str(R.string.mark_again_from, clock(positionMs))) }, onClick = { menu = false; onMarkStart() })
+                            DropdownMenuItem(text = { Text(str(R.string.search_other_videos)) }, onClick = { menu = false; onSearch(active) })
                             if (active.source == "auto") DropdownMenuItem(
-                                text = { Text(if (kind == SegmentKind.INTRO) "Non è un'intro…" else "Non è un finale…") },
+                                text = { Text(if (kind == SegmentKind.INTRO) str(R.string.not_an_intro_more) else str(R.string.not_an_ending_more)) },
                                 onClick = { menu = false; onReject(active) })
-                            DropdownMenuItem(text = { Text("Rimuovi") }, onClick = { menu = false; onRemove() })
+                            DropdownMenuItem(text = { Text(str(R.string.remove)) }, onClick = { menu = false; onRemove() })
                         }
                     }
                 }
@@ -261,21 +264,21 @@ private fun SegmentBlock(
                 when {
                     pendingStart != null -> {
                         FilledTonalButton(onClick = { onMarkEnd(pendingStart) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                            com.cripta.app.ui.components.ButtonText("Fine qui (da ${clock(pendingStart)})")
+                            com.cripta.app.ui.components.ButtonText(str(R.string.end_here_from, clock(pendingStart)))
                         }
-                        IconButton(onClick = onCancelMark) { Icon(CriptaIcons.Close, "Annulla il segno") }
+                        IconButton(onClick = onCancelMark) { Icon(CriptaIcons.Close, str(R.string.cancel_mark)) }
                     }
                     active == null -> FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = onMarkStart) {
-                        com.cripta.app.ui.components.ButtonText("$name da qui (${clock(positionMs)})")
+                        com.cripta.app.ui.components.ButtonText(str(R.string.x_from_here, name, clock(positionMs)))
                     }
                     else -> {
                         FilledTonalButton(modifier = Modifier.heightIn(min = 48.dp), onClick = { onTry(active) }) {
                             Icon(CriptaIcons.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                            com.cripta.app.ui.components.ButtonText("Prova")
+                            com.cripta.app.ui.components.ButtonText(str(R.string.try_))
                         }
                         Spacer(Modifier.width(4.dp))
                         TextButton(onClick = { trimming = !trimming }) {
-                            com.cripta.app.ui.components.ButtonText(if (trimming) "Fine regolazione" else "Regola")
+                            com.cripta.app.ui.components.ButtonText(if (trimming) str(R.string.done_adjusting) else str(R.string.adjust))
                         }
                     }
                 }
@@ -286,8 +289,8 @@ private fun SegmentBlock(
                 exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
                     androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(120))) {
                 if (active != null) Column {
-                    Trim("Inizio", active.startMs) { d -> onNudge(active, d, 0) }
-                    Trim("Fine", active.endMs) { d -> onNudge(active, 0, d) }
+                    Trim(str(R.string.start), active.startMs) { d -> onNudge(active, d, 0) }
+                    Trim(str(R.string.end), active.endMs) { d -> onNudge(active, 0, d) }
                 }
             }
         }
@@ -301,9 +304,10 @@ private fun Trim(label: String, ms: Long, onDelta: (Long) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("$label ${clockTenths(ms)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 92.dp))
         ChipFlowRow(gap = 4.dp) {
-            for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−0,1 s", 100L to "+0,1 s", 1_000L to "+1 s")) {
+            val tenth = String.format(com.cripta.app.Strings.locale, "%.1f", 0.1)
+            for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−$tenth s", 100L to "+$tenth s", 1_000L to "+1 s")) {
                 TextButton(onClick = { onDelta(d) }, contentPadding = PaddingValues(horizontal = 6.dp),
-                    modifier = Modifier.semantics { contentDescription = "$label ${if (d < 0) "indietro" else "avanti"} di ${t.trimStart('−', '+').removeSuffix(" s")} secondi" }) {
+                    modifier = Modifier.semantics { contentDescription = str(if (d < 0) R.string.trim_back else R.string.trim_forward, label, t.trimStart('−', '+').removeSuffix(" s")) }) {
                     com.cripta.app.ui.components.ButtonText(t)
                 }
             }
@@ -316,5 +320,6 @@ private fun clock(ms: Long): String = com.cripta.app.ui.components.formatDuratio
 /** m:ss,d: the trim moves by tenths of a second. */
 private fun clockTenths(ms: Long): String {
     val s = ms / 1000
-    return "%d:%02d,%d".format(s / 60, s % 60, (ms % 1000) / 100)
+    val sep = java.text.DecimalFormatSymbols.getInstance(com.cripta.app.Strings.locale).decimalSeparator
+    return "%d:%02d%c%d".format(s / 60, s % 60, sep, (ms % 1000) / 100)
 }

@@ -1,5 +1,8 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.cripta.app.ui.components.CriptaAlertDialog
 import android.graphics.Matrix
 import android.view.TextureView
@@ -178,15 +181,15 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
                     // One clip per face: its player and its view come and go together (the view of
                     // the first face kept showing it, and the next players had nowhere to draw).
                     if (f != null) key(card.id) {
-                        MomentClip(f, card, zoom, vm, Modifier.fillMaxWidth().clickable(onClickLabel = "Apri il media") { onOpen(card) })
+                        MomentClip(f, card, zoom, vm, Modifier.fillMaxWidth().clickable(onClickLabel = str(R.string.open_media)) { onOpen(card) })
                     }
                     Text(caption, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            com.cripta.app.ui.components.ChoiceChip(selected = !zoom, onClick = { zoom = false }, label = { Text("Scena") })
-            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { Text("Volto") })
+            com.cripta.app.ui.components.ChoiceChip(selected = !zoom, onClick = { zoom = false }, label = { Text(str(R.string.face_scene)) })
+            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { Text(str(R.string.face_face)) })
         }
     }
 }
@@ -196,7 +199,7 @@ private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(s / 60, 
 /** Two media chosen on a person's page, their faces side by side. */
 @Composable
 internal fun CompareDialog(a: TrackCard, b: TrackCard, o: FaceRepository.Overview, vm: SettingsViewModel, onClose: () -> Unit) {
-    CriptaAlertDialog(onDismissRequest = onClose, title = { Text("Confronto") },
+    CriptaAlertDialog(onDismissRequest = onClose, title = { Text(str(R.string.face_compare)) },
         text = { FacePair(a, b, clockOf(a.timeMs), clockOf(b.timeMs), o, vm) {} },
-        confirmButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText("Chiudi") } })
+        confirmButton = { TextButton(onClick = onClose) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
 }

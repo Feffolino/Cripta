@@ -1,5 +1,8 @@
 package com.cripta.app.data
 
+import com.cripta.app.R
+import com.cripta.app.str
+
 import com.google.crypto.tink.StreamingAead
 import com.google.crypto.tink.subtle.AesGcmHkdfStreaming
 import java.io.DataInputStream
@@ -54,7 +57,7 @@ internal object BackupCrypto {
     fun decryptingStream(raw: InputStream, passphrase: CharArray): InputStream {
         val din = DataInputStream(raw)
         val iterations = din.readInt()
-        require(iterations in 100_000..10_000_000) { "Formato non valido" }
+        require(iterations in 100_000..10_000_000) { str(R.string.err_bad_format) }
         val salt = ByteArray(SALT_LEN).also { din.readFully(it) }
         val header = Header(iterations, salt)
         return aead(passphrase, header).newDecryptingStream(raw, header.bytes())

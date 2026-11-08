@@ -5,12 +5,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import android.app.Application
+import org.junit.Before
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
+// The texts compared here are the Italian ones (res/values-it).
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class, qualifiers = "it")
 class BackupScopeTest {
+    @Before
+    fun texts() = com.cripta.app.Strings.init(RuntimeEnvironment.getApplication())
+
     // 1 and 4 are top-level; 2 is in 1, 3 is in 2; 9's parent is gone.
     private val parents = mapOf(1L to null, 2L to 1L, 3L to 2L, 4L to null, 9L to 77L)
 

@@ -1,5 +1,9 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.R
+import com.cripta.app.str
+import com.cripta.app.plural
+
 import kotlinx.coroutines.sync.withLock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,12 +36,12 @@ sealed interface ViewerState {
 
 /** Italian, user-facing text for a failure to open a file (never the raw exception message). */
 internal fun friendlyOpenError(t: Throwable): String = when (t) {
-    is OutOfMemoryError -> "Il file è troppo grande per l'anteprima. Esportalo sul dispositivo per aprirlo con un'altra app."
+    is OutOfMemoryError -> str(R.string.viewer_too_big)
     is java.security.GeneralSecurityException ->
-        "Impossibile decifrare il file: i dati potrebbero essere danneggiati."
-    is java.io.FileNotFoundException -> "Il contenuto cifrato del file non è stato trovato."
-    is java.io.IOException -> "Errore di lettura del file. Riprova."
-    else -> "Impossibile aprire il file. Riprova."
+        str(R.string.viewer_decrypt_failed)
+    is java.io.FileNotFoundException -> str(R.string.viewer_content_missing)
+    is java.io.IOException -> str(R.string.viewer_read_error)
+    else -> str(R.string.viewer_open_failed)
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -95,7 +99,7 @@ class ViewerViewModel @Inject constructor(
         val file = repo.fileById(id)
         when {
             // Trashed counts as gone (a note deleted from its editor stayed open here, editable).
-            file == null || file.deletedAt != null -> ViewerState.Error("Questo file non è più nel vault.", missing = true)
+            file == null || file.deletedAt != null -> ViewerState.Error(str(R.string.viewer_gone), missing = true)
             VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, repo.decryptBytes(file))
             VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
             VaultRepository.isNote(file.mimeType) -> ViewerState.Note(file, repo.noteText(file))
@@ -197,7 +201,7 @@ class ViewerViewModel @Inject constructor(
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
     private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
-            faceMessage.value = "Operazione non riuscita: " + com.cripta.app.work.UserErrors.of(e)
+            faceMessage.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
         }
     }
     fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
@@ -228,8 +232,8 @@ class ViewerViewModel @Inject constructor(
     /** "Elimina": faces found by mistake, not found again here; [everywhere] ("Non è un volto"): nowhere. */
     fun deleteFaces(fileId: String, trackIds: Collection<Long>, everywhere: Boolean = false) = faceAction {
         val u = faces.deleteFaces(trackIds, everywhere)
-        val what = if (trackIds.size == 1) "Volto eliminato" else "${trackIds.size} volti eliminati"
-        faceUndo.value = FaceUndo(fileId, if (everywhere) "$what ovunque" else what, u)
+        val what = plural(R.plurals.faces_deleted, trackIds.size)
+        faceUndo.value = FaceUndo(fileId, if (everywhere) str(R.string.x_everywhere, what) else what, u)
     }
     /** "Mostra tutte" in the details' tags: kept for every media until "Mostra meno". */
     val detailsAllTags: StateFlow<Boolean> = settingsStore.settings.map { it.detailsAllTags }
@@ -237,13 +241,13 @@ class ViewerViewModel @Inject constructor(
     fun setDetailsAllTags(v: Boolean) = viewModelScope.launch { settingsStore.setDetailsAllTags(v) }
     /** "Togli": [fileId], added to [personId] by hand, is not theirs any more. */
     fun unlinkPerson(fileId: String, personId: Long) = faceAction {
-        faceUndo.value = FaceUndo(fileId, "Tolto dalla persona", faces.unlink(personId, fileId))
+        faceUndo.value = FaceUndo(fileId, str(R.string.face_removed_from_person), faces.unlink(personId, fileId))
     }
     /** "Stessa persona": faces of [fileId] that are one person become one. */
     fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
         val u = faces.mergeFaces(trackIds)
-        if (u == null) faceMessage.value = "Questi volti sono di persone diverse. Togli prima il volto sbagliato dalla sua persona."
-        else faceUndo.value = FaceUndo(fileId, "Volti uniti", u)
+        if (u == null) faceMessage.value = str(R.string.faces_different_people)
+        else faceUndo.value = FaceUndo(fileId, str(R.string.faces_joined), u)
     }
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
     fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
@@ -266,8 +270,8 @@ class ViewerViewModel @Inject constructor(
         alsoFaces.value = null
         if (picked.isNotEmpty()) {
             val u = faces.mergeFaces(listOf(a.trackId) + picked)
-            if (u == null) faceMessage.value = "Questi volti sono di persone diverse. Togli prima il volto sbagliato dalla sua persona."
-            else faceUndo.value = FaceUndo(a.fileId, "Volti uniti", u)
+            if (u == null) faceMessage.value = str(R.string.faces_different_people)
+            else faceUndo.value = FaceUndo(a.fileId, str(R.string.faces_joined), u)
         }
         lookCloser(listOf(a.trackId))
     }
@@ -282,8 +286,8 @@ class ViewerViewModel @Inject constructor(
     /** "Dividi": the faces of [trackId] at [moments] are someone else. */
     fun splitFace(fileId: String, trackId: Long, moments: Set<Long>) = faceAction {
         val u = faces.splitFace(trackId, moments)
-        if (u == null) faceMessage.value = "Scegli alcuni momenti, non tutti."
-        else faceUndo.value = FaceUndo(fileId, "Volto diviso", u)
+        if (u == null) faceMessage.value = str(R.string.faces_pick_some)
+        else faceUndo.value = FaceUndo(fileId, str(R.string.face_split), u)
     }
     /** "Aggiungi un volto": the faces at the player's spot (null: none asked, empty: still looking or none). */
     val foundFaces = MutableStateFlow<List<com.cripta.app.data.face.FaceRepository.FoundFace>?>(null)
@@ -348,16 +352,16 @@ class ViewerViewModel @Inject constructor(
     fun applySegmentToAll(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
         val n = runCatching { intro.applyToAll(file, kind) }.getOrNull()
         _message.value = when {
-            n == null -> "Questo segmento non ha un suono rilevato da cercare: parti da uno trovato dall'analisi"
-            n == 0 -> "Regola salvata: varrà per i video con questo suono analizzati in futuro"
-            else -> "Applicato ad altri $n video, e varrà anche per quelli futuri"
+            n == null -> str(R.string.segment_no_sound)
+            n == 0 -> str(R.string.rule_saved)
+            else -> str(R.string.rule_applied_n, n)
         }
     }
 
     /** "Analizza ora" from the details panel. */
     fun analyzeIntro(file: FileEntity) {
         com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true, fileIds = listOf(file.id))
-        _message.value = "Analisi avviata: l'esito arriva in una notifica"
+        _message.value = str(R.string.analysis_started)
     }
 
     /** Ritocco: move a segment's bounds by [startDelta] / [endDelta] ms, kept inside the video and apart. */
@@ -372,7 +376,7 @@ class ViewerViewModel @Inject constructor(
 
     /** "Fine qui". False when the end would not come after the start. */
     fun markEnd(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, startMs: Long, posMs: Long): Boolean {
-        if (posMs < startMs + MIN_MARK_MS) { _message.value = "La fine deve venire dopo l'inizio"; return false }
+        if (posMs < startMs + MIN_MARK_MS) { _message.value = str(R.string.end_after_start); return false }
         viewModelScope.launch { intro.setManual(file.id, kind, startMs, posMs) }
         return true
     }
@@ -384,9 +388,9 @@ class ViewerViewModel @Inject constructor(
         viewModelScope.launch {
             val n = intro.searchOthers(file.id, kind, seg.startMs, seg.endMs)
             _message.value = when {
-                n == null -> "Tratto troppo corto, o video non ancora analizzato"
-                n == 0 -> "Non trovato in altri video"
-                else -> "Trovato in $n video"
+                n == null -> str(R.string.stretch_too_short)
+                n == 0 -> str(R.string.not_found_elsewhere)
+                else -> str(R.string.found_in_n, n)
             }
         }
 
@@ -395,7 +399,7 @@ class ViewerViewModel @Inject constructor(
         viewModelScope.launch {
             if (!everywhere) { intro.setNone(file.id, kind); return@launch }
             val n = intro.rejectEverywhere(file, kind, seg.startMs, seg.endMs)
-            _message.value = if (n > 0) "Scartato qui e in altri $n video" else "Scartato in tutti i video"
+            _message.value = if (n > 0) str(R.string.discarded_here_and_n, n) else str(R.string.discarded_everywhere)
         }
 
     /**
@@ -459,7 +463,7 @@ class ViewerViewModel @Inject constructor(
     fun download(file: FileEntity) {
         // Run decryption in the foreground service so it survives backgrounding and shows progress.
         com.cripta.app.work.ConversionService.startDownload(appContext, listOf(file.id))
-        _message.value = "Esportazione avviata in ${exportFolder(file.mimeType)}"
+        _message.value = str(R.string.export_started_in, exportFolder(file.mimeType))
     }
 
     fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
@@ -467,12 +471,12 @@ class ViewerViewModel @Inject constructor(
         try {
             val trashed = repo.deleteOrTrash(fileId)
             if (!trashed) thumbs.evict(fileId)
-            _message.value = if (trashed) "Spostato nel cestino" else "File eliminato"
+            _message.value = if (trashed) str(R.string.moved_to_trash) else str(R.string.file_deleted)
             onDone()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (_: Exception) {
-            _message.value = "Impossibile eliminare il file. Riprova."
+            _message.value = str(R.string.delete_failed)
         }
     }
 
@@ -482,9 +486,9 @@ class ViewerViewModel @Inject constructor(
 
         /** Where an export lands on the device (mirrors VaultRepository.restoreToGallery). */
         fun exportFolder(mimeType: String): String = when {
-            VaultRepository.isImage(mimeType) -> "Immagini › Cripta (Pictures/Cripta)"
-            VaultRepository.isVideo(mimeType) -> "Video › Cripta (Movies/Cripta)"
-            else -> "Download › Cripta (Download/Cripta)"
+            VaultRepository.isImage(mimeType) -> str(R.string.export_dest_pictures)
+            VaultRepository.isVideo(mimeType) -> str(R.string.export_dest_movies)
+            else -> str(R.string.export_dest_downloads)
         }
     }
 
@@ -534,7 +538,7 @@ class ViewerViewModel @Inject constructor(
                     _convertedId.value = event.newId
                     _convertedOriginalId.value = event.originalId
                 } else {
-                    _message.value = "Convertito in MP4"
+                    _message.value = str(R.string.converted_mp4)
                     // Replaced: the original is in the trash now (a missing page), its copy takes
                     // its place, so the viewer shows the MP4 instead of moving on or closing.
                     val i = liveIds.indexOf(event.originalId)
@@ -559,11 +563,11 @@ class ViewerViewModel @Inject constructor(
     fun convertToMp4(file: FileEntity, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
         if (rememberChoice) viewModelScope.launch { settingsStore.setConvertAfter(after) }
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id, after)
-        _message.value = "Conversione avviata: prosegue in background"
+        _message.value = str(R.string.conversion_started)
     }
 
     fun convertToMp4(file: FileEntity) {
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id)
-        _message.value = "Conversione avviata: prosegue in background"
+        _message.value = str(R.string.conversion_started)
     }
 }
