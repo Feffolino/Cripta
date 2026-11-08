@@ -469,7 +469,7 @@
     <string name="icon_none">Sin icono</string>
     <string name="icon">Icono</string>
     <string name="icon_all">Todos los iconos</string>
-    <string name="icon_search_hint">Buscar: heart, sea, cat, pizza…</string>
+    <string name="icon_search_hint">Buscar en inglés: heart, sea, cat, pizza…</string>
     <string name="icon_none_for">Ningún icono para «%1$s». Prueba otra palabra.</string>
     <string name="icon_for">Para «%1$s»</string>
     <string name="icon_most_used">Más usados</string>
@@ -872,8 +872,8 @@
     <string name="faces_now">Rostros de este momento</string>
     <string name="faces_searching_later">Buscando rostros, también en los segundos siguientes…</string>
     <string name="faces_searching">Buscando rostros…</string>
-    <string name="faces_none_video">No se encontró ningún rostro aquí ni en los siguientes 15 segundos: pausa donde se vea claramente el rostro y reinténtalo. También puedes añadir el archivo a una persona sin un rostro.</string>
-    <string name="faces_none_photo">No se encontró ningún rostro. También puedes añadir el archivo a una persona sin un rostro.</string>
+    <string name="faces_none_video">No se encontró ningún rostro aquí ni en los siguientes 15 segundos: pausa donde se vea claramente el rostro y reinténtalo. También puedes añadir el archivo a una persona sin seleccionar un rostro.</string>
+    <string name="faces_none_photo">No se encontró ningún rostro. También puedes añadir el archivo a una persona sin seleccionar un rostro.</string>
     <string name="faces_a_bit_later">No hay rostros aquí: estos están un poco más adelante.</string>
     <string name="faces_tap_to_add">Toca el rostro que quieras añadir. Así la persona también se reconocerá con este aspecto.</string>
     <string name="search_further">Buscar más adelante</string>
@@ -1135,7 +1135,7 @@
     <string name="collapse">Contraer</string>
     <string name="expand">Expandir</string>
     <string name="technical_details">Detalles técnicos</string>
-    <string name="intro_page_intro">Cripta reconoce las cabeceras y finales comparando el audio de los vídeos de la caja fuerte, en cualquier carpeta. Para marcarlos a mano, abre un vídeo y desliza hacia arriba: la sección está debajo de las etiquetas.</string>
+    <string name="intro_page_intro">Cripta reconoce las intros y los finales comparando el audio de los vídeos de la caja fuerte, en cualquier carpeta. Para marcarlos a mano, abre un vídeo y desliza hacia arriba: la sección está debajo de las etiquetas.</string>
     <string name="skipping">Salto</string>
     <string name="skip_intro_auto">Saltar la intro automáticamente</string>
     <string name="skip_intro_auto_on">El vídeo la salta solo; «Deshacer» vuelve atrás.</string>
@@ -1145,8 +1145,8 @@
     <string name="analyse_new_videos">Analizar vídeos nuevos</string>
     <string name="analyse_new_videos_desc">Tras cada importación, descarga o conversión, en segundo plano.</string>
     <string name="quick_analysis">Análisis rápido</string>
-    <string name="quick_analysis_on">Solo el primer y último minuto de cada vídeo: mucho más rápido, pero no encuentra cabeceras que empiecen después del primer minuto.</string>
-    <string name="quick_analysis_off">Los primeros 10 y últimos 5 minutos de cada vídeo: encuentra más cabeceras, pero es mucho más lento.</string>
+    <string name="quick_analysis_on">Solo el primer y último minuto de cada vídeo: mucho más rápido, pero no encuentra intros que empiecen después del primer minuto.</string>
+    <string name="quick_analysis_off">Los primeros 10 y últimos 5 minutos de cada vídeo: encuentra más intros y finales, pero es mucho más lento.</string>
     <string name="analyse_existing">Analizar vídeos existentes</string>
     <string name="analysis_running">Análisis en curso…</string>
     <string name="reading_state">Leyendo el estado…</string>
@@ -1179,20 +1179,20 @@
     <string name="comparing_sounds">Comparando los sonidos…</string>
     <string name="no_signatures">Sin huellas de audio.</string>
     <string name="remove_from_signature">Quitar %1$s de esta huella de audio</string>
-    <string name="results_none_with">Ningún vídeo con intro o final. Se necesitan al menos dos vídeos con el mismo audio; con el análisis rápido, la cabecera debe estar en el primer minuto.</string>
+    <string name="results_none_with">Ningún vídeo con intro o final. Se necesitan al menos dos vídeos con el mismo audio; con el análisis rápido, la intro debe estar en el primer minuto.</string>
     <string name="results_none_without">Todos los vídeos analizados tienen intro o final.</string>
     <string name="results_none_skipped">No hay vídeos imposibles de analizar.</string>
     <string name="rename_signature">Renombrar la huella de audio</string>
     <string name="merge_signatures_q">¿Unir %1$s huellas de audio?</string>
     <string name="merge_signatures_hint">Se convierten en una sola huella de audio que reconoce todos sus sonidos (%1$s vídeos). Nombre:</string>
     <plurals name="not_a_theme_q">
-        <item quantity="one">¿No es una cabecera?</item>
-        <item quantity="many">¿%1$s huellas de audio no son cabeceras?</item>
-        <item quantity="other">¿%1$s huellas de audio no son cabeceras?</item>
+        <item quantity="one">¿No es una intro ni un final?</item>
+        <item quantity="many">¿Estas %1$s huellas de audio no son intros ni finales?</item>
+        <item quantity="other">¿Estas %1$s huellas de audio no son intros ni finales?</item>
     </plurals>
     <string name="not_a_theme_text">%1$s vídeos pierden este segmento (se conservan los marcados a mano) y el sonido no volverá a detectarse. Se puede deshacer desde Mantenimiento › Segmentos descartados.</string>
-    <string name="signature_name_hint">P. ej., cabecera de One Piece</string>
-    <string name="theme_length">Duración de la cabecera</string>
+    <string name="signature_name_hint">P. ej., intro de One Piece</string>
+    <string name="theme_length">Duración de intro o final</string>
     <string name="theme_length_text">El sonido reconocido dura unos %1$s. Ajusta el inicio y el final respecto al sonido: se aplica a los %2$s vídeos de la huella de audio y a los futuros (se conservan las marcas manuales).</string>
     <string name="apply">Aplicar</string>
     <string name="intro_none_nor_ending">Sin intro ni final</string>
@@ -1201,7 +1201,7 @@
     <string name="signature_deltas">" · inicio %1$s, fin %2$s"</string>
     <string name="signature_actions">Acciones de la huella de audio</string>
     <string name="merge_with_others">Unir con otras…</string>
-    <string name="not_a_theme">No es una cabecera</string>
+    <string name="not_a_theme">No es una intro ni un final</string>
     <string name="marked_by_you_f">" · marcada por ti"</string>
     <string name="people_page_intro">Cripta encuentra los rostros de fotos y vídeos, en cualquier carpeta; tú indicas quiénes son desde los detalles de cada archivo. Todo ocurre en el teléfono: los rostros y las personas se guardan en la base de datos cifrada.</string>
     <string name="see_people">Ver las personas</string>
