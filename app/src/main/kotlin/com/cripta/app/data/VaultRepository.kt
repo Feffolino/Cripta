@@ -16,6 +16,7 @@ import com.cripta.crypto.FileCrypto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1676,6 +1677,9 @@ class VaultRepository @Inject constructor(
         coverFiles: MutableList<java.io.File>,
         onSettings: (ByteArray) -> Unit,
     ): RestoreReport {
+        // Leave 16 MiB for database writes and encryption overhead on the blob partition.
+        val quota = RestoreQuota((context.filesDir.usableSpace - 16L * 1024 * 1024).coerceAtLeast(0),
+            currentCoroutineContext()[Job])
         // Folders: remap old ids to new, inserting parents before children.
         val fArr = manifest.getJSONArray("folders")
         val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
@@ -1735,29 +1739,10 @@ class VaultRepository @Inject constructor(
             val o = fileArr.getJSONObject(i)
             currentCoroutineContext().ensureActive()
             val stored = inp.readLong()
-            // Negative = deflated document (v3): -(compressed size) - 1.
-            val zipped = stored < 0
-            val storedLen = if (zipped) -(stored + 1) else stored
-            require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { str(R.string.file_corrupt) }
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
             written += uuid
-            val len = try {
-                blobs.durableOutput(blobs.blob(uuid)).use { out ->
-                    FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
-                        if (zipped) {
-                            val z = ByteArray(storedLen.toInt()); inp.readFully(z)
-                            java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { it.copyTo(enc) }
-                        } else {
-                            val copied = copyAtMost(inp, enc, storedLen)
-                            if (copied != storedLen) throw java.io.IOException(str(R.string.err_backup_truncated))
-                            copied
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                blobs.shred(uuid); throw e
-            }
+            val len = restoreBlob(blobs, uuid, wrapped, dek, inp, stored, quota)
             val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
             val entity = FileEntity(
                 id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
@@ -1833,25 +1818,6 @@ class VaultRepository @Inject constructor(
     /** The backup could not be opened: wrong passphrase, or not a Cripta backup. */
     class WrongPassphraseException(cause: Throwable) : Exception(str(R.string.err_wrong_passphrase_or_invalid), cause)
 
-    /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
-    private fun copyAtMost(
-        input: java.io.InputStream,
-        output: java.io.OutputStream,
-        limit: Long,
-        onBytes: (Int) -> Unit = {},
-    ): Long {
-        val buf = ByteArray(DEFAULT_BUFFER_SIZE * 8)
-        var left = limit
-        while (left > 0) {
-            val n = input.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
-            if (n < 0) break
-            output.write(buf, 0, n)
-            left -= n
-            onBytes(n)
-        }
-        return limit - left
-    }
-
     /** Key of a v1-v3 archive (restore only: new ones use [BackupCrypto]). */
     private fun deriveBackupKey(passphrase: CharArray, salt: ByteArray): javax.crypto.SecretKey {
         val spec = javax.crypto.spec.PBEKeySpec(passphrase, salt, 210_000, 256)
@@ -1917,10 +1883,65 @@ class VaultRepository @Inject constructor(
 
     suspend fun noteText(file: FileEntity): String = String(decryptBytes(file))
 
+    internal class RestoreQuota(private var left: Long, private val job: Job? = null) {
+        fun take(n: Int) {
+            job?.ensureActive()
+            if (n > left) throw java.io.IOException("ENOSPC: restore larger than the free space")
+            left -= n
+        }
+    }
+
     companion object {
         private val BACKUP_MAGIC = "CRIPTABK".toByteArray()
         /** Largest document compressed in a backup (it is deflated in memory). */
-        private const val MAX_COMPRESSED_DOC = 32L * 1024 * 1024
+        internal const val MAX_COMPRESSED_DOC = 32L * 1024 * 1024
+
+        internal fun restoreBlob(
+            blobs: BlobStore, uuid: String, wrapped: ByteArray, dek: com.google.crypto.tink.Aead,
+            inp: java.io.DataInputStream, stored: Long, quota: RestoreQuota,
+        ): Long = try {
+            // Negative = deflated document (v3): -(compressed size) - 1.
+            val zipped = stored < 0
+            val storedLen = if (zipped) -(stored + 1) else stored
+            require(storedLen in 0..(if (zipped) MAX_COMPRESSED_DOC * 2 else Long.MAX_VALUE)) { str(R.string.file_corrupt) }
+            blobs.durableOutput(blobs.blob(uuid)).use { out ->
+                FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
+                    if (zipped) {
+                        val z = ByteArray(storedLen.toInt()); inp.readFully(z)
+                        java.util.zip.InflaterInputStream(java.io.ByteArrayInputStream(z)).use { input ->
+                            val copied = copyAtMost(input, enc, MAX_COMPRESSED_DOC, quota::take)
+                            if (input.read() != -1) throw java.io.IOException(str(R.string.file_corrupt))
+                            copied
+                        }
+                    } else {
+                        val copied = copyAtMost(inp, enc, storedLen, quota::take)
+                        if (copied != storedLen) throw java.io.IOException(str(R.string.err_backup_truncated))
+                        copied
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            blobs.shred(uuid); throw e
+        }
+
+        /** Copy up to [limit] bytes from [input] to [output]; returns how many were copied. */
+        private fun copyAtMost(
+            input: java.io.InputStream,
+            output: java.io.OutputStream,
+            limit: Long,
+            onBytes: (Int) -> Unit = {},
+        ): Long {
+            val buf = ByteArray(DEFAULT_BUFFER_SIZE * 8)
+            var left = limit
+            while (left > 0) {
+                val n = input.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                if (n < 0) break
+                onBytes(n)
+                output.write(buf, 0, n)
+                left -= n
+            }
+            return limit - left
+        }
 
         /** Worth deflating in a backup: not media, not an archive / already-compressed format. */
         fun compressibleInBackup(mime: String, size: Long): Boolean {
