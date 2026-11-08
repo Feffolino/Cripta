@@ -194,7 +194,7 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
     }
 }
 
-private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(s / 60, s % 60) }
+private fun clockOf(ms: Long) = (ms / 1000).let { s -> "%d:%02d".format(com.cripta.app.Strings.locale, s / 60, s % 60) }
 
 /** Two media chosen on a person's page, their faces side by side. */
 @Composable

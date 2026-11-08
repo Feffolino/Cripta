@@ -98,7 +98,7 @@ internal fun TrashDialog(
     var folderSheet by remember { mutableStateOf<com.cripta.app.data.db.FolderEntity?>(null) }
     // Path of opened trashed folders (empty = top level of the trash).
     val path = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
-    val fmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM) }
+    val fmt = remember(com.cripta.app.Strings.locale) { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale) }
     val trashedIds = remember(folders) { folders.map { it.id }.toSet() }
     val byId = remember(folders) { folders.associateBy { it.id } }
     // A restored/destroyed folder disappears: drop it (and what's below) from the path.

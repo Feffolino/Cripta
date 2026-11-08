@@ -245,7 +245,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
             // the first one ends. The count stays the media finished.
             val share = progress.share ?: (progress.done.toFloat() / maxOf(1, progress.total))
             val exact = share * 100
-            val pct = if (exact < 10f) String.format(java.util.Locale.getDefault(), "%.1f%%", exact) else "${exact.toInt()}%"
+            val pct = if (exact < 10f) String.format(com.cripta.app.Strings.locale, "%.1f%%", exact) else String.format(com.cripta.app.Strings.locale, "%d%%", exact.toInt())
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (progress.stopping) str(R.string.n_cancelling) else str(R.string.analysis_progress, progress.done, progress.total, pct),
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -256,7 +256,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
             if (!progress.stopping) {
                 val hands = progress.inHand.ifEmpty { listOfNotNull(progress.current?.let { it to null }) }
                 for ((name, s) in hands) {
-                    Text(str(R.string.analysing_x, name) + (s?.let { " · ${(it * 100).toInt()}%" } ?: ""),
+                    Text(str(R.string.analysing_x, name) + (s?.let { String.format(com.cripta.app.Strings.locale, " · %d%%", (it * 100).toInt()) } ?: ""),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -302,8 +302,8 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                     return@Column
                 }
                 Text(str(R.string.media_analysed, x.media) + if (x.skipped > 0) str(R.string.n_unreadable_paren, x.skipped) else "")
-                if (x.videos > 0) Text(str(R.string.avg_per_video).format(x.videoMs / 1000.0 / x.videos))
-                if (x.photos > 0) Text(str(R.string.avg_per_photo).format(x.photoMs / 1000.0 / x.photos))
+                if (x.videos > 0) Text(str(R.string.avg_per_video).format(com.cripta.app.Strings.locale, x.videoMs / 1000.0 / x.videos))
+                if (x.photos > 0) Text(str(R.string.avg_per_photo).format(com.cripta.app.Strings.locale, x.photoMs / 1000.0 / x.photos))
                 Text(str(R.string.faces_found, x.faces))
                 if (x.rejects.isNotEmpty()) Text(str(R.string.set_aside_prefix) + x.rejects.entries.joinToString(", ") { "${it.value} ${it.key.label}" })
                 // The algorithm's numbers stay available, folded away under what a person needs to know.
@@ -313,7 +313,7 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 if (tech) {
                     Text(str(R.string.frames_dup_extra, x.duplicates, x.extra),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(str(R.string.sharpness_header, "%.0f".format(com.cripta.app.media.face.FaceEngine.MIN_SHARPNESS)),
+                    Text(str(R.string.sharpness_header, "%.0f".format(com.cripta.app.Strings.locale, com.cripta.app.media.face.FaceEngine.MIN_SHARPNESS)),
                         style = MaterialTheme.typography.labelLarge)
                     x.sharp.forEachIndexed { i, n ->
                         Text("  ${FaceStats.bandLabel(i)}: $n", style = MaterialTheme.typography.bodySmall,

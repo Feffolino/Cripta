@@ -105,7 +105,7 @@ class IntroRepository @Inject constructor(
         Overview(live.size, entries)
     }
 
-    private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
+    private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(com.cripta.app.Strings.locale, s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(com.cripta.app.Strings.locale, s / 60, s % 60) }
 
     /**
      * "Confronta audio" on two selected videos: how much audio their starts share and where, whatever
@@ -119,7 +119,7 @@ class IntroRepository @Inject constructor(
             ?: return@withContext str(R.string.intro_no_common_audio, secs(a), secs(b))
         val len = m.length * Fingerprint.HOP_MS / 1000
         val bits = (m.aStart until m.aEnd).sumOf { Integer.bitCount(a.hashes[it] xor b.hashes[it + m.bStart - m.aStart]) } / m.length.toDouble()
-        str(R.string.intro_compare_result).format(
+        str(R.string.intro_compare_result).format(com.cripta.app.Strings.locale,
             len, clock(a.timeOf(m.aStart)), clock(a.timeOf(m.aEnd)), clock(b.timeOf(m.bStart)), clock(b.timeOf(m.bEnd)),
             ((1 - bits / 32) * 100).toInt(), secs(a), secs(b))
     }
@@ -161,11 +161,11 @@ class IntroRepository @Inject constructor(
         val secs = m.length * Fingerprint.HOP_MS / 1000
         val other = repo.fileById(o.fileId)?.originalName ?: str(R.string.another_video)
         return when {
-            m.length < kind.minHashes -> str(R.string.intro_shared_short, other).format(secs)
-            IntroDetector.isCut(kind, p, o, m) -> str(R.string.intro_shared_cut, other).format(secs)
+            m.length < kind.minHashes -> str(R.string.intro_shared_short, other).format(com.cripta.app.Strings.locale, secs)
+            IntroDetector.isCut(kind, p, o, m) -> str(R.string.intro_shared_cut, other).format(com.cripta.app.Strings.locale, secs)
             IntroDetector.isRejected(p.hashes.copyOfRange(m.aStart, m.aEnd), dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }) ->
                 str(R.string.intro_shared_rejected, other)
-            else -> str(R.string.intro_shared_unsaved, other).format(secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
+            else -> str(R.string.intro_shared_unsaved, other).format(com.cripta.app.Strings.locale, secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
         }
     }
 

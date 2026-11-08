@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /** A count with thousands separators in the user's locale: 1234 -> "1.234". */
-fun formatCount(n: Number): String = java.text.NumberFormat.getIntegerInstance().format(n)
+fun formatCount(n: Number): String = java.text.NumberFormat.getIntegerInstance(com.cripta.app.Strings.locale).format(n)
 
 /**
  * One counted thing as a full-width line: what it is on the left, the figure on the right

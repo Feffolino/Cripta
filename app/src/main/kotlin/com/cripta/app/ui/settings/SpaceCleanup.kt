@@ -253,7 +253,7 @@ internal fun VaultCleanupDialog(
                             shape = com.cripta.app.ui.theme.CoverShapeSmall)
                         Column(Modifier.weight(1f).padding(start = 14.dp)) {
                             Text(f.originalName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt)),
+                            Text(java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(f.importedAt)),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp))
                         }

@@ -315,11 +315,11 @@ private fun Trim(label: String, ms: Long, onDelta: (Long) -> Unit) {
     }
 }
 
-private fun clock(ms: Long): String = com.cripta.app.ui.components.formatDuration(ms) ?: "0:00"
+private fun clock(ms: Long): String = com.cripta.app.ui.components.formatDuration(ms) ?: String.format(com.cripta.app.Strings.locale, "%d:%02d", 0, 0)
 
 /** m:ss,d: the trim moves by tenths of a second. */
 private fun clockTenths(ms: Long): String {
     val s = ms / 1000
     val sep = java.text.DecimalFormatSymbols.getInstance(com.cripta.app.Strings.locale).decimalSeparator
-    return "%d:%02d%c%d".format(s / 60, s % 60, sep, (ms % 1000) / 100)
+    return "%d:%02d%c%d".format(com.cripta.app.Strings.locale, s / 60, s % 60, sep, (ms % 1000) / 100)
 }

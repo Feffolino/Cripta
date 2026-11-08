@@ -659,14 +659,14 @@ internal fun VideoPlayer(
                         activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = level.coerceAtLeast(0.01f) } }
                         gestureLabel = GestureHud(
                             when { level < 0.34f -> CriptaIcons.BrightnessLow; level < 0.67f -> CriptaIcons.BrightnessMedium; else -> CriptaIcons.BrightnessHigh },
-                            "${(level * 100).toInt()}%", level,
+                            String.format(com.cripta.app.Strings.locale, "%d%%", (level * 100).toInt()), level,
                         )
                     } else {
                         val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
                         audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (level * max).toInt(), 0)
                         gestureLabel = GestureHud(
                             when { level <= 0f -> CriptaIcons.VolumeOff; level < 0.5f -> CriptaIcons.VolumeDown; else -> CriptaIcons.VolumeUp },
-                            "${(level * 100).toInt()}%", level,
+                            String.format(com.cripta.app.Strings.locale, "%d%%", (level * 100).toInt()), level,
                         )
                     }
                 },
@@ -679,7 +679,7 @@ internal fun VideoPlayer(
             val back = side == SeekTapSeries.Side.Back
             seekBy(if (back) -stepMs else stepMs)
             seekTick++
-            seekLabel = (if (back) "-" else "+") + "${seekSeries.steps * prefs.seekStepSec}s"
+            seekLabel = (if (back) "-" else "+") + String.format(com.cripta.app.Strings.locale, "%ds", seekSeries.steps * prefs.seekStepSec)
         }
         fun Modifier.seekZone(side: SeekTapSeries.Side): Modifier = pointerInput(stepMs) {
             detectTapGestures(

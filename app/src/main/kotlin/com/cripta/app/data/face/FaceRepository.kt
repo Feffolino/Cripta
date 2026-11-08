@@ -1480,14 +1480,14 @@ class FaceRepository @Inject constructor(
             (if (st.extra > 0) str(R.string.faces_frames_extra, st.extra) else "") + "."
         lines += str(R.string.faces_found, s.faces) + (if (s.rejects.isNotBlank()) str(R.string.faces_set_aside, rejectText(s.rejects)) else "") + "."
         if (s.faces == 0) lines += str(R.string.faces_none_detected)
-        if (s.ms > 0) lines += str(R.string.faces_analysis_time).format(s.ms / 1000.0)
+        if (s.ms > 0) lines += str(R.string.faces_analysis_time).format(com.cripta.app.Strings.locale, s.ms / 1000.0)
         FaceStats.refineOf(s.stats)?.let { lines += refineText(it) }
         for (c in cards) {
             val who = c.personId?.let { names[it] }
             lines += "• " + when {
                 who == null -> str(R.string.face_unassigned)
                 c.state == "manual" -> str(R.string.face_confirmed, nameOf(who))
-                else -> str(R.string.face_similarity, nameOf(who)).format(c.similarity)
+                else -> str(R.string.face_similarity, nameOf(who)).format(com.cripta.app.Strings.locale, c.similarity)
             }
         }
         lines.joinToString("\n")

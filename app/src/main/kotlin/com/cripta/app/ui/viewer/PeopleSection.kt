@@ -438,4 +438,4 @@ private fun FaceEditor(
         dismissButton = { if (placed) TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
 }
 
-private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
+private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(com.cripta.app.Strings.locale, s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(com.cripta.app.Strings.locale, s / 60, s % 60) }

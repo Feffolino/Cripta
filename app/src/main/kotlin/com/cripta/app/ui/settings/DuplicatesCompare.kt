@@ -379,7 +379,7 @@ private fun SimilarPage(
                 modifier = Modifier.padding(top = 6.dp))
             Text(buildString {
                 append(listOfNotNull(focus.resolution?.let { "${it.first}×${it.second}" }, formatBytes(f.sizeBytes),
-                    java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))).joinToString(" · "))
+                    java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(f.importedAt))).joinToString(" · "))
             }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -522,7 +522,7 @@ private fun WhyRecommended(
     var otherId by remember(g) { mutableStateOf(others.firstOrNull()?.file?.id) }
     val other = others.firstOrNull { it.file.id == otherId } ?: others.firstOrNull() ?: return
     var picking by remember { mutableStateOf(false) }
-    val dateFmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM) }
+    val dateFmt = remember(com.cripta.app.Strings.locale) { java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale) }
     val reasons = remember(best, other) {
         com.cripta.app.data.dedup.CopyComparison.reasons(facts(best), facts(other),
             date = { dateFmt.format(java.util.Date(it)) }, duration = { formatDuration(it).orEmpty() })
@@ -864,7 +864,7 @@ private fun CandidateCard(
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt)),
+                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(f.importedAt)),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!f.sourceUrl.isNullOrBlank()) {

@@ -142,7 +142,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 internal fun typeLabel(t: TypeFilter) = when (t) {
     TypeFilter.ALL -> str(R.string.all)
@@ -169,7 +168,7 @@ internal const val FOLDERS_KEY = "folders"
 internal class FabAction(val label: String, val icon: ImageVector, val caption: String? = null, val onClick: () -> Unit)
 
 fun tagAlias(tag: TagEntity): String =
-    tag.alias?.takeIf { it.isNotBlank() } ?: tag.name.take(2).uppercase(Locale.getDefault())
+    tag.alias?.takeIf { it.isNotBlank() } ?: tag.name.take(2).uppercase(com.cripta.app.Strings.locale)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -1063,7 +1062,7 @@ fun VaultScreen(
                     val scrollLabels = remember(grouped, showFolders, sortKey) {
                         val out = ArrayList<String?>()
                         if (showFolders) out += str(R.string.home_folders)
-                        val fmt = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
+                        val fmt = DateTimeFormatter.ofPattern("d MMM yyyy", com.cripta.app.Strings.locale).withDecimalStyle(java.time.format.DecimalStyle.of(com.cripta.app.Strings.locale))
                         val total = grouped.sumOf { it.second.size }
                         var n = 0
                         grouped.forEach { (label, group) ->
@@ -1177,7 +1176,7 @@ fun VaultScreen(
                 // Folder details (moved here from under the card): contents, space, creation date.
                 Text(
                     folderSubtitle(folderStats[folder.id]) + str(R.string.created_on) +
-                        java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(folder.createdAt)),
+                        java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(folder.createdAt)),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 10.dp),
                 )
@@ -1418,10 +1417,10 @@ private fun SectionLabel(text: String, count: Int? = null) {
     )
 }
 
-private fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWithTags>>> {
+internal fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWithTags>>> {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
-    val fmt = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault())
+    val fmt = DateTimeFormatter.ofPattern("d MMMM yyyy", com.cripta.app.Strings.locale).withDecimalStyle(java.time.format.DecimalStyle.of(com.cripta.app.Strings.locale))
     return files.groupBy { Instant.ofEpochMilli(it.file.importedAt).atZone(zone).toLocalDate() }
         .toSortedMap(compareByDescending { it })
         .map { (day, list) ->

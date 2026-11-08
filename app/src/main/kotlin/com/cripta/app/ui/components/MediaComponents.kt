@@ -46,12 +46,12 @@ private val sizeUnits = arrayOf("B", "KB", "MB", "GB", "TB")
 
 /** Human-readable byte size, e.g. "3.1 MB". */
 fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
+    if (bytes <= 0) return String.format(com.cripta.app.Strings.locale, "%d B", 0)
     var value = bytes.toDouble()
     var unit = 0
     while (value >= 1024.0 && unit < sizeUnits.size - 1) { value /= 1024.0; unit++ }
     val pattern = if (unit == 0) "%.0f %s" else "%.1f %s"
-    return String.format(java.util.Locale.getDefault(), pattern, value, sizeUnits[unit])
+    return String.format(com.cripta.app.Strings.locale, pattern, value, sizeUnits[unit])
 }
 
 /** Media duration as "m:ss" or "h:mm:ss"; null when unknown/not applicable. */
@@ -61,8 +61,8 @@ fun formatDuration(ms: Long?): String? {
     val h = totalSec / 3600
     val m = (totalSec % 3600) / 60
     val s = totalSec % 60
-    return if (h > 0) String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", h, m, s)
-    else String.format(java.util.Locale.getDefault(), "%d:%02d", m, s)
+    return if (h > 0) String.format(com.cripta.app.Strings.locale, "%d:%02d:%02d", h, m, s)
+    else String.format(com.cripta.app.Strings.locale, "%d:%02d", m, s)
 }
 
 /**

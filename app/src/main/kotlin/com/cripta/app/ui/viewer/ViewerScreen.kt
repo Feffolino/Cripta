@@ -508,7 +508,7 @@ fun ViewerScreen(
                         Text(currentFile?.originalName ?: "", maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         if (ids.size > 1) {
                             Text(
-                                "${pagerState.currentPage + 1} / ${ids.size}",
+                                String.format(com.cripta.app.Strings.locale, "%d / %d", pagerState.currentPage + 1, ids.size),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f),
                             )

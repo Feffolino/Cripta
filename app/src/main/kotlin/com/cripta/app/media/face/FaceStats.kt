@@ -43,9 +43,9 @@ object FaceStats {
 
     /** "10–20" style label of band [i]. */
     fun bandLabel(i: Int): String = when (i) {
-        0 -> "< %.0f".format(SHARP_BANDS[0])
-        SHARP_BANDS.size -> "≥ %.0f".format(SHARP_BANDS.last())
-        else -> "%.0f–%.0f".format(SHARP_BANDS[i - 1], SHARP_BANDS[i])
+        0 -> "< %.0f".format(com.cripta.app.Strings.locale, SHARP_BANDS[0])
+        SHARP_BANDS.size -> "≥ %.0f".format(com.cripta.app.Strings.locale, SHARP_BANDS.last())
+        else -> "%.0f–%.0f".format(com.cripta.app.Strings.locale, SHARP_BANDS[i - 1], SHARP_BANDS[i])
     }
 
     /**

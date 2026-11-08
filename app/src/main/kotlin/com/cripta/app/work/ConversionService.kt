@@ -1278,7 +1278,7 @@ class ConversionService : Service() {
                     val pct = exact.toInt()
                     // With a decimal: thousands of media kept the island at "0%" for many minutes,
                     // as if the scan stood still.
-                    val chip = String.format(java.util.Locale.getDefault(), "%.1f%%", exact)
+                    val chip = String.format(com.cripta.app.Strings.locale, "%.1f%%", exact)
                     val stopping = faceStopping
                     // Settings shows the media finished and how far each one in hand is (longest in
                     // hand first); the notification only how far the whole scan is.

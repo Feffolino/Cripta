@@ -206,7 +206,7 @@ internal fun DetailsSheet(
                     // Type and date on one quiet line: no chip around the type.
                     Text(
                         kind + (ext?.let { " · $it" } ?: "") + " · " +
-                            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, com.cripta.app.Strings.locale)
                                 .format(java.util.Date(file.createdAt)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -251,13 +251,13 @@ internal fun DetailsSheet(
                 }
                 val w = file.width; val h = file.height
                 if (w != null && h != null && w > 0 && h > 0) {
-                    val pixels = "$w × $h"
+                    val pixels = String.format(com.cripta.app.Strings.locale, "%d × %d", w, h)
                     if (isVid) {
-                        val name = quality(w, h) ?: "${minOf(w, h)}p"
+                        val name = quality(w, h) ?: String.format(com.cripta.app.Strings.locale, "%dp", minOf(w, h))
                         DetailFigure(name, null, pixels, CriptaIcons.AspectRatio, str(R.string.resolution_desc, name, w, h), Modifier.weight(1f))
                     } else {
                         val mp = w.toLong() * h / 1_000_000.0
-                        val value = if (mp < 10) String.format(java.util.Locale.getDefault(), "%.1f", mp) else "${mp.roundToLong()}"
+                        val value = if (mp < 10) String.format(com.cripta.app.Strings.locale, "%.1f", mp) else String.format(com.cripta.app.Strings.locale, "%d", mp.roundToLong())
                         DetailFigure(value, "MP", pixels, CriptaIcons.AspectRatio, str(R.string.resolution_mp_desc, value, w, h), Modifier.weight(1f))
                     }
                 }

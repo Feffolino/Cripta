@@ -430,7 +430,7 @@ private fun likeness(s: Float) = when {
     else -> str(R.string.maybe)
 }
 
-private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60) }
+private fun clock(ms: Long) = (ms / 1000).let { s -> if (s >= 3600) "%d:%02d:%02d".format(com.cripta.app.Strings.locale, s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(com.cripta.app.Strings.locale, s / 60, s % 60) }
 
 /**
  * "Forse è …": one face at a time, full screen, swiped up like a feed (most alike first). The frame
@@ -614,7 +614,7 @@ internal fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Pers
             FaceAvatar(p.cover, { vm.faceCrop(it) }, 56.dp)
             Column(Modifier.weight(1f)) {
                 Text(likeness(s.similarity), style = MaterialTheme.typography.titleMedium)
-                Text(str(R.string.similarity_fmt).format(s.similarity), style = MaterialTheme.typography.bodySmall,
+                Text(str(R.string.similarity_fmt).format(com.cripta.app.Strings.locale, s.similarity), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

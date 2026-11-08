@@ -156,7 +156,7 @@ private fun listMeta(f: com.cripta.app.data.db.FileEntity, withDuration: Boolean
     val parts = mutableListOf<String>()
     if (withDuration) com.cripta.app.ui.components.formatDuration(f.durationMs)?.let { parts += it }
     parts += formatBytes(f.sizeBytes)
-    parts += java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.importedAt))
+    parts += java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(f.importedAt))
     return parts.joinToString(" · ")
 }
 
