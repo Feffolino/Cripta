@@ -519,22 +519,22 @@ private fun EmptyHome(
                         Button(modifier = Modifier.fillMaxWidth(), onClick = onImport) {
                             Icon(CriptaIcons.Upload, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(str(R.string.import_files), maxLines = 1)
+                            Text(str(R.string.import_files), maxLines = 2)
                         }
                         com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onDownload) {
                             Icon(CriptaIcons.Link, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(str(R.string.from_link), maxLines = 1)
+                            Text(str(R.string.from_link), maxLines = 2)
                         }
                     }
                 }
                 1 -> StartPage(CriptaIcons.Folder, str(R.string.start_order_title),
                     str(R.string.start_order_text)) {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { Text(str(R.string.open_folders), maxLines = 1) }
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { Text(str(R.string.open_folders), maxLines = 2) }
                 }
                 else -> StartPage(CriptaIcons.Lock, str(R.string.start_lock_title),
                     str(R.string.start_lock_text, lock)) {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { Text(str(R.string.open_security), maxLines = 1) }
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { Text(str(R.string.open_security), maxLines = 2) }
                 }
             }
         }

@@ -94,7 +94,7 @@ private fun LegendItem(color: Color, label: String, value: String, modifier: Mod
     Row(modifier, verticalAlignment = Alignment.Top) {
         Box(Modifier.padding(top = 4.dp).size(10.dp).clip(CircleShape).background(color))
         Column(Modifier.padding(start = 8.dp)) {
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }

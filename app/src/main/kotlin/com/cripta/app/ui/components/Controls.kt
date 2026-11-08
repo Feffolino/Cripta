@@ -260,14 +260,14 @@ fun ActionChip(
 }
 
 /**
- * A button's label: one line, cut with "…" when the button is narrower than its words, never
- * broken mid-phrase. A label that would often be cut gets a shorter wording instead.
+ * A button's label: up to two lines so longer translations keep the action readable.
  */
 @Composable
 fun ButtonText(text: String, modifier: Modifier = Modifier, color: Color = Color.Unspecified,
                style: TextStyle = androidx.compose.material3.LocalTextStyle.current) =
-    androidx.compose.material3.Text(text, modifier, color = color, maxLines = 1,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = style)
+    androidx.compose.material3.Text(text, modifier, color = color, maxLines = 2,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = style)
 
 /**
  * A button that throws something away (delete, empty, start over): still a button, never bare

@@ -374,7 +374,7 @@ internal fun FilterSortSheet(
                             onClick = { onSort(k, sortAscending) },
                             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
                             icon = {},
-                            label = { Text(lbl, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            label = { Text(lbl, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         )
                     }
                 }
@@ -400,13 +400,13 @@ internal fun FilterSortSheet(
                                     selected = !sortAscending, onClick = { onSort(sortKey, false) },
                                     shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
                                     icon = { Icon(CriptaIcons.ArrowDownward, null, Modifier.size(18.dp)) },
-                                    label = { Text(descLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    label = { Text(descLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                                 )
                                 SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
                                     selected = sortAscending, onClick = { onSort(sortKey, true) },
                                     shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
                                     icon = { Icon(CriptaIcons.ArrowUpward, null, Modifier.size(18.dp)) },
-                                    label = { Text(ascLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    label = { Text(ascLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                                 )
                             }
                         }

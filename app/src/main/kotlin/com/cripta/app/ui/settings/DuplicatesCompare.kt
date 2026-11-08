@@ -886,7 +886,7 @@ private fun CandidateCard(
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                 com.cripta.app.ui.components.FilledTonalButton(onClick = onKeep, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Text(str(R.string.keep_only_this), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    Text(str(R.string.keep_only_this), style = MaterialTheme.typography.labelMedium, maxLines = 2)
                 }
                 IconButton(onClick = onDelete) {
                     Icon(CriptaIcons.Delete, str(R.string.delete_this_copy), tint = MaterialTheme.colorScheme.error)

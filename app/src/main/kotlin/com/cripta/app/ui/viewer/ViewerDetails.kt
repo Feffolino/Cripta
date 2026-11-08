@@ -55,7 +55,6 @@ import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -424,12 +423,7 @@ private fun DetailFigure(value: String, unit: String?, label: String, icon: andr
         )
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
             Icon(icon, null, tint = quiet, modifier = Modifier.size(14.dp))
-            // One line, a little smaller when the column is narrow (landscape panel): on two lines it
-            // broke the word itself ("Dimension" / "e").
-            val base = MaterialTheme.typography.labelMedium
-            var shrink by remember(label) { mutableFloatStateOf(1f) }
-            Text(label, style = base.copy(fontSize = base.fontSize * shrink), color = quiet, maxLines = 1, softWrap = false,
-                onTextLayout = { if (it.hasVisualOverflow && shrink > 0.7f) shrink -= 0.1f },
+            Text(label, style = MaterialTheme.typography.labelMedium, color = quiet, maxLines = 2,
                 modifier = Modifier.padding(start = 4.dp))
         }
     }
