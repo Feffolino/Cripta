@@ -92,6 +92,7 @@ fun ViewerScreen(
     onEditNote: (String) -> Unit = {},
     vm: ViewerViewModel = hiltViewModel(),
 ) {
+    val horizontalSign = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
     val ctx = LocalContext.current
     val message by vm.message.collectAsStateWithLifecycle()
     val refresh by vm.refresh.collectAsStateWithLifecycle()
@@ -328,7 +329,7 @@ fun ViewerScreen(
             // Swipe up (not consumed by the page: photos at 1x, notes…) opens the details panel,
             // swipe down closes the viewer.
             // Videos consume their touches in the player, so they use the handle below instead.
-            .pointerInput(Unit) {
+            .pointerInput(horizontalSign) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Final)
                     // Split view: a gesture that starts on the panel belongs to the panel (scroll,
@@ -356,7 +357,7 @@ fun ViewerScreen(
                     // which sit above the pager and keep it from seeing the gesture): change file
                     // here, as the pager would have.
                     if (valid && kotlin.math.abs(dx) > size.width * 0.2f && kotlin.math.abs(dx) > 2 * kotlin.math.abs(dy)) {
-                        val target = (pagerState.currentPage + if (dx < 0) 1 else -1).coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+                        val target = (pagerState.currentPage + if (dx * horizontalSign < 0) 1 else -1).coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
                         if (target != pagerState.currentPage) pagerScope.launch { pagerState.animateScrollToPage(target) }
                     }
                 }
@@ -405,7 +406,7 @@ fun ViewerScreen(
                 topInset = if (splitOpen) 0.dp else topChromeH,
                 bottomInset = if (splitOpen) 0.dp else bottomChromeH,
                 onSeekClear = { seekClear = it },
-                pageShift = { (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction },
+                pageShift = { ((page - pagerState.currentPage) - pagerState.currentPageOffsetFraction) * horizontalSign },
                 onNext = { pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 controlsTimeoutMs = chromeTimeoutMs.toInt(),
                 onPausedChanged = { videoPaused = it },

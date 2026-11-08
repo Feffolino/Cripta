@@ -694,13 +694,13 @@ internal fun VideoPlayer(
             )
         }
         Box(
-            Modifier.align(Alignment.TopStart).fillMaxWidth(0.3f).fillMaxHeight()
+            Modifier.align(androidx.compose.ui.AbsoluteAlignment.TopLeft).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
                 .seekZone(SeekTapSeries.Side.Back)
                 .sideDrag(brightness = true)
         )
         Box(
-            Modifier.align(Alignment.TopEnd).fillMaxWidth(0.3f).fillMaxHeight()
+            Modifier.align(androidx.compose.ui.AbsoluteAlignment.TopRight).fillMaxWidth(0.3f).fillMaxHeight()
                 .padding(bottom = seekBarClearance)
                 .seekZone(SeekTapSeries.Side.Forward)
                 .sideDrag(brightness = false)

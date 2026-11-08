@@ -64,6 +64,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -647,12 +649,12 @@ private fun SlideCompare(
                             .drawWithContent { clipRect(right = size.width * split) { this@drawWithContent.drawContent() } })
                     }
                     val x = maxWidth * split
-                    Box(Modifier.offset(x = x - 1.dp).width(2.dp).fillMaxHeight().background(Color.White))
-                    Box(Modifier.offset(x = x - 18.dp).align(Alignment.CenterStart).size(36.dp).clip(CircleShape)
+                    Box(Modifier.align(AbsoluteAlignment.TopLeft).absoluteOffset(x = x - 1.dp).width(2.dp).fillMaxHeight().background(Color.White))
+                    Box(Modifier.absoluteOffset(x = x - 18.dp).align(AbsoluteAlignment.CenterLeft).size(36.dp).clip(CircleShape)
                         .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
                         Icon(CriptaIcons.SwapHoriz, null, tint = Color.White, modifier = Modifier.size(20.dp))
                     }
-                    listOf(a to Alignment.BottomStart, b to Alignment.BottomEnd).forEach { (c, at) ->
+                    listOf(a to AbsoluteAlignment.BottomLeft, b to AbsoluteAlignment.BottomRight).forEach { (c, at) ->
                         Text(c.file.originalName, color = Color.White, style = MaterialTheme.typography.labelMedium, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.align(at).padding(12.dp).widthIn(max = maxWidth / 2 - 24.dp)
                                 .clip(CircleShape).background(com.cripta.app.ui.components.OnImageGlass).padding(horizontal = 10.dp, vertical = 4.dp))

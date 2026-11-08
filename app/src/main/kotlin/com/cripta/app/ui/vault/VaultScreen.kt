@@ -210,6 +210,7 @@ fun VaultScreen(
     val convertSettings by vm.convertSettings.collectAsStateWithLifecycle()
     /** Ids waiting for the first-conversion choice dialog. */
     var convertAsk by remember { mutableStateOf<List<String>?>(null) }
+    val horizontalSign = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
     val ctx = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     // Portrait and landscape each keep their own column count; the "Vista" menu edits the one in use.
@@ -859,7 +860,7 @@ fun VaultScreen(
             val scrollMemory = remember { mutableMapOf<Long, Pair<Int, Int>>() }
             var shownLevel by remember { mutableStateOf(path.lastOrNull()?.id ?: ROOT_KEY) }
             var shownDepth by remember { mutableIntStateOf(path.size) }
-            LaunchedEffect(path) {
+            LaunchedEffect(path, horizontalSign) {
                 val newKey = path.lastOrNull()?.id ?: ROOT_KEY
                 if (newKey == shownLevel) return@LaunchedEffect
                 val deeper = path.size > shownDepth
@@ -883,7 +884,7 @@ fun VaultScreen(
                 repeat(2) { androidx.compose.runtime.withFrameNanos { } }
                 gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
                 if (animOn) {
-                    levelX.snapTo(with(density) { 32.dp.toPx() } * if (deeper) 1f else -1f)
+                    levelX.snapTo(with(density) { 32.dp.toPx() } * horizontalSign * if (deeper) 1f else -1f)
                     // Quick: the new level is already loaded, it only needs to say "deeper" / "back".
                     launch { levelX.animateTo(0f, Motion.enter(Motion.MEDIUM)) }
                     levelAlpha.animateTo(1f, Motion.enter(Motion.SHORT))

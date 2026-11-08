@@ -111,11 +111,11 @@ internal fun SelectionBar(actions: List<SelAction>) {
                         drawContent()
                         val clear = androidx.compose.ui.graphics.Color.Transparent
                         val solid = androidx.compose.ui.graphics.Color.Black
-                        if (scroll.canScrollBackward) drawRect(
+                        if (if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) scroll.canScrollForward else scroll.canScrollBackward) drawRect(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(clear, solid), 0f, fadeW),
                             size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
                         )
-                        if (scroll.canScrollForward) drawRect(
+                        if (if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) scroll.canScrollBackward else scroll.canScrollForward) drawRect(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(solid, clear), size.width - fadeW, size.width),
                             topLeft = androidx.compose.ui.geometry.Offset(size.width - fadeW, 0f),
                             size = size.copy(width = fadeW), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,

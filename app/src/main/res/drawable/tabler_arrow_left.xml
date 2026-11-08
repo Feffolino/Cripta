@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Tabler Icons v3.49.0 (outline/arrow-left.svg), MIT: assets/licenses/tabler-icons-LICENSE.txt -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:autoMirrored="true"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
