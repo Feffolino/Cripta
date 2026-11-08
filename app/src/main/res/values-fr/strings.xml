@@ -149,7 +149,7 @@
     <string name="unlock_mode_system_and_pin">Empreinte et code de l’application</string>
     <string name="unlock_mode_system_and_pin_desc">Deux étapes : empreinte ou verrouillage du téléphone, puis PIN ou mot de passe Cripta. Une personne dont l’empreinte est enregistrée sur le téléphone ne peut pas entrer sans le code.</string>
     <string name="unlock_mode_pin">Code de l’application uniquement</string>
-    <string name="unlock_mode_pin_desc">Seuls le PIN ou le mot de passe Cripta ouvrent le coffre. L’empreinte et le verrouillage du téléphone ne suffisent pas.</string>
+    <string name="unlock_mode_pin_desc">Seuls le PIN ou le mot de passe Cripta ouvrent le coffre. Les empreintes et le verrouillage du téléphone ne permettent pas de l’ouvrir.</string>
     <string name="secret_pin">PIN</string>
     <string name="secret_password">mot de passe</string>
     <string name="reject_low_score">incertain</string>
@@ -164,7 +164,7 @@
     <string name="bio_unavailable">Le capteur biométrique est indisponible pour le moment. Réessayez.</string>
     <string name="bio_timeout">Délai écoulé. Appuyez sur Déverrouiller pour réessayer.</string>
     <string name="bio_no_space">Espace insuffisant sur l’appareil pour terminer l’authentification.</string>
-    <string name="eta_about">environ %1$s restantes</string>
+    <string name="eta_about">encore environ %1$s</string>
     <string name="eta_few_seconds">quelques secondes restantes</string>
     <string name="eta_short">encore %1$s</string>
     <string name="eta_almost_done">presque terminé</string>
@@ -580,7 +580,7 @@
     <string name="show">Afficher</string>
     <string name="see_all">Tout voir</string>
     <string name="resume">Reprendre</string>
-    <string name="time_left">%1$s restantes</string>
+    <string name="time_left">Encore %1$s</string>
     <string name="lock_never">Le coffre ne se verrouille actuellement jamais automatiquement.</string>
     <string name="lock_on_leave">Il se verrouille actuellement dès que vous quittez l’application.</string>
     <string name="lock_after_minutes">Il se verrouille actuellement après %1$s min en arrière-plan.</string>
@@ -731,17 +731,17 @@
     <string name="intro">Intro</string>
     <string name="ending">Fin</string>
     <string name="seg_found_extended_f">trouvée et prolongée</string>
-    <string name="seg_found_extended_m">trouvé et prolongé</string>
+    <string name="seg_found_extended_m">trouvée et prolongée</string>
     <string name="seg_found_f">trouvée</string>
-    <string name="seg_found_m">trouvé</string>
+    <string name="seg_found_m">trouvée</string>
     <string name="seg_moved_f">déplacée par vous (le son était à %1$s–%2$s)</string>
-    <string name="seg_moved_m">déplacé par vous (le son était à %1$s–%2$s)</string>
+    <string name="seg_moved_m">déplacée par vous (le son était à %1$s–%2$s)</string>
     <string name="seg_marked_f">marquée par vous</string>
-    <string name="seg_marked_m">marqué par vous</string>
+    <string name="seg_marked_m">marquée par vous</string>
     <string name="seg_none_f">Aucune (votre choix)</string>
-    <string name="seg_none_m">Aucun (votre choix)</string>
+    <string name="seg_none_m">Aucune (votre choix)</string>
     <string name="seg_not_found_f">Non trouvée</string>
-    <string name="seg_not_found_m">Non trouvé</string>
+    <string name="seg_not_found_m">Non trouvée</string>
     <string name="signature_is">Empreinte audio : %1$s</string>
     <string name="more_actions_for">Autres actions pour %1$s</string>
     <string name="apply_same_signature">Appliquer à toutes les vidéos ayant la même empreinte audio</string>
@@ -1095,7 +1095,7 @@
     <string name="fit_stretch">Étirer (déformer)</string>
     <string name="speed_while_held">× pendant l’appui</string>
     <string name="next_in">Suivant dans %1$s s</string>
-    <string name="cancel_next">Annuler le suivant</string>
+    <string name="cancel_next">Annuler le passage au suivant</string>
     <string name="skip_intro">Passer l’intro</string>
     <string name="skip_ending">Passer la fin</string>
     <string name="hide">Masquer</string>
@@ -1125,8 +1125,8 @@
     <string name="size_x">Taille %1$s</string>
     <string name="duration">Durée</string>
     <string name="duration_x">Durée %1$s</string>
-    <string name="resolution_desc">Résolution %1$s, %2$s sur %3$s</string>
-    <string name="resolution_mp_desc">Résolution %1$s mégapixels, %2$s sur %3$s</string>
+    <string name="resolution_desc">Résolution %1$s, %2$s par %3$s</string>
+    <string name="resolution_mp_desc">Résolution %1$s mégapixels, %2$s par %3$s</string>
     <string name="tags_panel_hint">Appuyez pour ajouter ou retirer ; appui prolongé pour le libellé court, la couleur et l’icône.</string>
     <string name="new_short">Nouveau</string>
     <string name="show_less">Afficher moins</string>
@@ -1271,7 +1271,7 @@
     <string name="pf_favorite">Favoris</string>
     <string name="pf_named">Nommées</string>
     <string name="pf_single">Une fois</string>
-    <string name="pf_ignored">Ignorés</string>
+    <string name="pf_ignored">Ignorées</string>
     <string name="to_sort">À organiser</string>
     <string name="pf_none">Sans visage</string>
     <string name="sort_relevance">Favoris, puis plus de médias</string>
@@ -1694,7 +1694,7 @@
     <string name="hold_to_speed">Appui prolongé pour accélérer</string>
     <string name="hold_to_speed_desc">Maintenez un doigt sur un côté : la vidéo accélère jusqu’à ce que vous le releviez.</string>
     <string name="speed_while_holding">Vitesse pendant l’appui</string>
-    <string name="speed_1_5">1.5×</string>
+    <string name="speed_1_5">1,5×</string>
     <string name="double_tap_skip">Double appui sur les côtés : sauter de</string>
     <string name="sec_screen">Écran</string>
     <string name="follow_video_orientation">Suivre l’orientation de la vidéo</string>
@@ -1988,7 +1988,7 @@
     <string name="trash_never_backup">La corbeille n’est jamais incluse dans la sauvegarde : les fichiers supprimés restent uniquement sur cet appareil jusqu’à leur expiration.</string>
     <string name="choose_one_thing">Choisissez au moins un élément à inclure.</string>
     <string name="selected_m">Sélectionné</string>
-    <string name="destroyed_today">détruit d’ici aujourd’hui</string>
+    <string name="destroyed_today">suppression définitive aujourd’hui</string>
     <string name="days_left">%1$s jours restants</string>
     <string name="close_trash">Fermer la corbeille</string>
     <plurals name="n_selected_m">
