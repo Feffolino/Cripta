@@ -621,7 +621,7 @@
     <string name="root">Raiz</string>
     <string name="dl_queue_empty">Nenhum download na fila</string>
     <string name="dl_queue_hint">Os links são baixados um de cada vez, mesmo com o aplicativo fechado.</string>
-    <string name="in_progress">Em andamento</string>
+    <string name="in_progress_label">Em andamento</string>
     <string name="dl_waiting_n">Aguardando · %1$s</string>
     <string name="dl_finished">Concluídos</string>
     <string name="clear">Limpar</string>

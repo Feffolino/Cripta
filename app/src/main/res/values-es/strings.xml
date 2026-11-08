@@ -621,7 +621,7 @@
     <string name="root">Raíz</string>
     <string name="dl_queue_empty">Sin descargas en la cola</string>
     <string name="dl_queue_hint">Los enlaces se descargan uno a uno, incluso con la app cerrada.</string>
-    <string name="in_progress">En curso</string>
+    <string name="in_progress_label">En curso</string>
     <string name="dl_waiting_n">En espera · %1$s</string>
     <string name="dl_finished">Finalizadas</string>
     <string name="clear">Vaciar</string>

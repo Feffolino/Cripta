@@ -600,7 +600,7 @@
     <string name="root">Hauptverzeichnis</string>
     <string name="dl_queue_empty">Keine Downloads in der Warteschlange</string>
     <string name="dl_queue_hint">Links werden nacheinander heruntergeladen, auch bei geschlossener App.</string>
-    <string name="in_progress">Läuft</string>
+    <string name="in_progress_label">Läuft</string>
     <string name="dl_waiting_n">Wartet · %1$s</string>
     <string name="dl_finished">Abgeschlossen</string>
     <string name="clear">Leeren</string>

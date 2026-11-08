@@ -5,6 +5,7 @@
     <string name="share_unlock_for_import">Sblocca Cripta per importare i file condivisi</string>
     <plurals name="share_importing">
         <item quantity="one">Importazione di 1 file nel vault…</item>
+        <item quantity="many">Importazione di %1$s file nel vault…</item>
         <item quantity="other">Importazione di %1$s file nel vault…</item>
     </plurals>
     <string name="notif_rationale_title">Avanzamento in background</string>
@@ -19,10 +20,12 @@
     <string name="unlock_failed">Sblocco non riuscito. Riprova.</string>
     <plurals name="wait_seconds">
         <item quantity="one">%1$s secondo</item>
+        <item quantity="many">%1$s secondi</item>
         <item quantity="other">%1$s secondi</item>
     </plurals>
     <plurals name="wait_minutes">
         <item quantity="one">%1$s minuto</item>
+        <item quantity="many">%1$s minuti</item>
         <item quantity="other">%1$s minuti</item>
     </plurals>
     <string name="fingerprint_invalidated">L\'impronta non è più utilizzabile: sblocca con il codice di Cripta.</string>
@@ -37,18 +40,22 @@
     <string name="file_corrupt">File corrotto</string>
     <plurals name="restored_files">
         <item quantity="one">1 file</item>
+        <item quantity="many">%1$s file</item>
         <item quantity="other">%1$s file</item>
     </plurals>
     <plurals name="restored_tags">
         <item quantity="one">1 etichetta</item>
+        <item quantity="many">%1$s etichette</item>
         <item quantity="other">%1$s etichette</item>
     </plurals>
     <plurals name="restored_people">
         <item quantity="one">1 persona</item>
+        <item quantity="many">%1$s persone</item>
         <item quantity="other">%1$s persone</item>
     </plurals>
     <plurals name="restored_covers">
         <item quantity="one">1 copertina</item>
+        <item quantity="many">%1$s copertine</item>
         <item quantity="other">%1$s copertine</item>
     </plurals>
     <string name="restored_analysis">analisi</string>
@@ -88,10 +95,12 @@
     <string name="refine_nothing">Analizzato meglio: nessun altro volto da controllare.</string>
     <plurals name="refine_joined">
         <item quantity="one">1 volto era la persona confermata ed è stato unito al suo</item>
+        <item quantity="many">%1$s volti erano la persona confermata e sono stati uniti al suo</item>
         <item quantity="other">%1$s volti erano la persona confermata e sono stati uniti al suo</item>
     </plurals>
     <plurals name="refine_aside">
         <item quantity="one">1 volto non è stato ritrovato ed è tra i poco chiari</item>
+        <item quantity="many">%1$s volti non sono stati ritrovati e sono tra i poco chiari</item>
         <item quantity="other">%1$s volti non sono stati ritrovati e sono tra i poco chiari</item>
     </plurals>
     <string name="refine_head">"Analizzato meglio, %1$s fotogrammi attorno a chi hai confermato: "</string>
@@ -219,6 +228,7 @@
     <string name="n_test_starting">Avvio della prova…</string>
     <plurals name="imported_n">
         <item quantity="one">1 file importato</item>
+        <item quantity="many">%1$s file importati</item>
         <item quantity="other">%1$s file importati</item>
     </plurals>
     <string name="n_delete_originals_q">Eliminare gli originali?</string>
@@ -245,6 +255,7 @@
     <string name="n_backup_failed_unlock">Backup non riuscito: sblocca Cripta e riprova.</string>
     <plurals name="backup_created">
         <item quantity="one">Backup creato (1 file)</item>
+        <item quantity="many">Backup creato (%1$s file)</item>
         <item quantity="other">Backup creato (%1$s file)</item>
     </plurals>
     <string name="n_restore_done">Ripristino completato</string>
@@ -267,6 +278,7 @@
     <string name="n_in_gallery">nella galleria</string>
     <plurals name="export_saved">
         <item quantity="one">1 file salvato %2$s</item>
+        <item quantity="many">%1$s file salvati %2$s</item>
         <item quantity="other">%1$s file salvati %2$s</item>
     </plurals>
     <string name="n_not_exported">" · %1$s non esportati"</string>
@@ -282,6 +294,7 @@
     <string name="n_import_done_errors">Importazione completata con errori</string>
     <plurals name="import_encrypted">
         <item quantity="one">1 file cifrato nel vault</item>
+        <item quantity="many">%1$s file cifrati nel vault</item>
         <item quantity="other">%1$s file cifrati nel vault</item>
     </plurals>
     <string name="n_not_imported">" · %1$s non importati"</string>
@@ -332,6 +345,7 @@
     <string name="n_videos_analysed">%1$s di %2$s video analizzati%3$s</string>
     <plurals name="intro_done_n">
         <item quantity="one">Analisi del video completata</item>
+        <item quantity="many">Analisi di %1$s video completata</item>
         <item quantity="other">Analisi di %1$s video completata</item>
     </plurals>
     <string name="n_analysis_done">Analisi completata</string>
@@ -343,11 +357,13 @@
     <string name="n_cancelling">Annullamento in corso…</string>
     <plurals name="refined_n">
         <item quantity="one">Video analizzato meglio</item>
+        <item quantity="many">%1$s video analizzati meglio</item>
         <item quantity="other">%1$s video analizzati meglio</item>
     </plurals>
     <string name="n_nothing_to_join">Nessun volto da unire o da mettere da parte.</string>
     <plurals name="faces_done_n">
         <item quantity="one">Volti analizzati</item>
+        <item quantity="many">Volti di %1$s media analizzati</item>
         <item quantity="other">Volti di %1$s media analizzati</item>
     </plurals>
     <string name="n_face_analysis_done">Analisi dei volti completata</string>
@@ -381,14 +397,17 @@
     <string name="choose">Scegli</string>
     <plurals name="originals_pending">
         <item quantity="one">Copia MP4 creata</item>
+        <item quantity="many">%1$s originali da gestire</item>
         <item quantity="other">%1$s originali da gestire</item>
     </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">Eliminare %1$s originale?</item>
+        <item quantity="many">Eliminare %1$s originali?</item>
         <item quantity="other">Eliminare %1$s originali?</item>
     </plurals>
     <plurals name="delete_original_btn">
         <item quantity="one">Elimina %1$s originale</item>
+        <item quantity="many">Elimina %1$s originali</item>
         <item quantity="other">Elimina %1$s originali</item>
     </plurals>
     <string name="convert_replace">Sostituisci l\'originale</string>
@@ -399,6 +418,7 @@
     <string name="convert_ask_at_end_desc">A conversione finita scegli se eliminare l\'originale.</string>
     <plurals name="convert_q">
         <item quantity="one">Convertire in MP4?</item>
+        <item quantity="many">Convertire %1$s video in MP4?</item>
         <item quantity="other">Convertire %1$s video in MP4?</item>
     </plurals>
     <string name="convert_intro">Crea una copia MP4 scorribile, verificata prima di essere salvata. Prosegue in background. Dopo la conversione:</string>
@@ -420,6 +440,7 @@
     <string name="note_title">Titolo</string>
     <plurals name="note_words">
         <item quantity="one">1 parola</item>
+        <item quantity="many">%1$s parole</item>
         <item quantity="other">%1$s parole</item>
     </plurals>
     <string name="note_placeholder">Scrivi qui… # titolo, **grassetto**, - elenco, - [ ] da fare</string>
@@ -600,7 +621,7 @@
     <string name="root">Radice</string>
     <string name="dl_queue_empty">Nessun download in coda</string>
     <string name="dl_queue_hint">I link si scaricano uno alla volta, anche con l\'app chiusa.</string>
-    <string name="in_progress">In corso</string>
+    <string name="in_progress_label">In corso</string>
     <string name="dl_waiting_n">In attesa · %1$s</string>
     <string name="dl_finished">Finiti</string>
     <string name="clear">Pulisci</string>
@@ -644,6 +665,7 @@
     <string name="tag_edit_title">Modifica #%1$s</string>
     <plurals name="items_n">
         <item quantity="one">1 elemento</item>
+        <item quantity="many">%1$s elementi</item>
         <item quantity="other">%1$s elementi</item>
     </plurals>
     <string name="tags_for">Etichette per %1$s</string>
@@ -662,6 +684,7 @@
     <string name="operation_failed">Operazione non riuscita: %1$s</string>
     <plurals name="faces_deleted">
         <item quantity="one">Volto eliminato</item>
+        <item quantity="many">%1$s volti eliminati</item>
         <item quantity="other">%1$s volti eliminati</item>
     </plurals>
     <string name="x_everywhere">%1$s ovunque</string>
@@ -750,6 +773,7 @@
     <string name="signatures_merged">%1$s firme unite</string>
     <plurals name="signatures_deleted">
         <item quantity="one">Firma eliminata: il suono è tra i segmenti scartati</item>
+        <item quantity="many">%1$s firme eliminate: i suoni sono tra i segmenti scartati</item>
         <item quantity="other">%1$s firme eliminate: i suoni sono tra i segmenti scartati</item>
     </plurals>
     <string name="duration_applied">Durata applicata a %1$s video</string>
@@ -758,11 +782,13 @@
     <string name="operation_failed_prefix">"Operazione non riuscita: "</string>
     <plurals name="people_merged">
         <item quantity="one">Persone unite</item>
+        <item quantity="many">%1$s persone unite</item>
         <item quantity="other">%1$s persone unite</item>
     </plurals>
     <string name="person_hidden">Persona nascosta</string>
     <plurals name="media_removed">
         <item quantity="one">Media tolto</item>
+        <item quantity="many">%1$s media tolti</item>
         <item quantity="other">%1$s media tolti</item>
     </plurals>
     <string name="confirmed">Confermato</string>
@@ -770,10 +796,12 @@
     <string name="everywhere_suffix">ovunque</string>
     <plurals name="faces_assigned">
         <item quantity="one">Volto assegnato</item>
+        <item quantity="many">%1$s volti assegnati</item>
         <item quantity="other">%1$s volti assegnati</item>
     </plurals>
     <plurals name="faces_deleted_n">
         <item quantity="one">Eliminato 1 volto.</item>
+        <item quantity="many">Eliminati %1$s volti.</item>
         <item quantity="other">Eliminati %1$s volti.</item>
     </plurals>
     <string name="restore_not_started">Ripristino non avviato. Riprova.</string>
@@ -795,6 +823,7 @@
     <string name="dup_kept_name">"Tenuto \"%1$s\", "</string>
     <plurals name="dup_deleted">
         <item quantity="one">eliminata 1 copia</item>
+        <item quantity="many">eliminate %1$s copie</item>
         <item quantity="other">eliminate %1$s copie</item>
     </plurals>
     <string name="in_trash_paren">" (nel cestino)"</string>
@@ -802,6 +831,7 @@
     <string name="dup_marked_not_similar">Segnati come non simili: non verranno più proposti insieme</string>
     <plurals name="dup_restored">
         <item quantity="one">Copia ripristinata</item>
+        <item quantity="many">Ripristinate %1$s copie</item>
         <item quantity="other">Ripristinate %1$s copie</item>
     </plurals>
     <string name="copy_to_trash">Copia spostata nel cestino</string>
@@ -819,6 +849,7 @@
     <string name="exit_selection">Esci dalla selezione</string>
     <plurals name="faces_n">
         <item quantity="one">1 volto</item>
+        <item quantity="many">%1$s volti</item>
         <item quantity="other">%1$s volti</item>
     </plurals>
     <string name="same_person">Stessa persona</string>
@@ -826,6 +857,7 @@
     <string name="hide_unclear_faces">Nascondi i volti poco chiari</string>
     <plurals name="more_unclear_faces">
         <item quantity="one">Un altro volto poco chiaro</item>
+        <item quantity="many">Altri %1$s volti poco chiari</item>
         <item quantity="other">Altri %1$s volti poco chiari</item>
     </plurals>
     <string name="unclear_hint_aside">Visti una sola volta, poco nitidi o non ritrovati guardando meglio il video: spesso non sono volti.</string>
@@ -912,6 +944,7 @@
     <string name="nothing_to_confirm">Nessun volto da confermare. Più media gli assegni, più i suggerimenti diventano precisi.</string>
     <plurals name="faces_to_confirm">
         <item quantity="one">1 volto da confermare</item>
+        <item quantity="many">%2$s volti da confermare</item>
         <item quantity="other">%2$s volti da confermare</item>
     </plurals>
     <string name="check_suggestions">Controlla i suggerimenti</string>
@@ -950,11 +983,13 @@
     <string name="all_sorted">Tutto sistemato</string>
     <plurals name="groups_n">
         <item quantity="one">1 gruppo</item>
+        <item quantity="many">%1$s gruppi</item>
         <item quantity="other">%1$s gruppi</item>
     </plurals>
     <string name="dup_freed">Liberati %1$s in %2$s.</string>
     <plurals name="groups_apart">
         <item quantity="one">1 gruppo segnato come «non simili»: non tornerà.</item>
+        <item quantity="many">%1$s gruppi segnati come «non simili»: non torneranno.</item>
         <item quantity="other">%1$s gruppi segnati come «non simili»: non torneranno.</item>
     </plurals>
     <string name="watch_fullscreen">Guarda a schermo intero</string>
@@ -964,6 +999,7 @@
     <string name="recommended_f">consigliata</string>
     <plurals name="tags_n">
         <item quantity="one">1 etichetta</item>
+        <item quantity="many">%1$s etichette</item>
         <item quantity="other">%1$s etichette</item>
     </plurals>
     <string name="no_tags_lower">nessuna etichetta</string>
@@ -995,6 +1031,7 @@
     <string name="delete_secure">" Eliminazione sicura e irreversibile (il cestino è disattivato)."</string>
     <plurals name="delete_other_copies_q">
         <item quantity="one">Eliminare l\'altra copia?</item>
+        <item quantity="many">Eliminare le altre %1$s copie?</item>
         <item quantity="other">Eliminare le altre %1$s copie?</item>
     </plurals>
     <string name="stays_x">"Resta \"%1$s\". "</string>
@@ -1002,6 +1039,7 @@
     <string name="tags_moved_to_kept">Le etichette %1$s verranno spostate sulla copia tenuta.</string>
     <plurals name="delete_copies_q">
         <item quantity="one">Eliminare 1 copia?</item>
+        <item quantity="many">Eliminare %1$s copie?</item>
         <item quantity="other">Eliminare %1$s copie?</item>
     </plurals>
     <string name="n_copies_stay">"Restano %1$s copie. "</string>
@@ -1015,6 +1053,7 @@
     <string name="recommended_x">Consigliato: \"%1$s\"</string>
     <plurals name="keep_recommended">
         <item quantity="one">Tieni il consigliato, elimina l\'altra</item>
+        <item quantity="many">Tieni il consigliato, elimina le altre %1$s</item>
         <item quantity="other">Tieni il consigliato, elimina le altre %1$s</item>
     </plurals>
     <string name="recommended">Consigliato</string>
@@ -1148,6 +1187,7 @@
     <string name="merge_signatures_hint">Diventano una sola firma che riconosce tutti i loro suoni (%1$s video). Nome:</string>
     <plurals name="not_a_theme_q">
         <item quantity="one">Non è una sigla?</item>
+        <item quantity="many">%1$s firme non sono sigle?</item>
         <item quantity="other">%1$s firme non sono sigle?</item>
     </plurals>
     <string name="not_a_theme_text">%1$s video perdono questo segmento (quelli segnati a mano restano) e il suono non verrà più rilevato. Si può annullare da Manutenzione › Segmenti scartati.</string>
@@ -1174,6 +1214,7 @@
     <string name="refine_explain">Quando confermi un volto in un video, Cripta lo guarda più da vicino: unisce gli altri volti di quella persona nello stesso video e mette tra i poco chiari quelli che non ritrova. Non assegna mai volti da sola.</string>
     <plurals name="refine_videos_btn">
         <item quantity="one">Analizza meglio 1 video con persone confermate</item>
+        <item quantity="many">Analizza meglio %2$s video con persone confermate</item>
         <item quantity="other">Analizza meglio %2$s video con persone confermate</item>
     </plurals>
     <string name="display">Visualizzazione</string>
@@ -1210,6 +1251,7 @@
     <string name="n_unreadable">%1$s non leggibili</string>
     <plurals name="stalled_n">
         <item quantity="one">1 bloccato</item>
+        <item quantity="many">%1$s bloccati</item>
         <item quantity="other">%1$s bloccati</item>
     </plurals>
     <string name="analysed_of">Analizzati %1$s di %2$s media</string>
@@ -1244,6 +1286,7 @@
     <string name="others_first">Prima le altre</string>
     <plurals name="n_selected_f_pl">
         <item quantity="one">1 selezionata</item>
+        <item quantity="many">%1$s selezionate</item>
         <item quantity="other">%1$s selezionate</item>
     </plurals>
     <string name="sort">Ordina</string>
@@ -1253,6 +1296,7 @@
     <string name="no_usable_face_hint">Media in cui nessun volto è utilizzabile. Tocca per aprirlo e aggiungere un volto a mano dai dettagli; tieni premuto per il motivo.</string>
     <plurals name="search_deeper_n">
         <item quantity="one">Cerca più a fondo in questo media</item>
+        <item quantity="many">Cerca più a fondo in %1$s media</item>
         <item quantity="other">Cerca più a fondo in %1$s media</item>
     </plurals>
     <string name="search_deeper_desc">Più fotogrammi, volti più piccoli o meno nitidi: richiede più tempo.</string>
@@ -1270,10 +1314,12 @@
     <string name="no_faces_to_sort">Nessun volto da sistemare.</string>
     <plurals name="similar_groups_n">
         <item quantity="one">1 gruppo di volti simili</item>
+        <item quantity="many">%1$s gruppi di volti simili</item>
         <item quantity="other">%1$s gruppi di volti simili</item>
     </plurals>
     <plurals name="seen_once_n">
         <item quantity="one">1 volto visto una volta</item>
+        <item quantity="many">%1$s volti visti una volta</item>
         <item quantity="other">%1$s volti visti una volta</item>
     </plurals>
     <string name="sort_one_at_a_time">. Uno alla volta, a tutto schermo: chi è, dividi o elimina.</string>
@@ -1307,15 +1353,18 @@
     <string name="audio_compare">Confronto audio</string>
     <plurals name="moved_items">
         <item quantity="one">Spostato 1 elemento</item>
+        <item quantity="many">Spostati %1$s elementi</item>
         <item quantity="other">Spostati %1$s elementi</item>
     </plurals>
     <string name="moved_to">%1$s in %2$s</string>
     <plurals name="favorited_n">
         <item quantity="one">Aggiunto ai preferiti</item>
+        <item quantity="many">%1$s elementi aggiunti ai preferiti</item>
         <item quantity="other">%1$s elementi aggiunti ai preferiti</item>
     </plurals>
     <plurals name="unfavorited_n">
         <item quantity="one">Tolto dai preferiti</item>
+        <item quantity="many">%1$s elementi tolti dai preferiti</item>
         <item quantity="other">%1$s elementi tolti dai preferiti</item>
     </plurals>
     <string name="export_of_started">Esportazione di %1$s avviata: prosegue in background</string>
@@ -1388,31 +1437,37 @@
     <string name="cover_changed">Copertina cambiata</string>
     <plurals name="download_files_q">
         <item quantity="one">Scaricare 1 file?</item>
+        <item quantity="many">Scaricare %1$s file?</item>
         <item quantity="other">Scaricare %1$s file?</item>
     </plurals>
     <plurals name="export_files_text">
         <item quantity="one">Una copia NON cifrata di %1$s file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
+        <item quantity="many">Una copia NON cifrata di %1$s file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
         <item quantity="other">Una copia NON cifrata di %1$s file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
     </plurals>
     <string name="choose_folder">Scegli cartella</string>
     <plurals name="delete_files_q">
         <item quantity="one">Eliminare 1 file?</item>
+        <item quantity="many">Eliminare %1$s file?</item>
         <item quantity="other">Eliminare %1$s file?</item>
     </plurals>
     <string name="files_to_trash_text">Verranno spostati nel cestino: potrai ripristinarli da Impostazioni › Duplicati e cestino.</string>
     <string name="files_delete_secure">Eliminazione sicura (crypto-shredding). Irreversibile.</string>
     <plurals name="files_trashed">
         <item quantity="one">1 file spostato nel cestino</item>
+        <item quantity="many">%1$s file spostati nel cestino</item>
         <item quantity="other">%1$s file spostati nel cestino</item>
     </plurals>
     <plurals name="files_deleted">
         <item quantity="one">1 file eliminato</item>
+        <item quantity="many">%1$s file eliminati</item>
         <item quantity="other">%1$s file eliminati</item>
     </plurals>
     <string name="regenerating_covers">Rigenerazione copertine…</string>
     <string name="delete_folder_q">Eliminare la cartella?</string>
     <plurals name="files_n">
         <item quantity="one">1 file</item>
+        <item quantity="many">%1$s file</item>
         <item quantity="other">%1$s file</item>
     </plurals>
     <string name="folder_to_trash_empty">\"%1$s\" andrà nel cestino. Da Impostazioni › Duplicati e cestino puoi aprirla e ripristinarla tutta o solo alcuni file.</string>
@@ -1424,6 +1479,7 @@
     <string name="delete_all">Elimina tutto</string>
     <plurals name="delete_device_originals">
         <item quantity="one">1 file importato nel vault. Eliminare la copia originale dal dispositivo?</item>
+        <item quantity="many">%1$s file importati nel vault. Eliminare le copie originali dal dispositivo?</item>
         <item quantity="other">%1$s file importati nel vault. Eliminare le copie originali dal dispositivo?</item>
     </plurals>
     <string name="not_secure_original">" (Non è una cancellazione sicura dell\'originale.)"</string>
@@ -1448,6 +1504,7 @@
     <string name="empty_search">Svuota ricerca</string>
     <plurals name="chosen_n">
         <item quantity="one">1 scelta</item>
+        <item quantity="many">%1$s scelte</item>
         <item quantity="other">%1$s scelte</item>
     </plurals>
     <string name="favorites_only">Solo preferiti</string>
@@ -1461,6 +1518,7 @@
     <string name="show_files">Mostra i file</string>
     <plurals name="show_n_files">
         <item quantity="one">Mostra 1 file</item>
+        <item quantity="many">Mostra %1$s file</item>
         <item quantity="other">Mostra %1$s file</item>
     </plurals>
     <string name="save_these_filters">Salva questi filtri</string>
@@ -1536,6 +1594,7 @@
     <string name="close_keep_all">Chiudi: tieni tutto com\'è</string>
     <plurals name="conflict_head">
         <item quantity="one">1 file ha lo stesso nome o lo stesso contenuto di file che hai già. Sostituendo, la nuova versione prende etichette e cartella della precedente</item>
+        <item quantity="many">%1$s file hanno lo stesso nome o lo stesso contenuto di file che hai già. Sostituendo, la nuova versione prende etichette e cartella della precedente</item>
         <item quantity="other">%1$s file hanno lo stesso nome o lo stesso contenuto di file che hai già. Sostituendo, la nuova versione prende etichette e cartella della precedente</item>
     </plurals>
     <string name="old_to_trash">; la vecchia va nel cestino.</string>
@@ -1547,6 +1606,7 @@
     <string name="replace">Sostituisci</string>
     <plurals name="apply_to_files">
         <item quantity="one">Applica a 1 file</item>
+        <item quantity="many">Applica a %1$s file</item>
         <item quantity="other">Applica a %1$s file</item>
     </plurals>
     <string name="selected_suffix_one">selezionato</string>
@@ -1756,6 +1816,7 @@
     <string name="no_groups">nessun gruppo</string>
     <plurals name="open_groups_found">
         <item quantity="one">Apri il gruppo trovato</item>
+        <item quantity="many">Apri i %1$s gruppi trovati</item>
         <item quantity="other">Apri i %1$s gruppi trovati</item>
     </plurals>
     <string name="quick_search_desc">Copie identiche byte per byte, di qualsiasi tipo di file. Pochi secondi: usa l\'impronta calcolata all\'importazione.</string>
@@ -1932,6 +1993,7 @@
     <string name="close_trash">Chiudi cestino</string>
     <plurals name="n_selected_m">
         <item quantity="one">1 selezionato</item>
+        <item quantity="many">%1$s selezionati</item>
         <item quantity="other">%1$s selezionati</item>
     </plurals>
     <string name="restore_all">Ripristina tutto</string>
@@ -1956,6 +2018,7 @@
     <string name="folder_items_destroy">\"%1$s\" e %2$s al suo interno verranno distrutti in modo sicuro. Irreversibile.</string>
     <plurals name="items_destroyed">
         <item quantity="one">%1$s verrà distrutto in modo sicuro. Irreversibile.</item>
+        <item quantity="many">%1$s verranno distrutti in modo sicuro. Irreversibile.</item>
         <item quantity="other">%1$s verranno distrutti in modo sicuro. Irreversibile.</item>
     </plurals>
     <string name="empty_trash_q">Svuotare il cestino?</string>
@@ -1978,6 +2041,7 @@
     <string name="dl_open_folder">Apri %1$s</string>
     <plurals name="subfolders_n">
         <item quantity="one">%1$s sottocartella</item>
+        <item quantity="many">%1$s sottocartelle</item>
         <item quantity="other">%1$s sottocartelle</item>
     </plurals>
     <string name="sec_space_detail">Spazio occupato</string>

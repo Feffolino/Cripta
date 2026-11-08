@@ -621,7 +621,7 @@
     <string name="root">Racine</string>
     <string name="dl_queue_empty">Aucun téléchargement en attente</string>
     <string name="dl_queue_hint">Les liens sont téléchargés un par un, même lorsque l’application est fermée.</string>
-    <string name="in_progress">En cours</string>
+    <string name="in_progress_label">En cours</string>
     <string name="dl_waiting_n">En attente · %1$s</string>
     <string name="dl_finished">Terminés</string>
     <string name="clear">Effacer</string>

@@ -579,7 +579,7 @@
     <string name="root">ルート</string>
     <string name="dl_queue_empty">ダウンロードの待機はありません</string>
     <string name="dl_queue_hint">リンクを 1 件ずつダウンロードします。アプリを閉じても続きます。</string>
-    <string name="in_progress">進行中</string>
+    <string name="in_progress_label">進行中</string>
     <string name="dl_waiting_n">待機中 · %1$s</string>
     <string name="dl_finished">完了</string>
     <string name="clear">消去</string>

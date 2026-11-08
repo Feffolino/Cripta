@@ -600,7 +600,7 @@
     <string name="root">मूल</string>
     <string name="dl_queue_empty">कतार में डाउनलोड नहीं</string>
     <string name="dl_queue_hint">लिंक एक-एक करके डाउनलोड होते हैं, ऐप बंद होने पर भी।</string>
-    <string name="in_progress">जारी है</string>
+    <string name="in_progress_label">जारी है</string>
     <string name="dl_waiting_n">प्रतीक्षा · %1$s</string>
     <string name="dl_finished">समाप्त</string>
     <string name="clear">साफ़ करें</string>

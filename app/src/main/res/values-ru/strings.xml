@@ -642,7 +642,7 @@
     <string name="root">Корень</string>
     <string name="dl_queue_empty">В очереди нет скачиваний</string>
     <string name="dl_queue_hint">Ссылки скачиваются по одной, даже когда приложение закрыто.</string>
-    <string name="in_progress">Выполняется</string>
+    <string name="in_progress_label">Выполняется</string>
     <string name="dl_waiting_n">Ожидание · %1$s</string>
     <string name="dl_finished">Завершено</string>
     <string name="clear">Очистить</string>

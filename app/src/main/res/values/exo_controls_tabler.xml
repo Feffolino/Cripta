@@ -2,11 +2,11 @@
 <!-- The video player's transport buttons in Tabler Icons (white, filled), as the rest of the app.
      Media3 picks its icons through these aliases; the replay/forward-by-seconds circles keep
      Media3's own (the seconds are written inside them). -->
-<resources>
-    <drawable name="exo_styled_controls_play">@drawable/tabler_exo_play</drawable>
-    <drawable name="exo_styled_controls_pause">@drawable/tabler_exo_pause</drawable>
-    <drawable name="exo_styled_controls_next">@drawable/tabler_exo_next</drawable>
-    <drawable name="exo_styled_controls_previous">@drawable/tabler_exo_previous</drawable>
-    <drawable name="exo_styled_controls_rewind">@drawable/tabler_exo_rewind</drawable>
-    <drawable name="exo_styled_controls_fastforward">@drawable/tabler_exo_fastforward</drawable>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <drawable name="exo_styled_controls_play" tools:override="true">@drawable/tabler_exo_play</drawable>
+    <drawable name="exo_styled_controls_pause" tools:override="true">@drawable/tabler_exo_pause</drawable>
+    <drawable name="exo_styled_controls_next" tools:override="true">@drawable/tabler_exo_next</drawable>
+    <drawable name="exo_styled_controls_previous" tools:override="true">@drawable/tabler_exo_previous</drawable>
+    <drawable name="exo_styled_controls_rewind" tools:override="true">@drawable/tabler_exo_rewind</drawable>
+    <drawable name="exo_styled_controls_fastforward" tools:override="true">@drawable/tabler_exo_fastforward</drawable>
 </resources>

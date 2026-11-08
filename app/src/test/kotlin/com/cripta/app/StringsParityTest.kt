@@ -12,6 +12,7 @@ class StringsParityTest {
     private val res = File("src/main/res")
     private val placeholder = Regex("""%%(?:\.\d+f|[sdfc])|%(\d+\$)?[-#+ 0,(]*\d*(\.\d+)?[sdfc%]""")
     private val quantities = mapOf(
+        "values-it" to setOf("one", "many", "other"),
         "values-es" to setOf("one", "many", "other"),
         "values-fr" to setOf("one", "many", "other"),
         "values-de" to setOf("one", "other"),

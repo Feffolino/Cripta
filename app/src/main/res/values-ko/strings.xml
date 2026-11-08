@@ -579,7 +579,7 @@
     <string name="root">최상위</string>
     <string name="dl_queue_empty">대기 중인 다운로드 없음</string>
     <string name="dl_queue_hint">링크를 하나씩 다운로드하며 앱을 닫아도 계속됩니다.</string>
-    <string name="in_progress">진행 중</string>
+    <string name="in_progress_label">진행 중</string>
     <string name="dl_waiting_n">대기 중 · %1$s</string>
     <string name="dl_finished">완료</string>
     <string name="clear">지우기</string>

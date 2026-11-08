@@ -600,7 +600,7 @@
     <string name="root">Root</string>
     <string name="dl_queue_empty">No downloads in the queue</string>
     <string name="dl_queue_hint">Links download one at a time, even with the app closed.</string>
-    <string name="in_progress">In progress</string>
+    <string name="in_progress_label">In progress</string>
     <string name="dl_waiting_n">Waiting · %1$s</string>
     <string name="dl_finished">Finished</string>
     <string name="clear">Clear</string>

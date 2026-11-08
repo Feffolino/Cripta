@@ -684,7 +684,7 @@
     <string name="root">الجذر</string>
     <string name="dl_queue_empty">لا تنزيلات في قائمة الانتظار</string>
     <string name="dl_queue_hint">تُنزّل الروابط تباعاً، حتى مع إغلاق التطبيق.</string>
-    <string name="in_progress">جارٍ التنفيذ</string>
+    <string name="in_progress_label">جارٍ التنفيذ</string>
     <string name="dl_waiting_n">انتظار · %1$s</string>
     <string name="dl_finished">مكتمل</string>
     <string name="clear">مسح</string>

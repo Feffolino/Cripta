@@ -348,7 +348,7 @@ fun DownloadScreen(
                     modifier = Modifier.padding(top = 2.dp))
             }
         }
-        if (running.isNotEmpty()) { Heading(str(R.string.in_progress)); jobs(running) }
+        if (running.isNotEmpty()) { Heading(str(R.string.in_progress_label)); jobs(running) }
         if (waiting.isNotEmpty()) { Heading(str(R.string.dl_waiting_n, waiting.size), Modifier.padding(top = 8.dp)); jobs(waiting) }
         if (finished.isNotEmpty()) {
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
