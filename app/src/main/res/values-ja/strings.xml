@@ -1067,8 +1067,8 @@
     <string name="analyse_new_videos">新しい動画を解析</string>
     <string name="analyse_new_videos_desc">読み込み、ダウンロード、変換の後にバックグラウンドで解析します。</string>
     <string name="quick_analysis">簡易解析</string>
-    <string name="quick_analysis_on">各動画の最初と最後の 1 分だけを調べます。大幅に速くなりますが、1 分より後に始まるテーマ曲は見つかりません。</string>
-    <string name="quick_analysis_off">各動画の最初の 10 分と最後の 5 分を調べます。テーマ曲を見つけやすくなりますが、時間がかかります。</string>
+    <string name="quick_analysis_on">各動画の最初と最後の 1 分だけを調べます。大幅に速くなりますが、1 分より後に始まるオープニングは見つかりません。</string>
+    <string name="quick_analysis_off">各動画の最初の 10 分と最後の 5 分を調べます。より多くのオープニングやエンディングを見つけられますが、時間がかかります。</string>
     <string name="analyse_existing">既存の動画を解析</string>
     <string name="analysis_running">解析中…</string>
     <string name="reading_state">状態を読み取り中…</string>
@@ -1101,18 +1101,18 @@
     <string name="comparing_sounds">音声を比較中…</string>
     <string name="no_signatures">音声フィンガープリントはありません。</string>
     <string name="remove_from_signature">この音声フィンガープリントから %1$s を外す</string>
-    <string name="results_none_with">オープニングやエンディングのある動画がありません。同じ音声を持つ動画が 2 件以上必要です。簡易解析の場合、テーマ曲は最初の 1 分以内にある必要があります。</string>
+    <string name="results_none_with">オープニングやエンディングのある動画がありません。同じ音声を持つ動画が 2 件以上必要です。簡易解析の場合、オープニングは最初の 1 分以内にある必要があります。</string>
     <string name="results_none_without">解析済みの全動画にオープニングまたはエンディングがあります。</string>
     <string name="results_none_skipped">解析できない動画はありません。</string>
     <string name="rename_signature">音声フィンガープリントの名前を変更</string>
     <string name="merge_signatures_q">音声フィンガープリント %1$s 件を統合しますか？</string>
     <string name="merge_signatures_hint">すべての音声を認識する 1 つの音声フィンガープリントになります（動画 %1$s 件）。名前：</string>
     <plurals name="not_a_theme_q">
-        <item quantity="other">%1$s 件の音声フィンガープリントはテーマ曲ではありませんか？</item>
+        <item quantity="other">%1$s 件の音声フィンガープリントはオープニングでもエンディングでもありませんか？</item>
     </plurals>
     <string name="not_a_theme_text">%1$s 件の動画からこの区間を外し、今後この音声を検出しません（手動設定は残ります）。メンテナンス › 除外区間から元に戻せます。</string>
-    <string name="signature_name_hint">例：One Piece のテーマ曲</string>
-    <string name="theme_length">テーマ曲の長さ</string>
+    <string name="signature_name_hint">例：One Piece のオープニング</string>
+    <string name="theme_length">オープニング・エンディングの長さ</string>
     <string name="theme_length_text">認識した音声は約 %1$s です。音声を基準に開始と終了を調整します。この音声フィンガープリントの動画 %2$s 件と今後の動画に適用します（手動設定は残ります）。</string>
     <string name="apply">適用</string>
     <string name="intro_none_nor_ending">オープニングもエンディングもなし</string>
@@ -1121,7 +1121,7 @@
     <string name="signature_deltas">" · 開始 %1$s、終了 %2$s"</string>
     <string name="signature_actions">音声フィンガープリントの操作</string>
     <string name="merge_with_others">ほかと統合…</string>
-    <string name="not_a_theme">テーマ曲ではない</string>
+    <string name="not_a_theme">オープニングでもエンディングでもない</string>
     <string name="marked_by_you_f">" · 手動設定"</string>
     <string name="people_page_intro">Cripta は全フォルダーの写真や動画から顔を探します。各メディアの詳細で誰なのか指定してください。処理はすべて端末内で行い、顔と人物は暗号化データベースに保存します。</string>
     <string name="see_people">人物を見る</string>
