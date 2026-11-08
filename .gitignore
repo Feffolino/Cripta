@@ -16,7 +16,23 @@ captures/
 keystore.properties
 *.keystore
 *.jks
+*.p12
+*.pem
+.env
+.env.*
+
+# Built packages copied outside build/
+*.apk
+*.aab
+
+# Windows shell metadata
+Thumbs.db
+desktop.ini
+
+# Python helpers in scripts/
 __pycache__/
+*.pyc
+.venv/
 .kotlin/
 
 # Logs and heap dumps
