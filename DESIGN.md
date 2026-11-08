@@ -168,7 +168,9 @@ Tag icons are a separate set (see Components) and are not Tabler.
   with the name underneath, never on the picture. No "more" button: actions are on long-press,
   so the name keeps the whole width. In Raccolta and inside a folder the folders are a grid
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
-  Video, Altro, Preferiti); the files follow under a "File" heading.
+  Video, Altro, Preferiti); the files follow under a "File" heading. With Impostazioni › Aspetto ›
+  "Cartelle in una riga" (off by default) the folders are one row scrolling sideways instead,
+  fixed-width covers, so the files start right below however many folders there are.
 - **Home**: search pill, the summary strip (Foto, Video and Note or Altro), "Continua" (videos
   left halfway), Persone, then the saved filters as chips. The space used is in
   Impostazioni › I tuoi dati ("Spazio usato"), not on Home: one bar for the whole phone storage
@@ -235,7 +237,19 @@ Tag icons are a separate set (see Components) and are not Tabler.
   the page says so.
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as a grid of three options per row with the size under each, destination as two plain rows
-  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti.
+  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. The
+  folder row shows the full path from "Radice". Its sheet: the chosen path in the accent at the
+  top ("Ora: Radice › …"), then one level at a time, like a file manager: a path of text buttons
+  to go back, "Salva nella Radice" / "Salva in …" for the level on screen, each folder a row that
+  picks it (accent name, bold, tick when chosen) with an arrow that opens it, "Nuova cartella
+  qui" last (the new folder is chosen at once).
+- **Spazio e pulizia** (Impostazioni › I tuoi dati): "Spazio occupato" first: the phone bar (see
+  Home), then what Cripta holds by kind as `CountRow`s, largest first, empty kinds left out (Foto,
+  Video, Note, PDF, Altri file, Cestino, Miniature e cache, Indici e database, App), then "Pulisci il
+  vault" (filled), "Svuota la cache" and "Svuota il cestino" (tonal). Pulisci opens a full-screen
+  list, heaviest first (chips: Peso, Nome, Data); a tap selects (cover ring and tick), the bottom
+  bar says "Elimina (2,4 GB)"; the confirmation says where the files go: to the trash for N days
+  when it is on, else gone for good with the space freed.
 
 ## Touch and motion
 
@@ -257,3 +271,8 @@ Tag icons are a separate set (see Components) and are not Tabler.
 Plain Italian, short. Controls name their effect, not the mechanism ("Schermo diviso con i
 dettagli", "Crea backup"). Messages that point to a setting use its real path
 (`Impostazioni › <pagina>`).
+
+Texts live in `res/values` (English) and `res/values-it` (Italian). A text meant to be joined to
+others with a space at its start or end (" di ", "Cartelle · ") is quoted in both files: Android
+trims unquoted texts, and "18 GB di 64 GB" read "18 GBdi64 GB". `StringsParityTest` checks that
+both languages have the same texts, placeholders and edge spaces.
