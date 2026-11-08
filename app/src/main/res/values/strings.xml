@@ -384,12 +384,12 @@
         <item quantity="other">%1$s originals to handle</item>
     </plurals>
     <plurals name="delete_original_q">
-        <item quantity="one">Delete the original?</item>
-        <item quantity="other">Delete the originals?</item>
+        <item quantity="one">Delete %1$s original?</item>
+        <item quantity="other">Delete %1$s originals?</item>
     </plurals>
     <plurals name="delete_original_btn">
-        <item quantity="one">Delete original</item>
-        <item quantity="other">Delete originals</item>
+        <item quantity="one">Delete %1$s original</item>
+        <item quantity="other">Delete %1$s originals</item>
     </plurals>
     <string name="convert_replace">Replace the original</string>
     <string name="convert_replace_desc">The MP4 takes its place (folder, tags, cover); the original goes to the trash for %1$s days.</string>
@@ -1391,8 +1391,8 @@
         <item quantity="other">Download %1$s files?</item>
     </plurals>
     <plurals name="export_files_text">
-        <item quantity="one">An UNENCRYPTED copy of the file will be saved in the folder you choose, visible to other apps. The files also stay in the vault.</item>
-        <item quantity="other">An UNENCRYPTED copy of the files will be saved in the folder you choose, visible to other apps. The files also stay in the vault.</item>
+        <item quantity="one">An UNENCRYPTED copy of %1$s file will be saved in the folder you choose, visible to other apps. The files also stay in the vault.</item>
+        <item quantity="other">An UNENCRYPTED copy of %1$s files will be saved in the folder you choose, visible to other apps. The files also stay in the vault.</item>
     </plurals>
     <string name="choose_folder">Choose folder</string>
     <plurals name="delete_files_q">
@@ -1961,11 +1961,11 @@
     <string name="empty_trash_q">Empty the trash?</string>
     <string name="empty_short">Empty</string>
     <string name="sec_language">Language</string>
-    <string name="language_hint">Cripta is in English and Italian.</string>
+    <string name="language_hint">Choose the language Cripta uses on this phone.</string>
     <string name="language_pick">Choose Cripta\'s language</string>
     <string name="language_follows_system">Follows the phone\'s language</string>
     <string name="si_42">Language</string>
-    <string name="si_42_kw">language english italian translation lingua italiano</string>
+    <string name="si_42_kw">language change translation system</string>
     <string name="same_as_sound">same as the sound</string>
     <string name="tag_match_all">all</string>
     <string name="folder_lc">folder</string>

@@ -384,12 +384,12 @@
         <item quantity="other">%1$s originali da gestire</item>
     </plurals>
     <plurals name="delete_original_q">
-        <item quantity="one">Eliminare l\'originale?</item>
-        <item quantity="other">Eliminare gli originali?</item>
+        <item quantity="one">Eliminare %1$s originale?</item>
+        <item quantity="other">Eliminare %1$s originali?</item>
     </plurals>
     <plurals name="delete_original_btn">
-        <item quantity="one">Elimina originale</item>
-        <item quantity="other">Elimina originali</item>
+        <item quantity="one">Elimina %1$s originale</item>
+        <item quantity="other">Elimina %1$s originali</item>
     </plurals>
     <string name="convert_replace">Sostituisci l\'originale</string>
     <string name="convert_replace_desc">L\'MP4 prende il suo posto (cartella, etichette, copertina); l\'originale va nel cestino per %1$s giorni.</string>
@@ -1391,8 +1391,8 @@
         <item quantity="other">Scaricare %1$s file?</item>
     </plurals>
     <plurals name="export_files_text">
-        <item quantity="one">Una copia NON cifrata del file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
-        <item quantity="other">Una copia NON cifrata dei file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
+        <item quantity="one">Una copia NON cifrata di %1$s file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
+        <item quantity="other">Una copia NON cifrata di %1$s file verrà salvata nella cartella che sceglierai, visibile alle altre app. I file restano anche nel vault.</item>
     </plurals>
     <string name="choose_folder">Scegli cartella</string>
     <plurals name="delete_files_q">
@@ -1961,11 +1961,11 @@
     <string name="empty_trash_q">Svuotare il cestino?</string>
     <string name="empty_short">Svuota</string>
     <string name="sec_language">Lingua</string>
-    <string name="language_hint">Cripta è in inglese e in italiano.</string>
+    <string name="language_hint">Scegli la lingua usata da Cripta su questo telefono.</string>
     <string name="language_pick">Scegli la lingua di Cripta</string>
     <string name="language_follows_system">Segue la lingua del telefono</string>
     <string name="si_42">Lingua</string>
-    <string name="si_42_kw">lingua inglese italiano traduzione language english</string>
+    <string name="si_42_kw">lingua cambia traduzione sistema language</string>
     <string name="same_as_sound">come il suono</string>
     <string name="tag_match_all">tutte</string>
     <string name="folder_lc">cartella</string>

@@ -5,7 +5,7 @@ out of the system gallery, and open them only inside the app once you unlock it.
 the device.
 
 > Written entirely with [Claude](https://claude.ai) (Claude Code), through conversation: no line typed by hand.
-> A personal project, shared as is, with no warranty. The interface is in English and Italian.
+> A personal project, shared as is, with no warranty. The interface supports twelve languages.
 
 ## What it does
 
@@ -81,9 +81,11 @@ the device.
 
 ### Language
 
-Cripta is in English and Italian. It follows the phone's language (English for any language other
-than Italian); on Android 13 and later you can pick it for Cripta alone, from Settings › Appearance and
-folders › Language or the system's Settings › Apps › Cripta › Language.
+Cripta supports English, Italian, Spanish, French, German, Brazilian Portuguese, Simplified Chinese,
+Japanese, Korean, Hindi, Arabic and Russian. It follows the phone's language, with English as the
+fallback for unsupported languages. On Android 13 and later you can choose the language for Cripta
+alone, from Settings › Appearance and folders › Language or the system's
+Settings › Apps › Cripta › Language.
 
 ### Updates
 
