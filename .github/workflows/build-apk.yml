@@ -72,6 +72,21 @@ jobs:
       - name: App unit tests
         run: gradle :app:testDebugUnitTest --stacktrace --no-daemon
 
+      # Fails only on lint errors (missing translations, broken format strings...); warnings
+      # stay in the report, downloadable from the run even when this step fails.
+      - name: Lint
+        run: gradle :app:lintDebug --stacktrace --no-daemon
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.run_number }}
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+
       # Reconstruct the signing keystore from a secret (kept out of the repo).
       - name: Decode keystore
         id: keystore
