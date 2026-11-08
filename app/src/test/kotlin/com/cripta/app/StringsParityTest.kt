@@ -107,6 +107,22 @@ class StringsParityTest {
     }
 
     @Test
+    fun settingsFragmentsPreserveSpacing() {
+        val suffixes = setOf("sum_dynamic", "sum_filters_folder", "sum_on_covers",
+            "sum_recent", "sum_shots_allowed", "sum_shots_blocked", "dup_tags_moved_list")
+        for (dir in listOf(File(res, "values")) + translations()) {
+            val texts = resources(dir).associateBy { it.getAttribute("name") }
+            for (name in suffixes) {
+                val text = requireNotNull(texts[name])
+                assertEquals("${dir.name}/$name: leading space", 1, edges(text).first)
+                assertTrue("${dir.name}/$name: separator", text.textContent.startsWith("\" · "))
+            }
+            assertEquals("${dir.name}/deep_search_desc: trailing space", 1,
+                edges(requireNotNull(texts["deep_search_desc"])).second)
+        }
+    }
+
+    @Test
     fun edgeSpacesMatchInEveryLanguage() {
         val en = resources(File(res, "values"))
         for (dir in translations()) {

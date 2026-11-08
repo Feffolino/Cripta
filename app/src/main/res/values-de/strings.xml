@@ -808,7 +808,7 @@
     </plurals>
     <string name="copy_to_trash">Kopie in den Papierkorb verschoben</string>
     <string name="copy_deleted">Kopie gelöscht</string>
-    <string name="dup_tags_moved_list">· übertragene Schlagwörter: %1$s</string>
+    <string name="dup_tags_moved_list">" · übertragene Schlagwörter: %1$s"</string>
     <string name="faces_tap_hint">Tippe auf ein Gesicht, um die Person anzugeben. Lange drücken, um es mit einem anderen zusammenzuführen oder zu löschen.</string>
     <string name="faces_more_actions">Weitere Gesichtsaktionen</string>
     <string name="faces_why_none">Warum kein Gesicht?</string>
@@ -1708,10 +1708,10 @@
     <string name="sum_theme_system">Systemdesign</string>
     <string name="sum_theme_light">Helles Design</string>
     <string name="sum_theme_dark">Dunkles Design</string>
-    <string name="sum_dynamic">· dynamische Farben</string>
-    <string name="sum_filters_folder">· Filter im Ordner</string>
-    <string name="sum_on_covers">· auf Vorschaubildern</string>
-    <string name="sum_recent">· zuletzt verwendet</string>
+    <string name="sum_dynamic">" · dynamische Farben"</string>
+    <string name="sum_filters_folder">" · Filter im Ordner"</string>
+    <string name="sum_on_covers">" · auf Vorschaubildern"</string>
+    <string name="sum_recent">" · zuletzt verwendet"</string>
     <string name="sum_resume">Fortsetzen</string>
     <string name="sum_loop">Schleife</string>
     <string name="sum_next_file">nächste Datei</string>
@@ -1725,8 +1725,8 @@
     <string name="sum_lock_never">Sperrt nie</string>
     <string name="sum_lock_now">Sperrt sofort</string>
     <string name="sum_lock_after">Sperrt nach %1$s Min.</string>
-    <string name="sum_shots_allowed">· Screenshots erlaubt</string>
-    <string name="sum_shots_blocked">· Screenshots blockiert</string>
+    <string name="sum_shots_allowed">" · Screenshots erlaubt"</string>
+    <string name="sum_shots_blocked">" · Screenshots blockiert"</string>
     <string name="sum_import">Original: %1$s · MP4: %2$s</string>
     <string name="sum_ask">fragen</string>
     <string name="sum_delete">löschen</string>
@@ -1905,7 +1905,7 @@
     <string name="si_41">Updates</string>
     <string name="si_41_kw">Update Version Vorabversion Beta</string>
     <string name="compress_documents_desc">Notizen, PDFs und Texte verlustfrei komprimiert (nach Wiederherstellung identisch). Fotos und Videos bleiben unverändert: Sie sind bereits komprimiert. Zur Wiederherstellung ist diese oder eine neuere Cripta-Version nötig.</string>
-    <string name="deep_search_desc">Auch gleiche Fotos und Videos, die neu gespeichert, komprimiert oder skaliert wurden.</string>
+    <string name="deep_search_desc">"Auch gleiche Fotos und Videos, die neu gespeichert, komprimiert oder skaliert wurden. "</string>
     <string name="check_similar_import_desc">Auch bei anderem Namen: Ähnelt ein neues Foto oder Video einem vorhandenen, fragt Cripta nach. Wenn aus, findest du ähnliche unter Duplikate und Papierkorb › Ähnliche. Etwa eine Sekunde mehr pro Video.</string>
     <string name="search_setting">Einstellung suchen</string>
     <string name="clear_short">Leeren</string>

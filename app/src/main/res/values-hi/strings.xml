@@ -808,7 +808,7 @@
     </plurals>
     <string name="copy_to_trash">कॉपी कूड़ेदान में भेजी गई</string>
     <string name="copy_deleted">कॉपी हटाई गई</string>
-    <string name="dup_tags_moved_list">· ले जाए गए टैग: %1$s</string>
+    <string name="dup_tags_moved_list">" · ले जाए गए टैग: %1$s"</string>
     <string name="faces_tap_hint">किसका चेहरा है बताने के लिए दबाएँ; दूसरे से जोड़ने या हटाने के लिए दबाकर रखें।</string>
     <string name="faces_more_actions">चेहरों पर अन्य कार्य</string>
     <string name="faces_why_none">चेहरा क्यों नहीं?</string>
@@ -1708,10 +1708,10 @@
     <string name="sum_theme_system">सिस्टम की थीम</string>
     <string name="sum_theme_light">हल्की थीम</string>
     <string name="sum_theme_dark">गहरी थीम</string>
-    <string name="sum_dynamic">· डायनामिक रंग</string>
-    <string name="sum_filters_folder">· फ़ोल्डर में फ़िल्टर</string>
-    <string name="sum_on_covers">· कवर पर</string>
-    <string name="sum_recent">· हाल के</string>
+    <string name="sum_dynamic">" · डायनामिक रंग"</string>
+    <string name="sum_filters_folder">" · फ़ोल्डर में फ़िल्टर"</string>
+    <string name="sum_on_covers">" · कवर पर"</string>
+    <string name="sum_recent">" · हाल के"</string>
     <string name="sum_resume">फिर से चलाएँ</string>
     <string name="sum_loop">दोहराव</string>
     <string name="sum_next_file">अगली फ़ाइल</string>
@@ -1725,8 +1725,8 @@
     <string name="sum_lock_never">कभी लॉक नहीं होता</string>
     <string name="sum_lock_now">तुरंत लॉक होता है</string>
     <string name="sum_lock_after">%1$s मिनट बाद लॉक होता है</string>
-    <string name="sum_shots_allowed">· स्क्रीनशॉट की अनुमति</string>
-    <string name="sum_shots_blocked">· स्क्रीनशॉट बंद</string>
+    <string name="sum_shots_allowed">" · स्क्रीनशॉट की अनुमति"</string>
+    <string name="sum_shots_blocked">" · स्क्रीनशॉट बंद"</string>
     <string name="sum_import">मूल फ़ाइल: %1$s · MP4: %2$s</string>
     <string name="sum_ask">पूछें</string>
     <string name="sum_delete">हटाएँ</string>
@@ -1905,7 +1905,7 @@
     <string name="si_41">अपडेट</string>
     <string name="si_41_kw">अपडेट वर्शन प्री-रिलीज़ बीटा</string>
     <string name="compress_documents_desc">नोट, PDF और टेक्स्ट बिना नुकसान के कंप्रेस होते हैं (बहाल करने पर बिल्कुल समान)। फ़ोटो और वीडियो पहले से कंप्रेस होते हैं, इसलिए जस के तस रहते हैं। बहाल करने के लिए Cripta का यही या नया वर्शन चाहिए।</string>
-    <string name="deep_search_desc">उन्हीं फ़ोटो और वीडियो को भी खोजता है जिन्हें फिर सहेजा, कंप्रेस किया या जिनका आकार बदला गया हो।</string>
+    <string name="deep_search_desc">"उन्हीं फ़ोटो और वीडियो को भी खोजता है जिन्हें फिर सहेजा, कंप्रेस किया या जिनका आकार बदला गया हो। "</string>
     <string name="check_similar_import_desc">नाम अलग हो तब भी नई फ़ोटो या वीडियो वॉल्ट में मौजूद किसी फ़ाइल जैसा हो तो पूछा जाता है कि क्या करें। बंद होने पर डुप्लिकेट और कूड़ेदान › मिलता-जुलता में खोज सकते हैं। हर वीडियो पर लगभग एक सेकंड अतिरिक्त लगता है।</string>
     <string name="search_setting">सेटिंग खोजें</string>
     <string name="clear_short">साफ़ करें</string>

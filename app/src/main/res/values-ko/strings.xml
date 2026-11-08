@@ -778,7 +778,7 @@
     </plurals>
     <string name="copy_to_trash">사본을 휴지통으로 이동했습니다</string>
     <string name="copy_deleted">사본을 삭제했습니다</string>
-    <string name="dup_tags_moved_list">· 이동한 태그: %1$s</string>
+    <string name="dup_tags_moved_list">" · 이동한 태그: %1$s"</string>
     <string name="faces_tap_hint">얼굴을 눌러 누구인지 지정하세요. 길게 누르면 다른 얼굴과 합치거나 삭제할 수 있습니다.</string>
     <string name="faces_more_actions">얼굴 관련 더 많은 작업</string>
     <string name="faces_why_none">얼굴이 없는 이유</string>
@@ -1648,10 +1648,10 @@
     <string name="sum_theme_system">시스템 테마</string>
     <string name="sum_theme_light">밝은 테마</string>
     <string name="sum_theme_dark">어두운 테마</string>
-    <string name="sum_dynamic">· 동적 색상</string>
-    <string name="sum_filters_folder">· 폴더 내 필터</string>
-    <string name="sum_on_covers">· 표지에 표시</string>
-    <string name="sum_recent">· 최근 사용</string>
+    <string name="sum_dynamic">" · 동적 색상"</string>
+    <string name="sum_filters_folder">" · 폴더 내 필터"</string>
+    <string name="sum_on_covers">" · 표지에 표시"</string>
+    <string name="sum_recent">" · 최근 사용"</string>
     <string name="sum_resume">이어 재생</string>
     <string name="sum_loop">반복</string>
     <string name="sum_next_file">다음 파일</string>
@@ -1665,8 +1665,8 @@
     <string name="sum_lock_never">자동 잠금 안 함</string>
     <string name="sum_lock_now">즉시 잠금</string>
     <string name="sum_lock_after">%1$s분 후 잠금</string>
-    <string name="sum_shots_allowed">· 스크린샷 허용</string>
-    <string name="sum_shots_blocked">· 스크린샷 차단</string>
+    <string name="sum_shots_allowed">" · 스크린샷 허용"</string>
+    <string name="sum_shots_blocked">" · 스크린샷 차단"</string>
     <string name="sum_import">원본: %1$s · MP4: %2$s</string>
     <string name="sum_ask">묻기</string>
     <string name="sum_delete">삭제</string>
@@ -1844,7 +1844,7 @@
     <string name="si_41">업데이트</string>
     <string name="si_41_kw">업데이트 버전 사전출시 베타</string>
     <string name="compress_documents_desc">메모, PDF, 텍스트를 무손실 압축합니다(복원 시 원본과 동일). 사진과 동영상은 이미 압축되어 있어 그대로 둡니다. 복원하려면 이 버전 이상의 Cripta가 필요합니다.</string>
-    <string name="deep_search_desc">다시 저장하거나 재압축하거나 크기를 바꾼 같은 사진과 동영상도 찾습니다.</string>
+    <string name="deep_search_desc">"다시 저장하거나 재압축하거나 크기를 바꾼 같은 사진과 동영상도 찾습니다. "</string>
     <string name="check_similar_import_desc">이름이 달라도 새 사진이나 동영상이 보관함의 파일과 비슷하면 처리 방법을 묻습니다. 꺼도 중복 및 휴지통 › 유사에서 찾을 수 있습니다. 동영상마다 약 1초 더 걸립니다.</string>
     <string name="search_setting">설정 검색</string>
     <string name="clear_short">지우기</string>

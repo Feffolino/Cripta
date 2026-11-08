@@ -838,7 +838,7 @@
     </plurals>
     <string name="copy_to_trash">Copia spostata nel cestino</string>
     <string name="copy_deleted">Copia eliminata</string>
-    <string name="dup_tags_moved_list">· etichette spostate: %1$s</string>
+    <string name="dup_tags_moved_list">" · etichette spostate: %1$s"</string>
     <string name="faces_tap_hint">Tocca un volto per dire chi è, tienilo premuto per unirlo a un altro o eliminarlo.</string>
     <string name="faces_more_actions">Altre azioni sui volti</string>
     <string name="faces_why_none">Perché nessun volto?</string>
@@ -1768,10 +1768,10 @@
     <string name="sum_theme_system">Tema di sistema</string>
     <string name="sum_theme_light">Tema chiaro</string>
     <string name="sum_theme_dark">Tema scuro</string>
-    <string name="sum_dynamic">· colori dinamici</string>
-    <string name="sum_filters_folder">· filtri nella cartella</string>
-    <string name="sum_on_covers">· sulle copertine</string>
-    <string name="sum_recent">· recenti</string>
+    <string name="sum_dynamic">" · colori dinamici"</string>
+    <string name="sum_filters_folder">" · filtri nella cartella"</string>
+    <string name="sum_on_covers">" · sulle copertine"</string>
+    <string name="sum_recent">" · recenti"</string>
     <string name="sum_resume">Riprendi</string>
     <string name="sum_loop">loop</string>
     <string name="sum_next_file">prossimo file</string>
@@ -1785,8 +1785,8 @@
     <string name="sum_lock_never">Blocco mai</string>
     <string name="sum_lock_now">Blocco subito</string>
     <string name="sum_lock_after">Blocco dopo %1$s min</string>
-    <string name="sum_shots_allowed">· screenshot consentiti</string>
-    <string name="sum_shots_blocked">· screenshot bloccati</string>
+    <string name="sum_shots_allowed">" · screenshot consentiti"</string>
+    <string name="sum_shots_blocked">" · screenshot bloccati"</string>
     <string name="sum_import">Originale: %1$s · MP4: %2$s</string>
     <string name="sum_ask">chiedi</string>
     <string name="sum_delete">elimina</string>
@@ -1966,7 +1966,7 @@
     <string name="si_41">Aggiornamenti</string>
     <string name="si_41_kw">aggiorna versione update pre-release beta</string>
     <string name="compress_documents_desc">Note, PDF e testi compressi senza perdita (identici al ripristino). Foto e video restano come sono: sono già compressi. Il ripristino richiede questa versione di Cripta o successive.</string>
-    <string name="deep_search_desc">Anche foto e video uguali ma salvati di nuovo, ricompressi o ridimensionati.</string>
+    <string name="deep_search_desc">"Anche foto e video uguali ma salvati di nuovo, ricompressi o ridimensionati. "</string>
     <string name="check_similar_import_desc">Anche con un nome diverso: se una foto o un video nuovo somiglia a uno già nel vault, ti chiede cosa fare. Spento, i simili li trovi in Duplicati e cestino › Simili. Circa un secondo in più per video.</string>
     <string name="search_setting">Cerca un\'impostazione</string>
     <string name="clear_short">Cancella</string>

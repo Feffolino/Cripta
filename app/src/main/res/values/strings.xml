@@ -808,7 +808,7 @@
     </plurals>
     <string name="copy_to_trash">Copy moved to the trash</string>
     <string name="copy_deleted">Copy deleted</string>
-    <string name="dup_tags_moved_list">· tags moved: %1$s</string>
+    <string name="dup_tags_moved_list">" · tags moved: %1$s"</string>
     <string name="faces_tap_hint">Tap a face to say who it is, press and hold it to join it to another or delete it.</string>
     <string name="faces_more_actions">More actions on the faces</string>
     <string name="faces_why_none">Why no face?</string>
@@ -1708,10 +1708,10 @@
     <string name="sum_theme_system">System theme</string>
     <string name="sum_theme_light">Light theme</string>
     <string name="sum_theme_dark">Dark theme</string>
-    <string name="sum_dynamic">· dynamic colours</string>
-    <string name="sum_filters_folder">· filters in the folder</string>
-    <string name="sum_on_covers">· on covers</string>
-    <string name="sum_recent">· recent</string>
+    <string name="sum_dynamic">" · dynamic colours"</string>
+    <string name="sum_filters_folder">" · filters in the folder"</string>
+    <string name="sum_on_covers">" · on covers"</string>
+    <string name="sum_recent">" · recent"</string>
     <string name="sum_resume">Resume</string>
     <string name="sum_loop">loop</string>
     <string name="sum_next_file">next file</string>
@@ -1725,8 +1725,8 @@
     <string name="sum_lock_never">Never locks</string>
     <string name="sum_lock_now">Locks immediately</string>
     <string name="sum_lock_after">Locks after %1$s min</string>
-    <string name="sum_shots_allowed">· screenshots allowed</string>
-    <string name="sum_shots_blocked">· screenshots blocked</string>
+    <string name="sum_shots_allowed">" · screenshots allowed"</string>
+    <string name="sum_shots_blocked">" · screenshots blocked"</string>
     <string name="sum_import">Original: %1$s · MP4: %2$s</string>
     <string name="sum_ask">ask</string>
     <string name="sum_delete">delete</string>
@@ -1905,7 +1905,7 @@
     <string name="si_41">Updates</string>
     <string name="si_41_kw">update version pre-release beta</string>
     <string name="compress_documents_desc">Notes, PDFs and texts compressed without loss (identical on restore). Photos and videos stay as they are: they are already compressed. Restoring needs this version of Cripta or later.</string>
-    <string name="deep_search_desc">Also the same photos and videos saved again, recompressed or resized.</string>
+    <string name="deep_search_desc">"Also the same photos and videos saved again, recompressed or resized. "</string>
     <string name="check_similar_import_desc">Even with a different name: if a new photo or video looks like one already in the vault, it asks you what to do. When off, you find similar ones in Duplicates and trash › Similar. About one second more per video.</string>
     <string name="search_setting">Search a setting</string>
     <string name="clear_short">Clear</string>

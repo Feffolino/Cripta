@@ -868,7 +868,7 @@
     </plurals>
     <string name="copy_to_trash">Копия перемещена в корзину</string>
     <string name="copy_deleted">Копия удалена</string>
-    <string name="dup_tags_moved_list">· перенесены метки: %1$s</string>
+    <string name="dup_tags_moved_list">" · перенесены метки: %1$s"</string>
     <string name="faces_tap_hint">Нажмите на лицо, чтобы указать человека; удерживайте для объединения с другим лицом или удаления.</string>
     <string name="faces_more_actions">Другие действия с лицами</string>
     <string name="faces_why_none">Почему нет лиц?</string>
@@ -1828,10 +1828,10 @@
     <string name="sum_theme_system">Системная тема</string>
     <string name="sum_theme_light">Светлая тема</string>
     <string name="sum_theme_dark">Тёмная тема</string>
-    <string name="sum_dynamic">· динамические цвета</string>
-    <string name="sum_filters_folder">· фильтры в папке</string>
-    <string name="sum_on_covers">· на обложках</string>
-    <string name="sum_recent">· недавние</string>
+    <string name="sum_dynamic">" · динамические цвета"</string>
+    <string name="sum_filters_folder">" · фильтры в папке"</string>
+    <string name="sum_on_covers">" · на обложках"</string>
+    <string name="sum_recent">" · недавние"</string>
     <string name="sum_resume">Продолжение</string>
     <string name="sum_loop">повтор</string>
     <string name="sum_next_file">следующий файл</string>
@@ -1845,8 +1845,8 @@
     <string name="sum_lock_never">Никогда не блокируется</string>
     <string name="sum_lock_now">Блокируется сразу</string>
     <string name="sum_lock_after">Блокируется через %1$s мин</string>
-    <string name="sum_shots_allowed">· снимки экрана разрешены</string>
-    <string name="sum_shots_blocked">· снимки экрана запрещены</string>
+    <string name="sum_shots_allowed">" · снимки экрана разрешены"</string>
+    <string name="sum_shots_blocked">" · снимки экрана запрещены"</string>
     <string name="sum_import">Оригинал: %1$s · MP4: %2$s</string>
     <string name="sum_ask">спрашивать</string>
     <string name="sum_delete">удалять</string>
@@ -2027,7 +2027,7 @@
     <string name="si_41">Обновления</string>
     <string name="si_41_kw">обновление версия предварительная бета</string>
     <string name="compress_documents_desc">Заметки, PDF и тексты сжимаются без потерь (после восстановления идентичны). Фото и видео остаются как есть: они уже сжаты. Для восстановления нужна эта или более новая версия Cripta.</string>
-    <string name="deep_search_desc">Также те же фото и видео, сохранённые повторно, с другим сжатием или размером.</string>
+    <string name="deep_search_desc">"Также те же фото и видео, сохранённые повторно, с другим сжатием или размером. "</string>
     <string name="check_similar_import_desc">Даже с другим именем: если новое фото или видео похоже на уже имеющееся в хранилище, появится выбор действия. Если выключено, похожие находятся в Дубликаты и корзина › Похожие. Примерно на секунду дольше для каждого видео.</string>
     <string name="search_setting">Поиск настройки</string>
     <string name="clear_short">Очистить</string>

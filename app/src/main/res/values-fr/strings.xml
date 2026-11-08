@@ -838,7 +838,7 @@
     </plurals>
     <string name="copy_to_trash">Copie déplacée dans la corbeille</string>
     <string name="copy_deleted">Copie supprimée</string>
-    <string name="dup_tags_moved_list">· étiquettes transférées : %1$s</string>
+    <string name="dup_tags_moved_list">" · étiquettes transférées : %1$s"</string>
     <string name="faces_tap_hint">Appuyez sur un visage pour l’identifier ; un appui prolongé permet de le regrouper avec un autre ou de le supprimer.</string>
     <string name="faces_more_actions">Autres actions sur les visages</string>
     <string name="faces_why_none">Pourquoi aucun visage ?</string>
@@ -1768,10 +1768,10 @@
     <string name="sum_theme_system">Thème du système</string>
     <string name="sum_theme_light">Thème clair</string>
     <string name="sum_theme_dark">Thème sombre</string>
-    <string name="sum_dynamic">· couleurs dynamiques</string>
-    <string name="sum_filters_folder">· filtres dans le dossier</string>
-    <string name="sum_on_covers">· sur les vignettes</string>
-    <string name="sum_recent">· récentes</string>
+    <string name="sum_dynamic">" · couleurs dynamiques"</string>
+    <string name="sum_filters_folder">" · filtres dans le dossier"</string>
+    <string name="sum_on_covers">" · sur les vignettes"</string>
+    <string name="sum_recent">" · récentes"</string>
     <string name="sum_resume">Reprendre</string>
     <string name="sum_loop">boucle</string>
     <string name="sum_next_file">fichier suivant</string>
@@ -1785,8 +1785,8 @@
     <string name="sum_lock_never">Ne se verrouille jamais</string>
     <string name="sum_lock_now">Se verrouille immédiatement</string>
     <string name="sum_lock_after">Se verrouille après %1$s min</string>
-    <string name="sum_shots_allowed">· captures autorisées</string>
-    <string name="sum_shots_blocked">· captures bloquées</string>
+    <string name="sum_shots_allowed">" · captures autorisées"</string>
+    <string name="sum_shots_blocked">" · captures bloquées"</string>
     <string name="sum_import">Original : %1$s · MP4 : %2$s</string>
     <string name="sum_ask">demander</string>
     <string name="sum_delete">supprimer</string>
@@ -1966,7 +1966,7 @@
     <string name="si_41">Mises à jour</string>
     <string name="si_41_kw">mise à jour version préversion bêta</string>
     <string name="compress_documents_desc">Notes, PDF et textes compressés sans perte (identiques après restauration). Les photos et vidéos restent telles quelles : elles sont déjà compressées. La restauration nécessite cette version de Cripta ou une version ultérieure.</string>
-    <string name="deep_search_desc">Aussi les mêmes photos et vidéos réenregistrées, recompressées ou redimensionnées.</string>
+    <string name="deep_search_desc">"Aussi les mêmes photos et vidéos réenregistrées, recompressées ou redimensionnées. "</string>
     <string name="check_similar_import_desc">Même avec un autre nom : si une nouvelle photo ou vidéo ressemble à un élément du coffre, Cripta vous demande quoi faire. Si désactivé, vous trouverez les éléments similaires dans Doublons et corbeille › Similaires. Environ une seconde de plus par vidéo.</string>
     <string name="search_setting">Rechercher un paramètre</string>
     <string name="clear_short">Effacer</string>

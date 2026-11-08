@@ -778,7 +778,7 @@
     </plurals>
     <string name="copy_to_trash">コピーをごみ箱に移動しました</string>
     <string name="copy_deleted">コピーを削除しました</string>
-    <string name="dup_tags_moved_list">· 移動したタグ：%1$s</string>
+    <string name="dup_tags_moved_list">" · 移動したタグ：%1$s"</string>
     <string name="faces_tap_hint">顔をタップして人物を指定します。長押しで別の顔とまとめるか削除できます。</string>
     <string name="faces_more_actions">顔のその他の操作</string>
     <string name="faces_why_none">顔がない理由</string>
@@ -1648,10 +1648,10 @@
     <string name="sum_theme_system">システムテーマ</string>
     <string name="sum_theme_light">ライトテーマ</string>
     <string name="sum_theme_dark">ダークテーマ</string>
-    <string name="sum_dynamic">· ダイナミックカラー</string>
-    <string name="sum_filters_folder">· フォルダー内で絞り込み</string>
-    <string name="sum_on_covers">· カバーに表示</string>
-    <string name="sum_recent">· 最近使用</string>
+    <string name="sum_dynamic">" · ダイナミックカラー"</string>
+    <string name="sum_filters_folder">" · フォルダー内で絞り込み"</string>
+    <string name="sum_on_covers">" · カバーに表示"</string>
+    <string name="sum_recent">" · 最近使用"</string>
     <string name="sum_resume">再開</string>
     <string name="sum_loop">ループ</string>
     <string name="sum_next_file">次のファイル</string>
@@ -1665,8 +1665,8 @@
     <string name="sum_lock_never">自動ロックなし</string>
     <string name="sum_lock_now">すぐにロック</string>
     <string name="sum_lock_after">%1$s 分後にロック</string>
-    <string name="sum_shots_allowed">· スクリーンショット許可</string>
-    <string name="sum_shots_blocked">· スクリーンショット禁止</string>
+    <string name="sum_shots_allowed">" · スクリーンショット許可"</string>
+    <string name="sum_shots_blocked">" · スクリーンショット禁止"</string>
     <string name="sum_import">元ファイル：%1$s · MP4：%2$s</string>
     <string name="sum_ask">確認</string>
     <string name="sum_delete">削除</string>
@@ -1844,7 +1844,7 @@
     <string name="si_41">更新</string>
     <string name="si_41_kw">更新 バージョン プレビュー ベータ</string>
     <string name="compress_documents_desc">メモ、PDF、テキストを可逆圧縮します（復元時は元と同じ内容）。写真や動画は圧縮済みなので変更しません。復元にはこのバージョン以降の Cripta が必要です。</string>
-    <string name="deep_search_desc">保存し直したり、再圧縮やサイズ変更をした同じ写真や動画も探します。</string>
+    <string name="deep_search_desc">"保存し直したり、再圧縮やサイズ変更をした同じ写真や動画も探します。 "</string>
     <string name="check_similar_import_desc">名前が違っても、新しい写真や動画が保管庫内のものに似ていれば処理を確認します。オフでも重複とごみ箱 › 類似で探せます。動画ごとに約 1 秒余分にかかります。</string>
     <string name="search_setting">設定を検索</string>
     <string name="clear_short">消去</string>

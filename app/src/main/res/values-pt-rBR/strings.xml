@@ -838,7 +838,7 @@
     </plurals>
     <string name="copy_to_trash">Cópia movida para a lixeira</string>
     <string name="copy_deleted">Cópia excluída</string>
-    <string name="dup_tags_moved_list">· etiquetas transferidas: %1$s</string>
+    <string name="dup_tags_moved_list">" · etiquetas transferidas: %1$s"</string>
     <string name="faces_tap_hint">Toque em um rosto para dizer quem é; mantenha pressionado para uni-lo a outro ou excluí-lo.</string>
     <string name="faces_more_actions">Mais ações nos rostos</string>
     <string name="faces_why_none">Por que não há rosto?</string>
@@ -1768,10 +1768,10 @@
     <string name="sum_theme_system">Tema do sistema</string>
     <string name="sum_theme_light">Tema claro</string>
     <string name="sum_theme_dark">Tema escuro</string>
-    <string name="sum_dynamic">· cores dinâmicas</string>
-    <string name="sum_filters_folder">· filtros na pasta</string>
-    <string name="sum_on_covers">· nas capas</string>
-    <string name="sum_recent">· recentes</string>
+    <string name="sum_dynamic">" · cores dinâmicas"</string>
+    <string name="sum_filters_folder">" · filtros na pasta"</string>
+    <string name="sum_on_covers">" · nas capas"</string>
+    <string name="sum_recent">" · recentes"</string>
     <string name="sum_resume">Retomar</string>
     <string name="sum_loop">loop</string>
     <string name="sum_next_file">próximo arquivo</string>
@@ -1785,8 +1785,8 @@
     <string name="sum_lock_never">Nunca bloqueia</string>
     <string name="sum_lock_now">Bloqueia imediatamente</string>
     <string name="sum_lock_after">Bloqueia após %1$s min</string>
-    <string name="sum_shots_allowed">· capturas de tela permitidas</string>
-    <string name="sum_shots_blocked">· capturas de tela bloqueadas</string>
+    <string name="sum_shots_allowed">" · capturas de tela permitidas"</string>
+    <string name="sum_shots_blocked">" · capturas de tela bloqueadas"</string>
     <string name="sum_import">Original: %1$s · MP4: %2$s</string>
     <string name="sum_ask">perguntar</string>
     <string name="sum_delete">excluir</string>
@@ -1966,7 +1966,7 @@
     <string name="si_41">Atualizações</string>
     <string name="si_41_kw">atualização versão pré-lançamento beta</string>
     <string name="compress_documents_desc">Notas, PDFs e textos compactados sem perda (idênticos após a restauração). Fotos e vídeos ficam como estão: já são compactados. A restauração exige esta versão do Cripta ou uma mais recente.</string>
-    <string name="deep_search_desc">Também as mesmas fotos e vídeos salvos novamente, recompactados ou redimensionados.</string>
+    <string name="deep_search_desc">"Também as mesmas fotos e vídeos salvos novamente, recompactados ou redimensionados. "</string>
     <string name="check_similar_import_desc">Mesmo com outro nome: se uma foto ou vídeo novo se parece com um que já está no cofre, pergunta o que fazer. Quando desativado, você encontra os semelhantes em Duplicados e lixeira › Semelhantes. Cerca de um segundo a mais por vídeo.</string>
     <string name="search_setting">Buscar uma configuração</string>
     <string name="clear_short">Limpar</string>

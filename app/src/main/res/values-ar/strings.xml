@@ -928,7 +928,7 @@
     </plurals>
     <string name="copy_to_trash">نُقلت النسخة إلى المهملات</string>
     <string name="copy_deleted">حُذفت النسخة</string>
-    <string name="dup_tags_moved_list">· الوسوم المنقولة: %1$s</string>
+    <string name="dup_tags_moved_list">" · الوسوم المنقولة: %1$s"</string>
     <string name="faces_tap_hint">اضغط على وجه لتحديد صاحبه، واضغط مطولاً لضمه إلى وجه آخر أو حذفه.</string>
     <string name="faces_more_actions">إجراءات أخرى على الوجوه</string>
     <string name="faces_why_none">لماذا لا توجد وجوه؟</string>
@@ -1948,10 +1948,10 @@
     <string name="sum_theme_system">مظهر النظام</string>
     <string name="sum_theme_light">مظهر فاتح</string>
     <string name="sum_theme_dark">مظهر داكن</string>
-    <string name="sum_dynamic">· ألوان ديناميكية</string>
-    <string name="sum_filters_folder">· مرشحات في المجلد</string>
-    <string name="sum_on_covers">· على الأغلفة</string>
-    <string name="sum_recent">· الأخيرة</string>
+    <string name="sum_dynamic">" · ألوان ديناميكية"</string>
+    <string name="sum_filters_folder">" · مرشحات في المجلد"</string>
+    <string name="sum_on_covers">" · على الأغلفة"</string>
+    <string name="sum_recent">" · الأخيرة"</string>
     <string name="sum_resume">استئناف</string>
     <string name="sum_loop">تكرار</string>
     <string name="sum_next_file">الملف التالي</string>
@@ -1965,8 +1965,8 @@
     <string name="sum_lock_never">لا يقفل أبداً</string>
     <string name="sum_lock_now">يقفل فوراً</string>
     <string name="sum_lock_after">يقفل بعد %1$s د</string>
-    <string name="sum_shots_allowed">· لقطات الشاشة مسموحة</string>
-    <string name="sum_shots_blocked">· لقطات الشاشة ممنوعة</string>
+    <string name="sum_shots_allowed">" · لقطات الشاشة مسموحة"</string>
+    <string name="sum_shots_blocked">" · لقطات الشاشة ممنوعة"</string>
     <string name="sum_import">الأصل: %1$s · MP4: %2$s</string>
     <string name="sum_ask">السؤال</string>
     <string name="sum_delete">حذف</string>
@@ -2149,7 +2149,7 @@
     <string name="si_41">التحديثات</string>
     <string name="si_41_kw">تحديث إصدار أولي بيتا</string>
     <string name="compress_documents_desc">تُضغط الملاحظات وPDF والنصوص دون فقد (مطابقة بعد الاستعادة). تبقى الصور والفيديوهات كما هي: مضغوطة بالفعل. تتطلب الاستعادة هذا الإصدار من Cripta أو أحدث.</string>
-    <string name="deep_search_desc">وكذلك الصور والفيديوهات نفسها المحفوظة مجدداً أو المضغوطة أو المغيرة الحجم.</string>
+    <string name="deep_search_desc">"وكذلك الصور والفيديوهات نفسها المحفوظة مجدداً أو المضغوطة أو المغيرة الحجم. "</string>
     <string name="check_similar_import_desc">حتى باسم مختلف: إن شابهت صورة أو فيديو جديد ما في الخزنة، يسألك عما يجب فعله. عند التعطيل تجد المتشابهة في المكررات والمهملات › المشابهة. نحو ثانية إضافية لكل فيديو.</string>
     <string name="search_setting">البحث عن إعداد</string>
     <string name="clear_short">مسح</string>

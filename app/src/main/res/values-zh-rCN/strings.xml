@@ -778,7 +778,7 @@
     </plurals>
     <string name="copy_to_trash">副本已移至回收站</string>
     <string name="copy_deleted">副本已删除</string>
-    <string name="dup_tags_moved_list">· 已转移的标签：%1$s</string>
+    <string name="dup_tags_moved_list">" · 已转移的标签：%1$s"</string>
     <string name="faces_tap_hint">点按人脸可指定人物，长按可与另一张人脸合并或删除。</string>
     <string name="faces_more_actions">人脸的更多操作</string>
     <string name="faces_why_none">为什么没有人脸？</string>
@@ -1648,10 +1648,10 @@
     <string name="sum_theme_system">系统主题</string>
     <string name="sum_theme_light">浅色主题</string>
     <string name="sum_theme_dark">深色主题</string>
-    <string name="sum_dynamic">· 动态配色</string>
-    <string name="sum_filters_folder">· 文件夹内筛选</string>
-    <string name="sum_on_covers">· 封面显示</string>
-    <string name="sum_recent">· 最近使用</string>
+    <string name="sum_dynamic">" · 动态配色"</string>
+    <string name="sum_filters_folder">" · 文件夹内筛选"</string>
+    <string name="sum_on_covers">" · 封面显示"</string>
+    <string name="sum_recent">" · 最近使用"</string>
     <string name="sum_resume">续播</string>
     <string name="sum_loop">循环</string>
     <string name="sum_next_file">下一个文件</string>
@@ -1665,8 +1665,8 @@
     <string name="sum_lock_never">从不锁定</string>
     <string name="sum_lock_now">立即锁定</string>
     <string name="sum_lock_after">%1$s 分钟后锁定</string>
-    <string name="sum_shots_allowed">· 允许截屏</string>
-    <string name="sum_shots_blocked">· 禁止截屏</string>
+    <string name="sum_shots_allowed">" · 允许截屏"</string>
+    <string name="sum_shots_blocked">" · 禁止截屏"</string>
     <string name="sum_import">原文件：%1$s · MP4：%2$s</string>
     <string name="sum_ask">询问</string>
     <string name="sum_delete">删除</string>
@@ -1844,7 +1844,7 @@
     <string name="si_41">更新</string>
     <string name="si_41_kw">更新 版本 预发布 测试版</string>
     <string name="compress_documents_desc">对笔记、PDF 和文本进行无损压缩，恢复后内容完全一致。照片和视频本身已压缩，保持原样。恢复需要此版本或更新版本的 Cripta。</string>
-    <string name="deep_search_desc">还会查找重新保存、重新压缩或调整过大小的相同照片和视频。</string>
+    <string name="deep_search_desc">"还会查找重新保存、重新压缩或调整过大小的相同照片和视频。 "</string>
     <string name="check_similar_import_desc">即使名称不同，如果新照片或视频与保险库中的文件相似，也会询问你如何处理。关闭后，可在“重复文件与回收站 › 相似”中查找。每个视频大约多需一秒。</string>
     <string name="search_setting">搜索设置</string>
     <string name="clear_short">清除</string>
