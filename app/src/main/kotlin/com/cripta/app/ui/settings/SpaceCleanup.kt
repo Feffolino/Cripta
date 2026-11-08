@@ -91,7 +91,7 @@ internal fun DeviceSpaceBar(report: SpaceReport, modifier: Modifier = Modifier, 
 
 @Composable
 private fun LegendItem(color: Color, label: String, value: String, modifier: Modifier) {
-    Row(modifier, verticalAlignment = Alignment.Top) {
+    Row(modifier.semantics(mergeDescendants = true) { }, verticalAlignment = Alignment.Top) {
         Box(Modifier.padding(top = 4.dp).size(10.dp).clip(CircleShape).background(color))
         Column(Modifier.padding(start = 8.dp)) {
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)

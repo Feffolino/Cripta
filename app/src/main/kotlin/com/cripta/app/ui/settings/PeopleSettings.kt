@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -354,7 +355,7 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
 /** A star on a face: one tap adds or removes the person from the favourites. */
 @Composable
 internal fun FavoriteStar(on: Boolean, name: String, modifier: Modifier = Modifier, onToggle: () -> Unit) {
-    IconButton(onClick = onToggle, modifier = modifier.size(36.dp)) {
+    IconButton(onClick = onToggle, modifier = modifier.minimumInteractiveComponentSize().size(36.dp)) {
         Icon(if (on) CriptaIcons.Star else CriptaIcons.StarBorder, if (on) str(R.string.unfavorite_x, name) else str(R.string.favorite_x, name),
             tint = if (on) com.cripta.app.ui.theme.Favorite else androidx.compose.ui.graphics.Color.White,
             modifier = Modifier.size(26.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
@@ -898,7 +899,7 @@ private fun WhoDialog(ids: List<Long>, o: FaceRepository.Overview, vm: SettingsV
                 LazyColumn(Modifier.heightIn(max = 300.dp)) {
                     if (query.isBlank() || o.people.none { it.entity.name.equals(query.trim(), ignoreCase = true) }) item {
                         Text(if (query.isBlank()) str(R.string.new_unnamed_person) else str(R.string.new_person_plus, query.trim()), color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth().clickable { vm.assignFaces(ids, null, query); onDismiss() }.padding(vertical = 12.dp))
+                            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().clickable { vm.assignFaces(ids, null, query); onDismiss() }.padding(vertical = 12.dp))
                     }
                     items(list, key = { it.id }) { q ->
                         Row(Modifier.fillMaxWidth().clickable { vm.assignFaces(ids, q.id, ""); onDismiss() }.padding(vertical = 6.dp),

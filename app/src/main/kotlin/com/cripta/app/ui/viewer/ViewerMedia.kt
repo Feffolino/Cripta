@@ -342,7 +342,7 @@ private fun NoteView(
                         } else {
                             val done = com.cripta.app.ui.note.NoteMarkdown.checkState(part) == true
                             Row(
-                                Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(MaterialTheme.shapes.small)
+                                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
                                     .toggleableRow(done) { current = com.cripta.app.ui.note.NoteMarkdown.toggleCheck(current, index); onTextChange(current) },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

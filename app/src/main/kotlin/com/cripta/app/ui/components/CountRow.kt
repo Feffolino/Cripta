@@ -1,5 +1,6 @@
 package com.cripta.app.ui.components
 
+import androidx.compose.ui.semantics.semantics
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -45,7 +46,7 @@ fun CountRow(
     icon: ImageVector? = null,
     progress: Float? = null,
 ) {
-    Column(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.semantics(mergeDescendants = true) { }.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp).size(24.dp))

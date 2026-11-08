@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -437,7 +438,7 @@ fun ViewerScreen(
         val detailsHint: @Composable () -> Unit = {
             Row(
                 // DS cr-hint: a glass pill, 26dp.
-                Modifier.padding(top = 4.dp).heightIn(min = 26.dp).clip(CircleShape).background(com.cripta.app.ui.theme.Glass)
+                Modifier.padding(top = 4.dp).minimumInteractiveComponentSize().heightIn(min = 26.dp).clip(CircleShape).background(com.cripta.app.ui.theme.Glass)
                     .clickable(onClickLabel = str(R.string.viewer_open_panel)) { chromeTouch++; showTags = true }
                     .padding(start = 8.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,

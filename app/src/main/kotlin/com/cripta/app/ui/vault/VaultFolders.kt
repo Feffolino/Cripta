@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -90,7 +91,7 @@ internal fun Breadcrumb(names: List<String>, onGo: (Int) -> Unit) {
                 style = MaterialTheme.typography.labelLarge,
                 color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                 maxLines = 1,
-                modifier = Modifier.clip(MaterialTheme.shapes.small)
+                modifier = Modifier.minimumInteractiveComponentSize().clip(MaterialTheme.shapes.small)
                     .then(if (last) Modifier else Modifier.clickable(onClickLabel = str(R.string.go_to, n), role = Role.Button) { onGo(i) })
                     .heightIn(min = 40.dp)
                     .padding(horizontal = 6.dp, vertical = 10.dp),
@@ -227,7 +228,7 @@ fun FolderMosaic(
                 }
             }
             if (onRemoveFavorite != null) {
-                IconButton(onClick = onRemoveFavorite, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = onRemoveFavorite, modifier = Modifier.minimumInteractiveComponentSize().size(40.dp)) {
                     Icon(CriptaIcons.Star, str(R.string.unfavorite_folder), tint = com.cripta.app.ui.theme.Favorite,
                         modifier = Modifier.size(20.dp))
                 }

@@ -82,8 +82,8 @@ internal fun Filmstrip(
     // Width/height of each file's cover, learnt as the cells load (portrait files: up to 9:16).
     val aspects = remember { androidx.compose.runtime.mutableStateMapOf<String, Float>() }
     fun aspectOf(id: String) = if (rect && prefs.stripTrueAspect) aspects[id] ?: baseAspect else baseAspect
-    // Size of a cover along the strip: its height down the landscape edge, its width across.
-    fun along(h: androidx.compose.ui.unit.Dp, aspect: Float) = if (vertical) h else h * aspect
+    // Size of an interactive cover slot along the strip.
+    fun along(h: androidx.compose.ui.unit.Dp, aspect: Float) = maxOf(48.dp, if (vertical) h else h * aspect)
     val full = along(selH, baseAspect) + (along(thumbH, baseAspect) + gap) * (2 * span)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = current)
     val animate = com.cripta.app.ui.theme.animationsEnabled()
@@ -139,27 +139,33 @@ internal fun Filmstrip(
             val accentRing = MaterialTheme.colorScheme.primary
             val shown by animateFloatAsState(if (bmp != null) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripLoad")
             Box(
-                Modifier.height(h).aspectRatio(aspect)
-                    .clip(shape)
-                    .background(Color.White.copy(alpha = 0.12f))
-                    // DS filmstrip: the current item ringed in accent.
-                    .border(2.dp, accentRing.copy(alpha = ring), shape)
+                Modifier.height(maxOf(48.dp, h)).width(maxOf(48.dp, h * aspect))
                     .clickable(onClickLabel = str(R.string.open)) { onPick(i) }
                     .semantics {
                         this.contentDescription = str(R.string.file_x_of_y, i + 1, ids.size)
                         this.selected = sel
                     },
+                contentAlignment = Alignment.Center,
             ) {
-                bmp?.let {
-                    Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop,
-                        alpha = dim * shown, modifier = Modifier.fillMaxSize())
+                Box(
+                    Modifier.height(h).aspectRatio(aspect)
+                        .clip(shape)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        // DS filmstrip: the current item ringed in accent.
+                        .border(2.dp, accentRing.copy(alpha = ring), shape),
+                ) {
+                    bmp?.let {
+                        Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop,
+                            alpha = dim * shown, modifier = Modifier.fillMaxSize())
+                    }
                 }
             }
         }
+
         if (vertical) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.height(extent).width(selH * baseAspect.coerceAtLeast(1f)),
+                modifier = Modifier.height(extent).width(maxOf(48.dp, selH * baseAspect.coerceAtLeast(1f))),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = edge),
                 verticalArrangement = Arrangement.spacedBy(gap),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -170,7 +176,7 @@ internal fun Filmstrip(
             androidx.compose.foundation.lazy.LazyRow(
                 state = listState,
                 userScrollEnabled = !swipeLocked,
-                modifier = Modifier.width(extent).height(selH),
+                modifier = Modifier.width(extent).height(maxOf(48.dp, selH)),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = edge),
                 horizontalArrangement = Arrangement.spacedBy(gap),
                 verticalAlignment = Alignment.CenterVertically,

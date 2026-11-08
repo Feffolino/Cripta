@@ -1,5 +1,8 @@
 package com.cripta.app.ui.viewer
 
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -149,6 +152,13 @@ private fun StatusLine(text: String, action: String?, onAction: () -> Unit) {
     }
 }
 
+/** Taps and accessibility actions share finite, bounded seek positions. */
+internal fun seekTimeline(positionMs: Double, durationMs: Long, onSeek: (Long) -> Unit): Boolean {
+    if (durationMs <= 0 || !positionMs.isFinite()) return false
+    onSeek(positionMs.toLong().coerceIn(0L, durationMs))
+    return true
+}
+
 /**
  * The whole video as a bar: intro and outro as coloured stretches, the player's position as a line,
  * a pending mark as a tick. A tap moves the player there.
@@ -167,27 +177,37 @@ private fun Timeline(
         append(str(R.string.seek_bar_tap))
     }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Canvas(
-            Modifier.fillMaxWidth().height(32.dp)
-                .semantics { contentDescription = desc }
+        Box(
+            Modifier.fillMaxWidth().height(48.dp)
+                .semantics {
+                    contentDescription = desc
+                    progressBarRangeInfo = ProgressBarRangeInfo(
+                        positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L)).toFloat(),
+                        0f..durationMs.coerceAtLeast(0L).toFloat(),
+                    )
+                    setProgress { value -> seekTimeline(value.toDouble(), durationMs, onSeek) }
+                }
                 .pointerInput(durationMs) {
-                    detectTapGestures { o -> if (durationMs > 0) onSeek((o.x / size.width * durationMs).toLong().coerceIn(0L, durationMs)) }
+                    detectTapGestures { o -> seekTimeline(o.x.toDouble() / size.width * durationMs, durationMs, onSeek) }
                 },
+            contentAlignment = Alignment.Center,
         ) {
-            val h = 10.dp.toPx()
-            val top = (size.height - h) / 2
-            val r = CornerRadius(h / 2, h / 2)
-            drawRoundRect(track, Offset(0f, top), Size(size.width, h), r)
-            if (durationMs <= 0) return@Canvas
-            fun x(ms: Long) = (ms.toFloat() / durationMs).coerceIn(0f, 1f) * size.width
-            for ((seg, c) in listOf(intro to introColor, outro to outroColor)) {
-                seg ?: continue
-                val x0 = x(seg.startMs); val w = maxOf(x(seg.endMs) - x0, 3.dp.toPx())
-                drawRoundRect(c, Offset(x0, top), Size(w, h), r)
+            Canvas(Modifier.fillMaxWidth().height(32.dp)) {
+                val h = 10.dp.toPx()
+                val top = (size.height - h) / 2
+                val r = CornerRadius(h / 2, h / 2)
+                drawRoundRect(track, Offset(0f, top), Size(size.width, h), r)
+                if (durationMs <= 0) return@Canvas
+                fun x(ms: Long) = (ms.toFloat() / durationMs).coerceIn(0f, 1f) * size.width
+                for ((seg, c) in listOf(intro to introColor, outro to outroColor)) {
+                    seg ?: continue
+                    val x0 = x(seg.startMs); val w = maxOf(x(seg.endMs) - x0, 3.dp.toPx())
+                    drawRoundRect(c, Offset(x0, top), Size(w, h), r)
+                }
+                for (p in pending) drawRect(head.copy(alpha = 0.6f), Offset(x(p) - 1.dp.toPx(), top - 4.dp.toPx()), Size(2.dp.toPx(), h + 8.dp.toPx()))
+                val px = x(positionMs)
+                drawRect(head, Offset(px - 1.5.dp.toPx(), 0f), Size(3.dp.toPx(), size.height))
             }
-            for (p in pending) drawRect(head.copy(alpha = 0.6f), Offset(x(p) - 1.dp.toPx(), top - 4.dp.toPx()), Size(2.dp.toPx(), h + 8.dp.toPx()))
-            val px = x(positionMs)
-            drawRect(head, Offset(px - 1.5.dp.toPx(), 0f), Size(3.dp.toPx(), size.height))
         }
         Row {
             Text(clock(positionMs), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -221,7 +241,7 @@ private fun SegmentBlock(
                 Box(Modifier.size(10.dp).background(color, CircleShape))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(name, style = MaterialTheme.typography.titleSmall)
+                    Text(name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
                     Text(
                         when {
                             active != null -> "${clock(active.startMs)}–${clock(active.endMs)} · " + when {

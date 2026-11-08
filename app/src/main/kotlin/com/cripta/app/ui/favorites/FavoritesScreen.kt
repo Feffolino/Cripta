@@ -1,5 +1,6 @@
 package com.cripta.app.ui.favorites
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -187,7 +188,7 @@ fun FavoritesScreen(
                                                 if (r == SnackbarResult.ActionPerformed) vm.setFavorite(file.id, true)
                                             }
                                         },
-                                        modifier = Modifier.size(40.dp),
+                                        modifier = Modifier.minimumInteractiveComponentSize().size(40.dp),
                                     ) {
                                         Icon(CriptaIcons.Star, str(R.string.unfavorite),
                                             tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(20.dp))

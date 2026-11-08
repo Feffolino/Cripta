@@ -135,7 +135,7 @@ internal fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     Box(
         Modifier.align(Alignment.TopEnd)
             .fillMaxHeight()
-            .width(28.dp)
+            .width(48.dp)
             .onGloballyPositioned { trackH = it.size.height.toFloat() }
             .then(if (!visible) Modifier else Modifier.pointerInput(total, trackH) {
                 // Grabbed on the thumb: it keeps the same point under the finger (no jump). Grabbed

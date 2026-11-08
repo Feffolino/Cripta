@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -737,7 +738,7 @@ internal fun VideoPlayer(
                             Text(it, color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    IconButton(onClick = { nextCancelled = true }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { nextCancelled = true }, modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)) {
                         Icon(CriptaIcons.Close, str(R.string.cancel_next), tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
@@ -755,7 +756,7 @@ internal fun VideoPlayer(
                     Icon(CriptaIcons.SkipNext, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Text(if (skipSeg.kind == SegmentSkipper.Kind.INTRO) str(R.string.skip_intro) else str(R.string.skip_ending),
                         color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
-                    IconButton(onClick = { skipper.dismiss(skipSeg.kind); skipAction = SegmentSkipper.Action.None }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { skipper.dismiss(skipSeg.kind); skipAction = SegmentSkipper.Action.None }, modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)) {
                         Icon(CriptaIcons.Close, str(R.string.hide), tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }

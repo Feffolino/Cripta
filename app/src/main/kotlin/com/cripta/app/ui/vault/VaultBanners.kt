@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -214,7 +215,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (!state.active) {
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = onDismiss, modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)) {
                             Icon(CriptaIcons.Close, str(R.string.close), tint = onContainer, modifier = Modifier.size(18.dp))
                         }
                     } else {
@@ -306,7 +307,7 @@ fun ConvertBanner(
                     if (state.active) TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel), color = on) }
                     else IconButton(onClick = {
                         state.pendingOriginals.firstOrNull()?.let { onResolveOriginal(it.id, false) } ?: onDismiss()
-                    }, modifier = Modifier.size(32.dp)) {
+                    }, modifier = Modifier.minimumInteractiveComponentSize().size(32.dp)) {
                         Icon(CriptaIcons.Close, if (state.pendingOriginals.isEmpty()) str(R.string.close) else str(R.string.close_keep_original), tint = on, modifier = Modifier.size(18.dp))
                     }
                 }
@@ -360,14 +361,14 @@ internal fun StatsStrip(stats: VaultStats, filtering: Boolean, type: TypeFilter,
             else plural(R.plurals.items_n, shown.total)
         Text(lead, style = MaterialTheme.typography.labelLarge,
             color = if (filtering) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = str(R.string.summary), onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
+            modifier = Modifier.minimumInteractiveComponentSize().clip(MaterialTheme.shapes.small).clickable(onClickLabel = str(R.string.summary), onClick = onOpen).padding(horizontal = 6.dp, vertical = 4.dp))
         CountPill(CriptaIcons.Movie, shown.videos, str(R.string.videos_lower), type == TypeFilter.VIDEO) { onType(TypeFilter.VIDEO) }
         CountPill(CriptaIcons.Image, shown.images, str(R.string.photos_lower), type == TypeFilter.IMAGE) { onType(TypeFilter.IMAGE) }
         if (shown.others > 0 || type == TypeFilter.OTHER) {
             CountPill(CriptaIcons.InsertDriveFile, shown.others, str(R.string.other_files_lower), type == TypeFilter.OTHER) { onType(TypeFilter.OTHER) }
         }
         Box(Modifier.weight(1f))
-        IconButton(onClick = onOpen, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onOpen, modifier = Modifier.minimumInteractiveComponentSize().size(28.dp)) {
             Icon(CriptaIcons.ExpandMore, str(R.string.summary), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp))
         }
@@ -377,7 +378,7 @@ internal fun StatsStrip(stats: VaultStats, filtering: Boolean, type: TypeFilter,
 @Composable
 private fun CountPill(icon: ImageVector, count: Int, what: String, selected: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.clip(MaterialTheme.shapes.small)
+        Modifier.minimumInteractiveComponentSize().clip(MaterialTheme.shapes.small)
             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .semantics(mergeDescendants = true) { this.contentDescription = str(R.string.count_show_only, count, what, what) }

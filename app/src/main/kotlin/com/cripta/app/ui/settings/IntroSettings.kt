@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -177,7 +178,7 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
                 }
                 items(rejected, key = { it.id }) { r ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f).clickable { showRejected = false; onOpenFile(r.originFileId) }.padding(vertical = 4.dp)) {
+                        Column(Modifier.weight(1f).minimumInteractiveComponentSize().clickable { showRejected = false; onOpenFile(r.originFileId) }.padding(vertical = 4.dp)) {
                             Text(r.originName, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text((if (r.kind == "intro") str(R.string.intro) else str(R.string.ending)) +
                                 str(R.string.discarded_line, span(r.startMs, r.endMs), (r.endMs - r.startMs + 500) / 1000),

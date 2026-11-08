@@ -1,5 +1,9 @@
 package com.cripta.app.ui.components
 
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -162,7 +166,8 @@ fun SplitPanel(
             Column(Modifier.fillMaxSize()) {
                 // The handle: drag it, or tap it (TalkBack: "Chiudi pannello") to close.
                 Box(
-                    Modifier.fillMaxWidth()
+                    Modifier.fillMaxWidth().minimumInteractiveComponentSize()
+                        .semantics { contentDescription = str(R.string.close_panel) }
                         .clickable(onClickLabel = str(R.string.close_panel), role = androidx.compose.ui.semantics.Role.Button) { state.close() }
                         .draggable(
                             state = drag,
@@ -170,7 +175,7 @@ fun SplitPanel(
                             onDragStopped = { v -> state.settle(v / panelH) },
                         ),
                     contentAlignment = Alignment.Center,
-                ) { BottomSheetDefaults.DragHandle() }
+                ) { BottomSheetDefaults.DragHandle(modifier = Modifier.clearAndSetSemantics { }) }
                 content()
             }
         }

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.people
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -283,8 +284,8 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
             Text(p.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 color = if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f, fill = false).clickable(onClickLabel = str(R.string.rename), onClick = onRename))
-            IconButton(onClick = onRename, modifier = Modifier.padding(start = 4.dp).size(40.dp)) {
+                modifier = Modifier.weight(1f, fill = false).minimumInteractiveComponentSize().clickable(onClickLabel = str(R.string.rename), onClick = onRename))
+            IconButton(onClick = onRename, modifier = Modifier.padding(start = 4.dp).minimumInteractiveComponentSize().size(40.dp)) {
                 Icon(CriptaIcons.Edit, str(R.string.rename), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
@@ -358,7 +359,7 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
                 Icon(CriptaIcons.Link, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 Text(l, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 10.dp).clickable(onClickLabel = str(R.string.open_link)) { openLink(context, l) }
+                    modifier = Modifier.weight(1f).padding(horizontal = 10.dp).minimumInteractiveComponentSize().clickable(onClickLabel = str(R.string.open_link)) { openLink(context, l) }
                         .padding(vertical = 10.dp))
                 IconButton(onClick = {
                     clipboard.setText(androidx.compose.ui.text.AnnotatedString(l))

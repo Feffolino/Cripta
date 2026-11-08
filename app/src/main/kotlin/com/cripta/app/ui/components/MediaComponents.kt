@@ -1,5 +1,7 @@
 package com.cripta.app.ui.components
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -204,7 +206,7 @@ fun HeaderTitle(text: String) {
         val glide = com.cripta.app.ui.theme.animationsEnabled()
         Text(text, maxLines = 1, overflow = if (glide) TextOverflow.Clip else TextOverflow.Ellipsis,
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = 12.dp).then(
+            modifier = Modifier.semantics { heading() }.padding(start = 12.dp).then(
                 if (glide) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1200, repeatDelayMillis = 2000)
                 else Modifier,
             ))
@@ -235,5 +237,6 @@ fun MediaThumbCell(
 /** Title of a pushed page (an open folder): DS `title-lg`, one line. */
 @Composable
 fun PageTitle(text: String) {
-    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.semantics { heading() })
 }

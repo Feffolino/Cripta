@@ -427,8 +427,10 @@ internal fun FilterSortSheet(
                                 onClick = { onApplySaved(sf.json) },
                                 label = { Text(sf.name, maxLines = 1) },
                                 trailingIcon = {
-                                    Icon(CriptaIcons.Close, str(R.string.delete_saved_filter_x, sf.name),
-                                        modifier = Modifier.size(18.dp).clip(CircleShape).clickable { savedToDelete = sf })
+                                    androidx.compose.material3.IconButton(onClick = { savedToDelete = sf }) {
+                                        Icon(CriptaIcons.Close, str(R.string.delete_saved_filter_x, sf.name),
+                                            modifier = Modifier.size(18.dp))
+                                    }
                                 },
                             )
                         }

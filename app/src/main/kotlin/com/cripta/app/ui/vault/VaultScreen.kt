@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -607,7 +608,7 @@ fun VaultScreen(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 shape = com.cripta.app.ui.theme.RadiusMd,
-                                modifier = Modifier.size(44.dp).graphicsLayer { alpha = randomAlpha }
+                                modifier = Modifier.minimumInteractiveComponentSize().size(44.dp).graphicsLayer { alpha = randomAlpha }
                                     .then(if (fabExpanded) Modifier.clearAndSetSemantics { } else Modifier),
                             ) { Icon(CriptaIcons.Shuffle, randomLabel) }
                         }
@@ -769,7 +770,7 @@ fun VaultScreen(
                 ) {
                     // The folders group folds down to its heading (remembered across launches).
                     Row(
-                        Modifier.fillMaxWidth()
+                        Modifier.fillMaxWidth().minimumInteractiveComponentSize()
                             .clickable(onClickLabel = if (foldersCollapsed) str(R.string.show_folders) else str(R.string.hide_folders)) {
                                 vm.setFoldersCollapsed(!foldersCollapsed)
                             }

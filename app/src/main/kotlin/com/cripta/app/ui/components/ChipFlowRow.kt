@@ -13,10 +13,8 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 
 /**
- * Wrapping row of chips (filters, tags, choices). A 32dp chip normally sits in an invisible 48dp
- * touch box, so wrapped rows looked twice as far apart as the chips beside each other. Here the
- * touch box is 40dp (still well above the 24dp WCAG 2.2 minimum) and rows get no extra spacing:
- * the visible gap between rows equals the gap between chips on a row.
+ * Wrapping row of chips (filters, tags, choices), with 48dp interactive boxes.
+ * Visible chip sizes stay unchanged; wrapped rows add no unnecessary vertical spacing.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -25,7 +23,7 @@ fun ChipFlowRow(
     gap: Dp = 8.dp,
     content: @Composable FlowRowScope.() -> Unit,
 ) {
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 40.dp) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 48.dp) {
         FlowRow(
             modifier = modifier,
             horizontalArrangement = Arrangement.spacedBy(gap),
