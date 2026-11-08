@@ -843,8 +843,8 @@
     <string name="faces_none_video">Hier und in den nächsten 15 Sekunden kein Gesicht gefunden: Pausiere an einer Stelle mit gut sichtbarem Gesicht und versuche es erneut. Du kannst das Medium auch ohne Gesicht einer Person zuordnen.</string>
     <string name="faces_none_photo">Kein Gesicht gefunden. Du kannst das Medium auch ohne Gesicht einer Person zuordnen.</string>
     <string name="faces_a_bit_later">Hier kein Gesicht: Diese kommen etwas später.</string>
-    <string name="faces_tap_to_add">Tippe auf das hinzuzufügende Gesicht. So lernt die Person auch dieses Aussehen.</string>
-    <string name="search_further">Weiter vorne suchen</string>
+    <string name="faces_tap_to_add">Tippe auf das hinzuzufügende Gesicht. So erkennt Cripta die Person auch mit diesem Aussehen.</string>
+    <string name="search_further">Weiter im Video suchen</string>
     <string name="without_face">Ohne Gesicht</string>
     <string name="faces_title">Gesichter</string>
     <string name="who_is_it">Wer ist das?</string>
@@ -1056,7 +1056,7 @@
     <string name="fit_stretch">Strecken (verzerren)</string>
     <string name="speed_while_held">× während des Haltens</string>
     <string name="next_in">Weiter in %1$s s</string>
-    <string name="cancel_next">Weiter abbrechen</string>
+    <string name="cancel_next">Automatischen Wechsel abbrechen</string>
     <string name="skip_intro">Intro überspringen</string>
     <string name="skip_ending">Abspann überspringen</string>
     <string name="hide">Ausblenden</string>
@@ -1107,7 +1107,7 @@
     <string name="analyse_new_videos_desc">Nach jedem Import, Download und jeder Konvertierung im Hintergrund.</string>
     <string name="quick_analysis">Schnellanalyse</string>
     <string name="quick_analysis_on">Nur die erste und letzte Minute jedes Videos: Viel schneller, findet aber keinen Vorspann, der nach der ersten Minute beginnt.</string>
-    <string name="quick_analysis_off">Die ersten 10 und letzten 5 Minuten jedes Videos: Findet mehr Vorspänne, ist aber viel langsamer.</string>
+    <string name="quick_analysis_off">Die ersten 10 und letzten 5 Minuten jedes Videos: Findet mehr Intros und Abspänne, ist aber viel langsamer.</string>
     <string name="analyse_existing">Vorhandene Videos analysieren</string>
     <string name="analysis_running">Analyse läuft…</string>
     <string name="reading_state">Status wird gelesen…</string>
@@ -1214,7 +1214,7 @@
     </plurals>
     <string name="analysed_of">%1$s von %2$s Medien analysiert</string>
     <string name="people_n_sep">" · %1$s Personen"</string>
-    <string name="media_missing">%1$s Medien fehlen: Starte unten die Analyse.</string>
+    <string name="media_missing">%1$s Medien noch nicht analysiert: Starte unten die Analyse.</string>
     <string name="face_statistics">Gesichtsstatistik</string>
     <string name="computing">Berechnung…</string>
     <string name="stats_failed">Statistik konnte nicht gelesen werden.</string>
@@ -1334,7 +1334,7 @@
     <string name="filters_and_sort">Filter und Sortierung</string>
     <string name="folder_actions">Ordneraktionen</string>
     <string name="unfavorite_one">Aus Favoriten entfernen</string>
-    <string name="convert_mp4_one">MP4 konvertieren</string>
+    <string name="convert_mp4_one">In MP4 konvertieren</string>
     <string name="convert_n">Konvertieren (%1$s)</string>
     <string name="conversion_queued">Konvertierung vorgemerkt: Läuft im Hintergrund weiter</string>
     <string name="covers_n">Vorschaubilder (%1$s)</string>
@@ -1634,7 +1634,7 @@
     <string name="hold_to_speed">Zum Beschleunigen gedrückt halten</string>
     <string name="hold_to_speed_desc">Halte einen Finger an einer Seite: Das Video läuft schneller, bis du loslässt.</string>
     <string name="speed_while_holding">Tempo beim Gedrückthalten</string>
-    <string name="speed_1_5">1.5×</string>
+    <string name="speed_1_5">1,5×</string>
     <string name="double_tap_skip">Doppeltippen an den Seiten: Sprung um</string>
     <string name="sec_screen">Bildschirm</string>
     <string name="follow_video_orientation">Videoausrichtung folgen</string>
