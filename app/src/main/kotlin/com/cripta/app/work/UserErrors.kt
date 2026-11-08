@@ -27,8 +27,8 @@ object UserErrors {
             chain.any { it is javax.crypto.AEADBadTagException } || "tag mismatch" in text ->
                 str(R.string.err_bad_encrypted)
             chain.any { it is java.security.GeneralSecurityException } -> str(R.string.err_crypto)
-            // Our own Italian messages (IOException("Impossibile ..."), require { "Formato ..." }).
-            e.message?.let { looksItalian(it) || isOwn(it) } == true -> e.message!!
+            // Only the app's own resource texts pass through; never guess from the words in a message.
+            e.message?.let { isOwn(it) } == true -> e.message!!
             chain.any { it is java.io.IOException } -> str(R.string.err_io)
             else -> str(R.string.err_unexpected)
         }
@@ -82,6 +82,7 @@ object UserErrors {
         R.string.err_open_backup, R.string.err_bad_format, R.string.err_wrong_passphrase_or_corrupt, R.string.file_corrupt,
         R.string.err_backup_truncated, R.string.err_wrong_passphrase_or_invalid, R.string.err_note_save, R.string.settings_invalid,
         R.string.settings_unknown_kind, R.string.update_checksum_missing, R.string.update_checksum_invalid, R.string.update_checksum_mismatch,
+        R.string.dl_err_analyse_downloaded,
     )
 
     private fun isOwn(msg: String): Boolean = OWN.any { id ->
@@ -89,12 +90,5 @@ object UserErrors {
         val raw = com.cripta.app.Strings.context.getString(id)
         val head = raw.substringBefore('%')
         if (head.length == raw.length) msg == raw else head.isNotEmpty() && msg.startsWith(head)
-    }
-
-    private fun looksItalian(msg: String): Boolean {
-        val m = msg.lowercase()
-        return listOf("impossibile", "formato", "passphrase", "corrott", "incomplet", "troncato",
-            "non valid", "scrittura", "lettura", "vault").any { it in m } &&
-            listOf("exception", "failed", "error:", "null").none { it in m }
     }
 }

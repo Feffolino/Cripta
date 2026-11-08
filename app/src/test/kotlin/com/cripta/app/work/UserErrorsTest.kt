@@ -14,7 +14,6 @@ import javax.crypto.AEADBadTagException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -141,8 +140,7 @@ class UserErrorsTest {
             UserErrors.ofDownload(IllegalStateException("SSL: ENOSPC")))
     }
 
-    // The Italian-message heuristic accepts arbitrary diagnostics containing "vault".
-    @Ignore("Known bug: raw vault diagnostics are exposed")
+    // Regression: a word-based heuristic once let raw diagnostics containing "vault" through.
     @Test
     fun rawDiagnosticContainingVaultMustNotReachTheUi() {
         assertEquals(str(R.string.err_io),
