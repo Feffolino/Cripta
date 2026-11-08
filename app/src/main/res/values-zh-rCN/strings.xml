@@ -711,8 +711,8 @@
     <string name="adjust">调整</string>
     <string name="start">开始</string>
     <string name="end">结束</string>
-    <string name="trim_back">将%1$s向后移 %2$s 秒</string>
-    <string name="trim_forward">将%1$s向前移 %2$s 秒</string>
+    <string name="trim_back">将%1$s提前 %2$s 秒</string>
+    <string name="trim_forward">将%1$s延后 %2$s 秒</string>
     <string name="update_no_connection">无网络连接，无法访问更新服务器，请稍后重试。</string>
     <string name="update_none">没有可用版本。</string>
     <string name="update_none_stable">没有可用的稳定版本，可尝试启用预发布版本。</string>
@@ -1067,8 +1067,8 @@
     <string name="analyse_new_videos">分析新视频</string>
     <string name="analyse_new_videos_desc">每次导入、下载或转换后在后台分析。</string>
     <string name="quick_analysis">快速分析</string>
-    <string name="quick_analysis_on">仅分析每个视频的第一分钟和最后一分钟。速度快得多，但无法找到第一分钟之后开始的片头曲。</string>
-    <string name="quick_analysis_off">分析每个视频的前 10 分钟和后 5 分钟。可找到更多片头曲，但速度慢得多。</string>
+    <string name="quick_analysis_on">仅分析每个视频的第一分钟和最后一分钟。速度快得多，但无法找到第一分钟之后开始的片头。</string>
+    <string name="quick_analysis_off">分析每个视频的前 10 分钟和后 5 分钟。可找到更多片头和片尾，但速度慢得多。</string>
     <string name="analyse_existing">分析现有视频</string>
     <string name="analysis_running">正在分析…</string>
     <string name="reading_state">正在读取状态…</string>
@@ -1101,18 +1101,18 @@
     <string name="comparing_sounds">正在比较音频…</string>
     <string name="no_signatures">没有音频指纹。</string>
     <string name="remove_from_signature">从此音频指纹组中移除 %1$s</string>
-    <string name="results_none_with">没有包含片头或片尾的视频。至少需要两个视频具有相同音频；使用快速分析时，片头曲须位于第一分钟内。</string>
+    <string name="results_none_with">没有包含片头或片尾的视频。至少需要两个视频具有相同音频；使用快速分析时，片头须位于第一分钟内。</string>
     <string name="results_none_without">所有已分析的视频都有片头或片尾。</string>
     <string name="results_none_skipped">没有无法分析的视频。</string>
     <string name="rename_signature">重命名音频指纹</string>
     <string name="merge_signatures_q">合并 %1$s 个音频指纹？</string>
     <string name="merge_signatures_hint">将合并为一个音频指纹，识别所有相关音频（%1$s 个视频）。名称：</string>
     <plurals name="not_a_theme_q">
-        <item quantity="other">这 %1$s 个音频指纹不是片头曲或片尾曲？</item>
+        <item quantity="other">这 %1$s 个音频指纹不是片头或片尾？</item>
     </plurals>
     <string name="not_a_theme_text">将从 %1$s 个视频中移除此片段（保留手动标记），且不再检测此音频。可从“维护 › 排除片段”撤销。</string>
-    <string name="signature_name_hint">例如：One Piece 主题曲</string>
-    <string name="theme_length">主题曲时长</string>
+    <string name="signature_name_hint">例如：One Piece 片头</string>
+    <string name="theme_length">片头或片尾时长</string>
     <string name="theme_length_text">识别到的音频约为 %1$s。可相对该音频调整起止位置，适用于此音频指纹组中的 %2$s 个视频及今后的视频（保留手动标记）。</string>
     <string name="apply">应用</string>
     <string name="intro_none_nor_ending">无片头或片尾</string>
@@ -1121,7 +1121,7 @@
     <string name="signature_deltas">" · 开始 %1$s，结束 %2$s"</string>
     <string name="signature_actions">音频指纹操作</string>
     <string name="merge_with_others">与其他组合并…</string>
-    <string name="not_a_theme">不是主题曲</string>
+    <string name="not_a_theme">不是片头或片尾</string>
     <string name="marked_by_you_f">" · 你已手动标记"</string>
     <string name="people_page_intro">Cripta 会查找各文件夹中照片和视频的人脸，你可在各媒体文件的详情页指定人物。所有处理都在手机上完成，人脸和人物保存在加密数据库中。</string>
     <string name="see_people">查看人物</string>
@@ -1454,9 +1454,9 @@
     <string name="folder_named">文件夹 \"%1$s\"</string>
     <string name="filtered_results_in">筛选结果 · %1$s</string>
     <string name="with_subfolders">包含子文件夹：%1$s 个文件 · %2$s</string>
-    <string name="videos_shown_of">个显示的视频，已加载 %1$s 个</string>
-    <string name="video_loaded">个已加载的视频</string>
-    <string name="videos_loaded">个已加载的视频</string>
+    <string name="videos_shown_of">个视频已显示（已加载 %1$s 个）</string>
+    <string name="video_loaded">个视频已加载</string>
+    <string name="videos_loaded">个视频已加载</string>
     <string name="total_length_sep">" · 总时长 %1$s"</string>
     <string name="other_files">其他文件</string>
     <string name="total">总计</string>
