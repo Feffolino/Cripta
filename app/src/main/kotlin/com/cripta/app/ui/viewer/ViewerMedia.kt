@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.runtime.mutableLongStateOf
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -216,7 +217,7 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
     val offY = remember { Animatable(0f) }
     // The tap detector reads a drag that nobody consumed (a swipe up / down at 1x) as a tap: when
     // the last gesture dragged, its tap and a quick second tap are not a tap / double tap.
-    var dragEndedAt by remember { mutableStateOf(0L) }
+    var dragEndedAt by remember { mutableLongStateOf(0L) }
     val afterDrag = { android.os.SystemClock.uptimeMillis() - dragEndedAt < 600L }
 
     AsyncImage(

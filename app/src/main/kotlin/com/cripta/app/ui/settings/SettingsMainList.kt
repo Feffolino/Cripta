@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.runtime.remember
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -32,6 +33,10 @@ internal fun MainSettingsList(
     space: com.cripta.app.data.SpaceReport?,
     onOpenSpace: () -> Unit,
 ) {
+    val q = query.trim().lowercase()
+    val hits = if (q.isNotEmpty()) remember(q, com.cripta.app.Strings.locale) {
+        SEARCH_INDEX.filter { e -> e.label.lowercase().contains(q) || e.keywords.contains(q) }
+    } else emptyList()
     // Two columns of page rows in landscape; search, group labels and the lock button span the width.
     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> androidx.compose.foundation.lazy.grid.GridItemSpan =
         { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
@@ -43,7 +48,7 @@ internal fun MainSettingsList(
         verticalArrangement = Arrangement.spacedBy(0.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = full) {
+        item(key = "search", span = full) {
             // The app's single-line field: the same filled pill as every other search.
             com.cripta.app.ui.components.CriptaTextField(
                 value = query, onValueChange = onQuery,
@@ -54,27 +59,25 @@ internal fun MainSettingsList(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
-        val q = query.trim().lowercase()
         if (q.isNotEmpty()) {
-            val hits = SEARCH_INDEX.filter { e -> e.label.lowercase().contains(q) || e.keywords.contains(q) }
             if (hits.isEmpty()) {
-                item(span = full) { Text(str(R.string.no_setting_found), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                item(key = "empty-search", span = full) { Text(str(R.string.no_setting_found), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(8.dp)) }
             }
-            items(hits.size) { i ->
+            items(hits.size, key = { hits[it].let { e -> "hit:${e.page.name}:${e.section}:${e.label}" } }) { i ->
                 val e = hits[i]
                 PageRow(e.page, e.label, "${e.page.label} › ${e.section}") { onOpen(e.page, e.section) }
             }
         } else {
             SettingsGroup.entries.forEach { g ->
-                item(span = full) { GroupLabel(g.label) }
+                item(key = "group:${g.name}", span = full) { GroupLabel(g.label) }
                 val pages = SettingsPage.entries.filter { it.group == g }
-                items(pages.size) { i ->
+                items(pages.size, key = { "page:${pages[it].name}" }) { i ->
                     val p = pages[i]
                     PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, null) }
                 }
                 // DS Impostazioni: the space used, as a counted row, closes "I tuoi dati".
-                if (g == SettingsGroup.DATA) item(span = full) {
+                if (g == SettingsGroup.DATA) item(key = "device-space", span = full) {
                     // The whole phone storage: Cripta, the rest, free. Shown from the last reading
                     // (no jump on every visit); before the very first one, nothing.
                     space?.let { DeviceSpaceBar(it, Modifier.padding(top = 8.dp), onClick = onOpenSpace) }

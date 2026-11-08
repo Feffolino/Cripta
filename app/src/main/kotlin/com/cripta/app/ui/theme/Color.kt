@@ -1,5 +1,6 @@
 package com.cripta.app.ui.theme
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -84,7 +85,7 @@ object TagColorsEnabled {
 
 /** How many recently used tags pickers show (Settings › Etichette). */
 object RecentTagsCount {
-    var value by mutableStateOf(6)
+    var value by mutableIntStateOf(6)
 }
 
 /** The automatic colour of a name (stable hash into [TagPalette]), ignoring the global default. */

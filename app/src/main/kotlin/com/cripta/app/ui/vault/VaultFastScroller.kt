@@ -51,7 +51,7 @@ internal fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     modifier: Modifier = Modifier,
     labelAt: (Int) -> String? = { null },
 ) {
-    val total = state.layoutInfo.totalItemsCount
+    val total by remember(state) { derivedStateOf { state.layoutInfo.totalItemsCount } }
     if (total <= 0) return
     val scope = rememberCoroutineScope()
     var trackH by remember { mutableFloatStateOf(0f) }

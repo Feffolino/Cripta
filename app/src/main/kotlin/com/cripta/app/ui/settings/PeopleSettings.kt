@@ -1,5 +1,7 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -203,7 +205,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
 private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
     val periods = listOf(3_600_000L to str(R.string.last_hour), 86_400_000L to str(R.string.last_24h), 7 * 86_400_000L to str(R.string.last_7d),
         30 * 86_400_000L to str(R.string.last_30d), Long.MAX_VALUE to str(R.string.always))
-    var period by remember { mutableStateOf(periods[1].first) }
+    var period by remember { mutableLongStateOf(periods[1].first) }
     val found by produceState<FaceRepository.Detected?>(null, period) {
         value = null
         val since = if (period == Long.MAX_VALUE) 0L else System.currentTimeMillis() - period
@@ -288,7 +290,7 @@ private fun ScanStatus(o: FaceRepository.Overview?, progress: ConversionService.
 @Composable
 private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
     // null = still computing; a failure is its own state, with a retry, never an endless "Calcolo…".
-    var attempt by remember { mutableStateOf(0) }
+    var attempt by remember { mutableIntStateOf(0) }
     var tech by remember { mutableStateOf(false) }
     val st by produceState<Result<FaceRepository.Stats>?>(null, attempt) { value = null; value = runCatching { vm.faceStats() } }
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text(str(R.string.face_statistics)) },

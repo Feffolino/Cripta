@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -427,8 +428,8 @@ private fun NameDialog(title: String, initial: String, confirm: String, hint: St
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DurationDialog(s: IntroRepository.Signature, onDismiss: () -> Unit, onConfirm: (Long, Long) -> Unit) {
-    var start by remember { mutableStateOf(s.startDeltaMs) }
-    var end by remember { mutableStateOf(s.endDeltaMs) }
+    var start by remember { mutableLongStateOf(s.startDeltaMs) }
+    var end by remember { mutableLongStateOf(s.endDeltaMs) }
     @Composable
     fun Stepper(label: String, value: Long, onChange: (Long) -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

@@ -269,7 +269,7 @@ fun HomeScreen(
             if (savedFilters.isNotEmpty()) {
                 item {
                     LazyRow(Modifier.padding(top = 8.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(savedFilters.size) { i ->
+                        items(savedFilters.size, key = { savedFilters[it].first.id }) { i ->
                             val (sf, count) = savedFilters[i]
                             // DS cr-chip: a saved filter is a one-tap chip.
                             com.cripta.app.ui.components.ActionChip(

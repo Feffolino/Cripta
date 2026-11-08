@@ -97,12 +97,14 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        val shown = faces.sortedWith(compareBy<TrackCard>({ it.personId == null }, { it.moments.firstOrNull() ?: it.timeMs }))
+        val shown = remember(faces) {
+            faces.sortedWith(compareBy<TrackCard>({ it.personId == null }, { it.moments.firstOrNull() ?: it.timeMs }))
+        }
         // Faces gone meanwhile (joined, deleted, analysed again) leave the selection.
         val chosen = selected.filterTo(HashSet()) { id -> shown.any { it.id == id } }
         fun toggle(id: Long) { selected = if (id in chosen) chosen - id else chosen + id }
         // Faces nearly always found by mistake wait folded at the end.
-        val (unclear, clear) = shown.partition { FaceRepository.uncertain(it, isVideo) }
+        val (unclear, clear) = remember(shown, isVideo) { shown.partition { FaceRepository.uncertain(it, isVideo) } }
         val unassigned = shown.any { it.personId == null && it.state != "manual" }
         // Someone confirmed in a video: it can be looked at closer around them.
         val confirmed = isVideo && shown.any { it.personId != null && it.state == "manual" }

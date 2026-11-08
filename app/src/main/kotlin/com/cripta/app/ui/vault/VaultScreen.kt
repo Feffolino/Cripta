@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -858,7 +859,7 @@ fun VaultScreen(
             val levelX = remember { Animatable(0f) }
             val levelAlpha = remember { Animatable(1f) }
             val scrollMemory = remember { mutableMapOf<Long, Pair<Int, Int>>() }
-            var shownLevel by remember { mutableStateOf(path.lastOrNull()?.id ?: ROOT_KEY) }
+            var shownLevel by remember { mutableLongStateOf(path.lastOrNull()?.id ?: ROOT_KEY) }
             var shownDepth by remember { mutableIntStateOf(path.size) }
             LaunchedEffect(path, horizontalSign) {
                 val newKey = path.lastOrNull()?.id ?: ROOT_KEY

@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -193,7 +194,7 @@ internal fun VideoPlayer(
     // counts down, then the viewer moves on when playback ends. The card's X cancels it.
     val autoNextOn = !prefs.loop && prefs.autoNext && nextId != null && !inPip
     var remainingMs by remember(file.id) { mutableStateOf<Long?>(null) }
-    var totalMs by remember(file.id) { mutableStateOf(0L) }
+    var totalMs by remember(file.id) { mutableLongStateOf(0L) }
     var nextCancelled by remember(file.id) { mutableStateOf(false) }
     LaunchedEffect(file.id, autoNextOn) {
         if (!autoNextOn) { remainingMs = null; return@LaunchedEffect }

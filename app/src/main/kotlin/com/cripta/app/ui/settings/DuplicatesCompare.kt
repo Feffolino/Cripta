@@ -1,5 +1,8 @@
 package com.cripta.app.ui.settings
 
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -629,7 +632,7 @@ private fun SlideCompare(
         else runCatching { decodeFitted(imageBytes(c.file), 2048) }.getOrNull() ?: thumb(c.file)
     val left by produceState<android.graphics.Bitmap?>(null, a.file.id) { value = picture(a) }
     val right by produceState<android.graphics.Bitmap?>(null, b.file.id) { value = picture(b) }
-    var split by remember { mutableStateOf(0.5f) }
+    var split by remember { mutableFloatStateOf(0.5f) }
     com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(color = Color.Black, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
@@ -911,9 +914,9 @@ private fun PreviewDialog(
     onKeep: (SettingsViewModel.DupCandidate) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var index by remember { mutableStateOf(startIndex.coerceIn(0, group.candidates.lastIndex)) }
+    var index by remember { mutableIntStateOf(startIndex.coerceIn(0, group.candidates.lastIndex)) }
     // Position carried across copies so the same moment of each video can be compared.
-    var positionMs by remember { mutableStateOf(0L) }
+    var positionMs by remember { mutableLongStateOf(0L) }
     val c = group.candidates[index]
     val best = c.file.id == group.bestId
     com.cripta.app.ui.components.CriptaDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
