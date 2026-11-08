@@ -4,7 +4,6 @@ import android.app.Application
 import com.cripta.app.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -92,8 +91,7 @@ class SkipReasonsTest {
         }
     }
 
-    // The parser strips "skip" even when it is not the stored "skip:" prefix.
-    @Ignore("Known bug: unknown skip-prefixed reasons are truncated")
+    // Regression: "skip" was stripped even when it was not the stored "skip:" prefix.
     @Test
     fun unknownReasonBeginningWithSkipIsNotMistakenForTheDatabasePrefix() {
         assertEquals("skipped by newer decoder", SkipReasons.text("skipped by newer decoder"))

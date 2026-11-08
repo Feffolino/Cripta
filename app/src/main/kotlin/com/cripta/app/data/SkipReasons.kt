@@ -15,7 +15,9 @@ object SkipReasons {
 
     /** [reason], with or without its "skip:" prefix, in words; an unknown reason as it is. */
     fun text(reason: String): String {
-        val r = reason.removePrefix("skip").removePrefix(":").trim()
+        // The stored prefix is "skip:"; a bare "skip" comes from an older version (no reason).
+        val t = reason.trim()
+        val r = if (t == "skip") "" else t.removePrefix("skip:").trim()
         READ_ERROR.matchEntire(r)?.let { return str(R.string.reason_read_error, it.groupValues[1]) }
         STALLED.matchEntire(r)?.let { return str(R.string.reason_stalled, it.groupValues[1]) }
         UNSUPPORTED.matchEntire(r)?.let { return str(R.string.reason_audio_unsupported, it.groupValues[1]) }
