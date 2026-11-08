@@ -94,7 +94,7 @@
         <item quantity="one">1 face was not found again and is among the unclear ones</item>
         <item quantity="other">%1$s faces were not found again and are among the unclear ones</item>
     </plurals>
-    <string name="refine_head">Looked closer, %1$s frames around the person you confirmed:</string>
+    <string name="refine_head">"Looked closer, %1$s frames around the person you confirmed: "</string>
     <string name="refine_none">no other face is surely the same person.</string>
     <string name="refine_split_hint">" If a merge is wrong, use “Split” from the face\'s menu."</string>
     <string name="unnamed_person">unnamed person</string>
@@ -121,7 +121,7 @@
     <string name="intro_compare_result" formatted="false">Shared %.1f s: %s–%s in the first, %s–%s in the second. Similarity %d%% (analysed %d s and %d s).</string>
     <string name="video">Video</string>
     <string name="intro_found_at">intro %1$s–%2$s</string>
-    <string name="intro_none_because">no intro:</string>
+    <string name="intro_none_because">"no intro: "</string>
     <string name="intro_found_count">Intro found in %1$s of %2$s\n</string>
     <string name="intro_marked_none">marked by you as “no intro” (turn it back on with “Start here” / “End here”, or “Start over” also clearing the marks made by hand)</string>
     <string name="intro_not_analysable">can\'t be analysed (%1$s)</string>
@@ -288,7 +288,7 @@
     <string name="n_already_there">" · %1$s were already there"</string>
     <string name="n_same_name_confirm">" · %1$s with the same name to confirm"</string>
     <string name="n_similar_confirm">" · %1$s similar to confirm"</string>
-    <string name="n_file_of_sep">File %1$s of %2$s ·</string>
+    <string name="n_file_of_sep">"File %1$s of %2$s · "</string>
     <string name="n_cancel_after_file">cancelling after this file</string>
     <string name="n_n_queued">%1$s queued</string>
     <string name="n_preparing_video">Preparing the video…</string>
@@ -404,7 +404,7 @@
     <string name="convert_intro">Creates a scrollable MP4 copy, checked before it is saved. Carries on in the background. After the conversion:</string>
     <string name="convert_remember">Remember the choice (can be changed in Settings › Import and conversion)</string>
     <string name="convert">Convert</string>
-    <string name="count_of_sep">of</string>
+    <string name="count_of_sep">" of "</string>
     <string name="favorite">Favourite</string>
     <string name="open">Open</string>
     <string name="close_panel">Close panel</string>
@@ -435,7 +435,8 @@
     <string name="note_save_failed">Couldn\'t save the note. Try again.</string>
     <string name="note_delete_failed">Couldn\'t delete the note.</string>
     <string name="tab_home">Home</string>
-    <string name="tab_folders">Folders</string>
+    <string name="tab_folders">Collection</string>
+    <string name="home_folders">Folders</string>
     <string name="tab_download">Download</string>
     <string name="tab_settings">Settings</string>
     <string name="share_import_failed">Couldn\'t start importing the shared files</string>
@@ -531,8 +532,8 @@
     <string name="choose_code">Choose Cripta\'s code</string>
     <string name="numeric_pin">Numeric PIN</string>
     <string name="password_cap">Password</string>
-    <string name="pin_rules">From %1$s to %2$s digits, different from the phone\'s.</string>
-    <string name="password_rules">From %1$s to %2$s characters: letters, numbers and symbols.</string>
+    <string name="pin_rules">"From %1$s to %2$s digits, different from the phone\'s. "</string>
+    <string name="password_rules">"From %1$s to %2$s characters: letters, numbers and symbols. "</string>
     <string name="code_forget_warning">If you forget it the vault won\'t open again: only an encrypted backup is left.</string>
     <string name="code_wait_warning">After 5 wrong attempts you have to wait, longer after each mistake.</string>
     <string name="pin_too_short">At least %1$s digits (%2$s/%1$s)</string>
@@ -567,8 +568,8 @@
     <string name="import_files">Import files</string>
     <string name="from_link">From a link</string>
     <string name="start_order_title">Put them in order</string>
-    <string name="start_order_text">Create folders with the + in Folders. Tags are given from each file; press and hold to select several at once.</string>
-    <string name="open_folders">Open Folders</string>
+    <string name="start_order_text">Create folders with the + in Collection. Tags are given from each file; press and hold to select several at once.</string>
+    <string name="open_folders">Open Collection</string>
     <string name="start_lock_title">Choose when it locks</string>
     <string name="start_lock_text">%1$s You can change it in Security and privacy, along with how to unlock it.</string>
     <string name="open_security">Open Security</string>
@@ -790,8 +791,8 @@
     <string name="dup_reason_first">it was imported first</string>
     <string name="scan_failed">Scan failed. Try again; if it keeps happening, restart the app.</string>
     <string name="dup_keep_gone">The copy to keep is no longer in the vault: no copy deleted</string>
-    <string name="dup_kept_n">Kept %1$s copies,</string>
-    <string name="dup_kept_name">Kept \"%1$s\",</string>
+    <string name="dup_kept_n">"Kept %1$s copies, "</string>
+    <string name="dup_kept_name">"Kept \"%1$s\", "</string>
     <plurals name="dup_deleted">
         <item quantity="one">deleted 1 copy</item>
         <item quantity="other">deleted %1$s copies</item>
@@ -889,7 +890,7 @@
     <string name="compare_two_faces">Compare the two faces</string>
     <string name="rename">Rename</string>
     <string name="change_face">Change face</string>
-    <string name="show_in_folders">Show in Folders</string>
+    <string name="show_in_folders">Show in Collection</string>
     <string name="merge_with">Join with…</string>
     <string name="analyse_their_videos">Analyse their videos more closely</string>
     <string name="restore">Restore</string>
@@ -936,9 +937,9 @@
     <string name="done_nothing_left">Done: nothing else to check.</string>
     <string name="nothing_left">Nothing else to check. The more media you give them, the more precise the suggestions get.</string>
     <string name="play_from_here">Play from here</string>
-    <string name="from_prefix">From</string>
+    <string name="from_prefix">"From "</string>
     <string name="found_here">Found here</string>
-    <string name="media_of_sep">" media of"</string>
+    <string name="media_of_sep">" media of "</string>
     <string name="from_sep">from</string>
     <string name="is_x">It\'s %1$s</string>
     <string name="similarity_fmt" formatted="false">similarity %.2f</string>
@@ -977,7 +978,7 @@
     <string name="not_similar">They\'re not similar</string>
     <string name="similar_copies_reclaim">%1$s similar copies · you get back %2$s</string>
     <string name="why_x">Why %1$s</string>
-    <string name="compared_to">Compared with:</string>
+    <string name="compared_to">"Compared with: "</string>
     <string name="choose_copy_to_compare">Choose the copy to compare</string>
     <string name="counts_more">Counts more</string>
     <string name="the_differences">The differences</string>
@@ -996,14 +997,14 @@
         <item quantity="one">Delete the other copy?</item>
         <item quantity="other">Delete the other %1$s copies?</item>
     </plurals>
-    <string name="stays_x">\"%1$s\" stays.</string>
+    <string name="stays_x">"\"%1$s\" stays. "</string>
     <string name="no_tags_to_move">No tags to move.</string>
     <string name="tags_moved_to_kept">Tags %1$s will be moved to the kept copy.</string>
     <plurals name="delete_copies_q">
         <item quantity="one">Delete 1 copy?</item>
         <item quantity="other">Delete %1$s copies?</item>
     </plurals>
-    <string name="n_copies_stay">%1$s copies stay.</string>
+    <string name="n_copies_stay">"%1$s copies stay. "</string>
     <string name="tags_pass_to">Tags %1$s go to \"%2$s\".</string>
     <string name="delete_this_copy_q">Delete this copy?</string>
     <string name="copy_will_trash">\"%1$s\" will be moved to the trash for %2$s days.</string>
@@ -1221,7 +1222,7 @@
     <string name="n_unreadable_paren">" (%1$s not readable)"</string>
     <string name="avg_per_video" formatted="false">Average time per video: %.1f s</string>
     <string name="avg_per_photo" formatted="false">Average time per photo: %.2f s</string>
-    <string name="set_aside_prefix">Set aside:</string>
+    <string name="set_aside_prefix">"Set aside: "</string>
     <string name="hide_tech">Hide the technical details</string>
     <string name="frames_dup_extra">Same frames skipped: %1$s · added near the faces: %2$s</string>
     <string name="sharpness_header">Sharpness of the aligned faces (below %1$s = blurry):</string>
@@ -1359,7 +1360,7 @@
     <string name="search_name_or_tag">Search name or tag</string>
     <string name="show_folders">Show the folders</string>
     <string name="hide_folders">Hide the folders</string>
-    <string name="folders_count_prefix">Folders ·</string>
+    <string name="folders_count_prefix">"Folders · "</string>
     <string name="leave_selection_to_open">Leave the selection to open a folder</string>
     <string name="customise">Customise</string>
     <string name="choose_cover">Choose the cover</string>
@@ -1375,7 +1376,7 @@
     <string name="tags_updated">Tags updated</string>
     <string name="tags_added_to">Tags added to %1$s</string>
     <string name="tags_removed_from">Tags removed from %1$s</string>
-    <string name="created_on">" · created on"</string>
+    <string name="created_on">" · created on "</string>
     <string name="include_in_random">Include in random</string>
     <string name="exclude_from_random">Exclude from random (subfolders too)</string>
     <string name="folder_included_random">Folder included in random</string>
@@ -1559,13 +1560,15 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="dynamic_colours">Dynamic colours (Material You)</string>
-    <string name="folders_sec_hint">View, columns and sorting are changed straight from Folders (icons at the top and filter panel).</string>
+    <string name="folders_sec_hint">View, columns and sorting are changed straight from Collection (icons at the top and filter panel).</string>
     <string name="filters_current_folder">Filters only in the current folder</string>
     <string name="filters_current_folder_desc">At the root the filters leave out the files inside folders; inside a folder they search only among its files.</string>
     <string name="summary_above_grid">Count summary above the grid</string>
     <string name="date_headers">Date headers</string>
     <string name="size_length_under">Size and length under the files</string>
     <string name="count_under_folders">Number of items under the folders</string>
+    <string name="folders_in_a_row">Folders in one row</string>
+    <string name="folders_in_a_row_desc">Folders sit on a single row you scroll sideways, so the files start right below.</string>
     <string name="length_on_video_covers">Length on video covers</string>
     <string name="length_on_covers_desc">Top right, e.g. 3:12.</string>
     <string name="people_on_covers">People on covers</string>
@@ -1698,7 +1701,7 @@
     <string name="page_analysis">People and intros</string>
     <string name="page_security">Security and privacy</string>
     <string name="page_import">Import and conversion</string>
-    <string name="page_space">Duplicates and trash</string>
+    <string name="page_space">Space and cleanup</string>
     <string name="page_info">About and updates</string>
     <string name="sum_theme_system">System theme</string>
     <string name="sum_theme_light">Light theme</string>
@@ -1966,4 +1969,41 @@
     <string name="same_as_sound">same as the sound</string>
     <string name="tag_match_all">all</string>
     <string name="folder_lc">folder</string>
+    <string name="dl_dest_now">Now: %1$s</string>
+    <string name="dl_save_in_root">Save in the Root</string>
+    <string name="dl_save_here">Save in \"%1$s\"</string>
+    <string name="dl_no_subfolders">No subfolders here.</string>
+    <string name="dl_new_folder_root">New folder in the Root</string>
+    <string name="dl_new_folder_in">New folder in \"%1$s\"</string>
+    <string name="dl_open_folder">Open %1$s</string>
+    <plurals name="subfolders_n">
+        <item quantity="one">%1$s subfolder</item>
+        <item quantity="other">%1$s subfolders</item>
+    </plurals>
+    <string name="sec_space_detail">Space used</string>
+    <string name="space_detail_hint">How much Cripta takes on the phone, by file type, and what you can free.</string>
+    <string name="space_open_detail">See the space in detail</string>
+    <string name="space_bar_desc">Cripta uses %1$s, other apps and the system %2$s, %3$s free, of %4$s in all.</string>
+    <string name="space_cripta">Cripta</string>
+    <string name="space_other">Other</string>
+    <string name="space_free">Free</string>
+    <string name="space_photos">Photos</string>
+    <string name="space_videos">Videos</string>
+    <string name="space_notes">Notes</string>
+    <string name="space_pdf">PDF</string>
+    <string name="space_other_files">Other files</string>
+    <string name="space_trash">Trash</string>
+    <string name="space_cache">Thumbnails and cache</string>
+    <string name="space_indexes">Indexes (faces, intros, similar) and database</string>
+    <string name="space_app">App and download engine</string>
+    <string name="cleanup_open">Clean up the vault</string>
+    <string name="cleanup_title">Cleanup</string>
+    <string name="cleanup_hint">Tap the files to remove. The heaviest are at the top.</string>
+    <string name="cleanup_delete_n">Delete (%1$s)</string>
+    <string name="cleanup_trash_q">Move %1$s to the trash?</string>
+    <string name="cleanup_trash_text">They can be restored for %1$s days, then they are deleted for good.</string>
+    <string name="cleanup_delete_q">Delete %1$s for good?</string>
+    <string name="cleanup_delete_text">This frees %1$s. They can\'t be restored.</string>
+    <string name="clear_cache">Clear the cache</string>
+    <string name="cache_cleared">Cache cleared: %1$s freed</string>
 </resources>

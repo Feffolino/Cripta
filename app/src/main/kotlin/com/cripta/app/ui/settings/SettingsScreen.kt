@@ -147,6 +147,12 @@ fun SettingsScreen(
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     val trashed by vm.trashed.collectAsStateWithLifecycle()
+    val space by vm.space.collectAsStateWithLifecycle()
+    val tagCount by vm.tagCount.collectAsStateWithLifecycle()
+    val cleanupFiles by vm.allFiles.collectAsStateWithLifecycle()
+    var showCleanup by remember { mutableStateOf(false) }
+    var confirmEmptyTrash by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { vm.refreshSpace() }
     val trashedFolders by vm.trashedFolders.collectAsStateWithLifecycle()
 
     // Two-level navigation: the category list, or one category page. Back returns to the list.
@@ -172,12 +178,15 @@ fun SettingsScreen(
     val scrollBehavior = if (landscape) androidx.compose.material3.TopAppBarDefaults.enterAlwaysScrollBehavior()
         else androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior()
     val maxW = if (landscape) 1400.dp else 720.dp
+    // Set by the list or page on screen, so a page opening at a search result's section (or the
+    // list coming back scrolled) shows the right bar at once.
+    val topLift = remember { com.cripta.app.ui.components.TopBarLift() }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(topLift.lifted),
                 title = { if (current == null) com.cripta.app.ui.components.HeaderTitle(str(R.string.tab_settings)) else com.cripta.app.ui.components.PageTitle(current.label) },
                 // Impostazioni is a tab root: the back arrow only appears inside a category page.
                 navigationIcon = {
@@ -212,13 +221,18 @@ fun SettingsScreen(
           label = "settingsPage",
       ) { current ->
         if (current == null) {
+            val mainState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+            com.cripta.app.ui.components.TrackTopBarLift(topLift, mainState)
             MainSettingsList(
+                state = mainState,
                 modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()
                     .wrapContentWidth().widthIn(max = maxW).fillMaxWidth(),
                 columns = if (landscape) 2 else 1,
                 query = query,
                 onQuery = { query = it },
-                summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tags.size, trashed.size + trashedFolders.size, dupWaiting?.groups?.size) },
+                summaries = SettingsPage.entries.associateWith { pageSummary(it, s, tagCount, trashed.size + trashedFolders.size, dupWaiting?.groups?.size) },
+                space = space,
+                onOpenSpace = { page = SettingsPage.SPAZIO.name; anchor = str(R.string.sec_space_detail) },
                 // From a search result: land on its section and keep the query for the way back.
                 onOpen = { p, a -> page = p.name; anchor = a; if (a == null) query = "" },
                 onLock = { vm.lockNow(); onBack() },
@@ -270,6 +284,8 @@ fun SettingsScreen(
                             ToggleRow(str(R.string.summary_above_grid), s.display.showStatsStrip) { vm.setShowStatsStrip(it) }
                             ToggleRow(str(R.string.date_headers), s.display.showDateHeaders) { vm.setShowDateHeaders(it) }
                             ToggleRow(str(R.string.size_length_under), s.display.showFileInfo) { vm.setShowFileInfo(it) }
+                            ToggleRow(str(R.string.folders_in_a_row), s.display.foldersHorizontal,
+                                desc = str(R.string.folders_in_a_row_desc)) { vm.setFoldersHorizontal(it) }
                             ToggleRow(str(R.string.count_under_folders), s.display.showFolderInfo) { vm.setShowFolderInfo(it) }
                             ToggleRow(str(R.string.length_on_video_covers), s.display.showDurationBadge,
                                 desc = str(R.string.length_on_covers_desc)) { vm.setShowDurationBadge(it) }
@@ -686,6 +702,14 @@ fun SettingsScreen(
                     },
                 )
                 SettingsPage.SPAZIO -> listOf(
+                    sec(str(R.string.sec_space_detail)) {
+                        Section(str(R.string.sec_space_detail), str(R.string.space_detail_hint)) {
+                            SpaceDetails(space, trashed.size + trashedFolders.size,
+                                onCleanup = { showCleanup = true },
+                                onClearCache = { vm.clearCache() },
+                                onEmptyTrash = { confirmEmptyTrash = true })
+                        }
+                    },
                     sec(str(R.string.sec_duplicate_files)) {
                         Section(str(R.string.sec_duplicate_files), str(R.string.duplicates_hint)) {
                             // How much of the vault the deep search already knows (it only reads the rest).
@@ -878,6 +902,7 @@ fun SettingsScreen(
                 )
             }
             val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
+            com.cripta.app.ui.components.TrackTopBarLift(topLift, gridState)
             LaunchedEffect(current, anchor) {
                 val a = anchor ?: return@LaunchedEffect
                 val index = sections.indexOfFirst { it.first == a }
@@ -904,6 +929,20 @@ fun SettingsScreen(
           }
         }
       }
+    }
+
+    if (showCleanup) {
+        VaultCleanupDialog(cleanupFiles, { vm.thumbOf(it) }, s.trashEnabled, s.trashDays,
+            onDelete = { vm.deleteFiles(it) }, onDismiss = { showCleanup = false })
+    }
+    if (confirmEmptyTrash) {
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { confirmEmptyTrash = false },
+            title = { Text(str(R.string.empty_trash_q)) },
+            text = { Text(str(R.string.cleanup_delete_text, com.cripta.app.ui.components.formatBytes(space?.byKind?.get(com.cripta.app.data.SpaceKind.TRASH) ?: 0L))) },
+            confirmButton = { TextButton(onClick = { vm.emptyTrash(); confirmEmptyTrash = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.empty_trash)) } },
+            dismissButton = { TextButton(onClick = { confirmEmptyTrash = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+        )
     }
 
     confirmReset?.let { p ->
@@ -1246,6 +1285,7 @@ private val SEARCH_INDEX: List<SearchEntry> get() = listOf(
 /** First level: search + preference pages + tools, each with a live summary. */
 @Composable
 private fun MainSettingsList(
+    state: androidx.compose.foundation.lazy.grid.LazyGridState,
     modifier: Modifier,
     columns: Int,
     query: String,
@@ -1254,12 +1294,15 @@ private fun MainSettingsList(
     /** Page, plus the section to land on when coming from a search result. */
     onOpen: (SettingsPage, String?) -> Unit,
     onLock: () -> Unit,
+    space: com.cripta.app.data.SpaceReport?,
+    onOpenSpace: () -> Unit,
 ) {
     // Two columns of page rows in landscape; search, group labels and the lock button span the width.
     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> androidx.compose.foundation.lazy.grid.GridItemSpan =
         { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns),
+        state = state,
         modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -1296,7 +1339,11 @@ private fun MainSettingsList(
                     PageRow(p, p.label, summaries[p].orEmpty()) { onOpen(p, null) }
                 }
                 // DS Impostazioni: the space used, as a counted row, closes "I tuoi dati".
-                if (g == SettingsGroup.DATA) item(span = full) { SpaceUsedRow() }
+                if (g == SettingsGroup.DATA) item(span = full) {
+                    // The whole phone storage: Cripta, the rest, free. Shown from the last reading
+                    // (no jump on every visit); before the very first one, nothing.
+                    space?.let { DeviceSpaceBar(it, Modifier.padding(top = 8.dp), onClick = onOpenSpace) }
+                }
             }
         }
     }
@@ -1336,28 +1383,6 @@ private fun PageRow(p: SettingsPage, title: String, summary: String, onClick: ()
         }
         Icon(CriptaIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
     }
-}
-
-/** "Spazio usato: 18,4 GB di 64 GB": what the vault takes on this phone, against the phone's storage. */
-@Composable
-private fun SpaceUsedRow() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val space by androidx.compose.runtime.produceState<Pair<Long, Long>?>(null) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                val dir = ctx.filesDir
-                val used = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } +
-                    (ctx.getDatabasePath("x").parentFile?.walkTopDown()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L)
-                used to android.os.StatFs(dir.path).totalBytes
-            }.getOrNull()
-        }
-    }
-    val s = space ?: return
-    com.cripta.app.ui.components.CountRow(
-        str(R.string.space_used_short), com.cripta.app.ui.components.formatBytes(s.first),
-        of = com.cripta.app.ui.components.formatBytes(s.second),
-        progress = if (s.second > 0) s.first.toFloat() / s.second else 0f,
-    )
 }
 
 /**

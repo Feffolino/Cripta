@@ -282,6 +282,16 @@ class ThumbnailLoader @Inject constructor(
     /** Forget this session's failed-extraction ids so those covers are retried (pull-to-refresh). */
     fun clearFailed() = failed.clear()
 
+    /**
+     * Empty the covers cached on disk (they are rebuilt when next shown); the ones chosen by hand
+     * are kept. Returns the bytes freed.
+     */
+    fun clearDiskCache(): Long {
+        var freed = 0L
+        diskDir.listFiles()?.forEach { f -> val n = f.length(); if (runCatching { f.delete() }.getOrDefault(false)) freed += n }
+        return freed
+    }
+
     /** Bump a file's version so any cover keyed on it reloads (re-runs the full extraction chain). */
     fun invalidate(id: String) = bumpVersion(id)
 

@@ -43,6 +43,9 @@ class DownloadViewModel @Inject constructor(
 
     val folders: StateFlow<List<FolderEntity>> =
         repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** A new folder made from the destination picker; its id, to choose it right away. */
+    suspend fun createFolder(name: String, parentId: Long?): Long = repo.createFolder(name, parentId)
     val tags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

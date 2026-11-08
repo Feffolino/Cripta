@@ -44,6 +44,12 @@ class SettingsViewModel @Inject constructor(
     private val vaultNavigator: com.cripta.app.ui.vault.VaultNavigator,
     private val backups: com.cripta.app.data.BackupJobs,
 ) : ViewModel() {
+    private companion object {
+        /** Last tag count and space reading, kept across the screen's view models (see [tagCount]). */
+        @Volatile var lastTagCount = 0
+        @Volatile var lastSpace: com.cripta.app.data.SpaceReport? = null
+    }
+
 
     sealed interface UpdateState {
         data object Idle : UpdateState
@@ -146,6 +152,37 @@ class SettingsViewModel @Inject constructor(
     val tags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * Tag count for the page list. The screen gets a new view model each time Impostazioni opens,
+     * so the last count is kept for the process: the summary shows it at once, not "0" then a jump.
+     */
+    val tagCount: StateFlow<Int> = kotlinx.coroutines.flow.flow { repo.tags().collect { lastTagCount = it.size; emit(it.size) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), lastTagCount)
+
+    /** Space used (Impostazioni list and Spazio page): the last reading at once, then a fresh one. */
+    private val _space = kotlinx.coroutines.flow.MutableStateFlow(lastSpace)
+    val space: StateFlow<com.cripta.app.data.SpaceReport?> = _space
+    fun refreshSpace() = viewModelScope.launch {
+        runCatching { repo.spaceReport() }.getOrNull()?.let { lastSpace = it; _space.value = it }
+    }
+
+    /** Every live file, for the cleanup list (heaviest first there). */
+    val allFiles: StateFlow<List<com.cripta.app.data.db.FileEntity>> =
+        repo.allFiles().map { l -> l.map { it.file } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Cleanup: delete these files, through the trash when it is on. */
+    fun deleteFiles(ids: List<String>) = launchHeld("deleteFiles") {
+        ids.forEach { id -> if (!repo.deleteOrTrash(id)) thumbs.evict(id) }
+        refreshSpace()
+    }
+
+    /** Cleanup: drop the covers cached on disk; says how much was freed. */
+    fun clearCache() = launchHeld("clearCache") {
+        val freed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { thumbs.clearDiskCache() }
+        _message.value = str(R.string.cache_cleared, com.cripta.app.ui.components.formatBytes(freed))
+        refreshSpace()
+    }
+
     fun setAutoLock(minutes: Int) = viewModelScope.launch { store.setAutoLockMinutes(minutes) }
     fun setDeletePolicy(p: DeleteOriginalPolicy) = viewModelScope.launch { store.setDeleteOriginalPolicy(p) }
     fun setThemeMode(m: com.cripta.app.data.ThemeMode) = viewModelScope.launch { store.setThemeMode(m) }
@@ -159,6 +196,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowTagsOnCover(v: Boolean) = viewModelScope.launch { store.setShowTagsOnCover(v) }
     fun setShowDateHeaders(v: Boolean) = viewModelScope.launch { store.setShowDateHeaders(v) }
     fun setShowFolderInfo(v: Boolean) = viewModelScope.launch { store.setShowFolderInfo(v) }
+    fun setFoldersHorizontal(v: Boolean) = viewModelScope.launch { store.setFoldersHorizontal(v) }
     fun setShowNoteFab(v: Boolean) = viewModelScope.launch { store.setShowNoteFab(v) }
     fun setShowRandomFab(v: Boolean) = viewModelScope.launch { store.setShowRandomFab(v) }
     fun setCoverTagRows(v: Int) = viewModelScope.launch { store.setCoverTagRows(v) }
@@ -227,7 +265,7 @@ class SettingsViewModel @Inject constructor(
     fun restoreFolder(id: Long) = launchHeld("restoreFolder") { repo.restoreFolder(id) }
     fun deleteForever(id: String) = launchHeld("deleteForever") { if (repo.secureDelete(id, onlyIfTrashed = true)) thumbs.evict(id) }
     fun deleteFolderForever(id: Long) = launchHeld("deleteFolderForever") { repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
-    fun emptyTrash() = launchHeld("emptyTrash") { repo.emptyTrash().forEach { thumbs.evict(it) } }
+    fun emptyTrash() = launchHeld("emptyTrash") { repo.emptyTrash().forEach { thumbs.evict(it) }; refreshSpace() }
     /** Selection in the trash: restore these, one after the other (folders first, files then). */
     fun restoreMany(files: List<String>, folders: List<Long>) = launchHeld("restoreMany") {
         folders.forEach { repo.restoreFolder(it) }

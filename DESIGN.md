@@ -84,7 +84,8 @@ Tag icons are a separate set (see Components) and are not Tabler.
   frame in the people suggestions. One exception that is not a state: the rim of a tag over a
   picture, which keeps the tinted pill readable on any image.
 - Top bars are the page itself (same background) and lift one tier only when content scrolls under
-  them (`criptaTopBarColors()`). The navigation bar is a flat tier with an accent pill on the
+  them (`criptaTopBarColors(lifted)`, from the list's real position, so a page opening already
+  scrolled shows the lifted bar at once). The navigation bar is a flat tier with an accent pill on the
   current tab.
 - Counted figures are lines, not tiles: `CountRow` (label left, "1.234 di 5.678" right, optional
   bar). Side-by-side tiles cut 4-digit numbers.
@@ -149,7 +150,7 @@ Tag icons are a separate set (see Components) and are not Tabler.
   press says why; "Cerca più a fondo" covers them all, unreadable ones too.
   Recognition (Impostazioni › Persone): "Tutti i volti" (Da sistemare) or "Solo persone note",
   where "Da confermare" lists only faces like someone with faces in at least 2 media. The people
-  grid selects as Cartelle (long press, drag over the others): star, "Unisci" (the user picks who
+  grid selects as Raccolta (long press, drag over the others): star, "Unisci" (the user picks who
   stays), "Nascondi".
 - **Similar media** (Impostazioni › Duplicati e cestino, "Ricerca approfondita"): one group per
   page, full screen, swiped up like "Da sistemare". The copy in view takes the free space (tap: the
@@ -165,12 +166,14 @@ Tag icons are a separate set (see Components) and are not Tabler.
   "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
   (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
   with the name underneath, never on the picture. No "more" button: actions are on long-press,
-  so the name keeps the whole width. In Cartelle and inside a folder the folders are a grid
+  so the name keeps the whole width. In Raccolta and inside a folder the folders are a grid
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
   Video, Altro, Preferiti); the files follow under a "File" heading.
 - **Home**: search pill, the summary strip (Foto, Video and Note or Altro), "Continua" (videos
   left halfway), Persone, then the saved filters as chips. The space used is in
-  Impostazioni › Dati ("Spazio usato"), not on Home.
+  Impostazioni › I tuoi dati ("Spazio usato"), not on Home: one bar for the whole phone storage
+  (Cripta in the accent, the rest, free) with a legend, Cripta's figure in bold; it opens
+  Spazio e pulizia (space by kind, the heaviest files to delete, cache and trash).
 - **Buttons** (`ui/components/Buttons.kt`, the only buttons screens use): pills; the page's one
   filled button 56dp tall, tonal and destructive ones 48dp.
 - **Start carousel** (Home with an empty vault): three pages to swipe, one step each (add,

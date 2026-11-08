@@ -45,4 +45,27 @@ class StringsParityTest {
         val different = en.keys.filter { k -> en[k] != it[k] }.map { k -> "$k: ${en[k]} vs ${it[k]}" }
         assertEquals("different placeholders", emptyList<String>(), different)
     }
+
+    /**
+     * A text that keeps a space at its start or end (only possible inside quotes: Android trims
+     * unquoted texts) keeps it in both languages. "x GB of y GB" read "x GBofy GB" when only the
+     * Italian " di " was quoted.
+     */
+    @Test
+    fun edgeSpacesMatchInBothLanguages() {
+        fun edges(dir: String): Map<String, Pair<Boolean, Boolean>> {
+            val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File("src/main/res/$dir/strings.xml"))
+            val strings = doc.getElementsByTagName("string")
+            return (0 until strings.length).associate { i ->
+                val e = strings.item(i) as Element
+                val raw = e.textContent
+                val kept = if (raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) raw.substring(1, raw.length - 1) else raw.trim()
+                e.getAttribute("name") to (kept.startsWith(" ") to kept.endsWith(" "))
+            }
+        }
+        val en = edges("values")
+        val ita = edges("values-it")
+        val different = en.keys.filter { k -> k in ita && en[k] != ita[k] }
+        assertEquals("edge spaces differ", emptyList<String>(), different)
+    }
 }

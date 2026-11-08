@@ -74,10 +74,11 @@ fun FavoritesScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val favGrid = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     Scaffold(
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(favGrid.canScrollBackward),
                 title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.favorites)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -129,6 +130,7 @@ fun FavoritesScreen(
                 FavPhase.Content -> {
                     val favorites = favoritesOrNull.orEmpty()
                     LazyVerticalGrid(
+                        state = favGrid,
                         columns = GridCells.Adaptive(112.dp),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(12.dp),

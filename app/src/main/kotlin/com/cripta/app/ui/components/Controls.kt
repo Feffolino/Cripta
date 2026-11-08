@@ -23,6 +23,8 @@ import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +52,37 @@ fun criptaTopBarColors(): androidx.compose.material3.TopAppBarColors =
         containerColor = MaterialTheme.colorScheme.background,
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
     )
+
+/**
+ * Top bar colours driven by where the content really is ([lifted]: something is scrolled under
+ * the bar), not by the scroll behaviour's sum of scroll deltas. That sum starts at zero on every
+ * page, so a page opening already scrolled (a remembered folder, a search result's section, a
+ * list restored on return) showed the flat bar until the first drag, and a page change kept the
+ * previous page's colour.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun criptaTopBarColors(lifted: Boolean): androidx.compose.material3.TopAppBarColors {
+    val color by androidx.compose.animation.animateColorAsState(
+        if (lifted) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        androidx.compose.animation.core.tween(com.cripta.app.ui.theme.Motion.SHORT), label = "topBarLift",
+    )
+    return androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = color, scrolledContainerColor = color)
+}
+
+/** Whether a page's content is scrolled under its top bar; written by [TrackTopBarLift]. */
+@androidx.compose.runtime.Stable
+class TopBarLift {
+    var lifted by androidx.compose.runtime.mutableStateOf(false)
+}
+
+/** Keeps [lift] in step with [state], from the first frame and in both directions. */
+@Composable
+fun TrackTopBarLift(lift: TopBarLift, state: androidx.compose.foundation.gestures.ScrollableState) {
+    androidx.compose.runtime.LaunchedEffect(lift, state) {
+        androidx.compose.runtime.snapshotFlow { state.canScrollBackward }.collect { lift.lifted = it }
+    }
+}
 
 /**
  * Insets of every top bar outside the player: the status bar's height even while it is hidden.

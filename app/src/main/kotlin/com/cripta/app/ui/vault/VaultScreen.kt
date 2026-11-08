@@ -441,6 +441,10 @@ fun VaultScreen(
     // Portrait keeps it pinned.
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior()
         else TopAppBarDefaults.pinnedScrollBehavior()
+    // The bar lifts from the grid's real position: a folder reopened at its remembered place is
+    // scrolled without a drag, which the scroll behaviour never sees.
+    val topLift = remember { com.cripta.app.ui.components.TopBarLift() }
+    com.cripta.app.ui.components.TrackTopBarLift(topLift, gridState)
 
     // Keep the last count while the title crossfades out of selection mode (selection is empty by then).
     var lastSelCount by remember { mutableIntStateOf(1) }
@@ -458,7 +462,7 @@ fun VaultScreen(
                 scrollBehavior = scrollBehavior,
                 // Same colour when the content scrolls under it (M3 otherwise switches to a tinted
                 // surface-container colour, which looked light blue on this theme).
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(topLift.lifted),
                 title = {
                     AnimatedContent(
                         targetState = inSelection,
@@ -844,10 +848,9 @@ fun VaultScreen(
                             modifier = Modifier.size(18.dp),
                         )
                     }
-                    if (!foldersCollapsed) folders.chunked(perRow).forEach { rowFolders ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        rowFolders.forEach { folder ->
-                          androidx.compose.runtime.key(folder.id) {
+                    // One folder card: the same in the grid and in the sideways row.
+                    @Composable
+                    fun folderCard(folder: FolderEntity, sizing: Modifier) {
                             androidx.compose.runtime.DisposableEffect(folder.id) {
                                 onDispose { folderBounds.remove(folder.id) }
                             }
@@ -863,7 +866,7 @@ fun VaultScreen(
                                 thumb = { vm.thumb(it) },
                                 showInfo = display.showFolderInfo,
                                 highlighted = hoverFolder == folder.id,
-                                modifier = Modifier.weight(1f)
+                                modifier = sizing
                                     .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
                                     .combinedClickable(
                                         onClickLabel = str(R.string.open),
@@ -880,6 +883,21 @@ fun VaultScreen(
                                         )
                                     },
                             )
+                    }
+                    if (!foldersCollapsed && display.foldersHorizontal) {
+                        // Impostazioni › Aspetto › "Cartelle in una riga": one row scrolling sideways,
+                        // so the files start right below however many folders there are.
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(folders.size, key = { folders[it].id }) { i ->
+                                val folder = folders[i]
+                                folderCard(folder, Modifier.width(if (landscape) 132.dp else 150.dp))
+                            }
+                        }
+                    } else if (!foldersCollapsed) folders.chunked(perRow).forEach { rowFolders ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        rowFolders.forEach { folder ->
+                          androidx.compose.runtime.key(folder.id) {
+                            folderCard(folder, Modifier.weight(1f))
                           }
                         }
                         repeat(perRow - rowFolders.size) { Spacer(Modifier.weight(1f)) }
@@ -946,7 +964,7 @@ fun VaultScreen(
                         folderName = pathNames.lastOrNull(),
                         // Where the filters actually looked: the vault, this folder, or the root's own files.
                         searchedWhere = when {
-                            !filterLocalOnly -> str(R.string.in_whole_vault)
+                            !filterLocalOnly || filters.wholeVault -> str(R.string.in_whole_vault)
                             path.isNotEmpty() -> str(R.string.in_this_folder)
                             else -> str(R.string.among_root_files)
                         },
@@ -1101,7 +1119,7 @@ fun VaultScreen(
                     // size, depending on the sort) and the position in the list.
                     val scrollLabels = remember(grouped, showFolders, sortKey) {
                         val out = ArrayList<String?>()
-                        if (showFolders) out += str(R.string.tab_folders)
+                        if (showFolders) out += str(R.string.home_folders)
                         val fmt = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
                         val total = grouped.sumOf { it.second.size }
                         var n = 0

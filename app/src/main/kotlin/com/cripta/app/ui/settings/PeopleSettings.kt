@@ -442,6 +442,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         if (snackbar.showSnackbar(u.first, str(R.string.undo), duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoFaceChange()
         else if (vm.faceUndo.value === u) vm.faceUndo.value = null
     }
+    val topLift = remember { com.cripta.app.ui.components.TopBarLift() }
     Scaffold(
         topBar = {
             if (selected.isNotEmpty()) {
@@ -460,7 +461,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         }
                     })
             } else
-            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(), title = { Text(str(R.string.people)) },
+            TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(topLift.lifted), title = { Text(str(R.string.people)) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } },
                 actions = {
                     Box {
@@ -514,6 +515,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         }
         var answered by remember { mutableStateOf(emptySet<Long>()) }
         val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+        com.cripta.app.ui.components.TrackTopBarLift(topLift, gridState)
         val scope = androidx.compose.runtime.rememberCoroutineScope()
         /** The person under a finger held for 60 ms: pressed, as a cell in Cartelle. */
         var pressedId by remember { mutableStateOf<Long?>(null) }

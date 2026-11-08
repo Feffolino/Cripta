@@ -141,6 +141,10 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
     fun trashedWithTags(): Flow<List<FileWithTags>>
 
+    /** Every file row, live and trashed: what the vault keeps on disk (Impostazioni › Spazio). */
+    @Query("SELECT * FROM files")
+    suspend fun everyFile(): List<FileEntity>
+
     @Query("SELECT id FROM files WHERE deletedAt IS NOT NULL AND deletedAt < :before")
     suspend fun trashedBefore(before: Long): List<String>
 

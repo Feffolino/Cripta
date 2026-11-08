@@ -49,11 +49,24 @@ data class Filters(
     val tagMatchAll: Boolean = true,
     /** People who must all be in the file (faces found, or added by hand). */
     val personIds: Set<Long> = emptySet(),
+    /**
+     * Search the whole vault even with "Filtri solo nella cartella corrente" on: set by Home's
+     * Foto / Video / Note figures, which count every file of the vault and must open all of them.
+     */
+    val wholeVault: Boolean = false,
 ) {
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
             type != TypeFilter.ALL || favoritesOnly || untaggedOnly || personIds.isNotEmpty()
 }
+
+/**
+ * Whether the filters run on the whole vault (true) or on the open folder only: active filters
+ * search everywhere unless Settings keeps them in the current folder, and a request that counted
+ * the whole vault ([Filters.wholeVault]) always does.
+ */
+fun searchesWholeVault(active: Boolean, wholeVault: Boolean, currentFolderOnly: Boolean): Boolean =
+    active && (!currentFolderOnly || wholeVault)
 
 /** True when [fwt] passes these filters (shared by the vault grid and the Home saved-filter counts). */
 fun Filters.matches(fwt: FileWithTags): Boolean {
@@ -294,9 +307,9 @@ class VaultViewModel @Inject constructor(
      * allowed by Settings. Re-queried only when that scope changes, never on a filter or a keystroke.
      */
     private val source =
-        combine(currentFolderId, filters.map { it.active }.distinctUntilChanged(),
-            settings.settings.map { it.filterCurrentFolderOnly }.distinctUntilChanged(), refresh) { folder, active, localOnly, _ ->
-            folder to (active && !localOnly)
+        combine(currentFolderId, filters.map { it.active to it.wholeVault }.distinctUntilChanged(),
+            settings.settings.map { it.filterCurrentFolderOnly }.distinctUntilChanged(), refresh) { folder, (active, whole), localOnly, _ ->
+            folder to searchesWholeVault(active, whole, localOnly)
         }
             .distinctUntilChanged()
             .flatMapLatest { (folder, wholeVault) ->

@@ -142,6 +142,9 @@ fun HomeScreen(
 
     // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
     val scrollBehavior = if (landscape) TopAppBarDefaults.enterAlwaysScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
+    val homeList = androidx.compose.foundation.lazy.rememberLazyListState()
+    val topLift = remember { com.cripta.app.ui.components.TopBarLift() }
+    com.cripta.app.ui.components.TrackTopBarLift(topLift, homeList)
     // Faces on the shelves' covers follow "Persone in Home": none when off, blurred until the row is touched.
     val coverPeopleMap by vm.coverPeople.collectAsStateWithLifecycle()
     val coverPeople = remember(coverPeopleMap, peopleBlurred, peopleRevealed) {
@@ -153,7 +156,7 @@ fun HomeScreen(
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(topLift.lifted),
                 title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.tab_home)) },
                 actions = {
                     IconButton(onClick = onLock) { Icon(CriptaIcons.Lock, str(R.string.lock)) }
@@ -186,6 +189,7 @@ fun HomeScreen(
         )
         HomePhase.CONTENT -> LazyColumn(
             Modifier.fillMaxSize().padding(pad),
+            state = homeList,
             contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -286,7 +290,7 @@ fun HomeScreen(
                 item { CoverShelf(favorites, display, coverVersions, vm::thumb) { id -> open(favorites, id) } }
             }
             if (folders.isNotEmpty()) {
-                item { ShelfHeader(str(R.string.tab_folders), onSeeAll = onOpenFolders) }
+                item { ShelfHeader(str(R.string.home_folders), onSeeAll = onOpenFolders) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(folders, key = { it.id }) { folder ->

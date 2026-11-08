@@ -1134,6 +1134,24 @@ class VaultRepository @Inject constructor(
         readOrDefault(emptyMap()) { d -> fileIds.associateWith { id -> d.fileDao().withTagsById(id)?.tags?.map { it.name } ?: emptyList() } }
     }
 
+    // --- Space (Impostazioni › Spazio) ---
+
+    /**
+     * What Cripta takes on this phone, by kind, and the phone's storage around it. Blobs are
+     * measured on disk (encrypted size); the database holds the face, intro and similarity
+     * indexes; the caches are the covers and leftovers of conversions and downloads.
+     */
+    suspend fun spaceReport(): SpaceReport = withContext(Dispatchers.IO) {
+        fun size(f: java.io.File?): Long =
+            if (f == null || !f.exists()) 0L else f.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        val blobSizes = db.fileDao().everyFile().map { spaceKindOf(it.mimeType, it.deletedAt != null) to blobs.blob(it.id).length() }
+        val dbDir = context.getDatabasePath("x").parentFile
+        val cache = size(context.cacheDir) + size(java.io.File(context.filesDir, "covers"))
+        val appTotal = size(context.filesDir) + size(dbDir) + size(context.cacheDir) + size(context.noBackupFilesDir)
+        val stat = android.os.StatFs(context.filesDir.path)
+        SpaceReport.of(blobSizes, cache, size(dbDir), appTotal, stat.totalBytes, stat.availableBytes)
+    }
+
     // --- Trash (optional; see Settings.trashEnabled) ---
 
     fun trashed(): Flow<List<FileWithTags>> = live { it.fileDao().trashedWithTags() }

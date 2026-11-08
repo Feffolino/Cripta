@@ -48,6 +48,7 @@ data class DisplayPrefs(
     val showTagsOnCover: Boolean = true,  // tag badges over grid thumbnails
     val showDateHeaders: Boolean = true,  // "Oggi / Ieri / date" grouping
     val showFolderInfo: Boolean = true,   // per-folder item count + size
+    val foldersHorizontal: Boolean = false, // folders in one row scrolling sideways instead of a grid
     val showNoteFab: Boolean = true,      // the "new note" floating button
     val showRandomFab: Boolean = true,    // the "random" floating button
     /** Rows of tag badges on a grid cover: 0 = automatic (by cover size), else 1..3. */
@@ -206,6 +207,7 @@ class SettingsStore @Inject constructor(
     private val showTagsCoverKey = booleanPreferencesKey("show_tags_cover")
     private val showDateHeadersKey = booleanPreferencesKey("show_date_headers")
     private val showFolderInfoKey = booleanPreferencesKey("show_folder_info")
+    private val foldersHorizontalKey = booleanPreferencesKey("folders_horizontal")
     private val showNoteFabKey = booleanPreferencesKey("show_note_fab")
     private val showRandomFabKey = booleanPreferencesKey("show_random_fab")
     private val tagSortModeKey = intPreferencesKey("tag_sort_mode")
@@ -298,6 +300,7 @@ class SettingsStore @Inject constructor(
                 showTagsOnCover = p[showTagsCoverKey] ?: true,
                 showDateHeaders = p[showDateHeadersKey] ?: true,
                 showFolderInfo = p[showFolderInfoKey] ?: true,
+                foldersHorizontal = p[foldersHorizontalKey] ?: false,
                 showNoteFab = p[showNoteFabKey] ?: true,
                 showRandomFab = p[showRandomFabKey] ?: true,
                 coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
@@ -379,6 +382,7 @@ class SettingsStore @Inject constructor(
     suspend fun setShowTagsOnCover(v: Boolean) { context.dataStore.edit { it[showTagsCoverKey] = v } }
     suspend fun setShowDateHeaders(v: Boolean) { context.dataStore.edit { it[showDateHeadersKey] = v } }
     suspend fun setShowFolderInfo(v: Boolean) { context.dataStore.edit { it[showFolderInfoKey] = v } }
+    suspend fun setFoldersHorizontal(v: Boolean) { context.dataStore.edit { it[foldersHorizontalKey] = v } }
     suspend fun setShowNoteFab(v: Boolean) { context.dataStore.edit { it[showNoteFabKey] = v } }
     suspend fun setShowRandomFab(v: Boolean) { context.dataStore.edit { it[showRandomFabKey] = v } }
     suspend fun setCoverTagRows(v: Int) { context.dataStore.edit { it[coverTagRowsKey] = v.coerceIn(0, 3) } }
@@ -537,7 +541,7 @@ class SettingsStore @Inject constructor(
     suspend fun resetPage(page: String) {
         val keys: List<androidx.datastore.preferences.core.Preferences.Key<*>> = when (page) {
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
-                showFolderInfoKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, foldersCollapsedKey, durationBadgeKey, qualityBadgeKey,
+                showFolderInfoKey, foldersHorizontalKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, foldersCollapsedKey, durationBadgeKey, qualityBadgeKey,
                 coverPeopleKey, coverPeopleSizeKey)
             "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey,
                 recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)

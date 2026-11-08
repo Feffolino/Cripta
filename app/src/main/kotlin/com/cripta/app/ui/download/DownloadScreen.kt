@@ -2,6 +2,8 @@ package com.cripta.app.ui.download
 
 import com.cripta.app.R
 import com.cripta.app.str
+import com.cripta.app.plural
+import kotlinx.coroutines.launch
 
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.theme.accentTint
@@ -43,6 +45,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import com.cripta.app.ui.components.Button
@@ -277,7 +280,7 @@ fun DownloadScreen(
                 onClick = { pickFolder = true },
                 onClickLabel = str(R.string.change_folder),
             ) {
-                Text(f?.let { folderLabel(it, folders) } ?: str(R.string.vault_root), style = MaterialTheme.typography.bodySmall,
+                Text(folderPath(f, folders), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (tags.isNotEmpty()) {
@@ -362,13 +365,16 @@ fun DownloadScreen(
         )
     }
 
+    // The bar lifts from the page's real scroll position (portrait: one scroll; landscape: either side).
+    val formScroll = rememberScrollState()
+    val queueScroll = rememberScrollState()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download)) },
                 scrollBehavior = scrollBehavior,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(formScroll.canScrollBackward || (landscape && queueScroll.canScrollBackward)),
             )
         },
     ) { pad ->
@@ -379,12 +385,12 @@ fun DownloadScreen(
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Column(
-                    Modifier.weight(1f).fillMaxHeight().imePadding().verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
+                    Modifier.weight(1f).fillMaxHeight().imePadding().verticalScroll(formScroll).padding(vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     content = form,
                 )
                 Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
+                    Modifier.weight(1f).fillMaxHeight().verticalScroll(queueScroll).padding(vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     content = queue,
                 )
@@ -394,7 +400,7 @@ fun DownloadScreen(
                 // imePadding keeps the field and the "Scarica" button reachable above the keyboard.
                 Modifier.padding(pad).consumeWindowInsets(pad).imePadding()
                     .fillMaxWidth().wrapContentWidth().widthIn(max = 720.dp).fillMaxWidth()
-                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+                    .verticalScroll(formScroll).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 form()
@@ -405,7 +411,9 @@ fun DownloadScreen(
     }
 
     if (pickFolder) {
-        FolderPickerSheet(folders, effectiveFolder, onPick = { folderId = it; pickFolder = false }, onDismiss = { pickFolder = false })
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        FolderPickerSheet(folders, effectiveFolder, onPick = { folderId = it; pickFolder = false }, onDismiss = { pickFolder = false },
+            onCreate = { name, parent -> scope.launch { folderId = vm.createFolder(name, parent); pickFolder = false } })
     }
     if (pickTags) {
         TagPickerSheet(tags, effectiveTags.toSet(),
@@ -529,35 +537,114 @@ private fun folderLabel(f: FolderEntity, all: List<FolderEntity>): String {
     return names.joinToString(" › ")
 }
 
+/** The full path of a destination, from the root: "Radice › Serie › Stagione 1". */
+private fun folderPath(f: FolderEntity?, all: List<FolderEntity>): String =
+    if (f == null) str(R.string.root) else str(R.string.root) + " › " + folderLabel(f, all)
+
+/**
+ * Where a download is saved: the chosen path in full at the top, then one level at a time like a
+ * file manager. "Salva qui" picks the level on screen (the root included, named as such), a row
+ * picks that folder, its arrow opens it to go deeper, and a new folder can be made where you are.
+ * The current choice carries the accent and a tick wherever it shows.
+ */
 @Composable
-private fun FolderPickerSheet(folders: List<FolderEntity>, selected: Long?, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
+private fun FolderPickerSheet(
+    folders: List<FolderEntity>,
+    selected: Long?,
+    onPick: (Long?) -> Unit,
+    onDismiss: () -> Unit,
+    onCreate: (String, Long?) -> Unit,
+) {
+    val byId = remember(folders) { folders.associateBy { it.id } }
+    val children = remember(folders) { folders.groupBy { it.parentId } }
+    // Opens on the level that holds the current choice, so it is in view with its neighbours.
+    var at by remember { mutableStateOf(byId[selected]?.parentId?.takeIf { it in byId }) }
+    var naming by remember { mutableStateOf(false) }
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
-        Column(Modifier.fillMaxWidth().heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
-            Text(str(R.string.save_in), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
-            FolderRow(str(R.string.vault_root), null, null, null, selected == null, 0) { afterSheet { onPick(null) } }
-            // Tree order: each folder under its parent, indented by depth.
-            val children = folders.groupBy { it.parentId }
-            fun walk(parent: Long?, depth: Int, out: MutableList<Pair<FolderEntity, Int>>) {
-                children[parent].orEmpty().forEach { out += it to depth; walk(it.id, depth + 1, out) }
+        Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+            Text(str(R.string.save_in), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp))
+            Text(
+                str(R.string.dl_dest_now, folderPath(byId[selected], folders)),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 20.dp).padding(top = 2.dp, bottom = 8.dp),
+            )
+            // Where you are: each step of the path goes back there.
+            val trail = remember(at, byId) {
+                val out = ArrayDeque<FolderEntity>()
+                var cur = at?.let { byId[it] }
+                var guard = 0
+                while (cur != null && guard++ < 50) { out.addFirst(cur); cur = cur.parentId?.let { byId[it] } }
+                out.toList()
             }
-            val ordered = mutableListOf<Pair<FolderEntity, Int>>().also { walk(null, 0, it) }
-            ordered.forEach { (f, d) -> FolderRow(f.name, f.color, f.icon, f.emoji, selected == f.id, d) { afterSheet { onPick(f.id) } } }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (at != null) IconButton(onClick = { at = byId[at]?.parentId }) { Icon(CriptaIcons.ArrowBack, str(R.string.up)) }
+                TextButton(onClick = { at = null }, enabled = at != null) { Text(str(R.string.root)) }
+                trail.forEach { f ->
+                    Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { at = f.id }, enabled = f.id != at) { Text(f.name, maxLines = 1) }
+                }
+            }
+            // This level itself.
+            val here = at?.let { byId[it] }
+            FolderRow(
+                if (here == null) str(R.string.dl_save_in_root) else str(R.string.dl_save_here, here.name),
+                here?.color, here?.icon, here?.emoji, selected == at, 0,
+            ) { afterSheet { onPick(at) } }
+            val level = children[at].orEmpty()
+            if (level.isEmpty()) {
+                Text(str(R.string.dl_no_subfolders), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            }
+            level.forEach { f ->
+                val inside = children[f.id].orEmpty().size
+                FolderRow(f.name, f.color, f.icon, f.emoji, selected == f.id, 0,
+                    caption = if (inside > 0) plural(R.plurals.subfolders_n, inside) else null,
+                    onOpen = { at = f.id }) { afterSheet { onPick(f.id) } }
+            }
+            TextButton(onClick = { naming = true }, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(if (here == null) str(R.string.dl_new_folder_root) else str(R.string.dl_new_folder_in, here.name))
+            }
         }
+    }
+    if (naming) {
+        com.cripta.app.ui.vault.TextPromptDialog(
+            title = str(R.string.new_folder), label = str(R.string.sort_name),
+            onConfirm = { naming = false; onCreate(it, at) }, onDismiss = { naming = false },
+            confirmLabel = str(R.string.create),
+        )
     }
 }
 
 @Composable
-private fun FolderRow(name: String, color: Int?, icon: String?, emoji: String?, selected: Boolean, depth: Int, onClick: () -> Unit) {
+private fun FolderRow(
+    name: String, color: Int?, icon: String?, emoji: String?, selected: Boolean, depth: Int,
+    caption: String? = null,
+    /** Opens the folder to see its subfolders; null on the "Salva qui" row. */
+    onOpen: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp)
-            .padding(start = (14 * depth).dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 20.dp, end = if (onOpen != null) 4.dp else 20.dp)
+            .padding(vertical = if (onOpen != null) 2.dp else 12.dp)
+            .padding(start = (14 * depth).dp)
+            .semantics { this.selected = selected },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (color == null && icon == null && emoji == null) Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         else com.cripta.app.ui.components.FolderGlyph(color, icon, emoji, 22.dp)
-        Text(name, Modifier.weight(1f).padding(start = 14.dp))
+        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(name, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null)
+            if (caption != null) Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (selected) Icon(CriptaIcons.CheckCircle, str(R.string.selected_f), tint = MaterialTheme.colorScheme.primary)
+        if (onOpen != null) IconButton(onClick = onOpen) { Icon(CriptaIcons.ChevronRight, str(R.string.dl_open_folder, name)) }
     }
 }
 

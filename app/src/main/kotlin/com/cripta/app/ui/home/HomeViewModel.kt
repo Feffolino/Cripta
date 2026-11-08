@@ -219,5 +219,7 @@ class HomeViewModel @Inject constructor(
     /** The Home search pill: the query opens in Cartelle, over the whole vault. */
     fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query))
 
-    fun showType(type: com.cripta.app.ui.vault.TypeFilter) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type))
+    /** Every file of [type] in the vault, wherever it is: the figure tapped counted them all. */
+    fun showType(type: com.cripta.app.ui.vault.TypeFilter) =
+        navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type, wholeVault = true))
 }
