@@ -176,7 +176,7 @@
     <string name="unlock_mode_system_and_pin">البصمة ورمز التطبيق</string>
     <string name="unlock_mode_system_and_pin_desc">خطوتان: البصمة أو قفل الهاتف أولاً، ثم PIN أو كلمة مرور Cripta. لا يمكن لمن سُجلت بصمته على الهاتف الدخول دون الرمز.</string>
     <string name="unlock_mode_pin">رمز التطبيق فقط</string>
-    <string name="unlock_mode_pin_desc">PIN أو كلمة مرور Cripta فقط: البصمات وقفل الهاتف لا تفتح الخزنة.</string>
+    <string name="unlock_mode_pin_desc">PIN أو كلمة مرور Cripta فقط: لا يمكن فتح الخزنة بالبصمات أو قفل الهاتف.</string>
     <string name="secret_pin">PIN</string>
     <string name="secret_password">كلمة المرور</string>
     <string name="reject_low_score">غير مؤكد</string>
@@ -741,7 +741,7 @@
     <string name="search_tag">البحث عن وسم</string>
     <string name="clear_search">مسح البحث</string>
     <string name="colour_n">اللون %1$s</string>
-    <string name="viewer_too_big">الملف أكبر من المعاينة. صدّره إلى الجهاز لفتحه بتطبيق آخر.</string>
+    <string name="viewer_too_big">الملف كبير جداً للمعاينة. صدّره إلى الجهاز لفتحه بتطبيق آخر.</string>
     <string name="viewer_decrypt_failed">تعذر فك تشفير الملف: قد تكون البيانات تالفة.</string>
     <string name="viewer_content_missing">لم يُعثر على المحتوى المشفر للملف.</string>
     <string name="viewer_read_error">خطأ في قراءة الملف. أعد المحاولة.</string>
@@ -800,17 +800,17 @@
     <string name="intro">المقدمة</string>
     <string name="ending">النهاية</string>
     <string name="seg_found_extended_f">وُجدت ومُددت</string>
-    <string name="seg_found_extended_m">وُجد ومُدد</string>
+    <string name="seg_found_extended_m">وُجدت ومُددت</string>
     <string name="seg_found_f">وُجدت</string>
-    <string name="seg_found_m">وُجد</string>
+    <string name="seg_found_m">وُجدت</string>
     <string name="seg_moved_f">حرّكتَها (كان الصوت %1$s–%2$s)</string>
-    <string name="seg_moved_m">حرّكتَه (كان الصوت %1$s–%2$s)</string>
+    <string name="seg_moved_m">حرّكتَها (كان الصوت %1$s–%2$s)</string>
     <string name="seg_marked_f">علّمتَها</string>
-    <string name="seg_marked_m">علّمتَه</string>
+    <string name="seg_marked_m">علّمتَها</string>
     <string name="seg_none_f">لا توجد (باختيارك)</string>
-    <string name="seg_none_m">لا يوجد (باختيارك)</string>
+    <string name="seg_none_m">لا توجد (باختيارك)</string>
     <string name="seg_not_found_f">لم يُعثر عليها</string>
-    <string name="seg_not_found_m">لم يُعثر عليه</string>
+    <string name="seg_not_found_m">لم يُعثر عليها</string>
     <string name="signature_is">البصمة الصوتية: %1$s</string>
     <string name="more_actions_for">إجراءات أخرى لـ%1$s</string>
     <string name="apply_same_signature">تطبيق على كل الفيديوهات ذات البصمة الصوتية نفسها</string>
@@ -1393,7 +1393,7 @@
     <string name="set_aside_prefix">"المستبعدة مؤقتاً: "</string>
     <string name="hide_tech">إخفاء التفاصيل التقنية</string>
     <string name="frames_dup_extra">الإطارات المتطابقة المتخطاة: %1$s · المضافة قرب الوجوه: %2$s</string>
-    <string name="sharpness_header">حدة الوجوه المحاذاة (أقل من %1$s = ضبابية):</string>
+    <string name="sharpness_header">حدة الوجوه بعد محاذاتها (أقل من %1$s = ضبابية):</string>
     <string name="pf_favorite">المفضلة</string>
     <string name="pf_named">بأسماء</string>
     <string name="pf_single">مرة واحدة</string>
@@ -1901,7 +1901,7 @@
     <string name="split_details_off">تغطي اللوحة الملف، ويبقى خلفها معتماً.</string>
     <string name="sec_leaving_app">مغادرة التطبيق</string>
     <string name="pause_video">إيقاف الفيديو مؤقتاً</string>
-    <string name="pause_video_desc">يتوقف الفيديو حين ينتقل التطبيق للخلفية. يستمر في Picture-in-Picture أو الشاشة المقسمة.</string>
+    <string name="pause_video_desc">يتوقف الفيديو حين ينتقل التطبيق إلى الخلفية. يستمر في وضع صورة داخل صورة أو الشاشة المقسمة.</string>
     <string name="auto_pip">Picture-in-Picture تلقائي</string>
     <string name="auto_pip_desc">عند مغادرة التطبيق يستمر الفيديو في نافذة صغيرة (يراها من ينظر للشاشة). عند التعطيل يبقى الزر في المشغل.</string>
     <string name="sec_unlock">فتح القفل</string>
@@ -1929,7 +1929,7 @@
     <string name="convert_ask_desc">في نهاية التحويل تُسأل إن أردت حذف الأصل.</string>
     <string name="convert_keep_both_setting_desc">يبقى الأصل ونسخة MP4 معاً.</string>
     <string name="sec_what_to_include">ما يجب تضمينه</string>
-    <string name="what_to_include_hint">ينطبق الاختيار على النسخ الاحتياطية التالية. تستعيد الاستعادة كل ما في الأرشيف.</string>
+    <string name="what_to_include_hint">ينطبق الاختيار على النسخ الاحتياطية التالية. عند الاستعادة يُسترجع كل ما في الأرشيف.</string>
     <string name="sec_encrypted_backup">نسخة احتياطية مشفرة</string>
     <string name="estimated_size">الحجم المقدر</string>
     <string name="encrypted_backup_hint">أرشيف الخزنة محمي بعبارة مرور، ويمكن استعادته على جهاز آخر أيضاً. يعتمد الأمان على عبارة المرور.</string>
