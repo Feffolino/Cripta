@@ -45,3 +45,6 @@ __pycache__/
 .claude/settings.local.json
 .claude/launch.json
 graphify-out/
+
+# Agent planning artifacts (superpowers specs and plans)
+docs/superpowers/
