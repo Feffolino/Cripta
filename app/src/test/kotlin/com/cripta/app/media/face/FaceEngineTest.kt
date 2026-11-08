@@ -10,6 +10,7 @@ import kotlin.math.abs
 class FaceEngineTest {
     @Test
     fun matchesOpenCvDetectionAndEmbedding() {
+        org.junit.Assume.assumeTrue("test photos are local only", TestFaces.available)
         val rows = TestFaces.golden()
         val byImage = rows.groupBy { it[0] }
         for ((name, faces) in byImage) {

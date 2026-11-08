@@ -104,6 +104,7 @@ class FaceClustersTest {
 
     @Test
     fun trackerNeverJoinsTwoPeopleOfTheTestPhotos() {
+        org.junit.Assume.assumeTrue("test photos are local only", TestFaces.available)
         val who = HashMap<Sighting, String>()
         TestFaces.names().forEachIndexed { i, name ->
             for (f in TestFaces.engine.analyze(TestFaces.image(name))) {

@@ -5,9 +5,13 @@ import java.io.File
 /**
  * Test data: the real models from the app's assets and public-domain photos (US government works
  * from Wikimedia Commons) in `src/test/resources/faces`, with hand-checked identities in labels.csv.
+ * The folder is local only (not in the repository); see [available].
  */
 object TestFaces {
-    private val dir = File(javaClass.classLoader!!.getResource("faces/labels.csv")!!.toURI()).parentFile!!
+    // The photos are kept only on the developer's machine (git-ignored): tests that need them skip without.
+    val available: Boolean = javaClass.classLoader?.getResource("faces/labels.csv") != null
+
+    private val dir by lazy { File(javaClass.classLoader!!.getResource("faces/labels.csv")!!.toURI()).parentFile!! }
 
     val engine: FaceEngine by lazy {
         val assets = listOf(File("src/main/assets/faces"), File("app/src/main/assets/faces")).first { it.isDirectory }

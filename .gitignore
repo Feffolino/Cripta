@@ -48,3 +48,6 @@ graphify-out/
 
 # Agent planning artifacts (superpowers specs and plans)
 docs/superpowers/
+
+# Face test photos: kept only locally (tests skip without them)
+app/src/test/resources/faces/
