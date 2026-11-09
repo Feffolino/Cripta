@@ -19,19 +19,19 @@ jobs:
     # android-actions/setup-android (the step that was failing after ~16s).
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Folder migration and query regression tests
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
         with:
           # Skip the action's default install: it tries the obsolete 'tools' package,
           # which no longer exists in the SDK repo and fails (exit 1). We install the
@@ -46,7 +46,7 @@ jobs:
         uses: gradle/actions/wrapper-validation@v6.4.0
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Compute version
         id: ver
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload test and lint reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: reports-${{ github.run_number }}
           path: |
@@ -128,7 +128,7 @@ jobs:
           echo "sha=$DST.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: cripta-${{ steps.ver.outputs.version }}
           path: |
@@ -138,7 +138,7 @@ jobs:
 
       - name: Publish GitHub Release
         if: steps.keystore.outputs.signed == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: Cripta ${{ steps.ver.outputs.version }}${{ steps.ver.outputs.stable == 'true' && ' (stabile)' || '' }}
