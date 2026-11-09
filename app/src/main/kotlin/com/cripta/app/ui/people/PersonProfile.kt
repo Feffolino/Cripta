@@ -387,7 +387,16 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             com.cripta.app.ui.components.CriptaTextField(newLink, { newLink = it }, singleLine = true,
-                placeholder = { Text(str(R.string.add_link)) }, modifier = Modifier.weight(1f))
+                placeholder = { Text(str(R.string.add_link)) },
+                // As in the video details: paste what was copied and keep it as a link at once.
+                trailingIcon = if (newLink.isNotBlank()) null else ({
+                    IconButton(onClick = {
+                        val clip = clipboard.getText()?.text?.trim().orEmpty()
+                        if (clip.isBlank()) android.widget.Toast.makeText(context, str(R.string.clipboard_empty), android.widget.Toast.LENGTH_SHORT).show()
+                        else { links.add(clip); save() }
+                    }) { Icon(CriptaIcons.ContentPaste, str(R.string.paste_copied_link), tint = MaterialTheme.colorScheme.primary) }
+                }),
+                modifier = Modifier.weight(1f))
             TextButton(enabled = newLink.isNotBlank(), onClick = { links.add(newLink.trim()); newLink = ""; save() }) { com.cripta.app.ui.components.ButtonText(str(R.string.add)) }
         }
     }
