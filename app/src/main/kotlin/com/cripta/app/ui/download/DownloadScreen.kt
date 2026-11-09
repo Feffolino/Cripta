@@ -20,6 +20,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -562,7 +564,9 @@ private fun FolderPickerSheet(
     var naming by remember { mutableStateOf(false) }
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
-        Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
+        // Fixed height (the sheet clamps it to the screen): a level with fewer folders must not
+        // shrink the sheet, which made it jump while the next level came in.
+        Column(Modifier.fillMaxWidth().height(560.dp).padding(bottom = 20.dp)) {
             Text(str(R.string.save_in), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp))
             Text(
                 str(R.string.dl_dest_now, folderPath(byId[selected], folders)),
@@ -588,27 +592,45 @@ private fun FolderPickerSheet(
                     TextButton(onClick = { at = f.id }, enabled = f.id != at) { Text(f.name, maxLines = 1) }
                 }
             }
-            // This level itself.
-            val here = at?.let { byId[it] }
-            FolderRow(
-                if (here == null) str(R.string.dl_save_in_root) else str(R.string.dl_save_here, here.name),
-                here?.color, here?.icon, here?.emoji, selected == at, 0,
-            ) { afterSheet { onPick(at) } }
-            val level = children[at].orEmpty()
-            if (level.isEmpty()) {
-                Text(str(R.string.dl_no_subfolders), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-            }
-            level.forEach { f ->
-                val inside = children[f.id].orEmpty().size
-                FolderRow(f.name, f.color, f.icon, f.emoji, selected == f.id, 0,
-                    caption = if (inside > 0) plural(R.plurals.subfolders_n, inside) else null,
-                    onOpen = { at = f.id }) { afterSheet { onPick(f.id) } }
-            }
-            TextButton(onClick = { naming = true }, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(if (here == null) str(R.string.dl_new_folder_root) else str(R.string.dl_new_folder_in, here.name))
+            // The level on screen slides in as a page (shared X axis, 320 ms ease-out), keyed by the
+            // folder it shows; every page scrolls on its own inside the fixed-height sheet.
+            fun depthOf(id: Long?): Int { var d = 0; var c = id?.let { byId[it] }; while (c != null && d < 50) { d++; c = c.parentId?.let { byId[it] } }; return d }
+            AnimatedContent(
+                targetState = at,
+                modifier = Modifier.weight(1f),
+                transitionSpec = {
+                    val dir = if (depthOf(targetState) >= depthOf(initialState)) 1 else -1
+                    (fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) +
+                        slideInHorizontally(Motion.enter(Motion.LONG)) { w -> dir * w / 8 }) togetherWith
+                        (fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) +
+                            slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -dir * w / 12 })
+                },
+                label = "folderLevel",
+            ) { lvl ->
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    // This level itself.
+                    val here = lvl?.let { byId[it] }
+                    FolderRow(
+                        if (here == null) str(R.string.dl_save_in_root) else str(R.string.dl_save_here, here.name),
+                        here?.color, here?.icon, here?.emoji, selected == lvl, 0,
+                    ) { afterSheet { onPick(lvl) } }
+                    val level = children[lvl].orEmpty()
+                    if (level.isEmpty()) {
+                        Text(str(R.string.dl_no_subfolders), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    }
+                    level.forEach { f ->
+                        val inside = children[f.id].orEmpty().size
+                        FolderRow(f.name, f.color, f.icon, f.emoji, selected == f.id, 0,
+                            caption = if (inside > 0) plural(R.plurals.subfolders_n, inside) else null,
+                            onOpen = { at = f.id }) { afterSheet { onPick(f.id) } }
+                    }
+                    TextButton(onClick = { naming = true }, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                        Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(if (here == null) str(R.string.dl_new_folder_root) else str(R.string.dl_new_folder_in, here.name))
+                    }
+                }
             }
         }
     }
