@@ -1819,7 +1819,7 @@
     <string name="passphrase_restore_hint">The backup\'s files are added to those already in the vault; nothing is deleted.</string>
     <string name="passphrase">Passphrase</string>
     <string name="passphrase_too_short">At least %1$s characters (%2$s/%3$s)</string>
-    <string name="length_ok">Length ok</string>
+    <string name="length_ok">Length OK</string>
     <string name="repeat_passphrase">Repeat the passphrase</string>
     <string name="passphrase_mismatch">The passphrases don\'t match</string>
     <string name="si_00">Light / dark theme</string>

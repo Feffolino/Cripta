@@ -347,7 +347,7 @@ private fun HomeSkeleton(modifier: Modifier, landscape: Boolean) {
  */
 @Composable
 private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolean, onPhotos: () -> Unit, onVideos: () -> Unit, onNotes: () -> Unit,
-                        compact: Boolean = false, modifier: Modifier = Modifier, loading: Boolean = false) {
+                        modifier: Modifier = Modifier, compact: Boolean = false, loading: Boolean = false) {
     // DS cr-summary: one tonal object (surface-raised, radius-lg), equal centred columns.
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,

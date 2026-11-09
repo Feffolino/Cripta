@@ -366,12 +366,12 @@ fun VaultScreen(
 
     // "Scarica": confirm (a plaintext copy leaves the vault), then pick the destination folder.
     var downloadAsk by remember { mutableStateOf<List<String>?>(null) }
-    var downloadIds by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var downloadIds by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     val downloadTreeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { tree ->
         val ids = downloadIds
-        downloadIds = arrayListOf()
+        downloadIds = emptyList()
         if (tree != null && ids.isNotEmpty()) {
             vm.downloadToFolder(ids, tree)
             selection = emptySet()

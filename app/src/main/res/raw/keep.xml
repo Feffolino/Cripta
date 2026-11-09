@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Media3 layouts reference these overrides through the library's resources. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/exo_styled_controls_*,@drawable/tabler_exo_*" />

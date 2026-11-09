@@ -1546,32 +1546,30 @@ class ConversionService : Service() {
     private fun joinParts(vararg parts: String?): String? = parts.filterNotNull().joinToString(" · ").ifEmpty { null }
 
     private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val mgr = getSystemService(NotificationManager::class.java)
-            if (mgr.getNotificationChannel(CHANNEL) == null) {
-                mgr.createNotificationChannel(
-                    NotificationChannel(CHANNEL, str(R.string.ch_ongoing), NotificationManager.IMPORTANCE_LOW)
-                )
-            }
-            // HyperOS focus notifications (Hyper Island): the island skips low-importance channels,
-            // so in-progress operations there use this one; silent all the same (no sound, no
-            // vibration, no pop-up: those need high importance), and only on Xiaomi phones.
-            if (HyperFocus.isSupported(this) && mgr.getNotificationChannel(LIVE_CHANNEL) == null) {
-                mgr.createNotificationChannel(
-                    NotificationChannel(LIVE_CHANNEL, str(R.string.ch_ongoing_island), NotificationManager.IMPORTANCE_DEFAULT).apply {
-                        setSound(null, null)
-                        enableVibration(false)
-                        setShowBadge(false)
-                    }
-                )
-            }
-            // Outcomes get their own channel (normal importance) so they are noticed, while the
-            // ongoing progress stays silent.
-            if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
-                mgr.createNotificationChannel(
-                    NotificationChannel(RESULT_CHANNEL, str(R.string.ch_done), NotificationManager.IMPORTANCE_DEFAULT)
-                )
-            }
+        val mgr = getSystemService(NotificationManager::class.java)
+        if (mgr.getNotificationChannel(CHANNEL) == null) {
+            mgr.createNotificationChannel(
+                NotificationChannel(CHANNEL, str(R.string.ch_ongoing), NotificationManager.IMPORTANCE_LOW)
+            )
+        }
+        // HyperOS focus notifications (Hyper Island): the island skips low-importance channels,
+        // so in-progress operations there use this one; silent all the same (no sound, no
+        // vibration, no pop-up: those need high importance), and only on Xiaomi phones.
+        if (HyperFocus.isSupported(this) && mgr.getNotificationChannel(LIVE_CHANNEL) == null) {
+            mgr.createNotificationChannel(
+                NotificationChannel(LIVE_CHANNEL, str(R.string.ch_ongoing_island), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    setSound(null, null)
+                    enableVibration(false)
+                    setShowBadge(false)
+                }
+            )
+        }
+        // Outcomes get their own channel (normal importance) so they are noticed, while the
+        // ongoing progress stays silent.
+        if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
+            mgr.createNotificationChannel(
+                NotificationChannel(RESULT_CHANNEL, str(R.string.ch_done), NotificationManager.IMPORTANCE_DEFAULT)
+            )
         }
     }
 

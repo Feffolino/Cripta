@@ -10,6 +10,8 @@ import androidx.annotation.StringRes
  * same call works in composables, view models, services and notifications. A language change
  * recreates the activity, so the screens read the new texts.
  */
+// Only the application context is retained, for the lifetime of this process.
+@android.annotation.SuppressLint("StaticFieldLeak")
 object Strings {
     @Volatile private var app: Context? = null
 

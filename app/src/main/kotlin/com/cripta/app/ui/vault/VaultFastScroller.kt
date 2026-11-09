@@ -112,7 +112,9 @@ internal fun androidx.compose.foundation.layout.BoxScope.FastScroller(
     // Bubble next to the thumb (section / position of the first visible item) only while the thumb
     // is held: shown on every swipe of the list, it covered the covers for nothing.
     val bubbleAlpha by animateFloatAsState(if (dragging) 1f else 0f, label = "fastscrollBubble")
-    val label = if (bubbleAlpha > 0f) labelAt(state.firstVisibleItemIndex) else null
+    val label = remember(state, labelAt) {
+        derivedStateOf { if (bubbleAlpha > 0f) labelAt(state.firstVisibleItemIndex) else null }
+    }.value
     if (label != null) {
         // A plain drawing, never a touch target: a Surface swallowed the touches landing on it, so a
         // new swipe started on the bubble (while the list was still moving) stopped the list dead.

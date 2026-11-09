@@ -541,7 +541,11 @@ internal fun VideoPlayer(
             factory = {
                 // Inflated for its TextureView surface (see the layout): a SurfaceView ignored the
                 // close fade and vanished all at once at the end of it.
-                (android.view.LayoutInflater.from(it).inflate(com.cripta.app.R.layout.cripta_player_view, null) as PlayerView).apply {
+                // AndroidView attaches the player and Compose provides its dimensions.
+                @android.annotation.SuppressLint("InflateParams")
+                val playerView = android.view.LayoutInflater.from(it)
+                    .inflate(com.cripta.app.R.layout.cripta_player_view, null) as PlayerView
+                playerView.apply {
                     // XML disables auto-show and native controller animations. Media3 reports
                     // VISIBLE even as its animated hide begins; echoing that back to Compose
                     // reopened the controls during the hide, causing an endless feedback loop.

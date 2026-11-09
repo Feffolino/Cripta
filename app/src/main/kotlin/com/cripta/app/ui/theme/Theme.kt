@@ -1,6 +1,5 @@
 package com.cripta.app.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -110,7 +109,7 @@ fun CriptaTheme(
         ThemeMode.DARK -> true
     }
     val colors = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val ctx = LocalContext.current
             if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         }

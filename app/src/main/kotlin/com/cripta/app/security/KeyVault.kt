@@ -164,6 +164,8 @@ class KeyVault @Inject constructor(
     }
 
     /** A pause of [ms] before the next PIN attempt, from now (see [pinWaitSeconds]). */
+    // Persist the wait before returning so it survives immediate process death.
+    @android.annotation.SuppressLint("CommitPrefEdits", "ApplySharedPref")
     private fun startPinWait(ms: Long, edit: android.content.SharedPreferences.Editor = prefs.edit()) {
         edit.putLong(KEY_PIN_WAIT_UNTIL, android.os.SystemClock.elapsedRealtime() + ms)
             .putLong(KEY_PIN_WAIT_LEN, ms)
@@ -207,6 +209,8 @@ class KeyVault @Inject constructor(
         class Refused(val result: PinResult) : PinCheck
     }
 
+    // Persist failed attempts and wait state together before returning the result.
+    @android.annotation.SuppressLint("ApplySharedPref")
     private fun checkPin(pin: CharArray, sealed: ByteArray): PinCheck {
         pinWaitSeconds().takeIf { it > 0 }?.let { return PinCheck.Refused(PinResult.Wait(it)) }
         val salt = loadBytes(KEY_PIN_SALT) ?: error("No PIN salt")

@@ -171,19 +171,15 @@ class MainActivity : FragmentActivity() {
         window.navigationBarColor = Color.TRANSPARENT
         // Extend the window into the display cutout so that strip shows the app background (tinted
         // below) instead of a black system letterbox; content is kept out of it via insets.
-        if (Build.VERSION.SDK_INT >= 28) {
-            window.attributes = window.attributes.apply {
-                // ALWAYS (not SHORT_EDGES): lets the window extend into the cutout on every edge and
-                // rotation, so the cutout inset is reported consistently — including reverse
-                // landscape (180° flip) where SHORT_EDGES let the system letterbox instead.
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            }
+        window.attributes = window.attributes.apply {
+            // ALWAYS (not SHORT_EDGES): lets the window extend into the cutout on every edge and
+            // rotation, so the cutout inset is reported consistently — including reverse
+            // landscape (180° flip) where SHORT_EDGES let the system letterbox instead.
+            layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
-        if (Build.VERSION.SDK_INT >= 29) {
-            window.isStatusBarContrastEnforced = false
-            window.isNavigationBarContrastEnforced = false
-        }
+        window.isStatusBarContrastEnforced = false
+        window.isNavigationBarContrastEnforced = false
         authUi.value = AuthUiState(
             firstRun = !keyVault.isInitialized,
             // "Solo PIN dell'app" needs no screen lock on the phone.
@@ -299,8 +295,7 @@ class MainActivity : FragmentActivity() {
     /** No screen lock / biometrics: open the system screen where the user can set one up. */
     private fun openSecuritySettings() {
         val candidates = buildList {
-            if (Build.VERSION.SDK_INT >= 30 &&
-                BiometricAuth.status(this@MainActivity) == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+            if (BiometricAuth.status(this@MainActivity) == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
             ) {
                 add(Intent(android.provider.Settings.ACTION_BIOMETRIC_ENROLL).putExtra(
                     android.provider.Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED, BiometricAuth.AUTHENTICATORS,

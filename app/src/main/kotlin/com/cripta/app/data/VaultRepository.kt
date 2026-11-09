@@ -1670,6 +1670,8 @@ class VaultRepository @Inject constructor(
     }
 
     /** The manifest's content and the files after it, into the vault (see [importBackupInner]). */
+    // Budget only currently usable space so restore never relies on clearing caches.
+    @android.annotation.SuppressLint("UsableSpace")
     private suspend fun restoreArchive(
         manifest: org.json.JSONObject,
         inp: java.io.DataInputStream,

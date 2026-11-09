@@ -137,7 +137,7 @@ dependencies {
     implementation(libs.onnxruntime.android)
     testImplementation(libs.junit)
     testImplementation(libs.onnxruntime.jvm)
-    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.espresso.core)
