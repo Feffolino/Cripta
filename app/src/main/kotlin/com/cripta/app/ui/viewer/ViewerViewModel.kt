@@ -150,7 +150,15 @@ class ViewerViewModel @Inject constructor(
     )
 
     /** Player prefs as a live flow (seek step, gestures, rotation, PiP apply without reopening). */
-    val playback: StateFlow<PlaybackPrefs> = settingsStore.settings.map { it.toPlayback() }.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackPrefs())
+    private val _playback = MutableStateFlow(PlaybackPrefs())
+    val playback: StateFlow<PlaybackPrefs> = _playback
+
+    /**
+     * True once the stored preferences (follow the video's orientation, the remembered lock) are in
+     * [playback] / [rotationLocked]. Until then they hold defaults, and turning the screen from
+     * those made a video flash into landscape and back.
+     */
+    val settingsRead = MutableStateFlow(false)
 
     /** Orientation lock chosen in the player; kept while swiping and remembered for next time. */
     val rotationLocked = MutableStateFlow(false)
@@ -160,10 +168,16 @@ class ViewerViewModel @Inject constructor(
         private set
 
     init {
-        // The last choice of the lock button is a preference: the player opens locked again.
         viewModelScope.launch {
-            val o = settingsStore.settings.first().viewerRotationLock
-            if (o >= 0) { lockedOrientation = o; rotationLocked.value = true }
+            settingsStore.settings.collect { s ->
+                _playback.value = s.toPlayback()
+                if (!settingsRead.value) {
+                    // The last choice of the lock button is a preference: the player opens locked again.
+                    val o = s.viewerRotationLock
+                    if (o >= 0) { lockedOrientation = o; rotationLocked.value = true }
+                    settingsRead.value = true
+                }
+            }
         }
     }
 

@@ -344,8 +344,10 @@ internal fun VideoPlayer(
     LaunchedEffect(rotationLocked) {
         if (activity != null && rotationLocked) activity.requestedOrientation = vm.lockedOrientation
     }
-    LaunchedEffect(videoAspect, prefs.autoRotate, rotationLocked) {
-        if (activity == null || rotationLocked) return@LaunchedEffect
+    val settingsRead by vm.settingsRead.collectAsStateWithLifecycle()
+    LaunchedEffect(videoAspect, prefs.autoRotate, rotationLocked, settingsRead) {
+        // Wait for the stored choices: the defaults would turn the screen and then undo it.
+        if (activity == null || rotationLocked || !settingsRead) return@LaunchedEffect
         val a = videoAspect
         activity.requestedOrientation = when {
             !prefs.autoRotate || a == null -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
