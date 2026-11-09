@@ -718,7 +718,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover, { vm.faceCrop(it) }, 88.dp, selected = on)
-                            if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
+                            if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd).offset(7.dp, (-7).dp)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }
