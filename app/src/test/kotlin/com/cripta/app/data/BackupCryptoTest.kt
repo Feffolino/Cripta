@@ -5,6 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.io.DataInputStream
+import java.io.IOException
+import java.security.GeneralSecurityException
+import kotlin.random.Random
 import java.io.ByteArrayOutputStream
 
 class BackupCryptoTest {
@@ -24,6 +28,55 @@ class BackupCryptoTest {
 
     private fun assertFails(block: () -> Unit) {
         try { block(); fail("expected a failure") } catch (e: Exception) { /* expected */ }
+    }
+
+    private fun assertRejected(bytes: ByteArray, case: String) {
+        val passphrase = "test passphrase".toCharArray()
+        try {
+            val raw = ByteArrayInputStream(bytes)
+            val magic = ByteArray(BackupCrypto.MAGIC.size).also { DataInputStream(raw).readFully(it) }
+            require(magic.contentEquals(BackupCrypto.MAGIC))
+            BackupCrypto.decryptingStream(raw, passphrase).use { stream ->
+                val buffer = ByteArray(256)
+                while (stream.read(buffer) != -1) { /* Consume through the authentication tag. */ }
+            }
+            fail("Accepted corrupted backup: $case")
+        } catch (_: IOException) {
+            // Includes truncated streams and Tink authentication failures.
+        } catch (_: GeneralSecurityException) {
+            // Also handled by restore.
+        } catch (_: IllegalArgumentException) {
+            // Invalid header.
+        }
+    }
+
+    @Test(timeout = 10_000)
+    fun malformedArchiveIsRejectedThroughTheFinalTag() {
+        val random = Random(90210)
+        val header = BackupCrypto.Header(100_001, random.nextBytes(16))
+        val plain = random.nextBytes(4096)
+        val valid = ByteArrayOutputStream().also { out ->
+            BackupCrypto.encryptingStream(out, "test passphrase".toCharArray(), header)
+                .use { it.write(plain) }
+        }.toByteArray()
+        assertArrayEquals(plain, open(valid, "test passphrase"))
+
+        val headerSize = header.bytes().size
+        val cuts = (0..headerSize).toList() +
+            List(8) { random.nextInt(headerSize + 1, valid.size) } + (valid.size - 1)
+        cuts.distinct().forEach { end ->
+            assertRejected(valid.copyOf(end), "truncated at $end")
+        }
+
+        val positions = listOf(
+            0, BackupCrypto.MAGIC.size + 3, headerSize - 1,
+            headerSize, valid.size / 2, valid.lastIndex,
+        )
+        positions.forEach { index ->
+            val corrupted = valid.copyOf()
+            corrupted[index] = (corrupted[index].toInt() xor 1).toByte()
+            assertRejected(corrupted, "byte flipped at $index")
+        }
     }
 
     @Test

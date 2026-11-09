@@ -9,6 +9,9 @@ import com.cripta.crypto.DekManager
 import com.cripta.crypto.FileCrypto
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.io.File
+import kotlinx.coroutines.runBlocking
 import java.io.DataInputStream
 import java.io.IOException
 import java.util.UUID
@@ -62,6 +65,64 @@ class RestoreLimitsTest {
 
     private fun plain(uuid: String, wrapped: ByteArray): ByteArray =
         FileCrypto.decryptingStream(wrapped, dek, uuid, blobs.blob(uuid)).use { it.readBytes() }
+
+    @Test(timeout = 5_000)
+    fun backupRejectsIterationCostsOutsideTheSupportedRange() {
+        val salt = ByteArray(16)
+        val passphrase = "test passphrase".toCharArray()
+        for (iterations in listOf(Int.MIN_VALUE, -1, 0, 99_999, 10_000_001, Int.MAX_VALUE)) {
+            val raw = BackupCrypto.Header(iterations, salt).bytes()
+            val size = BackupCrypto.MAGIC.size
+            val input = ByteArrayInputStream(raw, size, raw.size - size)
+            assertThrows(IllegalArgumentException::class.java) {
+                BackupCrypto.decryptingStream(input, passphrase).close()
+            }
+        }
+    }
+
+    @Test(timeout = 10_000)
+    fun restoreRejectsExtremeManifestLengthsBeforeOpeningTheVault() {
+        val app = RuntimeEnvironment.getApplication()
+        val repository = VaultRepository(app, com.cripta.app.security.SessionManager(), blobs, SettingsStore(app))
+        val backup = File.createTempFile("bad-manifest", ".cripta", app.cacheDir)
+        val passphrase = "test passphrase"
+        val header = BackupCrypto.Header(100_000, ByteArray(16))
+        try {
+            for (length in listOf(Int.MIN_VALUE, -1, 0, 50_000_001, Int.MAX_VALUE)) {
+                backup.outputStream().use { raw ->
+                    val encrypted = BackupCrypto.encryptingStream(raw, passphrase.toCharArray(), header)
+                    DataOutputStream(encrypted).use { it.writeInt(length) }
+                }
+                val error = assertThrows(VaultRepository.WrongPassphraseException::class.java) {
+                    runBlocking { repository.importBackup(android.net.Uri.fromFile(backup), passphrase.toCharArray()) }
+                }
+                // Coroutine stack trace recovery can wrap the same failure again.
+                val cause = generateSequence<Throwable>(error) { it.cause }
+                    .firstOrNull { it !is VaultRepository.WrongPassphraseException }
+                if (cause !is IllegalArgumentException) {
+                    throw AssertionError("Length $length must be rejected before allocation", error)
+                }
+            }
+        } finally {
+            backup.delete()
+        }
+    }
+
+    @Test(timeout = 5_000)
+    fun extremeDeclaredEntryLengthsCannotAllocateOrLeaveABlob() {
+        val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+        val compressed = UUID.randomUUID().toString()
+        assertThrows(IllegalArgumentException::class.java) {
+            restore(compressed, wrapped, Long.MIN_VALUE, ByteArray(0), VaultRepository.RestoreQuota(Long.MAX_VALUE))
+        }
+        assertFalse(blobs.blob(compressed).exists())
+
+        val stored = UUID.randomUUID().toString()
+        assertThrows(IOException::class.java) {
+            restore(stored, wrapped, Long.MAX_VALUE, ByteArray(0), VaultRepository.RestoreQuota(Long.MAX_VALUE))
+        }
+        assertFalse(blobs.blob(stored).exists())
+    }
 
     @Test
     fun deflatedDocumentExpandingPastTheLimitIsRefusedAndLeavesNoBlob() {
