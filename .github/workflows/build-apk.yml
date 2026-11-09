@@ -42,10 +42,11 @@ jobs:
         run: |
           yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" >/dev/null
 
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6.4.0
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
 
       - name: Compute version
         id: ver
@@ -67,15 +68,15 @@ jobs:
           fi
 
       - name: Crypto unit tests
-        run: gradle :crypto:testDebugUnitTest --stacktrace --no-daemon
+        run: ./gradlew :crypto:testDebugUnitTest --stacktrace --no-daemon
 
       - name: App unit tests
-        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon
+        run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon
 
       # Fails only on lint errors (missing translations, broken format strings...); warnings
       # stay in the report, downloadable from the run even when this step fails.
       - name: Lint
-        run: gradle :app:lintDebug --stacktrace --no-daemon
+        run: ./gradlew :app:lintDebug --stacktrace --no-daemon
 
       - name: Upload test and lint reports
         if: always()
@@ -111,7 +112,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: >
-          gradle :app:assembleDebug --stacktrace --no-daemon
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon
           -PbuildLabel=${{ steps.ver.outputs.label }}
           -PbuildNumber=${{ github.run_number }}
 
