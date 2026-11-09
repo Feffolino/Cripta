@@ -1309,7 +1309,7 @@
     <string name="opened">已打开</string>
     <string name="closed">已关闭</string>
     <string name="close_actions">关闭操作</string>
-    <string name="search_name_or_tag">搜索名称或标签</string>
+    <string name="search_name_or_tag">搜索名称、标签或人物</string>
     <string name="show_folders">显示文件夹</string>
     <string name="hide_folders">隐藏文件夹</string>
     <string name="folders_count_prefix">"文件夹 · "</string>

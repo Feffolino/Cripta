@@ -1407,7 +1407,7 @@
     <string name="opened">Ouvert</string>
     <string name="closed">Fermé</string>
     <string name="close_actions">Fermer les actions</string>
-    <string name="search_name_or_tag">Rechercher un nom ou une étiquette</string>
+    <string name="search_name_or_tag">Rechercher un nom, une étiquette ou une personne</string>
     <string name="show_folders">Afficher les dossiers</string>
     <string name="hide_folders">Masquer les dossiers</string>
     <string name="folders_count_prefix">"Dossiers · "</string>

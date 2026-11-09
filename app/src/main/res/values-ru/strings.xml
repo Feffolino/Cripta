@@ -1456,7 +1456,7 @@
     <string name="opened">Открыто</string>
     <string name="closed">Закрыто</string>
     <string name="close_actions">Закрыть действия</string>
-    <string name="search_name_or_tag">Поиск по имени или метке</string>
+    <string name="search_name_or_tag">Поиск по имени, метке или человеку</string>
     <string name="show_folders">Показать папки</string>
     <string name="hide_folders">Скрыть папки</string>
     <string name="folders_count_prefix">"Папки · "</string>

@@ -1407,7 +1407,7 @@
     <string name="opened">Aperto</string>
     <string name="closed">Chiuso</string>
     <string name="close_actions">Chiudi azioni</string>
-    <string name="search_name_or_tag">Cerca nome o etichetta</string>
+    <string name="search_name_or_tag">Cerca nome, etichetta o persona</string>
     <string name="show_folders">Mostra le cartelle</string>
     <string name="hide_folders">Nascondi le cartelle</string>
     <string name="folders_count_prefix">"Cartelle · "</string>

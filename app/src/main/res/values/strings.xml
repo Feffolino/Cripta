@@ -1358,7 +1358,7 @@
     <string name="opened">Open</string>
     <string name="closed">Closed</string>
     <string name="close_actions">Close actions</string>
-    <string name="search_name_or_tag">Search name or tag</string>
+    <string name="search_name_or_tag">Search name, tag or person</string>
     <string name="show_folders">Show the folders</string>
     <string name="hide_folders">Hide the folders</string>
     <string name="folders_count_prefix">"Folders · "</string>

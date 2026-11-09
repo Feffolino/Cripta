@@ -1407,7 +1407,7 @@
     <string name="opened">Abierto</string>
     <string name="closed">Cerrado</string>
     <string name="close_actions">Cerrar acciones</string>
-    <string name="search_name_or_tag">Buscar nombre o etiqueta</string>
+    <string name="search_name_or_tag">Buscar nombre, etiqueta o persona</string>
     <string name="show_folders">Mostrar las carpetas</string>
     <string name="hide_folders">Ocultar las carpetas</string>
     <string name="folders_count_prefix">"Carpetas · "</string>

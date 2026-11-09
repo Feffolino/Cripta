@@ -1309,7 +1309,7 @@
     <string name="opened">開いた状態</string>
     <string name="closed">閉じた状態</string>
     <string name="close_actions">操作を閉じる</string>
-    <string name="search_name_or_tag">名前やタグで検索</string>
+    <string name="search_name_or_tag">名前・タグ・人物で検索</string>
     <string name="show_folders">フォルダーを表示</string>
     <string name="hide_folders">フォルダーを隠す</string>
     <string name="folders_count_prefix">"フォルダー · "</string>

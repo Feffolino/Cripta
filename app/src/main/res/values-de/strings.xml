@@ -1358,7 +1358,7 @@
     <string name="opened">Geöffnet</string>
     <string name="closed">Geschlossen</string>
     <string name="close_actions">Aktionen schließen</string>
-    <string name="search_name_or_tag">Name oder Schlagwort suchen</string>
+    <string name="search_name_or_tag">Name, Schlagwort oder Person suchen</string>
     <string name="show_folders">Ordner anzeigen</string>
     <string name="hide_folders">Ordner ausblenden</string>
     <string name="folders_count_prefix">"Ordner · "</string>

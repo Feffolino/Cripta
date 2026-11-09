@@ -270,8 +270,15 @@ internal fun FolderCoverSheet(
             )
             val list = files
             when {
-                list == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator()
+                list == null -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = GridCells.Adaptive(96.dp), userScrollEnabled = false,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(12) {
+                        com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().aspectRatio(1f), com.cripta.app.ui.theme.CoverShape)
+                    }
                 }
                 list.isEmpty() -> Text(str(R.string.folder_no_files), style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))

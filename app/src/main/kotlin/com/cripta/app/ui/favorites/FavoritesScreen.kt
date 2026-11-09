@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +53,6 @@ import com.cripta.app.ui.components.MediaThumbCell
 import com.cripta.app.data.SortKey
 import com.cripta.app.ui.vault.FolderMosaic
 import com.cripta.app.ui.theme.Motion
-import com.cripta.app.ui.viewer.DelayedSpinner
 import kotlinx.coroutines.launch
 
 /** What the favorites page shows; the crossfade is keyed on it so the grid doesn't re-animate on
@@ -117,9 +118,7 @@ fun FavoritesScreen(
             label = "favoritesPhase",
         ) { p ->
             when (p) {
-                FavPhase.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    DelayedSpinner()
-                }
+                FavPhase.Loading -> FavoritesSkeleton(Modifier.fillMaxSize())
                 FavPhase.Empty -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(CriptaIcons.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(56.dp))
@@ -197,6 +196,26 @@ fun FavoritesScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** The favourites grid while it is read: the same square covers, name lines and gaps as the real one. */
+@Composable
+private fun FavoritesSkeleton(modifier: Modifier = Modifier) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(112.dp), modifier = modifier, userScrollEnabled = false,
+        contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(18) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 6.dp)) {
+                com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().aspectRatio(1f), com.cripta.app.ui.theme.CoverShape)
+                Box(Modifier.padding(top = 8.dp, start = 2.dp).height(20.dp), contentAlignment = Alignment.CenterStart) {
+                    com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth(0.7f).height(12.dp))
                 }
             }
         }

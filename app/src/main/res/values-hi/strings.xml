@@ -1358,7 +1358,7 @@
     <string name="opened">खुला</string>
     <string name="closed">बंद</string>
     <string name="close_actions">कार्रवाइयाँ बंद करें</string>
-    <string name="search_name_or_tag">नाम या टैग खोजें</string>
+    <string name="search_name_or_tag">नाम, टैग या व्यक्ति खोजें</string>
     <string name="show_folders">फ़ोल्डर दिखाएँ</string>
     <string name="hide_folders">फ़ोल्डर छिपाएँ</string>
     <string name="folders_count_prefix">"फ़ोल्डर · "</string>
