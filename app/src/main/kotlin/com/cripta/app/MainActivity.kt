@@ -358,7 +358,7 @@ class MainActivity : FragmentActivity() {
                         error = str(R.string.unlock_wait, waitText(res.seconds)))
                 }
             }.onFailure {
-                android.util.Log.e("MainActivity", "PIN unlock failed", it)
+                logException(android.util.Log.ERROR, "MainActivity", "PIN unlock failed", it)
                 authUi.value = authUi.value.copy(pinBusy = false, error = str(R.string.unlock_failed))
             }
         }
@@ -399,7 +399,7 @@ class MainActivity : FragmentActivity() {
         val cipher = runCatching {
             if (setup) keyVault.cipherForSetup() else keyVault.cipherForUnlock()
         }.getOrElse {
-            android.util.Log.e("MainActivity", "cipher init failed", it)
+            logException(android.util.Log.ERROR, "MainActivity", "cipher init failed", it)
             if (keyVault.isKeyInvalidated(it) && mode == com.cripta.app.security.UnlockMode.SYSTEM_OR_PIN) {
                 // The PIN still opens the vault: no reset needed.
                 authUi.value = authUi.value.copy(error = str(R.string.fingerprint_invalidated))
@@ -435,7 +435,7 @@ class MainActivity : FragmentActivity() {
                         authUi.value = authUi.value.copy(firstRun = false, error = null,
                             pin = if (twoStep) PinStep.SECOND else pinStepFor(keyVault.unlockMode))
                     }.onFailure {
-                        android.util.Log.e("MainActivity", "unlock failed", it)
+                        logException(android.util.Log.ERROR, "MainActivity", "unlock failed", it)
                         if (keyVault.isKeyInvalidated(it)) {
                             keyInvalidated.value = true
                         } else {

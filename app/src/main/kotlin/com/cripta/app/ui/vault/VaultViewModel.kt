@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.logException
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -158,7 +159,7 @@ class VaultViewModel @Inject constructor(
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("VaultViewModel", "$what failed", e)
+            logException(android.util.Log.ERROR, "VaultViewModel", "$what failed", e)
         } finally {
             session.endWork()
         }

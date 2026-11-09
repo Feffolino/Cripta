@@ -1,5 +1,6 @@
 package com.cripta.app.data
 
+import com.cripta.app.logException
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -1338,7 +1339,7 @@ class VaultRepository @Inject constructor(
      */
     suspend fun deletePendingJob(id: String) = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
         runCatching { db.pendingJobDao().delete(id) }
-            .onFailure { android.util.Log.w("VaultRepository", "pending job not removed", it) }
+            .onFailure { logException(android.util.Log.WARN, "VaultRepository", "pending job not removed", it) }
         Unit
     }
     suspend fun pendingJobs(): List<com.cripta.app.data.db.PendingJobEntity> =
@@ -1661,7 +1662,7 @@ class VaultRepository @Inject constructor(
                 // Settings only once the vault part is in: a failed restore changes nothing.
                 val settingsOk = settingsBytes?.let { b ->
                     runCatching { settings.importFromBackup(b) }
-                        .onFailure { android.util.Log.w("VaultRepository", "backup settings not restored", it) }.isSuccess
+                        .onFailure { logException(android.util.Log.WARN, "VaultRepository", "backup settings not restored", it) }.isSuccess
                 } ?: false
                 notifyChanged()
                 restored.copy(settings = settingsOk)

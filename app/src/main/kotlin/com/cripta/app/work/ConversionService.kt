@@ -1,5 +1,6 @@
 package com.cripta.app.work
 
+import com.cripta.app.logException
 import com.cripta.app.str
 import com.cripta.app.plural
 
@@ -145,7 +146,7 @@ class ConversionService : Service() {
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    android.util.Log.e("ConversionService", "delete originals failed", e)
+                    logException(android.util.Log.ERROR, "ConversionService", "delete originals failed", e)
                 } finally {
                     if (active.decrementAndGet() == 0) stopWhenIdle()
                 }
@@ -365,7 +366,7 @@ class ConversionService : Service() {
                 throw e
             } catch (e: Exception) {
                 // best-effort; individual items already guarded below
-                android.util.Log.e("ConversionService", "job failed: $mode", e)
+                logException(android.util.Log.ERROR, "ConversionService", "job failed: $mode", e)
             } finally {
                 // New videos get their intro/outro analysis right after (when on in Settings).
                 // Never thrown out of here: Android may refuse a foreground start while the app is in
@@ -374,9 +375,9 @@ class ConversionService : Service() {
                 if (mode == MODE_IMPORT || mode == MODE_DOWNLOAD_URL || mode == MODE_CONVERT) withContext(NonCancellable) {
                     val s = runCatching { settings.settingsOnce() }.getOrNull()
                     if (s?.introAnalyzeNew == true) runCatching { startIntroScan(this@ConversionService, manual = false) }
-                        .onFailure { android.util.Log.w("ConversionService", "intro scan not started", it) }
+                        .onFailure { logException(android.util.Log.WARN, "ConversionService", "intro scan not started", it) }
                     if (s?.facesAnalyzeNew == true) runCatching { startFaceScan(this@ConversionService, manual = false) }
-                        .onFailure { android.util.Log.w("ConversionService", "face scan not started", it) }
+                        .onFailure { logException(android.util.Log.WARN, "ConversionService", "face scan not started", it) }
                 }
                 if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) stopWhenIdle()
@@ -517,7 +518,7 @@ class ConversionService : Service() {
                 backups.finish(text)
                 notifyResult(if (req.restore) str(R.string.n_restore_done) else str(R.string.n_backup_done), text, ResultKind.BACKUP)
             }.onFailure { e ->
-                android.util.Log.e("ConversionService", "backup failed (restore=${req.restore})", e)
+                logException(android.util.Log.ERROR, "ConversionService", "backup failed (restore=${req.restore})", e)
                 val text = when {
                     !req.restore -> str(R.string.n_backup_failed_space)
                     e is VaultRepository.WrongPassphraseException -> str(R.string.n_restore_failed_passphrase)
@@ -565,7 +566,7 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_update_cancelled), null, ResultKind.UPDATE, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("ConversionService", "update download failed", e)
+            logException(android.util.Log.ERROR, "ConversionService", "update download failed", e)
             updater.publish(com.cripta.app.update.AppUpdater.Download.Failed(rel, e))
             notifyResult(str(R.string.n_update_failed), str(R.string.n_update_retry_from),
                 ResultKind.UPDATE, state = ResultState.FAILED)
@@ -657,7 +658,7 @@ class ConversionService : Service() {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                android.util.Log.e("ConversionService", "export item failed", e)
+                logException(android.util.Log.ERROR, "ConversionService", "export item failed", e)
                 failed++
             }
             done++
@@ -722,7 +723,7 @@ class ConversionService : Service() {
                     throw e
                 } catch (e: Throwable) {
                     // Throwable: an OutOfMemoryError on one odd file must not kill the whole batch.
-                    android.util.Log.e("ConversionService", "import failed", e)   // never the name: logcat is readable
+                    logException(android.util.Log.ERROR, "ConversionService", "import failed", e)   // never the name: logcat is readable
                     repo.importFailed(name, UserErrors.of(e))
                     false
                 }
@@ -747,7 +748,7 @@ class ConversionService : Service() {
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            android.util.Log.e("ConversionService", "tag inheritance failed", e)
+                            logException(android.util.Log.ERROR, "ConversionService", "tag inheritance failed", e)
                             false
                         }
                         // Not named like one: maybe the same photo or video re-saved or resized,
@@ -907,7 +908,7 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_convert_cancelled), str(R.string.n_original_file_untouched), state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("ConversionService", "convert failed: $id", e)
+            logException(android.util.Log.ERROR, "ConversionService", "convert failed: $id", e)
             val msg = convertErrorText(e)
             result = false to str(R.string.n_convert_failed_long, msg)
             notifyResult(str(R.string.n_convert_failed), str(R.string.n_original_untouched_sep, msg.replaceFirstChar { it.uppercase() }), state = ResultState.FAILED)
@@ -1053,7 +1054,7 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_x_cancelled, label), null, ResultKind.SCAN, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("ConversionService", "duplicate scan failed", e)
+            logException(android.util.Log.ERROR, "ConversionService", "duplicate scan failed", e)
             val msg = UserErrors.of(e)
             dupStore.fail(msg)
             notifyResult(str(R.string.n_x_failed, label), msg, ResultKind.SCAN, state = ResultState.FAILED)
@@ -1187,7 +1188,7 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("ConversionService", "intro scan failed", e)
+            logException(android.util.Log.ERROR, "ConversionService", "intro scan failed", e)
             notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.INTRO, state = ResultState.FAILED)
         } finally {
             releaseScan(ResultKind.INTRO)
@@ -1384,7 +1385,7 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.FACES, state = ResultState.CANCELLED)
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("ConversionService", "face scan failed", e)
+            logException(android.util.Log.ERROR, "ConversionService", "face scan failed", e)
             notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
             return false
         } finally {
@@ -1515,7 +1516,7 @@ class ConversionService : Service() {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                android.util.Log.e("ConversionService", "delete originals failed", e)
+                logException(android.util.Log.ERROR, "ConversionService", "delete originals failed", e)
             }
             // "Chiedi": the app shows the keep/delete prompt in the vault, and the import's result
             // notification becomes the same choice (it stays in the Hyper Island until answered).

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.logException
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -257,7 +258,7 @@ class SettingsViewModel @Inject constructor(
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            android.util.Log.e("SettingsViewModel", "$what failed", e)
+            logException(android.util.Log.ERROR, "SettingsViewModel", "$what failed", e)
         }
     }
 
@@ -524,7 +525,7 @@ class SettingsViewModel @Inject constructor(
     private fun startBackup(request: com.cripta.app.data.BackupJobs.Request) {
         if (!backups.offer(request)) return
         runCatching { com.cripta.app.work.ConversionService.startBackup(appContext) }.onFailure {
-            android.util.Log.e("SettingsViewModel", "backup service not started", it)
+            logException(android.util.Log.ERROR, "SettingsViewModel", "backup service not started", it)
             backups.take()?.passphrase?.fill('\u0000')
             backups.finish(if (request.restore) str(R.string.restore_not_started) else str(R.string.backup_not_started))
         }
@@ -607,7 +608,7 @@ class SettingsViewModel @Inject constructor(
     /** Cipher the system prompt authorizes to confirm the change and re-wrap the vault key. */
     fun cipherForModeChange(): javax.crypto.Cipher? =
         runCatching { keyVault.cipherForModeChange() }
-            .onFailure { android.util.Log.e("SettingsVM", "mode-change cipher", it) }
+            .onFailure { logException(android.util.Log.ERROR, "SettingsVM", "mode-change cipher", it) }
             .getOrNull()
 
     /** Confirms the current app PIN before a change; [systemLayer] in SYSTEM_AND_PIN mode (see [unwrapSystemLayer]). */
@@ -619,13 +620,13 @@ class SettingsViewModel @Inject constructor(
     /** Decrypt cipher for the system step of confirming a change in SYSTEM_AND_PIN mode. */
     fun cipherForSystemStep(): javax.crypto.Cipher? =
         runCatching { keyVault.cipherForUnlock() }
-            .onFailure { android.util.Log.e("SettingsVM", "system-step cipher", it) }
+            .onFailure { logException(android.util.Log.ERROR, "SettingsVM", "system-step cipher", it) }
             .getOrNull()
 
     /** The PIN-sealed layer the authorized [cipher] opens (SYSTEM_AND_PIN); wipe it after use. */
     fun unwrapSystemLayer(cipher: javax.crypto.Cipher): ByteArray? =
         runCatching { keyVault.unwrapSystemLayer(cipher) }
-            .onFailure { android.util.Log.e("SettingsVM", "system-step unwrap", it) }
+            .onFailure { logException(android.util.Log.ERROR, "SettingsVM", "system-step unwrap", it) }
             .getOrNull()
 
     fun pinWaitSeconds(): Long = keyVault.pinWaitSeconds()
@@ -647,7 +648,7 @@ class SettingsViewModel @Inject constructor(
                 _unlockMode.value = keyVault.unlockMode
                 _message.value = str(R.string.unlock_mode_set, mode.label.replaceFirstChar { it.lowercase() })
             }.onFailure {
-                android.util.Log.e("SettingsVM", "unlock mode change failed", it)
+                logException(android.util.Log.ERROR, "SettingsVM", "unlock mode change failed", it)
                 _message.value = str(R.string.unlock_mode_failed)
             }
         }
