@@ -503,6 +503,13 @@ class ConversionService : Service() {
                 if (req.restore) runCatching { repo.importBackup(req.uri, req.passphrase, progress).describe() }
                 else runCatching {
                     val n = repo.exportBackup(req.uri, req.passphrase, req.compressDocs, progress, req.scope)
+                    // Shown on the Backup page ("Ultimo backup"); the size only if the provider tells it.
+                    val size = runCatching {
+                        contentResolver.query(req.uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+                            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+                        }
+                    }.getOrNull()
+                    runCatching { settings.setLastBackup(com.cripta.app.data.LastBackup(System.currentTimeMillis(), n, size)) }
                     plural(R.plurals.backup_created, n)
                 }
             }

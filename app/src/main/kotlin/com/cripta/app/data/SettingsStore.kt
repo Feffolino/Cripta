@@ -84,6 +84,9 @@ data class DownloadDefaults(
     val height: Int? = null,
 )
 
+/** A backup made on this device: when (epoch ms), how many files, the archive's size if known. */
+data class LastBackup(val at: Long, val files: Int, val bytes: Long?)
+
 data class Settings(
     val autoLockMinutes: Int = 1,
     val deleteOriginalPolicy: DeleteOriginalPolicy = DeleteOriginalPolicy.ASK,
@@ -179,6 +182,8 @@ data class Settings(
     val backupCompressDocs: Boolean = false,
     /** Backup: what goes in it (remembered between backups). */
     val backupScope: BackupScope = BackupScope(),
+    /** The last backup made on this device, null if none yet. */
+    val lastBackup: LastBackup? = null,
     /** Days a trashed file is kept before being crypto-shredded. */
     val trashDays: Int = 7,
     val downloadDefaults: DownloadDefaults = DownloadDefaults(),
@@ -255,6 +260,9 @@ class SettingsStore @Inject constructor(
     private val recentTagsKey = booleanPreferencesKey("recent_tags")
     private val recentTagsCountKey = intPreferencesKey("recent_tags_count")
     private val backupCompressKey = booleanPreferencesKey("backup_compress_docs")
+    private val lastBackupAtKey = androidx.datastore.preferences.core.longPreferencesKey("last_backup_at")
+    private val lastBackupFilesKey = intPreferencesKey("last_backup_files")
+    private val lastBackupBytesKey = androidx.datastore.preferences.core.longPreferencesKey("last_backup_bytes")
     private val quickTagsKey = booleanPreferencesKey("viewer_quick_tags")
     private val introAnalyzeKey = booleanPreferencesKey("intro_analyze_new")
     private val facesAnalyzeKey = booleanPreferencesKey("faces_analyze_new")
@@ -319,6 +327,7 @@ class SettingsStore @Inject constructor(
             trashEnabled = p[trashKey] ?: false,
             similarOnImport = p[similarOnImportKey] ?: false,
             backupCompressDocs = p[backupCompressKey] ?: false,
+            lastBackup = p[lastBackupAtKey]?.let { LastBackup(it, p[lastBackupFilesKey] ?: 0, p[lastBackupBytesKey]) },
             backupScope = BackupScope(
                 files = p[bkFilesKey] ?: true,
                 excludedFolders = BackupScope.parseIds(p[bkExcludedFoldersKey]),
@@ -429,6 +438,13 @@ class SettingsStore @Inject constructor(
     suspend fun setUpdatePrerelease(v: Boolean) { context.dataStore.edit { it[updatePreKey] = v } }
     suspend fun setShowRecentTags(v: Boolean) { context.dataStore.edit { it[recentTagsKey] = v } }
     suspend fun setBackupCompressDocs(v: Boolean) { context.dataStore.edit { it[backupCompressKey] = v } }
+    suspend fun setLastBackup(v: LastBackup) {
+        context.dataStore.edit {
+            it[lastBackupAtKey] = v.at
+            it[lastBackupFilesKey] = v.files
+            if (v.bytes != null) it[lastBackupBytesKey] = v.bytes else it.remove(lastBackupBytesKey)
+        }
+    }
     suspend fun setBackupScope(v: BackupScope) {
         context.dataStore.edit {
             it[bkFilesKey] = v.files

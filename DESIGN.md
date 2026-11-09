@@ -230,11 +230,18 @@ Tag icons are a separate set (see Components) and are not Tabler.
 - **Viewer filmstrip**: covers 26–54dp tall by size step, 10dp apart, 8dp corners (or round);
   the current one larger, full opacity and ringed.
 - **Dialogs**: `CriptaAlertDialog` titles in `titleLarge`, shape from the theme (sheet, 28dp).
-- **Backup** (Impostazioni › Backup): "Cosa includere" first, one switch per group (File, with
-  the top-level folders folded behind "Scegli le cartelle"; Copertine scelte a mano; Etichette e
-  filtri salvati; Persone e volti; Analisi; Impostazioni), the remembered choice; then the size
-  estimate that follows it, "Comprimi i documenti" and the buttons. The trash never goes in, and
-  the page says so.
+- **Backup** (Impostazioni › Backup): a one-feature page. `PageIntro` first: what the archive is,
+  "Ultimo backup …" (relative time, then date, files and size; "Nessun backup ancora" before the
+  first; kept per device, never restored), "Prossimo backup" (the live estimate as a `CountRow`)
+  and the one filled button "Crea backup" with the free space it needs under it; while it runs the
+  button gives way to a `CountRow` with the percentage and bar, then the time left. Then "Cosa
+  includere" (the remembered choice; the hint says the trash never goes in): one switch per group,
+  each with its icon and a one-line caption (File; Cartelle, a row opening a sheet; Copertine
+  scelte a mano; Etichette e filtri salvati; Persone e volti; Analisi; Impostazioni). The folders
+  sheet lists the top-level folders and the loose files with their files and size, a tap puts one
+  in or out (accent bold name and a tick), "Tutte" / "Nessuna" chips, the total chosen at the end.
+  Then "Opzioni" ("Comprimi i documenti") and last "Ripristino" (what a restore does, a tonal
+  button). The passphrase dialog shows a bar filling up to the minimum length.
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as a grid of three options per row with the size under each, destination as two plain rows
   opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. The

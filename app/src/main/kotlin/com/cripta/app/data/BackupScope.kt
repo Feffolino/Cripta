@@ -75,10 +75,12 @@ object BackupSettings {
      *   restored, a backup could switch screenshots on or lengthen the auto-lock unasked.
      * - viewer_rotation_lock: an orientation of this phone's screen.
      * - dl_folder, dl_tag_ids, backup_excluded_folders: folder / tag ids, which change on restore.
+     * - last_backup_*: when this device last made a backup; another device's would mislead.
      */
     val EXCLUDED = setOf(
         "allow_screenshots", "auto_lock_minutes", "viewer_rotation_lock",
         "dl_folder", "dl_tag_ids", "backup_excluded_folders",
+        "last_backup_at", "last_backup_files", "last_backup_bytes",
     )
 
     private const val VERSION = 1

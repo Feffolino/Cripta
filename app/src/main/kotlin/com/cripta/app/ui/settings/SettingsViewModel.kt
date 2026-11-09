@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -489,6 +490,15 @@ class SettingsViewModel @Inject constructor(
     /** Top-level folders, each one a choice of the backup (with everything under it). */
     val backupFolders: StateFlow<List<com.cripta.app.data.db.FolderEntity>> = repo.folders(null)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+    /** Files and size of each folder with everything under it: the weight of each backup choice. */
+    val backupFolderStats: StateFlow<Map<Long, com.cripta.app.data.FolderStat>> =
+        kotlinx.coroutines.flow.combine(repo.allFolders(), repo.folderAggregates()) { f, a -> com.cripta.app.data.computeFolderStats(f, a) }
+            .flowOn(kotlinx.coroutines.Dispatchers.Default)
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyMap())
+    /** The files in no folder, the other backup choice: count and size. */
+    val backupRootStat: StateFlow<com.cripta.app.data.FolderStat> =
+        repo.files(null).map { l -> com.cripta.app.data.FolderStat(l.size, l.sumOf { it.file.sizeBytes }) }
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), com.cripta.app.data.FolderStat(0, 0))
     fun setBackupScope(v: com.cripta.app.data.BackupScope) = viewModelScope.launch { store.setBackupScope(v) }
 
     init {

@@ -112,6 +112,8 @@ fun SettingsScreen(
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
     val backupEstimate by vm.backupEstimate.collectAsStateWithLifecycle()
     val backupFolders by vm.backupFolders.collectAsStateWithLifecycle()
+    val backupFolderStats by vm.backupFolderStats.collectAsStateWithLifecycle()
+    val backupRootStat by vm.backupRootStat.collectAsStateWithLifecycle()
 
     var showAllTags by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
@@ -610,25 +612,15 @@ fun SettingsScreen(
                     },
                 )
                 SettingsPage.BACKUP -> listOf(
-                    sec(str(R.string.sec_what_to_include)) {
-                        Section(str(R.string.sec_what_to_include), str(R.string.what_to_include_hint)) {
-                            BackupScopeChoice(s.backupScope, backupFolders) { vm.setBackupScope(it) }
-                        }
-                    },
+                    // One-feature page: what it does, its state (last and next backup), the main action.
                     sec(str(R.string.sec_encrypted_backup)) {
-                        Section(str(R.string.sec_encrypted_backup), str(R.string.encrypted_backup_hint)) {
+                        PageIntro(str(R.string.encrypted_backup_hint)) {
+                            LastBackupRow(s.lastBackup)
                             // Always visible: how big the archive would be if made now.
                             backupEstimate?.let { (n, bytes) ->
-                                com.cripta.app.ui.components.CountRow(str(R.string.estimated_size),
-                                    com.cripta.app.ui.components.formatBytes(bytes) + " · " +
-                                        plural(R.plurals.files_n, n, com.cripta.app.ui.components.formatCount(n)))
-                                Text(if (s.backupCompressDocs) str(R.string.backup_estimate_compressed)
-                                    else str(R.string.backup_estimate_space),
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            ToggleRow(str(R.string.compress_documents), s.backupCompressDocs,
-                                desc = str(R.string.compress_documents_desc)) {
-                                vm.setBackupCompressDocs(it)
+                                com.cripta.app.ui.components.CountRow(str(R.string.next_backup),
+                                    com.cripta.app.ui.components.formatBytes(bytes),
+                                    after = " · " + plural(R.plurals.files_n, n, com.cripta.app.ui.components.formatCount(n)))
                             }
                             androidx.compose.animation.AnimatedContent(
                                 targetState = backupBusy,
@@ -641,11 +633,11 @@ fun SettingsScreen(
                                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
                                         val p = backupProgress
                                         val eta = com.cripta.app.ui.components.rememberEta(p ?: 0f, p != null, key = busy)
-                                        Text(if (p != null) "$busy ${(p * 100).toInt()}%" else busy, style = MaterialTheme.typography.bodyMedium)
                                         if (p != null) {
                                             val smooth by animateFloatAsState(p, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "backupPct")
-                                            androidx.compose.material3.LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth())
+                                            com.cripta.app.ui.components.CountRow(busy, "${(p * 100).toInt()}%", progress = smooth)
                                         } else {
+                                            Text(busy, style = MaterialTheme.typography.bodyMedium)
                                             androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
                                         }
                                         Text(eta?.replaceFirstChar { it.uppercase() }?.let { str(R.string.eta_keep_open, it) }
@@ -653,20 +645,49 @@ fun SettingsScreen(
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 } else {
-                                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         Button(
                                             onClick = { exportLauncher.launch("cripta-backup-${backupStamp()}.criptabak") },
                                             enabled = !s.backupScope.isEmpty,
                                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                                        ) { com.cripta.app.ui.components.ButtonText(str(R.string.create_backup)) }
-                                        com.cripta.app.ui.components.FilledTonalButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                            com.cripta.app.ui.components.ButtonText(str(R.string.restore_from_backup))
+                                        ) {
+                                            Icon(CriptaIcons.Backup, null, Modifier.size(20.dp))
+                                            com.cripta.app.ui.components.ButtonText(str(R.string.create_backup), modifier = Modifier.padding(start = 8.dp))
+                                        }
+                                        backupEstimate?.let { (_, bytes) ->
+                                            Text(if (s.backupCompressDocs) str(R.string.backup_estimate_compressed)
+                                                else str(R.string.backup_space_needed, com.cripta.app.ui.components.formatBytes(bytes)),
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
                                         }
                                     }
                                 }
                             }
-                            Text(str(R.string.restore_adds_hint),
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                    sec(str(R.string.sec_what_to_include)) {
+                        Section(str(R.string.sec_what_to_include), str(R.string.what_to_include_hint)) {
+                            BackupScopeChoice(s.backupScope, backupFolders, backupFolderStats, backupRootStat) { vm.setBackupScope(it) }
+                        }
+                    },
+                    sec(str(R.string.sec_backup_options)) {
+                        Section(str(R.string.sec_backup_options)) {
+                            ToggleRow(str(R.string.compress_documents), s.backupCompressDocs,
+                                desc = str(R.string.compress_documents_desc), icon = CriptaIcons.Description) {
+                                vm.setBackupCompressDocs(it)
+                            }
+                        }
+                    },
+                    sec(str(R.string.sec_backup_restore)) {
+                        Section(str(R.string.sec_backup_restore), str(R.string.restore_adds_hint)) {
+                            com.cripta.app.ui.components.FilledTonalButton(
+                                onClick = { importLauncher.launch(arrayOf("*/*")) },
+                                enabled = backupBusy == null,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            ) {
+                                Icon(CriptaIcons.Download, null, Modifier.size(20.dp))
+                                com.cripta.app.ui.components.ButtonText(str(R.string.restore_from_backup), modifier = Modifier.padding(start = 8.dp))
+                            }
                         }
                     },
                 )
