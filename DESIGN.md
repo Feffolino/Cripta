@@ -123,7 +123,8 @@ Tag icons are a separate set (see Components) and are not Tabler.
   bar. No quality badge (4K/HD/SD) and no shade over the image. Notes, texts and documents
   show their content: a light sheet with the first lines (the first in bold when it reads as a
   title); a PDF its first page. So do the folders holding them.
-- **People**: the people page (grid of round faces, filters as chips, order from the top bar;
+- **People**: the people page (grid of round faces, filters as chips, order from the top bar in a
+  sheet like the files' filter sheet: the key as chips, the direction as a segmented control;
   starred people are first whatever the order, hidden ones last) leads to each person's **profile** page: face (tap to pick another among those found), name (a pencil beside it renames), star,
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
   are one face at a time, full screen, swiped up like a feed (the frame takes the free space, the
@@ -170,7 +171,9 @@ Tag icons are a separate set (see Components) and are not Tabler.
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
   Video, Altro, Preferiti); the files follow under a "File" heading. Typing a name in the search
   also shows the people it matches under the field (68dp faces, name below): a tap filters by that
-  person and clears the text. The filter sheet's people follow the People page's order. With Impostazioni › Aspetto ›
+  person and clears the text. The filter sheet's people follow the People page's order. The filter
+  sheet opens with the order (short, most used), then type, people and the two switches, the tag
+  library (it can be long) after them, the saved filters last. With Impostazioni › Aspetto ›
   "Cartelle in una riga" (off by default) the folders are one row scrolling sideways instead,
   fixed-width covers, so the files start right below however many folders there are.
 - **Home**: search pill, the summary strip (Foto, Video and Note or Altro), "Continua" (videos

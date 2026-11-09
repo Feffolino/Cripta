@@ -194,8 +194,8 @@ private fun TagFilterChip(label: String, state: TagFilterState, color: Color, ic
 
 /**
  * Sort + filter sheet. A fixed header keeps the live result count and "Azzera" in reach even at half
- * height; below it the groups follow the order people reach for them: saved filters, order, what
- * to show, then the (possibly long) tag library last. Every change applies at once; the sheet is
+ * height; below it the groups follow the order people reach for them: order, what to show (type,
+ * people, switches), then the (possibly long) tag library, then saved filters. Every change applies at once; the sheet is
  * only closed by the user. Tags keep the library's fixed order so each one is always in its place.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -239,12 +239,50 @@ internal fun FilterSortSheet(
             TextButton(onClick = onClear, enabled = filters.active) { com.cripta.app.ui.components.ButtonText(str(R.string.reset)) }
         }
 
-        // DS order: what to show (type, tags, people, favourites), then the order and saved sets.
+        // The order first (the group people reach for most, and short), then what to show; the
+        // tag library, which can be long, comes last, then the saved sets.
         Column(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            // ---- Order: key as one segmented control, direction spelled out.
+            FilterGroup(str(R.string.sort_by)) {
+                val keys = listOf(SortKey.DATE to str(R.string.sort_date), SortKey.NAME to str(R.string.sort_name), SortKey.SIZE to str(R.string.sort_size), SortKey.MANUAL to str(R.string.sort_manual))
+                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    keys.forEachIndexed { i, (k, lbl) ->
+                        SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+                            selected = sortKey == k,
+                            onClick = { onSort(k, sortAscending) },
+                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
+                            icon = {},
+                            label = { Text(lbl, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        )
+                    }
+                }
+                // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
+                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = sortKey == SortKey.MANUAL,
+                        transitionSpec = { fadeIn(Motion.enter(Motion.SHORT)) togetherWith fadeOut(Motion.exit(Motion.SHORT)) },
+                        label = "sortDirection",
+                    ) { manual ->
+                        if (manual) {
+                            Text(str(R.string.drag_to_reorder),
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            val (descLabel, ascLabel) = when (sortKey) {
+                                SortKey.DATE -> str(R.string.order_newest) to str(R.string.order_oldest)
+                                SortKey.NAME -> str(R.string.z_to_a) to str(R.string.a_to_z)
+                                SortKey.SIZE -> str(R.string.order_largest) to str(R.string.order_smallest)
+                                else -> str(R.string.descending) to str(R.string.ascending)
+                            }
+                            SortDirectionRow(descLabel, ascLabel, sortAscending) { onSort(sortKey, it) }
+                        }
+                    }
+                }
+            }
+
             FilterGroup(str(R.string.type)) {
                 com.cripta.app.ui.components.ChipFlowRow {
                     TypeFilter.entries.forEach { t ->
@@ -252,6 +290,26 @@ internal fun FilterSortSheet(
                             label = { Text(typeLabel(t)) })
                     }
                 }
+            }
+
+            // ---- People: faces in a row, a tap adds or removes; a file must show everyone chosen.
+            if (people.isNotEmpty()) {
+                FilterGroup(
+                    str(R.string.people),
+                    trailing = {
+                        val n = filters.personIds.size
+                        if (n > 0) Text(plural(R.plurals.chosen_n, n), style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary)
+                    },
+                ) {
+                    PeopleFaceRow(people, filters.personIds, faceCrop, onPerson)
+                }
+            }
+
+            // Two quick narrowing switches (DS: "Solo preferiti" as a switch row).
+            Column {
+                com.cripta.app.ui.settings.ToggleRow(str(R.string.favorites_only), filters.favoritesOnly, icon = CriptaIcons.StarBorder) { onFav() }
+                com.cripta.app.ui.settings.ToggleRow(str(R.string.untagged), filters.untaggedOnly, icon = CriptaIcons.LabelOff) { onUntagged() }
             }
 
             // ---- Tags: tri-state chips in library order, a search once the library is long.
@@ -325,76 +383,6 @@ internal fun FilterSortSheet(
                                 // neutral -> include; include -> exclude; exclude -> neutral.
                                 onClick = { if (state == TagFilterState.NEUTRAL) onTag(tag.id) else onExcludeTag(tag.id) },
                             )
-                        }
-                    }
-                }
-            }
-
-            // ---- People: faces in a row, a tap adds or removes; a file must show everyone chosen.
-            if (people.isNotEmpty()) {
-                FilterGroup(
-                    str(R.string.people),
-                    trailing = {
-                        val n = filters.personIds.size
-                        if (n > 0) Text(plural(R.plurals.chosen_n, n), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary)
-                    },
-                ) {
-                    PeopleFaceRow(people, filters.personIds, faceCrop, onPerson)
-                }
-            }
-
-            // Two quick narrowing switches (DS: "Solo preferiti" as a switch row).
-            Column {
-                com.cripta.app.ui.settings.ToggleRow(str(R.string.favorites_only), filters.favoritesOnly, icon = CriptaIcons.StarBorder) { onFav() }
-                com.cripta.app.ui.settings.ToggleRow(str(R.string.untagged), filters.untaggedOnly, icon = CriptaIcons.LabelOff) { onUntagged() }
-            }
-
-            // ---- Order: key as one segmented control, direction spelled out.
-            FilterGroup(str(R.string.sort_by)) {
-                val keys = listOf(SortKey.DATE to str(R.string.sort_date), SortKey.NAME to str(R.string.sort_name), SortKey.SIZE to str(R.string.sort_size), SortKey.MANUAL to str(R.string.sort_manual))
-                androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    keys.forEachIndexed { i, (k, lbl) ->
-                        SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
-                            selected = sortKey == k,
-                            onClick = { onSort(k, sortAscending) },
-                            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
-                            icon = {},
-                            label = { Text(lbl, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                        )
-                    }
-                }
-                // Fixed-height slot so switching to/from Manual doesn't resize (and slide) the sheet.
-                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = sortKey == SortKey.MANUAL,
-                        transitionSpec = { fadeIn(Motion.enter(Motion.SHORT)) togetherWith fadeOut(Motion.exit(Motion.SHORT)) },
-                        label = "sortDirection",
-                    ) { manual ->
-                        if (manual) {
-                            Text(str(R.string.drag_to_reorder),
-                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            val (descLabel, ascLabel) = when (sortKey) {
-                                SortKey.DATE -> str(R.string.order_newest) to str(R.string.order_oldest)
-                                SortKey.NAME -> str(R.string.z_to_a) to str(R.string.a_to_z)
-                                SortKey.SIZE -> str(R.string.order_largest) to str(R.string.order_smallest)
-                                else -> str(R.string.descending) to str(R.string.ascending)
-                            }
-                            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                                SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
-                                    selected = !sortAscending, onClick = { onSort(sortKey, false) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
-                                    icon = { Icon(CriptaIcons.ArrowDownward, null, Modifier.size(18.dp)) },
-                                    label = { Text(descLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                )
-                                SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
-                                    selected = sortAscending, onClick = { onSort(sortKey, true) },
-                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
-                                    icon = { Icon(CriptaIcons.ArrowUpward, null, Modifier.size(18.dp)) },
-                                    label = { Text(ascLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                )
-                            }
                         }
                     }
                 }
@@ -489,9 +477,29 @@ internal fun PeopleFaceRow(
     }
 }
 
+/** The two directions of an order as one segmented control, descending first ("Più recenti" / "Meno recenti"). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SortDirectionRow(descLabel: String, ascLabel: String, ascending: Boolean, onChange: (Boolean) -> Unit) {
+    androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+            selected = !ascending, onClick = { onChange(false) },
+            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
+            icon = { Icon(CriptaIcons.ArrowDownward, null, Modifier.size(18.dp)) },
+            label = { Text(descLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        )
+        SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
+            selected = ascending, onClick = { onChange(true) },
+            shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
+            icon = { Icon(CriptaIcons.ArrowUpward, null, Modifier.size(18.dp)) },
+            label = { Text(ascLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        )
+    }
+}
+
 /** A titled group of the filter sheet (title row with an optional trailing element, then content). */
 @Composable
-private fun FilterGroup(
+internal fun FilterGroup(
     title: String,
     trailing: @Composable () -> Unit = {},
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,

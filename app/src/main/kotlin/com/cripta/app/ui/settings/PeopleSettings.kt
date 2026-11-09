@@ -47,6 +47,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.selected
@@ -387,6 +388,33 @@ private enum class PeopleFilter(private val labelRes: Int) {
     }
 }
 
+/** The people's order in the same sheet as the files' filters: the key as chips, the direction as one segmented control. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PeopleSortSheet(
+    key: com.cripta.app.data.PeopleSort, ascending: Boolean,
+    onSort: (com.cripta.app.data.PeopleSort, Boolean) -> Unit, onDismiss: () -> Unit,
+) {
+    com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
+        val closeSheet = com.cripta.app.ui.components.rememberSheetAction()
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Text(str(R.string.sort), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+            com.cripta.app.ui.vault.FilterGroup(str(R.string.sort_by)) {
+                com.cripta.app.ui.components.ChipFlowRow {
+                    com.cripta.app.data.PeopleSort.entries.forEach { k ->
+                        com.cripta.app.ui.components.ChoiceChip(selected = k == key, onClick = { onSort(k, ascending) }, label = { Text(sortLabel(k)) })
+                    }
+                }
+                val (desc, asc) = sortDirections(key)
+                com.cripta.app.ui.vault.SortDirectionRow(desc, asc, ascending) { onSort(key, it) }
+            }
+            com.cripta.app.ui.components.Button(onClick = { closeSheet {} }, modifier = Modifier.fillMaxWidth()) {
+                com.cripta.app.ui.components.ButtonText(str(R.string.done))
+            }
+        }
+    }
+}
+
 private fun sortLabel(k: com.cripta.app.data.PeopleSort) = when (k) {
     com.cripta.app.data.PeopleSort.RELEVANCE -> str(R.string.sort_relevance)
     com.cripta.app.data.PeopleSort.NAME -> str(R.string.sort_name)
@@ -477,24 +505,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(topLift.lifted), title = { Text(str(R.string.people)) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } },
                 actions = {
-                    Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, str(R.string.sort)) }
-                        DropdownMenu(sortMenu && vaultUnlocked(), { sortMenu = false }) {
-                            com.cripta.app.data.PeopleSort.entries.forEach { k ->
-                                DropdownMenuItem(text = { Text(sortLabel(k)) },
-                                    leadingIcon = { androidx.compose.material3.RadioButton(selected = k == sortKey, onClick = null) },
-                                    onClick = { vm.setPeopleSort(k, st.peopleSortAscending) })
-                            }
-                            androidx.compose.material3.HorizontalDivider()
-                            val (desc, asc) = sortDirections(sortKey)
-                            DropdownMenuItem(text = { Text(desc) },
-                                leadingIcon = { androidx.compose.material3.RadioButton(selected = !st.peopleSortAscending, onClick = null) },
-                                onClick = { vm.setPeopleSort(sortKey, false) })
-                            DropdownMenuItem(text = { Text(asc) },
-                                leadingIcon = { androidx.compose.material3.RadioButton(selected = st.peopleSortAscending, onClick = null) },
-                                onClick = { vm.setPeopleSort(sortKey, true) })
-                        }
-                    }
+                    IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, str(R.string.sort)) }
+                    if (sortMenu && vaultUnlocked()) PeopleSortSheet(sortKey, st.peopleSortAscending, { k, a -> vm.setPeopleSort(k, a) }) { sortMenu = false }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.more)) }
                         DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
