@@ -25,18 +25,33 @@ class FileCryptoTest {
 
     @Test
     fun encryptThenDecrypt_roundTrips() {
+        lateinit var wrappingInput: ByteArray
+        lateinit var unwrappedOutput: ByteArray
+        val recordingDek = object : Aead {
+            override fun encrypt(plaintext: ByteArray, associatedData: ByteArray?): ByteArray {
+                assertTrue(plaintext.any { it != 0.toByte() })
+                wrappingInput = plaintext
+                return dek.encrypt(plaintext, associatedData)
+            }
+
+            override fun decrypt(ciphertext: ByteArray, associatedData: ByteArray?): ByteArray =
+                dek.decrypt(ciphertext, associatedData).also { unwrappedOutput = it }
+        }
         val uuid = "uuid-1"
-        val wrappedKeyset = FileCrypto.createWrappedFileKeyset(dek)
+        val wrappedKeyset = FileCrypto.createWrappedFileKeyset(recordingDek)
+        assertArrayEquals(ByteArray(wrappingInput.size), wrappingInput)
         val plain = bigPlaintext()
         val blob = tmp.newFile("blob")
         blob.outputStream().use { out ->
-            FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
+            FileCrypto.encryptingStream(wrappedKeyset, recordingDek, uuid, out).use { enc ->
+                assertArrayEquals(ByteArray(unwrappedOutput.size), unwrappedOutput)
                 enc.write(plain)
             }
         }
         assertTrue(blob.length() > 0)
         val decrypted = ByteArrayOutputStream()
-        FileCrypto.decryptingStream(wrappedKeyset, dek, uuid, blob).use { dec ->
+        FileCrypto.decryptingStream(wrappedKeyset, recordingDek, uuid, blob).use { dec ->
+            assertArrayEquals(ByteArray(unwrappedOutput.size), unwrappedOutput)
             dec.copyTo(decrypted)
         }
         assertArrayEquals(plain, decrypted.toByteArray())

@@ -2,18 +2,17 @@ package com.cripta.crypto
 
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.BinaryKeysetReader
-import com.google.crypto.tink.BinaryKeysetWriter
 import com.google.crypto.tink.CleartextKeysetHandle
 import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.StreamingAead
 import com.google.crypto.tink.streamingaead.StreamingAeadKeyTemplates
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.SeekableByteChannel
+import java.util.Arrays
 
 /**
  * Per-file encryption. Each file has its own StreamingAead keyset, serialized and
@@ -26,19 +25,24 @@ object FileCrypto {
     fun createWrappedFileKeyset(dek: Aead): ByteArray {
         TinkInit.ensureInitialized()
         val handle = KeysetHandle.generateNew(StreamingAeadKeyTemplates.AES256_GCM_HKDF_1MB)
-        val serialized = ByteArrayOutputStream().use { out ->
-            CleartextKeysetHandle.write(handle, BinaryKeysetWriter.withOutputStream(out))
-            out.toByteArray()
+        val serialized = serializeKeyset(handle)
+        return try {
+            dek.encrypt(serialized, KEYSET_AAD)
+        } finally {
+            Arrays.fill(serialized, 0)
         }
-        return dek.encrypt(serialized, KEYSET_AAD)
     }
 
     private fun streamingAead(wrappedKeyset: ByteArray, dek: Aead): StreamingAead {
         val serialized = dek.decrypt(wrappedKeyset, KEYSET_AAD)
-        val handle = CleartextKeysetHandle.read(
-            BinaryKeysetReader.withInputStream(ByteArrayInputStream(serialized))
-        )
-        return handle.getPrimitive(StreamingAead::class.java)
+        return try {
+            val handle = CleartextKeysetHandle.read(
+                BinaryKeysetReader.withInputStream(ByteArrayInputStream(serialized))
+            )
+            handle.getPrimitive(StreamingAead::class.java)
+        } finally {
+            Arrays.fill(serialized, 0)
+        }
     }
 
     /** Encrypting stream writing ciphertext to [ciphertextOut]. Caller closes it. */

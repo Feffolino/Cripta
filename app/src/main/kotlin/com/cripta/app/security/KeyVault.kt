@@ -74,24 +74,32 @@ class KeyVault @Inject constructor(
     /** First run: generate DEK + DB key, persist wrapped, open DB, activate session. */
     fun completeSetup(authorizedEncryptCipher: Cipher) {
         val dekBytes = DekManager.newDekKeysetBytes()
-        val wrappedDek = kek.wrapWith(authorizedEncryptCipher, dekBytes)
-        val dek = DekManager.dekAeadFromBytes(dekBytes)
-        val dbKey = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        val wrappedDbKey = dek.encrypt(dbKey, DB_KEY_AAD)
-        // One synchronous write: saved one at a time, a crash in between left a vault that counted
-        // as set up (wrapped DEK) but could never open ("Missing DB key"), with no way to reset it.
-        // The alias is recorded so this fresh vault is never treated as a pre-fix install.
-        check(
-            prefs.edit()
-                .putString(KEY_WRAPPED_DEK, encode(wrappedDek))
-                .putString(KEY_WRAPPED_DBKEY, encode(wrappedDbKey))
-                .putString(KEY_KEK_ALIAS, activeAlias)
-                .commit()
-        ) { "Could not save the vault keys" }
+        try {
+            val wrappedDek = kek.wrapWith(authorizedEncryptCipher, dekBytes)
+            val dek = DekManager.dekAeadFromBytes(dekBytes)
+            val dbKey = ByteArray(32)
+            try {
+                SecureRandom().nextBytes(dbKey)
+                val wrappedDbKey = dek.encrypt(dbKey, DB_KEY_AAD)
+                // One synchronous write: saved one at a time, a crash in between left a vault that counted
+                // as set up (wrapped DEK) but could never open ("Missing DB key"), with no way to reset it.
+                // The alias is recorded so this fresh vault is never treated as a pre-fix install.
+                check(
+                    prefs.edit()
+                        .putString(KEY_WRAPPED_DEK, encode(wrappedDek))
+                        .putString(KEY_WRAPPED_DBKEY, encode(wrappedDbKey))
+                        .putString(KEY_KEK_ALIAS, activeAlias)
+                        .commit()
+                ) { "Could not save the vault keys" }
 
-        val db = CriptaDatabase.open(context, dbKey)
-        session.activate(dek, db, dekBytes)
-        dekBytes.fill(0)
+                val db = CriptaDatabase.open(context, dbKey)
+                session.activate(dek, db, dekBytes)
+            } finally {
+                java.util.Arrays.fill(dbKey, 0)
+            }
+        } finally {
+            java.util.Arrays.fill(dekBytes, 0)
+        }
     }
 
     /**
