@@ -898,7 +898,6 @@
     <string name="restore">बहाल करें</string>
     <string name="delete_person">व्यक्ति हटाएँ</string>
     <string name="not_a_person">व्यक्ति नहीं है</string>
-    <string name="reading">पढ़ रहे हैं…</string>
     <string name="media_count">मीडिया · %1$s</string>
     <string name="person_no_media">मीडिया नहीं। फ़ोटो या वीडियो खोलें, विवरण के लिए ऊपर स्वाइप करें और लोग में %1$s चुनें।</string>
     <string name="person_media_hint">खोलने के लिए दबाएँ; चुनने और हटाने, ले जाने या अलग करने के लिए दबाकर रखें।</string>

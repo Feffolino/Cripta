@@ -176,9 +176,7 @@ fun HomeScreen(
             label = "homePhase",
         ) { p ->
         when (p) {
-        HomePhase.LOADING -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
-            androidx.compose.material3.CircularProgressIndicator()
-        }
+        HomePhase.LOADING -> HomeSkeleton(Modifier.fillMaxSize().padding(pad), landscape)
         HomePhase.EMPTY -> EmptyHome(
             Modifier.fillMaxSize().padding(pad),
             onImport = { importLauncher.launch(arrayOf("*/*")) },
@@ -318,12 +316,38 @@ fun HomeScreen(
 private enum class HomePhase { LOADING, EMPTY, CONTENT }
 
 /**
+ * Home while the vault is read: the same rhythm as the content (search pill, the strip with its
+ * figures as blocks, two shelves of covers), so the real thing replaces it without moving.
+ */
+@Composable
+private fun HomeSkeleton(modifier: Modifier, landscape: Boolean) {
+    Column(modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(52.dp), CircleShape)
+        SummaryCard(0, 0, 0, onlyNotes = false, onPhotos = {}, onVideos = {}, onNotes = {}, compact = landscape,
+            modifier = Modifier.padding(top = 12.dp), loading = true)
+        repeat(if (landscape) 1 else 2) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 16.dp, end = 16.dp, top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.cripta.app.ui.components.Skeleton(Modifier.width(110.dp).height(14.dp))
+            }
+            LazyRow(userScrollEnabled = false, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(4) {
+                    Column(Modifier.width(128.dp).padding(bottom = 6.dp)) {
+                        com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().aspectRatio(1f), com.cripta.app.ui.theme.CoverShape)
+                        com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 8.dp, start = 2.dp).width(84.dp).height(12.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * What the vault holds, as one quiet strip: videos, photos and space, each a tappable segment.
  * Numbers lead, labels follow; no per-type colours (the accent is kept for actions).
  */
 @Composable
 private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolean, onPhotos: () -> Unit, onVideos: () -> Unit, onNotes: () -> Unit,
-                        compact: Boolean = false, modifier: Modifier = Modifier) {
+                        compact: Boolean = false, modifier: Modifier = Modifier, loading: Boolean = false) {
     // DS cr-summary: one tonal object (surface-raised, radius-lg), equal centred columns.
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -331,18 +355,19 @@ private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolea
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(horizontal = 4.dp)) {
-            SummaryTile(CriptaIcons.Image, com.cripta.app.ui.components.formatCount(photos), str(R.string.photos), Modifier.weight(1f), onPhotos, compact)
-            SummaryTile(CriptaIcons.Movie, com.cripta.app.ui.components.formatCount(videos), str(R.string.videos), Modifier.weight(1f), onVideos, compact)
+            SummaryTile(CriptaIcons.Image, com.cripta.app.ui.components.formatCount(photos), str(R.string.photos), Modifier.weight(1f), onPhotos, compact, loading)
+            SummaryTile(CriptaIcons.Movie, com.cripta.app.ui.components.formatCount(videos), str(R.string.videos), Modifier.weight(1f), onVideos, compact, loading)
             // The third tile opens the "Altro" filter (notes, PDFs, any other file): it counts all of
             // them, so the number matches what opens. Named "Note" while notes are all there is.
             SummaryTile(CriptaIcons.Description, com.cripta.app.ui.components.formatCount(others), if (onlyNotes) str(R.string.notes) else str(R.string.other),
-                Modifier.weight(1f), onNotes, compact)
+                Modifier.weight(1f), onNotes, compact, loading)
         }
     }
 }
 
 @Composable
-private fun SummaryTile(icon: ImageVector, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false) {
+private fun SummaryTile(icon: ImageVector, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false,
+                        loading: Boolean = false) {
     val source = remember { MutableInteractionSource() }
     Column(
         modifier.heightIn(min = 48.dp).clip(com.cripta.app.ui.theme.RadiusLg)
@@ -350,7 +375,10 @@ private fun SummaryTile(icon: ImageVector, value: String, label: String, modifie
             .padding(horizontal = 4.dp, vertical = if (compact) 10.dp else 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, style = if (compact) MaterialTheme.typography.titleLarge else com.cripta.app.ui.theme.FigureStyle, maxLines = 1)
+        val figure = if (compact) MaterialTheme.typography.titleLarge else com.cripta.app.ui.theme.FigureStyle
+        // Loading: the figure is a block as tall as its line, so the strip keeps its height.
+        if (loading) com.cripta.app.ui.components.Skeleton(Modifier.padding(vertical = 3.dp).width(40.dp).height(with(androidx.compose.ui.platform.LocalDensity.current) { figure.lineHeight.toDp() } - 6.dp))
+        else Text(value, style = figure, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

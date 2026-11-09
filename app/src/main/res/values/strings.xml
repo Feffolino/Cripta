@@ -898,7 +898,6 @@
     <string name="restore">Restore</string>
     <string name="delete_person">Delete the person</string>
     <string name="not_a_person">Not a person</string>
-    <string name="reading">Reading…</string>
     <string name="media_count">Media · %1$s</string>
     <string name="person_no_media">No media. Open a photo or a video, swipe up for the details and choose %1$s in People.</string>
     <string name="person_media_hint">Tap to open, press and hold to select and remove, move or split.</string>

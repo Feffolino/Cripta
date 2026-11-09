@@ -41,4 +41,21 @@ class NoteMarkdownTest {
         assertEquals("# t", NoteMarkdown.linePrefix(TextFieldValue("t", TextRange(1)), null).text)
         assertEquals("- [x] a\nb", NoteMarkdown.toggleCheck("- [ ] a\nb", 0))
     }
+
+    @Test fun webAddressesAreFoundUnderTheCursor() {
+        val t = "guarda https://youtu.be/abc_d?t=3, poi [sito](https://example.com/a) fine."
+        assertEquals("https://youtu.be/abc_d?t=3", NoteMarkdown.urlAt(t, 10))
+        assertEquals("https://youtu.be/abc_d?t=3", NoteMarkdown.urlAt(t, 7))
+        assertEquals("https://example.com/a", NoteMarkdown.urlAt(t, t.indexOf("example") + 2))
+        assertEquals(null, NoteMarkdown.urlAt(t, 2))
+        assertEquals(null, NoteMarkdown.urlAt("solo testo", 3))
+    }
+
+    @Test fun bareAddressesAreStyledAndTheTextStays() {
+        val t = "vai a https://example.com/x_y. Poi *corsivo*"
+        val out = NoteMarkdown.render(t, p, keepMarkers = true)
+        assertEquals(t, out.text)
+        val link = out.spanStyles.first { it.item.color == Color.Blue && it.item.textDecoration != null }
+        assertEquals("https://example.com/x_y", out.text.substring(link.start, link.end))
+    }
 }

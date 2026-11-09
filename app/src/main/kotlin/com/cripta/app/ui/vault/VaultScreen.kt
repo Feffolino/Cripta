@@ -697,6 +697,13 @@ fun VaultScreen(
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
             val filterPeople by vm.filterPeople.collectAsStateWithLifecycle()
+            // People matching the typed text: a tap filters by that person.
+            val foundPeople by vm.searchPeople.collectAsStateWithLifecycle()
+            if (filters.query.isNotBlank() && foundPeople.isNotEmpty()) {
+                Text(str(R.string.people), style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { heading() })
+                Box(Modifier.padding(horizontal = 8.dp)) { PeopleFaceRow(foundPeople, filters.personIds, { vm.faceCrop(it) }, vm::pickSearchedPerson) }
+            }
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
@@ -901,7 +908,10 @@ fun VaultScreen(
                 Modifier.weight(1f).fillMaxWidth()
                     .graphicsLayer { translationX = levelX.value; alpha = if (levelPending) 0f else levelAlpha.value },
             ) {
+            // Before the first level has been read there is nothing to say yet (not "empty").
+            val firstRead = filesLevelState.value == LEVEL_UNKNOWN || foldersLevelState.value == LEVEL_UNKNOWN
             when {
+                firstRead && files.isEmpty() -> VaultSkeleton(columnCount, viewMode, display.showFileInfo, Modifier.fillMaxSize())
                 files.isEmpty() && !showFolders ->
                     EmptyState(filters.active, Modifier.fillMaxSize(),
                         onImport = { startImport() },

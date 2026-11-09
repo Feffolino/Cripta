@@ -930,7 +930,6 @@
     <string name="restore">Restaurar</string>
     <string name="delete_person">Eliminar la persona</string>
     <string name="not_a_person">No es una persona</string>
-    <string name="reading">Leyendo…</string>
     <string name="media_count">Archivos multimedia · %1$s</string>
     <string name="person_no_media">Sin archivos multimedia. Abre una foto o un vídeo, desliza hacia arriba para ver los detalles y elige %1$s en Personas.</string>
     <string name="person_media_hint">Toca para abrir; mantén pulsado para seleccionar y quitar, mover o separar.</string>

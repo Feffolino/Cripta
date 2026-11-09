@@ -151,6 +151,32 @@ internal fun FileCell(
     }
 }
 
+/** The grid / list while the first level is read: covers and name lines of the same size, same gaps. */
+@Composable
+internal fun VaultSkeleton(columns: Int, viewMode: ViewMode, showInfo: Boolean, modifier: Modifier = Modifier) {
+    val list = viewMode == ViewMode.LIST
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns), modifier, userScrollEnabled = false,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(if (list) 4.dp else 14.dp),
+    ) {
+        items(if (list) 10 else columns * 6) {
+            if (list) Row(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.cripta.app.ui.components.Skeleton(Modifier.size(76.dp), com.cripta.app.ui.theme.CoverShape)
+                Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                    Box(Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth(0.6f).height(14.dp)) }
+                    if (showInfo) Box(Modifier.padding(top = 2.dp).height(16.dp), contentAlignment = Alignment.CenterStart) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth(0.4f).height(10.dp)) }
+                }
+            } else Column {
+                com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().aspectRatio(1f), com.cripta.app.ui.theme.CoverShape)
+                Box(Modifier.padding(top = 8.dp, start = 2.dp).height(20.dp), contentAlignment = Alignment.CenterStart) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth(0.7f).height(12.dp)) }
+                if (showInfo) Box(Modifier.padding(start = 2.dp, top = 2.dp).height(16.dp), contentAlignment = Alignment.CenterStart) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth(0.45f).height(10.dp)) }
+            }
+        }
+    }
+}
+
 /** Size · date (the length is on the cover itself in list mode, unless the badge is off). */
 private fun listMeta(f: com.cripta.app.data.db.FileEntity, withDuration: Boolean): String {
     val parts = mutableListOf<String>()

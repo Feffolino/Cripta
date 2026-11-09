@@ -125,7 +125,17 @@ internal fun SpaceDetails(
     onEmptyTrash: () -> Unit,
 ) {
     if (report == null) {
-        Text(str(R.string.reading), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // The rows that will be here (label and figure, then the bar), as blocks of the same size.
+        repeat(4) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.height(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.cripta.app.ui.components.Skeleton(Modifier.width(110.dp).height(14.dp))
+                    Spacer(Modifier.weight(1f))
+                    com.cripta.app.ui.components.Skeleton(Modifier.width(60.dp).height(14.dp))
+                }
+                com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().height(10.dp), CircleShape)
+            }
+        }
         return
     }
     DeviceSpaceBar(report)

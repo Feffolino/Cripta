@@ -41,8 +41,16 @@ object NoteMarkdown {
             """|(~~)(.+?)(~~)""" +
             """|(\[)([^\]\n]+)(\]\(([^)\s]+)\))""" +
             """|(?<![*\w])(\*)(?![*\s])(.+?)(?<![\s*])(\*)(?![*\w])""" +
-            """|(?<![_\w])(_)(?![_\s])(.+?)(?<![\s_])(_)(?![_\w])""",
+            """|(?<![_\w])(_)(?![_\s])(.+?)(?<![\s_])(_)(?![_\w])""" +
+            """|(https?://[^\s<>()\[\]]*[^\s<>()\[\].,;:!?'"*_~])""",
     )
+
+    /** A web address in the text: what [urlAt] looks for (the inline rule above is the same shape). */
+    private val URL = Regex("""https?://[^\s<>()\[\]]*[^\s<>()\[\].,;:!?'"*_~]""")
+
+    /** The web address the cursor is in or touches (a bare one, or the target of a Markdown link), else null. */
+    fun urlAt(text: String, cursor: Int): String? =
+        URL.findAll(text).firstOrNull { cursor in it.range.first..it.range.last + 1 }?.value
 
     fun render(text: String, p: Palette, keepMarkers: Boolean): AnnotatedString = buildAnnotatedString {
         val lines = text.split('\n')
@@ -141,6 +149,12 @@ object NoteMarkdown {
                     } else {
                         withStyle(style) { append(label) }
                     }
+                }
+                g[23] != null -> {
+                    val url = g[23]!!.value
+                    val style = SpanStyle(color = p.accent, textDecoration = TextDecoration.Underline)
+                    if (keep) withStyle(style) { append(url) }
+                    else withLink(LinkAnnotation.Url(url, TextLinkStyles(style))) { append(url) }
                 }
                 else -> {
                     val (o, inner, c) = if (g[17] != null) Triple(g[17]!!, g[18]!!, g[19]!!) else Triple(g[20]!!, g[21]!!, g[22]!!)

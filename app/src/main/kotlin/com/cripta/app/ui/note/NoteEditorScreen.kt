@@ -82,15 +82,17 @@ fun NoteEditorScreen(
     }
 
     // Save on the way out; an unchanged draft (or an empty new note) just closes.
-    val leave: () -> Unit = {
+    val leaveThen: (() -> Unit) -> Unit = { after ->
         when {
             vm.saving -> Unit
             // A note that failed to load is read-only: leaving never saves over the original.
-            !vm.loaded || vm.loadFailed || !vm.dirty -> onBack()
-            fileId == null && vm.name.isBlank() && vm.text.isBlank() -> onBack()
-            else -> vm.save(fileId, folderId) { onBack() }
+            !vm.loaded || vm.loadFailed || !vm.dirty -> { onBack(); after() }
+            fileId == null && vm.name.isBlank() && vm.text.isBlank() -> { onBack(); after() }
+            else -> vm.save(fileId, folderId) { onBack(); after() }
         }
     }
+    val leave: () -> Unit = { leaveThen {} }
+    val context = androidx.compose.ui.platform.LocalContext.current
     BackHandler(onBack = leave)
 
     Scaffold(
@@ -210,6 +212,20 @@ fun NoteEditorScreen(
                                 .onFocusChanged { contentFocused = it.isFocused }
                                 .semantics { contentDescription = str(R.string.note_content) },
                         )
+                        // The cursor in a web address: opening it is the user's explicit act (nothing is
+                        // fetched to preview it), and it can go to the downloader (the note is saved first).
+                        val link = NoteMarkdown.urlAt(body.text, body.selection.start)
+                        if (link != null && !vm.loadFailed) Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TextButton(onClick = { com.cripta.app.ui.people.openLink(context, link) }) {
+                                com.cripta.app.ui.components.ButtonText(str(R.string.open_link))
+                            }
+                            TextButton(onClick = { leaveThen { vm.sendToDownloader(link) } }) {
+                                com.cripta.app.ui.components.ButtonText(str(R.string.dl_download))
+                            }
+                        }
                         // The formatting bar, above the keyboard; the right end left to "Fatto".
                         if (!vm.loadFailed) Row(
                             Modifier.fillMaxWidth().padding(start = 8.dp, end = 84.dp, bottom = 12.dp)

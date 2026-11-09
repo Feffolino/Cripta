@@ -20,6 +20,8 @@ import com.cripta.app.media.ThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.cripta.app.data.face.matching
+import com.cripta.app.data.face.ordered
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -555,10 +557,23 @@ class VaultViewModel @Inject constructor(
     }
     fun clearFilters() { filters.value = Filters() }
 
-    /** The people offered in the filter sheet (starred first): named, starred, or seen in two media or more. */
-    val filterPeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> = faces.people()
-        .map { o -> o.people.filter { it.main } }
+    /** The people offered in the filter sheet: named, starred, or seen in two media or more, in the People page's order (starred first). */
+    val filterPeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> =
+        combine(faces.people(), settings.settings.map { s -> s.peopleSort to s.peopleSortAscending }.distinctUntilChanged()) { o, (k, asc) ->
+            val key = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == k } ?: com.cripta.app.data.PeopleSort.RELEVANCE
+            o.people.filter { it.main }.ordered(key, asc)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** People whose name matches the search text, shown under the search field (starred first). */
+    val searchPeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> =
+        combine(faces.people(), filters.map { it.query.trim() }.distinctUntilChanged().debounce(200)) { o, q -> o.people.matching(q) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** A person picked from the search results: their media, and the typed text goes. */
+    fun pickSearchedPerson(id: Long) {
+        filters.value = filters.value.copy(query = "", personIds = filters.value.personIds + id)
+    }
 
     fun togglePerson(id: Long) {
         val cur = filters.value.personIds

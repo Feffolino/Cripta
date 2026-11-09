@@ -1026,7 +1026,6 @@
     <string name="restore">استعادة</string>
     <string name="delete_person">حذف الشخص</string>
     <string name="not_a_person">ليس شخصاً</string>
-    <string name="reading">جارٍ القراءة…</string>
     <string name="media_count">الوسائط · %1$s</string>
     <string name="person_no_media">لا وسائط. افتح صورة أو فيديو واسحب للأعلى للتفاصيل، واختر %1$s في «الأشخاص».</string>
     <string name="person_media_hint">اضغط للفتح، واضغط مطولاً للتحديد والإزالة أو النقل أو الفصل.</string>

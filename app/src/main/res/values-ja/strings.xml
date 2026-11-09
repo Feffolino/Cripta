@@ -866,7 +866,6 @@
     <string name="restore">復元</string>
     <string name="delete_person">人物を削除</string>
     <string name="not_a_person">人物ではない</string>
-    <string name="reading">読み取り中…</string>
     <string name="media_count">メディア · %1$s</string>
     <string name="person_no_media">メディアがありません。写真や動画を開いて上にスワイプし、詳細の人物から%1$sを選んでください。</string>
     <string name="person_media_hint">タップして開くか、長押しして選択し、外す、移動、分割を行えます。</string>

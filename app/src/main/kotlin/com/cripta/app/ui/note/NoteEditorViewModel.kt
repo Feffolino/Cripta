@@ -19,6 +19,7 @@ import javax.inject.Inject
 class NoteEditorViewModel @Inject constructor(
     private val repo: VaultRepository,
     private val thumbs: com.cripta.app.media.ThumbnailLoader,
+    private val sharedLinks: com.cripta.app.data.SharedLinkStore,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -77,6 +78,9 @@ class NoteEditorViewModel @Inject constructor(
         }
         loaded = true
     }
+
+    /** Hands a link of the note to the downloader (AppRoot opens its tab); the user picks the quality there. */
+    fun sendToDownloader(url: String) = sharedLinks.set(url)
 
     /**
      * Save and then [onDone]. A new note goes into [folderId] (screen parameter) or else the folder

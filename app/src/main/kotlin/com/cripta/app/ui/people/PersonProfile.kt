@@ -198,7 +198,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         if (p == null || o == null) {
-            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { Text(str(R.string.reading)) }
+            ProfileSkeleton(Modifier.fillMaxSize().padding(pad))
             return@Scaffold
         }
         val media = remember(p.media, order) {
@@ -271,6 +271,23 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text(str(R.string.faces_title)) },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) { Text(m) } },
             confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
+    }
+}
+
+/** The profile while it is read: the round face, the name and count lines, then the grid of media. */
+@Composable
+private fun ProfileSkeleton(modifier: Modifier) {
+    LazyVerticalGrid(if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600) GridCells.Fixed(3) else GridCells.Adaptive(112.dp),
+        modifier, userScrollEnabled = false, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 32.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                com.cripta.app.ui.components.Skeleton(Modifier.size(112.dp), CircleShape)
+                com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 18.dp).width(160.dp).height(24.dp))
+                com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 8.dp).width(96.dp).height(12.dp))
+            }
+        }
+        items(12) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().aspectRatio(1f), MaterialTheme.shapes.small) }
     }
 }
 
@@ -377,7 +394,7 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
 }
 
 /** A link opens in the user's browser (Cripta itself has no network access). */
-private fun openLink(context: android.content.Context, link: String) {
+internal fun openLink(context: android.content.Context, link: String) {
     val url = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:").containsMatchIn(link)) link else "https://$link"
     runCatching {
         context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))

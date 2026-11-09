@@ -962,7 +962,6 @@
     <string name="restore">Восстановить</string>
     <string name="delete_person">Удалить человека</string>
     <string name="not_a_person">Не человек</string>
-    <string name="reading">Чтение…</string>
     <string name="media_count">Файлы · %1$s</string>
     <string name="person_no_media">Файлов нет. Откройте фото или видео, смахните вверх для сведений и выберите %1$s в разделе «Люди».</string>
     <string name="person_media_hint">Нажмите, чтобы открыть; удерживайте для выбора, удаления из профиля, перемещения или разделения.</string>

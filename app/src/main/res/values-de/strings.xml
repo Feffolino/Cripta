@@ -898,7 +898,6 @@
     <string name="restore">Wiederherstellen</string>
     <string name="delete_person">Person löschen</string>
     <string name="not_a_person">Keine Person</string>
-    <string name="reading">Wird gelesen…</string>
     <string name="media_count">Medien · %1$s</string>
     <string name="person_no_media">Keine Medien. Öffne ein Foto oder Video, wische für Details nach oben und wähle %1$s unter Personen.</string>
     <string name="person_media_hint">Zum Öffnen tippen; lange drücken zum Auswählen und Entfernen, Verschieben oder Trennen.</string>

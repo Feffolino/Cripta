@@ -340,21 +340,7 @@ internal fun FilterSortSheet(
                             color = MaterialTheme.colorScheme.primary)
                     },
                 ) {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                        people.forEach { p ->
-                            val on = p.id in filters.personIds
-                            Column(
-                                Modifier.width(64.dp).clip(MaterialTheme.shapes.small)
-                                    .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
-                                    .padding(vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 44.dp, selected = on)
-                                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                    }
+                    PeopleFaceRow(people, filters.personIds, faceCrop, onPerson)
                 }
             }
 
@@ -475,6 +461,31 @@ internal fun FilterSortSheet(
             },
             dismissButton = { TextButton(onClick = { savedToDelete = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
+    }
+}
+
+/** Faces in a row (big, name below), a tap on one calls [onPerson]; the chosen ones carry the accent ring. */
+@Composable
+internal fun PeopleFaceRow(
+    people: List<com.cripta.app.data.face.FaceRepository.Person>,
+    chosen: Set<Long>,
+    faceCrop: suspend (Long) -> android.graphics.Bitmap?,
+    onPerson: (Long) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        people.forEach { p ->
+            val on = p.id in chosen
+            Column(
+                Modifier.width(84.dp).clip(MaterialTheme.shapes.small)
+                    .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
+                    .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 68.dp, selected = on)
+                Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+            }
+        }
     }
 }
 

@@ -123,8 +123,8 @@ Tag icons are a separate set (see Components) and are not Tabler.
   bar. No quality badge (4K/HD/SD) and no shade over the image. Notes, texts and documents
   show their content: a light sheet with the first lines (the first in bold when it reads as a
   title); a PDF its first page. So do the folders holding them.
-- **People**: the people page (grid of round faces, filters as chips, order from the top bar) leads
-  to each person's **profile** page: face (tap to pick another among those found), name (a pencil beside it renames), star,
+- **People**: the people page (grid of round faces, filters as chips, order from the top bar;
+  starred people are first whatever the order, hidden ones last) leads to each person's **profile** page: face (tap to pick another among those found), name (a pencil beside it renames), star,
   notes and links as plain fields, the suggestions, then the media. **Suggestions** ("Forse è …")
   are one face at a time, full screen, swiped up like a feed (the frame takes the free space, the
   two faces side by side under it, "No" and "È …" across the width; an answer glides to the next
@@ -168,7 +168,9 @@ Tag icons are a separate set (see Components) and are not Tabler.
   with the name underneath, never on the picture. No "more" button: actions are on long-press,
   so the name keeps the whole width. In Raccolta and inside a folder the folders are a grid
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
-  Video, Altro, Preferiti); the files follow under a "File" heading. With Impostazioni › Aspetto ›
+  Video, Altro, Preferiti); the files follow under a "File" heading. Typing a name in the search
+  also shows the people it matches under the field (68dp faces, name below): a tap filters by that
+  person and clears the text. The filter sheet's people follow the People page's order. With Impostazioni › Aspetto ›
   "Cartelle in una riga" (off by default) the folders are one row scrolling sideways instead,
   fixed-width covers, so the files start right below however many folders there are.
 - **Home**: search pill, the summary strip (Foto, Video and Note or Altro), "Continua" (videos
@@ -249,7 +251,9 @@ Tag icons are a separate set (see Components) and are not Tabler.
   top ("Ora: Radice › …"), then one level at a time, like a file manager: a path of text buttons
   to go back, "Salva nella Radice" / "Salva in …" for the level on screen, each folder a row that
   picks it (accent name, bold, tick when chosen) with an arrow that opens it, "Nuova cartella
-  qui" last (the new folder is chosen at once).
+  qui" last (the new folder is chosen at once). The sheet keeps one height (560dp, less on a short
+  screen) whatever the level holds; the level slides in as a page (320 ms along X, ease-out), keyed
+  by its folder, so its rows are there when it arrives.
 - **Spazio e pulizia** (Impostazioni › I tuoi dati): "Spazio occupato" first: the phone bar (see
   Home), then what Cripta holds by kind as `CountRow`s, largest first, empty kinds left out (Foto,
   Video, Note, PDF, Altri file, Cestino, Miniature e cache, Indici e database, App), then "Pulisci il
@@ -269,6 +273,10 @@ Tag icons are a separate set (see Components) and are not Tabler.
   accent ring (`FaceAvatar(selected = …)`), the name under it in the accent where there is one.
 - Motion explains a state change and is short (120 / 220 / 320 ms, ease-out, no bounce); it
   collapses when the system removes animations.
+- Loading: a screen that would show up empty and then jump shows `Skeleton` blocks of the size
+  and shape of what replaces them (covers, rows, round faces, the figures of the Home strip), on
+  the surface-container tier, no border; they breathe slowly and stand still with animations off.
+  The content replaces them in place, with the "loaded" flag the screen already has.
 - Navigation: tabs cross-fade with a slight drift towards the tab chosen; pages (people, a
   profile, favourites, a note, a Settings page) slide in along X from the right and Back reverses
   it; only the player moves in depth (comes forward, the page recedes).

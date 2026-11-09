@@ -98,6 +98,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.cripta.app.data.Settings
 import com.cripta.app.data.face.FaceRepository
+import com.cripta.app.data.face.ordered
 import com.cripta.app.media.face.FaceStats
 import com.cripta.app.ui.components.MediaThumb
 import com.cripta.app.work.ConversionService
@@ -402,17 +403,26 @@ private fun sortDirections(k: com.cripta.app.data.PeopleSort) = when (k) {
     com.cripta.app.data.PeopleSort.RELEVANCE -> str(R.string.main_first) to str(R.string.others_first)
 }
 
-/** The people page's order. Hidden people stay last whatever the order. */
-private fun sortPeople(list: List<FaceRepository.Person>, k: com.cripta.app.data.PeopleSort, ascending: Boolean): List<FaceRepository.Person> {
-    val sorted = when (k) {
-        // The repository's order (starred, main, most media) is the "descending" one.
-        com.cripta.app.data.PeopleSort.RELEVANCE -> list.reversed()
-        com.cripta.app.data.PeopleSort.NAME -> list.sortedBy { it.title.lowercase() }
-        com.cripta.app.data.PeopleSort.MEDIA -> list.sortedBy { it.media.size }
-        com.cripta.app.data.PeopleSort.LATEST -> list.sortedBy { p -> p.media.maxOfOrNull { it.importedAt } ?: 0L }
-        com.cripta.app.data.PeopleSort.ADDED -> list.sortedBy { it.entity.createdAt }
+/** The people page while the faces are read: the same grid (search, chips, round faces with a name and a count). */
+@Composable
+private fun PeopleSkeleton(modifier: Modifier) {
+    val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600) GridCells.Fixed(3) else GridCells.Adaptive(104.dp)
+    LazyVerticalGrid(cols, modifier, userScrollEnabled = false, contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        item(span = { GridItemSpan(maxLineSpan) }) { com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().height(52.dp), CircleShape) }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(3) { com.cripta.app.ui.components.Skeleton(Modifier.width(88.dp).height(40.dp), CircleShape) }
+            }
+        }
+        items(12) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                com.cripta.app.ui.components.Skeleton(Modifier.size(88.dp), CircleShape)
+                com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 9.dp).width(64.dp).height(14.dp))
+                com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 6.dp).width(40.dp).height(10.dp))
+            }
+        }
     }
-    return (if (ascending) sorted else sorted.reversed()).sortedBy { it.entity.ignored }
 }
 
 /** The people page: its own destination (Settings, Home, the scan's notification lead here). */
@@ -498,11 +508,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     ) { pad ->
         val o = overview
         if (o == null) {
-            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { Text(str(R.string.reading)) }
+            PeopleSkeleton(Modifier.fillMaxSize().padding(pad))
             return@Scaffold
         }
-        val shown = sortPeople(o.people.filter { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) },
-            sortKey, st.peopleSortAscending)
+        val shown = o.people.filter { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+            .ordered(sortKey, st.peopleSortAscending)
         val noFaces = remember(o) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }

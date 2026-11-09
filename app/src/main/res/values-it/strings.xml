@@ -930,7 +930,6 @@
     <string name="restore">Ripristina</string>
     <string name="delete_person">Elimina la persona</string>
     <string name="not_a_person">Non è una persona</string>
-    <string name="reading">Lettura…</string>
     <string name="media_count">Media · %1$s</string>
     <string name="person_no_media">Nessun media. Apri una foto o un video, scorri su per i dettagli e in Persone scegli %1$s.</string>
     <string name="person_media_hint">Tocca per aprire, tieni premuto per selezionare e togliere, spostare o dividere.</string>
