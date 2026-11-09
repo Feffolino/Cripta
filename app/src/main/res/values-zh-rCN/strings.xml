@@ -1406,6 +1406,10 @@
     <plurals name="show_n_files">
         <item quantity="other">显示 %1$s 个文件</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="other">显示 %1$s 人</item>
+    </plurals>
+    <string name="people_favorites_first">收藏的人物始终排在最前面。</string>
     <string name="save_these_filters">保存这些筛选条件</string>
     <string name="save_filter">保存筛选器</string>
     <string name="filter_name_hint">名称（例如：待看视频）</string>

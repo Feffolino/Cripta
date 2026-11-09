@@ -1580,6 +1580,13 @@
         <item quantity="many">Показать %1$s файлов</item>
         <item quantity="other">Показать %1$s файла</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="one">Показать %1$s человека</item>
+        <item quantity="few">Показать %1$s человека</item>
+        <item quantity="many">Показать %1$s человек</item>
+        <item quantity="other">Показать %1$s человека</item>
+    </plurals>
+    <string name="people_favorites_first">Избранные всегда остаются вверху.</string>
     <string name="save_these_filters">Сохранить эти фильтры</string>
     <string name="save_filter">Сохранить фильтр</string>
     <string name="filter_name_hint">Имя (например, Видео для просмотра)</string>

@@ -1464,6 +1464,11 @@
         <item quantity="one">Show 1 file</item>
         <item quantity="other">Show %1$s files</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="one">Show 1 person</item>
+        <item quantity="other">Show %1$s people</item>
+    </plurals>
+    <string name="people_favorites_first">Starred people always stay on top.</string>
     <string name="save_these_filters">Save these filters</string>
     <string name="save_filter">Save filter</string>
     <string name="filter_name_hint">Name (e.g. Videos to watch)</string>

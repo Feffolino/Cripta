@@ -392,7 +392,7 @@ private enum class PeopleFilter(private val labelRes: Int) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun PeopleSortSheet(
-    key: com.cripta.app.data.PeopleSort, ascending: Boolean,
+    key: com.cripta.app.data.PeopleSort, ascending: Boolean, count: Int,
     onSort: (com.cripta.app.data.PeopleSort, Boolean) -> Unit, onDismiss: () -> Unit,
 ) {
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
@@ -407,9 +407,10 @@ private fun PeopleSortSheet(
                 }
                 val (desc, asc) = sortDirections(key)
                 com.cripta.app.ui.vault.SortDirectionRow(desc, asc, ascending) { onSort(key, it) }
+                Text(str(R.string.people_favorites_first), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             com.cripta.app.ui.components.Button(onClick = { closeSheet {} }, modifier = Modifier.fillMaxWidth()) {
-                com.cripta.app.ui.components.ButtonText(str(R.string.done))
+                com.cripta.app.ui.components.ButtonText(plural(R.plurals.show_n_people, count, com.cripta.app.ui.components.formatCount(count)))
             }
         }
     }
@@ -478,6 +479,9 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     androidx.activity.compose.BackHandler(enabled = selected.isNotEmpty()) { selected = emptySet() }
     val st by vm.settings.collectAsStateWithLifecycle()
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
+    // Who the page shows now (filter chip and search); the sort sheet's button counts them.
+    val keep: (FaceRepository.Person) -> Boolean = { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+    val shownCount = overview?.people?.count(keep) ?: 0
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect
         if (snackbar.showSnackbar(u.first, str(R.string.undo), duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoFaceChange()
@@ -506,7 +510,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                 navigationIcon = { IconButton(onClick = onBack) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } },
                 actions = {
                     IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, str(R.string.sort)) }
-                    if (sortMenu && vaultUnlocked()) PeopleSortSheet(sortKey, st.peopleSortAscending, { k, a -> vm.setPeopleSort(k, a) }) { sortMenu = false }
+                    if (sortMenu && vaultUnlocked()) PeopleSortSheet(sortKey, st.peopleSortAscending, shownCount, { k, a -> vm.setPeopleSort(k, a) }) { sortMenu = false }
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.more)) }
                         DropdownMenu(menu && vaultUnlocked(), { menu = false }) {
@@ -523,7 +527,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             PeopleSkeleton(Modifier.fillMaxSize().padding(pad))
             return@Scaffold
         }
-        val shown = o.people.filter { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
+        val shown = o.people.filter(keep)
             .ordered(sortKey, st.peopleSortAscending)
         val noFaces = remember(o) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }

@@ -1522,6 +1522,12 @@
         <item quantity="many">Mostrar %1$s arquivos</item>
         <item quantity="other">Mostrar %1$s arquivos</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="one">Mostrar %1$s pessoa</item>
+        <item quantity="many">Mostrar %1$s pessoas</item>
+        <item quantity="other">Mostrar %1$s pessoas</item>
+    </plurals>
+    <string name="people_favorites_first">As favoritas ficam sempre no topo.</string>
     <string name="save_these_filters">Salvar estes filtros</string>
     <string name="save_filter">Salvar filtro</string>
     <string name="filter_name_hint">Nome (ex.: Vídeos para assistir)</string>

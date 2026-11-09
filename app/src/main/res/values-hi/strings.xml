@@ -1464,6 +1464,11 @@
         <item quantity="one">%1$s फ़ाइल दिखाएँ</item>
         <item quantity="other">%1$s फ़ाइलें दिखाएँ</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="one">%1$s व्यक्ति दिखाएँ</item>
+        <item quantity="other">%1$s लोग दिखाएँ</item>
+    </plurals>
+    <string name="people_favorites_first">पसंदीदा लोग हमेशा सबसे ऊपर रहते हैं।</string>
     <string name="save_these_filters">ये फ़िल्टर सहेजें</string>
     <string name="save_filter">फ़िल्टर सहेजें</string>
     <string name="filter_name_hint">नाम (जैसे देखने वाले वीडियो)</string>

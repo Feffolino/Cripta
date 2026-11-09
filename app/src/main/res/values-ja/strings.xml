@@ -1406,6 +1406,10 @@
     <plurals name="show_n_files">
         <item quantity="other">ファイル %1$s 件を表示</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="other">%1$s 人を表示</item>
+    </plurals>
+    <string name="people_favorites_first">お気に入りの人物は常に先頭に表示されます。</string>
     <string name="save_these_filters">この条件を保存</string>
     <string name="save_filter">フィルターを保存</string>
     <string name="filter_name_hint">名前（例：見たい動画）</string>

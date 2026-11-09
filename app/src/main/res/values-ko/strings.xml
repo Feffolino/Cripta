@@ -1406,6 +1406,10 @@
     <plurals name="show_n_files">
         <item quantity="other">파일 %1$s개 표시</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="other">%1$s명 표시</item>
+    </plurals>
+    <string name="people_favorites_first">즐겨찾기한 인물은 항상 맨 위에 표시됩니다.</string>
     <string name="save_these_filters">현재 필터 저장</string>
     <string name="save_filter">필터 저장</string>
     <string name="filter_name_hint">이름(예: 볼 동영상)</string>

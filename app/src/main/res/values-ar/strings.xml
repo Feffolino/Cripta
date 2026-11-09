@@ -1696,6 +1696,15 @@
         <item quantity="many">عرض %1$s ملف</item>
         <item quantity="other">عرض %1$s ملف</item>
     </plurals>
+    <plurals name="show_n_people">
+        <item quantity="zero">عرض %1$s شخص</item>
+        <item quantity="one">عرض شخص واحد</item>
+        <item quantity="two">عرض شخصين (%1$s)</item>
+        <item quantity="few">عرض %1$s أشخاص</item>
+        <item quantity="many">عرض %1$s شخصًا</item>
+        <item quantity="other">عرض %1$s شخص</item>
+    </plurals>
+    <string name="people_favorites_first">الأشخاص المفضلون يبقون دائمًا في الأعلى.</string>
     <string name="save_these_filters">حفظ هذه المرشحات</string>
     <string name="save_filter">حفظ المرشح</string>
     <string name="filter_name_hint">الاسم (مثلاً فيديوهات للمشاهدة)</string>
