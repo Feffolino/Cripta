@@ -117,9 +117,11 @@ Tag icons are a separate set (see Components) and are not Tabler.
   common ones, and a searchable list of all. On a cover a tag shows only its symbol or its
   acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
   `CoverTagStyle`): **Bollini** (default), round marks of one size (22dp, 18dp on small covers),
-  the tag colour at 90% on the glass with its icon, else its alias (two characters at most), else
-  its initial, in black or white; **Pillole piene**, pills in the tag colour in full, no rim, with
-  the icon and alias. Both pack from the bottom edge in up to 3 rows, then "+N".
+  with its icon, else its alias (two characters at most), else its initial; **Pillole piene**,
+  pills with the icon and alias. Both are opaque, no rim, filled with the tag colour (the accent
+  when tag colours are off) with 28% black mixed in, darkened further on a light colour of the
+  user's own until white reaches 3:1 (`coverMarkFill`); glyph and text always white. The "+N"
+  mark stays on the dark glass, white. Both pack from the bottom edge in up to 3 rows, then "+N".
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size

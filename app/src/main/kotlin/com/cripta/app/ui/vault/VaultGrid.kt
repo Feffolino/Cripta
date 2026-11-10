@@ -4,7 +4,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.compositeOver
 import com.cripta.app.ui.theme.popIn
 import com.cripta.app.R
 import com.cripta.app.str
@@ -314,7 +313,8 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
  * Tags over the bottom of a cover, in the style picked in Impostazioni › Sulle copertine:
  * - [CoverTagStyle.BUBBLE] (default): round 22dp marks of one size, the tag's icon or its initial,
  *   so a row of them reads as a tidy strip and hides little of the picture;
- * - [CoverTagStyle.PILL]: pills in the tag's full colour with its alias (and icon), no see-through.
+ * - [CoverTagStyle.PILL]: pills with the tag's alias (and icon), no see-through.
+ * Both fill with the tag's colour darkened ([coverMarkFill]) and draw in white.
  * Up to 3 rows (automatic: by cover width, or fixed by the user), filled from the bottom; a "+N"
  * mark appears only once every row is full. A tag assigned while the cover is on screen pops in.
  */
@@ -424,14 +424,25 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
 private fun bubbleText(tag: TagEntity): String =
     tag.alias?.takeIf { it.isNotBlank() }?.take(2) ?: tag.name.take(1).uppercase(com.cripta.app.Strings.locale)
 
-/** Ink on a tag's full colour: black, or white on a darker colour of the user's own (as TagPill's On). */
-private fun inkOn(bg: Color): Color = if (bg.luminance() >= 0.175f) Color.Black else Color.White
+/**
+ * A cover mark's fill: the tag's colour with 28% black mixed in, opaque, so white reads on it.
+ * A light colour of the user's own is darkened further until white reaches 3:1 (luminance 0.3).
+ */
+internal fun coverMarkFill(color: Color): Color {
+    var t = 0.28f
+    var c = androidx.compose.ui.graphics.lerp(color.copy(alpha = 1f), Color.Black, t)
+    while (c.luminance() > 0.3f && t < 1f) {
+        t = (t + 0.04f).coerceAtMost(1f)
+        c = androidx.compose.ui.graphics.lerp(color.copy(alpha = 1f), Color.Black, t)
+    }
+    return c
+}
 
-/** D: one round mark, the tag's colour at 90% on the dark glass, its icon or initial in the middle. */
+/** One round mark in the tag's darkened colour ([coverMarkFill]), its icon or initial in white. */
 @Composable
 private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
-    val bg = color.copy(alpha = 0.9f).compositeOver(com.cripta.app.ui.components.OnImageGlass)
-    val fg = inkOn(bg)
+    val bg = coverMarkFill(color)
+    val fg = Color.White
     val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
     Box(
         modifier.size(size).clip(CircleShape).background(bg).semantics { contentDescription = tag.name },
@@ -447,13 +458,14 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
     }
 }
 
-/** C: a pill in the tag's full colour (no see-through, no rim), its icon and alias in black or white. */
+/** A pill in the tag's darkened colour ([coverMarkFill], no rim), its icon and alias in white. */
 @Composable
 private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
-    val fg = inkOn(color)
+    val fg = Color.White
+    val bg = coverMarkFill(color)
     val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
     Row(
-        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).clip(CircleShape).background(color)
+        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).clip(CircleShape).background(bg)
             .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
         verticalAlignment = Alignment.CenterVertically,
     ) {
