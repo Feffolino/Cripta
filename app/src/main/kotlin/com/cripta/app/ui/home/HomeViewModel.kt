@@ -237,6 +237,10 @@ class HomeViewModel @Inject constructor(
     /** The Home search pill: the query opens in Cartelle, over the whole vault. */
     fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query))
 
+    /** The videos of "Continua a guardare" (started, not finished), wherever they are. */
+    fun showContinueWatching() =
+        navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = com.cripta.app.ui.vault.TypeFilter.VIDEO, inProgress = true, wholeVault = true))
+
     /** Every file of [type] in the vault, wherever it is: the figure tapped counted them all. */
     fun showType(type: com.cripta.app.ui.vault.TypeFilter) =
         navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type, wholeVault = true))

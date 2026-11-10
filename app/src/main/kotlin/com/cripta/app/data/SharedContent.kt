@@ -34,6 +34,13 @@ internal fun classifySharedContent(intent: Intent, resolver: ContentResolver): S
             }
         }
     }
+    // One real photo or video with its caption: the attachment is what was shared, not the link in
+    // the caption (the link wins only over the preview image a browser attaches to a page).
+    if (intent.action == Intent.ACTION_SEND && files.size == 1) {
+        val mime = runCatching { resolver.getType(files.first()) }.getOrNull() ?: intent.type.orEmpty()
+        val caption = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty()
+        if (isAttachmentNotPreview(mime, caption)) return SharedContent.Files(files)
+    }
     text.map(::extractUrl).firstOrNull(::looksLikeUrl)?.let { return SharedContent.WebLink(it) }
 
     // Handle actual .url/.webloc/HTML shortcut attachments without treating arbitrary text files
@@ -65,6 +72,14 @@ internal fun classifySharedContent(intent: Intent, resolver: ContentResolver): S
     }
     return if (files.isEmpty()) SharedContent.None else SharedContent.Files(files)
 }
+
+/**
+ * Whether the single attachment shared with [caption] is the thing being shared rather than the
+ * preview a browser sends with a page link: a video (browsers attach only a picture). A picture
+ * stays a preview: a browser shares "title + link" with one, which a caption cannot be told from.
+ */
+internal fun isAttachmentNotPreview(mime: String, @Suppress("UNUSED_PARAMETER") caption: String): Boolean =
+    mime.startsWith("video/")
 
 private fun htmlShareUrl(html: String): String? = webShortcutUrl(html, "text/html", "html")
     ?: Regex("<a\\b[^>]*href\\s*=\\s*[\"'](https?://[^\"']+)[\"']", RegexOption.IGNORE_CASE)

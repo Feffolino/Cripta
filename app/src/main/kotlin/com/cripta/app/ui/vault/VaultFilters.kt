@@ -91,6 +91,7 @@ internal fun ActiveFilterBar(
     tagColors: Boolean = true,
     /** The results really come from the whole vault (see [searchesWholeVault]); else the note is not shown. */
     wholeVault: Boolean = true,
+    onClearInProgress: () -> Unit = {},
 ) {
     // Keep drawing the last active filters while the bar collapses.
     val last = remember { mutableStateOf(filters) }
@@ -113,6 +114,7 @@ internal fun ActiveFilterBar(
                 if (f.query.isNotBlank()) DismissChip("“${f.query}”", str(R.string.search_x, f.query)) { onClearQuery() }
                 if (f.type != TypeFilter.ALL) DismissChip(typeLabel(f.type)) { onType(TypeFilter.ALL) }
                 if (f.favoritesOnly) DismissChip(str(R.string.favorites)) { onClearFav() }
+                if (f.inProgress) DismissChip(str(R.string.continue_watching)) { onClearInProgress() }
                 if (f.untaggedOnly) DismissChip(str(R.string.untagged)) { onClearUntagged() }
                 f.personIds.forEach { id ->
                     val name = people.firstOrNull { it.id == id }?.title ?: com.cripta.app.data.face.FaceRepository.UNNAMED

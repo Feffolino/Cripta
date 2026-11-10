@@ -1976,4 +1976,8 @@
     <string name="pdf_page_failed">%1$dページを表示できませんでした</string>
     <string name="image_cant_show">この画像を表示できませんでした。ファイルが破損しているか、この端末で読めない形式の可能性があります。</string>
     <string name="viewer_show_controls">操作を表示</string>
+    <string name="share_unsupported">共有された内容は Cripta では使えません。リンクもファイルも含まれていません</string>
+    <string name="destroyed_next_open">次に Cripta を開いたときに完全に削除されます</string>
+    <string name="trash_original_folder">元のフォルダ</string>
+    <string name="cover_picker_limit">最新の%1$d件のファイルだけを表示しています。</string>
 </resources>

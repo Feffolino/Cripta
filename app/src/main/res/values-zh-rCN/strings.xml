@@ -1976,4 +1976,8 @@
     <string name="pdf_page_failed">无法显示第 %1$d 页</string>
     <string name="image_cant_show">无法显示这张图片：文件可能已损坏，或格式不受此手机支持。</string>
     <string name="viewer_show_controls">显示控件</string>
+    <string name="share_unsupported">Cripta 无法使用所分享的内容：其中既没有链接也没有文件</string>
+    <string name="destroyed_next_open">将在下次打开 Cripta 时销毁</string>
+    <string name="trash_original_folder">原文件夹</string>
+    <string name="cover_picker_limit">仅列出最新的 %1$d 个文件。</string>
 </resources>

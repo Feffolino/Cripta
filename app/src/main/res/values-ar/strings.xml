@@ -2301,4 +2301,8 @@
     <string name="pdf_page_failed">تعذّر عرض الصفحة %1$d</string>
     <string name="image_cant_show">تعذّر عرض هذه الصورة: قد يكون الملف تالفاً أو بتنسيق لا يستطيع الهاتف قراءته.</string>
     <string name="viewer_show_controls">إظهار عناصر التحكم</string>
+    <string name="share_unsupported">لا يستطيع Cripta استخدام ما تمت مشاركته: لا يحتوي على رابط ولا ملف</string>
+    <string name="destroyed_next_open">سيُتلف عند فتح Cripta في المرة القادمة</string>
+    <string name="trash_original_folder">مجلدها الأصلي</string>
+    <string name="cover_picker_limit">تُعرض أحدث %1$d ملف فقط.</string>
 </resources>

@@ -79,6 +79,17 @@ fun SettingsScreen(
     val pkgInfo = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull() }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     val updateState by vm.update.collectAsStateWithLifecycle()
+    // The update's installer opens only while this screen is the one in front (see the view model).
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.setSettingsForeground(true)
+            else if (e == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) vm.setSettingsForeground(false)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        vm.setSettingsForeground(lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); vm.setSettingsForeground(false) }
+    }
     LaunchedEffect(message) {
         message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
     }

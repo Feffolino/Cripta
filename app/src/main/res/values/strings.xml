@@ -2041,4 +2041,8 @@
     <string name="pdf_page_failed">Page %1$d could not be shown</string>
     <string name="image_cant_show">This picture could not be shown: the file may be damaged or in a format this phone cannot read.</string>
     <string name="viewer_show_controls">Show controls</string>
+    <string name="share_unsupported">Cripta can\'t use what was shared: it has no link and no file</string>
+    <string name="destroyed_next_open">to be destroyed when Cripta next opens</string>
+    <string name="trash_original_folder">Its original folder</string>
+    <string name="cover_picker_limit">Only the %1$d newest files are listed.</string>
 </resources>

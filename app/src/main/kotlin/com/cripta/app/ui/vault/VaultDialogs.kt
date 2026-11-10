@@ -75,6 +75,13 @@ internal fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> 
         while (p != null && guard < 50) { d++; p = byId[p]?.parentId; guard++ }
         return d
     }
+    /** "A / B" for the folders above [f]; null at the top level. */
+    fun parentPath(f: FolderEntity): String? {
+        val names = ArrayList<String>()
+        var p = f.parentId; var guard = 0
+        while (p != null && guard++ < 50) { val parent = byId[p] ?: break; names.add(0, parent.name); p = parent.parentId }
+        return names.takeIf { it.isNotEmpty() }?.joinToString(" / ")
+    }
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
@@ -94,7 +101,14 @@ internal fun MoveToFolderDialog(folders: List<FolderEntity>, onPick: (Long?) -> 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(CriptaIcons.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                    Text(f.name, Modifier.padding(start = 16.dp))
+                    Column(Modifier.padding(start = 16.dp)) {
+                        Text(f.name)
+                        // Two folders can share a name: the path above this one tells them apart.
+                        parentPath(f)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                    }
                 }
             }
         }

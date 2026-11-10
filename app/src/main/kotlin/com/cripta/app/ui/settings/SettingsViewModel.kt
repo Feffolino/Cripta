@@ -102,6 +102,8 @@ class SettingsViewModel @Inject constructor(
 
     /** Set when the download was started from this screen: its end opens the installer. */
     private var watchingDownload = false
+    @Volatile private var settingsInForeground = false
+    fun setSettingsForeground(b: Boolean) { settingsInForeground = b }
 
     init {
         viewModelScope.launch {
@@ -112,7 +114,9 @@ class SettingsViewModel @Inject constructor(
                     is com.cripta.app.update.AppUpdater.Download.Ready -> {
                         // Stay on "ready" rather than "100%": the system installer may be cancelled.
                         _update.value = UpdateState.ReadyToInstall(d.release, d.apk)
-                        if (watchingDownload) { watchingDownload = false; openInstaller(appContext, d.apk) }
+                        // Only with this screen in front: from another tab the installer would open over
+                        // whatever the user is doing (the notification and this screen still offer it).
+                        if (watchingDownload) { watchingDownload = false; if (settingsInForeground) openInstaller(appContext, d.apk) }
                     }
                     is com.cripta.app.update.AppUpdater.Download.Failed -> {
                         watchingDownload = false

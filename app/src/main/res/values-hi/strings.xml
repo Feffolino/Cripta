@@ -2041,4 +2041,8 @@
     <string name="pdf_page_failed">पृष्ठ %1$d दिखाया नहीं जा सका</string>
     <string name="image_cant_show">यह तस्वीर दिखाई नहीं जा सकी: फ़ाइल क्षतिग्रस्त हो सकती है या ऐसे फ़ॉर्मैट में हो सकती है जिसे फ़ोन नहीं पढ़ सकता।</string>
     <string name="viewer_show_controls">नियंत्रण दिखाएँ</string>
+    <string name="share_unsupported">Cripta साझा की गई चीज़ का उपयोग नहीं कर सकता: उसमें न लिंक है, न फ़ाइल</string>
+    <string name="destroyed_next_open">Cripta अगली बार खुलने पर नष्ट हो जाएगा</string>
+    <string name="trash_original_folder">इसका मूल फ़ोल्डर</string>
+    <string name="cover_picker_limit">केवल %1$d सबसे नई फ़ाइलें सूचीबद्ध हैं।</string>
 </resources>

@@ -2106,4 +2106,8 @@
     <string name="pdf_page_failed">Non è stato possibile mostrare la pagina %1$d</string>
     <string name="image_cant_show">Non è stato possibile mostrare questa immagine: il file potrebbe essere danneggiato o in un formato che il telefono non legge.</string>
     <string name="viewer_show_controls">Mostra i comandi</string>
+    <string name="share_unsupported">Cripta non può usare ciò che è stato condiviso: non contiene né un link né un file</string>
+    <string name="destroyed_next_open">verrà distrutto alla prossima apertura di Cripta</string>
+    <string name="trash_original_folder">La sua cartella originale</string>
+    <string name="cover_picker_limit">Sono elencati solo i %1$d file più recenti.</string>
 </resources>

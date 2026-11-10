@@ -56,8 +56,18 @@ class FavoritesViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortKey.DATE to false)
     fun setSort(key: SortKey, ascending: Boolean) = viewModelScope.launch { settings.setScreenSort("favorites", key, ascending) }
 
-    val folders: StateFlow<List<FolderEntity>?> = repo.changes.flatMapLatest { repo.allFolders() }
-        .map { list -> list.filter { it.isFavorite } }
+    /** The folders follow the screen's order too: by name or by creation (a folder has no size to sort on). */
+    val folders: StateFlow<List<FolderEntity>?> = combine(
+        repo.changes.flatMapLatest { repo.allFolders() }.map { list -> list.filter { it.isFavorite } },
+        settings.screenSort("favorites"),
+    ) { list, (key, ascending) ->
+        val sorted = when (key) {
+            SortKey.NAME -> list.sortedBy { it.name.lowercase() }
+            SortKey.DATE -> list.sortedBy { it.id }
+            else -> return@combine list
+        }
+        if (ascending) sorted else sorted.reversed()
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val folderPreviews: StateFlow<Map<Long, List<FileEntity>>> = combine(folders, repo.changes) { list, _ -> list }
         .mapLatest { repo.folderPreviews(it.orEmpty().map { f -> f.id }) }

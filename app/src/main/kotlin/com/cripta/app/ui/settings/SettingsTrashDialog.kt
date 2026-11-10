@@ -108,7 +108,8 @@ internal fun TrashDialog(
     val shownFolders = folders.filter { if (openId == null) it.parentId == null || it.parentId !in trashedIds else it.parentId == openId }
     val shownFiles = items.filter { if (openId == null) it.folderId == null || it.folderId !in trashedIds else it.folderId == openId }
     fun left(at: Long?) = at?.let { days - ((System.currentTimeMillis() - it) / 86_400_000L).toInt() } ?: days
-    fun leftText(at: Long?): String { val l = left(at); return if (l <= 1) str(R.string.destroyed_today) else str(R.string.days_left, l) }
+    // The purge runs when Home opens, not at midnight: past its day a file waits for the next opening.
+    fun leftText(at: Long?): String { val l = left(at); return if (l < 1) str(R.string.destroyed_next_open) else if (l == 1) str(R.string.destroyed_today) else str(R.string.days_left, l) }
     fun subtree(id: Long): Set<Long> {
         val ids = HashSet<Long>(); val todo = ArrayDeque(listOf(id))
         while (todo.isNotEmpty()) { val x = todo.removeFirst(); if (ids.add(x)) folders.filter { it.parentId == x }.forEach { todo.add(it.id) } }
@@ -326,6 +327,8 @@ internal fun TrashDialog(
                         // Original path: trashed folders by name (live ones are not in this list).
                         generateSequence(byId[id]) { it.parentId?.let(byId::get) }.map { it.name }.toList().reversed()
                             .joinToString(" › ").ifEmpty { null }
+                            // The folder is not in the trash list: it is still a live one, not the root.
+                            ?: str(R.string.trash_original_folder)
                     } ?: str(R.string.vault)
                     listOfNotNull(
                         str(R.string.size_label) to com.cripta.app.ui.components.formatBytes(f.sizeBytes),

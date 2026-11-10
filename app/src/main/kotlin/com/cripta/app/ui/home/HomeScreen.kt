@@ -224,7 +224,7 @@ fun HomeScreen(
                 }
             }
             if (continueWatching.isNotEmpty()) {
-                item { ShelfHeader(str(R.string.continue_watching), onSeeAll = { vm.showType(TypeFilter.VIDEO); onOpenFolders() }) }
+                item { ShelfHeader(str(R.string.continue_watching), onSeeAll = { vm.showContinueWatching(); onOpenFolders() }) }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(continueWatching, key = { it.file.id }) { fwt ->

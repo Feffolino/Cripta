@@ -152,7 +152,9 @@ class MainActivity : FragmentActivity() {
                         else plural(R.plurals.share_importing, n)
                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                 }
-                com.cripta.app.data.SharedContent.None -> Unit
+                // Nothing Cripta can take (plain text with no link, no attachment): say so, not silence.
+                com.cripta.app.data.SharedContent.None ->
+                    Toast.makeText(this@MainActivity, str(R.string.share_unsupported), Toast.LENGTH_LONG).show()
             }
         }
     }

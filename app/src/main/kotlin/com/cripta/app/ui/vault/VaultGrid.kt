@@ -639,7 +639,8 @@ internal fun ReorderableFileGrid(
                                         retarget()
                                     },
                                     onDragEnd = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
-                                    onDragCancel = { dragging = false; draggedId = null; onReorder(list.map { it.file.id }) },
+                                    // Cancelled by the system before the release: nothing is saved.
+                                    onDragCancel = { dragging = false; draggedId = null },
                                 )
                             } finally {
                                 // Handler removed mid-drag (e.g. a filter turned reordering off): unfreeze

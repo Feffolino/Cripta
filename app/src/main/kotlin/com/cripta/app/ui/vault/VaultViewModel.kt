@@ -57,10 +57,12 @@ data class Filters(
      * Foto / Video / Note figures, which count every file of the vault and must open all of them.
      */
     val wholeVault: Boolean = false,
+    /** Videos started and not finished: what Home's "Continua a guardare" row shows. */
+    val inProgress: Boolean = false,
 ) {
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
-            type != TypeFilter.ALL || favoritesOnly || untaggedOnly || personIds.isNotEmpty()
+            type != TypeFilter.ALL || favoritesOnly || untaggedOnly || personIds.isNotEmpty() || inProgress
 }
 
 /**
@@ -88,7 +90,8 @@ fun Filters.matches(fwt: FileWithTags): Boolean {
         TypeFilter.OTHER -> !VaultRepository.isImage(fwt.file.mimeType) && !VaultRepository.isVideo(fwt.file.mimeType)
     }
     val favOk = !f.favoritesOnly || fwt.file.isFavorite
-    return nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk
+    val progressOk = !f.inProgress || (VaultRepository.isVideo(fwt.file.mimeType) && (fwt.file.playbackPosMs ?: 0L) > 0)
+    return nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk && progressOk
 }
 
 /**
@@ -334,6 +337,8 @@ class VaultViewModel @Inject constructor(
             else repo.setFolderSort(folderId, key, ascending)
         }
     }
+
+    fun setInProgress(b: Boolean) { filters.value = filters.value.copy(inProgress = b) }
 
     fun setFolderFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { repo.setFolderFavorite(id, favorite) }
     fun setFolderRandomExcluded(id: Long, excluded: Boolean) = viewModelScope.launch { repo.setFolderRandomExcluded(id, excluded) }

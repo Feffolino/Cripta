@@ -364,7 +364,11 @@ class VaultRepository @Inject constructor(
 
     /** A folder's own files, newest first (the cover picker). */
     suspend fun filesInFolder(folderId: Long, limit: Int = 500): List<FileEntity> = withContext(Dispatchers.IO) {
-        db.fileDao().latestInFolder(folderId, limit)
+        val newest = db.fileDao().latestInFolder(folderId, limit)
+        // The cover in use stays in the list however old it is: it carries the selection mark.
+        val coverId = db.folderDao().byId(folderId)?.coverFileId
+        if (coverId == null || newest.any { it.id == coverId }) newest
+        else listOfNotNull(db.fileDao().byId(coverId)?.takeIf { it.deletedAt == null && it.folderId == folderId }) + newest
     }
 
     suspend fun setFolderFavorite(id: Long, favorite: Boolean) = withContext(Dispatchers.IO) {

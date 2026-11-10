@@ -2171,4 +2171,8 @@
     <string name="pdf_page_failed">Не удалось показать страницу %1$d</string>
     <string name="image_cant_show">Не удалось показать это изображение: файл может быть повреждён или в формате, который телефон не читает.</string>
     <string name="viewer_show_controls">Показать элементы управления</string>
+    <string name="share_unsupported">Cripta не может использовать присланное: в нём нет ни ссылки, ни файла</string>
+    <string name="destroyed_next_open">будет уничтожен при следующем открытии Cripta</string>
+    <string name="trash_original_folder">Исходная папка</string>
+    <string name="cover_picker_limit">Показаны только %1$d самых новых файлов.</string>
 </resources>

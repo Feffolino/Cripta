@@ -2041,4 +2041,8 @@
     <string name="pdf_page_failed">Seite %1$d konnte nicht angezeigt werden</string>
     <string name="image_cant_show">Dieses Bild konnte nicht angezeigt werden: Die Datei ist evtl. beschädigt oder in einem Format, das dieses Telefon nicht lesen kann.</string>
     <string name="viewer_show_controls">Steuerelemente anzeigen</string>
+    <string name="share_unsupported">Cripta kann das Geteilte nicht verwenden: Es enthält weder einen Link noch eine Datei</string>
+    <string name="destroyed_next_open">wird beim nächsten Öffnen von Cripta vernichtet</string>
+    <string name="trash_original_folder">Der ursprüngliche Ordner</string>
+    <string name="cover_picker_limit">Es werden nur die %1$d neuesten Dateien aufgelistet.</string>
 </resources>

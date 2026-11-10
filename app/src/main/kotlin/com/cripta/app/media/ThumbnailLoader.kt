@@ -139,7 +139,9 @@ class ThumbnailLoader @Inject constructor(
         else readDisk(file.id)?.let { return it.takeIf { b -> remember(file.id, b, epoch) } }
         // Skip files already known to yield nothing this session.
         if (file.id in failed) return null
-        val bmp = runCatching {
+        // A cell scrolled away cancels its request, even while it waits for a decoder: that is not a
+        // failure of the file, and must neither be remembered as one nor be swallowed.
+        val bmp = try {
             when {
                 VaultRepository.isImage(file.mimeType) -> imageThumb(file)
                 VaultRepository.isVideo(file.mimeType) -> videoDecoders.withPermit { videoFrame(file, null) }
@@ -147,7 +149,11 @@ class ThumbnailLoader @Inject constructor(
                 note -> noteCover(file)
                 else -> documentText(file)?.let { textCover(it) }
             }
-        }.getOrNull()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            null
+        }
         if (bmp != null) {
             if (!remember(file.id, bmp, epoch)) return null
             if (!note) runCatching { writeDisk(file.id, bmp) }
@@ -596,7 +602,9 @@ class ThumbnailLoader @Inject constructor(
                 runCatching { File(diskDir, file.id).delete() }
             } else {
                 android.util.Log.w("ThumbnailLoader", "custom cover not persisted for ${file.id}")
-                runCatching { writeDisk(file.id, bmp) }
+                val cached = runCatching { writeDisk(file.id, bmp) }.isSuccess
+                // Nothing reached the disk: a cover shown now would be gone after a restart. Not offered.
+                if (!cached) { cache.remove(file.id); return@withContext null }
             }
             bumpVersion(file.id)                    // refresh shelves/viewer keyed on versions
             bmp

@@ -291,6 +291,9 @@ internal fun FolderCoverSheet(
                 label = { Text(str(R.string.cover_auto_latest)) },
             )
             val list = files
+            // The picker lists the newest files only: said, instead of older ones missing without a word.
+            if (list != null && list.size >= 500) Text(str(R.string.cover_picker_limit, 500), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
             when {
                 list == null -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                     columns = GridCells.Adaptive(96.dp), userScrollEnabled = false,

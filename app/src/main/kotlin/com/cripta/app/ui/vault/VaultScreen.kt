@@ -758,7 +758,8 @@ fun VaultScreen(
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
                 people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors,
-                wholeVault = searchesWholeVault(filters.active, filters.wholeVault, filterLocalOnly))
+                wholeVault = searchesWholeVault(filters.active, filters.wholeVault, filterLocalOnly),
+                onClearInProgress = { vm.setInProgress(false) })
             if (path.size >= 2 && !filters.active) {
                 Breadcrumb(pathNames, onGo = vm::goToDepth)
             }
