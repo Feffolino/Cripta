@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-10
 
+- Keep the icon on more tags and folders from the old emoji set (706 names mapped instead of 253), and turn Fluent's mouse into a paw
 - Apply the manually selected Tabler Filled catalog to tags and folders, and search for icons by folder name
 - Use Tabler Filled for tag and folder icons, with search in all twelve app languages
 - Improve sort sheet contrast and labels, and enlarge the People favourite target `d9c5d88`

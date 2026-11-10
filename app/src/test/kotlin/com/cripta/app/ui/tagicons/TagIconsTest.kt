@@ -130,4 +130,27 @@ class TagIconsTest {
             room.close()
         }
     }
+
+    @Test
+    fun moreFluentNamesKeepAnIcon() = runBlocking {
+        val resolver = checkNotNull(TagIcons.migrationResolver(context))
+        // Picked by hand, the same emoji, a word of the name, a face's keyword.
+        assertEquals("heart", resolver("red-heart"))
+        assertEquals("woman", resolver("woman-cook"))
+        assertEquals("bottle", resolver("baby-bottle"))
+        assertEquals("mood-happy", resolver("grinning-face"))
+        assertEquals("clock", resolver("eight-oclock"))
+        // False friends of a name word are not followed.
+        assertEquals("ballpen", resolver("fountain-pen"))
+        assertNull(resolver("bell-pepper"))
+    }
+
+    @Test
+    fun fluentMouseIsTheAnimalOnlyBeforeTabler() = runBlocking {
+        // Fluent's "mouse" is the animal: migrated and old backups get the paw...
+        assertEquals("paw", checkNotNull(TagIcons.migrationResolver(context))("mouse"))
+        // ...while a Tabler-era name (and the runtime lookup) stays the computer mouse.
+        assertEquals("mouse", checkNotNull(TagIcons.migrationResolver(context, fluent = false))("mouse"))
+        assertEquals("mouse", TagIcons.resolveName(context, "mouse"))
+    }
 }

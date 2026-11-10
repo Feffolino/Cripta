@@ -1467,6 +1467,8 @@ class VaultRepository @Inject constructor(
         val manifest = org.json.JSONObject().apply {
             // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
             put("v", if (compressDocs) 3 else 2)
+            // Icon names are Tabler's (absent in older backups: Fluent names, see TagIcons.migrationResolver).
+            put("icons", "tabler")
             // What the user chose to put in (absent in older backups, which hold everything).
             put("contents", org.json.JSONObject().put("files", scope.files).put("tags", scope.tags).put("people", scope.people)
                 .put("analysis", scope.analysis).put("settings", scope.settings).put("covers", scope.covers && scope.files))
@@ -1680,7 +1682,7 @@ class VaultRepository @Inject constructor(
         coverFiles: MutableList<java.io.File>,
         onSettings: (ByteArray) -> Unit,
     ): RestoreReport {
-        val resolveIcon = com.cripta.app.ui.tagicons.TagIcons.migrationResolver(context)
+        val resolveIcon = com.cripta.app.ui.tagicons.TagIcons.migrationResolver(context, fluent = !manifest.has("icons"))
         fun restoredIcon(name: String): String? = if (resolveIcon == null) name else resolveIcon(name)
 
         // Leave 16 MiB for database writes and encryption overhead on the blob partition.

@@ -127,9 +127,21 @@ object TagIcons {
         return terms(context, language(context))[resolved]?.title ?: resolved.replace('-', ' ')
     }
 
-    /** A null resolver means the assets could not be validated. Leave stored names intact. */
-    internal fun migrationResolver(context: Context): ((String) -> String?)? =
-        (catalog ?: readCatalog(context))?.let { loaded -> { name -> resolve(loaded, name) } }
+    /**
+     * Fluent names that Tabler also uses for another drawing: Fluent's "mouse" is the animal,
+     * Tabler's the computer mouse. Only names written before Tabler ([fluent]) go through
+     * legacy.txt for these; at runtime a stored "mouse" is Tabler's.
+     */
+    private val FLUENT_NAMESAKES = setOf("mouse")
+
+    /**
+     * A null resolver means the assets could not be validated. Leave stored names intact.
+     * [fluent]: the names come from before the Tabler icons (the database migration, an old backup).
+     */
+    internal fun migrationResolver(context: Context, fluent: Boolean = true): ((String) -> String?)? =
+        (catalog ?: readCatalog(context))?.let { loaded ->
+            { name -> (if (fluent && name in FLUENT_NAMESAKES) loaded.legacy[name] else null) ?: resolve(loaded, name) }
+        }
 
     suspend fun resolveName(context: Context, name: String): String? = load(context)?.let { resolve(it, name) }
 
