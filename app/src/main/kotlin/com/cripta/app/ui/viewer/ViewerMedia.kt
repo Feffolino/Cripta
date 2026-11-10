@@ -157,7 +157,7 @@ internal fun MediaPage(
             is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls, controlsHeld = controlsHeld)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome,
-                onTextChange = { vm.saveNoteText(s.file, it) },
+                onTextChange = { text, revert -> vm.saveNoteText(s.file, text, revert) },
                 onEdit = { onEditNote(s.file.id) }, editShown = chromeVisible, bottomInset = bottomInset)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
             is ViewerState.Other -> CenteredPage(onTap = onToggleChrome) {
@@ -299,7 +299,7 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
 private fun NoteView(
     text: String,
     onSingleTap: () -> Unit,
-    onTextChange: (String) -> Unit,
+    onTextChange: (String, () -> Unit) -> Unit,
     onEdit: () -> Unit,
     editShown: Boolean,
     bottomInset: androidx.compose.ui.unit.Dp,
@@ -344,7 +344,11 @@ private fun NoteView(
                             val done = com.cripta.app.ui.note.NoteMarkdown.checkState(part) == true
                             Row(
                                 Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
-                                    .toggleableRow(done) { current = com.cripta.app.ui.note.NoteMarkdown.toggleCheck(current, index); onTextChange(current) },
+                                    .toggleableRow(done) {
+                                        val before = current
+                                        current = com.cripta.app.ui.note.NoteMarkdown.toggleCheck(current, index)
+                                        onTextChange(current) { current = before }
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(if (done) CriptaIcons.CheckCircle else CriptaIcons.FormatChecklist, null,

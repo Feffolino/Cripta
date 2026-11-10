@@ -174,8 +174,10 @@ fun NoteEditorScreen(
                                 // DS Nota: the title in headline, the word count under it.
                                 textStyle = MaterialTheme.typography.headlineSmall,
                                 colors = plain,
-                                // Not editable when the note couldn't be read (nothing typed could be saved).
+                                // Not editable when the note couldn't be read (nothing typed could be saved),
+                                // and read-only while saving: what is typed then would not be written.
                                 enabled = !vm.loadFailed,
+                                readOnly = vm.saving,
                                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = str(R.string.note_title) },
                             )
                             val words = vm.text.split(Regex("\\s+")).count { it.isNotBlank() }
@@ -208,6 +210,7 @@ fun NoteEditorScreen(
                             visualTransformation = styled,
                             colors = plain,
                             enabled = !vm.loadFailed,
+                            readOnly = vm.saving,
                             modifier = Modifier.fillMaxWidth().weight(1f)
                                 .onFocusChanged { contentFocused = it.isFocused }
                                 .semantics { contentDescription = str(R.string.note_content) },
@@ -234,7 +237,7 @@ fun NoteEditorScreen(
                         ) {
                             @Composable
                             fun tool(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, act: () -> Unit) =
-                                IconButton(onClick = act) { Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                IconButton(onClick = act, enabled = !vm.saving) { Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                             tool(CriptaIcons.FormatHeading, str(R.string.note_title)) { edit(NoteMarkdown.linePrefix(body, null)) }
                             tool(CriptaIcons.FormatBold, str(R.string.fmt_bold)) { edit(NoteMarkdown.wrap(body, "**")) }
                             tool(CriptaIcons.FormatItalic, str(R.string.fmt_italic)) { edit(NoteMarkdown.wrap(body, "*")) }

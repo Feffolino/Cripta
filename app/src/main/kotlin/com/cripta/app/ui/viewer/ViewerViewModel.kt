@@ -458,8 +458,13 @@ class ViewerViewModel @Inject constructor(
     private val noteSave = kotlinx.coroutines.sync.Mutex()
 
     /** A note's text changed in the viewer (a check-list box ticked): saved at once. */
-    fun saveNoteText(file: FileEntity, text: String) = viewModelScope.launch {
-        noteSave.withLock { runCatching { repo.updateNote(file.id, file.originalName, text) } }
+    fun saveNoteText(file: FileEntity, text: String, onFailed: () -> Unit = {}) = viewModelScope.launch {
+        val saved = noteSave.withLock { runCatching { repo.updateNote(file.id, file.originalName, text) }.isSuccess }
+        if (!saved) {
+            // Not written: the box goes back as it was and the user is told, not left with a tick that is gone later.
+            _message.value = str(R.string.note_save_failed)
+            onFailed()
+        }
     }
 
     fun toggleFavorite(file: FileEntity) = viewModelScope.launch {

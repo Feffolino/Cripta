@@ -93,14 +93,16 @@ class NoteEditorViewModel @Inject constructor(
         saving = true
         viewModelScope.launch {
             try {
-                val n = name.ifBlank { str(R.string.default_note_name) }
-                if (id == null) repo.createNote(folderId ?: routeFolderId, n, text)
+                // What is written is what "saved" means: anything typed meanwhile is not saved yet.
+                val writtenName = name; val writtenText = text
+                val n = writtenName.ifBlank { str(R.string.default_note_name) }
+                if (id == null) repo.createNote(folderId ?: routeFolderId, n, writtenText)
                 else {
-                    repo.updateNote(id, n, text)
+                    repo.updateNote(id, n, writtenText)
                     // Its cover shows its first lines: drawn again from the new text.
                     thumbs.evict(id)
                 }
-                savedName = name; savedText = text
+                savedName = writtenName; savedText = writtenText
                 onDone()
             } catch (e: CancellationException) {
                 throw e

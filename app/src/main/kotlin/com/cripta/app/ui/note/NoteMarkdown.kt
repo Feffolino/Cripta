@@ -204,12 +204,27 @@ object NoteMarkdown {
             return TextFieldValue(nt, TextRange(lineStart))
         }
         val next = when {
-            prefix.matches(Regex("""\d+[.)]\s""")) -> "${prefix.takeWhile { it.isDigit() }.toInt() + 1}${prefix.dropWhile { it.isDigit() }}"
+            // A number too big to count on: the new line starts plain instead of crashing the editor.
+            prefix.matches(Regex("""\d+[.)]\s""")) -> nextNumberedPrefix(prefix) ?: return new
             prefix.contains('[') -> prefix.take(2) + "[ ] "
             else -> prefix
         }
         val ins = indent + next
         return TextFieldValue(new.text.substring(0, c) + ins + new.text.substring(c), TextRange(c + ins.length))
+    }
+
+    /** Highest list number the editor goes on from ("999999. x" + Enter gives "1000000. "). */
+    const val MAX_LIST_NUMBER = 999_999
+
+    /**
+     * The marker of the item after [prefix] ("3. " gives "4. "), or null when the number is not a
+     * usable one (more digits than an Int holds, or past [MAX_LIST_NUMBER]): then no numbering goes on.
+     */
+    fun nextNumberedPrefix(prefix: String): String? {
+        val digits = prefix.takeWhile { it.isDigit() }
+        val n = digits.toIntOrNull() ?: return null
+        if (n >= MAX_LIST_NUMBER) return null
+        return "${n + 1}${prefix.drop(digits.length)}"
     }
 
     /** Line [index] of [text] with its check box flipped ("- [ ]" ↔ "- [x]"); other lines as they are. */
