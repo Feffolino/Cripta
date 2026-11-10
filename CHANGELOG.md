@@ -5,6 +5,10 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-10
 
+- Make the tag and folder palette pastel and show every colour in full, never darkened: tag pills, cover marks, the settings preview, a folder's disc and its empty card; text on a colour is black or white, whichever reads
+- Keep "Altro" (a round rainbow) first and always in view in the colour row; a colour of your own sits inside it, ticked
+- Move tags and folders coloured with a preset of an earlier palette to the new one; colours of your own stay as they are
+- Keep the tag icon catalog and word lists in LF on Windows checkouts, so local builds and tests match CI
 - Offer a colour of your own for tags and folders ("Altro": hue, saturation and brightness sliders or a typed code) next to the presets
 - Give tags and folders one shared palette of twelve colours that matches the app's blue accent; colours saved before keep working
 - Show a placeholder for the space bar in Impostazioni and Spazio e pulizia until the figures are known
