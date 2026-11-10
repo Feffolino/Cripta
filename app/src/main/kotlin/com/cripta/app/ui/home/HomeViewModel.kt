@@ -14,7 +14,7 @@ import com.cripta.app.data.db.SavedFilterEntity
 import com.cripta.app.media.ThumbnailLoader
 import com.cripta.app.ui.vault.TypeCounts
 import com.cripta.app.ui.vault.filtersFromJson
-import com.cripta.app.ui.vault.matches
+import com.cripta.app.ui.vault.applyTo
 import com.cripta.app.viewer.ViewerQueue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
