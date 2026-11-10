@@ -73,7 +73,8 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     val spot by remember(file.id) { vm.playerSpots.map { it[file.id] } }.collectAsStateWithLifecycle(initialValue = null)
     val status by produceState<String?>(initialValue = "ok", file.id, segments) { value = vm.introStatus(file.id) }
     val pending = remember(file.id) { mutableStateMapOf<SegmentKind, Long>() }
-    var rejecting by remember { mutableStateOf<Pair<SegmentKind, MediaSegmentEntity>?>(null) }
+    // Keyed by the video: the question was opened for this one, and goes away when the viewer moves on.
+    var rejecting by remember(file.id) { mutableStateOf<Pair<SegmentKind, MediaSegmentEntity>?>(null) }
     val duration = spot?.durationMs?.takeIf { it > 0 } ?: file.durationMs ?: 0L
     val position = spot?.positionMs ?: 0L
     val introColor = MaterialTheme.colorScheme.primary

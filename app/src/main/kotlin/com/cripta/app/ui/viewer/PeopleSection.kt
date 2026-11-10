@@ -208,14 +208,18 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                 confirmButton = { TextButton(onClick = { splitting = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
         }
     }
-    val found by vm.foundFaces.collectAsStateWithLifecycle()
+    val foundAll by vm.foundFaces.collectAsStateWithLifecycle()
+    val foundFor by vm.foundFacesFile.collectAsStateWithLifecycle()
+    // Faces found for another media (the viewer moved on during the search) are not offered here.
+    val found = foundAll?.takeIf { foundFor == file.id }
+    androidx.compose.runtime.LaunchedEffect(file.id) { vm.closeFoundFacesUnless(file.id) }
     val finding by vm.findingFaces.collectAsStateWithLifecycle()
     var picked by remember(file.id) { mutableStateOf<FaceRepository.FoundFace?>(null) }
     val start by vm.findStart.collectAsStateWithLifecycle()
     found?.let { list ->
         val at = list.firstOrNull()?.timeMs ?: start
         val later = isVideo && list.isNotEmpty() && at > start
-        if (picked == null) CriptaAlertDialog(onDismissRequest = { vm.foundFaces.value = null },
+        if (picked == null) CriptaAlertDialog(onDismissRequest = { vm.closeFoundFaces() },
             title = { Text(if (!isVideo) str(R.string.faces_in_photo) else if (later) str(R.string.faces_at, clock(at)) else str(R.string.faces_now)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -243,13 +247,13 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { vm.foundFaces.value = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
-            dismissButton = { TextButton(onClick = { vm.foundFaces.value = null; adding = true }) { com.cripta.app.ui.components.ButtonText(str(R.string.without_face)) } })
+            confirmButton = { TextButton(onClick = { vm.closeFoundFaces() }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
+            dismissButton = { TextButton(onClick = { vm.closeFoundFaces(); adding = true }) { com.cripta.app.ui.components.ButtonText(str(R.string.without_face)) } })
         else picked?.let { chosen ->
             FaceEditor(null, null, people, vm,
                 onPick = { id -> vm.addFoundFace(file, chosen, id, "") },
                 onNew = { name -> vm.addFoundFace(file, chosen, null, name) },
-                onDismiss = { picked = null; vm.foundFaces.value = null })
+                onDismiss = { picked = null; vm.closeFoundFaces() })
         }
     }
     message?.let { m ->

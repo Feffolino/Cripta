@@ -306,6 +306,21 @@ class ViewerViewModel @Inject constructor(
     /** "Aggiungi un volto": the faces at the player's spot (null: none asked, empty: still looking or none). */
     val foundFaces = MutableStateFlow<List<com.cripta.app.data.face.FaceRepository.FoundFace>?>(null)
     val findingFaces = MutableStateFlow(false)
+    /** The media [foundFaces] belong to: the dialog is only shown on that one. */
+    val foundFacesFile = MutableStateFlow<String?>(null)
+    /** Bumped when a search starts or its dialog closes: an older search finishing later is dropped. */
+    private var findToken = 0
+
+    /** Close the "add a face" dialog and forget a search still running (it must not reopen it). */
+    fun closeFoundFaces() {
+        findToken++
+        foundFaces.value = null; foundFacesFile.value = null; findingFaces.value = false
+    }
+
+    /** The dialog belongs to another media than [fileId] (the viewer moved on): close it. */
+    fun closeFoundFacesUnless(fileId: String) {
+        if (foundFacesFile.value != null && foundFacesFile.value != fileId) closeFoundFaces()
+    }
     /** Where the last search started (ms): faces found later than this were found further on. */
     val findStart = MutableStateFlow(0L)
     /**
@@ -314,17 +329,21 @@ class ViewerViewModel @Inject constructor(
      */
     fun findFaces(file: com.cripta.app.data.db.FileEntity, from: Long? = null) = faceAction {
         val at = from ?: playerSpots.value[file.id]?.positionMs ?: 0L
+        val token = ++findToken
         findStart.value = at
+        foundFacesFile.value = file.id
         findingFaces.value = true; foundFaces.value = emptyList()
         try {
             val list = faces.facesFrom(file, at)
+            // Closed, or another media's search started, meanwhile: these faces are not for the dialog now.
+            if (token != findToken) return@faceAction
             foundFaces.value = list
             list.firstOrNull()?.timeMs?.takeIf { it > at }?.let { seekPlayer(file.id, it) }
-        } finally { findingFaces.value = false }
+        } finally { if (token == findToken) findingFaces.value = false }
     }
     fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceAction {
         faces.addFace(file, f, personId ?: faces.newPerson(newName))
-        foundFaces.value = null
+        closeFoundFaces()
         // A face added by hand teaches what the person looks like here: their other faces of the video too.
         if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType)) com.cripta.app.work.ConversionService.startFaceRefine(appContext, listOf(file.id))
     }
@@ -529,7 +548,10 @@ class ViewerViewModel @Inject constructor(
      *  even if the viewer has since swiped to another page). */
     private val _convertedOriginalId = MutableStateFlow<String?>(null)
     val convertedOriginalId: StateFlow<String?> = _convertedOriginalId
-    fun clearConverted() { _convertedId.value = null; _convertedOriginalId.value = null }
+    /** The original's name, so the question says which video it is about (it may not be on screen). */
+    private val _convertedOriginalName = MutableStateFlow<String?>(null)
+    val convertedOriginalName: StateFlow<String?> = _convertedOriginalName
+    fun clearConverted() { _convertedId.value = null; _convertedOriginalId.value = null; _convertedOriginalName.value = null }
 
     /**
      * Answer the completion prompt: delete (to the trash) or keep the just-converted original.
@@ -551,12 +573,14 @@ class ViewerViewModel @Inject constructor(
                 if (event.ask) {
                     _convertedId.value = event.newId
                     _convertedOriginalId.value = event.originalId
+                    _convertedOriginalName.value = runCatching { repo.fileById(event.originalId)?.originalName }.getOrNull()
                 } else {
                     _message.value = str(R.string.converted_mp4)
                     // Replaced: the original is in the trash now (a missing page), its copy takes
                     // its place, so the viewer shows the MP4 instead of moving on or closing.
+                    // Only when it was replaced: "keep both" leaves the original's page where it is.
                     val i = liveIds.indexOf(event.originalId)
-                    if (i >= 0 && event.newId !in liveIds) liveIds[i] = event.newId
+                    if (event.replaced && i >= 0 && event.newId !in liveIds) liveIds[i] = event.newId
                 }
                 _refresh.value++
             }

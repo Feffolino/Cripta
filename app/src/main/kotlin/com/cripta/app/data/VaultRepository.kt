@@ -61,7 +61,7 @@ class VaultRepository @Inject constructor(
     // --- Video conversion events (foreground service -> UI) ---
     /** Emitted after a video is successfully transcoded+encrypted into the vault. */
     /** [ask] = the user chose to be asked whether to delete the original (otherwise it's handled). */
-    data class ConversionEvent(val originalId: String, val newId: String, val ask: Boolean = true)
+    data class ConversionEvent(val originalId: String, val newId: String, val ask: Boolean = true, val replaced: Boolean = true)
     private val _convertEvents =
         kotlinx.coroutines.flow.MutableSharedFlow<ConversionEvent>(extraBufferCapacity = 16)
     val convertEvents: kotlinx.coroutines.flow.SharedFlow<ConversionEvent> = _convertEvents

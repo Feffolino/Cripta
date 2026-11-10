@@ -654,10 +654,17 @@ fun ViewerScreen(
     }
     if (convertedId != null) {
         val originalId by vm.convertedOriginalId.collectAsStateWithLifecycle()
+        val originalName by vm.convertedOriginalName.collectAsStateWithLifecycle()
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { vm.clearConverted() },
             title = { Text(str(R.string.video_converted)) },
-            text = { Text(str(R.string.video_converted_text)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // The video the question is about: it may not be the one on screen.
+                    originalName?.let { Text(it, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                    Text(str(R.string.video_converted_text))
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     // The original's page leaves the list (the viewer moves on instead of closing).

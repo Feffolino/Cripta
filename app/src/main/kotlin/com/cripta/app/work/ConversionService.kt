@@ -912,7 +912,7 @@ class ConversionService : Service() {
                 com.cripta.app.data.ConvertAfter.KEEP_BOTH -> notifyResult(str(R.string.n_convert_done), str(R.string.n_mp4_added))
             }
             repo.emitConvertResult(
-                VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK)
+                VaultRepository.ConversionEvent(id, newFile.id, ask = mode == com.cripta.app.data.ConvertAfter.ASK, replaced = replace)
             )
             result = true to when {
                 replace -> str(R.string.n_converted_trash, newFile.originalName)
