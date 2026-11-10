@@ -434,7 +434,7 @@
     <string name="icon_for">“%1$s” 검색 결과</string>
     <string name="icon_most_used">자주 사용</string>
     <string name="icon_all_short">전체</string>
-    <string name="icon_credit">Tabler Icons Filled (MIT). 검색어는 Unicode CLDR에서 제공합니다.</string>
+    <string name="icon_credit">Fluent Emoji Flat, Microsoft (MIT). 검색어는 Unicode CLDR에서 제공합니다.</string>
     <string name="favorites">즐겨찾기</string>
     <string name="back">뒤로</string>
     <string name="favorites_sort">즐겨찾기 정렬</string>

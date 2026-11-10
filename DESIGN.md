@@ -64,7 +64,7 @@ Tabler Icons v3.49.0 (MIT, licence in `assets/licenses/`), outline, converted to
 `res/drawable/tabler_*.xml` and reached only through `ui/theme/CriptaIcons.kt` (properties keep the
 Material names). The navigation bar shows the outline at rest and the filled glyph on the current
 tab. The player's Media3 transport icons are Tabler too (`res/values/exo_controls_tabler.xml`).
-Tags and folders share a manually selected subset of Tabler Icons Filled (see Components).
+Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
 
 ## Structure
 
@@ -108,12 +108,21 @@ Tags and folders share a manually selected subset of Tabler Icons Filled (see Co
   apart from Off even with tag colours off. The tick takes the room of the dot, the pin or the
   tag's icon: turning a tag on or off never changes the pill's width (nothing after it moves). Over a picture (`onImage = true`) the pill is
   the tag colour at 45% (On: 90%) on a light dark glass, with a 1dp rim of the same colour at 85%, text
-  white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour.
+  white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour (or the
+  tag's icon at 55%).
   Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
   a weight (it would measure to nothing in a LazyRow).
-- **Tag icons** (`ui/tagicons/`): Tabler Icons Filled (MIT, licence in
-  `assets/tagicons/`), one colour, drawn in the pill's text colour before the name (in place of
-  the colour dot). Both editors offer icons fitting the tag or folder name in the app language and
+- **Tag icons** (`ui/tagicons/`): Fluent Emoji Flat by Microsoft (MIT, licence in
+  `assets/tagicons/`), about 1,480 emoji drawn in their own colours, before the name in place of the
+  colour dot. They are never tinted: not by the tag colour, the text colour or the state, and tag
+  colours off (Impostazioni › Etichette) leave them as they are. A Plain pill shows the icon in full,
+  Off at 55% opacity, On and Excluded put the tick or the "no" sign in its place; over a picture
+  it is as in the other states. On a folder it sits on the colour disc, which keeps the folder's
+  colour. The set has no skin tones and leaves out the abstract signs, the arrows, the keycaps and
+  the few drawings that need a filter or are too detailed for 14 to 18dp (`scripts/tagicons.py`
+  builds it from the npm package, with the names and keywords in the twelve languages from Unicode
+  CLDR). Icon names saved by earlier versions (Tabler's, Fluent's) still lead to their closest
+  emoji (`legacy.txt`, `TagIcons.migrationResolver`). Both editors offer icons fitting the tag or folder name in the app language and
   English, common icons, and a searchable list. Folder customisation shows the search and results
   beside its colour controls. On a cover a tag shows only its symbol or its
   acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
@@ -121,7 +130,8 @@ Tags and folders share a manually selected subset of Tabler Icons Filled (see Co
   with its icon, else its alias (two characters at most), else its initial; **Pillole piene**,
   pills with the icon and alias. Both are opaque, no rim, filled with the tag colour (the accent
   when tag colours are off) with 28% black mixed in, darkened further on a light colour of the
-  user's own until white reaches 3:1 (`coverMarkFill`); glyph and text always white. The "+N"
+  user's own until white reaches 3:1 (`coverMarkFill`); the icon in its own colours, the alias
+  always white. The "+N"
   mark stays on the dark glass, white. Both pack from the bottom edge in up to 3 rows, then "+N".
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the

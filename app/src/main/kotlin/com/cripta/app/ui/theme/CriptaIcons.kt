@@ -14,7 +14,7 @@ import com.cripta.app.R
  *
  * Plain values, not composables, so they work where Material's did: enums, lists, gesture callbacks.
  * Built on first use from the app's resources ([init] runs in CriptaApp.onCreate). The tags' own
- * icons are not here: they are TagIcons (Tabler Filled).
+ * icons are not here: they are TagIcons (Fluent Emoji Flat).
  */
 object CriptaIcons {
     private lateinit var res: Resources

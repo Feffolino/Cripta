@@ -476,7 +476,7 @@
     <string name="icon_for">Para “%1$s”</string>
     <string name="icon_most_used">Mais usados</string>
     <string name="icon_all_short">Todos</string>
-    <string name="icon_credit">Tabler Icons Filled (MIT). Termos de busca do Unicode CLDR.</string>
+    <string name="icon_credit">Fluent Emoji Flat, Microsoft (MIT). Termos de busca do Unicode CLDR.</string>
     <string name="favorites">Favoritos</string>
     <string name="back">Voltar</string>
     <string name="favorites_sort">Ordenar favoritos</string>

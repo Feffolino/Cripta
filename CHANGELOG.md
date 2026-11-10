@@ -7,9 +7,7 @@ Entries marked **stable** went out as a stable release.
 
 - Scroll the tag colour swatches sideways on one line
 - Make the grid auto-scroll during a drag start later and speed up more gently
-- Keep the icon on more tags and folders from the old emoji set (706 names mapped instead of 253), and turn Fluent's mouse into a paw
-- Apply the manually selected Tabler Filled catalog to tags and folders, and search for icons by folder name
-- Use Tabler Filled for tag and folder icons, with search in all twelve app languages
+- Draw tag and folder icons as Fluent Emoji Flat in full colour (about 1,480 emoji, searchable by name in all twelve app languages); icons saved before keep working
 - Improve sort sheet contrast and labels, and enlarge the People favourite target `d9c5d88`
 - Test saved viewer settings and the order of hidden favourites `e74e128`
 - Show loading placeholders for the Intro and ending analysis summary `defa38a`

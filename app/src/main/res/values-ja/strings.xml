@@ -434,7 +434,7 @@
     <string name="icon_for">「%1$s」の検索結果</string>
     <string name="icon_most_used">よく使うアイコン</string>
     <string name="icon_all_short">すべて</string>
-    <string name="icon_credit">Tabler Icons Filled（MIT）。検索語は Unicode CLDR に基づきます。</string>
+    <string name="icon_credit">Fluent Emoji Flat, Microsoft（MIT）。検索語は Unicode CLDR に基づきます。</string>
     <string name="favorites">お気に入り</string>
     <string name="back">戻る</string>
     <string name="favorites_sort">お気に入りの並び順</string>

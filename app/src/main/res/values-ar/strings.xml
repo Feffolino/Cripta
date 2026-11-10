@@ -539,7 +539,7 @@
     <string name="icon_for">لـ«%1$s»</string>
     <string name="icon_most_used">الأكثر استخداماً</string>
     <string name="icon_all_short">الكل</string>
-    <string name="icon_credit">Tabler Icons Filled (MIT). مصطلحات البحث من Unicode CLDR.</string>
+    <string name="icon_credit">Fluent Emoji Flat, Microsoft (MIT). مصطلحات البحث من Unicode CLDR.</string>
     <string name="favorites">المفضلة</string>
     <string name="back">رجوع</string>
     <string name="favorites_sort">ترتيب المفضلة</string>

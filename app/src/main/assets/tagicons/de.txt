@@ -1,578 +1,1482 @@
-accessible	♿	Symbol „Rollstuhl“	Rollstuhl|Symbol „Rollstuhl“|barrierefrei|behindertengerecht
-aerial-lift	🚡	Bergseilbahn	Bergseilbahn|Gondel|Seilbahn
-air-balloon		Heißluftballon	Heißluftballon
-alarm	⏰	Wecker	Uhr|Uhrzeit|Wecker|Zeit
-alert-circle		Warnung Kreis	Warnung Kreis
-alert-triangle		Warnung Dreieck	Warnung Dreieck
-alien	👽	Außerirdischer	Alien|All|Außerirdische|Außerirdischer|Fantasy|Gesicht|Monster|Märchen|UFO|Weltraum|Wesen|außerirdisch
-apple	🍎	roter Apfel	Apfel|Frucht|Obst|rot|roter Apfel
-archive		Archiv	Archiv
-arrow-badge-down		Pfeil Ausweis unten	Pfeil Ausweis unten
-arrow-badge-left		Pfeil Ausweis links	Pfeil Ausweis links
-arrow-badge-right		Pfeil Ausweis rechts	Pfeil Ausweis rechts
-arrow-badge-up		Pfeil Ausweis oben	Pfeil Ausweis oben
-arrow-big-down		Pfeil groß unten	Pfeil groß unten
-arrow-big-left		Pfeil groß links	Pfeil groß links
-arrow-big-right		Pfeil groß rechts	Pfeil groß rechts
-arrow-big-up		Pfeil groß oben	Pfeil groß oben
-artboard		Zeichenfläche	Zeichenfläche
-article		Artikel	Artikel
-asset		Ressource	Ressource
-atom-2		Atom 2	Atom 2
-automatic-gearbox		Automatikgetriebe	Automatikgetriebe
-award	🏅	Sportmedaille	Gewinn|Goldmedaille|Medaille|Sportmedaille
-baby-carriage		Kinderwagen	Kinderwagen
-badge-3d		Ausweis 3d	Ausweis 3d
-badge-4k		Ausweis 4k	Ausweis 4k
-badge-8k		Ausweis 8k	Ausweis 8k
-badge-ad		Ausweis Werbung	Ausweis Werbung
-badge-ar		Ausweis ar	Ausweis ar
-badge-cc		Ausweis cc	Ausweis cc
-badge-hd		Ausweis hd	Ausweis hd
-badge-sd		Ausweis sd	Ausweis sd
-badge-tm		Ausweis tm	Ausweis tm
-badge-vo		Ausweis vo	Ausweis vo
-badge-vr		Ausweis vr	Ausweis vr
-badge		Ausweis	Ausweis
-badges		Abzeichen	Abzeichen
-ball-bowling	🎳	Bowling	Bowling|Bowlingkugel|Kugel|Spiel
-balloon	🎈	Luftballon	Ballon|Feier|Geburtstag|Luftballon
-ballpen	🖊	Kugelschreiber	Kugelschreiber|Stift
-bandage	🩹	Heftpflaster	Heftpflaster|Pflaster|Wunde|verletzt
-barbell		Langhantel	Langhantel
-barrier-block		Sperre Block	Sperre Block
-basket	🧺	Korb	Bauernhof|Korb|Landwirtschaft|Picknick|Tragekorb|Wäsche|Wäschekorb
-bath		Badewanne	Badewanne
-battery-automotive		Batterie Auto	Batterie Auto
-battery-vertical-1		Batterie vertikal 1	Batterie vertikal 1
-bed-flat		Bett flach	Bett flach
-bed	🛏	Bett	Bett|Hotel|schlafen|Übernachtung
-beer	🍺 🍻	Bierkrug	Bar|Bier|Bierkrug|Bierkrüge|Krug|Oktoberfest|Weizen|Weizenbier|anstoßen|prosit|prost
-bell-ringing-2		Glocke klingelnd 2	Glocke klingelnd 2
-bell-ringing		Glocke klingelnd	Glocke klingelnd
-bell	🔔	Glocke	Glocke|Klingeling|Ton eingeschaltet|ding dong
-bike	🚲	Fahrrad	BMX|Fahrrad|Rad|Radeln|Radler|Spinning
-binoculars		Fernglas	Fernglas
-biohazard	☣	Biogefährdung	Biogefährdung|Zeichen
-blade		Klinge	Klinge
-blender		Standmixer	Standmixer
-bolt	⚡	Hochspannung	Blitz|Elektrizität|Gefahr|Gewitter|Hochspannung|Hochspannungszeichen|Strom
-bomb	💣	Bombe	Bombe|Comic|Dynamit|Explodieren
-bone	🦴	Knochen	Hund|Hundeknochen|Kauknochen|Knochen|Skelett
-bong		Bong	Bong
-book	📕	geschlossenes Buch	Buch|Geschlossenes Buch|geschlossen|geschlossenes Buch
-bookmark	🔖	Lesezeichen	Etikett|Lesen|Lesezeichen
-bookmarks		Lesezeichen	Lesezeichen
-bottle		Flasche	Flasche
-bow		Schleife	Schleife
-bowl-chopsticks	🥢	Essstäbchen	Essstäbchen|Hashi|Stäbchen|chinesisches essen|essen|japanisches essen|stäbchen
-bowl-spoon	🥣	Schüssel mit Löffel	Cerealien|Frühstück|Reisbrei|Schüssel mit Löffel|brei|essen|haferbrei|schüssel|suppe
-bowl		Schüssel	Schüssel
-brand-apple		Marke apple	Marke apple
-brand-discord		Marke discord	Marke discord
-brand-dribbble		Marke dribbble	Marke dribbble
-brand-facebook		Marke facebook	Marke facebook
-brand-github		Marke github	Marke github
-brand-google		Marke google	Marke google
-brand-instagram		Marke instagram	Marke instagram
-brand-kick		Marke kick	Marke kick
-brand-linkedin		Marke linkedin	Marke linkedin
-brand-messenger		Marke messenger	Marke messenger
-brand-open-source		Marke offen Quelle	Marke offen Quelle
-brand-opera		Marke opera	Marke opera
-brand-paypal		Marke paypal	Marke paypal
-brand-pinterest		Marke pinterest	Marke pinterest
-brand-signal		Marke Signal	Marke Signal
-brand-sketch		Marke sketch	Marke sketch
-brand-snapchat		Marke snapchat	Marke snapchat
-brand-spotify		Marke spotify	Marke spotify
-brand-steam		Marke Dampf	Marke Dampf
-brand-tabler		Marke tabler	Marke tabler
-brand-tiktok		Marke tiktok	Marke tiktok
-brand-tinder		Marke tinder	Marke tinder
-brand-tumblr		Marke tumblr	Marke tumblr
-brand-twitter		Marke twitter	Marke twitter
-brand-vimeo		Marke vimeo	Marke vimeo
-brand-whatsapp		Marke whatsapp	Marke whatsapp
-brand-windows		Marke windows	Marke windows
-brand-x		Marke x	Marke x
-brand-youtube		Marke youtube	Marke youtube
-bread	🍞	Brot	Brot|Brotlaib|Essen|Kohlenhydrate|Laib Brot|Toast|Weizen|Weißbrot
-briefcase-2		Aktentasche 2	Aktentasche 2
-briefcase	💼	Aktentasche	Aktentasche|Tasche
-bubble-text		Sprechblase Text	Sprechblase Text
-bubble		Sprechblase	Sprechblase
-bug	🐛	Raupe	Insekt|Raupe|Tier|gefräßig
-building-bridge-2		Brücke	Brücke
-bulb	💡	Glühbirne	Glühbirne|Idee|Lampe|Licht|hell
-bus	🚌	Bus	Bus|Fahrzeug|Schulbus
-butterfly	🦋	Schmetterling	Insekt|Schmetterling|schön
-cactus	🌵	Kaktus	Dürre|Kaktus|Natur|Pflanze|Trockenzeit|Wüste
-calculator		Taschenrechner	Taschenrechner
-calendar-event		Kalender Ereignis	Kalender Ereignis
-calendar-month		Kalender Monat	Kalender Monat
-calendar-week		Kalender Woche	Kalender Woche
-calendar	📅	Kalender	Datum|Kalender|Kalenderblatt
-camera	📷	Fotoapparat	Fotoapparat|Fotos|Kamera
-campfire		Lagerfeuer	Lagerfeuer
-candle	🕯	Kerze	Kerze|Licht
-cannabis		Cannabis	Cannabis
-capsule-horizontal		Kapsel horizontal	Kapsel horizontal
-capsule		Kapsel	Kapsel
-car-4wd		Geländewagen	Geländewagen
-car-crane		Autokran	Autokran
-car-fan		Auto Ventilator	Auto Ventilator
-car-suv		Auto SUV	Auto SUV
-car	🚗	Auto	Auto|Fahrzeug|Verkehr|fahren|rot
-carambola		Sternfrucht	Sternfrucht
-caravan		Wohnwagen	Wohnwagen
-cardboards		VR-Brille aus Pappe	VR-Brille aus Pappe
-cards		Spielkarten	Spielkarten
-cash-banknote		Geldschein	Geldschein
-charging-pile		Ladesäule	Ladesäule
-check		Häkchen	Häkchen
-chef-hat		Kochmütze	Kochmütze
-cherry	🍒	Kirschen	Frucht|Kirsche|Kirschen|Obst
-chess-bishop		Schachläufer	Schachläufer
-chess-king		Schachkönig	Schachkönig
-chess-knight		Schachspringer	Schachspringer
-chess-queen		Schachdame	Schachdame
-chess-rook		Schachturm	Schachturm
-chess		Schach	Schach
-christmas-tree	🎄	Weihnachtsbaum	Baum|Tanne|Weihnachten|Weihnachtsbaum
-circle-key		Kreis Schlüssel	Kreis Schlüssel
-circle-letter-a		Kreis Buchstabe a	Kreis Buchstabe a
-circle-letter-b		Kreis Buchstabe b	Kreis Buchstabe b
-circle-letter-c		Kreis Buchstabe c	Kreis Buchstabe c
-circle-letter-d		Kreis Buchstabe d	Kreis Buchstabe d
-circle-letter-e		Kreis Buchstabe e	Kreis Buchstabe e
-circle-letter-f		Kreis Buchstabe f	Kreis Buchstabe f
-circle-letter-g		Kreis Buchstabe g	Kreis Buchstabe g
-circle-letter-h		Kreis Buchstabe h	Kreis Buchstabe h
-circle-letter-i		Kreis Buchstabe i	Kreis Buchstabe i
-circle-letter-j		Kreis Buchstabe j	Kreis Buchstabe j
-circle-letter-k		Kreis Buchstabe k	Kreis Buchstabe k
-circle-letter-l		Kreis Buchstabe l	Kreis Buchstabe l
-circle-letter-m		Kreis Buchstabe m	Kreis Buchstabe m
-circle-letter-n		Kreis Buchstabe n	Kreis Buchstabe n
-circle-letter-o		Kreis Buchstabe o	Kreis Buchstabe o
-circle-letter-p		Kreis Buchstabe p	Kreis Buchstabe p
-circle-letter-q		Kreis Buchstabe q	Kreis Buchstabe q
-circle-letter-r		Kreis Buchstabe r	Kreis Buchstabe r
-circle-letter-s		Kreis Buchstabe s	Kreis Buchstabe s
-circle-letter-t		Kreis Buchstabe t	Kreis Buchstabe t
-circle-letter-u		Kreis Buchstabe u	Kreis Buchstabe u
-circle-letter-v		Kreis Buchstabe v	Kreis Buchstabe v
-circle-letter-w		Kreis Buchstabe w	Kreis Buchstabe w
-circle-letter-x		Kreis Buchstabe x	Kreis Buchstabe x
-circle-letter-y		Kreis Buchstabe y	Kreis Buchstabe y
-circle-letter-z		Kreis Buchstabe z	Kreis Buchstabe z
-circle-number-0		Kreis Zahl 0	Kreis Zahl 0
-circle-number-1		Kreis Zahl 1	Kreis Zahl 1
-circle-number-2		Kreis Zahl 2	Kreis Zahl 2
-circle-number-3		Kreis Zahl 3	Kreis Zahl 3
-circle-number-4		Kreis Zahl 4	Kreis Zahl 4
-circle-number-5		Kreis Zahl 5	Kreis Zahl 5
-circle-number-6		Kreis Zahl 6	Kreis Zahl 6
-circle-number-7		Kreis Zahl 7	Kreis Zahl 7
-circle-number-8		Kreis Zahl 8	Kreis Zahl 8
-circle-number-9		Kreis Zahl 9	Kreis Zahl 9
-circle-percentage		Kreis Prozent	Kreis Prozent
-circle		Kreis	Kreis
-clipboard-check		Klemmbrett Häkchen	Klemmbrett Häkchen
-clipboard-data		Klemmbrett Daten	Klemmbrett Daten
-clipboard-plus		Klemmbrett Plus	Klemmbrett Plus
-clipboard-text		Klemmbrett Text	Klemmbrett Text
-clipboard-x		Klemmbrett x	Klemmbrett x
-clipboard	📋	Klemmbrett	Clipboard|Clpboard|Klemmbrett|Zwischenablage
-clock-hour-1		Uhr Stunde 1	Uhr Stunde 1
-clock-hour-10		Uhr Stunde 10	Uhr Stunde 10
-clock-hour-11		Uhr Stunde 11	Uhr Stunde 11
-clock-hour-12		Uhr Stunde 12	Uhr Stunde 12
-clock-hour-2		Uhr Stunde 2	Uhr Stunde 2
-clock-hour-3		Uhr Stunde 3	Uhr Stunde 3
-clock-hour-4		Uhr Stunde 4	Uhr Stunde 4
-clock-hour-5		Uhr Stunde 5	Uhr Stunde 5
-clock-hour-6		Uhr Stunde 6	Uhr Stunde 6
-clock-hour-7		Uhr Stunde 7	Uhr Stunde 7
-clock-hour-8		Uhr Stunde 8	Uhr Stunde 8
-clock-hour-9		Uhr Stunde 9	Uhr Stunde 9
-clock		Uhr	Uhr
-cloud-computing		Cloud-Computing	Cloud-Computing
-cloud	☁	Wolke	Wetter|Wolke|wolkig
-clover	🍀	Glücksklee	Blatt|Glück|Glücksklee|Klee|Kleeblatt|Pflanze|Silverster|Vierblättriges Kleeblatt|vier|vierblättrig
-clubs	♣	Kreuz	Kartenspiel|Kreuz
-code-circle-2		Code Kreis 2	Code Kreis 2
-code-circle		Code Kreis	Code Kreis
-coin-bitcoin		Münze Bitcoin	Münze Bitcoin
-coin-euro		Münze Euro	Münze Euro
-coin-monero		Münze Monero	Münze Monero
-coin-pound		Münze Pfund Sterling	Münze Pfund Sterling
-coin-rupee		Münze Rupie	Münze Rupie
-coin-taka		Münze Taka	Münze Taka
-coin-yen		Münze Yen	Münze Yen
-coin-yuan		Münze Yuan	Münze Yuan
-coin	🪙	Münze	Dollar|Euro|Geld|Gold|Goldesel|Metall|Münze|Schatz|Silber|bezahlen|reich|sparen
-compass	🧭	Kompass	Himmelsrichtung|Kompass|Navigation|Orientierung|Richtung|Windrose|magnetisch
-cone-2		Kegel 2	Kegel 2
-cone		Kegel	Kegel
-confetti	🎊 🎉	Konfettiball	Böller|Feier|Knaller|Konfetti|Konfettiball|Konfettibombe|Party|juhu|super|yay
-cookie-man		Keks Mann	Keks Mann
-cookie	🍪	Keks	Cookie|Keks|Plätchen
-copyleft		Copyleft	Copyleft
-copyright	©	Copyright	C|Copyright
-credit-card	💳	Kreditkarte	Bankkarte|EC-Karte|Geldkarte|Guthaben|Karte|Kreditkarte
-crop-1-1		Zuschnitt 1 1	Zuschnitt 1 1
-crop-16-9		Zuschnitt 16 9	Zuschnitt 16 9
-crop-3-2		Zuschnitt 3 2	Zuschnitt 3 2
-crop-5-4		Zuschnitt 5 4	Zuschnitt 5 4
-crop-7-5		Zuschnitt 7 5	Zuschnitt 7 5
-crop-landscape		Zuschnitt Querformat	Zuschnitt Querformat
-crop-portrait		Zuschnitt Hochformat	Zuschnitt Hochformat
-cross	✝	lateinisches Kreuz	Christentum|Kreuz|Religion|lateinisch|römisch
-crown	👑	Krone	Kopfbedeckung|Krone|König|Königin|Majestät
-database		Datenbank	Datenbank
-device-cctv		Gerät Videoüberwachung	Gerät Videoüberwachung
-device-desktop	🖥	Desktopcomputer	Bildschirm|Computer|Desktop|Desktopcomputer|Monitor|iMac
-device-floppy	💾	Diskette	Datenträger|Diskette
-device-gamepad-2		Gerät Gamepad 2	Gerät Gamepad 2
-device-gamepad-3		Gerät Gamepad 3	Gerät Gamepad 3
-device-gamepad	🎮	Gamepad	Gamepad|Gaming|Unterhaltung|Videospiel
-device-heart-monitor		Herzmonitor	Herzmonitor
-device-imac		Gerät imac	Gerät imac
-device-ipad		Gerät ipad	Gerät ipad
-device-mobile	📱	Mobiltelefon	Handy|Mobiltelefon|Smartphone|iPhone|telefonieren
-device-remote		Gerät Fernbedienung	Gerät Fernbedienung
-device-speaker	🔊	Lautsprecher mit hoher Lautstärke	Dezibel|Lautsprecher mit drei Schallwellen|Lautsprecher mit hoher Lautstärke|Musik|Schallwellen|laut
-device-tablet		Gerät Tablet	Gerät Tablet
-device-tv-old		alter Fernseher	alter Fernseher
-device-tv	📺	Fernseher	Fernsehen|Fernseher|Film|TV
-device-unknown		Gerät unbekannt	Gerät unbekannt
-device-usb		Gerät USB	Gerät USB
-device-watch	⌚	Armbanduhr	Armbanduhr|Uhr|Zeit
-diamond	💎	Edelstein	Diamant|Edelstein
-diamonds	♦	Karo	Karo|Kartenspiel
-dice-1		Würfel 1	Würfel 1
-dice-2		Würfel 2	Würfel 2
-dice-3		Würfel 3	Würfel 3
-dice-4		Würfel 4	Würfel 4
-dice-5		Würfel 5	Würfel 5
-dice-6		Würfel 6	Würfel 6
-dice	🎲	Spielwürfel	Casino|Spiel|Spielwürfel|Unterhaltung|Würfel|Zufall|würfeln
-directions		Wegbeschreibung	Wegbeschreibung
-disc	💿	CD	Blu-Ray|CD|DVD
-discount		Rabatt	Rabatt
-download		herunterladen	herunterladen
-drop-circle		Tropfen Kreis	Tropfen Kreis
-droplet	💧	Tropfen	Schweiß|Tropfen|Träne|Wasser|Wassertropfen
-droplets		Tropfen	Tropfen
-dual-screen		doppelt Leinwand	doppelt Leinwand
-dumpling	🥟	Teigtasche	Empanada|Gyōza|Jiaozi|Pierogi|Teigtasche|chinesische Teigtasche|dumpling|empanada|essen|kloß|potsticker
-egg-cracked		Ei gesprungen	Ei gesprungen
-egg-fried	🍳	Spiegelei in Bratpfanne	Bratpfanne|Kochen|Pfanne|Spiegelei|Spiegelei in Bratpfanne|braten
-egg	🥚	Ei	Ei|Frühstück|Frühstücksei
-elevator	🛗	Fahrstuhl	Aufzug|Fahrstuhl|Haus|Lift|Symbol|Transport
-engine		Motor	Motor
-escalator-down		Rolltreppe unten	Rolltreppe unten
-escalator-up		Rolltreppe oben	Rolltreppe oben
-escalator		Rolltreppe	Rolltreppe
-explicit		explizite Inhalte	explizite Inhalte
-eye	👁	Auge	Auge|Blick|Körper|Körperteil|schauen|sehen
-eyeglass-2		Brille 2	Brille 2
-eyeglass	👓	Brille	Accessoire|Brille
-face-mask	😷	Gesicht mit Atemschutzmaske	Arzt|Atemschutzmaske|Bazillen|Gesicht|Krankheit|Mund|Mundschutz|Schutzmaske|Smiley|Viren|Virus|erkältet|krank
-favicon		Website-Symbol	Website-Symbol
-feather	🪶	Feder	Feder|Federn|Gefieder|Vogelfeder|federleicht|fliegen|leicht
-fence		Zaun	Zaun
-ferry	⛴	Fähre	Fähre|Schiff
-fidget-spinner		Fidget Spinner	Fidget Spinner
-file-check		Datei Häkchen	Datei Häkchen
-file-code		Datei Code	Datei Code
-file-description		Datei Beschreibung	Datei Beschreibung
-file-dollar		Datei Dollar	Datei Dollar
-file-euro		Datei Euro	Datei Euro
-file-horizontal		Datei horizontal	Datei horizontal
-file-invoice		Datei Rechnung	Datei Rechnung
-file-music		Datei Musik	Datei Musik
-file-neutral		Datei neutral	Datei neutral
-file-sad		Datei traurig	Datei traurig
-file-smile		Datei Lächeln	Datei Lächeln
-file-star		Datei Stern	Datei Stern
-file-text		Datei Text	Datei Text
-file-time		Datei Zeit	Datei Zeit
-file		Datei	Datei
-files		Dateien	Dateien
-fish-bone		Fischgräte	Fischgräte
-flag-2		Flagge 2	Flagge 2
-flag-3		Flagge 3	Flagge 3
-flag	🏁	Zielflagge	Flagge|Rennen|Sport|Zielflagge|formel 1|karierte Flagge|nascar
-flame	🔥	Feuer	Feuer|Flamme|brennen|heiß
-flare		Lichtschein	Lichtschein
-flask-2		Kolben 2	Kolben 2
-flask		Kolben	Kolben
-flower		Blume	Blume
-folder-open	📂	geöffneter Ordner	Dokument|Geöffneter Ordner|Ordner|geöffneter Ordner|offen
-folder	📁	Ordner	Akten|Büro|Dokument|Ordner|geschlossen
-folders		Ordner	Ordner
-forbid-2		Verbot 2	Verbot 2
-forbid	🚫	Verboten	Kein-Zutritt-Zeichen|Verboten|Verbotszeichen|kein zutritt
-fountain	⛲	Springbrunnen	Brunnen|Garten|Park|Springbrunnen
-garden-cart		Gartenwagen	Gartenwagen
-gas-station		Tankstelle	Tankstelle
-ghost-2		Gespenst 2	Gespenst 2
-ghost-3		Gespenst 3	Gespenst 3
+eye-in-speech-bubble	👁‍🗨	Auge in Sprechblase	Auge|Dialog|Sprechblase|Zeuge|reden|sprechen
+ogre	👹	Ungeheuer	Gesicht|Japan|Maske|Monster|Märchen|Oger|Ungeheuer|gruselig|japanisch
+goblin	👺	Kobold	Gesicht|Japan|Kobold|Maske|Monster|Märchen|Tengu|Ungeheuer|gemein|japanisch|wütend
 ghost	👻	Gespenst	Fantasy|Geist|Gesicht|Gespenst|Halloween|Märchen|Spuk|Zunge|buh|gruselig
-gift-card		Geschenkkarte	Geschenkkarte
-gift	🎁	Geschenk	Feier|Geburtstag|Geschenk|Schachtel|Schleife|Weihnachten|verpackt|Überraschung
-glass-full	🍷	Weinglas	Alkohol|Bar|Glas|Wein|Weinglas
-glass		Glas	Glas
-globe	🌐 🌍 🌎 🌏	Globus mit Meridianen	Afrika|Asien|Australien|Breitengrad|Erde|Europa|Globus|Globus mit Amerika|Globus mit Asien und Australien|Globus mit Europa und Afrika|Globus mit Meridianen|Längengrad|Nordamerika|Südamerika|Weltkugel
-golf	⛳	Golffahne	Golffahne|Golfplatz
-guitar-pick		Plektrum	Plektrum
-hanger-2		Kleiderbügel 2	Kleiderbügel 2
-headphones	🎧	Kopfhörer	Kopfhörer|Musik|Unterhaltung
-headset		Headset	Headset
-heart-broken	💔	gebrochenes Herz	Gefühl|Herz|Herzschmerz|Liebeskummer|Schmerz|Trennung|allein|gebrochen|traurig|zerbrochen
-heart	❤	rotes Herz	Herz|rotes Herz
-helicopter-landing		Hubschrauber Landung	Hubschrauber Landung
-helicopter	🚁	Hubschrauber	Helikopter|Hubschrauber|fliegen|reisen
-hexagon		Sechseck	Sechseck
-home-2		Haus 2	Haus 2
-home	🏠 🏡	Haus	Baum|Gebäude|Haus|Haus mit Baum|Haus mit Garten|Zuhause
-hospital-circle	🏥	Krankenhaus	Ambulanz|Arzt|Gebäude|Krankenhaus|Medizin|Notaufnahme|krank
-hourglass	⌛ ⏳	Sanduhr	Laufende Sanduhr|Prozess|Sanduhr|Vorgang läuft|Zeit|laufende Sanduhr
-icons		Symbole	Symbole
-ironing		Bügeln	Bügeln
-jetpack		Raketenrucksack	Raketenrucksack
-jewish-star	✡	Davidstern	Davidstern|Religion|jüdisch
-key	🔑	Schlüssel	Passwort|Schlüssel|schließen
-keyboard	⌨	Tastatur	Computer|Keyboard|Tastatur
-label-important		Etikett wichtig	Etikett wichtig
-label	🏷	Etikett	Etikett|Label|Marke
-leaf		Blatt	Blatt
-lego		lego	lego
-lemon-2		Zitrone 2	Zitrone 2
-library		Bibliothek	Bibliothek
-lifebuoy		Rettungsring	Rettungsring
-link	🔗	Linksymbol	Kettenglieder|Linksymbol|Verknüpfung|Verknüpfungssymbol|verknüpfen|zwei Ringe
-location		Standort	Standort
-lock-square-rounded		Schloss Quadrat abgerundet	Schloss Quadrat abgerundet
-lock	🔒 🔐	geschlossenes Schloss	Datenschutz|Geschlossenes Schloss|Schloss|Schloss mit Schlüssel|Sicherheit|geschlossen|geschlossenes Schloss|privat
-lungs	🫁	Lunge	Atem|Körper|Körperteil|Lunge|Lungenflügel|Mensch|Organ|atmen|ausatmen|einatmen
-macro		Makro	Makro
-magnet	🧲	Magnet	Anziehung|Anziehungskraft|Hufeisen|Magnet|Pole|U-Form|magnetisch|positiv negativ
-mail-opened		Post geöffnet	Post geöffnet
-mail	✉	Briefumschlag	Brief|Briefumschlag|E-Mail
+alien	👽	Außerirdischer	Alien|All|Außerirdische|Außerirdischer|Fantasy|Gesicht|Monster|Märchen|UFO|Weltraum|Wesen|außerirdisch
+alien-monster	👾	Computerspiel-Monster	Computerspiel-Monster|Gesicht|Monster|UFO
+angry-face-with-horns	👿	wütendes Gesicht mit Hörnern	Dämon|Dämonin|Fantasie|Fantasy|Gesicht|Hörner|Kobold|Märchen|Satan|Teufel|Teufelchen|böse|lila|violett|wütend
+skull	💀	Totenkopf	Gesicht|Knochen|Märchen|Schädel|Tod|Totenkopf|tot|yolo
+kiss-mark	💋	Kussabdruck	Gefühl|Knutsch|Kuss|Kussabdruck|Liebe|Lippen|Lippenstift|küssen|romantisch|sexy
+love-letter	💌	Liebesbrief	Brief|Herz|Liebe|Liebesbrief|Post|Siegel
+beating-heart	💓	schlagendes Herz	Gefühl|Herz|Herzschlag|Liebe|Puls|pulsieren|schlagen
+broken-heart	💔	gebrochenes Herz	Gefühl|Herz|Herzschmerz|Liebeskummer|Schmerz|Trennung|allein|gebrochen|traurig|zerbrochen
+two-hearts	💕	zwei Herzen	Date|Gefühl|Herz|Herzen|Hochzeitstag|Jahrestag|Küsschen|Küsse|Liebe|Rendezvous|xoxo|zwei
+sparkling-heart	💖	funkelndes Herz	Aufregung|Gefühl|Herz|Liebe|Morgen|Nacht|funkeln|glitzern|rosa|xoxo
+growing-heart	💗	wachsendes Herz	Aufregung|Gefühl|Herz|Herzschlag|Küsschen|Küsse|Liebe|Nervosität|Puls|nervös|wachsen|xoxo
+blue-heart	💙	blaues Herz	Gefühl|Herz|Liebe|blau|romantisch
+green-heart	💚	grünes Herz	Gefühl|Herz|Liebe|grün|romantisch
+yellow-heart	💛	gelbes Herz	Gefühl|Herz|Liebe|gelb|herzlich
+purple-heart	💜	lila Herz	Gefühl|Herz|Liebe|beste|hdl|lila|lilafarben|violett
+heart-with-ribbon	💝	Herz mit Schleife	Herz|Hochzeitstag|Jahrestag|Küsschen|Küsse|Liebe|Schleife|Valentinstag|xoxo
+revolving-hearts	💞	kreisende Herzen	Emotion|Gefühl|Herz|Herzen|Hochzeitstag|Jahrestag|Liebe|kreisen|süß
+heart-decoration	💟	Herzdekoration	Deko|Emotion|Gefühl|Herz|Herzdekoration|Liebe|lila|violett|weiß
+anger-symbol	💢	Ärger	Comic|Wut|Ärger
+bomb	💣	Bombe	Bombe|Comic|Dynamit|Explodieren
+zzz	💤	Schlafen	Buchstaben|Comic|Nickerchen|Schlaf|Schlafen|Schnarchen|ZZZ|gähn|langweilig|müde|öde
+collision	💥	Zusammenstoß	Bombe|Boom|Comic|Explosion|Kollision|Zusammenstoß|explodieren|kollidieren|zusammenstoßen
+sweat-droplets	💦	Schweißtropfen	Comic|Schweiß|Schweißtropfen|Training|Tropfen|Wasser|feucht|nass|schwitzen|trainieren
+dashing-away	💨	Staubwolke	Comic|Staubwolke|rennen|weglaufen
+pile-of-poo	💩	Kothaufen	Kot|Kothaufen|Mist
+dizzy	💫	schwindlig	Benommenheit|Comic|Komet|Stern|Sterne|Sternschnuppe|benommen|schwindlig
+speech-balloon	💬	Sprechblase mit drei Punkten	Comic|Dialog|Gespräch|Sprechblase|Sprechblase mit drei Punkten|Unterhaltung
+thought-balloon	💭	Gedankenblase	Comic|Gedankenblase|Nachdenken
+hundred-points	💯	100 Punkte	100|100 Punkte|Punktestand|volle Punktzahl
+hole	🕳	Loch	Loch|schwarz
+black-heart	🖤	schwarzes Herz	Herz|böse|schwarz|schwarzes Herz
+left-speech-bubble	🗨	Sprechblase links	Dialog|Sprechblase links|Unterhaltung|reden|sprechen
+right-anger-bubble	🗯	Sprechblase für wütende Aussage rechts	Sprechblase|Sprechblase für wütende Aussage rechts|wütend
+grinning-face	😀	grinsendes Gesicht	Gesicht|Smiley|froh|fröhlich|grinsen|haha|lachen|lol|lustig
+beaming-face-with-smiling-eyes	😁	strahlendes Gesicht mit lachenden Augen	Augen|Gesicht|Smiley|Zähne|fröhlich|grinsen|happy|lachen|lustig|lächeln|strahlen
+face-with-tears-of-joy	😂	Gesicht mit Freudentränen	Freude|Freudentränen|Gesicht|Smiley|Tränen|fröhlich|haha|happy|hehe|hihi|lachen|lol|lustig|muahaha|rofl|witzig
+grinning-face-with-big-eyes	😃	grinsendes Gesicht mit großen Augen	Augen|Gesicht|Mund|Smiley|fröhlich|glücklich|grinsen|große|lachen|lol|lustig|lächeln|offen
+grinning-face-with-smiling-eyes	😄	grinsendes Gesicht mit lachenden Augen	Augen|Gesicht|Mund|Smiley|fröhlich|geschlossen|glücklich|grinsen|lachen|lol|lustig|lächeln|offen|witzig
+grinning-face-with-sweat	😅	grinsendes Gesicht mit Schweißtropfen	Gesicht|Mund|Schweiß|Schweißtropfen|Smiley|grinsen|lachen|lustig|lächeln|nervös|offen|schwitzen
+grinning-squinting-face	😆	Grinsegesicht mit zugekniffenen Augen	Augen|Gesicht|Grinsegesicht|Mund|Smiley|geschlossen|grinsen|haha|hehe|hihi|lachen|lol|lustig|offen|witzig|zugekniffen|zusammengekniffen
+smiling-face-with-halo	😇	lächelndes Gesicht mit Heiligenschein	Engel|Gesicht|Heiligenschein|Lächeln|Smiley|brav|glücklich|lieb|seelig
+smiling-face-with-horns	😈	grinsendes Gesicht mit Hörnern	Dämon|Dämonin|Fantasie|Hörner|Märchen|Satan|Smiley|Teufel|böse|grinsen|lila|violett
+winking-face	😉	zwinkerndes Gesicht	Auge|Gesicht|Smiley|Zwinkern|flirten|sexy|zudrücken|zugedrückt|zukneifen|zuzwinkern
+smiling-face-with-smiling-eyes	😊	lächelndes Gesicht mit lachenden Augen	Augen|Freude|Gesicht|Wangen|erröten|freundlich|glücklich|lachen|lächeln|rot
+face-savoring-food	😋	sich die Lippen leckendes Gesicht	Gesicht|Sich die Lippen leckender Smiley|Smiley|Zunge|lecker|leckeres Essen|lächeln|sich die Lippen leckendes Gesicht
+relieved-face	😌	erleichtertes Gesicht	Augen|Gesicht|Smiley|Zen|entspannt|erleichtert|geschlossen|zufrieden
+smiling-face-with-heart-eyes	😍	lächelndes Gesicht mit herzförmigen Augen	Augen|Gesicht|Herzen|Liebe|Smiley|glücklich|herzförmig|lächeln|verliebt
+smiling-face-with-sunglasses	😎	lächelndes Gesicht mit Sonnenbrille	Gesicht|Smiley|Sonnenbrille|cool|lächeln
+smirking-face	😏	süffisant lächelndes Gesicht	Gesicht|Mundwinkel|Smiley|feixen|flirten|lächeln|schief|süffisant
+neutral-face	😐	neutrales Gesicht	Gesicht|Smiley|ausdruckslos|kommentarlos|neutral|todernst|unbeeindruckt
+expressionless-face	😑	ausdrucksloses Gesicht	Gesicht|Smiley|ausdruckslos|kommentarlos|selbstgefällig|unbeeindruckt|unglaublich
+unamused-face	😒	verstimmtes Gesicht	Gesicht|Smiley|langweilig|traurig|unglücklich|unzufrieden|verstimmt
+downcast-face-with-sweat	😓	bedrücktes Gesicht mit Schweiß	Angstschweiß|Augen|Gesicht|Kopfschmerzen|Schweiß|Smiley|bedrückt|geschlossen
+pensive-face	😔	nachdenkliches Gesicht	Gesicht|Smiley|enttäuscht|nachdenklich|schrecklich|traurig|verlieren|verloren
+confused-face	😕	verwundertes Gesicht	Gesicht|Smiley|keine Ahnung|traurig|verwirrt|verwundert|weiß nicht
+confounded-face	😖	verwirrtes Gesicht	Gesicht|Smiley|bestürzt|frustriert|konfus|verwirrt|verzweifelt
+kissing-face	😗	küssendes Gesicht	Gesicht|HDL|Knutsch|Kuss|Smiley|flirten|küssen|xoxo
+face-blowing-a-kiss	😘	Kuss zuwerfendes Gesicht	Gesicht|Kuss|Küsschen|Smiley|flirten|küssen|lieb|zuwerfen
+kissing-face-with-smiling-eyes	😙	küssendes Gesicht mit lächelnden Augen	Augen|Gesicht|Kuss|Smiley|flirten|knutsch|küssen|lächeln
+kissing-face-with-closed-eyes	😚	küssendes Gesicht mit geschlossenen Augen	Gesicht|Knutsch|Kuss|Küsschen|Smiley|Wangen|geschlossen|küssen|rot|ugen
+face-with-tongue	😛	Gesicht mit herausgestreckter Zunge	Gesicht|Smiley|Zunge|bäh|herausgestreckt|lachen|lustig|ätsch
+winking-face-with-tongue	😜	zwinkerndes Gesicht mit herausgestreckter Zunge	Auge|Gesicht|Smiley|Zunge|Zwinkern|herausgestreckt|herausstrecken|zudrücken|zugedrückt
+squinting-face-with-tongue	😝	Gesicht mit herausgestreckter Zunge und zusammengekniffenen Augen	Auge|Augen|Gesicht|Smiley|Zunge|bäh|ekel|herausgestreckt|herausstrecken|igitt|schmeck|schrecklich|zusammengekniffen|zusammenkneifen
+disappointed-face	😞	enttäuschtes Gesicht	Gesicht|Smiley|enttäuscht|leider|schade|traurig|verloren
+worried-face	😟	besorgtes Gesicht	Gesicht|Smiley|besorgt|sorgen|traurig
+angry-face	😠	verärgertes Gesicht	Gesicht|Smiley|Wut|böse|verärgert|wütend|zornig|ärgern
+pouting-face	😡	schmollendes Gesicht	Gesicht|Rot angelaufener Smiley|rot|schmollendes Gesicht|wütend
+crying-face	😢	weinendes Gesicht	Gesicht|Smiley|Träne|traurig|weinen
+persevering-face	😣	entschlossenes Gesicht	Fokus|Gesicht|Konzentration|Kopfschmerzen|ausdauernd|durchhalten|konzentrieren
+face-with-steam-from-nose	😤	schnaubendes Gesicht	Gesicht|erleichtert|gewonnen|schnaubendes Gesicht
+sad-but-relieved-face	😥	trauriges aber erleichtertes Gesicht	Gesicht|Schweiß|enttäuscht|erleichtert|knapp|traurig|ängstlich
+frowning-face-with-open-mouth	😦	entsetztes Gesicht	Gesicht|Mund|Smiley|entsetzt|offen|schockiert|verwundert
+anguished-face	😧	qualvolles Gesicht	Gesicht|Smiley|arm|leidend|qualvoll|vergessen|wow
+fearful-face	😨	ängstliches Gesicht	Angst|Gesicht|besorgt|ängstlich
+weary-face	😩	erschöpftes Gesicht	Fehlschlag|Gesicht|Smiley|erschöpft|hungrig|müde|nein|unglücklich
+sleepy-face	😪	schläfriges Gesicht	Gesicht|Nacht|Smiley|gute|müde|schläfrig|traurig
+tired-face	😫	müdes Gesicht	Gesicht|Smiley|müde|niesen|traurig
+grimacing-face	😬	Grimassen schneidendes Gesicht	Gesicht|Grimasse|Smiley|Zähne|peinlich|schneiden|verziehen
+loudly-crying-face	😭	heulendes Gesicht	Gesicht|Smiley|Tränen|Tränenfluss|flennen|heulen|schluchzen|traurig|weinen
+face-with-open-mouth	😮	Gesicht mit offenem Mund	Gesicht|Mund|erstaunt|offen|omg|schockiert|unglaublich|vergessen|wow
+face-exhaling	😮‍💨	Gesicht, das ausatmet	Gesicht|Seufz|Smiley|ausatmen|erleichtert|erschöpft|husten|puh|pusten|schnaufen|seufzen
+hushed-face	😯	verdutztes Gesicht	Gesicht|Smiley|erstaunt|omg|sprachlos|verdutzt
+anxious-face-with-sweat	😰	besorgtes Gesicht mit Schweißtropfen	Angst|Angstschweiß|Gesicht|Mund|Schweiß|besorgt|nervös|offen|ängstlich
+face-screaming-in-fear	😱	vor Angst schreiendes Gesicht	Angst|Gesicht|Munch|Panik|Schrei|omg|schreien|schreiend|ängstlich
+astonished-face	😲	erstauntes Gesicht	Gesicht|Smiley|erstaunt|nee|omg|schockiert|verwundert
+flushed-face	😳	errötetes Gesicht mit großen Augen	Augen|Gesicht|Scham|Smiley|Wangen|erröten|groß|peinlich|rot|schämen|verlegen|überrascht
+sleeping-face	😴	schlafendes Gesicht	Gesicht|Mittagsschlaf|Nickerchen|Schlaf|Smiley|dösen|einschlafen|gute Nacht|gähnen|langweilig|müde|schlafen|zzz
+knocked-out-face	😵	benommenes Gesicht	Augen|Gesicht|Kreuze|Smiley|benommen|ko|krank|schwindelig|schwindlig
+face-with-spiral-eyes	😵‍💫	Gesicht mit Spiralen als Augen	Augen|Gesicht|Hypnose|Höhenangst|Smiley|Spiralen|hypnotisiert|omg|schwindelig|schwindlig|verwirrt|wirr
+face-without-mouth	😶	Gesicht ohne Mund	Gesicht|Mund|Smiley|kein|ohne|sprachlos
+face-in-clouds	😶‍🌫	Gesicht in Wolken	Gesicht im Nebel|Gesicht in Wolken|Kopf in Wolken|geistesabwesend
+face-with-medical-mask	😷	Gesicht mit Atemschutzmaske	Arzt|Atemschutzmaske|Bazillen|Gesicht|Krankheit|Mund|Mundschutz|Schutzmaske|Smiley|Viren|Virus|erkältet|krank
+grinning-cat-with-smiling-eyes	😸	grinsende Katze mit lachenden Augen	Augen|Gesicht|Katze|Katzengesicht|Smiley|Tier|grinsen|lachen
+cat-with-tears-of-joy	😹	Katze mit Freudentränen	Freude|Freudentränen|Gesicht|Katze|Katzengesicht|Smiley|Tier|Tränen|lachen
+grinning-cat	😺	grinsende Katze	Gesicht|Katze|Katzengesicht|Mund|Smiley|Tier|grinsen|lachen|lol|lustig|offen
+smiling-cat-with-heart-eyes	😻	lachende Katze mit Herzen als Augen	Augen|Gesicht|Herzaugen|Herzen|Katze|Katzengesicht|Liebe|Smiley|Tier|lachen|lächeln|verliebt
+cat-with-wry-smile	😼	verwegen lächelnde Katze	Gesicht|Katze|Katzengesicht|Smiley|Tier|grinsen|ironisch|lachen|lächeln|verwegen
+kissing-cat	😽	küssende Katze	Augen|Gesicht|Katze|Katzengesicht|Kuss|Küsschen|Küsse|Smiley|Tier|Wangen|geschlossen|küssen|rot
+pouting-cat	😾	schmollende Katze	Gesicht|Katze|Katzengesicht|Schmollmund|Smiley|Tier|schmollen|verärgert
+crying-cat	😿	weinende Katze	Gesicht|Katze|Katzengesicht|Smiley|Tier|Träne|traurig|weinen
+weary-cat	🙀	erschöpfte Katze	Angst|Gesicht|Katze|Katzengesicht|Panik|Schock|Schrei|Smiley|Tier|erschöpft|schockiert|schreien|überrascht
+slightly-frowning-face	🙁	betrübtes Gesicht	Gesicht|Smiley|betrübt|schade|traurig
+slightly-smiling-face	🙂	leicht lächelndes Gesicht	Gesicht|Smiley|leicht|lächeln
+head-shaking-horizontally	🙂‍↔	Kopfschütteln	Kopfschütteln|Schütteln|nein
+head-shaking-vertically	🙂‍↕	Kopfnicken	Kopfnicken|Nicken|ja
+upside-down-face	🙃	umgekehrtes Gesicht	Gesicht|Smiley|auf dem Kopf|lächeln|stehen|umgekehrt
+face-with-rolling-eyes	🙄	Augen verdrehendes Gesicht	Augen|Gesicht|Smiley|genervt|meinetwegen|nerv|ohje|rollen|verdrehen|verrollen
+see-no-evil-monkey	🙈	sich die Augen zuhaltendes Affengesicht	Affe|Affengesicht|Augen|Geheimnis|Geste|Tier|böse|gemein|nein|omg|sehen|verboten|vergessen|verstecken|zuhalten
+hear-no-evil-monkey	🙉	sich die Ohren zuhaltendes Affengesicht	Affe|Affengesicht|Geheimnis|Geste|Ohren|Tier|böse|gemein|hören|nein|verboten|zuhalten|zuhören
+speak-no-evil-monkey	🙊	sich den Mund zuhaltendes Affengesicht	Affe|Affengesicht|Geheimnis|Geste|Hand|Mund|Tier|böse|gemein|heimlich|leise|nein|sagen|sprechen|still|ups|verboten|zuhalten
+white-heart	🤍	weißes Herz	Herz|weiß|weißes Herz
+brown-heart	🤎	braunes Herz	Herz|braun|braunes Herz
+zipper-mouth-face	🤐	Gesicht mit Reißverschlussmund	Geheimnis|Gesicht|Mund|Reißverschluss|Smiley|halten|schweigen|wahren
+money-mouth-face	🤑	Gesicht mit Dollarzeichen	Dollar|Dollarzeichen|Geld|Gesicht|Mund|Smiley|Zunge
+face-with-thermometer	🤒	Gesicht mit Fieberthermometer	Fieber|Gesicht|Smiley|Thermometer|krank|messen
+nerd-face	🤓	Strebergesicht	Brille|Gesicht|Nerd|Schlaumeier|Smiley|Streber|Strebergesicht|intelligent|klug|schlau|smart
+thinking-face	🤔	nachdenkendes Gesicht	Gesicht|Smiley|fragen|grübeln|hm|komisch|nachdenken|nachdenklich|wundern
+face-with-head-bandage	🤕	Gesicht mit Kopfverband	Gesicht|Kopf|Schmerzen|Smiley|Verband|Verletzung|aua|autsch
+robot	🤖	Roboter	Gesicht|Monster|Roboter|Robotergesicht|Roboterkopf
+hugging-face	🤗	Gesicht mit umarmenden Händen	Gesicht|Hände|Smiley|Umarmung|drücken|umarmen
+cowboy-hat-face	🤠	Gesicht mit Cowboyhut	Cowboy|Cowboyhut|Cowgirl|Gesicht|Hut|Smiley
+clown-face	🤡	Clown-Gesicht	Clown|Clown-Gesicht|Gesicht
+nauseated-face	🤢	würgendes Gesicht	Gesicht|Smiley|ekel|eklig|erbrechen|grün|igitt|widerlich|würgen|Übelkeit|übergeben
+rolling-on-the-floor-laughing	🤣	sich vor Lachen auf dem Boden wälzen	Boden|Gesicht|Smiley|Tränen|haha|hehe|lachen|lol|lustig|muahaha|rofl|witzig|wälzen
+drooling-face	🤤	sabberndes Gesicht	Gesicht|Smiley|sabbern
+lying-face	🤥	lügendes Gesicht	Gesicht|Lüge|Nase|Pinocchio|Schwindel
+sneezing-face	🤧	niesendes Gesicht	Erkältung|Gesicht|Gesundheit|Grippe|Nase|Smiley|Taschentuch|erkältet|hatschi|krank|niesen|putzen
+face-with-raised-eyebrow	🤨	Gesicht mit hochgezogenen Augenbrauen	Augenbrauen|Gesicht|Smiley|Zweifel|argwöhnisch|hochgezogen|misstrauen|skeptisch|stutzig
+star-struck	🤩	überwältigt	Augen|Gesicht|Smiley|Star|Stern|aufgeregt|grinsen|wow|überwältigt
+zany-face	🤪	irres Gesicht	Auge|Augen|Gesicht|Smiley|groß|irre|klein|verrückt
+shushing-face	🤫	ermahnendes Gesicht	Finger|Gesicht|Ruhe|Smiley|ermahnen|leise|psst|pst|ruhig|sch
+face-with-symbols-on-mouth	🤬	Gesicht mit Symbolen über dem Mund	Gesicht|Mund|Schimpfwort|Smiley|Symbole|Wut|Zensur|fluchen|schimpfen|verdammt|wütend|Ärger|ärgern
+face-with-hand-over-mouth	🤭	verlegen kicherndes Gesicht	Gesicht|Hand|Huch|Mund|Smiley|Wangen|haha|hihi|kichern|lachen|rot|verlegen
+face-vomiting	🤮	kotzendes Gesicht	Gesicht|Smiley|brechen|erbrechen|kotzen|krank|schlecht|speien|spucken|übel|übergeben
+exploding-head	🤯	explodierender Kopf	Gesicht|Kopf|Schock|Smiley|entsetzt|explodieren|geschockt|schockiert|unglaublich|überwältigt
+smiling-face-with-hearts	🥰	lächelndes Gesicht mit Herzen	3|Gesicht|HDGDL|HDL|Herzchen|Herzen|Liebe|Smiley|anhimmeln|bewundern|lieb|lächeln|verknallt|verliebt|verzückt
+yawning-face	🥱	gähnendes Gesicht	Gesicht|Smiley|gelangweilt|gähnen|gähnend|langweilig|müde|schnarch|zzz|öde
+smiling-face-with-tear	🥲	lachendes Gesicht mit Träne	Freudenträne|Gesicht|Smiley|Träne|berührt|dankbar|erleichtert|gerührt|lächeln|stolz
+partying-face	🥳	Partygesicht	Feier|Fest|Geburtstag|Gesicht|Glückwunsch|Hurra|Hut|Party|Smiley|aufgeregt|fröhlich|Überraschung
+woozy-face	🥴	schwindeliges Gesicht	Mund|Smiley|angeheitert|angeschwipst|angetrunken|benebelt|berauscht|beschwipst|betrunken|gewellt|schwindelig|schwindlig
+hot-face	🥵	schwitzendes Gesicht	Fieber|Gesicht|Hitze|Hitzschlag|Smiley|Zunge|erhitzt|fiebrig|heiß|herausstrecken|rot|schnaufen|schwitzen
+cold-face	🥶	frierendes Gesicht	Gesicht|Smiley|Zähne|Zähneklappern|bibbern|blau|eisig|erfrieren|frieren|frostig|frösteln|kalt|unter Null|zittern
+disguised-face	🥸	verkleidet	Brille|Gesicht|Maske|Nase|Nasenbrille|Person|Smiley|Verkleidung|incognito|inkognito|spionieren|verdeckt|verkleidet
+face-holding-back-tears	🥹	Gesicht, das Tränen zurückhält	Freude|Freudentränen|Gesicht|Rührung|Smiley|Tränen|aufgebracht|dankbar|gerührt|stolz|weinen|zurückhalten
+pleading-face	🥺	bettelndes Gesicht	Augen|Gesicht|Kulleraugen|Smiley|Welpenaugen|anflehen|betteln|bettelnd|bitte|bitten|flehend|groß|traurig
+face-with-monocle	🧐	Gesicht mit Monokel	Gesicht|Monokel|Smiley|elegant|reich
+orange-heart	🧡	oranges Herz	Herz|Liebe|orange
+light-blue-heart	🩵	hellblaues Herz	Emotion|Gefühl|Herz|Liebe|aquamarin|gefallen|gefällt|hdl|hellblau|mag|mögen|niedlich|süß|türkis|zyan
+grey-heart	🩶	graues Herz	Emotion|Herz|Liebe|grau|graues Herz|hdl|schieferfarben|silber|silberfarben
+pink-heart	🩷	pinkes Herz	Gefühl|Herz|Liebe|gefallen|gefällt|mag|mögen|niedlich|pink|rosa|süß|verliebt
+melting-face	🫠	schmelzendes Gesicht	Gesicht|Hitze|Sarkasmus|Smiley|auflösen|beschämt|flüssig|sarkastisch|schmelzen|schwitzen|verschwinden
+saluting-face	🫡	salutierendes Gesicht	Aye|Gesicht|Militär|Respekt|Smiley|jawohl|jawoll|ok|salutieren|zu Befehl
+face-with-open-eyes-and-hand-over-mouth	🫢	Gesicht mit offenen Augen und Hand über dem Mund	Augen|Erschrecken|Erstaunen|Furcht|Gesicht|Hand|Mund|OMG|Schock|Smiley|Unglauben|Verlegenheit|geschockt|offen|Überraschung
+face-with-peeking-eye	🫣	Gesicht mit durch die Finger linsendem Auge	Auge|Finger|Gesicht|Smiley|gebannt|hervorlugen|linsen|schüchtern|spähen|starren|verlegen
+face-with-diagonal-mouth	🫤	Gesicht mit schrägem Mund	Gesicht|Smiley|enttäuscht|genervt|hmpf|keine Ahnung|langweilig|skeptisch|unsicher|zweifelnd
+dotted-line-face	🫥	gestricheltes Gesicht	Gesicht|Smiley|depressiv|deprimiert|egal|gestrichelt|introvertiert|traurig|unsichtbar|verschwinden|verstecken
+shaking-face	🫨	zitterndes Doppelgesicht	Doppelgesicht|Erdbeben|Gesicht|OMG|Panik|Schock|Smiley|verrückt|vibrieren|wow|zittern|überrascht
+skull-and-crossbones	☠	Totenkopf mit gekreuzten Knochen	Gesicht|Knochen|Piratenflagge|Schädel|Tod|Totenkopf|gekreuzt|tot
+frowning-face	☹	düsteres Gesicht	Gesicht|Smiley|deprimiert|düster|stirnrunzelnd|traurig
+smiling-face	☺	lächelndes Gesicht	Gesicht|Smiley|Wangen|fröhlich|lächeln|rot
+heart-exclamation	❣	Herz als Ausrufezeichen	Ausrufezeichen|Herz|Herz als Ausrufezeichen|Satzzeichen
+red-heart	❤	rotes Herz	Herz|rotes Herz
+heart-on-fire	❤‍🔥	Herz in Flammen	Herz in Flammen|Leidenschaft|Liebe|brennendes Herz
+mending-heart	❤‍🩹	Herz mit Verband	Besserung|Herz mit Verband|genesen
+santa-claus	🎅	Weihnachtsmann	Weihnachten|Weihnachtsmann
+snowboarder	🏂	Snowboarder(in)	Snowboard|Snowboarden|Snowboarder|Snowboarder(in)|Snowboarderin|Sport
+person-running	🏃	laufende Person	Laufen|Läufer|Läuferin|Marathon|Person|Sport|eilig|joggen|laufen|laufende Person|rennen|schnell
+woman-running	🏃‍♀	laufende Frau	Athlet|Athletin|Frau|Joggerin|Laufen|Läufer|Läuferin|Marathon|Renner|Rennerin|joggen|laufen|laufende Frau|rennen|rennt|schell
+woman-running-facing-right	🏃‍♀‍➡	laufende Frau: nach rechts	Athlet|Athletin|Frau|Joggerin|Laufen|Läufer|Läuferin|Marathon|Renner|Rennerin|joggen|laufen|laufende Frau|nach|rechts|rennen|rennt|schell
+man-running	🏃‍♂	laufender Mann	Jogger|Marathon|joggen|laufen|laufender Mann
+man-running-facing-right	🏃‍♂‍➡	laufender Mann: nach rechts	Jogger|Marathon|joggen|laufen|laufender Mann|nach|rechts
+person-running-facing-right	🏃‍➡	laufende Person: nach rechts	Laufen|Läufer|Läuferin|Marathon|Person|Sport|eilig|joggen|laufen|laufende Person|nach|rechts|rennen|schnell
+person-surfing	🏄	Surfer(in)	Person|Sport|Surfboard|Surfbrett|Surfen|Surfer|Surfer(in)|Surferin|Wassersport|Wellenreiten|Wellenreiter|Wellenreiterin
+woman-surfing	🏄‍♀	Surferin	Frau|Sport|Strand|Surf|Surfbrett|Surferin|Wellen|Wellenreiten
+man-surfing	🏄‍♂	Surfer	Mann|Surfer|Wellenreiten
+horse-racing	🏇	Pferderennen	Jockey auf Pferd|Pferderennen|Sport|schnell|um die Wette|wetten
+person-swimming	🏊	Schwimmer(in)	Kraulen|Person|Pool|Schwimmbecken|Schwimmen|Schwimmer|Schwimmer(in)|Schwimmerin|Sport|Triathlon|Wasser
+woman-swimming	🏊‍♀	Schwimmerin	Frau|Pool|Schwimmbad|Schwimmerin|Sport|kraulen|schwimmen
+man-swimming	🏊‍♂	Schwimmer	Pool|Schwimmbad|Schwimmer|kraulen|schwimmen
+person-lifting-weights	🏋	Gewichtheber(in)	Gewicht|Gewichtheber|Gewichtheber(in)|Gewichtheberin|Hantel|Muskeln|Person|Sport|Training|schwer|stark
+woman-lifting-weights	🏋‍♀	Gewichtheberin	Frau|Gewicht heben|Gewichte heben|Gewichteheberin|Gewichtheberin
+man-lifting-weights	🏋‍♂	Gewichtheber	Gewicht heben|Gewichtheber|Mann
+person-golfing	🏌	Golfer(in)	Abschlagplatz|Golf|Golfer|Golfer(in)|Golferin|Golfspieler|Golfspielerin|Person|Sport|Sportler|Sportlerin
+woman-golfing	🏌‍♀	Golferin	Frau|Golf|Golferin|Golfspielerin|golfen
+man-golfing	🏌‍♂	Golfer	Golf|Golfer|Golfspieler|Mann|golfen
+eyes	👀	Augen	Auge|Augen|Gesicht|gucken|schauen|sehen
+eye	👁	Auge	Auge|Blick|Körper|Körperteil|schauen|sehen
+ear	👂	Ohr	Körperteil|Ohr|hören
+nose	👃	Nase	Körperteil|Nase|riechen
+mouth	👄	Mund	Kuss|Körperteil|Lippen|Lippenstift|Mund
+tongue	👅	Zunge	Körperteil|Zunge|hmm|lecken|lecker|mmh|ätsch
+backhand-index-pointing-up	👆	nach oben weisender Zeigefinger von hinten	Finger|Handrücken|Handrückseite|Zeigefinger|aufwärts|hier|hinauf|melden|oben|rauf|weisen|zeigen
+backhand-index-pointing-down	👇	nach unten weisender Zeigefinger	Finger|Handrücken|Handrückseite|Zeigefinger|abwärts|hinab|hinunter|runter|unten|weisen|zeigen
+backhand-index-pointing-left	👈	nach links weisender Zeigefinger	Finger|Handrückseite|Zeigefinger|links|weisen|zeigen
+oncoming-fist	👊	geballte Faust	Bro|Faust|Hand|absolut|geballt|korrekt|zustimmen
+waving-hand	👋	winkende Hand	Hand|auf Wiedersehen|bis später|ciao|guten Tag|hallo|hey|hi|tschüs|tschüss|winken
+ok-hand	👌	OK-Zeichen	Finger|Hand|OK|OK-Zeichen|exzellent|genial|in Ordnung|natürlich|perfekt|super
+thumbs-up	👍	Daumen hoch	Daumen|Daumen hoch|Finger|Hand|einverstanden|gut|in Ordnung|jawohl|klar|klasse|like|nach oben|ok|super|top
+thumbs-down	👎	Daumen runter	Daumen|Daumen runter|Hand|nach unten|schlecht
+clapping-hands	👏	klatschende Hände	Applaus|Beifall|Gratulation|Hand|Hände|Klatschen|applaudieren|großartig|gut|klatschend|toll
+open-hands	👐	offene Hände	Hände|Jazz|Umarmung|offen|umarmen
+footprints	👣	Fußabdrücke	Abdruck|Fuß|Fußabdruck|Fußabdrücke|auf dem Weg
+bust-in-silhouette	👤	Silhouette einer Büste	Büste|Person|Silhouette einer Büste
+busts-in-silhouette	👥	Silhouette mehrerer Büsten	Büsten|Personen|Silhouette mehrerer Büsten
+boy	👦	Junge	Enkelsohn|Gesicht|Junge|Kind|Sohn|jung|jünger|munter|strahlend
+girl	👧	Mädchen	Enkeltochter|Gesicht|Kind|Mädchen|Tochter|jung|jünger|munter|strahlend
 man	👨	Mann	Gesicht|Mann|erwachsen
-manual-gearbox		Schaltgetriebe	Schaltgetriebe
-map-pin	📍	Stecknadel	Reißzwecke|Stecknadel|anpinnen|rund|runde Reißzwecke
-medical-cross		medizinisches Kreuz	medizinisches Kreuz
-meeple		Spielfigur	Spielfigur
-melon	🍈	Honigmelone	Frucht|Honigmelone|Melone|Obst|cantaloupe
-message-2		Nachricht 2	Nachricht 2
-message-chatbot		Nachricht Chatbot	Nachricht Chatbot
-message-circle		Nachricht Kreis	Nachricht Kreis
-message-report		Nachricht Bericht	Nachricht Bericht
-message		Nachricht	Nachricht
-messages		Nachrichten	Nachrichten
-meteor	☄	Komet	Komet|Weltall
-michelin-star		michelin Stern	michelin Stern
-mickey		mickey	mickey
-microphone	🎤	Mikrofon	Karaoke|Mikrofon|Singen|Unterhaltung
-microscope	🔬	Mikroskop	Labor|Mikroskop|Wissenschaft|untersuchen
-microwave		Mikrowelle	Mikrowelle
-military-rank		militärischer Dienstgrad	militärischer Dienstgrad
-milk		Milch	Milch
-mood-angry	😠 😡	verärgertes Gesicht	Gesicht|Rot angelaufener Smiley|Smiley|Wut|böse|rot|schmollendes Gesicht|verärgert|wütend|zornig|ärgern
-mood-confused		Stimmung verwirrt	Stimmung verwirrt
-mood-crazy-happy	😂 🤣	Gesicht mit Freudentränen	Boden|Freude|Freudentränen|Gesicht|Smiley|Tränen|fröhlich|haha|happy|hehe|hihi|lachen|lol|lustig|muahaha|rofl|sich vor Lachen auf dem Boden wälzen|witzig|wälzen
-mood-empty		Stimmung leer	Stimmung leer
-mood-happy	😀 😁	grinsendes Gesicht	Augen|Gesicht|Smiley|Zähne|froh|fröhlich|grinsen|haha|happy|lachen|lol|lustig|lächeln|strahlen|strahlendes Gesicht mit lachenden Augen
-mood-kid	👶	Baby	Baby|Gesicht|Kind|Kleinkind|Locke|jung
-mood-neutral		Stimmung neutral	Stimmung neutral
-mood-sad	😢 😭	weinendes Gesicht	Gesicht|Smiley|Träne|Tränen|Tränenfluss|flennen|heulen|heulendes Gesicht|schluchzen|traurig|weinen
-mood-smile	🙂 😊	leicht lächelndes Gesicht	Augen|Freude|Gesicht|Smiley|Wangen|erröten|freundlich|glücklich|lachen|leicht|lächeln|lächelndes Gesicht mit lachenden Augen|rot
-mood-wrrr		Stimmung Zähneknirschen	Stimmung Zähneknirschen
-moon	🌙	Mondsichel	Mond|Mondsichel|Nacht
-motorbike	🏍	Motorrad	Moped|Motorrad|Motorrennen
-mountain	⛰	Berg	Berg|Gebirge
-mouse	🖱	Computermaus	Computer|Computermaus|Maus
-mug	☕	Heißgetränk	Cafe|Getränk|Heißgetränk|Kaffee|Tasse|Tee|dampfend|heiß|trinken
-mushroom	🍄	Fliegenpilz	Fliegenpilz|Pilz|giftig
-nurse		Pflegekraft	Pflegekraft
-octagon		Achteck	Achteck
-oval-vertical		Oval vertikal	Oval vertikal
-oval		Oval	Oval
-pacman		pacman	pacman
-paint		Farbe	Farbe
-palette	🎨	Mischpalette	Farben|Kunst|Künstler|Mischpalette|Palette
-parking-circle		Parkplatz Kreis	Parkplatz Kreis
-paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	Tatzenabdrücke	Abdruck|Assistenz|Assistenzhund|Barrierefreiheit|Behinderung|Blindenhund|Gesicht|Haustier|Hund|Hundegesicht|Kater|Katze|Katzengesicht|Miau|Miez|Miezekatze|Pech|Pudel|Tatzen|Tatzenabdrücke|Tier|Unglück|Wau|blind|miau|schwarz|schwarze Katze|schwarzer Kater|sehbehindert|treu|wau|wuff
-pencil	✏	Bleistift	Bleistift|Stift
-pennant-2		Wimpel 2	Wimpel 2
-pennant		Wimpel	Wimpel
-pentagon		Fünfeck	Fünfeck
-phone-call		Telefon Anruf	Telefon Anruf
-phone-calling		Telefon Anruf läuft	Telefon Anruf läuft
-phone		Telefon	Telefon
-photo	🖼	gerahmtes Bild	Bild|Gemälde|Kunst|Rahmen|Zeichnung|gerahmtes Bild|malen|zeichnen
-pig	🐷 🐖	Schweinegesicht	Bauernhof|Gesicht|Sau|Schwein|Schweinegesicht|Tier
-pill	💊	Kapsel	Arznei|Arzt|Kapsel|Medizin|Pille|Tabletten
-pin	📌	Reißzwecke	Reißzwecke|anpinnen
-pinned		angeheftet	angeheftet
-pizza	🍕	Pizza	Pizza|Pizzastück|Pizzeria
-plane-arrival	🛬	Landung eines Flugzeugs	Ankunft|Flieger|Flughafen|Flugzeug|Landung|Landung eines Flugzeugs|landen
-plane-departure	🛫	Abflug	Abflug|Flughafen|Flugzeug|Start|Start eines Flugzeugs|fliegen
-plane-tilt		Flugzeug geneigt	Flugzeug geneigt
-plane	✈	Flugzeug	Flieger|Flugzeug
-play-card-1		Spiel Karte 1	Spiel Karte 1
-play-card-10		Spiel Karte 10	Spiel Karte 10
-play-card-2		Spiel Karte 2	Spiel Karte 2
-play-card-3		Spiel Karte 3	Spiel Karte 3
-play-card-4		Spiel Karte 4	Spiel Karte 4
-play-card-5		Spiel Karte 5	Spiel Karte 5
-play-card-6		Spiel Karte 6	Spiel Karte 6
-play-card-7		Spiel Karte 7	Spiel Karte 7
-play-card-8		Spiel Karte 8	Spiel Karte 8
-play-card-9		Spiel Karte 9	Spiel Karte 9
-play-card-a		Spiel Karte a	Spiel Karte a
-play-card-j		Spiel Karte j	Spiel Karte j
-play-card-k		Spiel Karte k	Spiel Karte k
-play-card-q		Spiel Karte q	Spiel Karte q
-play-card-star		Spielkarte mit Stern	Spielkarte mit Stern
-play-card	🃏	Jokerkarte	Joker|Jokerkarte|Spielkarte
-polaroid		Sofortbild	Sofortbild
-poo	💩	Kothaufen	Kot|Kothaufen|Mist
-presentation-analytics		Präsentation Analyse	Präsentation Analyse
-presentation		Präsentation	Präsentation
-puzzle	🧩	Puzzleteil	Bestandteile|Hinweise|Hobby|Puzzle|Puzzlestück|Puzzleteil|Puzzleteile|Spiel|Teile|passen|puzzeln|zusammenpassen|zusammensetzen
-quote		Zitat	Zitat
-radar		Radar	Radar
-radioactive	☢	Radioaktiv	Radioaktiv|radioaktiv
-receipt-dollar		Beleg Dollar	Beleg Dollar
-receipt-euro		Beleg Euro	Beleg Euro
-receipt-pound		Beleg Pfund Sterling	Beleg Pfund Sterling
-receipt-rupee		Beleg Rupie	Beleg Rupie
-receipt-yen		Beleg Yen	Beleg Yen
-receipt-yuan		Beleg Yuan	Beleg Yuan
-receipt	🧾	Beleg	Abrechnung|Aufstellung|Beleg|Blatt|Buchhalter|Buchhaltung|Quittung|Rechnung|Rechnungswesen|Schriftstück
-rectangle-vertical		Rechteck vertikal	Rechteck vertikal
-rectangle		Rechteck	Rechteck
-registered	®	Registered-Trademark	Markenzeichen|R|Registered-Trademark
-report-money		Bericht Geld	Bericht Geld
-rollercoaster		Achterbahn	Achterbahn
-rosette-discount-check		Rosette Rabatt Häkchen	Rosette Rabatt Häkchen
-rosette-discount		Rosette Rabatt	Rosette Rabatt
-rosette	🏵	Rosette	Pflanze|Rosette
-salad		Salat	Salat
-satellite	🛰	Satellit	Satellit|Sputnik|Weltraum
-scale	⚖	Waage	Gerechtigkeit|Gewicht|Waage|Werkzeug|wiegen
-school	🏫	Schule	Gebäude|Schule|Schulgebäude
-scuba-diving-tank		Tauchflasche	Tauchflasche
-seedling	🌱	Spross	Spross|junge Pflanze
-send		senden	senden
-settings		Einstellungen	Einstellungen
-shield-check		Schild Häkchen	Schild Häkchen
-shield-checkered		Schild kariert	Schild kariert
-shield-half		Schild halb	Schild halb
-shield-lock		Schild Schloss	Schild Schloss
-shield	🛡	Schutzschild	Schild|Schutzschild
-shirt	👕	T-Shirt	Kleidung|Shirt|T-Shirt
-shopping-cart	🛒	Einkaufswagen	Einkaufswagen|einkaufen
-sign-left		Schild links	Schild links
-sign-right		Schild rechts	Schild rechts
-soup		Suppe	Suppe
-spade	♠	Pik	Karten|Kartenspiel|Pik
-sparkles-2		Funkeln 2	Funkeln 2
-sparkles	✨	funkelnde Sterne	*|Funkelnde Sterne|Sterne|funkel|funkeln|funkelnde Sterne
-speedboat	🚤	Schnellboot	Boot|Luxus|Schnellboot|See|Sommer|Wasser|Yacht
-spider	🕷	Spinne	Insekt|Spinne|Tier
-square-letter-q		Quadrat Buchstabe q	Quadrat Buchstabe q
-square-rotated		Quadrat gedreht	Quadrat gedreht
-square-rounded-check		Quadrat abgerundet Häkchen	Quadrat abgerundet Häkchen
-square-rounded-letter-a		Quadrat abgerundet Buchstabe a	Quadrat abgerundet Buchstabe a
-square-rounded-letter-b		Quadrat abgerundet Buchstabe b	Quadrat abgerundet Buchstabe b
-square-rounded-letter-c		Quadrat abgerundet Buchstabe c	Quadrat abgerundet Buchstabe c
-square-rounded-letter-d		Quadrat abgerundet Buchstabe d	Quadrat abgerundet Buchstabe d
-square-rounded-letter-e		Quadrat abgerundet Buchstabe e	Quadrat abgerundet Buchstabe e
-square-rounded-letter-f		Quadrat abgerundet Buchstabe f	Quadrat abgerundet Buchstabe f
-square-rounded-letter-g		Quadrat abgerundet Buchstabe g	Quadrat abgerundet Buchstabe g
-square-rounded-letter-h		Quadrat abgerundet Buchstabe h	Quadrat abgerundet Buchstabe h
-square-rounded-letter-i		Quadrat abgerundet Buchstabe i	Quadrat abgerundet Buchstabe i
-square-rounded-letter-j		Quadrat abgerundet Buchstabe j	Quadrat abgerundet Buchstabe j
-square-rounded-letter-k		Quadrat abgerundet Buchstabe k	Quadrat abgerundet Buchstabe k
-square-rounded-letter-l		Quadrat abgerundet Buchstabe l	Quadrat abgerundet Buchstabe l
-square-rounded-letter-m		Quadrat abgerundet Buchstabe m	Quadrat abgerundet Buchstabe m
-square-rounded-letter-n		Quadrat abgerundet Buchstabe n	Quadrat abgerundet Buchstabe n
-square-rounded-letter-o		Quadrat abgerundet Buchstabe o	Quadrat abgerundet Buchstabe o
-square-rounded-letter-p		Quadrat abgerundet Buchstabe p	Quadrat abgerundet Buchstabe p
-square-rounded-letter-q		Quadrat abgerundet Buchstabe q	Quadrat abgerundet Buchstabe q
-square-rounded-letter-r		Quadrat abgerundet Buchstabe r	Quadrat abgerundet Buchstabe r
-square-rounded-letter-s		Quadrat abgerundet Buchstabe s	Quadrat abgerundet Buchstabe s
-square-rounded-letter-t		Quadrat abgerundet Buchstabe t	Quadrat abgerundet Buchstabe t
-square-rounded-letter-u		Quadrat abgerundet Buchstabe u	Quadrat abgerundet Buchstabe u
-square-rounded-letter-v		Quadrat abgerundet Buchstabe v	Quadrat abgerundet Buchstabe v
-square-rounded-letter-w		Quadrat abgerundet Buchstabe w	Quadrat abgerundet Buchstabe w
-square-rounded-letter-x		Quadrat abgerundet Buchstabe x	Quadrat abgerundet Buchstabe x
-square-rounded-letter-y		Quadrat abgerundet Buchstabe y	Quadrat abgerundet Buchstabe y
-square-rounded-letter-z		Quadrat abgerundet Buchstabe z	Quadrat abgerundet Buchstabe z
-square-rounded-minus		Quadrat abgerundet Minus	Quadrat abgerundet Minus
-square-rounded-number-0		Quadrat abgerundet Zahl 0	Quadrat abgerundet Zahl 0
-square-rounded-number-1		Quadrat abgerundet Zahl 1	Quadrat abgerundet Zahl 1
-square-rounded-number-2		Quadrat abgerundet Zahl 2	Quadrat abgerundet Zahl 2
-square-rounded-number-3		Quadrat abgerundet Zahl 3	Quadrat abgerundet Zahl 3
-square-rounded-number-4		Quadrat abgerundet Zahl 4	Quadrat abgerundet Zahl 4
-square-rounded-number-5		Quadrat abgerundet Zahl 5	Quadrat abgerundet Zahl 5
-square-rounded-number-6		Quadrat abgerundet Zahl 6	Quadrat abgerundet Zahl 6
-square-rounded-number-7		Quadrat abgerundet Zahl 7	Quadrat abgerundet Zahl 7
-square-rounded-number-8		Quadrat abgerundet Zahl 8	Quadrat abgerundet Zahl 8
-square-rounded-number-9		Quadrat abgerundet Zahl 9	Quadrat abgerundet Zahl 9
-square-rounded-plus		Quadrat abgerundet Plus	Quadrat abgerundet Plus
-square-rounded-x		Quadrat abgerundet x	Quadrat abgerundet x
-square-rounded		Quadrat abgerundet	Quadrat abgerundet
-square		Quadrat	Quadrat
-stack-2		Stapel 2	Stapel 2
-star-half		Stern halb	Stern halb
-star	⭐	weißer mittelgroßer Stern	Himmel|Stern|astronomie|gelber Stern|weißer mittelgroßer Stern
-stars		Sterne	Sterne
-steering-wheel		Lenkrad	Lenkrad
-sun-high		Sonne hoch	Sonne hoch
-sun-low		Sonne niedrig	Sonne niedrig
-sun	☀	Sonne	Sonne|Sonnenstrahlen|Strahlen|Wetter|sonnig
-sunglasses	🕶	Sonnenbrille	Augen|Brille|Sonnenbrille|dunkel
-sunrise	🌅	Sonnenaufgang über dem Meer	Meer|Sonnenaufgang|Sonnenaufgang über dem Meer
-sunset-2		Sonnenuntergang 2	Sonnenuntergang 2
-sunset	🌇	Sonnenuntergang in der Stadt	Großstadt|Hochhäuser|Morgenrot|Sonnenaufgang|Sonnenuntergang|Sonnenuntergang in der Stadt|Wolkenkratzer
-tag		Etikett	Etikett
-tags		Etiketten	Etiketten
-test-pipe-2		Reagenz Rohr 2	Reagenz Rohr 2
-thumb-down	👎	Daumen runter	Daumen|Daumen runter|Hand|nach unten|schlecht
-thumb-up	👍	Daumen hoch	Daumen|Daumen hoch|Finger|Hand|einverstanden|gut|in Ordnung|jawohl|klar|klasse|like|nach oben|ok|super|top
-ticket	🎫	Ticket	Konzert|Ticket|Unterhaltung
-tools-kitchen-2	🍴	Messer und Gabel	Abendessen|Besteck|Essen|Frühstück|Gabel|Gabel und Messer|Geschirr|Hunger|Messer|Messer und Gabel|Mittagessen|Restaurant|lecker
-train	🚆	Zug	Bahn|Eisenbahn|ICE|Zug
-trash-x		Papierkorb x	Papierkorb x
-trash		Papierkorb	Papierkorb
-triangle-inverted		Dreieck umgekehrt	Dreieck umgekehrt
-triangle-square-circle		Dreieck Quadrat Kreis	Dreieck Quadrat Kreis
-triangle		Dreieck	Dreieck
-trolley		Trolley	Trolley
-trophy	🏆	Pokal	Bundesliga|Champion|Pokal|Preis|Sieger|Sport|Trophäe|gewinnen
-truck		Lastwagen	Lastwagen
-ufo	🛸	fliegende Untertasse	Alien|Außerirdisch|UFO|fliegende Untertasse
-umbrella	☂	Regenschirm	Bekleidung|Regen|Regenschirm|Wetter
-user	👤	Silhouette einer Büste	Büste|Person|Silhouette einer Büste
-video	📹 🎥	Videokamera	Film|Filmkamera|Kino|Unterhaltung|Videokamera|Videos|filmen
-windmill		Windmühle	Windmühle
-windsock		Windsack	Windsack
+man-health-worker	👨‍⚕	Arzt	Arzt|Arztkittel|Doktor|Krankenpfleger|Pfleger
+man-judge	👨‍⚖	Richter	Gerechtigkeit|Mann|Recht|Richter
+man-pilot	👨‍✈	Pilot	Flugzeug|Mann|Pilot
+man-farmer	👨‍🌾	Bauer	Bauer|Farmer|Gärtner|Landwirt|Rancher|Ähre
+man-cook	👨‍🍳	Koch	Koch|Kochen|Restaurant
+man-feeding-baby	👨‍🍼	Mann, der Baby die Flasche gibt	Baby|Flasche geben|Flasche gebender Mann|Mann|füttern
+man-student	👨‍🎓	Student	Absolvent|Diplom|Doktorhut|Student|Uni
+man-singer	👨‍🎤	Sänger	Mann|Mikrofon|Popstar|Schauspieler|Sänger
+man-artist	👨‍🎨	Künstler	Farbpalette|Künstler|Maler|Mann
+man-teacher	👨‍🏫	Lehrer	Dozent|Lehrer|Mann|Professor|Tafel
+man-factory-worker	👨‍🏭	Fabrikarbeiter	Fabrik|Fabrikarbeiter|Helm
+man-technologist	👨‍💻	IT-Experte	Arbeit|Bildschirm|Büro|Computer|Entwickler|IT-Experte|Mann|Office
+man-office-worker	👨‍💼	Büroangestellter	Angestellter|Büro|Büroangestellter|Manager|Mann
+man-mechanic	👨‍🔧	Mechaniker	Elektriker|Handwerker|Klempner|Mann|Mechaniker
+man-scientist	👨‍🔬	Wissenschaftler	Chemie|Forscher|Labor|Wissenschaftler
+man-astronaut	👨‍🚀	Astronaut	Astronaut|Mann|Raumfahrt|Weltraum
+man-firefighter	👨‍🚒	Feuerwehrmann	Feuerwehr|Feuerwehrhelm|Feuerwehrmann|Mann
+man-with-white-cane	👨‍🦯	Mann mit Langstock	Barrierefreiheit|Behinderung|Mann|Mann mit Blindenstock|Mann mit Gehstock|Mann mit Langstock|Mensch|Person|blind|sehbehindert
+man-with-white-cane-facing-right	👨‍🦯‍➡	Mann mit Langstock: nach rechts	Barrierefreiheit|Behinderung|Mann|Mann mit Blindenstock|Mann mit Gehstock|Mann mit Langstock|Mensch|Person|blind|nach|rechts|sehbehindert
+man-red-hair	👨‍🦰	Mann: rotes Haar	Gesicht|Mann|erwachsen|rotes Haar
+man-bald	👨‍🦲	Mann: Glatze	Gesicht|Glatze|Mann|erwachsen
+man-white-hair	👨‍🦳	Mann: weißes Haar	Gesicht|Mann|erwachsen|weißes Haar
+man-in-motorized-wheelchair	👨‍🦼	Mann in elektrischem Rollstuhl	Barrierefreiheit|Behinderung|Mann|Mann in Rollstuhl|Mann in elektrischem Rollstuhl|Mensch|Person|Rollstuhl
+man-in-motorized-wheelchair-facing-right	👨‍🦼‍➡	Mann in elektrischem Rollstuhl: nach rechts	Barrierefreiheit|Behinderung|Mann|Mann in Rollstuhl|Mann in elektrischem Rollstuhl|Mensch|Person|Rollstuhl|nach|rechts
+man-in-manual-wheelchair	👨‍🦽	Mann in manuellem Rollstuhl	Barrierefreiheit|Behinderung|Mann|Mann in Rollstuhl|Mann in manuellem Rollstuhl|Mensch|Person|Rollstuhl
+man-in-manual-wheelchair-facing-right	👨‍🦽‍➡	Mann in manuellem Rollstuhl: nach rechts	Barrierefreiheit|Behinderung|Mann|Mann in Rollstuhl|Mann in manuellem Rollstuhl|Mensch|Person|Rollstuhl|nach|rechts
 woman	👩	Frau	Frau|Gesicht|erwachsen
-world	🗺	Weltkarte	Karte|Landkarte|Welt|Weltkarte|reisen
-writing-sign		Schreiben Schild	Schreiben Schild
-writing	✍	schreibende Hand	Hand|Stift|schreiben|schreibend
-x		x	x
+woman-health-worker	👩‍⚕	Ärztin	Arztkittel|Doktor|Krankenschwester|Pflegerin|Ärztin
+woman-judge	👩‍⚖	Richterin	Frau|Gerechtigkeit|Recht|Richterin
+woman-pilot	👩‍✈	Pilotin	Flieger|Flugzeug|Frau|Pilotin
+woman-farmer	👩‍🌾	Bäuerin	Bäuerin|Farmerin|Gärtnerin|Landwirtin|Ähre
+woman-cook	👩‍🍳	Köchin	Köchin|kochen
+woman-feeding-baby	👩‍🍼	Frau, die Baby die Flasche gibt	Baby|Eltern|Flasche geben|Flasche gebende Frau|Frau|Mama|Milch|Mutter|Neugeborenes|Person|Säugling|füttern
+woman-student	👩‍🎓	Studentin	Abschluss|Absolventin|Diplom|Doktorhut|Studentin|Uni
+woman-singer	👩‍🎤	Sängerin	Frau|Mikrofon|Popstar|Schauspielerin|Sängerin
+woman-artist	👩‍🎨	Künstlerin	Farbpalette|Frau|Künstlerin|Malerin
+woman-teacher	👩‍🏫	Lehrerin	Dozentin|Frau|Lehrerin|Professorin
+woman-factory-worker	👩‍🏭	Fabrikarbeiterin	Fabrik|Fabrikarbeiterin|Frau|Helm
+woman-technologist	👩‍💻	IT-Expertin	Arbeit|Bildschirm|Büro|Computer|Entwickler|Entwicklerin|Frau|IT-Expertin|Laptop|Office
+woman-office-worker	👩‍💼	Büroangestellte	Angestellte|Büro|Büroangestellte|Frau|Managerin|Mangerin
+woman-mechanic	👩‍🔧	Mechanikerin	Elektrikerin|Frau|Handwerkerin|Klempnerin|Mechanikerin
+woman-scientist	👩‍🔬	Wissenschaftlerin	Forscherin|Frau|Labor|Wissenschaftlerin
+woman-astronaut	👩‍🚀	Astronautin	Astronautin|Frau|Raumfahrt|Weltraum
+woman-firefighter	👩‍🚒	Feuerwehrfrau	Feuerwehrfrau|Feuerwehrhelm|Frau
+woman-with-white-cane	👩‍🦯	Frau mit Langstock	Barrierefreiheit|Behinderung|Frau|Frau mit Blindenstock|Frau mit Gehstock|Frau mit Langstock|Mensch|Person|blind
+woman-with-white-cane-facing-right	👩‍🦯‍➡	Frau mit Langstock: nach rechts	Barrierefreiheit|Behinderung|Frau|Frau mit Blindenstock|Frau mit Gehstock|Frau mit Langstock|Mensch|Person|blind|nach|rechts
+woman-red-hair	👩‍🦰	Frau: rotes Haar	Frau|Gesicht|erwachsen|rotes Haar
+woman-bald	👩‍🦲	Frau: Glatze	Frau|Gesicht|Glatze|erwachsen
+woman-white-hair	👩‍🦳	Frau: weißes Haar	Frau|Gesicht|erwachsen|weißes Haar
+woman-in-motorized-wheelchair	👩‍🦼	Frau in elektrischem Rollstuhl	Barrierefreiheit|Behinderung|Frau|Frau in Rollstuhl|Frau in elektrischem Rollstuhl|Mensch|Person|Rollstuhl
+woman-in-motorized-wheelchair-facing-right	👩‍🦼‍➡	Frau in elektrischem Rollstuhl: nach rechts	Barrierefreiheit|Behinderung|Frau|Frau in Rollstuhl|Frau in elektrischem Rollstuhl|Mensch|Person|Rollstuhl|nach|rechts
+woman-in-manual-wheelchair	👩‍🦽	Frau in manuellem Rollstuhl	Barrierefreiheit|Behinderung|Frau|Frau in Rollstuhl|Frau in manuellem Rollstuhl|Mensch|Person|Rollstuhl
+woman-in-manual-wheelchair-facing-right	👩‍🦽‍➡	Frau in manuellem Rollstuhl: nach rechts	Barrierefreiheit|Behinderung|Frau|Frau in Rollstuhl|Frau in manuellem Rollstuhl|Mensch|Person|Rollstuhl|nach|rechts
+police-officer	👮	Polizist(in)	Beruf|Gesetzeshüter|Gesicht|Person|Polizei|Polizist|Polizist(in)|Polizistin|Uniform|festnehmen|verhaften
+woman-police-officer	👮‍♀	Polizistin	Beruf|Frau|Gesetzeshüterin|Person|Polizei|Polizistin|Uniform|festnehmen|verhaften
+man-police-officer	👮‍♂	Polizist	Mann|Polizei|Polizist
+person-with-veil	👰	Person mit Schleier	Braut|Braut mit Schleier|Gesicht|Hochzeit|Person|Person mit Schleier|Schleier
+woman-with-veil	👰‍♀	Frau mit Schleier	Frau|Frau mit Schleier|Schleier
+man-with-veil	👰‍♂	Mann mit Schleier	Mann|Mann mit Schleier|Schleier
+person-blonde-hair	👱	Person: blondes Haar	Gesicht|Mensch|Person|blond|blondhaarig
+woman-blonde-hair	👱‍♀	Frau: blond	Frau|Frau: blond|Gesicht|Haar|blond|blonde Frau
+man-blonde-hair	👱‍♂	Mann: blond	Gesicht|Haar|Mann|Mann: blond|blond|blonder Mann
+person-with-skullcap	👲	Mann mit chinesischem Hut	China|Gesicht|Hut|Kappe|Mütze|Person|chinesisch
+person-wearing-turban	👳	Person mit Turban	Bart|Dreitagebart|Person|Person mit Turban|Turban
+woman-wearing-turban	👳‍♀	Frau mit Turban	Frau|Frau mit Turban|Gesicht|Turban
+man-wearing-turban	👳‍♂	Mann mit Turban	Gesicht|Mann|Mann mit Turban|Turban
+old-man	👴	älterer Mann	Großeltern|Großvater|Mann|Mensch|Opa|Senior|alt|erwachsen|weise|älter
+old-woman	👵	ältere Frau	Frau|Großeltern|Großmutter|Mensch|Oma|Seniorin|alt|erwachsen|weise|älter
+baby	👶	Baby	Baby|Gesicht|Kind|Kleinkind|Locke|jung
+construction-worker	👷	Bauarbeiter(in)	Arbeit|Bau|Bauarbeiter|Bauarbeiter(in)|Bauarbeiterin|Beruf|Gesicht|Helm|Person|Schutzhelm|umbauen
+woman-construction-worker	👷‍♀	Bauarbeiterin	Bauarbeiter|Bauarbeiterin|Baustelle|Frau|Helm|Mann
+man-construction-worker	👷‍♂	Bauarbeiter	Bauarbeiter|Baustelle|Helm
+princess	👸	Prinzessin	Gesicht|Krone|Märchen|Prinzessin
+baby-angel	👼	Putte	Engel|Gesicht|Kind|Märchen|Putte
+person-tipping-hand	💁	Infoschalter-Mitarbeiter(in)	Gerüchte|Geste|Hand|Klatsch|Person|Sarkasmus|Tratsch|abgekippt|beleidigen|klatschen|sarkastisch|tratschen
+woman-tipping-hand	💁‍♀	Infoschalter-Mitarbeiterin	Auskunft|Frau|Informationen|Infoschalter-Mitarbeiterin
+man-tipping-hand	💁‍♂	Infoschalter-Mitarbeiter	Gerüchte|Geste|Hand|Klatsch|Mann|Sarkasmus|Tratsch|abgekippt|beleidigen|klatschen|sarkastisch|tratschen
+guard	💂	Wache	Buckingham Palace|Bärenfellmütze|Gesicht|London|Wache|Wachfrau|Wachmann|Wachsoldat|Wachsoldatin|Wächter
+woman-guard	💂‍♀	Wachsoldatin	Buckingham|Buckingham Palace|Guard|Helm|London|Palast|Wache|Wachsoldatin|Wächter
+man-guard	💂‍♂	Wachsoldat	Buckingham Palace|Wache|Wachsoldat
+woman-dancing	💃	tanzende Frau	Flair|Flamenco|Frau|Salsa|Schwung|Tango|Tanz|Tanzen|Tänzerin|elegant|festlich
+nail-polish	💅	Nagellack	Kosmetik|Maniküre|Nagel|Nagellack|Nagelpflege
+person-getting-massage	💆	Person, die eine Kopfmassage bekommt	Behandlung|Kopfmassage|Kopfschmerzen|Massage|Migräne|Person|Person, die eine Kopfmassage bekommt|Salon|Spa|Therapie|die eine Kopfmassage bekommt|entspannen
+woman-getting-massage	💆‍♀	Frau, die eine Kopfmassage bekommt	Behandlung|Frau|Gesicht|Kopf|Kopfmassage|Kopfschmerzen|Kopfweh|Massage|Salon|Spa|Therapie|Verspannung|entspannen|entspannend|lindern|relaxen
+man-getting-massage	💆‍♂	Mann, der eine Kopfmassage bekommt	Kopfmassage|Kopfschmerzen|Mann|Mann, der eine Kopfmassage bekommt|Massage|Salon|der eine Kopfmassage bekommt|entspannen
+person-getting-haircut	💇	Person beim Haareschneiden	Friseur|Friseurin|Friseuse|Frisur|Frisör|Frisörin|Haare|Haarschnitt|Person|Person beim Haareschneiden|Schere
+woman-getting-haircut	💇‍♀	Frau beim Haareschneiden	Frau|Frau beim Haareschneiden|Friseur|Haarschnitt|Schere
+man-getting-haircut	💇‍♂	Mann beim Haareschneiden	Friseur|Frisur|Haarschnitt|Mann|Mann beim Haareschneiden|Salon|Schere
+flexed-biceps	💪	angespannter Bizeps	Arm|Bizeps|Bodybuilder|Bro|Fitnessstudio|Gewichtheben|Muckies|Muskeln|Training|stark
+person-in-suit-levitating	🕴	schwebender Mann im Anzug	Anzug|Mann|Schwebender Mann im Anzug|geschäftlich|schwebender Mann im Anzug
+detective	🕵	Detektiv(in)	Detektiv|Detektiv(in)|Lupe|Sherlock|Spion
+woman-detective	🕵‍♀	Detektivin	Detektivin|Frau|Spionage|Spionin
+man-detective	🕵‍♂	Detektiv	Detektiv|Mann|Spion
+man-dancing	🕺	tanzender Mann	Flair|Flamenco|Mann|Salsa|Schwung|Tango|Tanz|Tanzen|Tänzer|elegant|festlich
+hand-with-fingers-splayed	🖐	Hand mit gespreizten Fingern	5|Finger|Hand|Hand mit gespreizten Fingern|fünf|gespreizt
+middle-finger	🖕	Mittelfinger	Finger|Hand|Mittelfinger
+vulcan-salute	🖖	vulkanischer Gruß	Finger|Gruß|Hand|Hände|grüßen|spreizen
+speaking-head	🗣	sprechender Kopf	Gesicht|Kopf|Silhouette|Sprechende Person|sprechen|sprechend|sprechender Kopf
+person-gesturing-no	🙅	Person mit überkreuzten Armen	Arme|Gesicht|NEIN|Person|nicht|verbieten|verboten|überkreuzt
+woman-gesturing-no	🙅‍♀	Frau mit überkreuzten Armen	Arme|Frau|Frau mit überkreuzten Armen|Gesicht
+man-gesturing-no	🙅‍♂	Mann mit überkreuzten Armen	Arme|Gesicht|Mann|NEIN|nicht|verbieten|verboten|überkreuzt
+person-gesturing-ok	🙆	Person mit Händen auf dem Kopf	Geste|Hände|OK|Person|oje|omg|Übung|über Kopf
+woman-gesturing-ok	🙆‍♀	Frau mit Händen auf dem Kopf	Frau|Geste|Hände|OK|oje|omg|Übung|über Kopf
+man-gesturing-ok	🙆‍♂	Mann mit Händen auf dem Kopf	Geste|Hände|Mann|OK|oje|omg|Übung|über Kopf
+person-bowing	🙇	sich verbeugende Person	Bedauern|Demut|Entschuldigung|Geste|Kniefall|Meditation|Person|Verzeihung|bitten|meditieren|sorry|unterwerfen|verbeugen
+woman-bowing	🙇‍♀	sich verbeugende Frau	Bedauern|Demut|Entschuldigung|Frau|Geste|Kniefall|Meditation|Verzeihung|bitten|meditieren|sorry|unterwerfen|verbeugen
+man-bowing	🙇‍♂	sich verbeugender Mann	Demut|Mann|sich verbeugender Mann|verbeugen
+person-raising-hand	🙋	Person mit erhobenem Arm	Frage|Geste|Hand|Person|aufzeigen|drankommen|drannehmen|heben|hier|ich|sich melden|wissen
+woman-raising-hand	🙋‍♀	Frau mit erhobenem Arm	Frage|Frau|Geste|Hand|aufzeigen|drankommen|drannehmen|heben|hier|ich|sich melden|wissen
+man-raising-hand	🙋‍♂	Mann mit erhobenem Arm	Frage|Geste|Hand|Mann|aufzeigen|drankommen|drannehmen|heben|hier|ich|sich melden|wissen
+raising-hands	🙌	zwei erhobene Handflächen	Geste|Handflächen|Hände|erhoben|feiern|hurra|zwei
+person-frowning	🙍	missmutige Person	Gesicht|Person|frustriert|missmutig|runzeln|stirnrunzelnd|unzufrieden|verärgert
+woman-frowning	🙍‍♀	missmutige Frau	Frau|Gesicht|frustriert|missmutig|runzeln|stirnrunzelnd|unzufrieden|verärgert
+man-frowning	🙍‍♂	missmutiger Mann	Gesicht|Mann|frustriert|missmutig|runzeln|stirnrunzelnd|unzufrieden|verärgert
+person-pouting	🙎	schmollende Person	Person|eingeschnappt|enttäuscht|jammerd|jammern|schmollen|schmollend|verärgert
+woman-pouting	🙎‍♀	schmollende Frau	Frau|eingeschnappt|enttäuscht|jammerd|jammern|schmollen|schmollend|verärgert
+man-pouting	🙎‍♂	schmollender Mann	Mann|eingeschnappt|enttäuscht|jammerd|jammern|schmollen|schmollend|verärgert
+folded-hands	🙏	zusammengelegte Handflächen	Gebet|Handflächen|beten|betend|bitten|danke|danken|gefaltet|grüßen|zusammengelegt
+person-rowing-boat	🚣	Person im Ruderboot	Angeln|Boot|Kanu|Paddel|Person|Person im Ruderboot|Ruderboot|Rudern|Sport
+woman-rowing-boat	🚣‍♀	Frau im Ruderboot	Boot|Bootfahrerin|Frau|Frau im Ruderboot|Ruder|Ruderin|Rudern|See|rudern
+man-rowing-boat	🚣‍♂	Mann im Ruderboot	Boot|Mann|Mann im Ruderboot|rudern
+person-biking	🚴	Radfahrer(in)	Fahrrad|Person|Rad|Radfahren|Radfahrer|Radfahrer(in)|Radfahrerin|Sport|Tour de France|radeln
+woman-biking	🚴‍♀	Radfahrerin	Fahrrad|Fahrradfahrerin|Frau|Frauen|Rad|Radeln|Radfahrerin|Radlerin
+man-biking	🚴‍♂	Radfahrer	Fahrrad|Mann|Rad|Radfahrer
+person-mountain-biking	🚵	Mountainbiker(in)	Fahrrad|Mountainbiker|Mountainbiker(in)|Mountainbikerin|Mountainbiking|Person|Rad|Radfahren|Radfahrer|Radfahrerin|Sport|Tour de France
+woman-mountain-biking	🚵‍♀	Mountainbikerin	Fahrrad|Fahrradfahrerin|Frau|Mountain Bike|Mountain Bikerin|Mountainbike|Mountainbikerin|Rad|Radfahrerin|Sport|radeln
+man-mountain-biking	🚵‍♂	Mountainbiker	Fahrrad|Mann|Mountainbike|Mountainbiker|Rad
+person-walking	🚶	Fußgänger(in)	Fußgänger|Fußgänger(in)|Fußgängerin|Person|gehen|gehend|schlendern|schlurfen|wandern
+woman-walking	🚶‍♀	Fußgängerin	Frau|Fußgängerin|Gehen|Schlendern|Spazieren|Spaziergang|gehen
+woman-walking-facing-right	🚶‍♀‍➡	Fußgängerin: nach rechts	Frau|Fußgängerin|Gehen|Schlendern|Spazieren|Spaziergang|gehen|nach|rechts
+man-walking	🚶‍♂	Fußgänger	Fußgänger|Mann|Spaziergang|gehen
+man-walking-facing-right	🚶‍♂‍➡	Fußgänger: nach rechts	Fußgänger|Mann|Spaziergang|gehen|nach|rechts
+person-walking-facing-right	🚶‍➡	Fußgänger(in): nach rechts	Fußgänger|Fußgänger(in)|Fußgängerin|Person|gehen|gehend|nach|rechts|schlendern|schlurfen|wandern
+person-taking-bath	🛀	badende Person	Bad|Badewanne|Badezimmer|Dusche|baden|badende Person|entspannen
+person-in-bed	🛌	im Bett liegende Person	Bett|Heia|Im Bett liegende Person|Nachtruhe|gute Nacht|im Bett liegende Person|müde|schlaf schön|schlafen|zzz
+pinched-fingers	🤌	zusammengedrückte Finger	Bündelhand|Finger|Fingerspitzen|Geste|Hand|Handgeste|gehts noch|italienisch|was|zusammengedrückt|zusammengelegt
+pinching-hand	🤏	Wenig-Geste	Betrag|Finger|Geste|Hand|Menge|Wenig-Geste|gering|klein|unbedeutend|wenig|winzig
+sign-of-the-horns	🤘	Teufelsgruß	Finger|Hand|Heavy|Hörner|Mano cornuta|Metal|Metalhand|Pommesgabel|Rock|Teufel|Teufelsgruß|corna|yeah
+call-me-hand	🤙	Ruf-mich-an-Handzeichen	Anruf|Hand|Ruf-mich-an-Handzeichen|Shaka|anrufen|ruf
+raised-back-of-hand	🤚	erhobene Hand von hinten	Hand|erhoben|erhobene Hand von hinten|erhobener Handrücken
+left-facing-fist	🤛	Faust nach links	Faust|Hand|nach links
+right-facing-fist	🤜	Faust nach rechts	Faust|Hand|nach rechts
+handshake	🤝	Handschlag	Handschlag|Hände|Händeschütteln|Vereinbarung
+crossed-fingers	🤞	Hand mit gekreuzten Fingern	Finger|Hand|Hand mit gekreuzten Fingern|gekreuzt
+love-you-gesture	🤟	Ich-liebe-dich-Geste	Finger|Geste|Hand|Ich-liebe-dich-Geste|Liebe|drei|hdl
+person-facepalming	🤦	sich an den Kopf fassende Person	Gesicht|Kopf|OMG|Person|fassen|frustriert|genervt|oh nein|unfassbar|unglaublich|verzweifelt
+woman-facepalming	🤦‍♀	sich an den Kopf fassende Frau	Frau|Gesicht|Kopf|OMG|fassen|frustriert|genervt|oh nein|unfassbar|unglaublich|verzweifelt
+man-facepalming	🤦‍♂	sich an den Kopf fassender Mann	Gesicht|Kopf|Mann|OMG|fassen|frustriert|genervt|oh nein|unfassbar|unglaublich|verzweifelt
+pregnant-woman	🤰	schwangere Frau	Frau|schwanger|schwangere Frau
+breast-feeding	🤱	Stillen	Baby|Brust|Frau|Person|Stillen|stillen
+palms-up-together	🤲	Handflächen nach oben	Gebet|Hand|Hände|beten|nach oben|zusammen
+selfie	🤳	Selfie	Selfie|Smartphone
+prince	🤴	Prinz	Krone|Prinz
+person-in-tuxedo	🤵	Person im Smoking	Anzug|Bräutigam|Mann|Person|Person im Smoking|Smoking|formell|vornehm
+woman-in-tuxedo	🤵‍♀	Frau im Smoking	Frau|Frau im Smoking|Smoking
+man-in-tuxedo	🤵‍♂	Mann im Smoking	Mann|Mann im Smoking|Smoking
+mrs-claus	🤶	Weihnachtsfrau	Weihnachten|Weihnachtsfrau
+person-shrugging	🤷	schulterzuckende Person	Person|Schultern zucken|Zweifel|egal|gleichgültig|keine Ahnung|schulterzuckend|weiß nicht
+woman-shrugging	🤷‍♀	schulterzuckende Frau	Frau|Schultern zucken|Zweifel|egal|gleichgültig|keine Ahnung|schulterzuckend|weiß nicht
+man-shrugging	🤷‍♂	schulterzuckender Mann	Mann|Schultern zucken|Zweifel|egal|gleichgültig|keine Ahnung|schulterzuckend|weiß nicht
+person-cartwheeling	🤸	Rad schlagende Person	Akrobatik|Bodenturnen|Gymnastik|Person|Rad|Rad schlagen|Rad schlagende Person|Radschlag|Sport|Turner|Turnerin
+woman-cartwheeling	🤸‍♀	Rad schlagende Frau	Akrobatik|Bodenturnen|Frau|Gymnastik|Person|Rad|Rad schlagen|Rad schlagende Frau|Radschlag|Sport|Turnerin
+man-cartwheeling	🤸‍♂	Rad schlagender Mann	Akrobatik|Bodenturnen|Gymnastik|Mann|Person|Rad|Rad schlagen|Rad schlagender Mann|Radschlag|Sport|Turner
+person-juggling	🤹	Jongleur(in)	Artist|Artistin|Jongleur|Jongleur(in)|Jongleurin|Jongleuse|Multitasking|Person|Zirkus|geschickt|jonglieren
+woman-juggling	🤹‍♀	Jongleurin	Frau|Jongleurin|Jonglieren|Multitasking|geschickt|jonglieren|multitasking
+man-juggling	🤹‍♂	Jongleur	Artist|Entertainer|Jongleur|Jonglieren|Mann|Multitasking|Person|Unterhalter|Zirkus|geschickt|jonglieren
+person-fencing	🤺	Fechter(in)	Fechter|Fechter(in)|Schwert|Sport|fechten
+person-wrestling	🤼	Ringer(in)	Catchen|Catcher|Person|Ringer|Ringer(in)|Ringkampf|Sport|Sportler|Wrestler|Wrestling|ringen
+woman-wrestling	🤼‍♀	ringende Frauen	Catcherin|Person|Ringer|Ringerin|Ringkampf|Sport|Wrestlerin|Wrestling|catchen|ringen|ringende Frauen
+man-wrestling	🤼‍♂	ringende Männer	Catchen|Catcher|Männer|Ringer|Ringkampf|Sport|Wrestler|Wrestling|ringen
+person-playing-water-polo	🤽	Wasserballspieler(in)	Person|Schwimmsport|Sport|Sportler|Sportlerin|Wasser|Wasserball|Wasserballspieler|Wasserballspieler(in)|Wasserballspielerin|Wassersport
+woman-playing-water-polo	🤽‍♀	Wasserballspielerin	Ballspiele|Frau|Person|Schwimmsport|Sport|Sportlerin|Wasser|Wasserball|Wasserballspielerin|Wassersport
+man-playing-water-polo	🤽‍♂	Wasserballspieler	Mann|Person|Schwimmsport|Sport|Sportler|Wasser|Wasserball|Wasserballspieler|Wassersport
+person-playing-handball	🤾	Handballspieler(in)	Handball|Handballer|Handballerin|Handballspieler|Handballspieler(in)|Handballspielerin|Person|Sport|Sportler|schleudern|werfen
+woman-playing-handball	🤾‍♀	Handballspielerin	Frau|Handball|Handballerin|Handballspielerin|Person|Sport|Sportlerin|schleudern|werfen
+man-playing-handball	🤾‍♂	Handballspieler	Handball|Handballspieler|Mann|Sport
+ninja	🥷	Ninja	Ausdauer|Geheimmission|Killer|Krieger|Kunoichi|Kämpfer|Mörder|Ninja|Person|Shinobi|Soldat|vermummt
+bone	🦴	Knochen	Hund|Hundeknochen|Kauknochen|Knochen|Skelett
+leg	🦵	Bein	Bein|Extremität|Fuß|Gliedmaße|Knie|Körperglied|Körperteil|Treten|Tritt|gebeugtes Knie
+foot	🦶	Fuß	Fuß|Füße|Kick|Knöchel|Körperteil|Tritt|stampfen|treten
+tooth	🦷	Zahn	Zahn|Zahnarzt|Zahnärztin|Zähne|perlweiß|weiß
+person-superhero	🦸	Superheld(in)	Held|Person|Superheld|Superheld(in)|Superheldin|Superkraft|Superkräfte|Superman|Umhang|Übermensch
+woman-superhero	🦸‍♀	Heldin	Heldin|Superheldin
+man-superhero	🦸‍♂	Superheld	Held|Superheld
+person-supervillain	🦹	Bösewicht	Bösewicht|Bösewichtin|Krimineller|Person|Schurke|Schurkin|Superkräfte|Superschurke|Superschurkin|Verbrecher|böse
+woman-supervillain	🦹‍♀	weiblicher Bösewicht	Bösewicht|böse|weiblicher Bösewicht
+man-supervillain	🦹‍♂	männlicher Bösewicht	Bösewicht|böse|männlicher Bösewicht
+ear-with-hearing-aid	🦻	Ohr mit Hörgerät	Barrierefreiheit|Hilfsgerät|Hörgerät|Hörhilfe|Ohr|gehörlos|schwerhörig|taub
+mechanical-arm	🦾	Armprothese	Arm|Armprothese|Barrierefreiheit|Prothese
+mechanical-leg	🦿	Beinprothese	Barrierefreiheit|Bein|Beinprothese|Prothese
+troll	🧌	Troll	Fantasy|Kobold|Monster|Märchen|Ork|Troll|Ungeheuer|gruslig
+person-standing	🧍	stehende Person	Mensch|Person|Stand|stehen|stehende Person
+woman-standing	🧍‍♀	stehende Frau	Frau|stehen|stehende Frau
+man-standing	🧍‍♂	stehender Mann	Mann|stehen|stehender Mann
+person-kneeling	🧎	kniende Person	Fersensitz|Meditation|Mensch|Person|Seiza|Zazen|knien|kniend|kniende Person|meditieren
+woman-kneeling	🧎‍♀	kniende Frau	Frau|kniend|kniende Frau
+woman-kneeling-facing-right	🧎‍♀‍➡	kniende Frau: nach rechts	Frau|kniend|kniende Frau|nach|rechts
+man-kneeling	🧎‍♂	kniender Mann	Mann|kniend|kniender Mann
+man-kneeling-facing-right	🧎‍♂‍➡	kniender Mann: nach rechts	Mann|kniend|kniender Mann|nach|rechts
+person-kneeling-facing-right	🧎‍➡	kniende Person: nach rechts	Fersensitz|Meditation|Mensch|Person|Seiza|Zazen|knien|kniend|kniende Person|meditieren|nach|rechts
+person-deaf	🧏	gehörlose Person	Barrierefreiheit|Ohr|Person|gehörlos|hören|schwerhörig|taub
+woman-deaf	🧏‍♀	gehörlose Frau	Frau|gehörlos|gehörlose Frau|taub
+man-deaf	🧏‍♂	gehörloser Mann	Mann|gehörlos|gehörloser Mann|taub
+person	🧑	Person	Mensch|Person|erwachsen|erwachsene Person
+health-worker	🧑‍⚕	Arzt/Ärztin	Arzt/Ärztin|Arztkittel|Doktor(in)
+judge	🧑‍⚖	Richter(in)	Richter(in)|Waage
+pilot	🧑‍✈	Pilot(in)	Flugzeug|Pilot(in)
+farmer	🧑‍🌾	Bauer/Bäuerin	Bauer/Bäuerin|Farmer(in)|Gärtner(in)|Landwirt(in)
+cook	🧑‍🍳	Koch/Köchin	Koch/Köchin|Kochen
+person-feeding-baby	🧑‍🍼	Person, die Baby die Flasche gibt	Baby|Flasche geben|Flasche gebende Person|Person
+mx-claus	🧑‍🎄	Weihnachtsperson	Gesicht|Gesicht mit Hut|Person|Santa Claus|Weihnachten|Weihnachtsfrau|Weihnachtshut|Weihnachtsmann|Weihnachtsmütze|Weihnachtsperson
+student	🧑‍🎓	Student(in)	Absolvent(in)|Doktorhut|Student(in)|Uni
+singer	🧑‍🎤	Sänger(in)	Entertainer(in)|Rock|Star|Sänger(in)
+artist	🧑‍🎨	Künstler(in)	Farbpalette|Künstler(in)|Maler(in)
+factory-worker	🧑‍🏭	Fabrikarbeiter(in)	Arbeiter(in)|Fabrik|Fabrikarbeiter(in)|Montage|industriell
+technologist	🧑‍💻	IT-Experte/IT-Expertin	Bildschirm|Computer|Entwickler(in)|IT-Experte/IT-Expertin
+office-worker	🧑‍💼	Büroangestellte(r)	Architekt(in)|Business|Büroangestellte(r)|Manager(in)|Schlips und Kragen
+mechanic	🧑‍🔧	Mechaniker(in)	Elektriker(in)|Klempner(in)|Mechaniker(in)
+scientist	🧑‍🔬	Wissenschaftler(in)	Forscher(in)|Labor|Wissenschaftler(in)
+astronaut	🧑‍🚀	Astronaut(in)	Astronaut(in)|Raumfahrt|Weltraum
+firefighter	🧑‍🚒	Feuerwehrmann/-frau	Feuerwehrhelm|Feuerwehrmann/-frau
+person-with-white-cane	🧑‍🦯	Person mit Langstock	Barrierefreiheit|Person mit Blindenstock|Person mit Langstock|blind
+person-with-white-cane-facing-right	🧑‍🦯‍➡	Person mit Langstock: nach rechts	Barrierefreiheit|Person mit Blindenstock|Person mit Langstock|blind|nach|rechts
+person-red-hair	🧑‍🦰	Person: rotes Haar	Mensch|Person|erwachsen|erwachsene Person|rotes Haar
+person-bald	🧑‍🦲	Person: Glatze	Glatze|Mensch|Person|erwachsen|erwachsene Person
+person-white-hair	🧑‍🦳	Person: weißes Haar	Mensch|Person|erwachsen|erwachsene Person|weißes Haar
+person-in-motorized-wheelchair	🧑‍🦼	Person in elektrischem Rollstuhl	Barrierefreiheit|Person in elektrischem Rollstuhl|Rollstuhl
+person-in-motorized-wheelchair-facing-right	🧑‍🦼‍➡	Person in elektrischem Rollstuhl: nach rechts	Barrierefreiheit|Person in elektrischem Rollstuhl|Rollstuhl|nach|rechts
+person-in-manual-wheelchair	🧑‍🦽	Person in manuellem Rollstuhl	Barrierefreiheit|Person in manuellem Rollstuhl|Rollstuhl
+person-in-manual-wheelchair-facing-right	🧑‍🦽‍➡	Person in manuellem Rollstuhl: nach rechts	Barrierefreiheit|Person in manuellem Rollstuhl|Rollstuhl|nach|rechts
+child	🧒	Kind	Enkelkind|Kind|jung|jünger|munter|strahlend
+older-person	🧓	ältere Person	Großeltern|Mensch|Person|alt|erwachsen|weise|älter
+person-beard	🧔	Person: Bart	Bart|Person|Schnurrbart|bärtig
+woman-beard	🧔‍♀	Frau: Bart	Bart|Frau|Frau mit Bart|Frau: Bart
+man-beard	🧔‍♂	Mann: Bart	Bart|Mann|Mann mit Bart|Mann: Bart
+woman-with-headscarf	🧕	Frau mit Kopftuch	Frau|Frau mit Kopftuch|Hidschab|Hijab|Kopftuch|Mantilla|Person|Tichel|Tuch
+person-in-steamy-room	🧖	Person in Dampfsauna	Dampfbad|Dampfsauna|Frau|Person|Person in Dampfsauna|Relaxen|Sauna|Spa|abschalten|entspannen|luxuriös
+woman-in-steamy-room	🧖‍♀	Frau in Dampfsauna	Dampfsauna|Frau in Dampfsauna|Sauna
+man-in-steamy-room	🧖‍♂	Mann in Dampfsauna	Dampfsauna|Mann in Dampfsauna|Sauna
+person-climbing	🧗	Bergsteiger(in)	Bergsteiger|Bergsteiger(in)|Fels|Kletterer|Person|Sport|klettern
+woman-climbing	🧗‍♀	Bergsteigerin	Bergsteiger|Bergsteigerin
+man-climbing	🧗‍♂	Bergsteiger	Bergsteiger
+person-in-lotus-position	🧘	Person im Lotossitz	Frau|Lotussitz|Meditation|Person|Person im Lotossitz|Person in Lotussitz|Schneidersitz|Yoga|Zen|burmesischer Sitz
+woman-in-lotus-position	🧘‍♀	Frau im Lotossitz	Frau im Lotossitz|Meditation|Yoga
+man-in-lotus-position	🧘‍♂	Mann im Lotossitz	Mann im Lotossitz|Meditation|Yoga
+person-mage	🧙	Magier(in)	Hexe|Hexenmeister|Magier|Magier(in)|Magiker|Person|Zauberer|Zauberin|Zauberspruch|Zauberstab|zaubern
+woman-mage	🧙‍♀	Magierin	Hexe|Magierin|Zauberin
+man-mage	🧙‍♂	Magier	Hexenmeister|Magier|Zauberer
+person-fairy	🧚	Märchenfee	Elf|Elfe|Fantasy|Fee|Flügel|Märchen|Märchenfee|Person|Wesen|geflügelt|mystisch
+woman-fairy	🧚‍♀	Fee	Fee|Titania
+man-fairy	🧚‍♂	männliche Fee	Oberon|Puck|Zauberer|männliche Fee
+person-vampire	🧛	Vampir	Blutsauger|Dracula|Halloween|Person|Reißzähne|Untoter|Vampir|Zähne|untot
+woman-vampire	🧛‍♀	weiblicher Vampir	Untoter|weiblicher Vampir
+man-vampire	🧛‍♂	männlicher Vampir	Dracula|Untoter|männlicher Vampir
+person-merpeople	🧜	Wassermensch	Meerjungfrau|Meermann|Märchen|Nixe|Person|Sirene|Wasserfrau|Wassermann|Wassermensch
+woman-merpeople	🧜‍♀	Meerjungfrau	Meerjungfrau|Nixe|Wasserfrau
+man-merpeople	🧜‍♂	Wassermann	Triton|Wassermann
+person-elf	🧝	Elf(e)	Elbe|Elben|Elbin|Elf|Elf(e)|Elfe|Fantasy|Herr der Ringe|Magie|Person|magisch
+woman-elf	🧝‍♀	Elfe	Elbin|Elfe|magisch
+man-elf	🧝‍♂	Elf	Alb|Elbe|Elf|magisch
+person-genie	🧞	Flaschengeist	Aladdin|Aladin|Dschinn|Flaschengeist|Lampe|Person|Wunderlampe|Wünsche
+woman-genie	🧞‍♀	weiblicher Flaschengeist	Dschinn|weiblicher Flaschengeist
+man-genie	🧞‍♂	männlicher Flaschengeist	Dschinn|männlicher Flaschengeist
+person-zombie	🧟	Zombie	Apokalypse|Halloween|Horror|Person|Untoter|Walking Dead|Zombie|untot|wandelnder Toter
+woman-zombie	🧟‍♀	weiblicher Zombie	Untote|wandelnde Tote|weiblicher Zombie
+man-zombie	🧟‍♂	männlicher Zombie	Untoter|männlicher Zombie|wandelnder Toter
+brain	🧠	Gehirn	Gehirn|Hirn|Intelligenz|intelligent|klug|schlau
+anatomical-heart	🫀	Herz (Organ)	Anatomie|Herz|Herzschlag|Körper|Körperteil|Mensch|Organ|Puls|schlagen
+lungs	🫁	Lunge	Atem|Körper|Körperteil|Lunge|Lungenflügel|Mensch|Organ|atmen|ausatmen|einatmen
+people-hugging	🫂	sich umarmende Personen	Abschied|Danke|Drücker|Freundschaft|Hallo|Liebe|Tschüss|Umarmung|drücken|sich umarmende Personen
+pregnant-man	🫃	schwangerer Mann	Bauch|Person|aufgebläht|dick|schwanger|schwangerer Mann|zu viel gegessen|überfressen
+pregnant-person	🫄	schwangere Person	Bauch|Person|Schwangerschaft|aufgebläht|dick|dicker Bauch|schwanger|schwangere Person|zu viel gegessen|überfressen
+person-with-crown	🫅	Person mit Krone	Krönung|König|Königin|Monarch|Monarchin|Person|Person mit Krone|Prinz|Prinzessin|adelig|königlich|königliche Hoheit
+biting-lip	🫦	auf Lippe beißen	Angst|Kuss|Lippenstift|Mund|Zähne|beißen|besorgt|flirten|flirtend|nervös|sexy|unbehaglich|ängstlich
+hand-with-index-finger-and-thumb-crossed	🫰	Hand mit gekreuztem Zeigefinger und Daumen	Daumen|Finger|Fingerherz|Geld|Hand|Handgeste|Kosten|Zeigefinger|gekreuzt|teuer
+rightwards-hand	🫱	nach rechts weisende Hand	Hand|Hände|Händeschütteln|ausgestreckt|ausstrecken|rechts|reichen|schütteln|weisen
+leftwards-hand	🫲	nach links weisende Hand	Hand|Hände|Händeschütteln|ausgestreckt|ausstrecken|links|reichen|schütteln|weisen
+palm-down-hand	🫳	Hand mit Handfläche nach unten	Hand|Handfläche|Handgeste|abweisen|fallen lassen|fallenlassen|hau ab|unten|verscheuchen|wegscheuchen|wegschicken
+palm-up-hand	🫴	Hand mit Handfläche nach oben	Angebot|Hand|Handfläche|Handgeste|anbieten|darbieten|einladen|entgegenstrecken|kommen|locken|oben|reichen
+index-pointing-at-the-viewer	🫵	auf Betrachter zeigender Zeigefinger	Finger|Fingerzeig|Hand|Handgeste|Sie|Zeigefinger|deuten|du|stupsen|zeigen
+heart-hands	🫶	Hände, die Herz bilden	<3|Finger|Geste|Handgeste|Handherz|Herz|Hände|Händeherz|Liebe|hdl
+leftwards-pushing-hand	🫷	nach links schiebende Hand	Halt|Hand|High 5|High five|Moment|Schluss|Stopp|drücken|links|nein|schieben|warte mal|warten
+rightwards-pushing-hand	🫸	nach rechts schiebende Hand	Halt|Hand|High 5|High five|Moment|Schluss|Stopp|drücken|nein|rechts|schieben|warte mal|warten
+index-pointing-up	☝	nach oben weisender Zeigefinger von vorne	Finger|Hand|Handvorderseite|Zeigefinger|hier|melden|oben|weisen|zeigen
+skier	⛷	Skifahrer(in)	Schnee|Ski|Skifahrer|Skifahrer(in)|Skifahrerin|Sport
+person-bouncing-ball	⛹	Person mit Ball	Ball|Basketball|Basketballer|Basketballspieler|Basketballspielerin|Dribbeln|Person|Person mit Ball|Sport|Sportler|Sportlerin
+woman-bouncing-ball	⛹‍♀	Frau mit Ball	Ball|Ballsport|Basketball|Basketballspieler|Frau|Frau mit Ball|Handball|Sport
+man-bouncing-ball	⛹‍♂	Mann mit Ball	Ballsport|Handball|Mann|Mann mit Ball
+raised-fist	✊	erhobene Faust	Faust|Hand|Kampf|Solidarität|erhoben
+raised-hand	✋	erhobene Hand	5|Hand|Handfläche|Stopp|erhoben|halt|high five|schlag ein|warte
+victory-hand	✌	Victory-Geste	Sieg|V|Victory|Victory-Geste
+writing-hand	✍	schreibende Hand	Hand|Stift|schreiben|schreibend
+seedling	🌱	Spross	Spross|junge Pflanze
+evergreen-tree	🌲	Nadelbaum	Baum|Nadelbaum|Pflanze|Tannenbaum
+deciduous-tree	🌳	Laubbaum	Baum|Blätter|Laub|Laubbaum|Pflanze|Wald|grün
+palm-tree	🌴	Palme	Baum|Kokusnuss|Oase|Palme|Pflanze|Strand|Tropen
+cactus	🌵	Kaktus	Dürre|Kaktus|Natur|Pflanze|Trockenzeit|Wüste
+tulip	🌷	Tulpe	Blume|Blüte|Pflanze|Tulpe
+cherry-blossom	🌸	Kirschblüte	Blume|Blüte|Kirschblüte|Kirsche|Pflanze
+rose	🌹	Rose	Blume|Blüte|Pflanze|Rose
+hibiscus	🌺	Hibiskus	Blume|Blüte|Hibiskus|Pflanze|Rosa
+sunflower	🌻	Sonnenblume	Blume|Blüte|Pflanze|Sonne|Sonnenblume
+blossom	🌼	gelbe Blüte	Blume|Blüte|Gelbe Blüte|Pflanze|gelbe Blüte
+sheaf-of-rice	🌾	Reisähre	Pflanze|Reis|Reispflanze|Reisähre|Ähre
+herb	🌿	Kräuter	Blätter|Kräuter|Pflanze
+four-leaf-clover	🍀	Glücksklee	Blatt|Glück|Glücksklee|Klee|Kleeblatt|Pflanze|Silverster|Vierblättriges Kleeblatt|vier|vierblättrig
+maple-leaf	🍁	Ahornblatt	Ahorn|Ahornblatt|Blatt|Herbst|Laub|Pflanze
+fallen-leaf	🍂	Laub	Blatt|Blätter|Fallendes Laub|Herbst|Laub|Pflanze
+leaf-fluttering-in-wind	🍃	Blätter im Wind	Blatt|Blätter|Blätter im Wind|Laub|Pflanze|Wind
+rosette	🏵	Rosette	Pflanze|Rosette
+rat	🐀	Ratte	Nagetier|Ratte|Tier
+mouse	🐁	Maus	Maus|Nage|Tier
+ox	🐂	Ochse	Kuh|Ochse|Sternzeichen|Stier|Tier|Tierkreis
+water-buffalo	🐃	Wasserbüffel	Büffel|Tier|Wasser|Wasserbüffel
+cow	🐄	Kuh	Bauernhof|Kuh|Tier|muh
+tiger	🐅	Tiger	Tier|Tiger
+leopard	🐆	Leopard	Leopard|Punkte|Raubkatze|Raubtier|Tier|Zoo|gepunktet
+rabbit	🐇	Hase	Hase|Kaninchen|Karnickel|Mümmelmann|Nagetier|Tier
+cat	🐈	Katze	Haustier|Katze|Tier|miau
+black-cat	🐈‍⬛	schwarze Katze	Kater|Katze|Pech|Tier|Unglück|miau|schwarz|schwarze Katze|schwarzer Kater
+dragon	🐉	Drache	Drache|Märchen|Tier|chinesisch Neujahr
+crocodile	🐊	Krokodil	Krokodil|Reptil|Schnappi|Tier
+whale	🐋	Wal	Ozean|Tier|Wal
+snail	🐌	Schnecke	Schnecke|Tier|langsam
+snake	🐍	Schlange	Schlange|Schlangenträger|Sternzeichen|Tier|Tierkreis
+horse	🐎	Pferd	Pferd|Rennen|Rennpferd|Tier
+ram	🐏	Widder	Schaf|Sternzeichen|Tierkreis|Widder
+goat	🐐	Ziege	Steinbock|Sternzeichen|Tier|Tierkreis|Ziege
+ewe	🐑	Schaf	Bock|Schaf|Tier|Widder|Wolle|mäh
+monkey	🐒	Affe	Affe|Tier
+rooster	🐓	Hahn	Hahn|Tier
+chicken	🐔	Huhn	Geflügel|Henne|Huhn|Tier|Tierkopf
+dog	🐕	Hund	Haustier|Hund|Tier|wau|wuff
+service-dog	🐕‍🦺	Assistenzhund	Assistenz|Assistenzhund|Barrierefreiheit|Behinderung|Hund|Tier
+pig	🐖	Schwein	Bauernhof|Sau|Schwein|Tier
+boar	🐗	Wildschwein	Eber|Schwein|Tier|Wildschwein
+elephant	🐘	Elefant	Elefant|Tier
+octopus	🐙	Oktopus	Krake|Meer|Oktopus|Tier|Tintenfisch
+spiral-shell	🐚	Schneckenhaus	Muschel|Schneckenhaus|Strand|Tier
+bug	🐛	Raupe	Insekt|Raupe|Tier|gefräßig
+ant	🐜	Ameise	Ameise|Insekt|Tier
+honeybee	🐝	Biene	Biene|Honig|Honigbiene|Hummel|Insekt|Maja|Natur|Summ|Tier
+lady-beetle	🐞	Marienkäfer	Glückskäfer|Insekt|Käfer|Marienkäfer|Punkte|Tier|krabbel
+fish	🐟	Fisch	Aquarium|Fisch|Fische|Meehr|Sternzeichen|Tier|Tierkreis
+tropical-fish	🐠	Tropenfisch	Fisch|Tier|Tropenfisch
+blowfish	🐡	Kugelfisch	Fisch|Kugelfisch|Meer|Tier|kugelrund
+turtle	🐢	Schildkröte	Schildkröte|Tier
+hatching-chick	🐣	schlüpfendes Küken	Ei|Küken|Küken in Eierschale|Piep|Tier|Vogel|schlüpfen|schlüpfendes Küken
+baby-chick	🐤	Küken	Küken|Kükenkopf|Tier
+front-facing-baby-chick	🐥	Küken von vorne	Geflügel|Küken|Küken in Frontansicht|Küken von vorne|Tier
+bird	🐦	Vogel	Papagei|Taube|Tier|Vogel|Vogelkopf
+blackbird	🐦‍⬛	schwarzer Vogel	Amsel|Krähe|Rabe|Schnabel|Tier|Vogel|krächzen|schwarz|schwarzer Vogel
+phoenix-bird	🐦‍🔥	Phönix	Asche|Fabelwesen|Fantasy|Feuer|Feuervogel|Phönix|Reinkarnation|Tier|Vogel|Wiedergeburt
+penguin	🐧	Pinguin	Pinguin|Pinguinkopf|Tier|Vogel
+koala	🐨	Koala	Koala|Koalabär|Koalagesicht|Tier
+poodle	🐩	Pudel	Hund|Pudel|Tier
+camel	🐪	Dromedar	Dromedar|Kamel|Tier|Wüste|einhöckrig
+two-hump-camel	🐫	Kamel	Kamel|Tier|Wüste|zweihöckrig
+dolphin	🐬	Delfin	Delfin|Meer|Ozean|Strand|Tier
+mouse-face	🐭	Mäusegesicht	Gesicht|Maus|Mausgesicht|Mäusegesicht|Nagetier|Tier
+cow-face	🐮	Kuhgesicht	Gesicht|Kuh|Kuhgesicht|Tier
+tiger-face	🐯	Tigergesicht	Gesicht|Raubkatze|Tier|Tiger|Tigergesicht
+rabbit-face	🐰	Hasengesicht	Gesicht|Hase|Hasengesicht|Kaninchen|Karnickel|Langohr|Mümmelmann|Nager|Nagetier|Tier
+cat-face	🐱	Katzengesicht	Gesicht|Katze|Katzengesicht|Miau|Miez|Miezekatze|Tier
+dragon-face	🐲	Drachengesicht	Drache|Drachengesicht|Gesicht|Märchen|Tier
+spouting-whale	🐳	blasender Wal	Blasender Wal|Meer|Ozean|Tier|Wal|blasender Wal
+horse-face	🐴	Pferdegesicht	Gesicht|Pferd|Pferdegesicht|Pferdekopf|Tier
+monkey-face	🐵	Affengesicht	Affe|Affengesicht|Banane|Dschungel|Gesicht|Tier|Zoo
+dog-face	🐶	Hundegesicht	Gesicht|Hund|Hundegesicht|Tier|Wau|treu|wuff
+pig-face	🐷	Schweinegesicht	Gesicht|Schwein|Schweinegesicht|Tier
+frog	🐸	Frosch	Frosch|Froschgesicht|Gesicht|Tier|grün|quak
+hamster	🐹	Hamster	Gesicht|Hamster|Hamstergesicht|Tier
+wolf	🐺	Wolf	Gesicht|Tier|Wolf|Wolfsgesicht
+bear	🐻	Bär	Bär|Bärengesicht|Gesicht|Tier
+polar-bear	🐻‍❄	Eisbär	Arktis|Eisbär|Nordpol|weiß
+panda	🐼	Panda	Gesicht|Panda|Pandabär|Pandagesicht|Tier
+pig-nose	🐽	Schweinerüssel	Nase|Schwein|Schweinerüssel|Tier
+paw-prints	🐾	Tatzenabdrücke	Abdruck|Tatzen|Tatzenabdrücke|Tier
+chipmunk	🐿	Streifenhörnchen	Streifenhörnchen|Tier
+bouquet	💐	Blumenstrauß	Blumen|Blumenstrauß|Bouquet
+dove	🕊	Taube	Friede|Frieden|Friedenstaube|Taube|Vogel|fliegen
+spider	🕷	Spinne	Insekt|Spinne|Tier
+spider-web	🕸	Spinnennetz	Netz|Spinne|Spinnennetz
+wilted-flower	🥀	welke Blume	Blume|am sterben|sterbend|verwelkt|welk|welke Blume|welkende Blume
+lion	🦁	Löwe	Gesicht|Löwe|Löwengesicht|Sternzeichen|Tier|Tierkreis
+scorpion	🦂	Skorpion	Horoskop|Skorpion|Sternzeichen|Tierkreis
+turkey	🦃	Truthahn	Geflügel|Pute|Thanksgiving|Truthahn
+unicorn	🦄	Einhorn	Einhorn|Einhorngesicht|Gesicht
+eagle	🦅	Adler	Adler|Tier|Vogel
+duck	🦆	Ente	Ente|Tier|Vogel
+bat	🦇	Fledermaus	Fledermaus|Tier|Vampir
+shark	🦈	Hai	Fisch|Hai|Haifisch|Meer|Tier
+owl	🦉	Eule	Eule|Raubvogel|Tier|Uhu|Vogel|weise
+fox	🦊	Fuchs	Fuchs|Fuchsgesicht|Gesicht|Tier
+butterfly	🦋	Schmetterling	Insekt|Schmetterling|schön
+deer	🦌	Hirsch	Gesicht|Hirsch|Tier
+gorilla	🦍	Gorilla	Affe|Gesicht|Gorilla|Tier
+lizard	🦎	Eidechse	Eidechse|Reptil
+rhinoceros	🦏	Nashorn	Nashorn|Rhinozeros|Tier
+giraffe	🦒	Giraffe	Flecken|Giraffe|flecken|giraffe|tier
+zebra	🦓	Zebra	Streifen|Zebra|streifen|tier|zebra
+hedgehog	🦔	Igel	Igel|igel|stachelig|stacheln|tier
+sauropod	🦕	Sauropode	Brachiosaurus|Brontosaurus|Dino|Dinosaurier|Diplodocus|Saurier|Sauropode
+t-rex	🦖	T-Rex	Dino|Dinosaurier|Saurier|T-Rex|Tyrannosaurus Rex|dinosaurier|saurier|t-rex|tree
+cricket	🦗	Grille	Grille|Heuschrecke|grashüpfer|grille|insekt|tier|zikade
+kangaroo	🦘	Känguru	Australien|Beuteltier|Down Under|Hüpfen|Känguru|Quokka|Skippy|Tier|Wallaby|hüpfen|springen
+llama	🦙	Lama	Alpaca|Alpaka|Anden|Kamel|Lama|Tier|Vicuña|Wolle
+peacock	🦚	Pfau	Pfau|Tier|Vogel|bunt|stolz|stolzieren
+hippopotamus	🦛	Nilpferd	Flusspferd|Hippo|Nilpferd|Tier
+parrot	🦜	Papagei	Papagei|Pirat|Tier|Vogel|Wiederholen|ausplaudern|plappern|sprechen
+raccoon	🦝	Waschbär	Tier|Waschbär|klug|neugierig|schlau
+mosquito	🦟	Mücke	Biss|Fieber|Insekt|Insektenbiss|Insektenstich|Krankheit|Malaria|Moskito|Mücke|Schnake|Stechmücke|Stich|Tier|Virus
+microbe	🦠	Mikrobe	Amöbe|Amöben|Bakterie|Bakterien|Einzeller|Medizin|Mikrobe|Virus|Wissenschaft
+badger	🦡	Dachs	Dachs|Dachse|Frechdachs|Honigdachs|Ratel|Tier
+swan	🦢	Schwan	Schwan|Tier|Vogel|hässliches Entlein
+mammoth	🦣	Mammut	Aussterben|Mammut|Natur|Stoßzahn|Tier|groß|wollig
+dodo	🦤	Dodo	Aussterben|Dodo|Dronte|Mauritius|Natur|Tier|Vogel|groß
+sloth	🦥	Faultier	Faultier|Tier|faul|langsam|träge
+otter	🦦	Otter	Otter|Tier|fischen|verspielt
+orangutan	🦧	Orang-Utan	Affe|Orang-Utan|Tier
+skunk	🦨	Stinktier	Skunk|Stinktier|Tier|stinken
+flamingo	🦩	Flamingo	Flamingo|Tier|Tropen|Vogel|bunt|farbenfroh|rosa|tropisch
+beaver	🦫	Biber	Biber|Biberschwanz|Biberzahn|Damm|Natur|Otter|Tier
+bison	🦬	Bison	Bison|Büffel|Herde|Ochse|Tier|Wisent
+seal	🦭	Seehund	Meer|Ozean|Robbe|Seehund|Seelöwe|Tier
+guide-dog	🦮	Blindenhund	Barrierefreiheit|Behinderung|Blindenhund|Hund|Tier|blind|sehbehindert
+fly	🪰	Fliege	Fliege|Insekt|Krankheit|Made|Mücke|Plage|Schmeißfliege|Tier|fliegen|verwesen
+worm	🪱	Wurm	Insekt|Natur|Parasit|Regenwurm|Ringelwurm|Tier|Wurm
+beetle	🪲	Käfer	Insekt|Krabbeltier|Käfer|Minzkäfer|Tier|Wanze
+cockroach	🪳	Kakerlake	Insekt|Kakerlake|Krabbeltier|Käfer|Küchenschabe|La Cucaracha|Schabe|Tier|krabbeln
+potted-plant	🪴	Topfpflanze	Dekor|Grünpflanze|Haus|Pflanze|Topfpflanze|Zimmerpflanze|pflegen|wachsen
+feather	🪶	Feder	Feder|Federn|Gefieder|Vogelfeder|federleicht|fliegen|leicht
+lotus	🪷	Lotusblüte	Blume|Buddhismus|Erleuchtung|Gleichmut|Hinduismus|Liebe|Lotosblume|Lotusblüte|Pflanze|Reinheit|Ruhe|Schönheit
+coral	🪸	Koralle	Great Barrier Reef|Klimawandel|Koralle|Korallenriff|Meer|Ozean|Riff|Tier
+empty-nest	🪹	leeres Nest	Heim|Nest|Nestbau|Vogelnest|Zuhause|leeres Nest|nisten
+nest-with-eggs	🪺	Nest mit Eiern	Heim|Nest|Nest mit Eiern|Nest mit blauen Eiern|Nestbau|Vogelnest|Zuhause|nisten
+hyacinth	🪻	Hyazinthe	Blume|Blüte|Frühling|Hyazinthe|Lavendel|Lupine|Löwenmaul|Pflanze|blaue Wiesenlupine|blühen|lila|violett
+jellyfish	🪼	Qualle	Gallert|Glibber|Meer|Meeresbewohner|Meerestier|Nesseltier|Ozean|Qualle|Tentakeln|autsch|brennen
+wing	🪽	Flügel	Engel|Engelsflügel|Federn|Flug|Flügel|Mythologie|Vogel|fliegen|himmlisch
+goose	🪿	Gans	Gans|Ganter|Geflügel|Gänserich|Tier|Vogel|blöd|dumm|dumme Gans|schnattern
+moose	🫎	Elch	Elch|Geweih|Säugetier|Tier
+donkey	🫏	Esel	Dickschädel|Dummkopf|Esel|Maultier|Säugetier|Tier|austreten|stur|störrisch
+shamrock	☘	Kleeblatt	Kleeblatt|Pflanze|grün
+hot-dog	🌭	Hotdog	Essen|Frankfurter|Hot Dog|Hotdog|Wurst|Würstchen
+taco	🌮	Taco	Essen|Taco|mexikanisch
+burrito	🌯	Burrito	Burrito|essen|mexikanisch
+chestnut	🌰	Kastanie	Kastanie|Marone
+hot-pepper	🌶	Peperoni	Chili|Paprika|Peperoni|Pfeffer|Pflanze|scharf
+ear-of-corn	🌽	Maiskolben	Gemüse|Mais|Maiskolben
+mushroom	🍄	Fliegenpilz	Fliegenpilz|Pilz|giftig
+brown-mushroom	🍄‍🟫	brauner Pilz	Essen|Fungus|Gemüse|Lebensmittel|Natur|Pflanze|Pilz|Wald|braun
+tomato	🍅	Tomate	Essen|Gemüse|Obst|Tomate
+eggplant	🍆	Aubergine	Aubergine|Gemüse
+grapes	🍇	Trauben	Frucht|Obst|Traube|Trauben|Wein
+melon	🍈	Honigmelone	Frucht|Honigmelone|Melone|Obst|cantaloupe
+watermelon	🍉	Wassermelone	Frucht|Melone|Obst|Wasser|Wassermelone
+tangerine	🍊	Mandarine	Apfelsine|Frucht|Mandarine|Obst|Orange|Vitamin
+lemon	🍋	Zitrone	Frucht|Obst|Zitrone|Zitrusfrucht|sauer
+lime	🍋‍🟩	Limette	Cocktail|Essen|Frucht|Limette|Obst|Saft|Tequila|Zitrusfrucht|sauer|tropisch
+banana	🍌	Banane	Banane|Frucht|Obst|Schale
+pineapple	🍍	Ananas	Ananas|Frucht|Obst
+red-apple	🍎	roter Apfel	Apfel|Frucht|Obst|rot|roter Apfel
+green-apple	🍏	grüner Apfel	Apfel|Frucht|Obst|gesund|grün|grüner Apfel
+pear	🍐	Birne	Birne|Frucht|Obst
+peach	🍑	Pfirsich	Frucht|Obst|Pfirsich
+cherries	🍒	Kirschen	Frucht|Kirsche|Kirschen|Obst
+strawberry	🍓	Erdbeere	Beere|Erdbeere|Essen|Frucht|Obst
+hamburger	🍔	Hamburger	Burger|Fast Food|Hamburger|Restaurant
+pizza	🍕	Pizza	Pizza|Pizzastück|Pizzeria
+meat-on-bone	🍖	Fleischhachse	Fleisch|Fleischhachse|Knochen|Restaurant
+poultry-leg	🍗	Hähnchenschenkel	Fleisch|Geflügel|Hähnchenschenkel|Hühnerbein|Restaurant
+rice-cracker	🍘	Reiscracker	Cracker|Reiscracker
+rice-ball	🍙	Reisbällchen	Essen|Reis|Reisbällchen|japanisch
+cooked-rice	🍚	Reis in Schüssel	Essen|Reis|Reis in Schüssel
+curry-rice	🍛	Reis mit Curry	Curry|Reis|Reis mit Curry
+steaming-bowl	🍜	Schüssel und Essstäbchen	Eiernudeln|Nudeln|Schüssel|Schüssel und Essstäbchen|Stäbchen|Suppe|chinesisches Essen|dampfend
+spaghetti	🍝	Spaghetti	Essse|Nudeln mit Tomatensoße|Pasta|Restaurant|Spaghetti
+bread	🍞	Brot	Brot|Brotlaib|Essen|Kohlenhydrate|Laib Brot|Toast|Weizen|Weißbrot
+french-fries	🍟	Pommes frites	Fritten|Pommes|Pommes Frites|Pommes frites
+roasted-sweet-potato	🍠	geröstete Süßkartoffel	Essen|Gemüse|Süßkartoffel|geröstet
+dango	🍡	Dango	Dango|Mochi-Kugeln auf einem Spieß|Restaurant|japanisches Gericht
+oden	🍢	Oden	Oden|Restaurant|japanisches Gericht
+sushi	🍣	Sushi	Restaurant|Sushi|japanisches Gericht
+fried-shrimp	🍤	frittierte Garnele	Frittierte Garnele|Garnele|Restaurant|frittierte Garnele|tempura
+fish-cake-with-swirl	🍥	Fischfrikadelle	Fisch|Fischfrikadelle|Restaurant|Spirale
+soft-ice-cream	🍦	Softeis	Eis|Softeis
+shaved-ice	🍧	Wassereis	Eis|Sorbet|Wassereis|zerstoßen
+ice-cream	🍨	Eiscreme	Eis|Eisbecher|Eiscreme|Eisdiele
+doughnut	🍩	Donut	Donut|Doughnut|Essen|Kuchen|süß
+cookie	🍪	Keks	Cookie|Keks|Plätchen
+chocolate-bar	🍫	Schokoladentafel	Essen|Schokolade|Schokoladentafel|Süßigkeit
+candy	🍬	Bonbon	Bonbon|Süßigkeit|süß
+lollipop	🍭	Lutscher	Lolli|Lutscher|Süßigkeit
+custard	🍮	Pudding	Dessert|Flan|Nachspeise|Nachtisch|Pudding|Schokolade|Soße
+honey-pot	🍯	Honigtopf	Honig|Honigtopf|süß
+shortcake	🍰	Torte	Kuchen|Kuchenstück|Stück Torte|Torte|Tortenstück
+bento-box	🍱	Bento-Box	Bento|Bento-Box|Japanisches essen|Sushi
+pot-of-food	🍲	Topf mit Essen	Eintopf|Gericht|Schüssel|Suppe|Topf mit Essen
+cooking	🍳	Spiegelei in Bratpfanne	Bratpfanne|Kochen|Pfanne|Spiegelei|Spiegelei in Bratpfanne|braten
+fork-and-knife	🍴	Messer und Gabel	Abendessen|Besteck|Essen|Frühstück|Gabel|Gabel und Messer|Geschirr|Hunger|Messer|Messer und Gabel|Mittagessen|Restaurant|lecker
+teacup-without-handle	🍵	Teetasse ohne Henkel	Getränk|Oolong|Schale|Tee|Teetasse|Teetasse ohne Henkel|grüner Tee
+sake	🍶	Sake-Flasche mit Tasse	Flasche|Getränk|Sake|Sake-Flasche mit Tasse|Sake-Flasche und -tasse|Tasse|trinken
+wine-glass	🍷	Weinglas	Alkohol|Bar|Glas|Wein|Weinglas
+cocktail-glass	🍸	Cocktailglas	Bar|Cocktail|Cocktailglas|Drink|martini
+tropical-drink	🍹	Cocktail	Bar|Cocktail|exotisches Getränk
+beer-mug	🍺	Bierkrug	Bar|Bier|Bierkrug|Krug|Oktoberfest|Weizenbier|prost
+clinking-beer-mugs	🍻	Bierkrüge	Bier|Bierkrüge|Oktoberfest|Weizen|anstoßen|prosit|prost
+baby-bottle	🍼	Babyflasche	Baby|Babyflasche|Flasche|Fläschchen|Kind|Milch|trinken
+fork-and-knife-with-plate	🍽	Teller mit Messer und Gabel	Gabel|Geschirr|Messer|Teller|Teller mit Messer und Gabel|kochen
+bottle-with-popping-cork	🍾	Flasche mit knallendem Korken	Champagner|Flasche|Flasche mit knallendem Korken|Getränk|Korken|Sekt|knallen|trinken
+popcorn	🍿	Popcorn	Kino|Popcorn|Snack
+birthday-cake	🎂	Geburtstagskuchen	Essen|Feier|Geburtstag|Geburtstagskuchen|Geburtstagstorte|Kuchen|Lebensmittel|Torte|feier|happy birthday|kerzen
+amphora	🏺	Amphore	Amphore|Gefäß|Krug|Sternzeichen|Tierkreis|Vase|Wassermann|kochen|trinken
+kitchen-knife	🔪	Küchenmesser	Küchenmesser|Messer|schneiden
+clinking-glasses	🥂	Sektgläser	Feier|Getränk|Gläser|Sekt|Sektgläser|anstoßen|feiern|prost
+tumbler-glass	🥃	Trinkglas	Bar|Schnaps|Trinkglas|Whiskey
+spoon	🥄	Löffel	Besteck|Löffel
+croissant	🥐	Croissant	Corissant|Croissant|Frühstück|Frühstückshörnchen|französisch
+avocado	🥑	Avocado	Avocado|Essen|Frucht
+cucumber	🥒	Gurke	Essen|Gemüse|Gurke|Scheiben
+bacon	🥓	Bacon	Bacon|Essen|Frühstücksspeck|Speck|Speckstreifen
+potato	🥔	Kartoffel	Essen|Gemüse|Kartoffel
+carrot	🥕	Karotte	Gemüse|Karotte|Mohrrübe|Möhre
+baguette-bread	🥖	Baguette	Baguette|Brot|Frühstück|französisch
+green-salad	🥗	Salat	Blattgemüse|Essen|Salat|gesund|grün
+shallow-pan-of-food	🥘	Pfannengericht	Essen|Paella|Pfannengericht|Reispfanne
+stuffed-flatbread	🥙	Döner	Döner|Döner Kebab|Falafel|Wrap
+egg	🥚	Ei	Ei|Frühstück|Frühstücksei
+glass-of-milk	🥛	Glas Milch	Getränk|Glas|Milch|trinken
+peanuts	🥜	Erdnuss	Erdnuss|Essen
+kiwi-fruit	🥝	Kiwi	Frucht|Kiwi|Obst
+pancakes	🥞	Pfannkuchen	Crepe|Eierpfannkuchen|Essen|Pfannkuchen
+dumpling	🥟	Teigtasche	Empanada|Gyōza|Jiaozi|Pierogi|Teigtasche|chinesische Teigtasche|dumpling|empanada|essen|kloß|potsticker
+fortune-cookie	🥠	Glückskeks	Glückskeks|Prophezeiung|essen
+takeout-box	🥡	Takeaway-Schachtel	Takeaway-Box|Takeaway-Schachtel|chinesisches essen|essen|stäbchen
+chopsticks	🥢	Essstäbchen	Essstäbchen|Hashi|Stäbchen|chinesisches essen|essen|japanisches essen|stäbchen
+bowl-with-spoon	🥣	Schüssel mit Löffel	Cerealien|Frühstück|Reisbrei|Schüssel mit Löffel|brei|essen|haferbrei|schüssel|suppe
+cup-with-straw	🥤	Becher mit Strohhalm	Becher mit Strohhalm|Saft|Selters|becher|brause|erfrischung|soda|strohhalm|trinken|trinkhalm|wasser
+coconut	🥥	Kokosnuss	Colada|Essen|Frucht|Kokosnuss|Palme|Piña
+broccoli	🥦	Brokkoli	Broccoli|Brokkoli|Gemüse|Gemüsekohl|Kohl|essen
+pie	🥧	Kuchen	Essen|Füllung|Gebäck|Kuchen|Pastete|Torte
+pretzel	🥨	Brezel	Brezel|brezel|brezen|brezn|essen|gedreht|oktoberfest
+cut-of-meat	🥩	Fleischstück	Fleisch|Fleischstück|Kotelett|Lammkotelett|Schnitzel|Schweinekotelett|Steak|essen|rot
+sandwich	🥪	Sandwich	Brot|Sandwich|brot|essen|sandwich
+canned-food	🥫	Konserve	Büchse|Dose|Konserve|essen
+leafy-green	🥬	Blattgemüse	Blattgemüse|Essen|Gemüse|Grünkohl|Grünzeug|Kohl|Kraut|Mangold|Pak Choi|Pok Choi|Salat|Salatblatt|Spinat|blattgrün
+mango	🥭	Mango	Essen|Frucht|Früchte|Mango|Obst|Shaker|tropisch
+moon-cake	🥮	Mondkuchen	Essen|Fest|Festival|Herbst|Kuchen|Mondfest|Mondkuchen|Pinyin|Yuebing
+bagel	🥯	Bagel	Backwaren|Bagel|Brötchen|Bäckerei|Essen|Frühstück|Pausenbrot
+crab	🦀	Krebs	Krabbe|Krebs|Meer|Sternzeichen|Strand|Tierkreis
+shrimp	🦐	Garnele	Garnele|Gourmet|Krustentier|Meeresfrucht|Shrimp
+squid	🦑	Tintenfisch	Kalmar|Tier|Tintenfisch
+lobster	🦞	Hummer	Hummer|Lobster|Meeresfrucht|Meeresfrüchte|Meerestier|Scheren|Tier
+oyster	🦪	Auster	Auster|Meer|Muschel|Perle|Tier|tauchen
+cheese-wedge	🧀	Käsestück	Käse|Käsestück
+cupcake	🧁	Cupcake	Bäckerei|Cupcake|Dessert|Essen|Gebäck|Kalorienbombe|Konditorei|Muffin|Nachspeise|Streusel|Zucker|süß
+salt	🧂	Salz	Geschmack|Gewürz|Salz|Salzstreuer|Würze|Zutat|gesalzen|salzig
+beverage-box	🧃	Trinkpäckchen	Fruchtsaft|Getränk|Obstsaft|Saft|Saftpackung|Trinkpäckchen
+garlic	🧄	Knoblauch	Essen|Geschmack|Knoblauch|Lebensmittel|Nahrung|Würze|Zutat
+onion	🧅	Zwiebel	Essen|Geschmack|Gewürz|Lebensmittel|Nahrung|Würze|Zwiebel
+falafel	🧆	Falafel	Bällchen|Essen|Falafel|Fleischbällchen|Kichererbsen|Lebensmittel|Nahrung
+waffle	🧇	Waffel	Essen|Lebensmittel|Nahrung|Waffel|Waffel mit Butter
+butter	🧈	Butter	Butter|Essen|Lebensmittel|Milchprodukt|Nahrung
+mate	🧉	Mate-Tee	Getränk|Mate-Tee|Tee
+ice	🧊	Eiswürfel	Eisberg|Eiswürfel|Würfel|gefroren|kalt|kühlen
+bubble-tea	🧋	Bubble Tea	Blase|Bubble Tea|Essen|Getränk|Lebensmittel|Milch|Perle|Taiwan|Tee
+blueberries	🫐	Blaubeeren	Beere|Blaubeere|Blaubeeren|Essen|Frucht|Heidelbeere|Heidelbeeren|Lebensmittel|Nahrung|Obst|blau
+bell-pepper	🫑	Paprika	Essen|Gemüse|Gemüsepaprika|Lebensmittel|Nahrung|Paprika|Peperoni|grün
+olive	🫒	Olive	Essen|Lebensmittel|Nahrung|Olive|Olivenzweig|Olivenöl|Zweig|grün
+flatbread	🫓	Fladenbrot	Arepa|Brot|Essen|Fladenbrot|Lavasch|Lebensmittel|Naan|Nahrung|Pita
+tamale	🫔	Tamale	Burrito|Essen|Lebensmittel|Streetfood|Tamale|Wrap|eingewickelt|mexikanisch
+fondue	🫕	Fondue	Essen|Fondue|Käse|Schokolade|Topf|geschmolzen|schweizerisch
+teapot	🫖	Teekanne	Getränk|Kanne|Lebensmittel|Tee|Tee brühen|Teekanne|Teekrug|trinken
+pouring-liquid	🫗	Flüssigkeit ausgießen	Flüssigkeit ausgießen|Getränk|Glas|Missgeschick|ausgießen|ausleeren|gießen|leer|tropfende Flüssigkeit|verschütten
+beans	🫘	Bohnen	Bohne|Bohnen|Essen|Gemüse|Hülsenfrucht|Kidney-Bohne|Kidneybohne|Lebensmittel
+jar	🫙	Einmachglas	Einmachglas|Einweckglas|Essen|Gewürzglas|Marmeladeglas|Schraubglas|leer|leerer Behälter|leeres Einweckglas|leeres Glas
+ginger-root	🫚	Ingwer	Gewürz|Ginger Ale|Ingwer|Ingwerbier|Wurzel|gesund|scharf|würzig
+pea-pod	🫛	Erbsenschote	Bohne|Edamame|Erbse|Erbsen|Erbsenschote|Essen|Gemüse|Hülsenfrucht|Hülsenfrüchte|Schote
+hot-beverage	☕	Heißgetränk	Cafe|Getränk|Heißgetränk|Kaffee|Tasse|Tee|dampfend|heiß|trinken
+cyclone	🌀	Wirbel	Spirale|Wirbel|Wirbelsturm
+foggy	🌁	neblig	Nebel|Wetter|neblig
+closed-umbrella	🌂	geschlossener Regenschirm	Geschlossener Regenschirm|Regen|Regenschirm|geschlossener Regenschirm
+night-with-stars	🌃	Sternenhimmel	City|Hochhäuser|Nacht|Skyline|Stadt|Sterne|Sternenhimmel
+sunrise-over-mountains	🌄	Sonnenaufgang über Bergen	Berge|Sonnenaufgang|Sonnenaufgang über Bergen
+sunrise	🌅	Sonnenaufgang über dem Meer	Meer|Sonnenaufgang|Sonnenaufgang über dem Meer
+cityscape-at-dusk	🌆	Abendstimmung in der Stadt	Abendstimmung in der Stadt|Hochhäuser|New York|Skyline|Sonnenaufgang|Sonnenuntergang|Wolkenkratzer
+sunset	🌇	Sonnenuntergang in der Stadt	Großstadt|Hochhäuser|Morgenrot|Sonnenaufgang|Sonnenuntergang|Sonnenuntergang in der Stadt|Wolkenkratzer
+rainbow	🌈	Regenbogen	Regenbogen|Wetter
+bridge-at-night	🌉	Brücke vor Nachthimmel	Brücke|Brücke vor Nachthimmel|Golden Gate|Nacht|nachts
+water-wave	🌊	Welle	Meer|Welle
+volcano	🌋	Vulkan	Ausbruch|Berg|Lava|Vulkan|Vulkanausbruch|Wetter
+milky-way	🌌	Milchstraße	Galaxie|Milchstraße|Universum
+globe-showing-europe-africa	🌍	Globus mit Europa und Afrika	Afrika|Erde|Europa|Globus mit Europa und Afrika|Weltkugel
+globe-showing-americas	🌎	Globus mit Amerika	Erde|Globus|Globus mit Amerika|Nordamerika|Südamerika|Weltkugel
+globe-showing-asia-australia	🌏	Globus mit Asien und Australien	Asien|Australien|Erde|Globus|Globus mit Asien und Australien|Weltkugel
+globe-with-meridians	🌐	Globus mit Meridianen	Breitengrad|Globus mit Meridianen|Längengrad
+new-moon	🌑	Neumond	Mond|Neumond
+waxing-crescent-moon	🌒	erstes Mondviertel	Erstes Mondviertel|Mond|erstes Mondviertel|zunehmend
+first-quarter-moon	🌓	zunehmender Halbmond	Halbmond|Mond|Zunehmender Halbmond|zunehmend|zunehmender Halbmond
+waxing-gibbous-moon	🌔	zweites Mondviertel	Mond|Zweites Mondviertel|zunehmend|zweites Mondviertel
+full-moon	🌕	Vollmond	Mond|Vollmond
+waning-gibbous-moon	🌖	drittes Mondviertel	Drittes Mondviertel|Mond|abnehmend|drittes Mondviertel
+last-quarter-moon	🌗	abnehmender Halbmond	Abnehmender Halbmond|Halbmond|abnehmend|abnehmender Halbmond
+waning-crescent-moon	🌘	letztes Mondviertel	Letztes Mondviertel|Mond|Nacht|abnehmend|letztes Mondviertel
+crescent-moon	🌙	Mondsichel	Mond|Mondsichel|Nacht
+new-moon-face	🌚	Neumond mit Gesicht	Gesicht|Mond|Mondgesicht|Neumond|Neumond mit Gesicht
+first-quarter-moon-face	🌛	Mondsichel mit Gesicht links	Gesicht|Mond|Mondsichel|Mondsichel mit Gesicht links|Weltall
+last-quarter-moon-face	🌜	Mondsichel mit Gesicht rechts	Gesicht|Mondsichel|Mondsichel mit Gesicht rechts|Nacht
+full-moon-face	🌝	Vollmond mit Gesicht	Gesicht|Vollmond|Vollmond mit Gesicht
+sun-with-face	🌞	Sonne mit Gesicht	Gesicht|Sonne|Sonne mit Gesicht|Sonnengesicht|Sonnenschein
+glowing-star	🌟	funkelnder Stern	Funkelnder Stern|Stern|funkeln|funkelnder Stern|glitzern
+shooting-star	🌠	Sternschnuppe	Himmel|Sternschnuppe
+thermometer	🌡	Thermometer	Temperatur|Thermometer|Wetter
+sun-behind-small-cloud	🌤	Sonne hinter kleiner Wolke	Sonne|Sonne hinter kleiner Wolke|Wetter|Wolke|bewölkt|kleine Wolke
+sun-behind-large-cloud	🌥	Sonne hinter großer Wolke	Sonne|Sonne hinter großer Wolke|Wetter|Wolke|bewölkt|große Wolke
+sun-behind-rain-cloud	🌦	Sonne hinter Regenwolke	Regenwolke|Sonne|Sonne hinter Regenwolke|Wetter
+cloud-with-rain	🌧	Wolke mit Regen	Regen|Regenwolke|Wetter|Wolke|Wolke mit Regen
+cloud-with-snow	🌨	Wolke mit Schnee	Schnee|Wetter|Wolke|Wolke mit Schnee|kalt
+cloud-with-lightning	🌩	Wolke mit Blitz	Blitz|Gewitter|Wetter|Wolke|Wolke mit Blitz
+tornado	🌪	Wirbelsturm	Tornado|Wetter|Wirbelsturm
+fog	🌫	Nebel	Nebel|Wetter|neblig
+wind-face	🌬	Wind	Wetter|Wind|windig
+carousel-horse	🎠	Karussellpferd	Karussell|Karussellpferd|Pferd|reiten
+ferris-wheel	🎡	Riesenrad	Freizeitpark|Rad|Riesenrad|Volksfest
+roller-coaster	🎢	Achterbahn	Achterbahn|Freizeitpark|Volksfest
+circus-tent	🎪	Zirkuszelt	Unterhaltung|Zelt|Zirkus|Zirkuszelt
+motorcycle	🏍	Motorrad	Moped|Motorrad|Motorrennen
+racing-car	🏎	Rennauto	Autorennen|Rennauto
+snow-capped-mountain	🏔	schneebedeckter Berg	Berg|Gebirge|Schnee|Schneebedeckter Berg|kalt|schneebedeckter Berg
+camping	🏕	Camping	Camping|Zelt|campen|zelten
+beach-with-umbrella	🏖	Strand mit Sonnenschirm	Meer|Sonnenschirm|Strand|Strand mit Sonnenschirm
+building-construction	🏗	Kran	Bau|Kran|bauen
+houses	🏘	Wohnhäuser	Dorf|Gebäude|Haus|Häuser|Wohnhaus|Wohnhäuser|Wohnsiedlung
+cityscape	🏙	Skyline	Gebäude|Großstadt|Hochhäuser|Häuser|Skyline|Stadt|Wolkenkratzer
+derelict-house	🏚	verfallenes Haus	Gebäude|Haus|Verlassenes Haus|heruntergekommen|verfallen|verfallenes Haus|verlassen
+classical-building	🏛	antikes Gebäude	Antikes Gebäude|Gebäude|antik|antikes Gebäude|klassizistisch
+desert	🏜	Wüste	Wüste|heiß
+desert-island	🏝	einsame Insel	Einsame Insel|Insel|Meer|Palme|Strand|einsam|einsame Insel|verlassen
+national-park	🏞	Nationalpark	Berg|Fluss|Nationalpark|Natur|Park|Schutzgebiet
+stadium	🏟	Stadion	Arena|Stadion
+house	🏠	Haus	Gebäude|Haus|Zuhause
+house-with-garden	🏡	Haus mit Garten	Baum|Haus|Haus mit Baum|Haus mit Garten
+office-building	🏢	Bürogebäude	Bürogebäude|Hochhaus
+japanese-post-office	🏣	japanisches Postgebäude	Japan|Japanisches Postgebäude|Post|japanisches Postgebäude
+post-office	🏤	Postgebäude	Europa|Europäisches Postgebäude|Post|Postgebäude
+hospital	🏥	Krankenhaus	Ambulanz|Arzt|Gebäude|Krankenhaus|Medizin|Notaufnahme|krank
+bank	🏦	Bank	Bank|Gebäude|Geld
+hotel	🏨	Hotel	Gebäude|Hotel|Unterkunft|übernachten
+love-hotel	🏩	Stundenhotel	Gebäude|Hotel|Liebe|Stundenhotel|Unterkunft
+convenience-store	🏪	Minimarkt	Gebäude|Geschäft|Lebensmittel|Minimarkt|einkaufen
+school	🏫	Schule	Gebäude|Schule|Schulgebäude
+department-store	🏬	Kaufhaus	Gebäude|Geschäft|Kaufhaus|einkaufen|shoppen
+factory	🏭	Fabrik	Fabrik|Fabrikgebäude|Gebäude
+japanese-castle	🏯	japanisches Schloss	Bauwerk|Gebäude|Japan|Japanisches Schloss|Schloss|japanisch|japanisches Schloss
+castle	🏰	Schloss	Bauwerk|Burg|Europa|Gebäude|Märchen|Märchenschloss|Schloss|europäisch
+barber-pole	💈	Barbershop-Säule	Barbershop-Säule|Friseur|Herrenfriseur|Säule
+wedding	💒	Hochzeit	Herz|Hochzeit|Kirche
+droplet	💧	Tropfen	Schweiß|Tropfen|Träne|Wasser|Wassertropfen
+seat	💺	Sitzplatz	Bus|Flugzeug|Sitz|Sitzplatz|Zug
+fire	🔥	Feuer	Feuer|Flamme|brennen|heiß
+kaaba	🕋	Kaaba	Hajj|Islam|Kaaba|Moslem|Muslim|Religion
+mosque	🕌	Moschee	Islam|Moschee|Moslem|Muslim|Religion
+synagogue	🕍	Synagoge	Jude|Religion|Synagoge|Tempel|jüdisch
+one-oclock	🕐	1:00 Uhr	01:00|1|13:00|1:00 Uhr|Punkt eins|Uhr|Zeit|Ziffernblatt 1.00 Uhr|Ziffernblatt 1:00 Uhr
+two-oclock	🕑	2:00 Uhr	2|2:00 Uhr|Uhr|Zeit|Ziffernblatt 2.00 Uhr|Ziffernblatt 2:00 Uhr
+three-oclock	🕒	3:00 Uhr	3|3:00 Uhr|Uhr|Zeit|Ziffernblatt 3.00 Uhr|Ziffernblatt 3:00 Uhr
+four-oclock	🕓	4:00 Uhr	4|4:00 Uhr|Uhr|Zeit|Ziffernblatt 4.00 Uhr|Ziffernblatt 4:00 Uhr
+five-oclock	🕔	5:00 Uhr	05:00|17:00|5|5:00 Uhr|Punkt fünf|Uhr|Zeit|Ziffernblatt 5.00 Uhr|Ziffernblatt 5:00 Uhr
+six-oclock	🕕	6:00 Uhr	6|6:00 Uhr|Uhr|Zeit|Ziffernblatt 6.00 Uhr|Ziffernblatt 6:00 Uhr
+seven-oclock	🕖	7:00 Uhr	7|7:00 Uhr|Uhr|Ziffernblatt 7.00 Uhr|Ziffernblatt 7:00 Uhr
+eight-oclock	🕗	8:00 Uhr	8|8:00 Uhr|Uhr|Zeit|Ziffernblatt 8.00 Uhr|Ziffernblatt 8:00 Uhr|um 8
+nine-oclock	🕘	9:00 Uhr	9|9:00 Uhr|Uhr|Zeit|Ziffernblatt 9.00 Uhr|Ziffernblatt 9:00 Uhr
+ten-oclock	🕙	10:00 Uhr	10|10:00 Uhr|Uhr|Zeit|Ziffernblatt 10.00 Uhr|Ziffernblatt 10:00 Uhr
+eleven-oclock	🕚	11:00 Uhr	11|11:00 Uhr|Uhr|Zeit|Ziffernblatt 11.00 Uhr|Ziffernblatt 11:00 Uhr
+twelve-oclock	🕛	Ziffernblatt 12:00 Uhr	0 Uhr|12|12:00 Uhr|Mittag|Mitternacht|Uhr|Ziffernblatt 12.00 Uhr|Ziffernblatt 12:00 Uhr|zwölf Uhr
+one-thirty	🕜	1:30 Uhr	1 Uhr 30|1:30 Uhr|Uhr|Ziffernblatt 1.30 Uhr|Ziffernblatt 1:30 Uhr|halb zwei
+two-thirty	🕝	2:30 Uhr	2:30 Uhr|Uhr|Zeit|Ziffernblatt 2.30 Uhr|Ziffernblatt 2:30 Uhr|halb drei
+three-thirty	🕞	3:30 Uhr	3:30 Uhr|Uhr|Ziffernblatt 3.30 Uhr|Ziffernblatt 3:30 Uhr|halb vier
+four-thirty	🕟	4:30 Uhr	04:30|16:30|4:30 Uhr|Uhr|Zeit|Ziffernblatt 4.30 Uhr|Ziffernblatt 4:30 Uhr|halb fünf
+five-thirty	🕠	5:30 Uhr	05:30|17:30|5:30 Uhr|Uhr|Ziffernblatt 5.30 Uhr|Ziffernblatt 5:30 Uhr|halb sechs
+six-thirty	🕡	6:30 Uhr	6:30 Uhr|Uhr|Ziffernblatt 6.30 Uhr|halb sieben
+seven-thirty	🕢	7:30 Uhr	7:30 Uhr|Uhr|Zeit|Ziffernblatt 7.30 Uhr|Ziffernblatt 7:30 Uhr|halb acht
+eight-thirty	🕣	8:30 Uhr	8:30 Uhr|Uhr|Ziffernblatt 8.30 Uhr|Ziffernblatt 8:30 Uhr|halb neun
+nine-thirty	🕤	9:30 Uhr	9:30 Uhr|Uhr|Zeit|Ziffernblatt 9.30 Uhr|Ziffernblatt 9:30 Uhr|halb zehn
+ten-thirty	🕥	10:30 Uhr	10:30 Uhr|Uhr|Ziffernblatt 10.30 Uhr|Ziffernblatt 10:30 Uhr|halb elf
+eleven-thirty	🕦	11:30 Uhr	11:30 Uhr|Uhr|Zeit|Ziffernblatt 11.30 Uhr|Ziffernblatt 11:30 Uhr|halb zwölf
+twelve-thirty	🕧	12:30 Uhr	00:30|12:30|Uhr|Zeit|Ziffernblatt 12.30 Uhr|Ziffernblatt 12:30 Uhr|halb eins
+mantelpiece-clock	🕰	Kaminuhr	Kaminuhr|Uhr|tick tack
+world-map	🗺	Weltkarte	Karte|Landkarte|Welt|Weltkarte|reisen
+mount-fuji	🗻	Fuji	Berg|Fuji|Vulkan
+tokyo-tower	🗼	Tokyo Tower	Fernsehturm|Tokio|Tokyo Tower
+statue-of-liberty	🗽	Freiheitsstatue	Amerika|Freiheit|Freiheitsstatue
+map-of-japan	🗾	Umriss von Japan	Japan|Karte|Umriss von Japan
+rocket	🚀	Rakete	All|Rakete|Weltraum
+helicopter	🚁	Hubschrauber	Helikopter|Hubschrauber|fliegen|reisen
+locomotive	🚂	Dampflokomotive	Bahn|Dampf|Dampflok|Dampflokomotive|Fahrzeug|Lokomotive|Schiene|Zug
+railway-car	🚃	Eisenbahnwagen	Eisenbahnwagen|Fahrzeug|Straßenbahn|Straßenbahnwagen|Tram|Wagen|Waggon|Wagon|Zug
+high-speed-train	🚄	Hochgeschwindigkeitszug mit spitzer Nase	Hochgeschwindigkeitszug mit spitzer Nase|ICE|Shinkansen|TGV|Zug
+bullet-train	🚅	Hochgeschwindigkeitszug	Bahn|Hochgeschwindigkeitszug|Japan|Shinkansen|Zug
+train	🚆	Zug	Bahn|Eisenbahn|ICE|Zug
+metro	🚇	U-Bahn	Metro|U-Bahn
+light-rail	🚈	S-Bahn	Bahn|ICE|Monorail|S-Bahn|Zug
+station	🚉	Bahnhof	Bahn|Bahnhof|Zug
+tram	🚊	Straßenbahn	Straßenbahn|Tram|Verkehrsmittel
+tram-car	🚋	Straßenbahnwagen	Straßenbahn|Straßenbahnwagen|Tram|Tramwagen|Transport|Verkehrsmittel|Waggon
+bus	🚌	Bus	Bus|Fahrzeug|Schulbus
+oncoming-bus	🚍	Bus von vorne	Bus|Bus von vorne|Verkehrsmittel|Vorderansicht Bus
+trolleybus	🚎	Oberleitungsbus	Oberleitungsbus|Straßenbahn|Trolleybus
+bus-stop	🚏	Bushaltestelle	Bus|Bushaltestelle|Haltestelle
+minibus	🚐	Kleinbus	Bus|Fahrzeug|Kleinbus
+ambulance	🚑	Krankenwagen	Ambulanz|Krankenwagen|Notfall
+fire-engine	🚒	Feuerwehrauto	Brand|Feuerwehrauto|Löschfahrzeug
+police-car	🚓	Polizeiwagen	Polizei|Polizeiwagen|Streifenwagen
+oncoming-police-car	🚔	Polizeiwagen von vorne	Polizei|Polizeiwagen von vorne|Streifenwagen|Vorderansicht Polizeiwagen
+taxi	🚕	Taxi	Auto|Fahrzeug|Taxi
+oncoming-taxi	🚖	Taxi von vorne	Auto|Taxi|Taxi von vorne|Vorderansicht Taxi|fahren|gelb
+automobile	🚗	Auto	Auto|Fahrzeug|Verkehr|fahren|rot
+oncoming-automobile	🚘	Auto von vorne	Auto|Auto von vorne|Automobil|Fahrzeug|Vorderansicht Auto|rot
+sport-utility-vehicle	🚙	Wohnmobil	Auto|Wohnmobil|blau|fahren|verreisen
+delivery-truck	🚚	Lieferwagen	LKW|Lastwagen|Lieferwagen
+articulated-lorry	🚛	Sattelzug	LKW|Lastwagen|Sattelzug|umziehen|ziehen um
+tractor	🚜	Traktor	Bauernhof|Landwirtschaft|Traktor|Trecker
+monorail	🚝	Einschienenbahn	Bahn|Einschienenbahn|Magnetschwebebahn|Monorail
+mountain-railway	🚞	Bergbahn	Bahn|Bergbahn|Bimmelbahn|Zug
+suspension-railway	🚟	Schwebebahn	Hängebahn|Schwebebahn
+mountain-cableway	🚠	Bergschwebebahn	Bergschwebebahn|Schwebebahn
+aerial-tramway	🚡	Bergseilbahn	Bergseilbahn|Gondel|Seilbahn
+ship	🚢	Schiff	Dampfer|Kreuzfahrtschiff|Schiff|Traumschiff
+speedboat	🚤	Schnellboot	Boot|Luxus|Schnellboot|See|Sommer|Wasser|Yacht
+horizontal-traffic-light	🚥	horizontale Verkehrsampel	Ampel|Horizontale Verkehrsampel|Verkehrsampel|horizontale Verkehrsampel|vertikal
+vertical-traffic-light	🚦	vertikale Verkehrsampel	Ampel|Verkehrsampel|Vertikale Verkehrsampel|horizontal|vertikale Verkehrsampel
+construction	🚧	Baustellenabsperrung	Baustelle|Baustellenabsperrung|Baustellenschild|Schild
+bicycle	🚲	Fahrrad	BMX|Fahrrad|Rad|Radeln|Radler|Spinning
+bellhop-bell	🛎	Rezeptionsklingel	Klingel|Rezeptionsklingel
+stop-sign	🛑	Stoppschild	Schild|Stopp|Stoppschild|achteckig
+hindu-temple	🛕	Hindutempel	Gebäude|Hindu|Hindutempel|Tempel
+hut	🛖	Hütte	Behausung|Gebäude|Haus|Hütte|Jurte|Objekt|Rundhaus|Schutz
+playground-slide	🛝	Spielplatzrutsche	Rutschbahn|Rutsche|Spielplatz|Spielplatzrutsche|Vergnügungspark|spielen
+wheel	🛞	Autorad	Autorad|Autoreifen|Rad|Reifen|Reifen mit Felgen|drehen|rotieren
+ring-buoy	🛟	Rettungsring	Leben retten|Lebensretter|Rettung|Rettungsring|Schwimmring|Sicherheit|retten
+oil-drum	🛢	Ölfass	Fass|Öl|Ölfass
+motorway	🛣	Autobahn	Autobahn|Schnellstraße
+railway-track	🛤	Bahngleis	Bahn|Bahngleis|Gleise|Schienen
+motor-boat	🛥	Motorboot	Boot|Motorboot|Schiff
+small-airplane	🛩	kleines Flugzeug	Flugzeug|Kleines Flugzeug|Privatjet|klein|kleines Flugzeug
+airplane-departure	🛫	Abflug	Abflug|Flughafen|Flugzeug|Start|Start eines Flugzeugs|fliegen
+airplane-arrival	🛬	Landung eines Flugzeugs	Ankunft|Flieger|Flughafen|Flugzeug|Landung|Landung eines Flugzeugs|landen
+satellite	🛰	Satellit	Satellit|Sputnik|Weltraum
+passenger-ship	🛳	Passagierschiff	Aida|Passagierschiff|Rundreise|Schiff|Seereise|Traumschiff
+kick-scooter	🛴	Tretroller	Roller|Tretroller
+motor-scooter	🛵	Motorroller	Motoroller|Motorroller|Roller|Vespa
+canoe	🛶	Kanu	Boot|Kanu|Wassersport
+flying-saucer	🛸	fliegende Untertasse	Alien|Außerirdisch|UFO|fliegende Untertasse
+skateboard	🛹	Skateboard	Board|Brett|Räder|Skateboard|Skateboard fahren|Skater|skaten
+auto-rickshaw	🛺	Autorikscha	Autorikscha|Fahrzeug|Tuk-Tuk
+pickup-truck	🛻	Pick-up	Auto|Fahrzeug|LKW|Laster|Lastwagen|Lieferwagen|Pick-up|Transport|fahren
+roller-skate	🛼	Rollschuh	Rollen|Rollerskate|Rollschuh|Rollschuh laufen|Schuh|Sport
+motorized-wheelchair	🦼	elektrischer Rollstuhl	Barrierefreiheit|Behinderung|Rollstuhl|elektrischer Rollstuhl
+manual-wheelchair	🦽	manueller Rollstuhl	Barrierefreiheit|Behinderung|Rollstuhl|manueller Rollstuhl
+compass	🧭	Kompass	Himmelsrichtung|Kompass|Navigation|Orientierung|Richtung|Windrose|magnetisch
+brick	🧱	Ziegelstein	Grenze|Klinker|Mauer|Mauerwerk|Mörtel|Wand|Ziegel|Ziegelstein|Ziegelsteine|bauen|zugemauert
+luggage	🧳	Gepäck	Ballast|Gepäck|Hartschalenkoffer|Koffer|Reise|Trolley-Tasche
+parachute	🪂	Fallschirm	Fallschirm|Fallschirmspringen|Paragliding|Skydiving|Sport
+ringed-planet	🪐	Ringplanet	Gasplanet|Himmelskörper|Planet|Ringplanet|Saturn
+rock	🪨	Felsen	Felsen|Natur|Stein|felsig|hart|schwer|steinig
+wood	🪵	Holz	Baumstamm|Feuerholz|Holz|Holzscheite|Lagerfeuer|holzig
+watch	⌚	Armbanduhr	Armbanduhr|Uhr|Zeit
+hourglass-done	⌛	Sanduhr	Prozess|Sanduhr|Vorgang läuft|Zeit
+alarm-clock	⏰	Wecker	Uhr|Uhrzeit|Wecker|Zeit
+stopwatch	⏱	Stoppuhr	Stoppuhr|Uhr|Zeit
+timer-clock	⏲	Zeitschaltuhr	Timer|Uhr|Zeitschaltuhr
+hourglass-not-done	⏳	laufende Sanduhr	Laufende Sanduhr|Prozess|Sanduhr|Vorgang läuft|laufende Sanduhr
+sun	☀	Sonne	Sonne|Sonnenstrahlen|Strahlen|Wetter|sonnig
+cloud	☁	Wolke	Wetter|Wolke|wolkig
+umbrella	☂	Regenschirm	Bekleidung|Regen|Regenschirm|Wetter
+snowman	☃	Schneemann im Schnee	Schnee|Schneemann|Schneemann im Schnee
+comet	☄	Komet	Komet|Weltall
+umbrella-with-rain-drops	☔	Regenschirm im Regen	Regen|Regenschirm|Regenschirm im Regen
+hot-springs	♨	heiße Quellen	Dampf|Quelle|Quellen|dampfend|heiß|heiße Quelle|heiße Quellen
+anchor	⚓	Anker	Anker|Hafen|Meer
+high-voltage	⚡	Hochspannung	Blitz|Elektrizität|Gefahr|Gewitter|Hochspannung|Hochspannungszeichen|Strom
+snowman-without-snow	⛄	Schneemann ohne Schneeflocken	Schnee|Schneemann|Schneemann ohne Schneeflocken|Winter|kalt
+sun-behind-cloud	⛅	Sonne hinter Wolke	Sonne|Sonne hinter Wolke|Wolke|wolkig
+cloud-with-lightning-and-rain	⛈	Wolke mit Blitz und Regen	Blitz|Gewitter|Regen|Wetter|Wolke|Wolke mit Blitz und Regen|wolkig
+shinto-shrine	⛩	Shinto-Schrein	Religion|Schrein|Shinto|Shinto-Schrein
+church	⛪	Kirche	Christ|Christentum|Gebäude|Kirche|Kreuz|Religion|christlich
+mountain	⛰	Berg	Berg|Gebirge
+umbrella-on-ground	⛱	aufgestellter Sonnenschirm	Aufgestellter Sonnenschirm|Sonnenschirm|Strand|aufgestellt|aufgestellter Sonnenschirm
+fountain	⛲	Springbrunnen	Brunnen|Garten|Park|Springbrunnen
+ferry	⛴	Fähre	Fähre|Schiff
+sailboat	⛵	Segelboot	Boot|Segelboot
+tent	⛺	Zelt	Camping|Campingurlaub|Zelt|Zeltplatz
+fuel-pump	⛽	Tanksäule	Benzin|Tanke|Tankstelle|Tanksäule|tanken
+airplane	✈	Flugzeug	Flieger|Flugzeug
+snowflake	❄	Schneeflocke	Flocke|Schnee|Schneeflocke|Wetter|Winter|kalt|schneien
+star	⭐	weißer mittelgroßer Stern	Himmel|Stern|astronomie|gelber Stern|weißer mittelgroßer Stern
+mahjong-red-dragon	🀄	Mahjong-Stein	Mahjong|Mahjong-Stein|Spiel|roter Drache
+joker	🃏	Jokerkarte	Joker|Jokerkarte|Spielkarte
+ribbon	🎀	pinke Schleife	Feier|Geschenk|Schleife|pink|rosa
+wrapped-gift	🎁	Geschenk	Feier|Geburtstag|Geschenk|Schachtel|Schleife|Weihnachten|verpackt|Überraschung
+jack-o-lantern	🎃	Halloweenkürbis	Halloween|Halloweenkürbis|Herbst|Kürbis|Kürbislaterne
+christmas-tree	🎄	Weihnachtsbaum	Baum|Tanne|Weihnachten|Weihnachtsbaum
+fireworks	🎆	Feuerwerk	Feuerwerk|Silvester
+sparkler	🎇	Wunderkerze	Feiern|Feuerwerk|Party|Wunderkerze
+balloon	🎈	Luftballon	Ballon|Feier|Geburtstag|Luftballon
+party-popper	🎉	Konfettibombe	Böller|Feier|Knaller|Konfetti|Konfettibombe|Party|juhu|super|yay
+confetti-ball	🎊	Konfettiball	Feier|Konfetti|Konfettiball|Party
+tanabata-tree	🎋	Tanabata-Baum	Baum|Fest|Japan|Sternenfest|Tanabata-Baum|Zettel
+pine-decoration	🎍	Piniendekoration	Japan|Neujahrsfest|Piniendekoration
+japanese-dolls	🎎	japanische Puppen	Japanische Puppen|Puppenfest Japan|japanische Puppen
+carp-streamer	🎏	traditionelle japanische Windsäcke	Feier|Karpfen|Traditionelle japanische Windsäcke|Windsäcke|traditionelle japanische Windsäcke
+wind-chime	🎐	japanisches Windspiel	Bimmel|Feier|Glocke|Japanisches Windspiel|Wind|japanisches Windspiel
+moon-viewing-ceremony	🎑	traditionelles Mondfest	Japan|Mond|Mondfest|Traditionelles Mondfest|traditionelles Mondfest
+military-medal	🎖	Militärorden	Militärorden|Orden
+reminder-ribbon	🎗	Gedenkschleife	Gedenkschleife|Schleife
+admission-tickets	🎟	Eintrittskarten	Billet|Eintrittskarte|Eintrittskarten|Ticket
+fishing-pole	🎣	Angel mit Fisch	Angel mit Fisch|Angeln|Entspannung
+artist-palette	🎨	Mischpalette	Farben|Kunst|Künstler|Mischpalette|Palette
+ticket	🎫	Ticket	Konzert|Ticket|Unterhaltung
+performing-arts	🎭	Masken	Kunst|Masken|Theater|Unterhaltung
+video-game	🎮	Gamepad	Gamepad|Gaming|Unterhaltung|Videospiel
+bullseye	🎯	Darts	Dart|Darts|Pfeil|Spiel|Volltreffer|Zielscheibe
+slot-machine	🎰	Spielautomat	Glücksspiel|Spiel|Spielautomat
+pool-8-ball	🎱	Billardkugel	8-Ball|Billard|Billardkugel|Kugel|Spiel|schwarz
+game-die	🎲	Spielwürfel	Casino|Spiel|Spielwürfel|Unterhaltung|Würfel|Zufall|würfeln
+bowling	🎳	Bowling	Bowling|Bowlingkugel|Kugel|Spiel
+flower-playing-cards	🎴	japanische Blumenkarte	Blume|Blumenkarte|Hanafuda|Japan|Japanische Blumenkarte|Karte|japanische Blumenkarte
+running-shirt	🎽	Laufshirt	Laufen|Laufshirt|Laufshirt mit Schärpe|Schärpe|Sport
+tennis	🎾	Tennisball	Ball|Sport|Tennis|Tennisball
+skis	🎿	Ski	Ski|Ski und Stöcke
+basketball	🏀	Basketball	Ball|Basketball|Korb|Sport
+sports-medal	🏅	Sportmedaille	Gewinn|Goldmedaille|Medaille|Sportmedaille
+trophy	🏆	Pokal	Bundesliga|Champion|Pokal|Preis|Sieger|Sport|Trophäe|gewinnen
+american-football	🏈	Football	American Football|Amerika|Ball|Football|Sport|Super Bowl
+rugby-football	🏉	Rugbyball	Ball|Rugby|Rugbyball|Sport
+cricket-game	🏏	Kricket	Ball|Cricket|Kricket|Schläger
+volleyball	🏐	Volleyball	Ball|Sport|Volleyball
+field-hockey	🏑	Feldhockey	Feldhockey|Hockey|Schläger
+ice-hockey	🏒	Eishockey	Eishockey|Eishockey-Schläger und Puck|Hockey|Puck|Schläger
+ping-pong	🏓	Tischtennis	Ball|Ping Pong|Schläger|Spiel|Sport|Tischtennis
+badminton	🏸	Badminton	Badminton|Federball|Schläger
+crystal-ball	🔮	Kristallkugel	Kristallkugel|Wahrsager|Zukunft
+joystick	🕹	Joystick	Gaming|Joystick|Videospiel
+framed-picture	🖼	gerahmtes Bild	Bild|Gemälde|Kunst|Rahmen|Zeichnung|gerahmtes Bild|malen|zeichnen
+sled	🛷	Schlitten	Rodel|Rodeln|Schlitten|Schnee
+diving-mask	🤿	Tauchmaske	Sport|Sporttauchen|Tauchmaske|schnorcheln|schwimmen|tauchen
+goal-net	🥅	Tor	Fußball|Netz|Sport|Tor
+1st-place-medal	🥇	Goldmedaille	Erster|Gewinn|Goldmedaille|Medaille 1. Platz
+2nd-place-medal	🥈	Silbermedaille	Medaille 2. Platz|Silbermedaille|Zweiter
+3rd-place-medal	🥉	Bronzemedaille	Bronzemedaille|Dritter|Medaille 3. Platz
+boxing-glove	🥊	Boxhandschuh	Boxen|Boxhandschuh|Handschuh|Sport
+martial-arts-uniform	🥋	Kampfsportanzug	Judo|Kampfkunst|Kampfsport|Kampfsportanzug|Karate|Taekwondo
+curling-stone	🥌	Curlingstein	Curlingstein|Spiel|Sport|Stein
+lacrosse	🥍	Lacrosse	Ball|Lacrosse|Schläger|Sport|Stick|Stock|Tor
+softball	🥎	Softball	Ball|Baseball|Handschuh|Softball|Sport|Unterarm|werfen
+flying-disc	🥏	Frisbee	Disc|Disk|Frisbee|Scheibe|Ultimate|fliegende Untertasse
+red-envelope	🧧	roter Umschlag	Geld|Geschenk|Glück|Hong Bao|Hongbao|roter Umschlag
+firecracker	🧨	Feuerwerkskörper	Dynamit|Explosion|Feuer|Feuerwerk|Feuerwerkskörper|Funken|Knall|Knaller|Kracher|Silvester|Sprengstoff|Zündstoff|explosiv|knallen|sprengen
+puzzle-piece	🧩	Puzzleteil	Bestandteile|Hinweise|Hobby|Puzzle|Puzzlestück|Puzzleteil|Puzzleteile|Spiel|Teile|passen|puzzeln|zusammenpassen|zusammensetzen
+thread	🧵	Faden	Faden|Nadel|Nähen|Nähfaden|Nähgarn|Rolle|Spule|Zwirn|nähen
+yarn	🧶	Wollknäuel	Ball|Garn|Häkeln|Stricken|Wolle|Wollknäuel|Zwirn|häkeln|spinnen|stricken
+teddy-bear	🧸	Teddybär	Bär|Kuscheltier|Plüschteddy|Plüschtier|Spielwaren|Spielzeug|Stoffbär|Stofftier|Teddy|Teddybär
+nazar-amulet	🧿	Nazar-Amulett	Amulett|Glasperle|Glücksbringer|Kügelchen|Nazar|Nazar-Amulett|Perle|Talisman|blau|böser Blick
+yo-yo	🪀	Jo-Jo	Jo-Jo|Spielzeug|Yo-Yo
+kite	🪁	Drachen	Drachen|Wind|fliegen|hochfliegen|steigen
+magic-wand	🪄	Zauberstab	Abrakadabra|Hexe|Hexer|Magie|Wunder|Zauberei|Zauberer|Zauberin|Zauberstab|magisch|zaubern
+piata	🪅	Piñata	Feier|Hau drauf|Mexiko|Objekt|Party|Pinada|Pinata|Piñata|Süßigkeiten|mexikanisch|süß
+nesting-dolls	🪆	Matroschka	Babuschka|Matrioschka|Matrjoschka|Matroschka|Puppe|Russland|Spielzeug
+sewing-needle	🪡	Nähnadel	Faden|Nadel|Nadel und Faden|Nähnadel|Nähte|Stiche|einfädeln|nähen|schneidern|sticken
+mirror-ball	🪩	Discokugel	Disco|Discokugel|Lichtreflexe|Party|Spiegel|Spiegelkugel|Tanz|tanzen
+hamsa	🪬	Hamsa	Amulett|Auge in offener Hand|Fatima|Glückssymbol|Hamsa|Hand|Maria|Schutz|jüdisch|muslimisch
+chess-pawn	♟	Bauer Schach	Bauer Schach|Schach
+spade-suit	♠	Pik	Karten|Kartenspiel|Pik
+club-suit	♣	Kreuz	Kartenspiel|Kreuz
+heart-suit	♥	Herz	Herz|Kartenspiel
+diamond-suit	♦	Karo	Karo|Kartenspiel
+soccer-ball	⚽	Fußball	Ball|Bundesliga|Fußball|Messi
+baseball	⚾	Baseball	Ball|Baseball
+flag-in-hole	⛳	Golffahne	Golffahne|Golfplatz
+ice-skate	⛸	Schlittschuh	Eislauf|Schlittschuh
+sparkles	✨	funkelnde Sterne	*|Funkelnde Sterne|Sterne|funkel|funkeln|funkelnde Sterne
+backpack	🎒	Schulranzen	Ranzen|Rucksack|Schule|Schulranzen|Tornister
+graduation-cap	🎓	Doktorhut	Abschlussfeier|Diplom|Doktorhut
+studio-microphone	🎙	Studiomikrofon	Mikrofon|Studiomikrofon
+level-slider	🎚	Schieberegler	Musik|Schieberegler
+control-knobs	🎛	Drehregler	Bedienknöpfe|Drehregler|Knöpfe|Stellknöpfe
+film-frames	🎞	Filmstreifen	Film|Filmband|Filmstreifen|Kino
+microphone	🎤	Mikrofon	Karaoke|Mikrofon|Singen|Unterhaltung
+movie-camera	🎥	Filmkamera	Film|Filmkamera|Kino|Unterhaltung
+headphone	🎧	Kopfhörer	Kopfhörer|Musik|Unterhaltung
+top-hat	🎩	Zylinder	Hut|Kopfbedeckung|Unterhaltung|Zauberer|Zylinder|Zylinderhut
+clapper-board	🎬	Filmklappe	Film|Filmklappe|Klappe|Unterhaltung
+musical-note	🎵	Musiknote	Lied|Melodie|Musik|Musiknote|Note
+musical-notes	🎶	Musiknoten	Musik|Musiknoten|Noten
+saxophone	🎷	Saxofon	Instrument|Musik|Musikinstrument|Saxofon
+guitar	🎸	Gitarre	Gitarre|Instrument|Musik|Musikinstrument
+musical-keyboard	🎹	Klaviatur	Instrument|Klaviatur|Klavier|Musik|Musikinstrument|Piano|Tastatur|Tasten
+trumpet	🎺	Trompete	Instrument|Musik|Musikinstrument|Trompete
+violin	🎻	Geige	Geige|Instrument|Musik|Musikinstrument|Violine
+musical-score	🎼	Notenschlüssel	Musik|Noten|Notenschlüssel|Partitur|Violinschlüssel
+red-paper-lantern	🏮	rote Papierlaterne	Izakaya|Japanische Laterne|japanisches Lokal|rote Papierlaterne
+label	🏷	Etikett	Etikett|Label|Marke
+bow-and-arrow	🏹	Pfeil und Bogen	Bogen|Pfeil|Pfeil und Bogen
+crown	👑	Krone	Kopfbedeckung|Krone|König|Königin|Majestät
+womans-hat	👒	Damenhut	Damenhut|Damenhut mit Schleife|Hut|Kleidung|Kopfbedeckung|Schleife
+glasses	👓	Brille	Accessoire|Brille
+necktie	👔	Hemd mit Krawatte	Hemd|Hemd mit Krawatte|Kleidung|Kragen|Schlips
+t-shirt	👕	T-Shirt	Kleidung|Shirt|T-Shirt
+jeans	👖	Jeans	Hose|Jeans|Kleidung
+dress	👗	Kleid	Kleid|Kleidung
+kimono	👘	Kimono	Kimono|Kleid|Kleidung|japanisch
+bikini	👙	Bikini	Badeanzug|Bikini|Kleidung
+womans-clothes	👚	Bluse	Bluse|Damenmode|Kleidung|Oberbekleidung|Shirt
+purse	👛	Geldbörse	Accessoire|Brieftasche|Geldbörse|Münzen|Portemonnaie
+handbag	👜	Handtasche	Accessoire|Handtasche|Tasche|einkaufen
+clutch-bag	👝	Clutch	Accessoire|Beutel|Clutch|Handtasche|Kulturbeutel|Tasche|Waschtasche
+mans-shoe	👞	Herrenschuh	Herren|Herrenschuh|Schuh|gehen
+running-shoe	👟	Sportschuh	Schuh|Sneaker|Sportschuh|Turnschuh|laufen|rennen|sportlich
+high-heeled-shoe	👠	Stöckelschuh	Absatz|Absatzschuh|Damen|High Heel|Highheels|Pumps|Schuh|Stöckelschuh|elegant|rot|vornehm
+womans-sandal	👡	Damensandale	Damen|Damensandale|Sandale|Schuh
+womans-boot	👢	Damenstiefel	Damen|Damenstiefel|Schuh|Stiefel
+lipstick	💄	Lippenstift	Kosmetik|Lippenstift|Make-up|Rot|Schminke|makeup
+syringe	💉	Spritze	Arzt|Impfung|Injektion|Kanüle|Nadel|Spritze|impfen
+pill	💊	Kapsel	Arznei|Arzt|Kapsel|Medizin|Pille|Tabletten
+ring	💍	Ring	Diamantring|Edelstein|Ring|Schmuck|Verlobung
+gem-stone	💎	Edelstein	Diamant|Edelstein
+light-bulb	💡	Glühbirne	Glühbirne|Idee|Lampe|Licht|hell
+money-bag	💰	Geldsack	Geld|Geldsack|Moneten|Sack|reich
+credit-card	💳	Kreditkarte	Bankkarte|EC-Karte|Geldkarte|Guthaben|Karte|Kreditkarte
+yen-banknote	💴	Yen-Banknote	Geld|Geldschein|Yen|Yen-Banknote
+dollar-banknote	💵	Dollar-Banknote	Dollar|Dollar-Banknote|Geld|Geldschein|Währung
+euro-banknote	💶	Euro-Banknote	Euro|Euro-Banknote|Euroschein|Geld|Geldschein
+pound-banknote	💷	Pfund-Banknote	Geld|Geldschein|Pfund|Pfund-Banknote
+money-with-wings	💸	Geldschein mit Flügeln	Bank|Euro|Geld|Geldschein mit Flügeln|Knete|Moneten
+chart-increasing-with-yen	💹	steigende Kurve mit Yen-Zeichen	Diagramm|Markt|Steigender Trend mit Yen-Zeichen|steigende Kurve mit Yen-Zeichen
+laptop	💻	Laptop	Bildschirm|Computer|Computermonitor|Laptop|Monitor|Notebook|PC
+briefcase	💼	Aktentasche	Aktentasche|Tasche
+computer-disk	💽	Minidisc	MD|Minidisc|Minidisk
+floppy-disk	💾	Diskette	Datenträger|Diskette
+optical-disk	💿	CD	Blu-Ray|CD|DVD
+dvd	📀	DVD	CD|DVD|blu-ray|computer
+file-folder	📁	Ordner	Akten|Büro|Dokument|Ordner|geschlossen
+open-file-folder	📂	geöffneter Ordner	Dokument|Geöffneter Ordner|Ordner|geöffneter Ordner|offen
+page-with-curl	📃	teilweise eingerolltes Blatt	Dokument|Papier|Seite|Teilweise eingerolltes Blatt|teilweise eingerolltes Blatt
+page-facing-up	📄	Vorderseite eines Blattes	Dokument|Papier|Seite|Vorderseite eines Blattes
+calendar	📅	Kalender	Datum|Kalender|Kalenderblatt
+tear-off-calendar	📆	Abreißkalender	Abreißkalender|Datum|Kalender|Termin
+card-index	📇	Rotationskartei	Rotationskartei|Visitenkarten
+chart-increasing	📈	Aufwärtstrend	Aufwärtstrend|Diagramm|Kurve|steigend
+chart-decreasing	📉	Abwärtstrend	Abwärtstrend|Diagramm|Kurve|fallend
+bar-chart	📊	Balkendiagramm	Balken|Balkendiagramm|Diagramm
+clipboard	📋	Klemmbrett	Clipboard|Clpboard|Klemmbrett|Zwischenablage
+pushpin	📌	Reißzwecke	Reißzwecke|anpinnen
+round-pushpin	📍	Stecknadel	Reißzwecke|Stecknadel|anpinnen|rund|runde Reißzwecke
+paperclip	📎	Büroklammer	Büroklammer
+straight-ruler	📏	Lineal	Lineal
+triangular-ruler	📐	dreieckiges Lineal	Dreieckiges Lineal|Geodreieck|Lineal|dreieckiges Lineal
+bookmark-tabs	📑	Pagemarker	Notizen|Pagemarker
+ledger	📒	Spiralblock	Notizblock|Spiralblock
+notebook	📓	Notizbuch	Notizbuch|Notizen
+notebook-with-decorative-cover	📔	Notizbuch mit dekorativem Einband	Einband|Notizbuch|Notizbuch mit dekorativem Einband
+closed-book	📕	geschlossenes Buch	Buch|Geschlossenes Buch|geschlossen|geschlossenes Buch
+open-book	📖	offenes Buch	Bibliothek|Buch|Offenes Buch|Seite|blättern|geöffnet|lernen|lesen|offen|offenes Buch
+green-book	📗	grünes Buch	Buch|Grünes Buch|grün|grünes Buch|lesen
+blue-book	📘	blaues Buch	Blaues Buch|Buch|blau|blaues Buch
+orange-book	📙	orangefarbenes Buch	Buch|Orangefarbenes Buch|orangefarben|orangefarbenes Buch
+books	📚	Bücherstapel	Bücher|Bücherstapel|Fantasie|Roman|lesen
+scroll	📜	Schriftrolle	Papier|Schriftrolle
+memo	📝	Papier und Bleistift	Bleistift|Kurzmitteilung|Nachricht|Notiz|Papier|Papier und Bleistift|Schreibblock|schreiben
+telephone-receiver	📞	Telefonhörer	Hörer|Kommunikation|Telefon|Telefonhörer|anrufen
+pager	📟	Pager	Kommunikation|Pager|Piepser
+fax-machine	📠	Faxgerät	Fax|Faxgerät|Kommunikation
+satellite-antenna	📡	Satellitenschüssel	Antenne|Sat-Schüssel|Satellitenschüssel|Satschüssel|Schüssel
+loudspeaker	📢	Lautsprecher	Lautsprecher|Megafon|Schallendes Megafon
+megaphone	📣	Megafon	Jubel|Lautsprecher|Megafon
+outbox-tray	📤	Postausgang	Ablage|E-Mail|Postausgang
+inbox-tray	📥	Posteingang	Ablage|E-Mail|Posteingang
+package	📦	Paket	Paket|Päckchen
+e-mail	📧	E-Mail	Brief|E-Mail|E-Mail-Symbol|Post
+incoming-envelope	📨	eingehender Briefumschlag	E-Mail|Umschlag|eingehender Briefumschlag|empfangen
+closed-mailbox-with-lowered-flag	📪	geschlossener Briefkasten ohne Post	Briefkasten|Geschlossener Briefkasten ohne Post|Post|geschlossen|geschlossener Briefkasten ohne Post|keine E-Mail|keine Post
+closed-mailbox-with-raised-flag	📫	geschlossener Briefkasten mit Post	Briefkasten|E-Mail|Geschlossener Briefkasten mit Post|Post|geschlossen|geschlossener Briefkasten mit Post
+open-mailbox-with-raised-flag	📬	offener Briefkasten mit Post	Briefkasten|E-Mail|Offener Briefkasten mit Post|Post|offen|offener Briefkasten mit Post
+open-mailbox-with-lowered-flag	📭	offener Briefkasten ohne Post	Briefkasten|Post|keine E-Mail|keine Post|offen|offener Briefkasten ohne Post
+postbox	📮	Briefkasten	Brief|Briefkasten|Post
+postal-horn	📯	Posthorn	Brief|E-Mail|Post|Posthorn
+newspaper	📰	Zeitung	Medien|Nachrichten|Presse|Zeitung
+mobile-phone	📱	Mobiltelefon	Handy|Mobiltelefon|Smartphone|iPhone|telefonieren
+camera	📷	Fotoapparat	Fotoapparat|Fotos|Kamera
+camera-with-flash	📸	Fotoapparat mit Blitz	Blitz|Fotoapparat|Fotoapparat mit Blitz
+video-camera	📹	Videokamera	Videokamera|Videos|filmen
+television	📺	Fernseher	Fernsehen|Fernseher|Film|TV
+radio	📻	Radio	Musik|Radio
+videocassette	📼	Videokassette	Video|Videokassette|vhs
+film-projector	📽	Filmprojektor	Filmprojektor|Kino|Unterhaltung
+prayer-beads	📿	Gebetskette	Gebet|Gebetskette|Kette|Religion|Rosenkranz|beten
+muted-speaker	🔇	durchgestrichener Lautsprecher	Durchgestrichener Lautsprecher|durchgestrichener Lautsprecher|leise|psst|stumm|stummgeschaltet
+speaker-low-volume	🔈	Lautsprecher mit geringer Lautstärke	Lautsprecher mit geringer Lautstärke|Ton an|eingeschaltet
+speaker-medium-volume	🔉	Lautsprecher mit mittlerer Lautstärke	Lautsprecher mit einer Schallwelle|Lautsprecher mit mittlerer Lautstärke|Ton|leise|mittellaut
+speaker-high-volume	🔊	Lautsprecher mit hoher Lautstärke	Dezibel|Lautsprecher mit drei Schallwellen|Lautsprecher mit hoher Lautstärke|Musik|Schallwellen|laut
+battery	🔋	Batterie	Akku|Batterie
+electric-plug	🔌	Netzstecker	Netzstecker|Stecker|Stromstecker
+magnifying-glass-tilted-left	🔍	Lupe nach links	Lupe nach links|Suche|Vergrößerungsglas
+magnifying-glass-tilted-right	🔎	Lupe nach rechts	Lupe|Lupe nach rechts|Suche|Vergrößerungsglas
+locked-with-pen	🔏	Schloss mit Füller	Datenschutz|Schloss mit Füller|Sicherheit|privat
+locked-with-key	🔐	Schloss mit Schlüssel	Datenschutz|Schloss mit Schlüssel|Sicherheit|privat
+key	🔑	Schlüssel	Passwort|Schlüssel|schließen
+locked	🔒	geschlossenes Schloss	Datenschutz|Geschlossenes Schloss|Schloss|Sicherheit|geschlossen|geschlossenes Schloss
+unlocked	🔓	offenes Schloss	Offenes Schloss|Schloss|nicht gesichert|offen|offenes Schloss
+bell	🔔	Glocke	Glocke|Klingeling|Ton eingeschaltet|ding dong
+bell-with-slash	🔕	durchgestrichene Glocke	Durchgestrichene Glocke|Glocke|Ton ausgeschaltet|durchgestrichene Glocke|kein ton|leise
+bookmark	🔖	Lesezeichen	Etikett|Lesen|Lesezeichen
+link	🔗	Linksymbol	Kettenglieder|Linksymbol|Verknüpfung|Verknüpfungssymbol|verknüpfen|zwei Ringe
+flashlight	🔦	Taschenlampe	Lampe|Licht|Taschenlampe
+wrench	🔧	Schraubenschlüssel	Schraubenschlüssel|Werkzeug
+hammer	🔨	Hammer	Hammer|Werkzeug
+nut-and-bolt	🔩	Mutter und Schraube	Mutter und Schraube|Schraube
+water-pistol	🔫	Wasserpistole	Pistole|Revolver|Waffe|Wasserpistole
+microscope	🔬	Mikroskop	Labor|Mikroskop|Wissenschaft|untersuchen
+telescope	🔭	Teleskop	Himmel|Teleskop
+candle	🕯	Kerze	Kerze|Licht
+sunglasses	🕶	Sonnenbrille	Augen|Brille|Sonnenbrille|dunkel
+linked-paperclips	🖇	verhakte Büroklammern	Büroklammer|Büroklammern|Verhakte Büroklammern|verhakt|verhakte Büroklammern
+pen	🖊	Kugelschreiber	Kugelschreiber|Stift
+fountain-pen	🖋	Füllhalter	Füller|Füllfedehalter|Füllfederhalter|Füllhalter|Stift|schreiben
+paintbrush	🖌	Pinsel	Kunst|Pinsel|malen
+crayon	🖍	Wachsmalstift	Buntstift|Filzstift|Wachsmalstift
+desktop-computer	🖥	Desktopcomputer	Bildschirm|Computer|Desktop|Desktopcomputer|Monitor|iMac
+printer	🖨	Drucker	Computer|Drucker
+computer-mouse	🖱	Computermaus	Computer|Computermaus|Maus
+trackball	🖲	Trackball	Computer|Trackball
+card-index-dividers	🗂	Karteireiter	Akten|Büro|Büroausstattung|Büromaterial|Karteibahnen|Karteikarten|Karteireiter
+card-file-box	🗃	Karteikasten	Büroausstattung|Büromaterial|Karteikasten
+file-cabinet	🗄	Aktenschrank	Ablage|Aktenschrank|Archiv|Schublade
+wastebasket	🗑	Papierkorb	Abfalleimer|Papierkorb
+spiral-notepad	🗒	Notizblock	Block|Notiz|Notizblock|Papier
+spiral-calendar	🗓	Spiralkalender	Kalender|Spiralkalender
+clamp	🗜	Schraubzwinge	Schraubzwinge|Werkzeug
+old-key	🗝	alter Schlüssel	Alter Schlüssel|Schloss|Schlüssel|alt|alter Schlüssel
+rolled-up-newspaper	🗞	zusammengerollte Zeitung	Zeitung|Zusammengerollte Zeitung|zusammengerollt|zusammengerollte Zeitung
+dagger	🗡	Dolch	Dolch|Schwert|Waffe
+ballot-box-with-ballot	🗳	Urne mit Wahlzettel	Urne|Urne mit Wahlzettel|Wahlen|Wahlzettel
+moai	🗿	Statue	Gesicht|Maske|Osterinsel|Statue
+door	🚪	Tür	Eingang|Tür|geschlossen
+cigarette	🚬	Zigarette	Kippe|Rauchen|Rauchersymbol|Zigarette
+toilet	🚽	Toilette	Klo|Toilette|WC
+shower	🚿	Dusche	Dusche|Duschkopf
+bathtub	🛁	Badewanne	Bad|Badewanne|Badezimmer|Dusche
+couch-and-lamp	🛋	Sofa und Lampe	Couch|Lampe|Sofa|Sofa und Lampe
+shopping-bags	🛍	Einkaufstüten	Einkaufen|Einkaufstüten|Shopping|Tasche|Tüte|einkaufen|shoppen
+bed	🛏	Bett	Bett|Hotel|schlafen|Übernachtung
+shopping-cart	🛒	Einkaufswagen	Einkaufswagen|einkaufen
+elevator	🛗	Fahrstuhl	Aufzug|Fahrstuhl|Haus|Lift|Symbol|Transport
+hammer-and-wrench	🛠	Hammer und Schraubenschlüssel	Hammer|Hammer und Schraubenschlüssel|Schraubenschlüssel|Werkzeug
+shield	🛡	Schutzschild	Schild|Schutzschild
+drum	🥁	Trommel	Drumsticks|Instrument|Musik|Schlägel|Sticks|Trommel|Trommelstöcke
+sari	🥻	Sari	Kleid|Kleidung|Sari
+lab-coat	🥼	Laborkittel	Arzt|Arztkittel|Doc|Doktor|Experiment|Kleidung|Kleidungsstück|Laborkittel|Labormantel|Wissenschaftler|weiße Jacke|weißer Mantel
+goggles	🥽	Schutzbrille	Augenschutz|Brille|Schutzbrille|Schweißen|Schweißerbrille|Schwimmen|Taucherbrille|schweißen|schwimmen|tauchen
+hiking-boot	🥾	Wanderstiefel	Camping|Kleidungsstück|Outdoor|Rucksacktour|Schuh|Stiefel|Wandern|Wanderstiefel|Wanderung|brauner Schuh|campen
+flat-shoe	🥿	flacher Schuh	Ballerina|Ballet-Pumps|Frauenschuh|Kleidungsstück|Schuh|Slipper|bequem|flacher Schuh
+white-cane	🦯	Blindenstock	Barrierefreiheit|Behinderung|Blindenstock|Gehstock|blind
+safety-vest	🦺	Sicherheitsweste	Kleidung|Notfall|Sicherheit|Sicherheitsweste|Weste
+billed-cap	🧢	Baseballmütze	Baseball|Baseball-Kappe|Baseball-mütze|Baseballkappe|Baseballmütze|Mütze|Schirmkappe
+scarf	🧣	Schal	Hals|Kleidung|Schal|kalt|warm anziehen
+gloves	🧤	Handschuhe	Hand|Handschuh|Handschuhe
+coat	🧥	Mantel	Jacke|Kleidung|Mantel|brr|kalt|warm anziehen
+socks	🧦	Socken	Socken|Strümpfe|socken|strumpf|strümpfe
+test-tube	🧪	Reagenzglas	Chemie|Chemikalie|Chemiker|Experiment|Labor|Reagenzglas|Substanz|Versuche|Wissenschaft
+petri-dish	🧫	Petrischale	Bakterien|Bakterienkultur|Biologe|Biologie|Biologin|Kultur|Labor|Petrischale|Pipette|Probe
+dna	🧬	DNA	Biologe|Biologie|Biologin|DNA|DNS|Evolution|Gen|Genetik|Genmanipulation|Leben
+abacus	🧮	Abakus	Abaki|Abakus|Abakusse|Berechnung|Kalkulation|Mathe|Mathematik|Rechenhilfe|Rechenrahmen|Rechenschieber|Rechnen|Zählrahmen|zählen
+fire-extinguisher	🧯	Feuerlöscher	Feuer|Feuerlöscher|löschen
+toolbox	🧰	Werkzeugkasten	Box|Handkasten|Kasten|Kiste|Mechaniker|Werkzeug|Werkzeugkasten|Werkzeugkiste|Werkzeugkoffer|rote Kiste
+magnet	🧲	Magnet	Anziehung|Anziehungskraft|Hufeisen|Magnet|Pole|U-Form|magnetisch|positiv negativ
+lotion-bottle	🧴	Creme	Creme|Feuchtigkeitscreme|Feuchtigkeitsmilch|Haarwaschmittel|Körpercreme|Lotion|Nachtcreme|Shampoo|Sonnencreme
+safety-pin	🧷	Sicherheitsnadel	Punk|Sicherheitsnadel|Windel
+broom	🧹	Besen	Besen|Fegen|Hexe|Hexenbesen|Kehren|fegen|kehren|reinigen|sauber machen|säubern
+basket	🧺	Korb	Bauernhof|Korb|Landwirtschaft|Picknick|Tragekorb|Wäsche|Wäschekorb
+roll-of-paper	🧻	Küchenrolle	Hygiene|Klopapier|Küchenrolle|Papierrolle|Papiertücher|Toilette|Toilettenpapier|WC|WC-Papier
+soap	🧼	Seife	Baden|Riegel|Schaum|Seife|Seifenschale|Seifenstück|baden|putzen|reinigen|sauber|sauber machen|schäumen|säubern
+sponge	🧽	Schwamm	Putzmittel|Schaum|Schwamm|absorbieren|aufsaugen|löchrig|porös|putzen|reinigen|sauber machen|schäumen
+receipt	🧾	Beleg	Abrechnung|Aufstellung|Beleg|Blatt|Buchhalter|Buchhaltung|Quittung|Rechnung|Rechnungswesen|Schriftstück
+ballet-shoes	🩰	Ballettschuhe	Ballett|Ballettschuhe|Kleidung|Schuhe|Tanz
+one-piece-swimsuit	🩱	einteiliger Badeanzug	Badeanzug|Kleidung|einteiliger Badeanzug
+briefs	🩲	Slip	Badeanzug|Einteiler|Kleidung|Slip|Unterwäsche
+shorts	🩳	Shorts	Badebekleidung|Badehose|Boxershorts|Kleidung|Schwimmshorts|Shorts
+thong-sandal	🩴	Zehensandale	Badelatschen|Flipflops|Latschen|Sandalen|Schuh|Strandschuh|Zehensandale|Zehensandalen
+drop-of-blood	🩸	Blutstropfen	Blutspende|Blutstropfen|Flüssigkeit|Medizin|Menstruation
+adhesive-bandage	🩹	Heftpflaster	Heftpflaster|Pflaster|Wunde|verletzt
+stethoscope	🩺	Stethoskop	Arzt|Doktor|Herz|Herzschlag|Medizin|Stethoskop|Untersuchung|abhören
+x-ray	🩻	Röntgenbild	Knochen|Medizin|Radiologie|Rippen|Röntgen|Röntgenbild|Röntgenstrahlen|Skelett|durchleuchten
+crutch	🩼	Krücke	Behinderung|Beinverletzung|Fußverletzung|Gehhilfe|Gehstütze|Hilfe|Krücke|Schmerzen|Stock|Verletzung|verletzt
+boomerang	🪃	Bumerang	Aborigines|Australien|Boomerang|Bumerang|Schleuder|Waffe|werfen
+maracas	🪇	Maracas	Cha-Cha-Cha|Instrument|Maracas|Musik|Musikinstrument|Party|Percussion|Rassel|Tanz|musizieren|rasseln|tanzen
+flute	🪈	Flöte	Band|Blaskapelle|Flöte|Holzblasinstrument|Instrument|Musik|Musikinstrument|Orchester|Spielmannszug|musizieren
+chair	🪑	Stuhl	Holzstuhl|Möbel|Stuhl|sitzen
+razor	🪒	Rasierer	Klinge|Rasierer|Rasiermesser|rasieren|scharf
+axe	🪓	Axt	Axt|Beil|Holz|Werkzeug|hacken|spalten
+diya-lamp	🪔	Öllampe	Diya|Lampe|Öl|Öllampe
+banjo	🪕	Banjo	Banjo|Instrument|Musik|Saiteninstrument|Zupfinstrument
+military-helmet	🪖	Militärhelm	Armee|Heer|Helm|Krieg|Kämpfer|Kämpferin|Militär|Militärhelm|Schutzhelm|Soldat|Soldatin
+accordion	🪗	Akkordeon	Akkordeon|Akkordeons|Concertina|Harmonika|Instrument|Musik|Musikinstrument|Quetschkommode|Quetschkommoden|Schifferklavier|Ziehharmonika|Ziehharmonikas|spielen
+long-drum	🪘	afrikanische Trommel	Conga|Handtrommel|Instrument|Musikinstrument|Rhythmus|Trommel|afrikanische Trommel|trommeln
+coin	🪙	Münze	Dollar|Euro|Geld|Gold|Goldesel|Metall|Münze|Schatz|Silber|bezahlen|reich|sparen
+carpentry-saw	🪚	Handsäge	Handsäge|Holz|Säge|Tischler|Werkzeug|sägen|trimmen
+screwdriver	🪛	Schraubenzieher	Schraube|Schraubendreher|Schraubenzieher|Werkzeug|schrauben
+ladder	🪜	Leiter	Holzleiter|Leiter|Sprosse|Stufe|hochsteigen|klettern
+hook	🪝	Haken	Angelhaken|Haken|Metallhaken|aufhaken|aufhängen|einhaken|hängen
+mirror	🪞	Spiegel	Holzspiegel|Reflexion|Spiegel|Spiegelbild|Wandspiegel
+window	🪟	Fenster	Aussicht|Fenster|Fensterrahmen|Glas|Haus|Rahmen|durchsichtig|frische Luft|lüften|Öffnung
+plunger	🪠	Saugglocke	Abfluss|Gummiglocke|Klempner|Klo|Pömpel|Pümpel|Sanitär|Saugglocke|Saugglocken|Toilette|WC|Werkzeug|verstopft
+bucket	🪣	Eimer	Behälter|Bottich|Eimer|Kübel|Wassereimer
+mouse-trap	🪤	Mausefalle	Falle|Käse|Maus|Mausefalle|Mäusefalle|anlocken
+toothbrush	🪥	Zahnbürste	Badezimmer|Bürste|Körperpflege|Mundhygiene|Zahnbürste|Zahnhygiene|Zähne|putzen|sauber
+headstone	🪦	Grabstein	Friedhof|Grab|Grabstein|RIP|tot
+placard	🪧	Protestschild	Ankündigung|Bekanntmachung|Demonstration|Hinweis|Mahnwache|Plakat|Protest|Protestschild|Schild
+identification-card	🪪	Ausweis	Ausweis|Dokument|Führerschein|Karte|Pass|Personalausweis|Plakette|Reisepass
+low-battery	🪫	schwache Batterie	Akku|Akku fast leer|Akku leer|Batterie|Batterie fast leer|Batterie leer|Elektronik|Ladestand|aufladen|niedriger Akkustand|schwache Batterie|schwacher Akku
+folding-hand-fan	🪭	Faltfächer	Abkühlung|Faltfächer|Fächer|Luft zufächeln|Tanz|flirten|heiß|kühlen|schüchtern|spanisch|warm
+hair-pick	🪮	Haarkamm	Afro|Afro Pick|Haare|Haarkamm|Kamm|afro|kämmen
+bubbles	🫧	Blasen	Blasen|Perlen|Schaum|Seife|Seifenblasen|Wasserblasen|reinigen|schweben|unter Wasser
+keyboard	⌨	Tastatur	Computer|Keyboard|Tastatur
+telephone	☎	Telefon	Anruf|Festnetz|Telefon|anrufen
+hammer-and-pick	⚒	Hammer und Pickel	Arbeiter|Hammer|Hammer und Pickel|Pickel|Werkzeug
+crossed-swords	⚔	gekreuzte Schwerter	Gekreuzte Schwerter|Schwerter|Waffe|gekreuzt|gekreuzte Schwerter
+balance-scale	⚖	Waage	Gerechtigkeit|Gewicht|Waage|Werkzeug|wiegen
+alembic	⚗	Destillierapparat	Destillierapparat|Werkzeug
+gear	⚙	Zahnrad	Werkzeug|Zahnrad
+coffin	⚰	Sarg	Beerdigung|Sarg|Tod|Vampir|tot
+funeral-urn	⚱	Urne	Beerdigung|Tod|Urne|tot
+pick	⛏	Pickel	Pickel|Werkzeug
+rescue-workers-helmet	⛑	Rettungshelm	Helm|Helm mit weißem Kreuz|Hilfe|Kreuz|Rettungshelm|Sanitäter|bergen|erste Hilfe|retten|roter Helm
+chains	⛓	Ketten	Eisen|Kette|Ketten
+broken-chain	⛓‍💥	gebrochene Kette	Freiheit|Handschellen|Kette|brechen|gebrochen|gebrochene Kette|zerbrechen
+scissors	✂	Schere	Schere|schneiden|schnipp
+envelope	✉	Briefumschlag	Brief|Briefumschlag|E-Mail
+pencil	✏	Bleistift	Bleistift|Stift
+black-nib	✒	schwarzer Federhalter	Federhalter|Füller|Schwarzer Federhalter|Stift|schwarz|schwarzer Federhalter
+cool-button	🆒	Wort „Cool“ in blauem Quadrat	Cool|Wort „Cool“ in blauem Quadrat
+free-button	🆓	Wort „Free“ in blauem Quadrat	Free|Wort „Free“ in blauem Quadrat
+new-button	🆕	Wort „New“ in blauem Quadrat	Neu|New|Wort „New“ in blauem Quadrat
+ok-button	🆗	Großbuchstaben OK in blauem Quadrat	Großbuchstaben|OK|Taste|Tastenkappe|keycap|okay
+sos-button	🆘	SOS-Zeichen	Hilfe|SOS|SOS-Zeichen
+up-button	🆙	Schriftzug „UP!“ im blauen Quadrat	Keycap|Taste|Tastenkappe|UP|UP!
+cinema	🎦	Kinosymbol	Film|Filmkamera|Filmkamera in blauem Quadrat|Kino|Kinosymbol|Unterhaltung
+currency-exchange	💱	Geldwechsel	Geld|Geldwechsel|Wechsel|Währung
+heavy-dollar-sign	💲	Dollarzeichen extrafett	Dollar|Dollar-Zeichen|Dollarzeichen extrafett|Geld|Knete|Moneten|USD|Währung|bezahlen|teuer
+name-badge	📛	Namensschild	Namensschild|Schild
+no-mobile-phones	📵	Mobiltelefone verboten	Handy|Mobiltelefon|Mobiltelefone verboten|Verbot
+shuffle-tracks-button	🔀	Zufallsmodus	Pfeile|Richtung|Verschlungene Pfeile nach rechts|Zufallsmodus|gekreuzt|verschlungene Pfeile nach rechts
+repeat-button	🔁	Wiederholen	Pfeile|Wiederholen|im Uhrzeigersinn|keycap|tastenkappe|wiederholen
+repeat-single-button	🔂	Titel wiederholen	Pfeile|Titel wiederholen|dasselbe wiederholen|einmal|im Uhrzeigersinn|noch einmal|wiederholen
+no-one-under-eighteen	🔞	Minderjährige verboten	Erwachsene|Minderjährige verboten|Mindestalter|Zeichen mit durchgestrichener 18|nicht jugendfrei
+dotted-six-pointed-star	🔯	Hexagramm mit Punkt	Hexagramm mit Punkt|Wahrsager
+trident-emblem	🔱	Dreizack	Anker|Dreizack|Poseidon|Triton
+red-circle	🔴	roter Punkt	Ball|Punkt|rot|roter Punkt
+blue-circle	🔵	blauer Punkt	Ball|Großer blauer Kreis|Kreis|Punkt|blau|blauer Punkt
+large-orange-diamond	🔶	große orangefarbene Raute	Große orangefarbene Raute|Raute|große orangefarbene Raute|orangefarben
+large-blue-diamond	🔷	große blaue Raute	Große blaue Raute|Raute|blau|große blaue Raute
+small-orange-diamond	🔸	kleine orangefarbene Raute	Kleine orangefarbene Raute|Raute|kleine orangefarbene Raute|orangefarben
+small-blue-diamond	🔹	kleine blaue Raute	Kleine blaue Raute|Raute|blau|kleine blaue Raute
+red-triangle	🔺	rotes Dreieck mit der Spitze nach oben	Dreieck|Rotes Dreieck mit Spitze oben|aufwärts|rot|rotes Dreieck mit der Spitze nach oben
+red-triangle-pointed-down	🔻	rotes Dreieck mit der Spitze nach unten	Dreieck|abwärts|rot|rotes Dreieck mit der Spitze nach unten
+om	🕉	om	Hinduismus|Religion|om
+menorah	🕎	Menora	Leuchter|Menora|Religion
+prohibited	🚫	Verboten	Kein-Zutritt-Zeichen|Verboten|Verbotszeichen|kein zutritt
+no-smoking	🚭	Rauchverbot	Rauchen verboten|Rauchverbot|Zigarette
+litter-in-bin-sign	🚮	Symbol „Papierkorb“	Abfall|Müll|Mülleimer|Sauberkeit|Symbol „Papierkorb“|wegschmeißen|wegwerfen
+no-littering	🚯	Abfall verboten	Abfall|Müll|Müll-verboten-Zeichen|verboten
+potable-water	🚰	Trinkwasser	Trinkwasser|Wasser|Wasserhahn
+non-potable-water	🚱	Kein Trinkwasser	Kein Trinkwasser|Wasser|kein Trinkwasser|verboten|verschmutzt
+no-bicycles	🚳	Fahrräder verboten	Fahhrad|Fahrrad-verboten-Schild|Fahrräder verboten|Radfahren verboten|verboten
+no-pedestrians	🚷	Fußgänger verboten	Fußgänger verboten|Fußgänger-verboten-Schild|verboten
+children-crossing	🚸	Kinder überqueren die Straße	Kinder|Kinder überqueren die Straße|Kinder-queren-die-Straße-Schild|Straßenschild|Vorsicht
+mens-room	🚹	Herren	Herren|Herrentoilette|WC
+womens-room	🚺	Damen	Damen|Damentoilette|WC
+restroom	🚻	Toiletten	Toilette|Toiletten|WC
+baby-symbol	🚼	Symbol „Baby“	Baby|Symbol „Baby“|Wickelraum
+water-closet	🚾	WC	Toilette|WC
+passport-control	🛂	Passkontrolle	Pass|Passkontrolle
+customs	🛃	Zollkontrolle	Zoll|Zollkontrolle
+baggage-claim	🛄	Gepäckausgabe	Gepäck|Gepäckausgabe
+left-luggage	🛅	Gepäckaufbewahrung	Gepäck|Gepäckaufbewahrung|Schließfach
+place-of-worship	🛐	religiöse Stätte	Kultstätte|Religion|religiöse Stätte
+orange-circle	🟠	oranger Punkt	Form|Kreis|Punkt|orange|orange Scheibe|oranger Kreis|oranger Punkt
+yellow-circle	🟡	gelber Punkt	Form|Kreis|Punkt|Scheibe|gelb|gelbe Scheibe|gelber Kreis|gelber Punkt
+green-circle	🟢	grüner Punkt	Form|Kreis|Punkt|grün|grüne Scheibe|grüner Kreis|grüner Punkt
+purple-circle	🟣	lila Punkt	Form|Kreis|Punkt|Scheibe|lila|violett
+brown-circle	🟤	brauner Punkt	Form|Kreis|Punkt|braun|braune Scheibe|brauner Kreis|brauner Punkt
+red-square	🟥	rotes Quadrat	Form|Quadrat|Viereck|rot|rotes Quadrat|rotes Viereck
+blue-square	🟦	blaues Quadrat	Form|Quadrat|Viereck|blau|blaues Quadrat|blaues Viereck
+orange-square	🟧	oranges Quadrat	Form|Quadrat|Viereck|orange|oranges Quadrat|oranges Viereck
+yellow-square	🟨	gelbes Quadrat	Form|Quadrat|Viereck|gelb|gelbes Quadrat|gelbes Viereck
+green-square	🟩	grünes Quadrat	Form|Quadrat|Viereck|grün|grünes Quadrat|grünes Viereck
+purple-square	🟪	lila Quadrat	Form|Quadrat|Viereck|lila|violett
+brown-square	🟫	braunes Quadrat	Form|Quadrat|Viereck|braun|braunes Quadrat|braunes Viereck
+khanda	🪯	Khanda	Deg Tegh Fateh|Glaube|Khalsa|Khanda|Khanda-Emblem|Religion|Schwert|Sikh|Sikhismus
+double-exclamation-mark	‼	doppeltes Ausrufezeichen	Ausrufezeichen|Doppeltes Ausrufezeichen|Satzzeichen|doppelt|doppeltes Ausrufezeichen|muss|rot
+exclamation-question-mark	⁉	Ausrufe- und Fragezeichen	Ausrufe- und Fragezeichen|Ausrufezeichen|Fragezeichen|Satzzeichen|rot
+information	ℹ	Buchstabe „i“ in blauem Quadrat	Buchstabe „i“ in blauem Quadrat|Information|i
+eject-button	⏏	Auswerfen	Auswurf|Auswurftaste|Medien|auswerfen
+fast-forward-button	⏩	Doppelpfeile nach rechts	Doppelpfeil|Doppelpfeile nach rechts|vorwärts|weiter|überspringen
+fast-reverse-button	⏪	Zurückspulen	Doppelpfeil|Doppelpfeile nach links|Dreieck|Pfeil|Zurückspulen|vorheriger Titel|zurück
+next-track-button	⏭	Nächster Titel	Doppelpfeil|Dreieck|Nächster Titel|nächster Titel|vorwärts|weiter
+last-track-button	⏮	Vorheriger Titel	Doppelpfeil|Dreieck|Pfeil|Vorheriger Titel|vorheriger Titel|zurück
+play-or-pause-button	⏯	Wiedergabe oder Pause	Dreieck|Pause|Pfeil|Wiedergabe|Wiedergabe oder Pause|rechts
+pause-button	⏸	Pause	Pause|Streifen|Tastenkappe|keycap|vertikal
+stop-button	⏹	Stopp	Aufnahme stoppen|Quadrat|Stopp|Tastenkappe|keycap
+record-button	⏺	Aufnehmen	Aufnahme|Aufnehmen|Kreis|Tastenkappe|aufnehmen|keycap
+play-button	▶	Wiedergabe	Dreieck|Pfeil|Wiedergabe|abspielen|rechts
+reverse-button	◀	Pfeil zurück	Dreieck|Pfeil|links|zurück
+white-medium-square	◻	mittelgroßes weißes Quadrat	Quadrat|mittelgroßes weißes Quadrat|weiß
+black-medium-square	◼	mittelgroßes schwarzes Quadrat	Mittelgroßes schwarzes Quadrat|Quadrat|mittelgroßes schwarzes Quadrat|schwarz
+check-box-with-check	☑	abgehaktes Kästchen	Abstimmungsfeld|Abstimmungsfeld mit Häkchen|Feld|Häkchen|Kästchen|Kästchen mit Häkchen|Wahlurne|abgehaktes Kästchen|ankreuz|✓
+radioactive	☢	Radioaktiv	Radioaktiv|radioaktiv
+biohazard	☣	Biogefährdung	Biogefährdung|Zeichen
+orthodox-cross	☦	orthodoxes Kreuz	Christentum|Kreuz|Religion|orthodox
+star-and-crescent	☪	Hilal und Stern	Hilal|Islam|Muslim|Religion|Stern
+peace-symbol	☮	Friedenszeichen	Friedensbewegung|Friedenssymbol|Friedenszeichen
 yin-yang	☯	Yin und Yang	Daoismus|Religion|Yang|Yin|Yin und Yang
-zeppelin		Zeppelin	Zeppelin
-zoom-cancel		Zoom abbrechen	Zoom abbrechen
-zoom-check		Zoom Häkchen	Zoom Häkchen
-zoom-exclamation		Zoom Ausrufezeichen	Zoom Ausrufezeichen
-zoom		Zoom	Zoom
+wheel-of-dharma	☸	Dharma-Rad	Buddhismus|Dharma|Dharma-Rad
+female-sign	♀	Frauensymbol	Frau|Frauensymbol|Zeichen|weiblich
+male-sign	♂	Männersymbol	Mann|Männersymbol|Symbol|Zeichen
+aries	♈	Widder (Sternzeichen)	Sternzeichen|Widder|Widder (Sternzeichen)
+taurus	♉	Stier (Sternzeichen)	Horoskop|Sternzeichen|Stier
+gemini	♊	Zwillinge (Sternzeichen)	Horoskop|Sternzeichen|Zwilling|Zwillinge|Zwillinge (Sternzeichen)
+cancer	♋	Krebs (Sternzeichen)	Krebs|Krebs (Sternzeichen)|Sternzeichen
+leo	♌	Löwe (Sternzeichen)	Horoskop|Löwe|Löwe (Sternzeichen)|Sternzeichen
+virgo	♍	Jungfrau (Sternzeichen)	Horoskop|Jungfrau|Jungfrau (Sternzeichen)|Sternzeichen
+libra	♎	Waage (Sternzeichen)	Horoskop|Sternzeichen|Waage|Waage (Sternzeichen)
+scorpio	♏	Skorpion (Sternzeichen)	Horoskop|Skorpion|Skorpion (Sternzeichen)|Sternzeichen
+sagittarius	♐	Schütze (Sternzeichen)	Schütze|Schütze (Sternzeichen)|Sternzeichen
+capricorn	♑	Steinbock (Sternzeichen)	Steinbock|Steinbock (Sternzeichen)|Sternzeichen
+aquarius	♒	Wassermann (Sternzeichen)	Sternzeichen|Wassermann|Wassermann (Sternzeichen)
+pisces	♓	Fische (Sternzeichen)	Fische|Fische (Sternzeichen)|Horoskop|Sternzeichen
+recycling-symbol	♻	Recycling-Symbol	Recycling|Recycling-Symbol|grüne Punkt|grüner Punkt
+infinity	♾	Unendlichkeit	Unendlichkeit|ewig|grenzenlos|unendlich
+wheelchair-symbol	♿	Symbol „Rollstuhl“	Rollstuhl|Symbol „Rollstuhl“|barrierefrei|behindertengerecht
+medical-symbol	⚕	Äskulapstab	Apotheke|Arznei|Asklepiosstab|Medizin|Äskulapstab
+atom-symbol	⚛	Atomzeichen	Atheist|Atom|Atomzeichen
+fleur-de-lis	⚜	Lilie	Fleur-de-Lis|Lilie
+warning	⚠	Warnung	Achtung|Dreieck|Vorsicht|Warnschild|Warnung
+transgender-symbol	⚧	Transgender-Symbol	Symbol für Transgender|Transgender|Transgender-Symbol
+white-circle	⚪	weißer Punkt	Ball|Großer weißer Kreis|Kreis|Punkt|weiß|weißer Punkt
+black-circle	⚫	schwarzer Punkt	Ball|Großer schwarzer Kreis|Kreis|Punkt|rund|schwarz|schwarzer Punkt
+ophiuchus	⛎	Schlangenträger	Schlagenträger|Schlangenträger|Sternbild
+no-entry	⛔	Zutritt verboten	Einbahnstrasse|Zutritt verboten|Zutritt-verboten-Schild|kein Zutritt|keine Durchfahrt|verboten
+check-mark-button	✅	weißes Häkchen	Weißes Häkchen|abgehakt|erledigt|weißes Häkchen
+check-mark	✔	kräftiges Häkchen	Haken|Häkchen|abhaken|erledigt|fertig|kräftiges Häkchen
+latin-cross	✝	lateinisches Kreuz	Christentum|Kreuz|Religion|lateinisch|römisch
+star-of-david	✡	Davidstern	Davidstern|Religion|jüdisch
+eight-pointed-star	✴	achtstrahliger Stern	*|Stern|achtstrahliger Stern
+sparkle	❇	Funkeln	*|Funkeln|Quadrat|grün
+cross-mark	❌	Kreuzzeichen	Kreuzzeichen|Multiplikation|Rotes Kreuz|abbrechen|durchgestrichen|mal|multiplizieren|x
+cross-mark-button	❎	angekreuztes Kästchen	Feld|Kreuz|Kreuzsymbol im Quadrat|Quadrat|X|angekreuztes Feld|angekreuztes Kästchen
+red-question-mark	❓	rotes Fragezeichen	Frage|Fragezeichen|Rotes Fragezeichen|Satzzeichen|rot|rotes Fragezeichen|warum|wieso
+white-question-mark	❔	weißes Fragezeichen	Frage|Fragezeichen|Satzzeichen|warum|weiß|weißes Fragezeichen
+white-exclamation-mark	❕	weißes Ausrufezeichen	Ausrufezeichen|Satzzeichen|muss|weiß|weißes Ausrufezeichen
+red-exclamation-mark	❗	rotes Ausrufezeichen	!|Ausrufezeichen|Satzzeichen|rot
+black-large-square	⬛	großes schwarzes Quadrat	Großes schwarzes Quadrat|Quadrat|großes schwarzes Quadrat|schwarz
+white-large-square	⬜	großes weißes Quadrat	Großes weißes Quadrat|Quadrat|großes weißes Quadrat|weiß
+hollow-red-circle	⭕	hohler roter Kreis	Großer Kreis|Kreis|großer Kreis|hohler roter Kreis|o|rot
+crossed-flags	🎌	überkreuzte Flaggen	Japan|japanische Flaggen|Überkreuzte Flaggen|überkreuzte Flaggen
+chequered-flag	🏁	Zielflagge	Flagge|Rennen|Sport|Zielflagge|formel 1|karierte Flagge|nascar
+white-flag	🏳	weiße Flagge	Fahne|Wehende weiße Fahne|wehen|weiße Fahne|weiße Flagge
+transgender-flag	🏳‍⚧	Transgender-Flagge	Flagge|Transgender|Transgender-Flagge
+rainbow-flag	🏳‍🌈	Regenbogenflagge	Fahne|Flagge|Pride|Regenbogen|Regenbogenflagge|bisexuell|bunt|lesbisch|lgbt|lgbtq|queer|schwul|trans
+black-flag	🏴	schwarze Flagge	Fahne|Wehende schwarze Fahne|schwarze Fahne|schwarze Flagge|wehen
+pirate-flag	🏴‍☠	Piratenflagge	Jolly Roger|Pirat|Piratenfahne|Piratenflagge|Schatz
+triangular-flag	🚩	Wimpel	Dreiecksflagge|Flagge|Standortflagge|Wimpel|rot

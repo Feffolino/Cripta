@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -63,6 +64,9 @@ val OnImageGlass = Color(0x8C000000)
 
 /** How much of a tag's colour fills its pill over a picture (the rim is stronger). */
 private const val TINT_ON_IMAGE = 0.45f
+
+/** How much of its colours a tag's icon keeps on an Off pill. */
+private const val OFF_ICON_ALPHA = 0.55f
 
 /** A tag's text: its acronym before the name, when it has one. */
 fun tagText(tag: TagEntity): String =
@@ -206,7 +210,10 @@ fun TagPill(
             val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
             Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
                 if (markOnIcon && mark != null) Icon(mark, null, tint = shownFg, modifier = Modifier.matchParentSize().then(markPop))
-                else if (drawn != null) Icon(drawn, null, tint = shownFg, modifier = Modifier.matchParentSize())
+                // The icon keeps its own colours (it is not tinted); Off, the only state that shows it
+                // beside a neutral pill, dims it.
+                else if (drawn != null) Icon(drawn, null, tint = Color.Unspecified,
+                    modifier = Modifier.matchParentSize().alpha(if (state == TagPillState.Off) OFF_ICON_ALPHA else 1f))
             }
         }
         if (text.isNotEmpty()) Text(

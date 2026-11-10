@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -61,7 +62,7 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
     ) {
         when {
             name == null -> Icon(CriptaIcons.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
-            icon != null -> Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(size * 0.58f))
+            icon != null -> Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.58f))
         }
     }
 }

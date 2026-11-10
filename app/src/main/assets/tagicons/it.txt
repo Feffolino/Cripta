@@ -1,578 +1,1482 @@
-accessible	♿	simbolo della disabilità	accesso|accesso sedia a rotelle|disabile|sedia a rotelle|simbolo|simbolo della disabilità|simbolo sedia a rotelle
-aerial-lift	🚡	funivia aerea	aerea|funicolare|funivia|montagna|sci|sciare|tram|trasporto
-air-balloon		mongolfiera	mongolfiera
-alarm	⏰	sveglia	attesa|mattino|ora|ore|suono|sveglia|svegliarsi|tempo
-alert-circle		avviso cerchio	avviso cerchio
-alert-triangle		avviso triangolo	avviso triangolo
-alien	👽	alieno	ET|UFO|alieno|extraterrestre|faccina|favola|marziani|mostro|spazio
-apple	🍎	mela rossa	cibo|dieta|frutta|frutto|mela|rossa
-archive		archivio	archivio
-arrow-badge-down		freccia badge giù	freccia badge giù
-arrow-badge-left		freccia badge sinistra	freccia badge sinistra
-arrow-badge-right		freccia badge destra	freccia badge destra
-arrow-badge-up		freccia badge su	freccia badge su
-arrow-big-down		freccia grande giù	freccia grande giù
-arrow-big-left		freccia grande sinistra	freccia grande sinistra
-arrow-big-right		freccia grande destra	freccia grande destra
-arrow-big-up		freccia grande su	freccia grande su
-artboard		tavola da disegno	tavola da disegno
-article		articolo	articolo
-asset		risorsa	risorsa
-atom-2		atomo 2	atomo 2
-automatic-gearbox		cambio automatico	cambio automatico
-award	🏅	medaglia sportiva	campione|corsa|gara|medaglia|medaglia sportiva|podio|risultato sportivo|sport|vincere|vittoria
-baby-carriage		carrozzina	carrozzina
-badge-3d		badge 3d	badge 3d
-badge-4k		badge 4k	badge 4k
-badge-8k		badge 8k	badge 8k
-badge-ad		badge pubblicità	badge pubblicità
-badge-ar		badge ar	badge ar
-badge-cc		badge cc	badge cc
-badge-hd		badge hd	badge hd
-badge-sd		badge sd	badge sd
-badge-tm		badge tm	badge tm
-badge-vo		badge vo	badge vo
-badge-vr		badge vr	badge vr
-badge		badge	badge
-badges		distintivi	distintivi
-ball-bowling	🎳	bowling	birilli|bowling|giocare|gioco|palla|palla da bowling|sport
-balloon	🎈	palloncino	auguri|compleanno|festa|palloncino
-ballpen	🖊	penna a sfera	compiti|disegnare|penna|penna a sfera|scrivere|scrivere a penna|scuola|stilografica|ufficio
-bandage	🩹	cerotto	cerotto|cerotto adesivo
-barbell		bilanciere	bilanciere
-barrier-block		barriera blocco	barriera blocco
-basket	🧺	cesto	biancheria|bucato|cestino|cesto|orto|picnic
-bath		vasca da bagno	vasca da bagno
-battery-automotive		batteria auto	batteria auto
-battery-vertical-1		batteria verticale 1	batteria verticale 1
-bed-flat		letto piatto	letto piatto
-bed	🛏	letto	arredamento|dormire|hotel|letto|mobili|relax|sonno|stanchezza
-beer	🍺 🍻	boccale di birra	Germania|alcool|bar|bere|birra|birre|boccale di birra|boccali di birra|boccali di birra che brindano|brindisi|celebrare|cin cin|estate|festeggiare|octoberfest|pinta|pub|ristorante|sete
-bell-ringing-2		campanella che suona 2	campanella che suona 2
-bell-ringing		campanella che suona	campanella che suona
-bell	🔔	campana	campana|campanella|campanello|chiesa|musica|scuola|stonato|suono
-bike	🚲	bicicletta	bici|bicicletta|due ruote|gita|mezzo|pedalare|spinning|sport|trasporti|trasporto|veicolo
-binoculars		binocolo	binocolo
-biohazard	☣	simbolo del rischio biologico	biorischio|pericolo|rischio biologico|simbolo del rischio biologico|sostanze pericolose
-blade		lama	lama
-blender		frullatore	frullatore
-bolt	⚡	alta tensione	alta|fulmine|pericolo|simbolo|tensione|tuono
-bomb	💣	bomba	bomba|boom|emozione|esplosione|fumetto|pericolo
-bone	🦴	osso	cane|ossa|osso|osso a forchetta|scheletro
-bong		bong	bong
-book	📕	libro chiuso	biblioteca|istruzione|leggere|libreria|libro|libro chiuso|rosso|scuola|studiare|università
-bookmark	🔖	segnalibro	etichetta|leggere|lettura|libro|segnalibro
-bookmarks		segnalibri	segnalibri
-bottle		bottiglia	bottiglia
-bow		fiocco	fiocco
-bowl-chopsticks	🥢	bacchette	bacchette|bastoncini|cibo asiatico|hashi|jeotgarak|kuaizi
-bowl-spoon	🥣	ciotola con cucchiaio	cereali|cibo|ciotola|ciotola con cucchiaio|colazione|porridge|scodella|tazza|zuppa|zuppiera
-bowl		ciotola	ciotola
-brand-apple		marchio apple	marchio apple
-brand-discord		marchio discord	marchio discord
-brand-dribbble		marchio dribbble	marchio dribbble
-brand-facebook		marchio facebook	marchio facebook
-brand-github		marchio github	marchio github
-brand-google		marchio google	marchio google
-brand-instagram		marchio instagram	marchio instagram
-brand-kick		marchio kick	marchio kick
-brand-linkedin		marchio linkedin	marchio linkedin
-brand-messenger		marchio messenger	marchio messenger
-brand-open-source		marchio aperto sorgente	marchio aperto sorgente
-brand-opera		marchio opera	marchio opera
-brand-paypal		marchio paypal	marchio paypal
-brand-pinterest		marchio pinterest	marchio pinterest
-brand-signal		marchio segnale	marchio segnale
-brand-sketch		marchio sketch	marchio sketch
-brand-snapchat		marchio snapchat	marchio snapchat
-brand-spotify		marchio spotify	marchio spotify
-brand-steam		marchio vapore	marchio vapore
-brand-tabler		marchio tabler	marchio tabler
-brand-tiktok		marchio tiktok	marchio tiktok
-brand-tinder		marchio tinder	marchio tinder
-brand-tumblr		marchio tumblr	marchio tumblr
-brand-twitter		marchio twitter	marchio twitter
-brand-vimeo		marchio vimeo	marchio vimeo
-brand-whatsapp		marchio whatsapp	marchio whatsapp
-brand-windows		marchio windows	marchio windows
-brand-x		marchio x	marchio x
-brand-youtube		marchio youtube	marchio youtube
-bread	🍞	pane in cassetta	carboidrati|cereali|cibo|pancarré|pane|pane a cassetta|pane in cassetta|ristorante|toast
-briefcase-2		valigetta 2	valigetta 2
-briefcase	💼	valigetta 24 ore	24 ore|borsa|documenti|lavoro|porta documenti|ufficio|valigetta|valigetta 24 ore
-bubble-text		fumetto testo	fumetto testo
-bubble		fumetto	fumetto
-bug	🐛	insetto	animale|bruco|giardino|millepiedi
-building-bridge-2		ponte	ponte
-bulb	💡	lampadina	brillante|elettrica|elettricità|eureka|fumetto|geniale|idea|lampadina|luce
-bus	🚌	bus	autobus|bus|mezzo|scuola|scuolabus|trasporti|trasporto|veicolo
-butterfly	🦋	farfalla	ali|animale|colorata|insetto
-cactus	🌵	cactus	cactus|caldo|deserto|messico|natura|pianta|pianta grassa|spina|spine|west
-calculator		calcolatrice	calcolatrice
-calendar-event		calendario evento	calendario evento
-calendar-month		calendario mese	calendario mese
-calendar-week		calendario settimana	calendario settimana
-calendar	📅	calendario	17|calendario|data|diciassette|giorno|ricorrenza|sfortuna|venerdì 17
-camera	📷	fotocamera	foto|fotocamera|fotografare|instagram|macchina fotografica|ricordi|scattare foto|selfie|viaggiare|video
-campfire		falò	falò
-candle	🕯	candela	a lume di candela|calore|candela|candela accesa|cera|cero|illuminare|luce
-cannabis		cannabis	cannabis
-capsule-horizontal		capsula orizzontale	capsula orizzontale
-capsule		capsula	capsula
-car-4wd		fuoristrada	fuoristrada
-car-crane		autogru	autogru
-car-fan		auto ventilatore	auto ventilatore
-car-suv		auto SUV	auto SUV
-car	🚗	auto	auto|automobile|guidare|macchina|mezzo|trasporti|veicolo|viaggiare
-carambola		carambola	carambola
-caravan		roulotte	roulotte
-cardboards		visore di cartone	visore di cartone
-cards		carte da gioco	carte da gioco
-cash-banknote		banconota	banconota
-charging-pile		colonnina di ricarica	colonnina di ricarica
-check		spunta	spunta
-chef-hat		cappello da cuoco	cappello da cuoco
-cherry	🍒	ciliegie	cibo|ciliegia|ciliegie|frutta|frutto
-chess-bishop		alfiere	alfiere
-chess-king		re degli scacchi	re degli scacchi
-chess-knight		cavallo degli scacchi	cavallo degli scacchi
-chess-queen		regina degli scacchi	regina degli scacchi
-chess-rook		torre degli scacchi	torre degli scacchi
-chess		scacchi	scacchi
-christmas-tree	🎄	albero di Natale	Natale|albero|albero di Natale|celebrare|festa|festeggiare|festoni|natura|palline|pino
-circle-key		cerchio chiave	cerchio chiave
-circle-letter-a		cerchio lettera a	cerchio lettera a
-circle-letter-b		cerchio lettera b	cerchio lettera b
-circle-letter-c		cerchio lettera c	cerchio lettera c
-circle-letter-d		cerchio lettera d	cerchio lettera d
-circle-letter-e		cerchio lettera e	cerchio lettera e
-circle-letter-f		cerchio lettera f	cerchio lettera f
-circle-letter-g		cerchio lettera g	cerchio lettera g
-circle-letter-h		cerchio lettera h	cerchio lettera h
-circle-letter-i		cerchio lettera i	cerchio lettera i
-circle-letter-j		cerchio lettera j	cerchio lettera j
-circle-letter-k		cerchio lettera k	cerchio lettera k
-circle-letter-l		cerchio lettera l	cerchio lettera l
-circle-letter-m		cerchio lettera m	cerchio lettera m
-circle-letter-n		cerchio lettera n	cerchio lettera n
-circle-letter-o		cerchio lettera o	cerchio lettera o
-circle-letter-p		cerchio lettera p	cerchio lettera p
-circle-letter-q		cerchio lettera q	cerchio lettera q
-circle-letter-r		cerchio lettera r	cerchio lettera r
-circle-letter-s		cerchio lettera s	cerchio lettera s
-circle-letter-t		cerchio lettera t	cerchio lettera t
-circle-letter-u		cerchio lettera u	cerchio lettera u
-circle-letter-v		cerchio lettera v	cerchio lettera v
-circle-letter-w		cerchio lettera w	cerchio lettera w
-circle-letter-x		cerchio lettera x	cerchio lettera x
-circle-letter-y		cerchio lettera y	cerchio lettera y
-circle-letter-z		cerchio lettera z	cerchio lettera z
-circle-number-0		cerchio numero 0	cerchio numero 0
-circle-number-1		cerchio numero 1	cerchio numero 1
-circle-number-2		cerchio numero 2	cerchio numero 2
-circle-number-3		cerchio numero 3	cerchio numero 3
-circle-number-4		cerchio numero 4	cerchio numero 4
-circle-number-5		cerchio numero 5	cerchio numero 5
-circle-number-6		cerchio numero 6	cerchio numero 6
-circle-number-7		cerchio numero 7	cerchio numero 7
-circle-number-8		cerchio numero 8	cerchio numero 8
-circle-number-9		cerchio numero 9	cerchio numero 9
-circle-percentage		cerchio percentuale	cerchio percentuale
-circle		cerchio	cerchio
-clipboard-check		portablocco spunta	portablocco spunta
-clipboard-data		portablocco dati	portablocco dati
-clipboard-plus		portablocco più	portablocco più
-clipboard-text		portablocco testo	portablocco testo
-clipboard-x		portablocco x	portablocco x
-clipboard	📋	portablocco	appunti|blocco|blocco note|cartella|portablocco|tavoletta
-clock-hour-1		orologio ora 1	orologio ora 1
-clock-hour-10		orologio ora 10	orologio ora 10
-clock-hour-11		orologio ora 11	orologio ora 11
-clock-hour-12		orologio ora 12	orologio ora 12
-clock-hour-2		orologio ora 2	orologio ora 2
-clock-hour-3		orologio ora 3	orologio ora 3
-clock-hour-4		orologio ora 4	orologio ora 4
-clock-hour-5		orologio ora 5	orologio ora 5
-clock-hour-6		orologio ora 6	orologio ora 6
-clock-hour-7		orologio ora 7	orologio ora 7
-clock-hour-8		orologio ora 8	orologio ora 8
-clock-hour-9		orologio ora 9	orologio ora 9
-clock		orologio	orologio
-cloud-computing		informatica in cloud	informatica in cloud
-cloud	☁	nuvola	meteo|natura|nuvola|nuvola nera|nuvoletta
-clover	🍀	quadrifoglio	foglia|fortuna|natura|pianta|piante|quadrifoglio|quattro
-clubs	♣	fiori	carte|fiori|seme
-code-circle-2		codice cerchio 2	codice cerchio 2
-code-circle		codice cerchio	codice cerchio
-coin-bitcoin		moneta bitcoin	moneta bitcoin
-coin-euro		moneta euro	moneta euro
-coin-monero		moneta monero	moneta monero
-coin-pound		moneta sterlina	moneta sterlina
-coin-rupee		moneta rupia	moneta rupia
-coin-taka		moneta taka	moneta taka
-coin-yen		moneta yen	moneta yen
-coin-yuan		moneta yuan	moneta yuan
-coin	🪙	moneta	argento|denaro|dollaro|euro|metallo|moneta|oro|ricco|soldi|tesoro
-compass	🧭	bussola	bussola|direzione|magnetica|navigazione|orientamento
-cone-2		cono 2	cono 2
-cone		cono	cono
-confetti	🎊 🎉	coriandoli	auguri|carnevale|compleanno|congratulazioni|coriandoli|decorazioni|evviva|felicità|festa|festeggiare|palla|palla di coriandoli|party|spara coriandoli|stelle filanti|urrà|yahoo
-cookie-man		biscotto uomo	biscotto uomo
-cookie	🍪	biscotto	biscottino|biscotto|cibo|cioccolato|cookie|dessert|dolce|gocce di cioccolato|ristorante|zucchero
-copyleft		copyleft	copyleft
-copyright	©	copyright	copyright
-credit-card	💳	carta di credito	addebito|banca|carta|carta di credito|credito|denaro|pagare|soldi
-crop-1-1		ritaglio 1 1	ritaglio 1 1
-crop-16-9		ritaglio 16 9	ritaglio 16 9
-crop-3-2		ritaglio 3 2	ritaglio 3 2
-crop-5-4		ritaglio 5 4	ritaglio 5 4
-crop-7-5		ritaglio 7 5	ritaglio 7 5
-crop-landscape		ritaglio orizzontale	ritaglio orizzontale
-crop-portrait		ritaglio verticale	ritaglio verticale
-cross	✝	croce latina	Cristianesimo|cattolicesimo|croce|croce latina|religione
-crown	👑	corona	abbigliamento|corona|famiglia reale|medioevo|principe|principessa|re|regale|regina|vincere
-database		database	database
-device-cctv		dispositivo videosorveglianza	dispositivo videosorveglianza
-device-desktop	🖥	computer fisso	PC tutto in uno|computer|computer fisso|desktop|desktop PC|monitor
-device-floppy	💾	floppy disc	computer|disc|dischetto|floppy
-device-gamepad-2		dispositivo controller di gioco 2	dispositivo controller di gioco 2
-device-gamepad-3		dispositivo controller di gioco 3	dispositivo controller di gioco 3
-device-gamepad	🎮	gamepad	console|gamepad|giocare|gioco|joystick|videogioco
-device-heart-monitor		cardiomonitor	cardiomonitor
-device-imac		dispositivo imac	dispositivo imac
-device-ipad		dispositivo ipad	dispositivo ipad
-device-mobile	📱	telefono cellulare	cellulare|chiamare|comunicare|smartphone|telefono
-device-remote		dispositivo telecomando	dispositivo telecomando
-device-speaker	🔊	altoparlante a volume alto	alto|altoparlante a volume alto|audio|megafono|musica|speaker|suono|volume
-device-tablet		dispositivo tablet	dispositivo tablet
-device-tv-old		televisore d’epoca	televisore d’epoca
-device-tv	📺	televisore	TV|arredamento|televisione|televisore
-device-unknown		dispositivo sconosciuto	dispositivo sconosciuto
-device-usb		dispositivo USB	dispositivo USB
-device-watch	⌚	orologio	orologio|orologio da polso|tempo
-diamond	💎	gemma	diamante|fidanzamento|gemma|gioiello|per sempre|pietra preziosa|romanticismo|romantico|soldi
-diamonds	♦	quadri	carte|quadri|rombo|seme
-dice-1		dado 1	dado 1
-dice-2		dado 2	dado 2
-dice-3		dado 3	dado 3
-dice-4		dado 4	dado 4
-dice-5		dado 5	dado 5
-dice-6		dado 6	dado 6
-dice	🎲	dado	dadi|dado|gioco|gioco dei dadi
-directions		indicazioni	indicazioni
-disc	💿	disco ottico	CD|DVD|blu-ray|computer|disco|disco ottico
-discount		sconto	sconto
-download		scarica	scarica
-drop-circle		goccia cerchio	goccia cerchio
-droplet	💧	goccia	acqua|freddo|fumetto|goccia|lacrima|natura|sudore|triste
-droplets		gocce	gocce
-dual-screen		doppio schermo	doppio schermo
-dumpling	🥟	raviolo	cibo|dumpling|empanada|fagottino|gyoza|jiaozi|pierogi|ravioli|raviolo
-egg-cracked		uovo incrinato	uovo incrinato
-egg-fried	🍳	cucinare	cibo|colazione all’americana|cucinare|friggere|padella|padellino|ristorante|uova|uovo|uovo in padella
-egg	🥚	uovo	cibo|uova|uovo
-elevator	🛗	ascensore	accessibilità|ascensore|montacarichi
-engine		motore	motore
-escalator-down		scala mobile giù	scala mobile giù
-escalator-up		scala mobile su	scala mobile su
-escalator		scala mobile	scala mobile
-explicit		contenuto esplicito	contenuto esplicito
-eye	👁	occhio	1 occhio|corpo|faccia|occhio
-eyeglass-2		occhiali 2	occhiali 2
-eyeglass	👓	occhiali da vista	abbigliamento|nerd|occhiali|occhiali da vista
-face-mask	😷	faccina con mascherina	dentista|dottore|faccina con mascherina|germi|infermiera|infermiere|malato|mascherina|medicina|raffreddato|raffreddore|smog
-favicon		icona del sito	icona del sito
-feather	🪶	piuma	leggero|penna|piuma|piumaggio|uccello|volo
-fence		recinzione	recinzione
-ferry	⛴	traghetto	barca|crociera|mare|nave|traghetto|traversata
-fidget-spinner		fidget spinner	fidget spinner
-file-check		file spunta	file spunta
-file-code		file codice	file codice
-file-description		file descrizione	file descrizione
-file-dollar		file dollaro	file dollaro
-file-euro		file euro	file euro
-file-horizontal		file orizzontale	file orizzontale
-file-invoice		file fattura	file fattura
-file-music		file musica	file musica
-file-neutral		file neutro	file neutro
-file-sad		file triste	file triste
-file-smile		file sorriso	file sorriso
-file-star		file stella	file stella
-file-text		file testo	file testo
-file-time		file tempo	file tempo
-file		file	file
-files		file	file
-fish-bone		lisca di pesce	lisca di pesce
-flag-2		bandiera 2	bandiera 2
-flag-3		bandiera 3	bandiera 3
-flag	🏁	bandiera a scacchi	bandiera|bandiera a scacchi|circuito|corsa|gara|podio|scacchi|sport|vittoria
-flame	🔥	fuoco	bruciare|caldo|calore|esplosione|falò|fiamma|fiamme|fuoco|inferno|passione
-flare		bagliore	bagliore
-flask-2		beuta 2	beuta 2
-flask		beuta	beuta
-flower		fiore	fiore
-folder-open	📂	cartella aperta	aperta|cartella|file
-folder	📁	cartella file	archiviare|archivio|cartella|computer|file|ufficio
-folders		cartelle	cartelle
-forbid-2		divieto 2	divieto 2
-forbid	🚫	segnale di divieto	divieto|proibito|segnale di divieto|simbolo|simbolo di divieto|vietato|vietato fumare|vietato l’accesso
-fountain	⛲	fontana	acqua|acqua che scorre|fontana
-garden-cart		carrello da giardino	carrello da giardino
-gas-station		distributore di benzina	distributore di benzina
-ghost-2		fantasma 2	fantasma 2
-ghost-3		fantasma 3	fantasma 3
+eye-in-speech-bubble	👁‍🗨	occhio nel fumetto	fumetto|nuvoletta|occhio|occhio nel fumetto|spiare|testimone
+ogre	👹	orco	creature|diavolo|faccina|favola|fiaba|finzione|maschera|mostro|orco|paura
+goblin	👺	goblin	arrabbiato|carnevale|cattivo|crudele|diavolo|favola|fiaba|folletto|goblin|malefico|mostro
 ghost	👻	fantasma	creatura|fantasmino|favola|fiaba|halloween|horror|mostro|paura|scherzetto|scherzo|sciocco|storie di fantasmi|stregare|stregato|terrore
-gift-card		buono regalo	buono regalo
-gift	🎁	regalo	Natale|dono|festa|fiocco|pacchetto|regalino|regalo|sorpresa
-glass-full	🍷	bicchiere di vino	alcool|bar|bere|bicchiere|bicchiere di vino|calice|enoteca|ristorante|vino
-glass		bicchiere	bicchiere
-globe	🌐 🌍 🌎 🌏	globo con meridiani	Africa|America|Americhe|Asia|Asia e Australia|Australia|Europa|Europa e Africa|Terra|globo|globo con meridiani|mappamondo|meridiani|natura|pianeta|terra
-golf	⛳	bandiera in buca	bandiera golf|bandiera in buca|bandierina|buca|golf
-guitar-pick		plettro	plettro
-hanger-2		gruccia 2	gruccia 2
-headphones	🎧	cuffie	ascoltare|auricolari|cuffie|intrattenimento|musica|suono
-headset		cuffie con microfono	cuffie con microfono
-heart-broken	💔	cuore infranto	amore|amore finito|cuore|emozione|infranto|spezzato|triste
-heart	❤	cuore rosso	amore|cuore|cuoricino|emozione|rosso
-helicopter-landing		elicottero atterraggio	elicottero atterraggio
-helicopter	🚁	elicottero	elicottero|trasporti|veicolo|velivolo|viaggiare|volare
-hexagon		esagono	esagono
-home-2		casa 2	casa 2
-home	🏠 🏡	casa	abitazione|casa|casa con giardino|casa di campagna|casetta|edificio|fattoria|giardino|nido|villa|villetta
-hospital-circle	🏥	ospedale	COVID|clinica|edificio|emergenza|infermiera|infermiere|malattia|medici|medicina|ospedale|pronto soccorso
-hourglass	⌛ ⏳	clessidra	clessidra|clessidra che scorre|sabbia|tempo
-icons		icone	icone
-ironing		stiratura	stiratura
-jetpack		zaino a razzo	zaino a razzo
-jewish-star	✡	stella di David	David|Ebraismo|ebreo|sei punte|simbolo ebraico|stella|stella a sei punte|stella di David
-key	🔑	chiave	casa|chiave|lucchetto|password|segreto|sicuro
-keyboard	⌨	tastiera	computer|tasti|tastiera|tastiera senza fili
-label-important		etichetta importante	etichetta importante
-label	🏷	etichetta	etichetta|identificativo|prezzo|talloncino
-leaf		foglia	foglia
-lego		lego	lego
-lemon-2		limone 2	limone 2
-library		biblioteca	biblioteca
-lifebuoy		salvagente	salvagente
-link	🔗	collegamento	collegamento|due anelli|link|simbolo link
-location		posizione	posizione
-lock-square-rounded		lucchetto quadrato arrotondato	lucchetto quadrato arrotondato
-lock	🔒 🔐	lucchetto chiuso	chiave|chiuso|chiuso a chiave|lucchetto|lucchetto chiuso|lucchetto chiuso a chave|lucchetto chiuso con chiave|segreto|sicurezza|sicuro
-lungs	🫁	polmoni	espirazione|inspirazione|organo|polmoni|respirazione|respiro
-macro		macro	macro
-magnet	🧲	calamita	a forma di u|attrazione|calamita|ferro di cavallo|magnete|magnetica|magnetico|positivo negativo
-mail-opened		posta aperto	posta aperto
-mail	✉	busta	busta|comunicazione|corrispondenza|email|lettera|posta|ricevere posta
+alien	👽	alieno	ET|UFO|alieno|extraterrestre|faccina|favola|marziani|mostro|spazio
+alien-monster	👾	mostro alieno	GIF|UFO|alieno|arcade|creatura|faccina|faccina viola|favola|mostro|pixel|video gioco|videogioco
+angry-face-with-horns	👿	faccina arrabbiata con corna	arrabbiato|diavoletto|diavolo|diavolo viola|faccina|faccina arrabbiata con corna|scontento
+skull	💀	teschio	cranio|favola|morte|mostro|ossa|pericolo|stanco morto|teschio|umorismo nero|yolo
+kiss-mark	💋	impronta della bocca	bacio|impronta della bocca|labbra|romanticismo|romantico|rossetto|segno delle labbra|sexy
+love-letter	💌	lettera d’amore	busta|busta con cuore|cuore|c’è posta per te|inviare|lettera|lettera d’amore|posta|ricevere|romanticismo|san valentino
+beating-heart	💓	cuore che batte	amore|battito|cuore|cuore che batte|cuore rosa|emozione|pulsazione
+broken-heart	💔	cuore infranto	amore|amore finito|cuore|emozione|infranto|spezzato|triste
+two-hearts	💕	due cuori	amare|amore|anniversario|appuntamento|baci|cuori|due cuori|emozione|flirt|innamorato|romantico|rosa
+sparkling-heart	💖	cuore che luccica	amore|cuore|cuore che luccica|cuore rosa|emozionato|emozione|innamorata|innamorato|luccicare|luccichio
+growing-heart	💗	cuore che cresce	amore|battito|cuore|cuore che batte|cuore che cresce|cuore che pulsa|cuore rosa|emozionato|emozione|nervoso
+blue-heart	💙	cuore blu	amore|azzurro|blu|cuore|emozione
+green-heart	💚	cuore verde	amore|cuore|emozione|verde
+yellow-heart	💛	cuore giallo	amore|cuore|emozione|giallo|innamorato
+purple-heart	💜	cuore viola	amore|cuore|emozione|viola
+heart-with-ribbon	💝	cuore con fiocco	San Valentino|amore|cuore|cuore con fiocco|cuore rosa|cuore rosa con fiocco|emozione|fiocco|regalo|romantico
+revolving-hearts	💞	cuori che girano	adorabile|amore|appuntamento|carino|cuori che girano|cuoricini|cuoricino|emozione|girare
+heart-decoration	💟	decorazione con cuore	amore|cuore|cuore bianco|cuore nel quadrato|cuore viola|cuoricino|decorazione con cuore|san valentino|ti amo
+anger-symbol	💢	rabbia	arrabbiato|emozione|fumetto|rabbia|simbolo
+bomb	💣	bomba	bomba|boom|emozione|esplosione|fumetto|pericolo
+zzz	💤	sonno	Zzz|dormire|dormita|fumetto|ho sonno|pisolino|russare|sonnellino|sonno|stanco
+collision	💥	collisione	bomba|boom|collisione|emozione|esplodere|esplosione|fumetto|simbolo collisione
+sweat-droplets	💦	gocce di sudore	acqua|allenamento|fumetto|gocce|gocciolare|schizzo|sudata|sudato|sudore
+dashing-away	💨	nuvola di polvere	andare|correre|emozione|fuga|fumetto|fumo|nuvola di polvere|scappare|soffio|vento
+pile-of-poo	💩	cacca	buona fortuna|cacca|fortuna|fortunato|popò|pupù|puzza
+dizzy	💫	stella con scia	fumetto|stella cadente|stella con scia|vertiginoso|vorticoso
+speech-balloon	💬	fumetto	dialogo|fumetto|mmm|nuvoletta|parlare|puntini|sospensione|sta scrivendo|sto scrivendo|testo
+thought-balloon	💭	nuvoletta	fumetto|idea|inventare|nuvola|pensare|realizzare|riflettere|sognare a occhi aperti
+hundred-points	💯	100 punti	100|cento|d’accordo|massimo|punteggio|punteggio pieno|punti|sicuro|tutto
+hole	🕳	buco	buco|fumetto|nero|tombino
+black-heart	🖤	cuore nero	crudele|cuore|dolore|nero|tristezza
+left-speech-bubble	🗨	fumetto a sinistra	dialogo|fumetto|nuvoletta|parlare|sinistra
+right-anger-bubble	🗯	nuvoletta rabbia	arrabbiato|dialogo|fumetto|nuvoletta rabbia|rabbia|urlare
+grinning-face	😀	faccina con un gran sorriso	allegria|allegro|denti|faccina con un gran sorriso|felice|molto felice|risata|sogghignare|sogghigno|sorriso
+beaming-face-with-smiling-eyes	😁	faccina raggiante con occhi felici	denti|faccina|faccina che ride|faccina che sogghigna|faccina raggiante con occhi felici|molto felice|occhi felici|risata|sogghignare|sogghigno|sogghigno con occhi felici|sorriso
+face-with-tears-of-joy	😂	faccina con lacrime di gioia	ahahaha|che ridere|contentissimo|contento|faccina|faccina che piange dal ridere|felice|felicissimo|felicità|gioia|lacrima|lacrime di gioia|lol|piangere dal ridere|ridere|risata|rofl
+grinning-face-with-big-eyes	😃	faccina con sorriso e occhi spalancati	bocca aperta|che bello|contento|denti|evvai|faccina con un gran sorriso e occhi spalancati|felice|felicità|ottimo|ridere|risata|sorridente|sorridere|sorriso a bocca aperta|urrà
+grinning-face-with-smiling-eyes	😄	faccina con sorriso e occhi sorridenti	a crepapelle|bene|bocca aperta|faccina che ride|faccina con un gran sorriso e occhi sorridenti|faccina felice|felicità|occhi felici|ridere|risata|sorriso|sorriso a bocca aperta
+grinning-face-with-sweat	😅	faccina con sorriso e goccia di sudore	emozionato|faccina con un gran sorriso e goccia di sudore|felice|goccia|nervoso|sollevato|sollievo|sorriso con goccia di sudore|stressato|sudore|teso
+grinning-squinting-face	😆	sorriso a bocca aperta con occhi chiusi	ahahah|bocca aperta|faccina felice|faccina sorridente|felicissimo|lol|occhi chiusi|ridere|risata|sorridente|sorriso a bocca aperta con occhi chiusi
+smiling-face-with-halo	😇	faccina con sorriso e aureola	angelo|angioletto|aureola|faccina sorridente con aureola|innocente|santarellino|santo|sorriso con aureola|spirito
+smiling-face-with-horns	😈	faccina con sorriso e corna	arrabbiato|corna|diavolo|faccina|faccina con sorriso e corna|faccina viola|sorriso|sorriso con corna
+winking-face	😉	faccina che fa l’occhiolino	capirsi|faccina|faccina che fa l’occhiolino|fare l’occhiolino|flirtare|intesa|occhio|occhiolino|sexy|strizzare l’occhio
+smiling-face-with-smiling-eyes	😊	faccina con occhi sorridenti	arrossire|bocca|faccina|faccina con occhi sorridenti|felice|felicità|imbarazzato|occhi|occhi sorridenti|sorriso|timido
+face-savoring-food	😋	faccina che si lecca i baffi	buonissimo|buono|che buono|cibo delizioso|faccina che si lecca i baffi|gnam|golosa|goloso|leccarsi i baffi|slurp
+relieved-face	😌	faccina sollevata	faccina|faccina con sorriso|pace|sollevato|sollievo|tranquillità|tranquillo|zen
+smiling-face-with-heart-eyes	😍	faccina con sorriso e occhi a cuore	amore|cuore|faccina|faccina con sorriso e occhi a cuore|innamorato|occhi|occhi a cuore|romantico|sorriso|sorriso con occhi a cuore
+smiling-face-with-sunglasses	😎	faccina con sorriso e occhiali da sole	cool|fighetto|figo|ganzo|luce|relax|soleggiato|spensierato|vacanza
+smirking-face	😏	faccina con sorrisetto	ammiccante|bocca|faccia|faccina con sorrisetto|flirtare|furbetto|malizioso|mmm|non ci credo|occhiolino|sopracciglia|sorrisetto|sospetto|sospettoso
+neutral-face	😐	faccina neutra	ah|imbarazzato|imbarazzo|impassibile|mmm|neutro|no comment|non fa ridere|non rido|oh|senza espressione|senza parole|uh
+expressionless-face	😑	faccina inespressiva	brutto|cattivo|come no|faccina|inespressiva|male|neutro|niente commenti|no comment|strano
+unamused-face	😒	faccina contrariata	che barba|contrariato|deluso|faccina|indifferente|infelice|triste|uff|uffa|ugh|wtf
+downcast-face-with-sweat	😓	faccina abbattuta sudata	ci è mancato poco|delusione|faccina|faccina abbattuta sudata|faccina sudata|goccia|malato|sudore|triste
+pensive-face	😔	faccina pensierosa	mai una gioia|male|mi dispiace|morire|no|peccato|pensieroso|perdere|persa|purtroppo|scoraggiato|triste
+confused-face	😕	faccina confusa	confuso|deluso|faccina|forse|non so|peccato|triste|uffa
+confounded-face	😖	faccina frustrata	arrabbiato|concentrato|confuso|doh|faccia|faccina|frustrato|scontento|stressato|triste|uffa
+kissing-face	😗	faccina che bacia	appuntamento|bacio|bocca|buona notte|faccina che manda bacio|flirt|sbaciucchiare
+face-blowing-a-kiss	😘	faccina che manda un bacio	amore|bacetti|bacini|buona notte|cuore|faccina che manda baci|innamorato|mandare baci|mi manchi|smack|ti amo|ti voglio bene
+kissing-face-with-smiling-eyes	😙	faccina che bacia con occhi sorridenti	appuntamento|bacetti|buona notte|faccina che manda baci|occhi chiusi|occhi sorridenti|sorriso
+kissing-face-with-closed-eyes	😚	faccina che bacia con occhi chiusi	amore|bacetti|bacio a occhi chiusi|buona notte|faccina|faccina che bacia con occhi chiusi|occhi chiusi|ti amo|ti voglio bene|tvb
+face-with-tongue	😛	faccina che mostra la lingua	bello|faccina|faccina che fa la linguaccia|faccina che mostra la lingua|faccina con lingua fuori|fantastico|lingua|lingua fuori|linguaccia
+winking-face-with-tongue	😜	faccina che fa l’occhiolino e mostra la lingua	barzelletta|divertente|faccina che fa l’occhiolino e mostra la lingua|lingua fuori con occhiolino|linguaccia con occhiolino|occhiolino|pazzerello|pazzo|scherzo|sto scherzando|strano|yolo
+squinting-face-with-tongue	😝	faccina che strizza gli occhi e mostra la lingua	bleah|faccina|faccina che strizza gli occhi e mostra la lingua|faccina con un gran sorriso che mostra la lingua|lingua|linguaccia|linguaccia con occhi chiusi|non mi piace|occhi chiusi|orribile|terribile
+disappointed-face	😞	faccina delusa	abbandonare|delusione|disilluso|emozione|faccina|fallimento|fallire|fallito|ho perso|infelice|male|no|perdere|sospiro|triste|uffa
+worried-face	😟	faccina preoccupata	ansioso|faccina|nodo allo stomaco|preoccupato|preoccupazione|triste
+angry-face	😠	faccina arrabbiata	arrabbiato|che odio|faccina|frustrato|furia|infuriato|non mi piace|odio|rabbia
+pouting-face	😡	faccina accigliata	arrabbiato|broncio|faccina|faccina accigliata|faccina rossa|furioso|imbronciato|male|muso|odio
+crying-face	😢	faccina che piange	emozione|faccina|faccina che piange|faccina con lacrima|infelice|lacrima|mi dispiace|mi manchi|piangere|triste
+persevering-face	😣	faccina perseverante	concentrato|faccina|faccina che pensa|faccina concentrata|pensare|perseverante
+face-with-steam-from-nose	😤	faccina che sbuffa	arrabbiarsi|arrabbiato|faccina arrabbiata|faccina che sbuffa|faccina con il fumo|faccina frustrata|frustrato|frustrazione|rabbia|sbuffare|scontento|uffa
+sad-but-relieved-face	😥	faccina delusa ma sollevata	ansioso|deluso|deluso ma sollevato|faccina|faccina delusa ma sollevata|goccia|infelice|lacrima|sollevato|sudore|triste
+frowning-face-with-open-mouth	😦	faccina imbronciata con bocca aperta	bocca aperta|corrucciata|faccina imbronciata con bocca aperta|male|no|noo|paura|sorpresa|wow
+anguished-face	😧	faccina angosciata	angoscia|angosciato|ansia|ansioso|faccina|infelice|paura|sofferente|stressato|triste
+fearful-face	😨	faccina impaurita	ansia|ansioso|esami|faccina|fifa|fifa blu|impaurito|paura|preoccupato|spaventato|spavento
+weary-face	😩	faccina esausta	arrabbiato|disperato|esausto|faccina|faccina che piange|nooo|piangere|sfinito|stanco
+sleepy-face	😪	faccina assonnata	assonnato|dormire|faccina|faccina assonnata|goccia|sonno|stanco|zzz
+tired-face	😫	faccina stanca	disperato|faccina|stanco|triste
+grimacing-face	😬	faccina con smorfia	denti|dentista|digrignare|digrignare i denti|faccina|faccina con smorfia|smorfia
+loudly-crying-face	😭	faccina disperata	faccina che piange|faccina disperata|infelice|lacrime|no|nooo|piangere|pianto|singhiozzare|triste
+face-with-open-mouth	😮	faccina con bocca aperta	bocca|bocca aperta|non ci credo|non mi dire|oh|scioccato|shock|sorpresa|sorpreso|stupito|wow
+face-exhaling	😮‍💨	faccina che espira	ansimare|esausto|espirare|faccina che espira|fischiare|fumo|soffio|sollievo|sospiro|stanco|sussurrare|tosse
+hushed-face	😯	faccina sorpresa	faccina|incredulo|omg|sbalordito|sorpresa|sorpreso|wow
+anxious-face-with-sweat	😰	faccina sudata in ansia	ansia|blu|esami|faccina spaventata|freddo|nervoso|paura|risultato|spaventato|sudato|sudore|terrore
+face-screaming-in-fear	😱	faccina terrorizzata	blu|faccina|grido di paura|munch|oddio|paura|terrore|terrorizzata|urlare|urlo di munch
+astonished-face	😲	faccina stupita	cosa?|davvero|faccina|non ci credo|oddio|omg|scioccato|sorpresa|sorpreso|stupito
+flushed-face	😳	faccina imbarazzata	confuso|faccina|faccina arrossata|faccina con guance rosse|faccina con occhi aperti|guance rosse|imbarazzato|occhi
+sleeping-face	😴	faccina che dorme	assonnato|buona notte|dormire|faccina|faccina che dorme|pisolino|sonno|stanco|zzz
+knocked-out-face	😵	faccina frastornata	crocetta|crocette|emozione|faccina|frastornato|malato|occhi|occhi a croce|stanco|testa che gira
+face-with-spiral-eyes	😵‍💫	faccina con occhi a spirale	capogiro|confuso|faccina|faccina con occhi a spirale|giramento di testa|ipnotizzato|nausea|problema|stordito|vertigini
+face-without-mouth	😶	faccina senza bocca	faccina|faccina senza bocca|muto|non parlo|non posso parlare|segreto|senza bocca|senza espressione|senza parole|silenzio|zitto
+face-in-clouds	😶‍🌫	testa tra le nuvole	annebbiato|distratto|sbadato|testa tra le nuvole
+face-with-medical-mask	😷	faccina con mascherina	dentista|dottore|faccina con mascherina|germi|infermiera|infermiere|malato|mascherina|medicina|raffreddato|raffreddore|smog
+grinning-cat-with-smiling-eyes	😸	gatto che sogghigna	faccina|gatto|occhi|sorridente|sorriso
+cat-with-tears-of-joy	😹	gatto con lacrime di gioia	faccina|gatto|gioia|lacrime di gioia|risata|sorriso
+grinning-cat	😺	gatto che sorride	aperta|bocca|faccina|faccina del gatto|gatto|gatto che sorride|sorridente
+smiling-cat-with-heart-eyes	😻	gatto innamorato	amore|cuore|faccina|gatto|occhi a cuore|sorriso
+cat-with-wry-smile	😼	gatto con sorriso sarcastico	faccina|faccina del gatto|gatto|gatto con sorriso sarcastico|gatto sorriso ironico|gatto sorriso sarcastico|ironico|sarcastico|sorriso ironico
+kissing-cat	😽	gatto che manda baci	baci|faccina|gatto|occhi chiusi
+pouting-cat	😾	gatto imbronciato	arrabbiato|broncio|faccina|gatto|gatto imbronciato|infelice|muso
+crying-cat	😿	gatto che piange	faccina|gatto|lacrima|pianto|triste
+weary-cat	🙀	gatto esterrefatto	OMG|esterrefatto|faccina|gatto|impossibile|incredibile|non ci credo|oh mio Dio|sorpreso|wow
+slightly-frowning-face	🙁	faccina leggermente imbronciata	corrucciato|faccina|faccina leggermente imbronciata|imbronciato|mettere il muso|mi dispiace|triste|un po’ imbronciato
+slightly-smiling-face	🙂	faccina con sorriso accennato	contento|faccina|faccina che sorride|faccina con sorriso accennato|felice|mezzo sorriso|ok|sorrisetto|sorriso|sorriso a bocca chiusa|sorriso accennato|va bene
+head-shaking-horizontally	🙂‍↔	scuotere la testa in senso orizzontale	no|scuotere|scuotere la testa in senso orizzontale
+head-shaking-vertically	🙂‍↕	scuotere la testa in senso verticale	annuire|scuotere la testa in senso verticale|sì
+upside-down-face	🙃	faccina sottosopra	ah ah|ah ah ah|ahah|ahahah|arrabbiato|capovolto|faccina|sarcastico|scombussolata|sottosopra|triste
+face-with-rolling-eyes	🙄	faccina con occhi al cielo	evabbé|faccina con occhi al cielo|guardare altrove|noia|occhi al cielo|pazienza|roteare gli occhi|ruotare gli occhi|sollevare gli occhi al cielo|uffa|vabbè
+see-no-evil-monkey	🙈	non vedo	faccina|faccina della scimmietta|gesto|non guardo|non posso guardare|non vedo|proibito|scimmia|scimmietta|scimmietta non vedo|segreto|vietato
+hear-no-evil-monkey	🙉	non sento	animale|animali|faccina|non sentire|non sento|orecchie da mercante|scimmia|scimmietta|scimmietta non sento|segreto|vietato
+speak-no-evil-monkey	🙊	non parlo	animale|animali|faccina|in silenzio|monello|non parlo|proibito|scimmia|scimmietta non parlo|segreto|vietato
+white-heart	🤍	cuore bianco	bianco|cuore|emozione
+brown-heart	🤎	cuore marrone	amore|cuore|cuore di colore marrone|emozione|forma|marrone
+zipper-mouth-face	🤐	faccina con bocca con cerniera	acqua in bocca|bocca a zip|bocca cucita|faccina con bocca con cerniera|faccina con zip|no comment|non parlare|non posso parlare|segreto|silenzio|zitto
+money-mouth-face	🤑	faccina avida di denaro	avarizia|avidità|avido|denaro|dollari|faccina con lingua verde|guadagnare|lingua|pagare|ricchezza|ricco|taccagno
+face-with-thermometer	🤒	faccina con termometro	ammalato|faccina|faccina con termometro|faccina malata|febbre|influenza|malato|mutua|raffreddore|termometro
+nerd-face	🤓	faccina nerd	faccina|nerd|occhiali|occhiali da nerd|secchione|studioso
+thinking-face	🤔	faccina concentrata	arrovellarsi|concentrarsi|dubbio|faccina|faccina che pensa|faccina concentrata|mmm|pensare|scervellarsi
+face-with-head-bandage	🤕	faccina con la testa bendata	bende|dolore|faccina|faccina bendata|faccina con la testa bendata|faccina malata|farsi male|fasciarsi la testa|ferita|ferito|mal di testa|malato
+robot	🤖	faccina di robot	faccina|faccina di robot|robot|tecnologia
+hugging-face	🤗	faccina che abbraccia	abbracciare|abbraccio|ciao|faccina|faccina che abbraccia|imbarazzo|mani|mano|saluti|sorriso|ti voglio bene|tvb
+cowboy-hat-face	🤠	faccina con cappello da cowboy	cappello|cappello da cowboy|cowboy|faccina|faccina con cappello da cowboy
+clown-face	🤡	faccina pagliaccio	It|carnevale|circo|clown|faccina|faccina del clown|maschera|pagliaccio|teatro
+nauseated-face	🤢	faccina nauseata	faccina|faccina che vomita|faccina con la nausea|faccina nauseata|hang over|mal di mare|malato|nausea|nauseato|sto male|verde|vomito
+rolling-on-the-floor-laughing	🤣	ridere a crepapelle	ahah|crepapelle|divertente|esilarante|faccia che si rotola|faccina che ride|felice|felicissimo|lacrime dal ridere|lmao|lol|molto felice|occhi chiusi|ridere a crepapelle|ridicolo|risata|rofl
+drooling-face	🤤	faccina che sbava	bava|che buono|faccina|faccina che sbava|felice|figata|sbavare
+lying-face	🤥	faccina bugiarda	bugia|bugiardo|dire le bugie|faccina|faccina bugiarda|faccina con il naso lungo|mentire|naso lungo|pinocchio
+sneezing-face	🤧	faccina che starnutisce	faccina|faccina che starnutisce|faccina con fazzoletto|faccina con raffreddore|fazzoletto|malato|raffreddore|starnutire|starnuto
+face-with-raised-eyebrow	🤨	faccina con sopracciglia alzate	diffidente|disappunto|eh|faccia con sopracciglia alzate|faccina con sopracciglio alzato|incredulo|mah|non ci credo|scetticismo|scettico|sconcertato|sorpresa|sorpreso
+star-struck	🤩	colpo di fulmine	emozionante|emozionato|faccia sorridente|faccina con le stelle|felice|figata|figo|occhi a stella|stelline|wow
+zany-face	🤪	faccina impazzita	faccina|faccina con occhi pazzi|faccina impazzita|faccina pazza|grande|inquietante|occhi|occhi diversi|occhio|pazzo|piccolo|sclerato
+shushing-face	🤫	faccina che zittisce	dito|faccina che zittisce|muto|non parlare|segreto|silenzio|silenzioso|zittire|zitto
+face-with-symbols-on-mouth	🤬	faccina con simboli sulla bocca	arrabbiato|bestemmiare|censura|faccina|faccina che bestemmia|faccina che impreca|faccina con simboli sulla bocca|imprecare|incavolato|insultare|molto arrabbiato
+face-with-hand-over-mouth	🤭	faccina con mano sulla bocca	faccina che sogghigna|imbarazzato|imbarazzo|mano davanti alla bocca|non ci credo|oddio|oops|ridacchiare|ridere|segreto|sogghignare|sorpresa
+face-vomiting	🤮	faccina che vomita	faccina|faccina che vomita|malato|male|nausea|sputare|sto male|verde|vomitare|vomito
+exploding-head	🤯	testa che esplode	cervello|faccina sorpresa|non ci credo|sbalordito|scioccato|sconcertato|sorpresa|stupore|testa che esplode
+smiling-face-with-hearts	🥰	faccina con cuoricini	amore|cotta|cuoricini|faccina|innamoramento|sorriso|ti amo
+yawning-face	🥱	faccina che sbadiglia	annoiato|assonnato|buona notte|mi annoio|noia|pisolino|sbadigliare|sbadiglio|sonno|stanchezza|stanco|zzz
+smiling-face-with-tear	🥲	faccina sorridente con lacrima	commosso|dolore|emozionato|faccina sorridente con lacrima|felice|lacrima|orgoglioso|rincuorato
+partying-face	🥳	faccina che festeggia	cappellino|celebrazione|compleanno|entusiasta|faccina che festeggia|festa|festeggiamenti|festeggiamento|festeggiamo|festeggiare|party|si festeggia|trombetta
+woozy-face	🥴	faccina stordita	alticcio|bocca ondulata|brillo|confuso|frastornato|occhi storti|ubriaco|vertigini
+hot-face	🥵	faccina accaldata	accaldato|bollente|caldo|colpo di calore|febbre|febbricitante|fuoco|lingua di fuori|morendo dal caldo|morire di caldo|sudare|sudore
+cold-face	🥶	faccina congelata	blu|congelare|denti che battono per il freddo|freddo|gelo|ghiaccioli|ghiacciolo|ipotermia|sottozero
+disguised-face	🥸	faccina travestita	baffi|faccina|faccina travestita|incognito|naso|occhiali|persona|spia|travestimento
+face-holding-back-tears	🥹	faccina che trattiene le lacrime	ammirazione|faccina con gli occhi umidi|fiero|gioia|gratitudine|grato|imbarazzato|lacrime|orgoglioso|per favore|piangere|resistere|sentimenti|trattenere|triste
+pleading-face	🥺	faccina supplichevole	faccina implorante|faccina sull’orlo delle lacrime|lacrime|occhi da cucciolo|occhioni|per favore|per piacere|supplicare|triste
+face-with-monocle	🧐	faccina con monocolo	antico|classe|faccina|faccina con monocolo|fighetto|monocolo|occhiale|ricco|sospetto
+orange-heart	🧡	cuore arancione	amore|arancione|cuore|cuore arancio|emozione
+light-blue-heart	🩵	cuore azzurro	affetto|amore|azzurro|celeste|cuore|emozione
+grey-heart	🩶	cuore grigio	amore|ardesia|argento|cuore|emozione|grigio
+pink-heart	🩷	cuore rosa	affetto|amore|cuore|emozione|rosa
+melting-face	🫠	faccina che si scioglie	afa|caldo|dissolversi|faccina che si scioglie|liquefarsi|liquido|sciogliendo|sciogliersi|sciolto|sparire|squagliando|squagliarsi
+saluting-face	🫡	faccina che fa il saluto	agli ordini|d’accordo|faccina che fa il saluto militare|militare|obbedisco|ok|saluto|signorsì|sissignora|sissignore|truppe|va bene
+face-with-open-eyes-and-hand-over-mouth	🫢	faccina con occhi aperti e mano sulla bocca	imbarazzo|incredibile|incredulità|meraviglia|non ci credo|non ci posso credere|ops|sconvolto|shock|sorpresa|spavento|stupore
+face-with-peeking-eye	🫣	faccina che sbircia tra le dita	curiosità|faccina che sbircia tra le dita|fissare|imbarazzo|incuriosito|nascondo|sbirciare|sbircio|spiare|timida|timido
+face-with-diagonal-mouth	🫤	faccina perplessa	confuso|così così|deluso|dubbioso|faccina perplessa|mah|meh|perplesso|scettico
+dotted-line-face	🫥	faccina tratteggiata	depresso|faccina tratteggiata|introverso|invisibile|nascondersi|scomparire|sparire
+shaking-face	🫨	faccina tremante	faccina|faccina che trema|faccina scossa|scombussolato|scosso|scossone|shock|terremoto|tremante|tremare|vibrazione
+skull-and-crossbones	☠	teschio con ossa incrociate	letale|morte|ossa incrociate|pericolo|pirata|pirati|teschio|teschio con ossa incrociate
+frowning-face	☹	faccina imbronciata	corrucciato|faccina|faccina imbronciata|imbronciato|mettere il muso|molto imbronciato|triste
+smiling-face	☺	faccina sorridente	contorno faccina sorridente|delineata|emozionarsi|faccina|felice|rilassata|sorridente
+heart-exclamation	❣	punto esclamativo a cuore	cuore|punteggiatura|punto esclamativo|punto esclamativo a cuore|simbolo
+red-heart	❤	cuore rosso	amore|cuore|cuoricino|emozione|rosso
+heart-on-fire	❤‍🔥	cuore in fiamme	amore|bruciare|cuore in fiamme|cuore sacro|lussuria|passione
+mending-heart	❤‍🩹	cuore guarito	cuore con bende|cuore guarito|guarigione|guarire|sentirsi meglio
+santa-claus	🎅	Babbo Natale	Babbo Natale|Natale|Santa Claus|cappello|fest|festa|uomo
+snowboarder	🏂	persona sullo snowboard	inverno|montagna|neve|omino in snowboard|persona|persona sullo snowboard|snowboard|sport|tavola|uomo sullo snowboard
+person-running	🏃	persona che corre	correre|corsa|di corsa|gara|jogging|maratona|persona|persona che corre|sport
+woman-running	🏃‍♀	donna che corre	correre|corsa|di corsa|donna|donna che corre|maratona|persona|sport|veloce
+woman-running-facing-right	🏃‍♀‍➡	donna che corre: a destra	a|correre|corsa|destra|di corsa|donna|donna che corre|maratona|persona|sport|veloce
+man-running	🏃‍♂	uomo che corre	correre|corsa|sport|uomo|uomo che corre
+man-running-facing-right	🏃‍♂‍➡	uomo che corre: a destra	a|correre|corsa|destra|sport|uomo|uomo che corre
+person-running-facing-right	🏃‍➡	persona che corre: a destra	a|correre|corsa|destra|di corsa|gara|jogging|maratona|persona|persona che corre|sport
+person-surfing	🏄	persona che fa surf	mare|onde|persona|persona che fa surf|spiaggia|sport|surf|surfare|tavola
+woman-surfing	🏄‍♀	surfista donna	donna che fa surf|mare|oceano|persona|spiaggia|sport|surf|surfare|surfer|tavola da surf
+man-surfing	🏄‍♂	surfista uomo	sport|surf|surfista uomo|tavola da surf|uomo
+horse-racing	🏇	ippica	cavallo|cavallo da corsa|corse|fantino|galoppare|galoppo|ippica|sport|trotto
+person-swimming	🏊	persona che nuota	bracciata|gara|nuotare|nuotatore|nuoto|persona che nuota|sport|stile libero
+woman-swimming	🏊‍♀	nuotatrice	donna|donna che nuota|gara|nuotare|nuotata|nuotatrice|nuoto|olimpiadi|piscina|sport
+man-swimming	🏊‍♂	nuotatore	nuotatore|nuoto|piscina|sport|uomo
+person-lifting-weights	🏋	persona che solleva pesi	allenamento|bilanciere|bodybuilding|culturista|forza|persona|persona che solleva pesi|pesi|pesi massimi|sforzo|sollevamento pesi|sport
+woman-lifting-weights	🏋‍♀	donna che solleva pesi	bilanciere|donna|donna che solleva pesi|persona|pesi|pesi massimi|sollevamento pesi|sollevatrice di pesi|sport
+man-lifting-weights	🏋‍♂	uomo che solleva pesi	bilanciere|pesi|sport|uomo|uomo che solleva pesi
+person-golfing	🏌	persona che gioca a golf	buca|giocatore di golf|golf|green|mazza|pallina|persona|persona che gioca a golf|sport|tiro
+woman-golfing	🏌‍♀	golfista donna	attività|buca|donna|donna che gioca a golf|giocatrice di golf|golf|golfista|mazza|persona|sport|tiro
+man-golfing	🏌‍♂	golfista uomo	golf|golfista uomo|mazza|sport|uomo
+eyes	👀	occhi	corpo|faccia|guardare|occhi|osservare|vedere
+eye	👁	occhio	1 occhio|corpo|faccia|occhio
+ear	👂	orecchio	ascoltare|ascolto|corpo|orecchie|orecchio|sentire|sento|ti ascolto|ti sto ascoltando
+nose	👃	naso	annusare|corpo|faccia|ficcanaso|fiutare|naso|odore|profumo
+mouth	👄	bocca	bacio|bocca|corpo|faccia|labbra|rossetto|sexy|smack
+tongue	👅	lingua	corpo|faccia|lingua|linguaccia|slurp
+backhand-index-pointing-up	👆	indice alzato	dito|dito alzato|dito in su|dito indice|in alto|indice alzato|indice in su|mano|su
+backhand-index-pointing-down	👇	indice abbassato	dito|dito abbassato|dito in giù|dito indice|indicare|indice abbassato|indice in giù|mano|qui|sotto
+backhand-index-pointing-left	👈	indice verso sinistra	direzione|dito|dito verso sinistra|indicare|indice|indice verso sinistra|là|mano|sinistra
+oncoming-fist	👊	pugno chiuso	d’accordo|mano|ok|patto|pugno|pugno chiuso|rock|sì
+waving-hand	👋	mano che saluta	a dopo|ci sei?|ci vediamo|ciao|ciaone|gesto di saluto|mano|mano aperta|mano che saluta|salutare|schiaffo
+ok-hand	👌	mano che fa OK	OK con la mano|bene|capito|dito|d’accordo|gesto di ok|ho capito|indice e pollice|mano che fa OK|segno di OK|va bene
+thumbs-up	👍	pollice in su	+1|bene|capito|certo|dito|d’accordo|mi piace|ok|perfetto|pollice in su|sì|va bene
+thumbs-down	👎	pollice verso	giù|in basso|mano|no|non mi piace|pollice|pollice abbassato|pollice in giù|pollice verso|segno
+clapping-hands	👏	mani che applaudono	applaudire|applauso|bravo|clap clap|complimenti|congratulazioni|mani che applaudono|ok|pregare|preghiera|segno|yeah
+open-hands	👐	mani aperte	abbracciare|abbraccio|accogliere|aperta|aperte|mani|mano|segno|segno delle mani aperte
+footprints	👣	impronta di piedi	camminare|corpo|impronta|impronta di piedi|impronte|passi|passo|piede|piedi|piedi nudi
+bust-in-silhouette	👤	profilo di persona	busto|mistero|nascosto|ombra|persona|profilo|profilo di persona|sagoma|silhouette
+busts-in-silhouette	👥	profilo di due persone	amici|due|due utenti|mistero|ombra|ombre|persona|persone|profili|profilo|profilo di due persone|silhouette
+boy	👦	bambino	bambino|bimbo|giovane|persona|persone|ragazzino|tenero
+girl	👧	bambina	bambina|bimba|bionda|codini|contenta|felice|persona|persone|ragazzina|treccine
 man	👨	uomo	amico|biondo|fratello|maschio|papà|persona|persone|ragazzo|uomo
-manual-gearbox		cambio manuale	cambio manuale
-map-pin	📍	puntina arrotondata	località|mappa|pin|posizione|puntina|puntina arrotondata|puntina da disegno|spillo|ufficio
-medical-cross		croce medica	croce medica
-meeple		pedina da gioco	pedina da gioco
-melon	🍈	melone	cibo|frutta|frutto|melone
-message-2		messaggio 2	messaggio 2
-message-chatbot		messaggio chatbot	messaggio chatbot
-message-circle		messaggio cerchio	messaggio cerchio
-message-report		messaggio rapporto	messaggio rapporto
-message		messaggio	messaggio
-messages		messaggi	messaggi
-meteor	☄	cometa	cometa|natura|spazio|stella cometa
-michelin-star		michelin stella	michelin stella
-mickey		mickey	mickey
-microphone	🎤	microfono	Karaoke|cantare|concerto|intrattenimento|microfono|musica|palco|presentare|spettacolo|teatro
-microscope	🔬	microscopio	analisi|esperimento|microrganismo|microscopio|ricerca|scienza|scienziata|scienziato|strumento
-microwave		microonde	microonde
-military-rank		grado militare	grado militare
-milk		latte	latte
-mood-angry	😠 😡	faccina arrabbiata	arrabbiato|broncio|che odio|faccina|faccina accigliata|faccina rossa|frustrato|furia|furioso|imbronciato|infuriato|male|muso|non mi piace|odio|rabbia
-mood-confused		umore confuso	umore confuso
-mood-crazy-happy	😂 🤣	faccina con lacrime di gioia	ahah|ahahaha|che ridere|contentissimo|contento|crepapelle|divertente|esilarante|faccia che si rotola|faccina|faccina che piange dal ridere|faccina che ride|felice|felicissimo|felicità|gioia|lacrima|lacrime dal ridere|lacrime di gioia|lmao|lol|molto felice|occhi chiusi|piangere dal ridere|ridere|ridere a crepapelle|ridicolo|risata|rofl
-mood-empty		umore vuoto	umore vuoto
-mood-happy	😀 😁	faccina con un gran sorriso	allegria|allegro|denti|faccina|faccina che ride|faccina che sogghigna|faccina con un gran sorriso|faccina raggiante con occhi felici|felice|molto felice|occhi felici|risata|sogghignare|sogghigno|sogghigno con occhi felici|sorriso
-mood-kid	👶	neonato	bambino|bebè|faccia|famiglia|figlio|giovane|neonato|persone|piccolo
-mood-neutral		umore neutro	umore neutro
-mood-sad	😢 😭	faccina che piange	emozione|faccina|faccina che piange|faccina con lacrima|faccina disperata|infelice|lacrima|lacrime|mi dispiace|mi manchi|no|nooo|piangere|pianto|singhiozzare|triste
-mood-smile	🙂 😊	faccina con sorriso accennato	arrossire|bocca|contento|faccina|faccina che sorride|faccina con occhi sorridenti|faccina con sorriso accennato|felice|felicità|imbarazzato|mezzo sorriso|occhi|occhi sorridenti|ok|sorrisetto|sorriso|sorriso a bocca chiusa|sorriso accennato|timido|va bene
-mood-wrrr		umore digrigna i denti	umore digrigna i denti
-moon	🌙	spicchio di luna	calante|cielo|crescente|gobba|luna|natura|notte|spazio|spicchio di luna|ultimo quarto
-motorbike	🏍	motocicletta	avventura|due ruote|mezzo|moto|moto gp|motocicletta|ruote|trasporti|trasporto|veloce
-mountain	⛰	montagna	arrampicata|cima|montagna|vetta
-mouse	🖱	mouse	computer|cursore|mouse|mouse senza fili|periferica|periferiche|ufficio
-mug	☕	bevanda calda	bevanda|bevanda calda|caffè|fumante|the|thè|tè caldo
-mushroom	🍄	fungo	amanita|autunno|biancaneve|bosco|favola|fiaba|funghetto|fungo|natura|velenoso
-nurse		infermiere	infermiere
-octagon		ottagono	ottagono
-oval-vertical		ovale verticale	ovale verticale
-oval		ovale	ovale
-pacman		pacman	pacman
-paint		vernice	vernice
-palette	🎨	tavolozza	arte|artista|colori|creativo|dipingere|palette|pittore|pittura|tavolozza|tavolozza dei colori
-parking-circle		parcheggio cerchio	parcheggio cerchio
-paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	impronte di zampe	abbaiare|accessibilità|animale|animale domestico|animali|barboncino|cagnolino|cane|cane da accompagnamento|cane da assistenza|cane da salvataggio|cane di servizio|cane d’assistenza|cane guida|cieco|cucciolo|domestico|faccina|felino|gatta|gattina|gattino|gatto|gatto nero|halloween|impronta|impronta di zampa|impronte|impronte di zampe|miao|micino|micio|muso di cane|muso di gatto|nero|non vedente|non vedenti|pelo|razza|sfiga|sfortuna|soffice|zampa|zampe|zampine
-pencil	✏	matita	disegnare|matita|matita con gomma|scrivere|scrivere a matita
-pennant-2		gagliardetto 2	gagliardetto 2
-pennant		gagliardetto	gagliardetto
-pentagon		pentagono	pentagono
-phone-call		telefono chiamata	telefono chiamata
-phone-calling		telefono in chiamata	telefono in chiamata
-phone		telefono	telefono
-photo	🖼	quadro incorniciato	arte|cornice|dipinto|disegno|galleria|museo|opera d’arte|paesaggio|quadretto|quadro|quadro incorniciato
-pig	🐷 🐖	muso di maiale	animale|animali|faccina|fattoria|maiale|maialino|muso di maiale|natura|pancetta|porchetta|scrofa
-pill	💊	pillola	dottore|farmaco|malato|malattia|medicina|pillola|pillole|vitamina
-pin	📌	puntina	collage|puntina|puntina da disegno|scuola|ufficio
-pinned		appuntato	appuntato
-pizza	🍕	pizza	cena|cibo|fame|fetta|fetta di pizza|pizza|pizzeria|ristorante
-plane-arrival	🛬	atterraggio	aereo|aeroplano|aeroporto|arrivare|arrivi|arrivo|atterraggio|pista d’atterraggio|trasporti|trasporto|veicolo|viaggiare
-plane-departure	🛫	decollo	aereo|andare|check-in|decollo|partenza|partenze|partire|pista di decollo|trasporti|trasporto|vacanza|viaggiare
-plane-tilt		aereo inclinato	aereo inclinato
-plane	✈	aeroplano	aereo|aeroplano|jet|partenza|velivolo|viaggio
-play-card-1		gioco carta 1	gioco carta 1
-play-card-10		gioco carta 10	gioco carta 10
-play-card-2		gioco carta 2	gioco carta 2
-play-card-3		gioco carta 3	gioco carta 3
-play-card-4		gioco carta 4	gioco carta 4
-play-card-5		gioco carta 5	gioco carta 5
-play-card-6		gioco carta 6	gioco carta 6
-play-card-7		gioco carta 7	gioco carta 7
-play-card-8		gioco carta 8	gioco carta 8
-play-card-9		gioco carta 9	gioco carta 9
-play-card-a		gioco carta a	gioco carta a
-play-card-j		gioco carta j	gioco carta j
-play-card-k		gioco carta k	gioco carta k
-play-card-q		gioco carta q	gioco carta q
-play-card-star		carta da gioco con stella	carta da gioco con stella
-play-card	🃏	jolly	Joker|carta|carta da gioco|gioco|jolly
-polaroid		foto istantanea	foto istantanea
-poo	💩	cacca	buona fortuna|cacca|fortuna|fortunato|popò|pupù|puzza
-presentation-analytics		presentazione analisi	presentazione analisi
-presentation		presentazione	presentazione
-puzzle	🧩	pezzo di puzzle	incastrarsi|incastro|indizio|pezzo|pezzo di puzzle|pezzo mancante|puzzle|tassello|tessera del puzzle
-quote		citazione	citazione
-radar		radar	radar
-radioactive	☢	simbolo della radioattività	pericolo|radioattività|radioattivo|rifiuti tossici|scorie|simbolo della radioattività
-receipt-dollar		scontrino dollaro	scontrino dollaro
-receipt-euro		scontrino euro	scontrino euro
-receipt-pound		scontrino sterlina	scontrino sterlina
-receipt-rupee		scontrino rupia	scontrino rupia
-receipt-yen		scontrino yen	scontrino yen
-receipt-yuan		scontrino yuan	scontrino yuan
-receipt	🧾	scontrino	contabilità|fattura|invoice|prova|ricevuta|ricevuta di pagamento|scontrino|tenuta dei libri
-rectangle-vertical		rettangolo verticale	rettangolo verticale
-rectangle		rettangolo	rettangolo
-registered	®	marchio registrato	marchio registrato|marchio registrato cerchiato
-report-money		rapporto denaro	rapporto denaro
-rollercoaster		montagne russe	montagne russe
-rosette-discount-check		coccarda sconto spunta	coccarda sconto spunta
-rosette-discount		coccarda sconto	coccarda sconto
-rosette	🏵	rosetta	coccarda|fiore|natura|pianta|rosetta
-salad		insalata	insalata
-satellite	🛰	satellite	satellite|spazio
-scale	⚖	bilancia a doppio piatto	bilancia|bilancia a doppio piatto|chili|giustizia|grammi|pesare|piatti della bilancia|segno zodiacale|utensile
-school	🏫	scuola	alunni|classe|classi|edificio|imparare|insegnante|liceo|maestra|scuola|università
-scuba-diving-tank		bombola da sub	bombola da sub
-seedling	🌱	germoglio	germoglio|natura|pianta|piantina|primavera
-send		invia	invia
-settings		impostazioni	impostazioni
-shield-check		scudo spunta	scudo spunta
-shield-checkered		scudo a scacchi	scudo a scacchi
-shield-half		scudo metà	scudo metà
-shield-lock		scudo lucchetto	scudo lucchetto
-shield	🛡	scudo	cavaliere|combattimento|duello|medioevo|protezione|scudo|simbolo|torneo
-shirt	👕	t-shirt	abbigliamento|abbigliamento informale|casual|colletto|maglia|maglietta|maniche corte|shopping|t-shirt
-shopping-cart	🛒	carrello	acquistare|acquisti|acquisto|carrello|carrello della spesa|centro commerciale|fare la spesa|shopping|spesa|supermercato
-sign-left		segnale sinistra	segnale sinistra
-sign-right		segnale destra	segnale destra
-soup		zuppa	zuppa
-spade	♠	picche	carte|picche|seme
-sparkles-2		scintille 2	scintille 2
-sparkles	✨	stelline	scintille|spendente|stelle|stelline
-speedboat	🚤	motoscafo	barca|lago|lusso|mare|mezzo|milionario|motoscafo|vacanza|vacanze|veicolo|veloce
-spider	🕷	ragno	animale|aracnide|disgusto|insetto|ragno|schifo
-square-letter-q		quadrato lettera q	quadrato lettera q
-square-rotated		quadrato ruotato	quadrato ruotato
-square-rounded-check		quadrato arrotondato spunta	quadrato arrotondato spunta
-square-rounded-letter-a		quadrato arrotondato lettera a	quadrato arrotondato lettera a
-square-rounded-letter-b		quadrato arrotondato lettera b	quadrato arrotondato lettera b
-square-rounded-letter-c		quadrato arrotondato lettera c	quadrato arrotondato lettera c
-square-rounded-letter-d		quadrato arrotondato lettera d	quadrato arrotondato lettera d
-square-rounded-letter-e		quadrato arrotondato lettera e	quadrato arrotondato lettera e
-square-rounded-letter-f		quadrato arrotondato lettera f	quadrato arrotondato lettera f
-square-rounded-letter-g		quadrato arrotondato lettera g	quadrato arrotondato lettera g
-square-rounded-letter-h		quadrato arrotondato lettera h	quadrato arrotondato lettera h
-square-rounded-letter-i		quadrato arrotondato lettera i	quadrato arrotondato lettera i
-square-rounded-letter-j		quadrato arrotondato lettera j	quadrato arrotondato lettera j
-square-rounded-letter-k		quadrato arrotondato lettera k	quadrato arrotondato lettera k
-square-rounded-letter-l		quadrato arrotondato lettera l	quadrato arrotondato lettera l
-square-rounded-letter-m		quadrato arrotondato lettera m	quadrato arrotondato lettera m
-square-rounded-letter-n		quadrato arrotondato lettera n	quadrato arrotondato lettera n
-square-rounded-letter-o		quadrato arrotondato lettera o	quadrato arrotondato lettera o
-square-rounded-letter-p		quadrato arrotondato lettera p	quadrato arrotondato lettera p
-square-rounded-letter-q		quadrato arrotondato lettera q	quadrato arrotondato lettera q
-square-rounded-letter-r		quadrato arrotondato lettera r	quadrato arrotondato lettera r
-square-rounded-letter-s		quadrato arrotondato lettera s	quadrato arrotondato lettera s
-square-rounded-letter-t		quadrato arrotondato lettera t	quadrato arrotondato lettera t
-square-rounded-letter-u		quadrato arrotondato lettera u	quadrato arrotondato lettera u
-square-rounded-letter-v		quadrato arrotondato lettera v	quadrato arrotondato lettera v
-square-rounded-letter-w		quadrato arrotondato lettera w	quadrato arrotondato lettera w
-square-rounded-letter-x		quadrato arrotondato lettera x	quadrato arrotondato lettera x
-square-rounded-letter-y		quadrato arrotondato lettera y	quadrato arrotondato lettera y
-square-rounded-letter-z		quadrato arrotondato lettera z	quadrato arrotondato lettera z
-square-rounded-minus		quadrato arrotondato meno	quadrato arrotondato meno
-square-rounded-number-0		quadrato arrotondato numero 0	quadrato arrotondato numero 0
-square-rounded-number-1		quadrato arrotondato numero 1	quadrato arrotondato numero 1
-square-rounded-number-2		quadrato arrotondato numero 2	quadrato arrotondato numero 2
-square-rounded-number-3		quadrato arrotondato numero 3	quadrato arrotondato numero 3
-square-rounded-number-4		quadrato arrotondato numero 4	quadrato arrotondato numero 4
-square-rounded-number-5		quadrato arrotondato numero 5	quadrato arrotondato numero 5
-square-rounded-number-6		quadrato arrotondato numero 6	quadrato arrotondato numero 6
-square-rounded-number-7		quadrato arrotondato numero 7	quadrato arrotondato numero 7
-square-rounded-number-8		quadrato arrotondato numero 8	quadrato arrotondato numero 8
-square-rounded-number-9		quadrato arrotondato numero 9	quadrato arrotondato numero 9
-square-rounded-plus		quadrato arrotondato più	quadrato arrotondato più
-square-rounded-x		quadrato arrotondato x	quadrato arrotondato x
-square-rounded		quadrato arrotondato	quadrato arrotondato
-square		quadrato	quadrato
-stack-2		pila 2	pila 2
-star-half		stella metà	stella metà
-star	⭐	stella	astro|natura|stella|stella gialla|stellina
-stars		stelle	stelle
-steering-wheel		volante	volante
-sun-high		sole alto	sole alto
-sun-low		sole basso	sole basso
-sun	☀	sole	calore|luce|meteo|raggi|sole|soleggiato|splendente
-sunglasses	🕶	occhiali da sole	abbigliamento|accessori|cool|estate|figo|luce|occhiali|occhiali da sole|occhiali scuri|sole
-sunrise	🌅	alba	alba|finestra|mattino|natura|sole|sole che sorge
-sunset-2		tramonto 2	tramonto 2
-sunset	🌇	tramonto	città|skyline|sole che tramonta sulla città|tramonto
-tag		etichetta	etichetta
-tags		etichette	etichette
-test-pipe-2		provetta tubo 2	provetta tubo 2
-thumb-down	👎	pollice verso	giù|in basso|mano|no|non mi piace|pollice|pollice abbassato|pollice in giù|pollice verso|segno
-thumb-up	👍	pollice in su	+1|bene|capito|certo|dito|d’accordo|mi piace|ok|perfetto|pollice in su|sì|va bene
-ticket	🎫	biglietto	ammissione|biglietto|cartellino|ingresso
-tools-kitchen-2	🍴	forchetta e coltello	affamata|affamato|cena|che fame|cibo|cucinare|fame|forchetta e coltello|mangiare|posate|pranzo|ristorante
-train	🚆	treno	arrivo|binari|ferrovia|freccia|mezzo|trasporto|treno|veloce
-trash-x		cestino x	cestino x
-trash		cestino	cestino
-triangle-inverted		triangolo rovesciato	triangolo rovesciato
-triangle-square-circle		triangolo quadrato cerchio	triangolo quadrato cerchio
-triangle		triangolo	triangolo
-trolley		carrello	carrello
-trophy	🏆	coppa	campione|coppa|premio|sport|trofeo|vincere|vincitore|vittoria
-truck		camion	camion
-ufo	🛸	disco volante	UFO|alieni|disco volante|extra terrestri|marziani|spazio|ufo
-umbrella	☂	ombrello	meteo|ombrello|pioggia
-user	👤	profilo di persona	busto|mistero|nascosto|ombra|persona|profilo|profilo di persona|sagoma|silhouette
-video	📹 🎥	videocamera	attore|attrice|camera|cinema|cinepresa|film|filmare|filmino|fotocamera|hollywood|intrattenimento|regista|registrare|telecamera|video|videocamera
-windmill		mulino a vento	mulino a vento
-windsock		manica a vento	manica a vento
+man-health-worker	👨‍⚕	operatore sanitario	camice|dottore|infermiere|lavoro|medicina|medico|operatore sanitario|ospedale|sanità|terapista|uomo
+man-judge	👨‍⚖	giudice uomo	bilancia|giudice|giustizia|lavoro|martello|sentenza|tribunale|uomo
+man-pilot	👨‍✈	pilota uomo	aereo|aeroplano|copilota|lavoro|pilota|uomo
+man-farmer	👨‍🌾	contadino	allevatore|campagna|cappello|contadino|fattoria|giardino|lavoro|uomo
+man-cook	👨‍🍳	cuoco	chef|cucina|cucinare|cuoco|lavoro|ristorante|uomo
+man-feeding-baby	👨‍🍼	uomo che allatta	allattamento|amore|babysitter|bebè|neonato|nutrire|padre|papà|persona|uomo|uomo che allatta
+man-student	👨‍🎓	studente maschio	istruzione|laurea|laureato|maschio|ragazzo|studente|università|uomo
+man-singer	👨‍🎤	cantante uomo	attore|cantante|lavoro|musica|rock star|star|uomo|ziggy
+man-artist	👨‍🎨	artista uomo	arte|artista|dipingere|lavoro|pittore|uomo
+man-teacher	👨‍🏫	professore	insegnante|insegnare|lavoro|maestro|professore|scuola|studio|uomo
+man-factory-worker	👨‍🏭	operaio	fabbrica|industria|lavoro|operaio|saldatore|tuta blu|uomo
+man-technologist	👨‍💻	tecnologo	computer|high tech|lavoro|programmatore|sviluppatore|tecnologia|tecnologo|uomo
+man-office-worker	👨‍💼	impiegato	architetto|business|impiegato|lavoro|manager|ufficio|uomo
+man-mechanic	👨‍🔧	meccanico uomo	chiave inglese|idraulico|lavoro|meccanico|operaio|tecnico specializzato|tuta blu|uomo
+man-scientist	👨‍🔬	scienziato	biologia|biologo|camice|chimica|lavoro|scienza|scienziato|uomo
+man-astronaut	👨‍🚀	astronauta uomo	astronauta|astronauta maschio|lavoro|razzo|scienza|spazio|universo|uomo
+man-firefighter	👨‍🚒	pompiere uomo	fuoco|incendio|lavoro|pompiere|pompiere maschio|uomo|vigile del fuoco
+man-with-white-cane	👨‍🦯	uomo con bastone bianco di orientamento	accessibilità|cecità|cieco|ipovedente|ipovedenti|non vedente|non vedenti|persona|uomo|uomo con bastone bianco di orientamento|uomo con bastone per ciechi
+man-with-white-cane-facing-right	👨‍🦯‍➡	uomo con bastone bianco di orientamento: a destra	a|accessibilità|cecità|cieco|destra|ipovedente|ipovedenti|non vedente|non vedenti|persona|uomo|uomo con bastone bianco di orientamento|uomo con bastone per ciechi
+man-red-hair	👨‍🦰	uomo: capelli rossi	amico|biondo|capelli rossi|fratello|maschio|papà|persona|persone|ragazzo|uomo
+man-bald	👨‍🦲	uomo: calvo	amico|biondo|calvo|fratello|maschio|papà|persona|persone|ragazzo|uomo
+man-white-hair	👨‍🦳	uomo: capelli bianchi	amico|biondo|capelli bianchi|fratello|maschio|papà|persona|persone|ragazzo|uomo
+man-in-motorized-wheelchair	👨‍🦼	uomo su sedia a rotelle motorizzata	accessibilità|disabile|persona|sedia a rotelle|uomo|uomo in carrozzina|uomo in sedia a rotelle|uomo su sedia a rotelle motorizzata
+man-in-motorized-wheelchair-facing-right	👨‍🦼‍➡	uomo su sedia a rotelle motorizzata: a destra	a|accessibilità|destra|disabile|persona|sedia a rotelle|uomo|uomo in carrozzina|uomo in sedia a rotelle|uomo su sedia a rotelle motorizzata
+man-in-manual-wheelchair	👨‍🦽	uomo su sedia a rotelle manuale	accessibilità|disabile|persona|uomo|uomo in carrozzina|uomo in sedia a rotelle|uomo su sedia a rotelle manuale
+man-in-manual-wheelchair-facing-right	👨‍🦽‍➡	uomo su sedia a rotelle manuale: a destra	a|accessibilità|destra|disabile|persona|uomo|uomo in carrozzina|uomo in sedia a rotelle|uomo su sedia a rotelle manuale
 woman	👩	donna	bionda|capelli|donna|femmina|persona|persone|ragazza|viso
-world	🗺	mappa mondiale	cartina|mappa|mappa mondiale|mondo|viaggiare
-writing-sign		scrittura segnale	scrittura segnale
-writing	✍	mano che scrive	disegnare|mano che scrive|penna|scrivere|scrivere a mano
-x		x	x
+woman-health-worker	👩‍⚕	operatrice sanitaria	camice|donna|dottore|dottoressa|infermiera|lavoro|medicina|medico|operatrice sanitaria|ospedale|sanità|terapista
+woman-judge	👩‍⚖	giudice donna	bilancia|donna|giudice|giustizia|lavoro|martello|sentenza|tribunale
+woman-pilot	👩‍✈	pilota donna	aereo|aeroplano|copilota|donna|lavoro|pilota
+woman-farmer	👩‍🌾	contadina	allevatrice|campagna|cappello|contadina|donna|fattoria|giardino|lavoro
+woman-cook	👩‍🍳	cuoca	chef|cucina|cucinare|cuoca|donna|lavoro|ristorante
+woman-feeding-baby	👩‍🍼	donna che allatta	allattamento|amore|babysitter|bebè|donna|donna che allatta|madre|mamma|neonato|nutrire|persona
+woman-student	👩‍🎓	studentessa	donna|femmina|istruzione|laurea|laureata|ragazza|studente|studentessa|università
+woman-singer	👩‍🎤	cantante donna	attrice|cantante|donna|lavoro|musica|rock star|star|ziggy
+woman-artist	👩‍🎨	artista donna	arte|artista|dipingere|donna|lavoro|pennello|pittrice
+woman-teacher	👩‍🏫	professoressa	donna|insegnante|insegnare|lavoro|maestra|professoressa|scuola|studio
+woman-factory-worker	👩‍🏭	operaia	donna|fabbrica|industria|lavoro|operaia|saldatrice|tuta blu
+woman-technologist	👩‍💻	tecnologa	computer|donna|high tech|lavoro|programmatrice|sviluppatrice|tecnologa|tecnologia
+woman-office-worker	👩‍💼	impiegata	architetto|business|donna|impiegata|lavoro|manager|ufficio
+woman-mechanic	👩‍🔧	meccanico donna	chiave inglese|donna|idraulico|lavoro|meccanico|meccanico femmina|operaia|tecnico specializzato|tuta blu
+woman-scientist	👩‍🔬	scienziata	biologa|biologia|camice|chimica|donna|lavoro|scienza|scienziata
+woman-astronaut	👩‍🚀	astronauta donna	astronauta|astronauta femmina|donna|lavoro|razzo|scienza|spazio
+woman-firefighter	👩‍🚒	pompiere donna	donna|fuoco|incendio|lavoro|pompiere|pompiere femmina|vigile del fuoco
+woman-with-white-cane	👩‍🦯	donna con bastone bianco di orientamento	accessibilità|cecità|cieca|donna|donna con bastone bianco di orientamento|donna con bastone per ciechi|donna non vedente|ipovedente|ipovedenti|non vedente|non vedenti|persona
+woman-with-white-cane-facing-right	👩‍🦯‍➡	donna con bastone bianco di orientamento: a destra	a|accessibilità|cecità|cieca|destra|donna|donna con bastone bianco di orientamento|donna con bastone per ciechi|donna non vedente|ipovedente|ipovedenti|non vedente|non vedenti|persona
+woman-red-hair	👩‍🦰	donna: capelli rossi	bionda|capelli|capelli rossi|donna|femmina|persona|persone|ragazza|viso
+woman-bald	👩‍🦲	donna: calvo	bionda|calvo|capelli|donna|femmina|persona|persone|ragazza|viso
+woman-white-hair	👩‍🦳	donna: capelli bianchi	bionda|capelli|capelli bianchi|donna|femmina|persona|persone|ragazza|viso
+woman-in-motorized-wheelchair	👩‍🦼	donna su sedia a rotelle motorizzata	accessibilità|disabile|donna|donna in carrozzina|donna in sedia a rotelle|donna su sedia a rotelle motorizzata|persona|sedia a rotelle
+woman-in-motorized-wheelchair-facing-right	👩‍🦼‍➡	donna su sedia a rotelle motorizzata: a destra	a|accessibilità|destra|disabile|donna|donna in carrozzina|donna in sedia a rotelle|donna su sedia a rotelle motorizzata|persona|sedia a rotelle
+woman-in-manual-wheelchair	👩‍🦽	donna su sedia a rotelle manuale	accessibilità|disabile|donna|donna in carrozzina|donna in sedia a rotelle|donna su sedia a rotelle manuale|persona|sedia a rotelle
+woman-in-manual-wheelchair-facing-right	👩‍🦽‍➡	donna su sedia a rotelle manuale: a destra	a|accessibilità|destra|disabile|donna|donna in carrozzina|donna in sedia a rotelle|donna su sedia a rotelle manuale|persona|sedia a rotelle
+police-officer	👮	agente di polizia	agente|arresto|controllo|fermo|polizia
+woman-police-officer	👮‍♀	poliziotta	agente|arresto|carabiniere|controllo|divisa|donna|lavoro|polizia|poliziotta
+man-police-officer	👮‍♂	poliziotto	agente|divisa|polizia|poliziotto uomo|uomo
+person-with-veil	👰	persona con velo	abito|bianco|matrimonio|persona con velo|velo
+woman-with-veil	👰‍♀	sposa con velo	sposa|sposa con velo|velo
+man-with-veil	👰‍♂	sposo con velo	sposo|sposo con velo|velo
+person-blonde-hair	👱	persona bionda	biondo|capelli biondi|persona|persona bionda
+woman-blonde-hair	👱‍♀	donna bionda	bionda|capelli|capelli biondi|donna|femmina|persona|ragazza
+man-blonde-hair	👱‍♂	uomo biondo	biondo|maschio|uomo
+person-with-skullcap	👲	uomo con zucchetto cinese	cappello|cinese|uomo|uomo con zucchetto|uomo con zucchetto cinese|zucchetto
+person-wearing-turban	👳	persona con turbante	persona|persona con turbante|turbante
+woman-wearing-turban	👳‍♀	donna con turbante	donna|donna con turbante|femmina|turbante
+man-wearing-turban	👳‍♂	uomo con turbante	maschio|turbante|uomo|uomo con turbante
+old-man	👴	uomo anziano	anziano|capelli|nonnino|nonno|pelato|perdere i capelli|persona|persone|saggio|uomo|vecchietto|vecchio
+old-woman	👵	donna anziana	anziana|capelli|capelli bianchi|donna|nonna|nonnina|persone|saggezza|saggia|signora|vecchia|vecchietta
+baby	👶	neonato	bambino|bebè|faccia|famiglia|figlio|giovane|neonato|persone|piccolo
+construction-worker	👷	operaio edile	casco|costruire|costruzioni|edile|ingegnere|lavoratore|muratore|operaio|tuta blu|uomo
+woman-construction-worker	👷‍♀	operaia edile	casco|costruzioni|donna|edificio|edile|elmetto|ingegnere|lavoro|muratrice|operaia|tuta blu
+man-construction-worker	👷‍♂	operaio edile uomo	costruzioni|edificio|operaio|operaio edile uomo|uomo
+princess	👸	principessa	comandare|corona|donna|favola|fiaba|monarca|principessa|reale|regina|sovrana
+baby-angel	👼	angioletto	angelo|angioletto|bambina|bambino|bimba|bimbo|chiesa|faccina|favola|fiaba|persona|santo
+person-tipping-hand	💁	persona con mano capovolta	aiuto|capovolgere la mano|gesto con i capelli|gossip|informazioni|mano|mano all’insù|pettegolezzo|sarcasmo|sfacciataggine|sul serio
+woman-tipping-hand	💁‍♀	donna con mano capovolta	aiuto|capovolgere la mano|gesto con i capelli|mano|mano all’insù|sarcastica|sfacciata
+man-tipping-hand	💁‍♂	uomo con mano capovolta	aiuto|capovolgere la mano|gesto con i capelli|gossip|informazioni|mano|mano all’insù|pettegolezzo|sarcasmo|sarcastico|sfacciato
+guard	💂	guardia	buckingham palace|guardia|guardia reale|lavoro|londra|sentinella|turno di guardia
+woman-guard	💂‍♀	guardia donna	Londra|buckingham palace|donna|femmina|guardia|guardia reale|lavoro|sentinella|turno di guardia
+man-guard	💂‍♂	guardia uomo	guardia|maschio|uomo
+woman-dancing	💃	donna che balla	ballare|ballerina|ballo|donna|donna che balla|flamenco|lavoro|olé|salsa|tango
+nail-polish	💅	smalto per unghie	cosmetici|make up|manicure|noia|smalto|smalto per unghie|spa|unghie|unghie con smalto
+person-getting-massage	💆	persona che riceve un massaggio	centro estetico|estetista|faccia|mal di testa|massaggio|massaggio facciale|persona che riceve un massaggio|relax|spa|testa
+woman-getting-massage	💆‍♀	donna che riceve un massaggio	donna|donna che riceve un massaggio|faccia|massaggio|massaggio al viso per donna|viso
+man-getting-massage	💆‍♂	uomo che riceve un massaggio	centro estetico|mal di testa|massaggio al viso per uomo|persona|relax|spa|tensione|testa|uomo che riceve un massaggio|viso
+person-getting-haircut	💇	taglio di capelli	acconciatura|bellezza|capelli|parrucchiera|parrucchiere|persona|salone|salone di bellezza|tagliare|taglio|taglio di capelli
+woman-getting-haircut	💇‍♀	taglio di capelli per donna	bellezza|donna|taglio di capelli|taglio di capelli per donna
+man-getting-haircut	💇‍♂	taglio di capelli per uomo	acconciatura|bellezza|capelli|parrucchiere|persona|salone|salone di bellezza|tagliare|taglio|taglio di capelli|uomo
+flexed-biceps	💪	bicipite	bicipite|bodybuilding|braccio piegato|corpo|forte|forza|fumetto|muscolo|palestra|pesi|sollevamento|teso
+person-in-suit-levitating	🕴	uomo con completo che levita	abbigliamento|abito|business man|cravatta|giacca|lavoro|persona|uomo|uomo con completo che levita|uomo elegante che levita|vestito elegante
+detective	🕵	detective	detective|lavoro|lente|mistero|segugio|spia
+woman-detective	🕵‍♀	investigatrice	detective|donna|investigatore|investigatrice|lavoro|lente|mistero|spia
+man-detective	🕵‍♂	investigatore	detective|investigatore|spia|uomo
+man-dancing	🕺	uomo che balla	ballare|ballo|disco|discoteca|lavoro|uomo|uomo che balla
+hand-with-fingers-splayed	🖐	mano aperta	batti il cinque|cinque|dita|fermo|gesto|high five|mano alzata|mano aperta|palmo della mano|stop|un attimo
+middle-finger	🖕	dito medio	dita|dito|dito medio|insulto|mano|offendere|volgare
+vulcan-salute	🖖	saluto vulcaniano	Spock|mano|mano aperta|mano di Spock|saluto|saluto vulcaniano
+speaking-head	🗣	persona che parla	parlare|persona|persona che parla|profilo|urlare
+person-gesturing-no	🙅	persona che fa segno di no	escluso|gesto|no|non bene|persona|persona che fa segno di no|rifiuto|stop|vietato
+woman-gesturing-no	🙅‍♀	donna con gesto di rifiuto	donna|donna con gesto di rifiuto|no|proibito|rifiuto
+man-gesturing-no	🙅‍♂	uomo con gesto di rifiuto	basta|braccia incrociate|incrocio|no|persona|proibito|stop|vietato
+person-gesturing-ok	🙆	persona con gesto OK	OK|braccia alzate|esercizio|fitness|gesto|mani|persona|persona con gesto OK|tutto bene|yoga
+woman-gesturing-ok	🙆‍♀	donna con gesto OK	donna|donna con gesto OK|d’accordo|gesto|ok
+man-gesturing-ok	🙆‍♂	uomo con gesto OK	cerchio|d’accordo|esercizio|gesto|mani|mano|ok|uomo con braccia a cerchio|uomo con braccia alzate|uomo con gesto OK|ymca
+person-bowing	🙇	persona che fa un inchino profondo	chiedere perdono|gesto|grazie|inchino|meditare|mi dispiace|perdono|persona|persona che fa un inchino profondo|pietà|scusarsi
+woman-bowing	🙇‍♀	donna che fa inchino profondo	donna|donna che fa inchino profondo|donna che si inchina|gesto|grazie|inchino|meditare|mi dispiace|person|pregare|scusa|scuse
+man-bowing	🙇‍♂	uomo che fa inchino profondo	gesto|inchino|scuse|uomo|uomo che fa inchino profondo
+person-raising-hand	🙋	persona con mano alzata	ciao|eccomi|felice|gesto|mano alzata|persona|persona con mano alzata|salutare|saluto|sono qui
+woman-raising-hand	🙋‍♀	donna con mano alzata	donna|donna con mano alzata|gesto|mano alzata
+man-raising-hand	🙋‍♂	uomo con mano alzata	alzare la mano|anch’io|chiedere|ciao|domanda|gesto|io|mano alzata|persona felice con mano alzata|uomo con mano alzata
+raising-hands	🙌	mani alzate	celebrare|due mani|evvai|evviva|gesto|grazie|innocente|mani alzate|mano|urrà|vittoria
+person-frowning	🙍	persona corrucciata	arrabbiata|corrucciata|delusa|faccia|frustrata|gesto|infelice|persona|triste
+woman-frowning	🙍‍♀	donna corrucciata	arrabbiata|corrucciata|delusa|donna|faccia|frustrata|gesto|infelice|triste
+man-frowning	🙍‍♂	uomo corrucciato	arrabbiato|corrucciato|crucciato|deluso|emozione|faccia|infelice|persona corrucciata|preoccupato|ragazzo|triste|uomo
+person-pouting	🙎	persona imbronciata	arrabbiata|broncio|delusa|gesto|imbronciata|persona|seccata|sguardo arrabbiato
+woman-pouting	🙎‍♀	donna imbronciata	arrabbiata|broncio|delusa|donna|gesto|imbronciata|seccata|sguardo arrabbiato
+man-pouting	🙎‍♂	uomo imbronciato	arrabbiato|broncio|disappunto|gesto|imbronciato|maschio|uomo
+folded-hands	🙏	mani giunte	gesto|grazie|mani|mani giunte|mano|per favore|pregare|preghiera|ti prego
+person-rowing-boat	🚣	persona in barca a remi	barca|barca a remi|canoa|fiume|lago|persona|persona che rema|persona in barca a remi|pesca|remare|remi|sport
+woman-rowing-boat	🚣‍♀	donna in barca a remi	barca a remi|canoa|canottaggio|donna in barca a remi|imbarcazione|lago|mare|persona che rema|pesca|remi|sport
+man-rowing-boat	🚣‍♂	uomo in barca a remi	barca|remi|uomo|uomo in barca a remi
+person-biking	🚴	ciclista	bici|bicicletta|ciclismo|ciclista|due ruote|gara|mountain bike|pedalare|sport|trasporto
+woman-biking	🚴‍♀	ciclista donna	bici|bicicletta|casco|ciclismo|ciclista|donna|donna in bici|due ruote|persona|ruote|sport|veloce
+man-biking	🚴‍♂	ciclista uomo	bici|bicicletta|ciclista|ciclista uomo|sport
+person-mountain-biking	🚵	ciclista di mountain bike	atleta|bicicletta|ciclismo|ciclismo in montagna|ciclista|ciclista di mountain bike|montagna|mountain bike|pedalare|sport
+woman-mountain-biking	🚵‍♀	ciclista donna di mountain bike	bici|bicicletta|ciclismo|ciclismo in montagna|ciclista|ciclista donna di mountain bike|donna|donna in bici|due ruote|mountain bike|pedalare|sport
+man-mountain-biking	🚵‍♂	ciclista uomo di mountain bike	bici|bicicletta|ciclista uomo di mountain bike|mountain bike|sport
+person-walking	🚶	pedone	attività|camminare|camminata|giro a piedi|passeggiare|passeggiare lentamente|passeggiata|passo tranquillo|pedone|persona
+woman-walking	🚶‍♀	donna che cammina	camminare|camminata|donna|donna che cammina|donna che passeggia|passeggiare|passeggiata|pedona|pedone|persona|ragazza
+woman-walking-facing-right	🚶‍♀‍➡	donna che cammina: a destra	a|camminare|camminata|destra|donna|donna che cammina|donna che passeggia|passeggiare|passeggiata|pedona|pedone|persona|ragazza
+man-walking	🚶‍♂	uomo che cammina	camminare|passeggiata|pedone|uomo|uomo che cammina
+man-walking-facing-right	🚶‍♂‍➡	uomo che cammina: a destra	a|camminare|destra|passeggiata|pedone|uomo|uomo che cammina
+person-walking-facing-right	🚶‍➡	pedone: a destra	a|attività|camminare|camminata|destra|giro a piedi|passeggiare|passeggiare lentamente|passeggiata|passo tranquillo|pedone|persona
+person-taking-bath	🛀	persona che fa il bagno	bagno|doccia|fare il bagno|lavarsi|persona che fa il bagno|relax|vasca da bagno
+person-in-bed	🛌	persona a letto	addormentato|arredamento|dormire|hotel|letto|notte|persona a letto|sonno|stanca|stanco|zzz
+pinched-fingers	🤌	mano a pigna	che vuoi|cosa vuoi|dita unite|gesto della mano|interrogativo|ma che dici|mano a borsa|mano a carciofo|mano a cuoppo|mano a pigna|mano a tulipano|sarcastico
+pinching-hand	🤏	mano che fa il gesto del pizzico	dita|gesto|mano che fa il gesto del pizzico|piccola quantità|piccolo|poco|un pochino|un po’
+sign-of-the-horns	🤘	segno delle corna	concerto|corna|fare le corna|gesto|mani|mano con le corna|rock and roll|rockstar|segno delle corna
+call-me-hand	🤙	mano con gesto di chiamata	chiamami|chiamare|dita|dito|gesto|mani|mano|mano con gesto di chiamata|telefonare|ti chiamo
+raised-back-of-hand	🤚	dorso mano alzata	alzata|ciao|ciaone|dorso mano alzata|mano
+left-facing-fist	🤛	pugno a sinistra	mano|mano chiusa|pugno|pugno a sinistra|sinistra
+right-facing-fist	🤜	pugno a destra	destra|pugno|pugno a destra
+handshake	🤝	stretta di mano	affare fatto|conoscere|d’accordo|mani che si stringono|ok|patto|piacere|presentarsi|presentazione|promessa|stretta di mano|stringersi la mano
+crossed-fingers	🤞	dita incrociate	buona fortuna|dita|dita incrociate|fortuna|incrociare|incrociare le dita|mano
+love-you-gesture	🤟	gesto ti amo	corna|dita|dito|gesto|gesto ti amo|gesto tvb|mano|rock|tre dita
+person-facepalming	🤦	persona esasperata	disperazione|esasperazione|facepalm|incredulità|mano in fronte|oddio|oh no|persona|persona esasperata
+woman-facepalming	🤦‍♀	donna esasperata	donna|esasperata|esasperazione|figuraccia|gesto|imbarazzo|incredula|mano sul viso|non ci credo|oddio|persona
+man-facepalming	🤦‍♂	uomo esasperato	esasperato|esasperazione|facepalm|figuraccia|gesto|imbarazzo|incredulo|non ci credo|oddio|persona|uomo
+pregnant-woman	🤰	donna incinta	donna|gravidanza|incinta|mamma|pancione
+breast-feeding	🤱	allattare	allattamento|allattare|allattare al seno|bebé|donna|donna che allatta|mamma|mamma che allatta|persona
+palms-up-together	🤲	mani unite in alto	desiderare|mani|mani a coppa|mani in preghiera|mani unite|mani unite in alto|mano|offrire|palmi|palmo della mano|pregare|preghiera
+selfie	🤳	selfie	autoscatto|fare un selfie|foto|fotocamera|fotografare|fotografia|scattare|selfie|smartphone|telefono
+prince	🤴	principe	comandare|corona|fiaba|monarca|principe|re|reale|sovrano|uomo
+person-in-tuxedo	🤵	persona in smoking	abito|elegante|festa|matrimonio|persona in smoking|smoking
+woman-in-tuxedo	🤵‍♀	donna in smoking	donna|donna in smoking|smoking
+man-in-tuxedo	🤵‍♂	uomo in smoking	smoking|uomo|uomo in smoking
+mrs-claus	🤶	Mamma Natale	Mamma Natale|cappello|donna|fest|mamma natale|natale|santa claus
+person-shrugging	🤷	persona che scrolla le spalle	boh|dubbio|forse|indifferenza|non lo so|non saprei|noncuranza|persona che alza le spalle|persona che scrolla le spalle|può darsi|spalle alzate|vabbè
+woman-shrugging	🤷‍♀	donna che scrolla le spalle	alzare le spalle|boh|donna che scrolla le spalle|dubitare|forse|gesto|indifferente|indifferenza|mani|non lo so|non so|persona
+man-shrugging	🤷‍♂	uomo che scrolla le spalle	alzare le spalle|boh|dubbio|dubitare|forse|gesto|indifferenza|mani|non saprei|non so|persona|uomo che scrolla le spalle
+person-cartwheeling	🤸	persona che fa la ruota	atleta|attiva|capriola|felice|ginnasta|ginnastica|persona|persona che fa la ruota|ruota
+woman-cartwheeling	🤸‍♀	donna che fa la ruota	attiva|donna|donna che fa la ruota|fare la ruota|felice|ginnastica|persona|ruota|salti di gioia|sport
+man-cartwheeling	🤸‍♂	uomo che fa la ruota	attivo|fare la ruota|felice|ginnastica|persona|ruota|salti di gioia|sport|uomo|uomo che fa la ruota
+person-juggling	🤹	persona che fa giocoleria	abilità|destrezza|equilibrio|giocoliere|palline|persona|persona che fa giocoleria
+woman-juggling	🤹‍♀	giocoliere donna	abilità|circo|donna|equilibrio|giocoleria|giocoliere|lavoro|palline|ragazza
+man-juggling	🤹‍♂	giocoliere uomo	abilità|destreggiarsi|destrezza|equilibrio|giocoliere|lavoro|multitasking|persona|uomo
+person-fencing	🤺	schermidore	fioretto|persona|scherma|schermidore|spada|sport
+person-wrestling	🤼	persone che fanno la lotta	combattimento|lottatori|persone|persone che fanno la lotta|sport|torneo|wrestler|wrestling
+woman-wrestling	🤼‍♀	lottatrici	boxe|combattimento|donna|donne|lotta|lottatrici|persone|sport|torneo|wrestling
+man-wrestling	🤼‍♂	lottatori	combattimento|lotta|lottatori|persone|sport|torneo|uomini|wrestler|wrestling
+person-playing-water-polo	🤽	persona che gioca a pallanuoto	acqua|giocatrice di pallanuoto|pallanuoto|persona|persona che gioca a pallanuoto|piscina|sport
+woman-playing-water-polo	🤽‍♀	pallanuotista donna	donna|donna che gioca a pallanuoto|giocatrice di pallanuoto|pallanuotista donna|pallanuoto|persona|piscina|sport
+man-playing-water-polo	🤽‍♂	pallanuotista uomo	giocatore di pallanuoto|pallanuotista uomo|pallanuoto|persona|piscina|sport|uomo|uomo che gioca a pallanuoto
+person-playing-handball	🤾	persona che gioca a pallamano	atleta|lanciare|palla|pallamanista|pallamano|persona|persona che gioca a pallamano|sport|tirare la palla
+woman-playing-handball	🤾‍♀	pallamanista donna	atleta|donna|donna che gioca a pallamano|lanciare|palla|pallamanista donna|pallamano|persona|sport|tirare la palla
+man-playing-handball	🤾‍♂	pallamanista uomo	palla|pallamanista uomo|pallamano|sport|uomo|uomo che gioca a pallamano
+ninja	🥷	ninja	abilità|assassino|combattimento|furtivo|guerra|guerriero|invisibile|nascosto|ninja|persona
+bone	🦴	osso	cane|ossa|osso|osso a forchetta|scheletro
+leg	🦵	gamba	arto|calcio|gamba|gamba piegata|ginocchio|ginocchio piegato|piede|polpaccio
+foot	🦶	piede	calciare|calcio|calpestare|camminare|camminare con passo pesante|caviglia|piede|piedi
+tooth	🦷	dente	bianchi|bianco|dente|denti|dentista|perlacei|perlaceo
+person-superhero	🦸	supereroe	bene|buono|eroe|eroina|persona|personaggio|supereroe|supereroina|superman|superpotere|superpoteri
+woman-superhero	🦸‍♀	supereroina	donna|supereroina|superpoteri
+man-superhero	🦸‍♂	supereroe uomo	eroe|supereroe|uomo
+person-supervillain	🦹	supercattivo	cattivo|criminale|malvagio|persona|personaggio|supercattivo|superpotere|superpoteri
+woman-supervillain	🦹‍♀	supercattiva	cattivo|criminale|donna|supercattiva|superpotere
+man-supervillain	🦹‍♂	supercattivo uomo	cattivo|criminale|supercattivo uomo|superpotere|uomo
+ear-with-hearing-aid	🦻	orecchio con apparecchio acustico	accessibilità|apparecchio acustico|non udente|non udenti|orecchio|orecchio con apparecchio acustico|protesi acustica|sordità|sordo
+mechanical-arm	🦾	protesi robotica per il braccio	accessibilità|braccio meccanico|protesi|protesi robotica per il braccio
+mechanical-leg	🦿	protesi robotica per la gamba	accessibilità|gamba meccanica|protesi|protesi robotica per la gamba
+troll	🧌	troll	fantasia|favola|fiaba|mostro|troll
+person-standing	🧍	persona in piedi	in piedi|persona|persona in piedi|stare fermi|stare in piedi
+woman-standing	🧍‍♀	donna in piedi	donna|donna in piedi|in piedi
+man-standing	🧍‍♂	uomo in piedi	in piedi|uomo|uomo in piedi
+person-kneeling	🧎	persona inginocchiata	in ginocchio|inginocchiarsi|meditare|meditazione|persona|persona inginocchiata
+woman-kneeling	🧎‍♀	donna inginocchiata	donna|donna inginocchiata|in ginocchio|inginocchiarsi
+woman-kneeling-facing-right	🧎‍♀‍➡	donna inginocchiata: a destra	a|destra|donna|donna inginocchiata|in ginocchio|inginocchiarsi
+man-kneeling	🧎‍♂	uomo inginocchiato	in ginocchio|inginocchiarsi|uomo|uomo inginocchiato
+man-kneeling-facing-right	🧎‍♂‍➡	uomo inginocchiato: a destra	a|destra|in ginocchio|inginocchiarsi|uomo|uomo inginocchiato
+person-kneeling-facing-right	🧎‍➡	persona inginocchiata: a destra	a|destra|in ginocchio|inginocchiarsi|meditare|meditazione|persona|persona inginocchiata
+person-deaf	🧏	persona con problemi di udito	accessibilità|difficoltà uditive|non sentire|orecchio|persona|persona con problemi di udito|problemi di udito|sordità|sordo|udito
+woman-deaf	🧏‍♀	donna con problemi di udito	donna con difficoltà uditive|donna con problemi di udito|donna sorda|sorda|sordità
+man-deaf	🧏‍♂	uomo con problemi di udito	sordità|sordo|uomo con difficoltà uditive|uomo con problemi di udito|uomo sordo
+person	🧑	persona	adulta|adulto|persona
+health-worker	🧑‍⚕	persona che lavora nella sanità	infermiera|infermiere|medico|persona che lavora nella sanità|sanità|terapista
+judge	🧑‍⚖	giudice	bilancia|giudice|giustizia
+pilot	🧑‍✈	pilota	aereo|pilota
+farmer	🧑‍🌾	agricoltore	agricoltore|allevatore|contadino|giardiniere
+cook	🧑‍🍳	persona che cucina	chef|cuoco|persona che cucina
+person-feeding-baby	🧑‍🍼	persona che allatta	allattamento|babysitter|bebè|mamma|neonato|nutrire|papà|persona|persona che allatta
+mx-claus	🧑‍🎄	Santa Claus	Babbo Natale|Claus|Natale|Santa Claus|buon Natale|cappello di Babbo Natale|persona|vacanze di Natale
+student	🧑‍🎓	studente	diploma|studente|studentessa
+singer	🧑‍🎤	cantante	attore|cantante|intrattenitore|rock|star
+artist	🧑‍🎨	artista	artista|tavolozza
+factory-worker	🧑‍🏭	persona che lavora in fabbrica	assemblaggio|fabbrica|industria|operaio|persona che lavora in fabbrica
+technologist	🧑‍💻	persona esperta di tecnologia	inventore|persona esperta di tecnologia|programmatore|software|sviluppatore|tecnologo
+office-worker	🧑‍💼	persona che fa un lavoro d’ufficio	architetto|business|impiegato|manager|persona che fa un lavoro d’ufficio
+mechanic	🧑‍🔧	meccanico	elettricista|idraulico|meccanico|tecnico specializzato
+scientist	🧑‍🔬	persona che lavora in campo scientifico	biologo|chimico|fisico|ingegnere|persona che lavora in campo scientifico|scienziato
+astronaut	🧑‍🚀	astronauta	astronauta|razzo
+firefighter	🧑‍🚒	pompiere	pompiere|vigile del fuoco
+person-with-white-cane	🧑‍🦯	persona con bastone di orientamento	accessibilità|cecità|persona con bastone di orientamento
+person-with-white-cane-facing-right	🧑‍🦯‍➡	persona con bastone di orientamento: a destra	a|accessibilità|cecità|destra|persona con bastone di orientamento
+person-red-hair	🧑‍🦰	persona: capelli rossi	adulta|adulto|capelli rossi|persona
+person-bald	🧑‍🦲	persona: calvo	adulta|adulto|calvo|persona
+person-white-hair	🧑‍🦳	persona: capelli bianchi	adulta|adulto|capelli bianchi|persona
+person-in-motorized-wheelchair	🧑‍🦼	persona su sedia a rotelle motorizzata	accessibilità|persona su sedia a rotelle motorizzata|sedia a rotelle
+person-in-motorized-wheelchair-facing-right	🧑‍🦼‍➡	persona su sedia a rotelle motorizzata: a destra	a|accessibilità|destra|persona su sedia a rotelle motorizzata|sedia a rotelle
+person-in-manual-wheelchair	🧑‍🦽	persona su sedia a rotelle manuale	accessibilità|persona su sedia a rotelle manuale|sedia a rotelle
+person-in-manual-wheelchair-facing-right	🧑‍🦽‍➡	persona su sedia a rotelle manuale: a destra	a|accessibilità|destra|persona su sedia a rotelle manuale|sedia a rotelle
+child	🧒	bimbo	bambina|bambino|bimba|bimbo|giovane|persona|ragazzina|ragazzino
+older-person	🧓	persona anziana	adulto anziano|anziana|anziano|persona|vecchia|vecchio
+person-beard	🧔	persona con la barba	baffi|barba|barbuto|persona|persona con barba|persona con la barba
+woman-beard	🧔‍♀	donna con la barba	barba|donna|donna con la barba
+man-beard	🧔‍♂	uomo con la barba	barba|uomo|uomo con la barba
+woman-with-headscarf	🧕	donna con velo	copricapo|donna|donna con foulard|donna con hijab|donna con velo|hijab|islam|velo
+person-in-steamy-room	🧖	persona in sauna	bagno turco|benessere|hammam|persona|persona in sauna|persona nella sauna|relax|sauna|spa
+woman-in-steamy-room	🧖‍♀	donna in sauna	bagno turco|donna in sauna|sauna
+man-in-steamy-room	🧖‍♂	uomo in sauna	bagno turco|sauna|uomo in sauna
+person-climbing	🧗	persona che scala	arrampicarsi|arrampicata|arrampicatore|arrampicatrice|montagna|persona|persona che arrampica|persona che scala|roccia|scalatore|sport
+woman-climbing	🧗‍♀	scalatrice	donna che scala|scalatrice
+man-climbing	🧗‍♂	scalatore	scalatore|uomo che scala
+person-in-lotus-position	🧘	persona in posizione del loto	gambe incrociate|meditazione|pace|persona|persona che fa yoga|persona in posizione del loto|relax|rilassarsi|yoga|zen
+woman-in-lotus-position	🧘‍♀	donna in posizione del loto	donna in posizione del loto|meditazione|yoga
+man-in-lotus-position	🧘‍♂	uomo in posizione del loto	meditazione|uomo in posizione del loto|yoga
+person-mage	🧙	mago	barba|cappello|incantesimo|maghetto|magia|magico|mago|strega|stregone
+woman-mage	🧙‍♀	maga	maga|strega
+man-mage	🧙‍♂	mago uomo	mago|mago uomo|stregone
+person-fairy	🧚	fata	Oberon|Puck|Titania|ali|creatura|fata|fatina|fiaba|folletto|regina delle fate
+woman-fairy	🧚‍♀	fata donna	Titania|fata donna
+man-fairy	🧚‍♂	folletto alato	Oberon|Puck|folletto alato
+person-vampire	🧛	vampiro	Dracula|costume|creatura|denti|halloween|maschera|morte|morto vivente|paura|sangue|supernaturale|vampiro
+woman-vampire	🧛‍♀	vampira	non morto|vampira
+man-vampire	🧛‍♂	vampiro uomo	Dracula|morto vivente|vampiro uomo
+person-merpeople	🧜	sirena	creatura|donna sirena|fiaba|mare|mitologia|oceano|personaggio|pesce|sirena|sirenetta
+woman-merpeople	🧜‍♀	sirena donna	sirena|sirena donna
+man-merpeople	🧜‍♂	tritone	Nettuno|Poseidone|creatura|fiaba|mare|mitologia|oceano|tridente|tritone
+person-elf	🧝	elfo	creatura|elfetto|elfo|fantasy|fiaba|folclore|magia|magico
+woman-elf	🧝‍♀	elfo donna	elfo donna|magico
+man-elf	🧝‍♂	elfo uomo	elfo uomo|magico
+person-genie	🧞	genio	aladino|creatura|desideri|djinn|fiaba|genietto|genio|jinn|lampada|personaggio
+woman-genie	🧞‍♀	genio donna	djinn|genio donna
+man-genie	🧞‍♂	genio uomo	djinn|genio uomo
+person-zombie	🧟	zombie	carnevale|halloween|horror|morte|morto vivente|paura|scheletro|spaventoso|urlo|zombie
+woman-zombie	🧟‍♀	zombie donna	morto vivente|zombie donna
+man-zombie	🧟‍♂	zombie uomo	morto vivente|zombie uomo
+brain	🧠	cervello	cervello|corpo umano|intelligente|parte del corpo
+anatomical-heart	🫀	organo del cuore	anatomia|battito|cardiologia|cuore|cuore vero|organo|organo del cuore|pulsazione|rosso
+lungs	🫁	polmoni	espirazione|inspirazione|organo|polmoni|respirazione|respiro
+people-hugging	🫂	persone che si abbracciano	abbraccio|addio|amicizia|amore|ciao|confortare|consolare|grazie|persone|persone che si abbracciano
+pregnant-man	🫃	uomo incinto	gonfio|gravido|incinto|pancia|pieno|troppo cibo|uomo
+pregnant-person	🫄	persona incinta	gonfio|gravido|incinta|incinto|pancia|persona incinta|pieno|troppo cibo
+person-with-crown	🫅	persona con corona	monarca|nobile|persona con corona|re|reale|regale|regina
+biting-lip	🫦	bocca che morde il labbro	ansia|bocca che morde il labbro|bocca con rossetto|disagio|flirtare|labbra con denti|nervoso|paura|preoccupato|sedurre|seduzione|sexy
+hand-with-index-finger-and-thumb-crossed	🫰	mano con indice e pollice incrociati	amore|caro|costa|costoso|cuore|denaro|mano|mano con indice e pollice incrociati|schioccare|soldi
+rightwards-hand	🫱	mano rivolta a destra	dare la mano|destra|mano|mano rivolta a destra|verso destra
+leftwards-hand	🫲	mano rivolta a sinistra	dare la mano|mano|mano destra rivolta a sinistra|mano rivolta a sinistra|sinistra|verso sinistra
+palm-down-hand	🫳	mano con il palmo verso il basso	afferrare|allontanare|cacciare|congedare|imporre|lasciar cadere|mano|mano con il palmo verso il basso|porgere la mano|scacciare|sciò
+palm-up-hand	🫴	mano con il palmo verso l’alto	elemosina|mano|mano con il palmo verso l’alto|offrire|prendere|raccogliere|richiamare|sollevare|vieni qui
+index-pointing-at-the-viewer	🫵	indice verso l’osservatore	dito puntato|indicare|indice puntato|indice verso l’osservatore|mano|puntare|tu
+heart-hands	🫶	mani a cuore	amore|cuore|mani a cuore|mano|ti amo|ti voglio bene
+leftwards-pushing-hand	🫷	mano che spinge a sinistra	alt|aspettare|batti cinque|fermare|indietro|mano che spinge verso sinistra|palmo|rifiutare|sinistra|spingere|spinta|stop
+rightwards-pushing-hand	🫸	mano che spinge a destra	alt|aspettare|batti cinque|destra|fermare|indietro|mano che spinge verso destra|palmo|rifiutare|spingere|spinta|stop
+index-pointing-up	☝	indice verso l’alto	dito|dito verso l’alto|in alto|indicare|indice verso l’alto|io|sopra|tu
+skier	⛷	sciatore	neve|sci|sciare|sciatore|settimana bianca|sport
+person-bouncing-ball	⛹	persona che fa rimbalzare una palla	basket|campo|giocatore|giocatore di basket|palla|pallacanestro|palleggio|persona|persona che fa rimbalzare una palla|persona con la palla|sport
+woman-bouncing-ball	⛹‍♀	donna che fa rimbalzare una palla	basket|donna|donna che fa rimbalzare una palla|donna che gioca a basket|giocatrice|giocatrice di basket|palla|pallacanestro|persona con la palla|sport
+man-bouncing-ball	⛹‍♂	uomo che fa rimbalzare una palla	palla|sport|uomo|uomo che fa rimbalzare una palla
+raised-fist	✊	pugno	alzato|lotta|mano|pugno|pugno chiuso|sasso|solidarietà
+raised-hand	✋	mano alzata	alzata|carta|cinque|mano|mano aperta
+victory-hand	✌	vittoria	due|forbice|mano|segno di vittoria|vittoria|yeah
+writing-hand	✍	mano che scrive	disegnare|mano che scrive|penna|scrivere|scrivere a mano
+seedling	🌱	germoglio	germoglio|natura|pianta|piantina|primavera
+evergreen-tree	🌲	albero sempreverde	abete|albero|albero di natale|conifera|foresta|natura|pino|sempreverde
+deciduous-tree	🌳	albero deciduo	albero|albero rotondo|caduco|deciduo|natura|pianta
+palm-tree	🌴	palma	albero|natura|palma|spiaggia|tropicale|tropici
+cactus	🌵	cactus	cactus|caldo|deserto|messico|natura|pianta|pianta grassa|spina|spine|west
+tulip	🌷	tulipano	fiore|giardino|natura|pianta|rosa|tulipano
+cherry-blossom	🌸	fiore di ciliegio	ciliegio|fiore|fiore di ciliegio|fiorito|natura|pianta|primavera|primula|rosa
+rose	🌹	rosa	amore|bellezza|fiore|giardino|natura|pianta|regalo|rosa|rosa rossa|rosso
+hibiscus	🌺	ibisco	fiore|ibisco|natura|pianta|rosso
+sunflower	🌻	girasole	fiore|giallo|girasole|natura|pianta
+blossom	🌼	fiore	bocciolo|fiore|fiorellino|giallo|margherita|natura|pianta
+sheaf-of-rice	🌾	pianta di riso	cereale|natura|pianta|pianta di riso|riso|spiga|spiga di riso
+herb	🌿	pianta	foglia|natura|pianta|ramo|verde
+four-leaf-clover	🍀	quadrifoglio	foglia|fortuna|natura|pianta|piante|quadrifoglio|quattro
+maple-leaf	🍁	foglia d’acero	autunno|foglia|foglia caduta|foglia d’acero|natura
+fallen-leaf	🍂	foglia caduta	autunno|cadute foglia|foglia|foglia caduta|foglie|foglie cadute|foglie che cadono|foglie rosse|natura|ramo
+leaf-fluttering-in-wind	🍃	foglia al vento	foglia|foglia al vento|foglie|vento|vento che soffia
+rosette	🏵	rosetta	coccarda|fiore|natura|pianta|rosetta
+rat	🐀	ratto	animale|animali|fogna|ratto|topastro|topo
+mouse	🐁	topo	Topo|animale|animali|cavia|topo|topolino
+ox	🐂	bue	animale|animali|bovini|bovino|bue|domestico|fattoria|segno zodiacale del toro|toro
+water-buffalo	🐃	bufalo d’acqua	animale|animali|animali selvatici|bufalo|bufalo d’acqua
+cow	🐄	mucca	animale|animali|fattoria|latte|mucca|muu|vacca
+tiger	🐅	tigre	animale|animali|felino|predatore|tigre
+leopard	🐆	leopardo	animale|felino|leopardo|predatore|selvatico
+rabbit	🐇	coniglio	animale|animali|coniglietto|coniglio|domestico|fattoria
+cat	🐈	gatto	animale|cucciolo|domestico|gatta|gattina|gattino|miao|micino|micio
+black-cat	🐈‍⬛	gatto nero	animale|felino|gatto|halloween|miao|micio|nero|sfiga|sfortuna
+dragon	🐉	drago	animale|animali|cinese|drago|dragone|fiaba|game of thrones|mitologia|trono di spade
+crocodile	🐊	coccodrillo	animale|coccodrillo|lacrime di coccodrillo|rettile|selvatico
+whale	🐋	balena	animale|animali|balena|cetaceo|mare|oceano
+snail	🐌	lumaca	animale|giardino|lentezza|lento|lumachina|lumacone|natura
+snake	🐍	serpente	animale|animali|biscia|bosco|foresta|pericolo|selvatico|serpe|serpente|vipera
+horse	🐎	cavallo	animale|cavallo|cavallo da corsa|corsa|corse|fattoria|galoppo|polo|ranch|trotto
+ram	🐏	montone	animale|animali|ariete|fattoria|montone|ovino|pecora|segno zodiacale dell’ariete
+goat	🐐	capra	animale|animali|capra|capricorno|fattoria|latte|segno zodiacale del capricorno
+ewe	🐑	pecora	animale|beeh|campagna|contare le pecore|fattoria|lana|montone|morbido|notte|pecorella|pecorone|soffice
+monkey	🐒	scimmia	animale|scimmietta|selvatico
+rooster	🐓	gallo	alba|animale|animali|domestico|fattoria|galletto|gallo|mattino|uccello
+chicken	🐔	gallina	animale|animali|fattoria|galletto|gallina|gallo|pollo|uccello
+dog	🐕	cane	abbaiare|animale|animale domestico|animali|cagnolino|cane|cucciolo
+service-dog	🐕‍🦺	cane da assistenza	accessibilità|animale|cane|cane da assistenza|cane da salvataggio|cane di servizio|cane d’assistenza|cane guida
+pig	🐖	maiale	animale|animali|fattoria|maiale|scrofa
+boar	🐗	cinghiale	animale|bosco|cinghiale|maiale selvatico
+elephant	🐘	elefante	animale|elefante|savana|selvatico
+octopus	🐙	polpo	animale|animali|mare|oceano|polipo|polpo
+spiral-shell	🐚	conchiglia	animale|conchiglia|conchiglia a spirale|mare|oceano|spiaggia
+bug	🐛	insetto	animale|bruco|giardino|millepiedi
+ant	🐜	formica	animale|formica|formichina|insetto|lavorare
+honeybee	🐝	ape	animale|bombo|giardino|insetto|miele|natura|primavera|regina|vespa
+lady-beetle	🐞	coccinella	animale|fortuna|giardino|insetto|natura
+fish	🐟	pesce	animale|animali|mare|oceano|pesce|pesci|segno zodiacale dei Pesci
+tropical-fish	🐠	pesce tropicale	animale|animali|mare|oceano|pesce|pesce tropicale
+blowfish	🐡	pesce palla	animale|animali|mare|oceano|pesce|pesce palla|tropici
+turtle	🐢	tartaruga	animale|animali|lenta|lentezza|lento|tartaruga
+hatching-chick	🐣	pulcino che nasce	animale|cucciolo|gallina|nascita|pulcino|schiudere|uccello|uovo|uovo che si schiude
+baby-chick	🐤	pulcino	animale|animali|cucciolo|faccina pulcino|gallina|pulcino
+front-facing-baby-chick	🐥	pulcino visto di fronte	animale|baby shower|bambino|bebè|bimbo|cucciolo|fattoria|galletto|gallina|neonato|ornitologia|piccolo
+bird	🐦	uccello	animale|ornitologia|passerotto|uccellino
+blackbird	🐦‍⬛	merlo	animale|cornacchia|corvo|merlo|nero|uccello
+phoenix-bird	🐦‍🔥	fenice	fantasia|fenice|immortale|mitologia|personaggio|reincarnazione|reinventarsi|rinascita|trasformazione|uccello di fuoco
+penguin	🐧	pinguino	animale|antartico|ornitologia|polo sud|uccello
+koala	🐨	koala	Australia|animale|animali|faccina koala|koala|selvatico
+poodle	🐩	barboncino	animale|cane|pelo|razza|soffice
+camel	🐪	dromedario	Africa|animale|animali|cammello|deserto|dromedario|gobba|gobbe|trasporto
+two-hump-camel	🐫	cammello	animale|animali|cammello|deserto|due gobbe|gobba
+dolphin	🐬	delfino	animale|cetaceo|delfino|mare|oceano|spiaggia
+mouse-face	🐭	muso di topo	animale|faccina|muso di topo|topo|topolino
+cow-face	🐮	muso di mucca	animale|animali|faccina|fattoria|mucca|muso di mucca|muu
+tiger-face	🐯	muso di tigre	animale|animali|faccina|felino|muso di tigre|tigre
+rabbit-face	🐰	muso di coniglio	animale|animale domestico|animali|coniglietto|coniglio|faccina|muso di coniglio
+cat-face	🐱	muso di gatto	animale|animali|faccina|gatto|muso di gatto
+dragon-face	🐲	testa di drago	animale|animali|drago|dragone|faccina|fiaba|testa di drago
+spouting-whale	🐳	balena che spruzza acqua	animale|animali|balena|balena che spruzza acqua|balenottera|cetaceo|mare|oceano|spruzzare
+horse-face	🐴	muso di cavallo	animale|campagna|cavallino|cowboy|dressage|equino|faccina|far west|fattoria|rampante
+monkey-face	🐵	muso di scimmia	animale|faccina|scimmia|scimmietta
+dog-face	🐶	muso di cane	animale|cagnolino|cane|cucciolo|domestico|faccina
+pig-face	🐷	muso di maiale	animale|animali|faccina|fattoria|maiale|maialino|muso di maiale|natura|pancetta|porchetta
+frog	🐸	rana	animale|bosco|fiaba|lago|muso di rana|natura|principe|raganella|ranocchia|ranocchio|rospo|stagno
+hamster	🐹	criceto	animale|animali|criceto|domestico|faccina|muso di criceto
+wolf	🐺	lupo	animale|bosco|faccina|favola|fiaba|lupo mannaro|muso di lupo|selvatico
+bear	🐻	orso	animale|faccina|muso di orso|orsacchiotto|orsetto|orso
+polar-bear	🐻‍❄	orso polare	bianco|orso|polare
+panda	🐼	panda	WWF|animale|animali|bamboo|faccina|muso di panda|panda
+pig-nose	🐽	naso da maiale	animale|animali|faccina|maiale|maialino|naso|naso da maiale
+paw-prints	🐾	impronte di zampe	animale|cane|impronta|impronta di zampa|impronte|impronte di zampe|zampa|zampe|zampine
+chipmunk	🐿	scoiattolo	animale|animali|bosco|scoiattolo|selvatico
+bouquet	💐	mazzo di fiori	anniversario|appuntamento|bouquet|compleanno|fioraio|fiore|fiori|natura|regalo|romanticismo|romantico
+dove	🕊	colomba	Pasqua|animale|ornitologia|pace|uccellino|uccello|ulivo|volare
+spider	🕷	ragno	animale|aracnide|disgusto|insetto|ragno|schifo
+spider-web	🕸	ragnatela	ragnatela|ragno|tela
+wilted-flower	🥀	fiore appassito	appassito|fiore|natura|pianta|rosa|rosa appassita|sfiorire|sfiorita
+lion	🦁	leone	alpha|animale|criniera|forte|forza|muso di leone|oroscopo|roar|ruggito|segno zodiacale|selvaggio|selvatico
+scorpion	🦂	scorpione	animale|scorpione|segno zodiacale
+turkey	🦃	tacchino	Thanksgiving|animale|giorno del ringraziamento|ringraziamento|tacchino
+unicorn	🦄	unicorno	faccina|unicorno
+eagle	🦅	aquila	animale|aquila reale|ornitologia|rapace|uccello
+duck	🦆	anatra	animale|ornitologia|papera|uccello
+bat	🦇	pipistrello	ali|animale|notte|pipistrello|vampiro
+shark	🦈	squalo	aggressività|animale|animali|pericolo|pesce|squalo
+owl	🦉	gufo	animale|animali|bosco|foresta|fortuna|gufo|saggezza|selvatico|uccello
+fox	🦊	volpe	animale|bosco|faccina volpe|furbetto|furbizia|furbo|muso di volpe|natura|volpacchiotto
+butterfly	🦋	farfalla	ali|animale|colorata|insetto
+deer	🦌	cervo	animale|animali|bosco|cerbiatto|cervo|corna|primavera|selvatico
+gorilla	🦍	gorilla	animale|foresta|scimmia|selvatico
+lizard	🦎	lucertola	animale|animali|lucertola|rettile
+rhinoceros	🦏	rinoceronte	Africa|animale|animali|natura|rinoceronte|safari|savana|selvatico
+giraffe	🦒	giraffa	animale|animali|giraffa|macchie|puntini|savana|selvaggio|selvatico
+zebra	🦓	zebra	animale|animali|bianco|bianconero|nero|strisce|zebra
+hedgehog	🦔	riccio	animale|animali|riccio|spine|spinoso
+sauropod	🦕	sauropode	animale|animali|brachiosauro|brachiosaurus|brontosauro|brontosaurus|dinosauro|diplodoco|diplodocus|sauropode
+t-rex	🦖	T-Rex	T-Rex|Tirannosauro Rex|Tyrannosaurus Rex|animale|animali|dinosauro|tirannosauro
+cricket	🦗	grillo	animale|cavalletta|insetto|ortottero
+kangaroo	🦘	canguro	Australia|animale|animale che salta|canguro|cucciolo di canguro|marsupiale|saltare
+llama	🦙	lama	alpaca|animale|guanaco|lama|lana|vigogna
+peacock	🦚	pavone	animale|appariscente|colorato|esibizionista|orgoglioso|pavone|pavoneggiarsi|uccello|vistoso|volatile
+hippopotamus	🦛	ippopotamo	animale|ippo|ippopotamo
+parrot	🦜	pappagallo	animale|pappagallo|parlare|pirata|pirati|uccello|uccello parlante
+raccoon	🦝	procione	animale|curiosità|curioso|furbizia|furbo|procione
+mosquito	🦟	zanzara	febbre|insetto|malaria|malattia|morso|puntura d’insetto|virus|zanzara
+microbe	🦠	microbo	ameba|batteri|batterio|microbo|scienza|virus
+badger	🦡	tasso	animale|dare fastidio|infastidire|tasso|tasso del miele
+swan	🦢	cigno	animale|brutto anatroccolo|cigno|cigno giovane|uccello|volatile
+mammoth	🦣	mammut	animale|estinzione|grande|lanoso|mammut|zanna
+dodo	🦤	dodo	Mauritius|animale|dodo|estinzione|grande|uccello
+sloth	🦥	bradipo	animale|bradipo|calma|lentezza|lento|pigrizia|pigro
+otter	🦦	lontra	animale|giocherellone|lontra|lontra marina|pescare
+orangutan	🦧	orangotango	animale|gorilla|orango|orangotango|scimmia|scimmione
+skunk	🦨	puzzola	animale|puzza|puzzola|puzzolente
+flamingo	🦩	fenicottero	animale|fenicottero|flamingo|rosa|tropicale|uccello
+beaver	🦫	castoro	animale|castoro|denti|diga|roditore
+bison	🦬	bisonte	animale|bisonte|mandria
+seal	🦭	foca	animale|foca|leone marino|mare|oceano|otaria
+guide-dog	🦮	cane guida	accessibilità|animale|cane|cane da accompagnamento|cane guida|cieco|non vedente|non vedenti
+fly	🪰	mosca	animale|decomposizione|infestante|insetto|insetto volante|larva|malattia|mosca|moscone|volare
+worm	🪱	verme	anellide|animale|lombrico|parassita|strisciare|verme
+beetle	🪲	coleottero	animale|cimice|coleottero|insetto|scarabeo
+cockroach	🪳	scarafaggio	animale|blatta|disgustoso|infestante|insetto|scarafaggio
+potted-plant	🪴	pianta in vaso	casa|coltivare|curare|decorare|pianta|vaso|verde
+feather	🪶	piuma	leggero|penna|piuma|piumaggio|uccello|volo
+lotus	🪷	loto	India|Vietnam|bellezza|buddhismo|fior di loto|fiore|induismo|loto|purezza|serenità|yoga
+coral	🪸	corallo	barriera|barriera corallina|cambiamento climatico|corallo|mare|oceano
+empty-nest	🪹	nido vuoto	nidificazione|nido|nido vuoto
+nest-with-eggs	🪺	nido con uova	nidificazione|nido|nido con uova|nido di uccelli|uccelli|uova
+hyacinth	🪻	giacinto	bocca di leone|fiore|giacinto|lavanda|lupino|primavera
+jellyfish	🪼	medusa	animale|bruciatura|dolore|invertebrato|mare|medusa|puntura|trasparente|urticante
+wing	🪽	ala	ala|angelo|aviazione|mitologia|uccello|volare
+goose	🪿	oca	animale|oca|papera|pollame|starnazzare|stupidità|uccello
+moose	🫎	alce	alce|animale|corna|mammifero
+donkey	🫏	asino	animale|asino|mammifero|mulo|somaro|testardo
+shamrock	☘	trifoglio	Irlanda|foglia|natura|trifoglio
+hot-dog	🌭	hot dog	cibo|hot dog|panino|street food|wurstel
+taco	🌮	taco	Messico|cibo|cucina messicana|guacamole|messicana|messicano|ristorante|salsa|taco|tacos
+burrito	🌯	burrito	Messico|burrito|cucina messicana
+chestnut	🌰	castagna	autunno|bosco|caldarroste|castagna|cibo|frutta|frutto|nocciola
+hot-pepper	🌶	peperoncino	cibo|hot|peperoncino|piccante|verdura
+ear-of-corn	🌽	pannocchia	cibo|fattoria|granoturco|mais|pannocchia|verdura
+mushroom	🍄	fungo	amanita|autunno|biancaneve|bosco|favola|fiaba|funghetto|fungo|natura|velenoso
+brown-mushroom	🍄‍🟫	fungo marrone	autunno|bosco|champignon|cibo|fungo|fungo marrone|natura|porcino|vegano|vegetale|vegetariano
+tomato	🍅	pomodoro	cibo|pomodoro|rosso|verdura
+eggplant	🍆	melanzana	cibo|melanzana|verdura
+grapes	🍇	uva	cibo|dioniso|frutta|frutto|grappolo|grappolo d’uva|uva|vino|viola
+melon	🍈	melone	cibo|frutta|frutto|melone
+watermelon	🍉	anguria	anguria|cibo|frutta|frutto
+tangerine	🍊	mandarino	agrume|agrumi|arancia|cibo|frutta|frutto|mandarino|vitamina C
+lemon	🍋	limone	agrume|aspro|cibo|estate|frutta|frutto|giallo|limone
+lime	🍋‍🟩	lime	agrume|cibo|cocktail|dissetante|frutta|lime|limone|limone verde|mojito|succo|tequila|tropicale
+banana	🍌	banana	banana|cibo|frutta|frutto|potassio
+pineapple	🍍	ananas	ananas|cibo|frutta|frutto|pina colada|tropicale
+red-apple	🍎	mela rossa	cibo|dieta|frutta|frutto|mela|rossa
+green-apple	🍏	mela verde	cibo|dieta|frutta|frutto|mela|verde
+pear	🍐	pera	cibo|frutta|frutto|pera
+peach	🍑	pesca	cibo|frutta|frutto|pesca
+cherries	🍒	ciliegie	cibo|ciliegia|ciliegie|frutta|frutto
+strawberry	🍓	fragola	cibo|fragola|frutta|frutto|rosso
+hamburger	🍔	hamburger	burger|cibo|fast food|hamburger|panino|ristorante|sandwich
+pizza	🍕	pizza	cena|cibo|fame|fetta|fetta di pizza|pizza|pizzeria|ristorante
+meat-on-bone	🍖	carne	barbecue|carne|carne con osso|cibo|fame|osso|ristorante
+poultry-leg	🍗	coscia di pollo	carne|cibo|coscia|coscia di pollo|coscia di tacchino|fame|osso|pollo|ristorante|tacchino
+rice-cracker	🍘	galletta di riso	cibo|galletta di riso|riso
+rice-ball	🍙	onigiri	arancino di riso|arancino di riso giapponese|cibo|giapponese|onigiri|orientale|polpetta di riso giapponese|riso|ristorante
+cooked-rice	🍚	riso bollito	cibo|cinese|riso|riso bollito|ristorante
+curry-rice	🍛	riso al curry	India|cibo|curry|indiano|riso|riso al curry|ristorante
+steaming-bowl	🍜	ciotola fumante	bacchette|cibo|cinese|ciotola di noodle|ciotola fumante|giapponese|noodle|pho|piatto caldo|ramen|ristorante
+spaghetti	🍝	spaghetti	cena|cibo|cucina|cucinare|fame|pasta|pranzo|puttanesca|ragù|ristorante|spaghetti
+bread	🍞	pane in cassetta	carboidrati|cereali|cibo|pancarré|pane|pane a cassetta|pane in cassetta|ristorante|toast
+french-fries	🍟	patatine	cibo|patatine|patatine fritte|ristorante
+roasted-sweet-potato	🍠	patata dolce arrosto	arrosto|cibo|dolce|ortaggio|patata|verdura
+dango	🍡	dango	dango|dolce|dolcetto|palline di mochi|ristorante|spiedino di mochi
+oden	🍢	oden giapponese	cibo|cucina|kebab|oden|oden giapponese|pesce|ristorante|spiedino|spiedino di pesce
+sushi	🍣	sushi	cibo|cucina|giapponese|riso|ristorante|salmone|sushi
+fried-shrimp	🍤	gambero fritto	cibo|gamberetto|gambero|gambero fritto|ristorante|tempura
+fish-cake-with-swirl	🍥	tortino di pesce a spirale	cibo|crocchetta di pesce|cucina giapponese|giapponese|pesce|ristorante|rotolo di pesce|spirale|tortino di pesce a spirale
+soft-ice-cream	🍦	cono gelato	bar|cono|crema|dessert|dolce|estate|gelateria|gelato|ristorante|zucchero
+shaved-ice	🍧	granita	Sicilia|cibo|estate|ghiaccio|granita|granita siciliana
+ice-cream	🍨	coppa di gelato	cibo|coppa di gelato|crema|dessert|dolce|estate|gelateria|gelato|ristorante|zucchero
+doughnut	🍩	ciambella	ciambella|cibo|cioccolato|dolce|donut|ristorante|zucchero
+cookie	🍪	biscotto	biscottino|biscotto|cibo|cioccolato|cookie|dessert|dolce|gocce di cioccolato|ristorante|zucchero
+chocolate-bar	🍫	cioccolato	barretta di cioccolato|break|cibo|cioccolata|cioccolato|dolce|dolcetto|felicità|goloso|halloween|ristorante|snack
+candy	🍬	caramella	caramella|caramelle|dolce|dolcetti|dolcetto|dolci|dolciume|halloween|zucchero
+lollipop	🍭	lecca lecca	caramella|dolce|dolcetto|lecca lecca|ristorante|zucchero
+custard	🍮	budino	budino|cibo|creme caramel|dessert|dolce|dolci|pudding|ristorante|zucchero
+honey-pot	🍯	barattolo di miele	api|barattolo|cibo|dolce|miele|ristorante|vaso di miele|zucchero
+shortcake	🍰	fetta di torta	dessert|dolce|fetta|fetta di torta|ristorante|torta|zucchero
+bento-box	🍱	bento box	bento box|lunch box|monoporzione|piatto pronto|ristorante
+pot-of-food	🍲	pentola di cibo	cibo|ciotola di cibo|minestra|pentola di cibo|ristorante|stufato|zuppa
+cooking	🍳	cucinare	cibo|colazione all’americana|cucinare|friggere|padella|padellino|ristorante|uova|uovo|uovo in padella
+fork-and-knife	🍴	forchetta e coltello	affamata|affamato|cena|che fame|cibo|cucinare|fame|forchetta e coltello|mangiare|posate|pranzo|ristorante
+teacup-without-handle	🍵	tazza da tè senza manico	bere|bevanda|pomeriggio|sete|tazza|tazza da tè senza manico|tazza di tè|tazzina|tè
+sake	🍶	sakè	bar|bere|bevanda|bicchiere|bottiglia|bottiglia e bicchiere di sake|bottiglia e bicchiere di sakè|giapponese|ristorante|sake|sakè
+wine-glass	🍷	bicchiere di vino	alcool|bar|bere|bicchiere|bicchiere di vino|calice|enoteca|ristorante|vino
+cocktail-glass	🍸	cocktail	alcol|alcolico|bar|bere|bevanda|bicchiere|bicchiere da cocktail|calice|cocktail|drink|ristorante
+tropical-drink	🍹	cocktail tropicale	alcool|bar|bere|club|cocktail|drink|ristorante|tropicale
+beer-mug	🍺	boccale di birra	Germania|alcool|bar|bere|birra|boccale di birra|estate|octoberfest|pinta|pub|ristorante|sete
+clinking-beer-mugs	🍻	boccali di birra	alcool|bar|birra|birre|boccali di birra che brindano|brindisi|celebrare|cin cin|festeggiare|pub|ristorante
+baby-bottle	🍼	biberon	bambina|bambino|bebé|bere|biberon|bimba|bimbo|fame|latte|neonata|neonato|tenero
+fork-and-knife-with-plate	🍽	piatto e posate	apparecchiare|cena|coltello|fame|forchetta|mangiare|piatto|piatto e posate|posate|pranzo|tavola
+bottle-with-popping-cork	🍾	bottiglia stappata	auguri|bar|bere|brindisi|celebrare|champagne|congratulazioni|festeggiare|spumante|stappare|tappo
+popcorn	🍿	popcorn	cibo|cinema|mais|popcorn
+birthday-cake	🎂	torta di compleanno	auguri di compleanno|buon compleanno|candeline|cibo|compleanno|dolce|festa|festeggiare|pasticceria|tanti auguri|torta di compleanno|zucchero
+amphora	🏺	anfora	acquario|anfora|ornamento|reperto|segno zodiacale|vaso
+kitchen-knife	🔪	coltello da cucina	arma|chef|coltello|coltello da cucina|cucina|fame|posate
+clinking-glasses	🥂	brindisi	anniversario|auguri|bere|brindare|brindisi|champagne|cin cin|compleanno|congratulazioni|festeggiare|prosecco|spumante
+tumbler-glass	🥃	bicchiere tumbler	alcool|bevanda|bicchiere|drink|liquore|tumbler|whisky
+spoon	🥄	cucchiaio	cucchiaino|cucchiaio|cucina|posate|stoviglie|utensili
+croissant	🥐	croissant	bar|cibo|colazione|cornetto|croissant|dolce|francese|zucchero
+avocado	🥑	avocado	avocado|cibo|frutta|frutto
+cucumber	🥒	cetriolo	cetriolino sottaceto|cetriolo|cibo|ortaggio|sotto aceto|sott’aceto|verdura
+bacon	🥓	pancetta	americana|bacon|carne|cibo|cibo americano|colazione|maiale|pancetta
+potato	🥔	patata	cibo|ortaggio|patata|patatine|tubero|verdura
+carrot	🥕	carota	arancione|carota|carotene|cibo|coniglio|dieta|ortaggio|radice|sano|verdura|verdure
+baguette-bread	🥖	baguette	Francia|baguette|carboidrati|cibo|filone|francese|pane
+green-salad	🥗	insalata verde	cena|cibo|insalata|insalata mista|insalata verde|mangiare|pranzo|salutare|salute|verdure
+shallow-pan-of-food	🥘	padella con cibo	Spagna|casseruola|cibo|cucina|cucinare|padella|padella con cibo|paella
+stuffed-flatbread	🥙	pita farcita	carne|cibo|cibo turco|cucina turca|falafel|gyro|kebab|pita farcita|ripieno|ristorante
+egg	🥚	uovo	cibo|uova|uovo
+glass-of-milk	🥛	bicchiere di latte	bevanda|bicchiere|bicchiere di latte|latte
+peanuts	🥜	arachidi	arachide|arachidi|cibo|frutta secca|nocciolina|noccioline
+kiwi-fruit	🥝	kiwi	cibo|frutta|frutto|kiwi
+pancakes	🥞	pancake	america|brunch|burro|cibo|colazione|crêpe|dolce|francia|frittelle|pancake|sciroppo d’acero|zucchero
+dumpling	🥟	raviolo	cibo|dumpling|empanada|fagottino|gyoza|jiaozi|pierogi|ravioli|raviolo
+fortune-cookie	🥠	biscotto della fortuna	biscotto|biscotto della fortuna|cibo|cinese|consiglio|profezia|suggerimento
+takeout-box	🥡	confezione da asporto	asporto|bacchette|bastoncini|cibo|cibo a domicilio|cibo cinese|cibo da asporto|confezione da asporto|consegna|scatola d’asporto
+chopsticks	🥢	bacchette	bacchette|bastoncini|cibo asiatico|hashi|jeotgarak|kuaizi
+bowl-with-spoon	🥣	ciotola con cucchiaio	cereali|cibo|ciotola|ciotola con cucchiaio|colazione|porridge|scodella|tazza|zuppa|zuppiera
+cup-with-straw	🥤	bicchiere con cannuccia	acqua|bevanda|bevande|bibita|bibita gasata|bicchiere|bicchiere con cannuccia|cannuccia|succo
+coconut	🥥	cocco	cibo|cocco|frutta|frutto|noce di cocco|palma|piña colada
+broccoli	🥦	broccoli	broccoli|broccolo|cavolo nero|cibo|verde|verdura
+pie	🥧	torta	apple pie|cibo|dolce|fetta|pasticceria|torta|torta di mele|torta di zucca|tortino
+pretzel	🥨	pretzel	brezel|cibo|pane|pretzel
+cut-of-meat	🥩	taglio di carne	bistecca|braciola|carne|carne rossa|cibo|costoletta|costoletta di maiale|costoletta d’agnello|cotoletta|scaloppina|taglio|taglio di carne
+sandwich	🥪	sandwich	cibo|pane|panino|sandwich
+canned-food	🥫	cibo in scatola	cibo|cibo in scatola|latta|lattina|scatoletta
+leafy-green	🥬	verdure a foglia	bok choy|cavolo|cavolo cinese|cavolo nero|foglia verde|hamburger|insalata|kale|lattuga|verdura|verdure a foglia|verza
+mango	🥭	mango	cibo|frutta|frutto|mango|shaker|tropicale
+moon-cake	🥮	torta della luna	autunno|dolce della luna|dolce lunare|festa d’autunno|festival|moon cake|torta lunare|yuebing|yuèbǐng
+bagel	🥯	bagel	bagel|ciambella di pane|colazione|pane|panetteria|panificio|spalmare|spalmare formaggio sul bagel
+crab	🦀	granchio	cancro|crostaceo|granchio|mare|oceano|segno zodiacale
+shrimp	🦐	gamberetto	animale|animali|cibo|crostaceo|gamberetto|gambero|mare|oceano
+squid	🦑	calamaro	animale|animali|calamaro|cibo|mare|mollusco|oceano|polipo|polpo|totano
+lobster	🦞	aragosta	animale|aragosta|aragosta rossa|astice|chele|crostacei|frutti di mare|zuppa
+oyster	🦪	ostrica	alimento|cibo|mollusco|ostrea|ostrica|perla
+cheese-wedge	🧀	fetta di formaggio	cibo|fetta di formaggio|formaggio|gruviera
+cupcake	🧁	cupcake	cupcake|delizia|dessert|dolce|festa|panetteria|panificio|pasticceria|tortina|zucchero
+salt	🧂	sale	condimento|gusto|salato|sale|saliera|sapore|saporito
+beverage-box	🧃	bevanda monodose	bevanda|bevanda in brick|bevanda monodose|brick|cannuccia|succo|succo di frutta in cartone
+garlic	🧄	aglio	aglio|alimento|cibo|condimento|insaporire|insaporitore|spicchio d’aglio
+onion	🧅	cipolla	alimento|cibo|cipolla|insaporire|insaporitore|piangere|soffritto
+falafel	🧆	falafel	ceci|cibo|falafel|felafel|polpetta|polpette di ceci
+waffle	🧇	waffle	cialda|cibo|colazione|gaufre|waffle
+butter	🧈	burro	alimento|burro|cibo|latticini|latticino
+mate	🧉	mate	bevanda|erba Mate|mate|mate argentino
+ice	🧊	cubetto di ghiaccio	cubetto di ghiaccio|freddo|gelo|ghiaccio|ghiaccio in cubetti|ghiaccio in cubi
+bubble-tea	🧋	bubble tea	Taiwan|bibita|boba|bolla|bolle|bubble tea|cibo|latte|perla|sfera|thè|tè con le bolle
+blueberries	🫐	mirtilli	bacca|blu|cibo|frutta|frutti di bosco|mirtilli|mirtillo
+bell-pepper	🫑	peperone	cibo|ortaggio|peperone|peperone verde|verdure
+olive	🫒	oliva	cibo|olio|oliva|ramo di ulivo|ulivo
+flatbread	🫓	focaccia	arepa|cibo|focaccia|lavash|naan|pane|piadina|pita|tigella
+tamale	🫔	tamale	cibo|involtino|messicano|pamonha|tamale
+fondue	🫕	fonduta	cibo|cioccolato|fonduta|formaggio|fuso|pentola|sci
+teapot	🫖	teiera	bere|cibo|teiera|thè|tè
+pouring-liquid	🫗	liquido versato	bevanda|bicchiere|bicchiere rovesciato|drink|liquido versato|rovesciare|svuotare|versare
+beans	🫘	fagioli	cibo|fagioli|legume
+jar	🫙	barattolo	barattolo|condimento|conservare|contenitore|dispensa|salsa|sugo|vuoto
+ginger-root	🫚	radice di zenzero	birra|radice|radice di zenzero|salute|spezia|zenzero
+pea-pod	🫛	baccello di piselli	baccello|baccello di piselli|cibo|edamame|legume|pisello|vegetale|verdura
+hot-beverage	☕	bevanda calda	bevanda|bevanda calda|caffè|fumante|the|thè|tè caldo
+cyclone	🌀	ciclone	ciclone|mal di mare|meteo|nausea|spirale|tifone|tornado|vento
+foggy	🌁	nebbioso	clima|meteo|montagna con la nebbia|nebbia|nebbioso
+closed-umbrella	🌂	ombrello chiuso	meteo|ombrello chiuso|pioggia|piovere
+night-with-stars	🌃	notte stellata	cielo|città|città di notte|luna|notte|notte stellata|stelle
+sunrise-over-mountains	🌄	alba sulle montagne	alba|alba sulle montagne|montagna|montagne|paesaggio|sole|sole che sorge|tramonto
+sunrise	🌅	alba	alba|finestra|mattino|natura|sole|sole che sorge
+cityscape-at-dusk	🌆	città al tramonto	città|città al tramonto|edifici|paesaggio|tramonto
+sunset	🌇	tramonto	città|skyline|sole che tramonta sulla città|tramonto
+rainbow	🌈	arcobaleno	arcobaleno|bisessuale|colori|gay|lesbica|lgbt|meteo|natura|omosessuale|pace|pioggia|transgender
+bridge-at-night	🌉	ponte di notte	Golden Gate|San Francisco|notte|paesaggio|ponte|ponte di notte
+water-wave	🌊	onda	acqua|la grande onda|mare|natura|oceano|onda|onda del mare|onda d’acqua|surf
+volcano	🌋	vulcano	Etna|Vesuvio|eruzione|etna|lava|natura|vulcano|vulcano in eruzione
+milky-way	🌌	Via Lattea	Via Lattea|lattea|nebulosa|notte|spazio|stelle
+globe-showing-europe-africa	🌍	Europa e Africa	Africa|Europa|Europa e Africa|globo|mappamondo|natura|pianeta|terra
+globe-showing-americas	🌎	America	America|Americhe|globo|mappamondo|natura|pianeta|terra
+globe-showing-asia-australia	🌏	Asia e Australia	Asia|Asia e Australia|Australia|Terra|globo|mappamondo|natura|pianeta|terra
+globe-with-meridians	🌐	globo con meridiani	globo|globo con meridiani|meridiani
+new-moon	🌑	luna nuova	cielo|luna|luna nera|natura|notte|novilunio|nuova
+waxing-crescent-moon	🌒	luna crescente	buona notte|crescente|luna|mezza luna|natura|notte|quarto di luna|sogni|spicchio di luna
+first-quarter-moon	🌓	primo quarto di luna	luna|natura|notte|primo quarto di luna|quarto
+waxing-gibbous-moon	🌔	luna gibbosa crescente	crescente|gibbosa|luna|natura|notte
+full-moon	🌕	luna piena	luna|natura|notte|piena|plenilunio
+waning-gibbous-moon	🌖	luna gibbosa calante	calante|gibbosa|luna|luna quasi pieni|natura|notte
+last-quarter-moon	🌗	ultimo quarto di luna	luna|metà|natura|notte|quarto|spazio|ultimo quarto di luna
+waning-crescent-moon	🌘	luna calante	calante|luna|natura|notte
+crescent-moon	🌙	spicchio di luna	calante|cielo|crescente|gobba|luna|natura|notte|spazio|spicchio di luna|ultimo quarto
+new-moon-face	🌚	faccina luna nuova	faccina|faccina luna nuova|luna|luna nera|luna nuova|luna nuova con faccina|natura|notte
+first-quarter-moon-face	🌛	faccina primo quarto di luna	cielo|faccina|faccina primo quarto di luna|luna|luna con faccina|natura|notte|primo quarto di luna|quarto di luna con faccina
+last-quarter-moon-face	🌜	faccina ultimo quarto di luna	faccina|faccina della luna|faccina ultimo quarto di luna|luna|luna con faccina|natura|notte|quarto di luna con faccina|ultimo quarto di luna
+full-moon-face	🌝	faccina luna piena	faccina|faccina con la luna|faccina della luna|faccina luna piena|luna|luna con faccina|luna piena|luna piena con faccina|natura
+sun-with-face	🌞	faccina sole	bel tempo|caldo|denari|estate|faccina|giornata|giorno|meteo|sole|soleggiato
+glowing-star	🌟	stella che brilla	brillante|evvai|felicità|festeggiare|natura|notte|scintillante|sorpresa|stella|stella che brilla|stella con scintille|stellina
+shooting-star	🌠	stella cadente	cadente|desiderio|fortuna|notte|stella
+thermometer	🌡	termometro	caldo|clima|freddo|meteo|temperatura|termometro
+sun-behind-small-cloud	🌤	parzialmente nuvoloso	meteo|natura|nuvola|nuvole|nuvoloso|parzialmente nuvoloso|sole|sole dietro nuvola|variabile
+sun-behind-large-cloud	🌥	molto nuvoloso	coperto|maltempo|meteo|molto nuvoloso|natura|nuvole|nuvoloso
+sun-behind-rain-cloud	🌦	sole coperto e pioggia	coperto|meteo|natura|nuvola|nuvola con sole|pioggia|sole|sole con pioggia|sole coperto e pioggia|sole dietro nuvola|variabile
+cloud-with-rain	🌧	pioggia	diluvio|meteo|natura|nuvole|nuvoloso|pioggerella|pioggia|piovere|piovigginare
+cloud-with-snow	🌨	neve	brutto tempo|freddo|meteo|natura|neve|nevica|nuvola|nuvole|tempo
+cloud-with-lightning	🌩	fulmini	fulmine|fulmini|maltempo|meteo|natura|nuvola|nuvole|pioggia|tempo|temporale|temporali
+tornado	🌪	tornado	meteo|tornado|tromba d’aria|twister|uragano|vento
+fog	🌫	nebbia	foschia|meteo|nebbia|nuvole|visibilità ridotta
+wind-face	🌬	vento	Eolo|aria|sbuffo|vento
+carousel-horse	🎠	cavallo da giostra	cavallino|cavallo|cavallo da giostra|giostra|infanzia|intrattenimento
+ferris-wheel	🎡	ruota panoramica	intrattenimento|london eye|luna park|panoramica|parco divertimenti|parco giochi|ruota
+roller-coaster	🎢	montagne russe	intrattenimento|luna park|montagne|parco divertimenti|russe
+circus-tent	🎪	circo	circo|festa|fiera|intrattenimento|spettacolo|tenda|tenda da circo|tendone
+motorcycle	🏍	motocicletta	avventura|due ruote|mezzo|moto|moto gp|motocicletta|ruote|trasporti|trasporto|veloce
+racing-car	🏎	auto da corsa	auto|auto da corsa|gran premio|sport|velocità
+snow-capped-mountain	🏔	montagna innevata	cima|ghiacciaio|inverno|montagna|montagna innevata|paesaggio
+camping	🏕	campeggio	campeggio|lago|montagna|tenda|vacanza
+beach-with-umbrella	🏖	spiaggia con ombrellone	estate|mare|ombrellone|ombrellone in spiaggia|spiaggia|spiaggia con ombrellone|vacanze
+building-construction	🏗	edificio in costruzione	cantiere|costruire|edifici|edificio in costruzione|edilizia|gru
+houses	🏘	case	casa|case|casetta|casette|cittadina|edifici|quartiere|residenziale|via|vicinato|vicini|vicino
+cityscape	🏙	paesaggio urbano	città|edifici|finistra|grattacieli|metropoli|paesaggio|paesaggio urbano|vista
+derelict-house	🏚	casa in rovina	abbandonata|casa in rovina|crepa|crepe|decrepita|disabitata|disabitato|fatiscente|in rovina|rovinato|rudere|terremoto
+classical-building	🏛	edificio classico	Grecia|Partenone|antichità|edificio|edificio classico|palazzo|tempio|tempio greco
+desert	🏜	deserto	arido|caldo|canyon|deserto|sole cocente
+desert-island	🏝	isola deserta	isola|isola deserta|mare|naufrago|palma|solitudine|spiaggia|vacanza
+national-park	🏞	parco nazionale	colline|escursione|natura|paesaggio|parco|parco nazionale
+stadium	🏟	stadio	calcio|competizione|concerto|derby|domenica|giocare|gioco|partita|quiddich|sfida|sport|stadio
+house	🏠	casa	abitazione|casa|casa di campagna|casetta|edificio|fattoria|villetta
+house-with-garden	🏡	casa con giardino	abitazione|casa|casa con giardino|casa di campagna|casetta|edificio|giardino|nido|villa|villetta
+office-building	🏢	edificio	edificio|edificio di uffici|lavoro|palazzo|ufficio
+japanese-post-office	🏣	ufficio postale giapponese	edificio|giapponese|palazzo|posta|ufficio postale|ufficio postale giapponese
+post-office	🏤	ufficio postale	edificio|europeo|posta|ufficio postale|ufficio postale europeo
+hospital	🏥	ospedale	COVID|clinica|edificio|emergenza|infermiera|infermiere|malattia|medici|medicina|ospedale|pronto soccorso
+bank	🏦	banca	banca|denaro|edificio|finanza|mutuo|prelevare|soldi|wall street
+hotel	🏨	hotel	albergo|edificio|hotel|palazzo
+love-hotel	🏩	love hotel	amore|edificio|hotel|love hotel|motel
+convenience-store	🏪	minimarket	24 ore|autogrill|edificio|minimarket|negozio|negozio aperto 24 ore|supermercato
+school	🏫	scuola	alunni|classe|classi|edificio|imparare|insegnante|liceo|maestra|scuola|università
+department-store	🏬	grande magazzino	centro|commerciale|edificio|grande magazzino
+factory	🏭	fabbrica	azienda|ciminiera|edificio|fabbrica|industria|industriale|inquinamento|produzione|stabile
+japanese-castle	🏯	castello giapponese	asia|casa|castello|edificio|giappone|giapponese|palazzo
+castle	🏰	castello	castello|edificio|fiaba|fiabe|palazzo
+barber-pole	💈	barbiere	barbiere|insegna
+wedding	💒	chiesa per matrimonio	amore|cappella|chiesa|chiesa per matrimonio|matrimonio|nozze|religione|romanticismo|sposarsi
+droplet	💧	goccia	acqua|freddo|fumetto|goccia|lacrima|natura|sudore|triste
+seat	💺	sedile	sedia|sedile
+fire	🔥	fuoco	bruciare|caldo|calore|esplosione|falò|fiamma|fiamme|fuoco|inferno|passione
+kaaba	🕋	Kaaba	Arabia Saudita|Islam|Islamismo|Kaaba|La Mecca|islamismo|musulmana|musulmani|musulmano|religione
+mosque	🕌	moschea	Islamismo|islam|islamismo|moschea|musulmani|musulmano|pregare|preghiera|religione
+synagogue	🕍	sinagoga	Ebraismo|ebraismo|religione|sinagoga|tempio ebraico
+one-oclock	🕐	ore una	13:00|1:00|ora|ore una|orologio|tempo
+two-oclock	🕑	ore due	14:00|2:00|ore due|orologio|tempo
+three-oclock	🕒	ore tre	15:00|3:00|ora|ore tre|orologio|tempo
+four-oclock	🕓	ore quattro	16:00|4:00|ora|ore quattro|orologio|quattro|tempo
+five-oclock	🕔	ore cinque	17:00|5:00|ora|ore cinque|orologio|tempo
+six-oclock	🕕	ore sei	18:00|6:00|ora|ore sei|orologio|tempo
+seven-oclock	🕖	ore sette	19:00|7:00|ora|ore sette|orologio|tempo
+eight-oclock	🕗	ore otto	20:00|8:00|ore otto|orologio|otto
+nine-oclock	🕘	ore nove	21:00|9:00|ora|ore nove|orologio|tempo
+ten-oclock	🕙	ore dieci	10:00|22:00|ora|ore dieci|orologio|tempo
+eleven-oclock	🕚	ore undici	11:00|23:00|ore undici|orologio|undici
+twelve-oclock	🕛	ore dodici	12:00|mezzanotte|mezzogiorno|ora|ore dodici|orologio|tempo
+one-thirty	🕜	ore una e mezza	13:30|1:30|ora|ore una e mezza|orologio|tempo
+two-thirty	🕝	ore due e mezza	14:30|2:30|due e mezza|ore due e mezza|orologio
+three-thirty	🕞	ore tre e mezza	15:00|3:30|ore tre e mezza|orologio|tre e mezza
+four-thirty	🕟	ore quattro e mezza	16:30|4:30|ora|ore quattro e mezza|orologio|tempo
+five-thirty	🕠	ore cinque e mezza	17:30|5:30|ora|ore cinque e mezza|orologio|tempo
+six-thirty	🕡	ore sei e mezza	18:30|6:30|ora|ore sei e mezza|orologio|tempo
+seven-thirty	🕢	ore sette e mezza	19:30|7:30|ora|ore sette e mezza|orologio|tempo
+eight-thirty	🕣	ore otto e mezza	20:30|8:30|ora|ore otto e mezza|orologio|otto e mezza|tempo
+nine-thirty	🕤	ore nove e mezza	21:30|9:30|nove e mezza|ora|ore nove e mezza|orologio
+ten-thirty	🕥	ore dieci e mezza	10:30|22:30|ora|ore dieci e mezza|orologio|tempo
+eleven-thirty	🕦	ore undici e mezza	11:30|23:30|ora|ore undici e mezza|orologio|tempo
+twelve-thirty	🕧	ore dodici e mezza	12:30|mezzanotte e mezza|mezzogiorno e mezza|ora|ore dodici e mezza|tempo
+mantelpiece-clock	🕰	orologio da mensola	ora|orologio|orologio da mensola|sveglia|tempo
+world-map	🗺	mappa mondiale	cartina|mappa|mappa mondiale|mondo|viaggiare
+mount-fuji	🗻	Monte Fuji	Fuji|Giappone|montagna|monte|natura|paesaggio
+tokyo-tower	🗼	Torre di Tokyo	Giappone|Tokyo|Tokyo Tower|Torre di Tokyo|architettura|città|torre|torre rossa
+statue-of-liberty	🗽	Statua della Libertà	Statua della Libertà|america|libertà|new york|simbolo|statua
+map-of-japan	🗾	mappa del Giappone	Giappone|Mappa del Giappone|mappa|mappa del Giappone
+rocket	🚀	razzo	astronauta|astronave|razzo|spazio|trasporti|universo|veicolo|viaggiare|viaggio
+helicopter	🚁	elicottero	elicottero|trasporti|veicolo|velivolo|viaggiare|volare
+locomotive	🚂	locomotiva	ferrovia|locomotiva|locomotiva a vapore|motore|treno|vapore|veicolo|viaggiare
+railway-car	🚃	vagone	elettrico|ferrovia|tram|trasporto|treno|vagone|veicolo|viaggiare
+high-speed-train	🚄	treno alta velocità	alta velocità|ferrovia|freccia|tav|trasporto|treno|treno alta velocità|veicolo|veloce|viaggiare
+bullet-train	🚅	treno alta velocità punta arrotondata	alta velocità|ferrovia|mezzo|punta arrotondata|trasporti|trasporto|treno|treno alta velocità|treno alta velocità punta arrotondata|veicolo|veloce|viaggiare
+train	🚆	treno	arrivo|binari|ferrovia|freccia|mezzo|trasporto|treno|veloce
+metro	🚇	metropolitana	metro|metropolitana|mezzo|trasporti|trasporto|veicolo|viaggiare
+light-rail	🚈	metrotranvia	arrivare|ferrovia|metrotranvia|mezzo|monorotaia|tram|trasporti|trasporto|treno|veicolo|viaggiare
+station	🚉	stazione	arrivo|fermata|ferrovia|ritardo|stazione|trasporto|treno|veicolo|viaggiare
+tram	🚊	tram	arrivo|ferrovia|freccia|partire|pendolare|tram|trasporto|treno|veicolo|veloce|velocità|viaggiare
+tram-car	🚋	vagone del tram	filobus|mezzo|tram|trasporti|trasporto|vagone|vagone del tram|veicolo
+bus	🚌	bus	autobus|bus|mezzo|scuola|scuolabus|trasporti|trasporto|veicolo
+oncoming-bus	🚍	bus in arrivo	autobus|bus|bus in arrivo|in arrivo|mezzo|scuolabus|trasporti|trasporto|veicolo|viaggiare
+trolleybus	🚎	filobus	autobus|bus|città|filobus|mezzo|tram|trasporti pubblici|veicolo|viaggiare
+bus-stop	🚏	fermata dell’autobus	autobus|fermata|fermata dell’autobus|pendolare|stop|viaggiare
+minibus	🚐	pulmino	bus|fiorino|guidare|minibus|pullmino|pulmino|veicolo|viaggiare
+ambulance	🚑	ambulanza	ambulanza|croce rossa|emergenza|incidente|mezzo|ospedale|trasporto|veicolo
+fire-engine	🚒	camion dei pompieri	autopompa|camion dei pompieri|emergenza|incendio|mezzo|pompieri|veicolo|vigili del fuoco
+police-car	🚓	macchina della polizia	auto|carabinieri|gazzella|macchina|macchina della polizia|polizia|veicolo
+oncoming-police-car	🚔	macchina della polizia in arrivo	auto della polizia|automobile|gazzella|macchina della polizia|mezzo|polizia|trasporti|trasporto|veicolo|volante
+taxi	🚕	taxi	auto|guidare|mezzo|tassì|taxi|taxi giallo|trasporto|veicolo
+oncoming-taxi	🚖	taxi in arrivo	mezzo|tassì|taxi|taxi giallo|taxi in arrivo|trasporti|trasporto|veicolo
+automobile	🚗	auto	auto|automobile|guidare|macchina|mezzo|trasporti|veicolo|viaggiare
+oncoming-automobile	🚘	auto in arrivo	auto|auto in arrivo|automobile|automobile in arrivo|guidare|in arrivo|mezzo|trasporti|trasporto|veicolo
+sport-utility-vehicle	🚙	SUV	SUV|auto|automobile|guidare|macchina|trasporti|utilitaria|veicolo|viaggiare
+delivery-truck	🚚	camion	camion|consegna|in viaggio|mezzo|trasporti|trasporto|veicolo
+articulated-lorry	🚛	autoarticolato	autoarticolato|camion|guidare|rimorchio|spedizione|trasporto|veicolo|viaggiare
+tractor	🚜	trattore	agricolo|campagna|fattoria|guidare|lavoro|mezzo|trattore|veicolo
+monorail	🚝	monorotaia	mezzo|monorotaia|trasporti|trasporto|veicolo|veloce|viaggiare
+mountain-railway	🚞	ferrovia di montagna	ferrovia|ferrovia di montagna|montagna|trasporti|treno|treno di montagna|veicolo|viaggiare
+suspension-railway	🚟	ferrovia sospesa	ferrovia sospesa|funivia|mezzo|trasporti|trasporto|veicolo
+mountain-cableway	🚠	funivia	cabina|funicolare|funivia|montagna|sci|ski lift|trasporti|trasporto|veicolo
+aerial-tramway	🚡	funivia aerea	aerea|funicolare|funivia|montagna|sci|sciare|tram|trasporto
+ship	🚢	nave	barca|crociera|imbarcazione|mare|nave|titanic|trasporti|trasporto|veicolo|viaggiare
+speedboat	🚤	motoscafo	barca|lago|lusso|mare|mezzo|milionario|motoscafo|vacanza|vacanze|veicolo|veloce
+horizontal-traffic-light	🚥	semaforo orizzontale	orizzontale|semaforo|traffico
+vertical-traffic-light	🚦	semaforo verticale	incrocio|luce|segnale|semaforo|stop|traffico|verticale
+construction	🚧	area cantiere	area cantiere|costruzione|giallo e nero|simbolo|simbolo area cantiere
+bicycle	🚲	bicicletta	bici|bicicletta|due ruote|gita|mezzo|pedalare|spinning|sport|trasporti|trasporto|veicolo
+bellhop-bell	🛎	campanello da hotel	campanello|campanello da hotel|campanello d’hotel|hotel|reception
+stop-sign	🛑	segnale di stop	geometria|ottagonale|ottagono|rosso|segnale|segnale di stop|stop
+hindu-temple	🛕	tempio indù	induismo|tempio induista|tempio indù
+hut	🛖	capanna	capanna|capanno|casa|iurta|rifugio
+playground-slide	🛝	scivolo	area divertimento|area giochi|giocare|giochi per bambini|parco giochi|scivolata|scivolo
+wheel	🛞	ruota	auto|cerchio|cerchione|girare|gomma|pneumatico|ruota|veicolo
+ring-buoy	🛟	salvagente	ciambella|galleggiante|gonfiabile|nuotare|salvagente|salvare|salvataggio|sicurezza|soccorso
+oil-drum	🛢	barile di petrolio	barile|barile di petrolio|bidone|fusto|petrolio
+motorway	🛣	autostrada	autostrada|guidare|pedaggio|strada|strada veloce|viaggiare
+railway-track	🛤	binari	binari|ferrovia|treno
+motor-boat	🛥	barca a motore	barca|barca a motore|barcone|imbarcazione|lusso|motore|motoscafo|yatch
+small-airplane	🛩	aereo turistico	aereo|aereo turistico|aeroplano|jet|velivolo|viaggiare|viaggio
+airplane-departure	🛫	decollo	aereo|andare|check-in|decollo|partenza|partenze|partire|pista di decollo|trasporti|trasporto|vacanza|viaggiare
+airplane-arrival	🛬	atterraggio	aereo|aeroplano|aeroporto|arrivare|arrivi|arrivo|atterraggio|pista d’atterraggio|trasporti|trasporto|veicolo|viaggiare
+satellite	🛰	satellite	satellite|spazio
+passenger-ship	🛳	nave da crociera	barca|crociera|imbarcazione|nave|nave da crociera|traghetto|vacanza
+kick-scooter	🛴	monopattino	monopattino|trasporti|veicolo
+motor-scooter	🛵	scooter	due ruote|estate|guidare|mezzo|motorino|scooter|trasporti|trasporto|vacanze romane|veicolo|vespa|viaggiare
+canoe	🛶	canoa	barca|canoa|fiume|imbarcazione|kayak|lago|mare|pagaia|sport|trasporto
+flying-saucer	🛸	disco volante	UFO|alieni|disco volante|extra terrestri|marziani|spazio|ufo
+skateboard	🛹	skateboard	andare in skate|andare sullo skateboard|rotelle|skate|skateboard|skateboarder|skater|tavola da skateboard
+auto-rickshaw	🛺	risciò a motore	risciò a motore|tuk tuk
+pickup-truck	🛻	pickup	auto|camioncino|furgoncino|pick-up|pickup|trasporto|veicolo
+roller-skate	🛼	pattini a rotelle	pattinaggio|pattinare|pattini|pattini a rotelle|rotelle|sport
+motorized-wheelchair	🦼	sedia a rotelle motorizzata	accessibilità|carrozzina motorizzata|sedia a rotelle motorizzata
+manual-wheelchair	🦽	sedia a rotelle manuale	accessibilità|carrozzina manuale|sedia a rotelle manuale
+compass	🧭	bussola	bussola|direzione|magnetica|navigazione|orientamento
+brick	🧱	mattoni	argilla|malta|mattone|mattoni|muro|muro di mattoni
+luggage	🧳	valigia	bagagli|bagaglio|partenza|partiamo|preparare il bagaglio|preparazione dei bagagli|si parte|trolley|valigia|viaggiare|viaggio
+parachute	🪂	paracadute	paracadute|paracadute ascensionale|paracadutismo|paracadutista|parasailing|parà|skydiving|sport
+ringed-planet	🪐	pianeta con anelli	Saturno|anelli|corpo celeste|pianeta|spazio
+rock	🪨	roccia	duro|macigno|masso|pesante|pietra|roccia|sasso|solido
+wood	🪵	legna	ceppo|ciocco|legna|legname|legno|tronco
+watch	⌚	orologio	orologio|orologio da polso|tempo
+hourglass-done	⌛	clessidra	clessidra|sabbia|tempo
+alarm-clock	⏰	sveglia	attesa|mattino|ora|ore|suono|sveglia|svegliarsi|tempo
+stopwatch	⏱	cronometro	cronometrare|cronometro|gara|prendere il tempo
+timer-clock	⏲	timer	orologio|timer
+hourglass-not-done	⏳	clessidra che scorre	clessidra|clessidra che scorre|sabbia|tempo
+sun	☀	sole	calore|luce|meteo|raggi|sole|soleggiato|splendente
+cloud	☁	nuvola	meteo|natura|nuvola|nuvola nera|nuvoletta
+umbrella	☂	ombrello	meteo|ombrello|pioggia
+snowman	☃	pupazzo di neve	freddo|inverno|meteo|neve|pupazzo|pupazzo di neve|pupazzo innevato
+comet	☄	cometa	cometa|natura|spazio|stella cometa
+umbrella-with-rain-drops	☔	ombrello con gocce di pioggia	diluvio|gocce d’acqua|meteo|natura|ombrello|ombrello bagnato|ombrello con gocce di pioggia|pioggia
+hot-springs	♨	sorgenti termali	acqua sorgente|acqua termale|sorgenti termali|terme
+anchor	⚓	ancora	ancora|mare|marina|marinaio|nave|simbolo
+high-voltage	⚡	alta tensione	alta|fulmine|pericolo|simbolo|tensione|tuono
+snowman-without-snow	⛄	pupazzo di neve senza neve	inverno|natura|neve|pupazzo|pupazzo di neve|pupazzo di neve senza neve
+sun-behind-cloud	⛅	sole coperto	meteo|natura|nuvola|sole|sole con nuvole|sole coperto|variabile
+cloud-with-lightning-and-rain	⛈	temporale	diluvio|fulmini|meteo|natura|nuvole|pioggia|temporale
+shinto-shrine	⛩	santuario shintoista	Cina|Jinja|cinese|jinja|religione|santuario shintoista
+church	⛪	chiesa	cappella|cattedrale|chiesa|cristianesimo|croce|edificio|religione
+mountain	⛰	montagna	arrampicata|cima|montagna|vetta
+umbrella-on-ground	⛱	ombrellone	estate|mare|meteo|ombrellone|sole|spiaggia|vacanza
+fountain	⛲	fontana	acqua|acqua che scorre|fontana
+ferry	⛴	traghetto	barca|crociera|mare|nave|traghetto|traversata
+sailboat	⛵	barca a vela	barca|barca a vela|località balneare|mare|sport|vacanza|vela|yacht
+tent	⛺	tenda	accampamento|campeggio|tenda
+fuel-pump	⛽	stazione di servizio	benzina|carburante|fare il pieno|pieno|pompa di benzina|stazione|stazione di servizio
+airplane	✈	aeroplano	aereo|aeroplano|jet|partenza|velivolo|viaggio
+snowflake	❄	fiocco di neve	fiocco di neve|freddo|ghiaccio|inverno|meteo|neve
+star	⭐	stella	astro|natura|stella|stella gialla|stellina
+mahjong-red-dragon	🀄	tessera Mahjong	Mahjong|drago|drago rosso|tessera
+joker	🃏	jolly	Joker|carta|carta da gioco|gioco|jolly
+ribbon	🎀	fiocco	auguri|festa|fiocco
+wrapped-gift	🎁	regalo	Natale|dono|festa|fiocco|pacchetto|regalino|regalo|sorpresa
+jack-o-lantern	🎃	zucca di Halloween	Halloween|festa|lanterna|zucca|zucca di Halloween
+christmas-tree	🎄	albero di Natale	Natale|albero|albero di Natale|celebrare|festa|festeggiare|festoni|natura|palline|pino
+fireworks	🎆	fuochi d’artificio	boom|celebrazione|festa|fuochi d’artificio|fuoco d’artificio|luce|scintilla|stella
+sparkler	🎇	stellina scintillante	boom|esplosione|festa|fuoco|fuoco d’artificio|stella filante|stellina scintillante|stelline scintillanti
+balloon	🎈	palloncino	auguri|compleanno|festa|palloncino
+party-popper	🎉	spara coriandoli	auguri|compleanno|congratulazioni|coriandoli|evviva|felicità|festa|party|spara coriandoli|stelle filanti|urrà|yahoo
+confetti-ball	🎊	coriandoli	carnevale|congratulazioni|coriandoli|decorazioni|evviva|festa|festeggiare|palla|palla di coriandoli|stelle filanti
+tanabata-tree	🎋	albero di Tanabata	Festa delle stelle|albero|albero decorato|albero di Tanabata|decorazioni|decorazioni di carta|festa|giappone|giapponese|natura
+pine-decoration	🎍	bambù decorato	bambù|bambù decorato|decorazione kadomatsu|festa|giapponese|pianta|pino
+japanese-dolls	🎎	bambole giapponesi	Festa delle bambole|Hina-matsuri|Hinamatsuri|bambole|festa|giapponesi|imperatore|imperatore e imperatrice|imperatrice
+carp-streamer	🎏	aquilone a forma di carpa	aquilone|aquilone a forma di carpa|carpa|festa|giapponese|pesce
+wind-chime	🎐	campana al vento	campana|campana al vento|campanelle|campanelle a vento|festa|scacciapensieri|vento
+moon-viewing-ceremony	🎑	contemplazione della luna	contemplazione della luna|contemplazione festa|festa|festa della contemplazione della luna|festa della luna|festeggiare|luna
+military-medal	🎖	medaglia militare	medaglia|medaglia al valore|medaglia con stella|militare|onore|onoreficenza|riconoscimento|stella|valore|vittoria
+reminder-ribbon	🎗	nastro	festa|festeggiamenti|fiocchetto|fiocco|fiocco giallo|nastro|nastro giallo|nodo
+admission-tickets	🎟	biglietto d’ingresso	biglietto|biglietto d’ingresso|cinema|entrata|ingresso|spettacolo|ticket
+fishing-pole	🎣	canna da pesca	canna da pesca|intrattenimento|lenza|pesca|pescare|pesce|sport
+artist-palette	🎨	tavolozza	arte|artista|colori|creativo|dipingere|palette|pittore|pittura|tavolozza|tavolozza dei colori
+ticket	🎫	biglietto	ammissione|biglietto|cartellino|ingresso
+performing-arts	🎭	maschere	arte|arti performative|carnevale|dietro le quinte|intrattenimento|maschere|palco|performance|recitare|scena|shakespeare|teatro
+video-game	🎮	gamepad	console|gamepad|giocare|gioco|joystick|videogioco
+bullseye	🎯	bersaglio	arciere|arco|bersaglio|colpire|freccette|gioco|sport|target|tiro con l’arco
+slot-machine	🎰	slot machine	azzardo|casinò|gioco|gioco d’azzardo|scommesse|scommettere|slot|slot machine
+pool-8-ball	🎱	palla da biliardo	8|biliardo|giocare|gioco|otto|palla da biliardo|palla otto|sport
+game-die	🎲	dado	dadi|dado|gioco|gioco dei dadi
+bowling	🎳	bowling	birilli|bowling|giocare|gioco|palla|palla da bowling|sport
+flower-playing-cards	🎴	carta da gioco Hanafuda	Hanafuda|carta|carta da gioco|carta da gioco Hanafuda|carta dei fiori|giappone|giapponese|gioco|gioco di carte
+running-shirt	🎽	maglia da corsa	abbigliamento|correre|corsa|fascia|maglia|maglia da corsa|maglia da corsa con fascia|sport
+tennis	🎾	tennis	giallo|palla|palla da tennis|pallina|pallina gialla|racchetta e palla da tennis|sport|tennis
+skis	🎿	sci	accessori|scarpone|scarpone da sci|sci|sport
+basketball	🏀	palla da pallacanestro	basket|basketball|canestro|canestro da basket|palla|palla da pallacanestro|pallacanestro|pallone|pallone da basket|sport
+sports-medal	🏅	medaglia sportiva	campione|corsa|gara|medaglia|medaglia sportiva|podio|risultato sportivo|sport|vincere|vittoria
+trophy	🏆	coppa	campione|coppa|premio|sport|trofeo|vincere|vincitore|vittoria
+american-football	🏈	football americano	americano|football|palla|sport
+rugby-football	🏉	pallone da rugby	palla|pallone|pallone da rugby|rugby|sport
+cricket-game	🏏	cricket	cricket|gioco|mazza|palla|sport
+volleyball	🏐	palla da pallavolo	palla|palla da pallavolo|pallavolo|pallone|rete|sport|volley
+field-hockey	🏑	hockey su prato	campo|hockey|hockey su prato|mazza|palla|partita|sport
+ice-hockey	🏒	hockey su ghiaccio	ghiaccio|giocare|hockey su ghiaccio|hockey sul ghiaccio|mazza|mazza da hockey|puck|sport
+ping-pong	🏓	ping pong	giocare|gioco|pallina|ping pong|racchetta|rete|sport|tennis da tavolo|tennis tavolo
+badminton	🏸	badminton	badminton|giocare|gioco|racchetta|sport|volano
+crystal-ball	🔮	sfera di cristallo	chiaroveggenza|chiromanzia|cristallo|futuro|magia|sfera|sfera di cristallo|sfera viola
+joystick	🕹	joystick	giocare|joystick|leva del joystick|video giochi|video gioco|videogame|videogiochi|videogioco
+framed-picture	🖼	quadro incorniciato	arte|cornice|dipinto|disegno|galleria|museo|opera d’arte|paesaggio|quadretto|quadro|quadro incorniciato
+sled	🛷	slitta	inverno|montagna|neve|slitta|slittino|toboggan
+diving-mask	🤿	maschera da sub	diving|fare immersioni|immersioni|maschera da sub|maschera e boccaglio|nuotare|nuoto|snorkeling|sport
+goal-net	🥅	porta da calcio	calcio|gol|porta|porta da calcio|porta di calcio|rete|sport|traversa
+1st-place-medal	🥇	medaglia d’oro	medaglia|medaglia d’oro|numero 1|numero uno|oro|primo posto|sport|uno|vincere
+2nd-place-medal	🥈	medaglia d’argento	argento|medaglia|medaglia d’argento|secondo posto|sport
+3rd-place-medal	🥉	medaglia di bronzo	bronzo|gara|medaglia|medaglia 3|medaglia di bronzo|sport|terzo|terzo posto
+boxing-glove	🥊	guantone da pugilato	boxe|forza|guanto|guantone|guantone da pugilato|pugilato|pugile|pugno|sport
+martial-arts-uniform	🥋	kimono per arti marziali	arti marziali|judo|karate|kimono|kimono per arti marziali|sport|taekwondo|uniforme
+curling-stone	🥌	stone da curling	curling|sport|stone da curling
+lacrosse	🥍	lacrosse	goal|lacrosse|palla|pallina|racchetta da lacrosse|rete|sport
+softball	🥎	palla da softball	guantone|palla|palla da softball|softball|sport
+flying-disc	🥏	frisbee	disco|disco volante|frisbee|ultimate frisbee
+red-envelope	🧧	busta hongbao	buona fortuna|buono auspicio|busta rossa|busta soldi|denaro|hóngbāo|lai see|regalo|soldi
+firecracker	🧨	petardo	botto|dinamite|esplodere|esplosivo|far esplodere|fuochi artificiali|fuochi d’artificio|petardo|scintilla|scoppiare|scoppio
+puzzle-piece	🧩	pezzo di puzzle	incastrarsi|incastro|indizio|pezzo|pezzo di puzzle|pezzo mancante|puzzle|tassello|tessera del puzzle
+thread	🧵	filo	ago|bobina|corda|cucire|filo|rocchetto|rotolo
+yarn	🧶	gomitolo	fare la maglia|filo|gomitolo|lavorare a maglia|palla|sferruzzare|uncinetto
+teddy-bear	🧸	orsetto	giocattolo|imbottito|orsacchiotto|orsacchiotto di peluche|orsetto|orsetto di peluche|orso|peluche|soffice|teddy bear
+nazar-amulet	🧿	occhio di Allah	amuleto|amuleto di nazar|blu|malocchio|nazar|occhio di Allah|occhio di nazar|perlina|portafortuna|talismano
+yo-yo	🪀	yo-yo	giocattolo|rocchetto|yo-yo|yoyo
+kite	🪁	aquilone	aquilone|planare|vento|volare|volo
+magic-wand	🪄	bacchetta magica	abracadabra|bacchetta magica|formula magica|incantesimo|maga|magia|mago|strega|stregone
+piata	🪅	pentolaccia	caramelle|divertimento|dolcetti|festa|gioco della pentolaccia|gioco della pignatta|pentolaccia|pignatta
+nesting-dolls	🪆	matrioska	bambola|bambola di legno|bambola russa|matriosca|matrioska|russia
+sewing-needle	🪡	ago da cucito	ago|ago da cucito|attività|cucito|punti|ricamo|sarta|sarto|sartoria|suture
+mirror-ball	🪩	palla da discoteca	ballare|brillare|dance|disco|discoteca|festa|glitter|palla a specchio|palla da discoteca|party|specchi
+hamsa	🪬	mano di Fatima	Mano con l’occhio divino|Mano di ALO|Maria|Miriam|amuleto|fortuna|hamsa|khamsa|mano di Fatima|protezione
+chess-pawn	♟	pedina degli scacchi	pedina|pedina degli scacchi|sacrificabile|scacchi|scacco matto
+spade-suit	♠	picche	carte|picche|seme
+club-suit	♣	fiori	carte|fiori|seme
+heart-suit	♥	cuori	carte|cuore|cuori|seme
+diamond-suit	♦	quadri	carte|quadri|rombo|seme
+soccer-ball	⚽	pallone da calcio	calcetto|calcio|palla|pallone|pallone da calcio|sport
+baseball	⚾	palla da baseball	baseball|battitore|guantone|mazza|palla da baseball|ricevitore|sport
+flag-in-hole	⛳	bandiera in buca	bandiera golf|bandiera in buca|bandierina|buca|golf
+ice-skate	⛸	pattinaggio su ghiaccio	ghiaccio|pattinaggio artistico|pattinaggio su ghiaccio|pattini|sport
+sparkles	✨	stelline	scintille|spendente|stelle|stelline
+backpack	🎒	zaino	accessori|campeggio|cartella|cartella di scuola|compiti|istruzioni|scuola|viaggiare|zainetto|zaino|zaino di scuola|zaino per la scuola
+graduation-cap	🎓	cappello da laureato	cappello|cappello da laureato|festa|istruzione|laurea|laureata|laureato|università
+studio-microphone	🎙	microfono radiofonico	cantare|microfoni|microfoni da studio|microfono|microfono da studio|microfono radiofonico|radio|registrazione|studio
+level-slider	🎚	cursore del volume	abbassare il volume|alzare il volume|audio|cursore del volume|levetta del volume|musica|regolazione volume|volume
+control-knobs	🎛	manopole di controllo	console|dj|manopola|manopole|manopole del volume|manopole di controllo|musica|regolazione volume
+film-frames	🎞	pellicola cinematografica	cinema|film|fotogrammi|fotogrammi di film|pellicola|pellicola cinematografica
+microphone	🎤	microfono	Karaoke|cantare|concerto|intrattenimento|microfono|musica|palco|presentare|spettacolo|teatro
+movie-camera	🎥	cinepresa	cinema|cinepresa|film|filmare|hollywood|intrattenimento|registrare|telecamera
+headphone	🎧	cuffie	ascoltare|auricolari|cuffie|intrattenimento|musica|suono
+top-hat	🎩	cilindro	abbigliamento|cappello|cilindro|elegante|inglese|intrattenimento|lincoln|mago
+clapper-board	🎬	ciak	ciak|ciak si gira|cinema|film|filmare|intrattenimento|lavagna|regista|scena|tavoletta
+musical-note	🎵	nota musicale	canzone|musica|nota|nota musicale
+musical-notes	🎶	note musicali	canzone|melodia|musica|nota|note|note musicali|spartito
+saxophone	🎷	sassofono	blues|jazz|musica|sassofono|sax|strumento|strumento musicale|suonare
+guitar	🎸	chitarra	band|basso|chitarra|corde|elettrica|musica|rock|strumento|strumento musicale|suonare
+musical-keyboard	🎹	piano	classica|comporre|jazz|musica|piano|pianoforte|strumento|strumento musicale|suonare|tastiera
+trumpet	🎺	tromba	band|banda|blues|concerto|gruppo|jazz|musica|strumento|strumento musicale
+violin	🎻	violino	musica|orchestra|strumento|strumento musicale|suonare|violino
+musical-score	🎼	pentagramma	chiave|chiave di violino|musica|partitura|pentagramma
+red-paper-lantern	🏮	lanterna rossa	bar ristorante|cinese|giapponese|izakaya|lanterna|lanterna rossa|lanterne|luce|rosso
+label	🏷	etichetta	etichetta|identificativo|prezzo|talloncino
+bow-and-arrow	🏹	arco e freccia	Sagittario|arciere|arco|arco e freccia|cacciare|freccia|sport|tiratore d’arco|tiro con l’arco
+crown	👑	corona	abbigliamento|corona|famiglia reale|medioevo|principe|principessa|re|regale|regina|vincere
+womans-hat	👒	cappello da donna	abbigliamento|abbigliamento donna|accessori|cappellino di paglia|cappello|cappello da donna|fiocco
+glasses	👓	occhiali da vista	abbigliamento|nerd|occhiali|occhiali da vista
+necktie	👔	cravatta	abbigliamento|abbigliamento uomo|camicia|colletto|cravatta|cravatta a righe|vestiti da uomo
+t-shirt	👕	t-shirt	abbigliamento|abbigliamento informale|casual|colletto|maglia|maglietta|maniche corte|shopping|t-shirt
+jeans	👖	jeans	abbigliamento|blu|casual|denim|jeans|pantaloni|vestiti
+dress	👗	vestito	abbigliamento|abito|donna|elegante|vestiti|vestito
+kimono	👘	kimono	abbigliamento|giappone|kimono|vestito
+bikini	👙	bikini	abbigliamento|bikini|costume|costume da bagno|costume due pezzi|estate|mare|piscina|spiaggia
+womans-clothes	👚	maglietta da donna	abbigliamento|blusa|camicetta|camicia|colletto|donna|shopping|vestiti
+purse	👛	borsellino	abbigliamento|accessori|borsellino|borsetta|denaro|elegante|moneta|porta monete|portafogli|shopping|soldi
+handbag	👜	borsa	abbigliamento|borsa|borsetta|shopping|valigia
+clutch-bag	👝	pochette	abbigliamento|accessori|borsa|borsetta|elegante|pochette
+mans-shoe	👞	scarpa da uomo	abbigliamento|accessori|mocassino|scarpa|scarpa da uomo|shopping|uomo
+running-shoe	👟	scarpa sportiva	abbigliamento|accessori|correre|corsa|scarpa|scarpa da ginnastica|scarpa sportiva|scarpe|scarpe da corsa|scarpe da tennis|sneaker|tennis
+high-heeled-shoe	👠	scarpa con il tacco	abbigliamento|decolleté|donna|moda|scarpa|scarpa con il tacco|stiletto|tacco
+womans-sandal	👡	sandalo da donna	abbigliamento|accessori|donna|sandalo|sandalo da donna|scarpa
+womans-boot	👢	stivale da donna	abbigliamento|donna|scarpa|scarpe|stivale|stivale da donna|stivaletto
+lipstick	💄	rossetto	appuntamento|bellezza|cosmetici|make up|makeup|rossetto|rosso|serata|trucco
+syringe	💉	siringa	ago|dottore|iniezione|malato|medicina|medico|ospedale|puntura|sangue|siringa|vaccinazione|vaccino
+pill	💊	pillola	dottore|farmaco|malato|malattia|medicina|pillola|pillole|vitamina
+ring	💍	anello	brillante|diamante|fidanzamento|fidanzarsi|fidanzata|fidanzato|gioielli|gioiello|matrimonio|romanticismo undefined
+gem-stone	💎	gemma	diamante|fidanzamento|gemma|gioiello|per sempre|pietra preziosa|romanticismo|romantico|soldi
+light-bulb	💡	lampadina	brillante|elettrica|elettricità|eureka|fumetto|geniale|idea|lampadina|luce
+money-bag	💰	sacco di soldi	banca|borsa|contanti|denaro|dollari|oro|pagare|ricchezza|ricco|sacco per soldi|soldi|tesoro
+credit-card	💳	carta di credito	addebito|banca|carta|carta di credito|credito|denaro|pagare|soldi
+yen-banknote	💴	banconota Yen	Giappone|Yen|banca|banconota|denaro|soldi|valuta
+dollar-banknote	💵	banconota Dollaro	Dollaro|banca|banconota|banconote|contanti|denaro|moneta|soldi|valuta
+euro-banknote	💶	banconota Euro	Euro|banca|banconota|cash|crisi|denaro|milionario|soldi|valuta
+pound-banknote	💷	banconota Sterlina	Gran Bretagna|Sterlina|UK|banconote|brexit|cash|denaro|millionario|pound|ricco|soldi|valuta
+money-with-wings	💸	soldi con le ali	banconota|banconota con le ali|soldi|soldi che volano|soldi con le ali
+chart-increasing-with-yen	💹	grafico ascendente	ascendente|banca|crescita|finanza|grafico yen in rialzo|in rialzo|mercati|mercato in salita|rialzo|trend|valute|yen
+laptop	💻	computer portatile	PC|computer|notebook|personal|portatile
+briefcase	💼	valigetta 24 ore	24 ore|borsa|documenti|lavoro|porta documenti|ufficio|valigetta|valigetta 24 ore
+computer-disk	💽	minidisc	CD|MD|computer|disc|disco|lettore|mini disc|minidisc
+floppy-disk	💾	floppy disc	computer|disc|dischetto|floppy
+optical-disk	💿	disco ottico	CD|DVD|blu-ray|computer|disco|disco ottico
+dvd	📀	DVD	DVD|blu ray|blu-ray|computer|computer disk|disco
+file-folder	📁	cartella file	archiviare|archivio|cartella|computer|file|ufficio
+open-file-folder	📂	cartella aperta	aperta|cartella|file
+page-with-curl	📃	pagina con piega	carta|documento|lettera|pagina|pagina arricciata|pagina con piega|ufficio
+page-facing-up	📄	pagina	carta|di fronte|documento|fronte|lettera|pagina|pagina di fronte|ufficio
+calendar	📅	calendario	17|calendario|data|diciassette|giorno|ricorrenza|sfortuna|venerdì 17
+tear-off-calendar	📆	calendario a strappo	calendario|calendario a strappo|quando|tempo|venerdì 17
+card-index	📇	schedario	Rolodex|contatti|rolodex|schedario|schedario girevole|schedario rotante|ufficio|vintage
+chart-increasing	📈	grafico con andamento positivo	andamento ascendente|ascendente|aumentare|aumento|crescere|crescita|finanza|grafico|grafico con andamento positivo|linea|trend
+chart-decreasing	📉	grafico con andamento negativo	andamento discendente|calo|crisi|discendente|economia|finanza|grafico|grafico con andamento negativo|trend
+bar-chart	📊	grafico a barre	barre|dati|grafico|grafico a barre|statistica
+clipboard	📋	portablocco	appunti|blocco|blocco note|cartella|portablocco|tavoletta
+pushpin	📌	puntina	collage|puntina|puntina da disegno|scuola|ufficio
+round-pushpin	📍	puntina arrotondata	località|mappa|pin|posizione|puntina|puntina arrotondata|puntina da disegno|spillo|ufficio
+paperclip	📎	graffetta	clippy|fermaglio|graffa|graffetta|paperclip|ufficio
+straight-ruler	📏	righello	geometria|matematica|misurare|riga|righello|scuola|strumento|studiare
+triangular-ruler	📐	squadra	angoli|geometria|matematica|misurare|righello|scuola|squadra|triangolo
+bookmark-tabs	📑	etichette segnalibro	etichette segnalibro|linguette|segnalibro|ufficio
+ledger	📒	quaderno ad anelli	annotazioni|appunti|blocco|block notes|libro mastro|note|quaderno|quaderno ad anelli|registro|registro scolastico|scuola|taccuino
+notebook	📓	quaderno	appunti|biblioteca|libreria|libro|libro grigio|prendere nota|quaderno|taccuino|ufficio
+notebook-with-decorative-cover	📔	quaderno con copertina decorata	album|album delle foto|compiti|copertina|fotoalbum|quaderno con copertina decorata|scuola|taccuino|taccuino con decorazione|taccuino copertina decorata|taccuino decorato|università
+closed-book	📕	libro chiuso	biblioteca|istruzione|leggere|libreria|libro|libro chiuso|rosso|scuola|studiare|università
+open-book	📖	libro aperto	compiti|istruzione|leggere|libreria|libro|libro aperto|romanzo|scuola
+green-book	📗	libro verde	biblioteca|compiti|istruzione|libreria|libro|libro verde|quaderno|scuola
+blue-book	📘	libro blu	biblioteca|compiti|istruzione|leggere|libreria|libro|libro blu|quaderno|quaderno blu|scuola|studiare
+orange-book	📙	libro arancione	biblioteca|compiti|istruzione|leggere|libreria|libro|libro arancione|quaderno|scuola|studiare
+books	📚	libri	biblioteca|compiti|doposcuola|leggere|libreria|libri|pila di libri|quaderni|romanzi|scuola|studiare|università
+scroll	📜	pergamena	decreto|documento|laurea|lettera|mappa|pergamena|rotolo|rotolo di carta
+memo	📝	memo	appunti|blocco note|block notes|comunicazione|matita|memo|nota|scrivere|taccuino
+telephone-receiver	📞	cornetta	chiamami|chiamare|comunicazione|cornetta|cornetta del telefono|fisso|telefonare|telefono|ti chiamo|ti richiamo
+pager	📟	cercapersone	cercapersone|comunicazione|lavoro
+fax-machine	📠	fax	computer|comunicazione|fax|periferiche|stampante|ufficio
+satellite-antenna	📡	antenna satellitare	antenna|antenna parabolica|antenne paraboliche|antenne satellitari|comunicazione|parabola|satellitare|satellite|scienza|scienze|tecnologia
+loudspeaker	📢	altoparlante	audio|comunicazione|megafono|parlare in pubblico|speaker|suono|volume
+megaphone	📣	megafono	altoparlante|altoparlanti|comunicazione|megafoni|megafono|parlare|suono|tifare|tifo|urlare
+outbox-tray	📤	posta inviata	comunicazione|in uscita|inviata|posta|posta in uscita|vaschetta
+inbox-tray	📥	posta ricevuta	comunicazione|email|in arrivo|posta|posta in arrivo|ricevuta|vaschetta
+package	📦	pacco	cartone|collo|consegna|pacco|scatola|scatolone|spedizione
+e-mail	📧	e-mail	busta|comunicazione|e-mail|email|inviare|lettera|mail|posta|posta elettronica|ricevere
+incoming-envelope	📨	posta in arrivo	busta|comunicazione|consegna|consegnare|e-mail|email|in arrivo|lettera|mail|posta|posta in arrivo|posta ricevuta
+closed-mailbox-with-lowered-flag	📪	cassetta postale chiusa bandierina abbassata	bandierina|buca delle lettere|casella postale|cassetta postale|cassetta postale chiusa bandierina abbassata|cassetta postale chiusa bandierina giù|chiusa|email|inviare|mail|posta|ricevere
+closed-mailbox-with-raised-flag	📫	cassetta postale chiusa bandierina alzata	bandierina|buca delle lettere|cassetta postale|cassetta postale chiusa bandierina alzata|cassetta postale chiusa bandierina su|chiusa|comunicazione|email|inviare|mail|posta|ricevere
+open-mailbox-with-raised-flag	📬	cassetta postale aperta bandierina alzata	aperta|bandierina|buca delle lettere|cassetta postale|cassetta postale aperta bandierina alzata|cassetta postale aperta bandierina su|mail|posta
+open-mailbox-with-lowered-flag	📭	cassetta postale aperta bandierina abbassata	aperta|bandierina|buca delle lettere|cassetta postale|cassetta postale aperta bandierina abbassata|cassetta postale aperta bandierina giù|cassetta postale con bandierina abbassata|consegna|inviare|mail|posta|ricevere
+postbox	📮	cassetta delle lettere	buca delle lettere|cassetta delle lettere|c’è posta per te|inviare|lettera|posta|poste|ricevere|spedire
+postal-horn	📯	corno postale	cornetta da postiglione|cornetto postale|corno|nuovo messaggio|postale|tromba|trombone
+newspaper	📰	quotidiano	giornale|notizia|quotidiano
+mobile-phone	📱	telefono cellulare	cellulare|chiamare|comunicare|smartphone|telefono
+camera	📷	fotocamera	foto|fotocamera|fotografare|instagram|macchina fotografica|ricordi|scattare foto|selfie|viaggiare|video
+camera-with-flash	📸	fotocamera con flash	flash|foto con flash|fotocamera|fotocamera con flash|fotografare|macchina fotografica|macchina fotografica con flash|ricordi|scattare foto|selfie
+video-camera	📹	videocamera	attore|attrice|camera|film|filmare|filmino|fotocamera|regista|registrare|telecamera|video|videocamera
+television	📺	televisore	TV|arredamento|televisione|televisore
+radio	📻	radio	ascoltare|ascoltare la radio|musica|radio|stazioni radio
+videocassette	📼	videocassetta	VHS|cassetta|registrare|video|videocassetta|vintage
+film-projector	📽	proiettore cinematografico	cinema|cinepresa|film|filmato|ricordi|riproduzione|video|videoproiettore
+prayer-beads	📿	collana da preghiera	grani|perle|pregare|religione
+muted-speaker	🔇	altoparlante disattivato	altoparlante barrato|audio|megafono barrato|musica|muto|no audio|no volume|silenzioso|speaker barrato|suono disattivato|volume|zitto
+speaker-low-volume	🔈	altoparlante a volume basso	altoparlante a basso volume|altoparlante a volume basso|altoparlante attivato|audio|basso volume|megafono|speaker|suoneria|suono|suono attivo|volume|volume basso
+speaker-medium-volume	🔉	altoparlante a volume intermedio	altoparlante a volume intermedio|altoparlante volume basso|audio|basso|megafono|speaker|suono|volume basso|volume intermedio|volume medio
+speaker-high-volume	🔊	altoparlante a volume alto	alto|altoparlante a volume alto|audio|megafono|musica|speaker|suono|volume
+battery	🔋	batteria	autonomia|batteria|batteria scarica|carica|pila|ricaricare|verde
+electric-plug	🔌	spina elettrica	elettrica|elettricista|elettricità|presa elettrica|spina
+magnifying-glass-tilted-left	🔍	lente di ingrandimento rivolta a sinistra	cerca|cercare|investigare|lente|lente di ingrandimento rivolta a sinistra|lente d’ingrandimento|lente ingrandimento|lente ingrandimento verso sinistra|verso sinistra
+magnifying-glass-tilted-right	🔎	lente di ingrandimento rivolta a destra	cercare|investigare|investigatore|lente|lente di ingrandimento rivolta a destra|lente ingrandimento|lente ingrandimento verso destra|ricerca|spia|spiare|trovare
+locked-with-pen	🔏	lucchetto con penna stilo	lucchetto|lucchetto con penna stilo|penna stilografica|privacy|stilo|stilografica
+locked-with-key	🔐	lucchetto chiuso con chiave	chiave|chiuso a chiave|lucchetto|lucchetto chiuso|lucchetto chiuso a chave|lucchetto chiuso con chiave|segreto|sicurezza|sicuro
+key	🔑	chiave	casa|chiave|lucchetto|password|segreto|sicuro
+locked	🔒	lucchetto chiuso	chiuso|chiuso a chiave|lucchetto|segreto|sicurezza
+unlocked	🔓	lucchetto aperto	aperto|chiuso|lucchetto|segreto|sicurezza
+bell	🔔	campana	campana|campanella|campanello|chiesa|musica|scuola|stonato|suono
+bell-with-slash	🔕	campana sbarrata	audio|campana|campana sbarrata|divieto|muto|silenzio|suono|volume
+bookmark	🔖	segnalibro	etichetta|leggere|lettura|libro|segnalibro
+link	🔗	collegamento	collegamento|due anelli|link|simbolo link
+flashlight	🔦	torcia	elettrica|luce|pila|torcia
+wrench	🔧	chiave inglese	attrezzo|chiave|diy|fai da te|idraulico|inglese|lavoro|meccanico|utensile
+hammer	🔨	martello	attrezzo|bricolage|falegname|lavoro|martello|meccanico|muratore|operaio|riparare|riparazioni|utensile
+nut-and-bolt	🔩	vite e bullone	attrezzo|bricolage|bullonare|bullone|dado|fai da te|fissare|lavori di casa|lavoro
+water-pistol	🔫	pistola ad acqua	arma|pistola|pistola ad acqua|revolver|sparare
+microscope	🔬	microscopio	analisi|esperimento|microrganismo|microscopio|ricerca|scienza|scienziata|scienziato|strumento
+telescope	🔭	telescopio	astronomia|corpi celesti|costellazioni|galileo galilei|osservatorio|osservazione delle stelle|scientifico|scienza|spazio|stelle|telescopio|universo
+candle	🕯	candela	a lume di candela|calore|candela|candela accesa|cera|cero|illuminare|luce
+sunglasses	🕶	occhiali da sole	abbigliamento|accessori|cool|estate|figo|luce|occhiali|occhiali da sole|occhiali scuri|sole
+linked-paperclips	🖇	graffette attaccate	allegare|cancelleria|cartoleria|clip|fermagli|graffette|graffette attaccate|ufficio
+pen	🖊	penna a sfera	compiti|disegnare|penna|penna a sfera|scrivere|scrivere a penna|scuola|stilografica|ufficio
+fountain-pen	🖋	penna stilografica	cartuccia|inchiostro|penna|pennino|scrivere|scuola|stilo|stilografica|ufficio
+paintbrush	🖌	pennello	arte|artista|colorare|dipingere|pennellare|pennello|pittore|pittrice
+crayon	🖍	pastello a cera	colorare|colorare con pastelli|colori|disegnare|pastello|pastello a cera|scrivere|scuola
+desktop-computer	🖥	computer fisso	PC tutto in uno|computer|computer fisso|desktop|desktop PC|monitor
+printer	🖨	stampante	computer|fotocopie|periferica|periferiche|stampante|stampare|stampe|ufficio
+computer-mouse	🖱	mouse	computer|cursore|mouse|mouse senza fili|periferica|periferiche|ufficio
+trackball	🖲	trackball	computer|mouse a sfera|mouse con trackball|puntamento|sfera|trackball
+card-index-dividers	🗂	divisori per schedario	archiviare|archivio|biblioteca|cassetto|divisori|divisori per schedario|documenti|ordinare|schedario|ufficio
+card-file-box	🗃	schedario da tavolo	archiviare|archivio|contenitore|documenti|scatola|schedario|schedario da tavolo|ufficio
+file-cabinet	🗄	schedario da ufficio	archiviare|armadietto schedario|cassetti|documenti|file|ordinare|schedario|schedario da ufficio|ufficio
+wastebasket	🗑	cestino	buttare|cartacce|cestino|rifiuti|ufficio
+spiral-notepad	🗒	blocco per appunti con spirale	appuntare|appunti|blocchetto degli appunti|blocco|blocco a spirale|blocco per appunti con spirale|scrivere
+spiral-calendar	🗓	calendario a spirale	calendario|calendario a spirale|giorni|taccuino|tempo
+clamp	🗜	morsetto	fissare|morsa|morsetto|serrare|stringere|utensile
+old-key	🗝	chiave antica	chiave|chiave antica|chiudere a chiave|indizio|segreto|serratura
+rolled-up-newspaper	🗞	quotidiano arrotolato	arrotolato|consegna a domicilio|giornale|giornali|giornali arrotolati|notizie|quotidiani|quotidiano
+dagger	🗡	pugnale	affilato|arma|armi|combattere|pugnalare|pugnale|spada
+ballot-box-with-ballot	🗳	urna elettorale con scheda	ballottaggio|elezioni|esprimere un voto|scheda elettorale|urna|urna elettorale|urna elettorale con scheda|urne|votare|voto
+moai	🗿	Moai	Isola di Pasqua|Moai|Moyai|faccia|pietra|statua|statua dell’Isola di Pasqua|storia|vacanza|viaggiare
+door	🚪	porta	aprire|armadio|chiudere|entrare|porta|portoncino|uscire
+cigarette	🚬	sigaretta	area fumatori|fumare|fumo|sigaretta|simbolo
+toilet	🚽	toilette	bagno|toilette|trono|water
+shower	🚿	doccia	acqua|doccia|fare la doccia|lavare|lavarsi
+bathtub	🛁	vasca	bagno|doccia|lavare|lavarsi|relax|vasca|vasca da bagno
+couch-and-lamp	🛋	divano e lampada	casa|divano|divano e lampada|lampada|leggere|mobili|relax|riposare|salotto
+shopping-bags	🛍	borse della spesa	acquisti|borsa|borse|borse della spesa|sacchetti|sacchetti regalo|shopping|spesa
+bed	🛏	letto	arredamento|dormire|hotel|letto|mobili|relax|sonno|stanchezza
+shopping-cart	🛒	carrello	acquistare|acquisti|acquisto|carrello|carrello della spesa|centro commerciale|fare la spesa|shopping|spesa|supermercato
+elevator	🛗	ascensore	accessibilità|ascensore|montacarichi
+hammer-and-wrench	🛠	martello e chiave inglese	aggiustare|attrezzi|chiave inglese|impostazioni|lavorare|lavoro|lavoro manuale|martello|martello e chiave inglese|operaio|simbolo impostazioni|utensili
+shield	🛡	scudo	cavaliere|combattimento|duello|medioevo|protezione|scudo|simbolo|torneo
+drum	🥁	tamburo	bacchette|banda|musica|percussioni|tamburello|tamburo
+sari	🥻	sari	abbigliamento|abito indiano|abito tradizionale indiano|sari|vestito indiano|vestito tradizionale
+lab-coat	🥼	camice	abiti|camice|camice bianco|camice da laboratorio|dottore|dottoressa|esperimento|giacca|medico|scienziato
+goggles	🥽	maschera	immersioni|maschera|nuotare|nuoto|occhiali di protezione|occhiali protettivi|occhialini|protezione per gli occhi|saldare|saldatura|sub
+hiking-boot	🥾	stivale da trekking	campeggio|escursionismo|passeggiata|scarpa|scarponcino|scarpone|scarponi|stivale da trekking|trekking
+flat-shoe	🥿	ballerina	ballerine|comfort|scarpa bassa|scarpa senza lacci|scarpe da ballerina
+white-cane	🦯	bastone per non vedenti	accessibilità|bastone bianco|bastone per ciechi|bastone per ipovedenti|bastone per non vedenti
+safety-vest	🦺	gilet di sicurezza	antinfortunistica|emergenza|gilet antinfortunistica|gilet catarifrangente|gilet di sicurezza
+billed-cap	🧢	cappello con visiera	abbigliamento|baseball|cappellino|cappellino da baseball|cappello|cappello con visiera|cappello da baseball|indumenti|vestiti
+scarf	🧣	sciarpa	abbigliamento|collo|freddo|inverno|sciarpa|sciarpetta|sciarpina
+gloves	🧤	guanti	blu|guanti|guanto|mano
+coat	🧥	cappotto	abbigliamento|cappotto|freddo|giacca|giaccone|giubbotto|inverno
+socks	🧦	calzini	abbigliamento|calze|calzette|calzini
+test-tube	🧪	provetta	chimica|chimico|esperimenti|esperimento|laboratorio|provetta|scienza
+petri-dish	🧫	piastra di Petri	batteri|batterio|biologa|biologia|biologo|capsula di petri|coltura|cultura|laboratorio|piastra di Petri|piastra di petri
+dna	🧬	dna	biologo|dna|evoluzione|gene|genetica|geni|vita
+abacus	🧮	abaco	abaco|abbaco|calcolare|calcolatrice|calcolo|fare i calcoli|pallottoliere
+fire-extinguisher	🧯	estintore	estinguere|estintore|fiamme|fuoco|incendio|raffreddare|spegnere|spegnere un incendio
+toolbox	🧰	cassetta degli attrezzi	attrezzi|attrezzo|cassetta|cassetta degli attrezzi|cassetta per gli attrezzi|meccanico|strumenti|strumento
+magnet	🧲	calamita	a forma di u|attrazione|calamita|ferro di cavallo|magnete|magnetica|magnetico|positivo negativo
+lotion-bottle	🧴	flacone	bottiglia di crema|bottiglia di lozione|crema|crema idratante|crema solare|filtro solare|flacone|lozione|lozione solare|shampoo
+safety-pin	🧷	spilla da balia	pannolone|punk rock|spilla da balia|spilla di sicurezza
+broom	🧹	scopa	pulire|scopa|scopare|spazzare|strega
+basket	🧺	cesto	biancheria|bucato|cestino|cesto|orto|picnic
+roll-of-paper	🧻	rotolo di carta igienica	asciugamani di carta|carta assorbente|carta igienica|rotolo|rotolo di carta|rotolo di carta igienica|scottex
+soap	🧼	sapone	bagno|fare il bagno|insaponare|lavarsi|pulito|pulizia|sapone|saponetta|schiuma
+sponge	🧽	spugna	assorbenza|assorbire|bagnare|poroso|pulire|pulizia|spugna|spugna porosa|spugnetta
+receipt	🧾	scontrino	contabilità|fattura|invoice|prova|ricevuta|ricevuta di pagamento|scontrino|tenuta dei libri
+ballet-shoes	🩰	scarpette da ballerina	balletto|danza|danza classica|scarpette da ballerina|scarpette da ballo
+one-piece-swimsuit	🩱	costume da bagno intero	abbigliamento|costume da bagno|costume da bagno intero|costume da donna|costume intero
+briefs	🩲	slip	costume da bagno maschile|costume da uomo|intimo|mutande da uomo|slip
+shorts	🩳	pantaloncini	abbigliamento|boxer|costume da bagno maschile|costume da uomo|intimo|mutande da uomo|pantaloncini|shorts
+thong-sandal	🩴	infradito	abbigliamento|ciabatte|infradito|mare|sandali|scarpe|spiaggia
+drop-of-blood	🩸	goccia di sangue	ciclo mestruale|donare il sangue|donazione di sangue|goccia di sangue|medicina|medicinale|mestruazioni
+adhesive-bandage	🩹	cerotto	cerotto|cerotto adesivo
+stethoscope	🩺	stetoscopio	cardiologo|dottore|dottoressa|fonendoscopio|medico|stetoscopio
+x-ray	🩻	radiografia	dottore|lastra|medico|ossa|radiografia|raggi x|scheletro
+crutch	🩼	stampella	ausilio|bastone|disabile|ferito|infortunio|oggetto|stampella|supporto|zoppicare
+boomerang	🪃	boomerang	aborigeni|arma|australia|boomerang|oggetto|rimbalzo|ripercussione
+maracas	🪇	maracas	agitare|ballare|maracas|musica|percussioni|ritmo|scuotere|strumento
+flute	🪈	flauto	fiati|fiato|flautista|flauto|legno|musica|pifferaio|piffero|strumento|zufolo
+chair	🪑	sedia	mettersi seduti|mobile|sedersi|sedia|seduti|seggiola
+razor	🪒	rasoio	farsi la barba|lama da barba|lama da barbiere|lametta da barba|radersi|rasoio|rasoio da barbiere
+axe	🪓	ascia	accetta|ascia|boscaiolo|taglialegna
+diya-lamp	🪔	diya	deepak|deepam|divaa|diya|lampada a olio|lampada a olio tradizionale
+banjo	🪕	banjo	banjo|musica|strumento a corde
+military-helmet	🪖	elmetto militare	caschetto|elmetto|esercito|guerra|militare|oggetto|soldato
+accordion	🪗	fisarmonica	concertina|fisarmonica|musica|organetto|strumento musicale
+long-drum	🪘	tamburo lungo	bongo|conga|musica|percussioni|ritmo|strumento musicale|tamburo|tamburo lungo
+coin	🪙	moneta	argento|denaro|dollaro|euro|metallo|moneta|oro|ricco|soldi|tesoro
+carpentry-saw	🪚	sega da falegname	falegname|legname|legno|oggetto|sega|sega da falegname|segare|tagliare|utensile
+screwdriver	🪛	cacciavite	avvitare|cacciavite|oggetto|svitare|utensile|vite
+ladder	🪜	scala	arrampicarsi|oggetto|piolo|scala|scala a pioli|scalino
+hook	🪝	gancio	amo|curva|fermaglio|gancio|impigliarsi|intrappolare|oggetto|punto vendita|uncino
+mirror	🪞	specchio	oggetto|riflesso|specchio|trucco
+window	🪟	finestra	apertura|aria fresca|finestra|oggetto|telaio|trasparente|vista
+plunger	🪠	sturalavandini	aspirazione|bagno|idraulico|ingorgo|intasamento|oggetto|scarico|sturalavandini|ventosa
+bucket	🪣	secchio	contenitore|oggetto|secchia|secchio
+mouse-trap	🪤	trappola per topi	esca|formaggio|oggetto|topo|trappola|trappola per topi
+toothbrush	🪥	spazzolino da denti	bagno|dentale|denti|igiene|lavarsi i denti|oggetto|pulito|pulizia|spazzolino|spazzolino da denti
+headstone	🪦	lapide	RIP|cimitero|lapide|morto|pietra tombale|sepoltura|tomba
+placard	🪧	cartello	cartello|corteo|manifestazione|manifesto|oggetto|picchetto|protesta|striscione
+identification-card	🪪	carta d’identità	badge|carta d’identità|credenziali|documento d’identità|identificazione|patente|sicurezza|tessera
+low-battery	🪫	batteria scarica	batteria scarica|elettronica|energia bassa|esausta|esausto|pila scarica|ricarica
+folding-hand-fan	🪭	ventaglio	afa|aria|caldo|rinfrescare|sventagliare|sventolare|timidezza|ventaglio
+hair-pick	🪮	pettine afro	afro|capelli|pettinatura|pettine
+bubbles	🫧	bolle	bolle|bollicine|perle|pulito|rutto|sapone|schiuma|sott’acqua|subacqueo
+keyboard	⌨	tastiera	computer|tasti|tastiera|tastiera senza fili
+telephone	☎	telefono fisso	fisso|telefono|telefono di casa
+hammer-and-pick	⚒	piccone e martello	attrezzi|lavori manuali|manodopera|martello|operaio|piccone e martello|utensili
+crossed-swords	⚔	spade incrociate	armi|combattimento|duello|sfida|spada|spade|spade incrociate
+balance-scale	⚖	bilancia a doppio piatto	bilancia|bilancia a doppio piatto|chili|giustizia|grammi|pesare|piatti della bilancia|segno zodiacale|utensile
+alembic	⚗	alambicco	alambicco|chimica|esperimento|strumento
+gear	⚙	ingranaggio	componente|ingranaggio|meccanismo|ruota dentata
+coffin	⚰	bara	bara|funerale|morte|sepoltura|vampiro
+funeral-urn	⚱	urna funeraria	ceneri|funerale|morte|sepoltura|urna|urna cineraria|urna funeraria|vaso
+pick	⛏	piccone	attrezzo|miniera|picconare|piccone|scalare|scavare|utensile
+rescue-workers-helmet	⛑	elmetto con croce bianca	bianca|croce|elmetto|elmetto con croce bianca|salvataggio|soccorso
+chains	⛓	catene	anelli di una catena|catena|catene|imprigionare|incatenare
+broken-chain	⛓‍💥	catena spezzata	catena spezzata|catene|libertà|manette|rompere|spezzare
+scissors	✂	forbici	forbici|strumento|tagliare|taglio
+envelope	✉	busta	busta|comunicazione|corrispondenza|email|lettera|posta|ricevere posta
+pencil	✏	matita	disegnare|matita|matita con gomma|scrivere|scrivere a matita
+black-nib	✒	pennino	boccetta d’inchiostro|calamaio|inchiostro|pennino|scrivere a penna
+cool-button	🆒	pulsante COOL	cool|pulsante|simbolo|tasto
+free-button	🆓	pulsante FREE	free|gratis|libero|pulsante|simbolo|tasto
+new-button	🆕	pulsante NEW	new|nuovo|pulsante|simbolo|tasto
+ok-button	🆗	pulsante OK	OK|pulsante|simbolo|tasto
+sos-button	🆘	pulsante SOS	SOS|Segnale di SOS|aiuto|pulsante SOS|simbolo SOS|simbolo di SOS|soccorsi|soccorso
+up-button	🆙	pulsante UP!	UP!|alto|in alto|pulsante|simbolo UP!|sù|tasto UP!
+cinema	🎦	simbolo del cinema	cinema|cinepresa|film|filmare|hollywood|intrattenimento|simbolo del cinema|simbolo film
+currency-exchange	💱	cambio valuta	banca|cambio|cambio di valuta|denaro|finanza|mercati|mercato|soldi|valuta
+heavy-dollar-sign	💲	Dollaro	cash|contanti|denaro|dollaro|pagare|simbolo del dollaro|soldi|valuta
+name-badge	📛	tesserino per nome	badge|etichetta|etichetta a tulipano|giappone|giapponese|nome|tesserino|tesserino per nome|tulipano
+no-mobile-phones	📵	simbolo che vieta l’uso dei cellulari	cellulari vietati|divieto|niente cellulare|no cellulare|no telefono|proibito|segnale|segno|simbolo|simbolo che vieta l’uso dei cellulari|telefono|vietato telefonare
+shuffle-tracks-button	🔀	pulsante di riproduzione casuale	frecce|frecce incrociate|frecce incrociate verso destra|pulsante di riproduzione casuale|shuffle
+repeat-button	🔁	pulsante di ripetizione della riproduzione	frecce|frecce a cerchio|frecce senso orario|freccia|orario|pulsante|pulsante di ripetizione della riproduzione|senso orario|simbolo|tasto
+repeat-single-button	🔂	pulsante di ripetizione di una traccia	frecce|frecce a cerchio numero 1|frecce senso orario|frecce senso orario numero 1|pulsante di ripetizione della riproduzione di una traccia|ripeti|ripetizione|senso orario
+no-one-under-eighteen	🔞	simbolo di divieto ai minorenni	18|18 sbarrato|divieto|divieto ai minori|minori|proibito|simbolo di divieto ai minorenni|vietato|vietato ai minori|vietato ai minori di 18|vietato ai minori di anni 18
+dotted-six-pointed-star	🔯	stella a sei punte	chiromanzia|futuro|sei punte|stella|stella a sei punte
+trident-emblem	🔱	tridente	ancora|barca|dio del mare|favola|fiaba|marino|naufragio|nave|oceano|poseidone|simbolo|tridente
+red-circle	🔴	cerchio rosso	cerchio|cerchio rosso grande|geometria|rosso|stop
+blue-circle	🔵	cerchio blu	blu|cerchio|geometria|grande
+large-orange-diamond	🔶	rombo arancione grande	arancione|forma|geometria|grande|quadrato|rombo
+large-blue-diamond	🔷	rombo blu grande	blu|diamante|grande|rombo
+small-orange-diamond	🔸	rombo arancione piccolo	arancione|piccolo|rombo
+small-blue-diamond	🔹	rombo blu piccolo	blu|piccolo|rombo
+red-triangle	🔺	triangolo rosso con punta verso l’alto	alto|forma|geometria|rosso|triangolo|triangolo rosso con punta verso l’alto|triangolo rosso punta in alto
+red-triangle-pointed-down	🔻	triangolo rosso con punta verso il basso	basso|geometria|rosso|triangolo|triangolo rosso con punta verso il basso|triangolo rosso punta in basso
+om	🕉	Om	Induismo|Om|induismo|mantra|religione induista|religone
+menorah	🕎	Menorah	Ebraismo|Menorah|candelabro|religione|sette bracci
+prohibited	🚫	segnale di divieto	divieto|proibito|segnale di divieto|simbolo|simbolo di divieto|vietato|vietato fumare|vietato l’accesso
+no-smoking	🚭	segnale di vietato fumare	divieto|fumare|fumo|proibito|segnale|segnale di vietato fumare|sigarette|simbolo|vietato
+litter-in-bin-sign	🚮	simbolo per la raccolta dei rifiuti	buttare|cestino dei rifiuti|pattumiera|raccolta rifiuti|riciclare|rifiuti|simbolo|simbolo per la raccolta dei rifiuti|simbolo raccolta rifiuti
+no-littering	🚯	simbolo del divieto di gettare rifiuti	buttare|divieto|proibito|simbolo|simbolo del divieto di gettare rifiuti|simbolo vietato gettare rifiuti|vietato gettare rifiuti
+potable-water	🚰	acqua potabile	acqua|bere|goccia|potabile|rubinetto|simbolo
+non-potable-water	🚱	simbolo di acqua non potabile	acqua|acqua non potabile|divieto|non potabile|rubinetto|simbolo|simbolo acqua non potabile|simbolo di acqua non potabile|vietato
+no-bicycles	🚳	segnale di divieto di transito delle biciclette	bici|bicicletta|divieto bicicletta|divieto biciclette|divieto di transito|divieto transito biciclette|proibito|segnale|segnale di divieto di transito delle biciclette
+no-pedestrians	🚷	simbolo del divieto di transito pedoni	divieto transito pedoni|niente pedoni|no|no pedoni|proibito|segnale|simbolo|simbolo del divieto di transito pedoni|strada|vietato
+children-crossing	🚸	attraversamento bambini	attraversamento|attraversamento pedonale|attraversare|bambini|pedoni|scuola|segnale|simbolo|strada|traffico
+mens-room	🚹	simbolo del bagno degli uomini	Uomini|bagno|segnale|simbolo|simbolo del bagno degli uomini|toilette|uomo
+womens-room	🚺	simbolo del bagno delle donne	Donne|bagno donne|segnale|servizi|simbolo|simbolo bagno donne|simbolo del bagno delle donne|toilette
+restroom	🚻	simbolo dei servizi igienici	bagni|bagno|cartello|figure|omini|pulsante|servizi|simbolo|simbolo dei servizi igienici|tasto|toilette|wc
+baby-symbol	🚼	simbolo con immagine di bambino	bambino a bordo|cartello neonato|fasciatoio|neonato|simbolo con immagine di bambino|simbolo neonato
+water-closet	🚾	simbolo del WC	WC|bagni|bagno|gabinetto|segnale|servizi|simbolo del WC|toilette
+passport-control	🛂	simbolo del controllo passaporti	aeroporto|controllo|dogana|immigrazione|passaporti|passaporto|segnale|simbolo del controllo passaporti
+customs	🛃	simbolo della dogana	confine di Stato|controllo doganale|dogana|doganiere|frontiera|polizia|polizia di frontiera|simbolo della dogana|viaggiare
+baggage-claim	🛄	simbolo del ritiro bagagli	aereo|aeroporto|arrivare|bagagli|check in|gita|partire|pronti|ritiro|simbolo del ritiro bagagli|valigie|viaggio
+left-luggage	🛅	simbolo del deposito bagagli	aeroporto|bagagli|deposito|servizio bagagli|sicurezza|simbolo del deposito bagagli|viaggiare
+place-of-worship	🛐	luogo di culto	luogo di culto|luogo di preghiera|luogo sacro|persona che prega|pregare|preghiera|religione|silenzio|simbolo
+orange-circle	🟠	cerchio arancione	arancione|cerchio|cerchio arancio|cerchio di colore arancione|forma
+yellow-circle	🟡	cerchio giallo	cerchio|cerchio di colore giallo|colore giallo|forma|giallo
+green-circle	🟢	cerchio verde	cerchio|cerchio di colore verde|colore verde|forma|verde
+purple-circle	🟣	cerchio viola	cerchio|cerchio di colore viola|colore viola|forma|viola
+brown-circle	🟤	cerchio marrone	cerchio|cerchio di colore marrone|colore marrone|forma|marrone
+red-square	🟥	quadrato rosso	colore rosso|forma|quadrato|quadrato di colore rosso|rosso
+blue-square	🟦	quadrato blu	blu|colore blu|forma|quadrato|quadrato di colore blu
+orange-square	🟧	quadrato arancione	arancione|colore arancione|forma|quadrato|quadrato di colore arancione
+yellow-square	🟨	quadrato giallo	colore giallo|forma|giallo|quadrato|quadrato di colore giallo
+green-square	🟩	quadrato verde	colore verde|forma|quadrato|quadrato di colore verde|verde
+purple-square	🟪	quadrato viola	colore viola|forma|quadrato|quadrato di colore viola|viola
+brown-square	🟫	quadrato marrone	colore marrone|forma|marrone|quadrato|quadrato di colore marrone
+khanda	🪯	khanda	Sikh|khanda|religione|sikhismo
+double-exclamation-mark	‼	doppio punto esclamativo	doppio punto esclamativo|esclamazione|punteggiatura|punti esclamativi|punto esclamativo
+exclamation-question-mark	⁉	punto esclamativo e interrogativo	punteggiatura|punto esclamativo|punto esclamativo e interrogativo|punto interrogativo
+information	ℹ	punto informazioni	i|info|informazioni|punto informazioni
+eject-button	⏏	pulsante di espulsione	espulsione|pulsante|pulsante di espulsione
+fast-forward-button	⏩	pulsante di avanzamento rapido	avanzamento rapido|destra|doppia freccia a destra|fast forward|freccia|pulsante di avanzamento rapido|triangolo
+fast-reverse-button	⏪	pulsante di riavvolgimento rapido	doppia freccia a sinistra|freccia|pulsante di riavvolgimento rapido|rewind|riavvolgimento rapido|sinistra
+next-track-button	⏭	traccia successiva	freccia|prossima traccia|pulsante|traccia successiva
+last-track-button	⏮	pulsante traccia precedente	freccia|precedente|pulsante|pulsante traccia precedente|rewind|torna indietro|traccia precedente|triangolo
+play-or-pause-button	⏯	pulsante riproduci/pausa	destra|freccia|play e pausa|play o pausa|pulsante riproduci/pausa|triangolo
+pause-button	⏸	pulsante pausa	in pausa|mettere in pausa|pausa|pulsante
+stop-button	⏹	pulsante stop	pulsante|quadrato|stop
+record-button	⏺	pulsante di registrazione	cerchio|pulsante|pulsante di registrazione|registrazione
+play-button	▶	pulsante di riproduzione	freccia|play|pulsante di riproduzione|pulsante play|riproduzione|tasto play|triangolo
+reverse-button	◀	pulsante di riavvolgimento	pulsante|pulsante di riavvolgimento|pulsante riavvolgimento|rewind|sinistra|tasto riavvolgimento|triangolo
+white-medium-square	◻	quadrato bianco medio	geometria|quadrato|quadrato bianco medio|quadrato vuoto
+black-medium-square	◼	quadrato nero medio	geometria|quadrato|quadrato nero medio
+check-box-with-check	☑	riquadro con spunta	fatto|grigio|riquadro|riquadro con spunta|spunta
+radioactive	☢	simbolo della radioattività	pericolo|radioattività|radioattivo|rifiuti tossici|scorie|simbolo della radioattività
+biohazard	☣	simbolo del rischio biologico	biorischio|pericolo|rischio biologico|simbolo del rischio biologico|sostanze pericolose
+orthodox-cross	☦	croce ortodossa	Cristianesimo|croce|croce ortodossa|ortodossi|religione
+star-and-crescent	☪	mezzaluna e stella	Islam|Islamismo|mezzaluna|mezzaluna e stella|mezzaluna islamica|musulmano|religione|stella
+peace-symbol	☮	simbolo della pace	Pace e amore|Peace and Love|hippy|pace|pacifico|simbolo|simbolo della pace
 yin-yang	☯	Yin e Yang	Confucianesimo|Taoismo|Yin e Yang|religione|simbolo
-zeppelin		dirigibile	dirigibile
-zoom-cancel		zoom annulla	zoom annulla
-zoom-check		zoom spunta	zoom spunta
-zoom-exclamation		zoom punto esclamativo	zoom punto esclamativo
-zoom		zoom	zoom
+wheel-of-dharma	☸	ruota del Dharma	Buddhismo|Dharma|Dharmacakra|religione|religione buddhista|ruota a otto raggi|ruota del Dharma
+female-sign	♀	simbolo genere femminile	donna|femmina|simbolo di femmina|simbolo genere femminile
+male-sign	♂	simbolo genere maschile	maschio|simbolo di maschio|simbolo genere maschile|uomo
+aries	♈	Segno zodiacale dell’Ariete	Ariete|Segno zodiacale dell’Ariete|zodiaco
+taurus	♉	Segno zodiacale del Toro	Segno zodiacale del Toro|Toro|oroscopo|segno zodiacale|zodiaco
+gemini	♊	Segno zodiacale dei Gemelli	Gemelli|Segno zodiacale dei Gemelli|oroscopo|segno zodiacale|zodiaco
+cancer	♋	Segno zodiacale del Cancro	Cancro|Segno zodiacale del Cancro|oroscopo|segno zodiacale|zodiaco
+leo	♌	Segno zodiacale del Leone	Leone|Segno zodiacale del Leone|oroscopo|segno zodiacale|zodiaco
+virgo	♍	Segno zodiacale della Vergine	Segno zodiacale della Vergine|Vergine|oroscopo|segno zodiacale|zodiaco
+libra	♎	Segno zodiacale della Bilancia	Bilancia|Segno zodiacale della Bilancia|oroscopo|segno zodiacale|zodiaco
+scorpio	♏	Segno zodiacale dello Scorpione	Scorpione|Segno zodiacale dello Scorpione|oroscopo|segno zodiacale|zodiaco
+sagittarius	♐	Segno zodiacale del Sagittario	Sagittario|Segno zodiacale del Saggitario|oroscopo|segno zodiacale|zodiaco
+capricorn	♑	Segno zodiacale del Capricorno	Capricorno|Segno zodiacale del Capricorno|oroscopo|segno zodiacale|zodiaco
+aquarius	♒	Segno zodiacale dell’Acquario	Acquario|Segno zodiacale dell’Acquario|segno zodiacale|zodiaco
+pisces	♓	Segno zodiacale dei Pesci	Pesci|Segno zodiacale dei Pesci|oroscopo|segno zodiacale|zodiaco
+recycling-symbol	♻	simbolo del riciclaggio	raccolta differenziata|riciclaggio|riciclare|riciclo|simbolo|simbolo del riciclaggio
+infinity	♾	simbolo dell’infinito	eternità|illimitato|per sempre|simbolo dell’infinito|universale
+wheelchair-symbol	♿	simbolo della disabilità	accesso|accesso sedia a rotelle|disabile|sedia a rotelle|simbolo|simbolo della disabilità|simbolo sedia a rotelle
+medical-symbol	⚕	simbolo della medicina	bastone di esculapio|medicina|medico|simbolo della medicina
+atom-symbol	⚛	simbolo dell’atomo	ateismo|atomo|fisica|simbolo dell’atomo
+fleur-de-lis	⚜	giglio araldico	araldica|fiore|giglio|giglio araldico|simbolo|stemma
+warning	⚠	simbolo di avviso	attenzione|pericolo|punto esclamativo|simbolo|simbolo di avviso|triangolo
+transgender-symbol	⚧	simbolo transgender	simbolo transgender|transgender
+white-circle	⚪	cerchio bianco	bianco|cerchio|cerchio bianco grande|geometria
+black-circle	⚫	cerchio nero	cerchio|cerchio nero grande|geometria|nero
+ophiuchus	⛎	Segno zodiacale dell’Ofiuco	Ofiuco|Segno zodiacale dell’Ofiuco|segno zodiacale|zodiaco
+no-entry	⛔	segnale di divieto di accesso	accesso|divieto|divieto di accesso|proibito|segnale di divieto di accesso|simbolo|stop|vietato
+check-mark-button	✅	pulsante segno di spunta	baffo|fatto|pulsante segno di spunta|segno di spunta|segno di spunta grande|spunta
+check-mark	✔	segno di spunta	baffo|fatto|segno di spunta|segno di spunta nero|spunta
+latin-cross	✝	croce latina	Cristianesimo|cattolicesimo|croce|croce latina|religione
+star-of-david	✡	stella di David	David|Ebraismo|ebreo|sei punte|simbolo ebraico|stella|stella a sei punte|stella di David
+eight-pointed-star	✴	stella stilizzata	asterisco|otto punte|stella|stella stilizzata
+sparkle	❇	scintilla stilizzata	scintilla|scintilla stilizzata|simbolo
+cross-mark	❌	croce	X|croce|croce rossa|moltiplicazione
+cross-mark-button	❎	croce con quadrato	X con quadrato|croce con quadrato|croce verde|moltiplicazione
+red-question-mark	❓	punto interrogativo rosso	?|domanda|punteggiatura|punto di domanda|punto di domanda pieno|punto interrogativo|punto interrogativo rosso
+white-question-mark	❔	punto interrogativo bianco	?|domanda|punteggiatura|punto di domanda|punto di domanda vuoto|punto interrogativo|punto interrogativo bianco|punto interrogativo grigio
+white-exclamation-mark	❕	punto esclamativo bianco	!|esclamazione|punteggiatura|punto esclamativo|punto esclamativo bianco|punto esclamativo grigio|punto esclamativo vuoto
+red-exclamation-mark	❗	punto esclamativo rosso	esclamazione|punteggiatura|punto esclamativo|punto esclamativo pieno|punto esclamativo rosso
+black-large-square	⬛	quadrato nero grande	geometria|quadrato|quadrato nero grande
+white-large-square	⬜	quadrato bianco grande	geometria|quadrato|quadrato bianco grande
+hollow-red-circle	⭕	cerchio rosso vuoto	cerchio|cerchio rosso vuoto|gioco|pallino|tris
+crossed-flags	🎌	bandiere del Giappone incrociate	Giappone|bandiere|bandiere del Giappone incrociate|festa|festeggiamenti|giapponese|giapponesi|incrociate
+chequered-flag	🏁	bandiera a scacchi	bandiera|bandiera a scacchi|circuito|corsa|gara|podio|scacchi|sport|vittoria
+white-flag	🏳	bandiera bianca	arrendersi|bandiera|bandiera bianca|bandiera che sventola|sos|sventolare bandiera bianca
+transgender-flag	🏳‍⚧	bandiera transgender	azzurro|bandiera|bianco|rosa|transgender
+rainbow-flag	🏳‍🌈	bandiera arcobaleno	bisessuale|bisex|gay|genderqueer|glbtq|lesbica|lgbtqia|omosessuale|pace|pride|transgender
+black-flag	🏴	bandiera nera	bandiera|bandiera che sventola|bandiera nera
+pirate-flag	🏴‍☠	bandiera dei pirati	bandiera dei pirati|corsari|corsaro|pirata|pirati
+triangular-flag	🚩	bandierina rossa	bandiera|bandiera rossa|bandiera rossa triangolare|bandierina|bandierina rossa|bandierina rossa triangolare|golf

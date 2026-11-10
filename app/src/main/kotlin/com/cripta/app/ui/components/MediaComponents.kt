@@ -195,7 +195,7 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Bool
         }
         if (resolved != null) {
             // Blank for the frame it takes to build, rather than flashing the folder symbol.
-            if (vector != null) Icon(vector, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.6f))
+            if (vector != null) Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.6f))
         } else if (!emoji.isNullOrBlank()) {
             // Sized in dp (not scaled by the user's font size) so the emoji always fits its box.
             val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }

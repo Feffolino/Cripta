@@ -450,7 +450,7 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
         contentAlignment = Alignment.Center,
     ) {
         when {
-            drawn != null -> Icon(drawn, null, tint = fg, modifier = Modifier.size(size * 0.58f))
+            drawn != null -> Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.58f))
             // Its room is kept while the icon loads, so nothing shifts.
             icon != null -> Unit
             else -> Text(text.ifEmpty { tagAlias(tag) }, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
@@ -472,7 +472,7 @@ private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: a
             .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize()) }
+        if (icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize()) }
         if (icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
         if (shownText.isNotEmpty()) Text(shownText, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
