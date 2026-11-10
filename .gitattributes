@@ -1,0 +1,3 @@
+# Tag icon catalog and word lists are read byte by byte (the catalog carries a checksum):
+# always LF, whatever core.autocrlf says on the machine that checks them out.
+app/src/main/assets/tagicons/** text eol=lf
