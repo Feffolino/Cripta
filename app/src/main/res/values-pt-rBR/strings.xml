@@ -2100,4 +2100,6 @@
     <string name="n_originals_kept">%1$d originais não puderam ser excluídos: continuam no telefone</string>
     <string name="n_maybe_incomplete">" · %1$s cópias talvez incompletas"</string>
     <string name="reset_failed">Redefinição não concluída: não foi possível excluir os dados antigos. Tente novamente.</string>
+    <string name="n_backup_failed_reason">O backup falhou (%1$s). Verifique o destino e tente novamente.</string>
+    <string name="bulk_partial">%1$d de %2$d feitos: o resto ficou como estava</string>
 </resources>

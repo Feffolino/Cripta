@@ -71,7 +71,7 @@ object UserErrors {
         str(R.string.dl_err_unavailable), str(R.string.dl_err_geo), str(R.string.dl_err_too_many),
         str(R.string.dl_err_forbidden), str(R.string.dl_err_not_found), str(R.string.dl_err_connection),
         str(R.string.dl_err_no_format), str(R.string.dl_err_incomplete),
-        str(R.string.dl_err_extractor),
+        str(R.string.dl_err_extractor), str(R.string.dl_err_player_format),
         str(R.string.err_no_space), str(R.string.dl_err_certificate), str(R.string.dl_err_failed),
     )
 

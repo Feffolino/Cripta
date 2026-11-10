@@ -315,9 +315,13 @@ fun VaultScreen(
         if (ids.isEmpty()) return
         val set = ids.toSet()
         val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.folderId }
-        vm.moveFiles(ids, target)
-        notify(str(R.string.moved_to, plural(R.plurals.moved_items, ids.size), folderLabel(target))) {
-            vm.restoreFolders(prev)
+        vm.moveFiles(ids, target) { moved ->
+            // After the work: the number really moved, and an undo only when something moved.
+            if (moved == 0) notify(str(R.string.bulk_partial, moved, ids.size))
+            else notify(
+                if (moved < ids.size) str(R.string.bulk_partial, moved, ids.size)
+                else str(R.string.moved_to, plural(R.plurals.moved_items, moved), folderLabel(target)),
+            ) { vm.restoreFolders(prev) }
         }
     }
     /** Drop of a move drag. The drag may have changed folder, so the files can be off screen:
@@ -325,9 +329,12 @@ fun VaultScreen(
     fun moveCarried(ids: List<String>, from: Map<String, Long?>, target: Long?) {
         val moving = ids.filter { from.containsKey(it) && from[it] != target }
         if (moving.isEmpty()) return
-        vm.moveFiles(moving, target)
-        notify(str(R.string.moved_to, plural(R.plurals.moved_items, moving.size), folderLabel(target))) {
-            vm.restoreFolders(moving.associateWith { from[it] })
+        vm.moveFiles(moving, target) { moved ->
+            if (moved == 0) notify(str(R.string.bulk_partial, moved, moving.size))
+            else notify(
+                if (moved < moving.size) str(R.string.bulk_partial, moved, moving.size)
+                else str(R.string.moved_to, plural(R.plurals.moved_items, moved), folderLabel(target)),
+            ) { vm.restoreFolders(moving.associateWith { from[it] }) }
         }
     }
     fun favoriteWithUndo(requested: List<String>, fav: Boolean) {
@@ -1634,11 +1641,17 @@ fun VaultScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    vm.deleteFiles(toDelete); selection = emptySet(); confirmMultiDelete = false
-                    notify(
-                        if (trashEnabled) plural(R.plurals.files_trashed, n)
-                        else plural(R.plurals.files_deleted, n),
-                    )
+                    selection = emptySet(); confirmMultiDelete = false
+                    // Said after the work, with the number really done.
+                    vm.deleteFiles(toDelete) { done ->
+                        notify(
+                            when {
+                                done < n -> str(R.string.bulk_partial, done, n)
+                                trashEnabled -> plural(R.plurals.files_trashed, done)
+                                else -> plural(R.plurals.files_deleted, done)
+                            },
+                        )
+                    }
                 }) {
                     Text(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
@@ -1683,8 +1696,16 @@ fun VaultScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    vm.deleteFolder(folder); folderToDelete = null
-                    notify(if (trashEnabled) str(R.string.folder_in_trash, folder.name) else str(R.string.folder_deleted, folder.name))
+                    folderToDelete = null
+                    vm.deleteFolder(folder) { done ->
+                        notify(
+                            when {
+                                done == 0 -> str(R.string.bulk_partial, 0, 1)
+                                trashEnabled -> str(R.string.folder_in_trash, folder.name)
+                                else -> str(R.string.folder_deleted, folder.name)
+                            },
+                        )
+                    }
                 }) {
                     Text(if (trashEnabled) str(R.string.move_to_trash) else if (n == 0) str(R.string.delete) else str(R.string.delete_all), color = MaterialTheme.colorScheme.error)
                 }

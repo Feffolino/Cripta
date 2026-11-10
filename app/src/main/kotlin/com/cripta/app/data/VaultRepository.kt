@@ -146,6 +146,8 @@ class VaultRepository @Inject constructor(
         val weightDone: Long = 0,
         /** Copies kept in the vault that came out shorter than the source said: maybe incomplete. */
         val incomplete: Int = 0,
+        /** Stopped by the user ("Annulla"): the result must not say "complete". */
+        val cancelled: Boolean = false,
     ) {
         val succeeded: Int get() = done - failed
         /**
@@ -245,7 +247,9 @@ class VaultRepository @Inject constructor(
         _importState.update { s -> s.copy(duplicates = s.duplicates.filterNot { it.first in ids }) }
 
     /** A batch ended; returns the final state when it was the last one running, else null. */
-    fun importEnd(): ImportState? = synchronized(importLock) {
+    fun importEnd(cancelled: Boolean = false): ImportState? = synchronized(importLock) {
+        // A batch cancelled while others run still marks the whole result.
+        if (cancelled) _importState.update { it.copy(cancelled = true) }
         if (importBatches.decrementAndGet() > 0) null
         else {
             _importState.update { it.copy(active = false, finished = true, currentName = null) }
@@ -1186,7 +1190,9 @@ class VaultRepository @Inject constructor(
             if (f == null || !f.exists()) 0L else f.walkTopDown().filter { it.isFile }.sumOf { it.length() }
         val blobSizes = db.fileDao().everyFile().map { spaceKindOf(it.mimeType, it.deletedAt != null) to blobs.blob(it.id).length() }
         val dbDir = context.getDatabasePath("x").parentFile
-        val cache = size(context.cacheDir) + size(java.io.File(context.filesDir, "covers"))
+        // Only what "Svuota la cache" clears (the covers cached on disk): picked covers and the
+        // rest of the app's files are counted under the app, not as cache.
+        val cache = size(java.io.File(context.cacheDir, "thumbs"))
         val appTotal = size(context.filesDir) + size(dbDir) + size(context.cacheDir) + size(context.noBackupFilesDir)
         val stat = android.os.StatFs(context.filesDir.path)
         SpaceReport.of(blobSizes, cache, size(dbDir), appTotal, stat.totalBytes, stat.availableBytes)
@@ -1371,6 +1377,8 @@ class VaultRepository @Inject constructor(
     private val jobsRestored = java.util.concurrent.atomic.AtomicBoolean(false)
     /** True only the first time it is called in this process: restore pending jobs once. */
     fun claimJobRestore(): Boolean = jobsRestored.compareAndSet(false, true)
+    /** The restore did not get through (the list was unreadable, Android refused a start): allow another try. */
+    fun releaseJobRestore() { jobsRestored.set(false) }
     /**
      * Awaited, and not cancellable: fire-and-forget, it could run after the job released the keys
      * and fail silently, and the finished download or conversion was resumed at the next unlock.
@@ -1380,8 +1388,9 @@ class VaultRepository @Inject constructor(
             .onFailure { logException(android.util.Log.WARN, "VaultRepository", "pending job not removed", it) }
         Unit
     }
+    /** The saved jobs; throws when they cannot be read (an empty list means there are none). */
     suspend fun pendingJobs(): List<com.cripta.app.data.db.PendingJobEntity> =
-        withContext(Dispatchers.IO) { runCatching { db.pendingJobDao().all() }.getOrDefault(emptyList()) }
+        withContext(Dispatchers.IO) { db.pendingJobDao().all() }
 
     /** Root-to-folder chain for [folderId] (empty when it doesn't exist). */
     suspend fun folderPath(folderId: Long): List<FolderEntity> = withContext(Dispatchers.IO) {
@@ -1765,12 +1774,14 @@ class VaultRepository @Inject constructor(
 
         // Tags with alias.
         val tArr = manifest.getJSONArray("tags")
+        var tagsAdded = 0
         for (i in 0 until tArr.length()) {
             val o = tArr.getJSONObject(i)
             val name = o.getString("name")
             // A tag already in the vault keeps its own alias, colour, icon, pin and place: the
             // restore only adds ("nothing that is there is replaced"). Files still get linked to it.
             if (db.tagDao().insert(TagEntity(name = name)) == -1L) continue
+            tagsAdded++
             // v2: pin and custom order.
             if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
             if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
@@ -1857,11 +1868,20 @@ class VaultRepository @Inject constructor(
                 }
                 f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
                 f.remove("tagNames"); f.remove("exNames")
+                // People get new ids on restore too: the old ones would match nobody, or somebody else.
+                val oldPeople = f.optJSONArray("people")
+                if (oldPeople != null && oldPeople.length() > 0) {
+                    val mapped = org.json.JSONArray()
+                    for (j in 0 until oldPeople.length()) extras.personIds[oldPeople.getLong(j)]?.let { mapped.put(it) }
+                    // None of their people came along: the filter would show everything, not what it meant.
+                    if (mapped.length() == 0) continue
+                    f.put("people", mapped)
+                }
                 db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", str(R.string.default_filter_name)), json = f.toString()))
             }
         }
         val segments = (0 until fileArr.length()).any { (fileArr.getJSONObject(it).optJSONArray("segments")?.length() ?: 0) > 0 }
-        return RestoreReport(files = fileArr.length(), tags = tArr.length(), people = extras.people,
+        return RestoreReport(files = fileArr.length(), tags = tagsAdded, people = extras.people,
             analysis = extras.analysis || segments, covers = coverFiles.size)
     }
 

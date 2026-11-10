@@ -129,7 +129,12 @@ class ConversionService : Service() {
         }
         // Import / export: stop after the file being processed (never half a file).
         if (mode == MODE_CANCEL_BATCH) {
-            batchCancels.incrementAndGet()
+            importCancels.incrementAndGet()
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        if (mode == MODE_CANCEL_EXPORT) {
+            exportCancels.incrementAndGet()
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -521,7 +526,7 @@ class ConversionService : Service() {
             }.onFailure { e ->
                 logException(android.util.Log.ERROR, "ConversionService", "backup failed (restore=${req.restore})", e)
                 val text = when {
-                    !req.restore -> str(R.string.n_backup_failed_space)
+                    !req.restore -> str(R.string.n_backup_failed_reason, UserErrors.of(e))
                     e is VaultRepository.WrongPassphraseException -> str(R.string.n_restore_failed_passphrase)
                     else -> str(R.string.n_restore_failed_reason, UserErrors.of(e))
                 }
@@ -627,7 +632,9 @@ class ConversionService : Service() {
      * differs from the value when the batch began. A single flag, reset by every new batch, lost
      * a cancel when another batch started meanwhile.
      */
-    private val batchCancels = java.util.concurrent.atomic.AtomicInteger()
+    private val importCancels = java.util.concurrent.atomic.AtomicInteger()
+    /** Same for exports: an import and an export running together are cancelled one at a time. */
+    private val exportCancels = java.util.concurrent.atomic.AtomicInteger()
 
     /**
      * Decrypt [ids] back to the gallery one by one ("Esporta"), or into the user-picked folder
@@ -637,7 +644,7 @@ class ConversionService : Service() {
     private suspend fun exportBatch(ids: List<String>, tree: Uri? = null) {
         val total = ids.size
         if (total == 0) return
-        val cancelGen = batchCancels.get()
+        val cancelGen = exportCancels.get()
         val files = ids.map { id ->
             try { repo.fileById(id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
         }
@@ -647,11 +654,11 @@ class ConversionService : Service() {
         var saved = 0; var failed = 0; var done = 0
         val title = if (tree != null) str(R.string.n_export_folder) else str(R.string.n_export_gallery)
         notify(build(title, 0, sub = str(R.string.n_file_first_of, total), chip = "0/$total",
-            cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
+            cancelable = true, cancelMode = MODE_CANCEL_EXPORT, kind = ResultKind.EXPORT))
         // Starts the measurement at 0, so the end of the first file already gives a speed.
         eta.left(0f)
         for (f in files) {
-            if (batchCancels.get() != cancelGen) break
+            if (exportCancels.get() != cancelGen) break
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
                 if (f == null) failed++
@@ -671,7 +678,7 @@ class ConversionService : Service() {
             val fraction = if (weightTotal > 0) weightDone.toFloat() / weightTotal else done.toFloat() / total
             val left = if (done < total) eta.left(fraction) else null
             notify(build(title, (fraction * 100).toInt(), sub = if (done < total) str(R.string.n_file_of, done + 1, total) else str(R.string.n_finishing),
-                chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.EXPORT))
+                chip = "$done/$total", eta = left, cancelable = true, cancelMode = MODE_CANCEL_EXPORT, kind = ResultKind.EXPORT))
         }
         val cancelled = done < total
         val text = buildString {
@@ -699,12 +706,12 @@ class ConversionService : Service() {
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         // Vault files imported from now on belong to this run: never taken as a "previous version".
         val batchStart = runStart ?: System.currentTimeMillis()
-        val cancelGen = batchCancels.get()
+        val cancelGen = importCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
         try {
             for ((i, uri) in uris.withIndex()) {
-                if (batchCancels.get() != cancelGen) { cancelled = true; break }
+                if (importCancels.get() != cancelGen) { cancelled = true; break }
                 val (name, size) = info[i]
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
@@ -778,7 +785,7 @@ class ConversionService : Service() {
             }
         } finally {
             withContext(NonCancellable) {
-                repo.importEnd()?.let { fin ->
+                repo.importEnd(cancelled)?.let { fin ->
                     val title = when {
                         cancelled -> str(R.string.n_import_cancelled)
                         fin.succeeded == 0 && fin.failed > 0 -> str(R.string.n_import_failed)
@@ -821,7 +828,7 @@ class ConversionService : Service() {
     private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator, cancelGen: Int): Notification {
         val done = n - 1
         val left = eta.left(fraction)
-        val stopping = batchCancels.get() != cancelGen
+        val stopping = importCancels.get() != cancelGen
         return build(str(R.string.n_import), (fraction * 100).toInt(), sub = str(R.string.n_file_of_sep, n, total) + if (stopping) str(R.string.n_cancel_after_file) else what,
             chip = "$done/$total", eta = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.IMPORT)
@@ -1652,7 +1659,7 @@ class ConversionService : Service() {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             // One request code per cancel: the intro and face scans shared one, so the PendingIntent
             // carried whichever cancel was built last and "Annulla" could stop the other scan.
-            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7; else -> 6 }
+            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_EXPORT -> 31; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7; else -> 6 }
             val pi = android.app.PendingIntent.getService(
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
@@ -2158,6 +2165,7 @@ class ConversionService : Service() {
         private const val EX_HEIGHT = "height"
         private const val EX_TAGS = "tags"
         private const val MODE_CANCEL_BATCH = "cancel_batch"
+        private const val MODE_CANCEL_EXPORT = "cancel_export"
         private const val MODE_UPDATE = "update"
         private const val MODE_BACKUP = "backup"
         private const val MODE_CANCEL_UPDATE = "cancel_update"

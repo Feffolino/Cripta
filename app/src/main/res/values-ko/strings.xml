@@ -1970,4 +1970,6 @@
     <string name="n_originals_kept">원본 %1$d개를 삭제하지 못했습니다. 아직 휴대폰에 남아 있습니다</string>
     <string name="n_maybe_incomplete">" · 사본 %1$s개가 불완전할 수 있음"</string>
     <string name="reset_failed">초기화가 완료되지 않았습니다. 이전 데이터를 삭제하지 못했습니다. 다시 시도하세요.</string>
+    <string name="n_backup_failed_reason">백업에 실패했습니다(%1$s). 대상 위치를 확인하고 다시 시도하세요.</string>
+    <string name="bulk_partial">%2$d개 중 %1$d개 완료: 나머지는 그대로입니다</string>
 </resources>

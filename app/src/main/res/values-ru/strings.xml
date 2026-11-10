@@ -2165,4 +2165,6 @@
     <string name="n_originals_kept">Не удалось удалить оригиналы: %1$d. Они остались на телефоне</string>
     <string name="n_maybe_incomplete">" · возможно неполных копий: %1$s"</string>
     <string name="reset_failed">Сброс не завершён: старые данные не удалось удалить. Попробуй ещё раз.</string>
+    <string name="n_backup_failed_reason">Не удалось создать резервную копию (%1$s). Проверь место сохранения и попробуй снова.</string>
+    <string name="bulk_partial">Выполнено %1$d из %2$d: остальное осталось как было</string>
 </resources>

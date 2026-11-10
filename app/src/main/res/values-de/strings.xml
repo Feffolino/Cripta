@@ -2035,4 +2035,6 @@
     <string name="n_originals_kept">%1$d Originale konnten nicht gelöscht werden: Sie sind noch auf dem Telefon</string>
     <string name="n_maybe_incomplete">" · %1$s Kopien evtl. unvollständig"</string>
     <string name="reset_failed">Zurücksetzen nicht abgeschlossen: Die alten Daten konnten nicht gelöscht werden. Versuche es erneut.</string>
+    <string name="n_backup_failed_reason">Sicherung fehlgeschlagen (%1$s). Prüfe das Ziel und versuche es erneut.</string>
+    <string name="bulk_partial">%1$d von %2$d erledigt: der Rest blieb unverändert</string>
 </resources>

@@ -35,7 +35,11 @@ internal object BackupExtras {
     const val MAGIC = 0x43524558 // "CREX"
 
     /** What [read] found: people restored, and whether any analysis came with them. */
-    class Contents { var people = 0; var analysis = false }
+    class Contents {
+        var people = 0; var analysis = false
+        /** Old person id -> restored id, for what refers to people (saved filters). */
+        val personIds = HashMap<Long, Long>()
+    }
 
     private fun JSONObject.optLongOrNull(k: String): Long? = if (!has(k) || isNull(k)) null else optLong(k)
     private fun JSONObject.optStrOrNull(k: String): String? = if (!has(k) || isNull(k)) null else optString(k)
@@ -169,6 +173,7 @@ internal object BackupExtras {
                 p.optLongOrNull("cover")?.let { covers[id] = it }
             }
         }
+        contents?.personIds?.putAll(personIds)
         o.optJSONArray("personMedia")?.let { a ->
             for (i in 0 until a.length()) {
                 val m = a.getJSONObject(i)

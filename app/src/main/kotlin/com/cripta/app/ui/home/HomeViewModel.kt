@@ -69,11 +69,17 @@ class HomeViewModel @Inject constructor(
             // Emojis of folders and tags (older vaults, restored backups) become icons.
             runCatching { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
             // Resume downloads/conversions that were waiting when Android killed the app.
-            if (repo.claimJobRestore()) runCatching { restorePendingJobs() }
+            if (repo.claimJobRestore()) {
+                val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
+                // Not everything was resumed: the next time Home opens tries again.
+                if (!complete) repo.releaseJobRestore()
+            }
         }
     }
 
-    private suspend fun restorePendingJobs() {
+    /** Resume what was waiting; false when something could not be (unreadable list, start refused). */
+    private suspend fun restorePendingJobs(): Boolean {
+        var complete = true
         val queued = downloadQueue.downloads.value.filter { !it.finished }
         val queuedUrls = queued.map { it.url }.toSet()
         val queuedIds = queued.map { it.id }.toSet()
@@ -106,16 +112,18 @@ class HomeViewModel @Inject constructor(
                         )
                     }.isSuccess
                     if (started) repo.deletePendingJob(job.id)   // the service stores it again under a new id
+                    else complete = false
                 }
                 "convert" -> {
                     val id = o.optString("id")
                     if (id.isBlank() || id in converting) continue
                     if (repo.fileById(id) == null) { repo.deletePendingJob(job.id); continue }
                     val after = com.cripta.app.data.ConvertAfter.entries.getOrNull(o.optInt("after", -1))
-                    com.cripta.app.work.ConversionService.startConvert(appContext, id, after)
+                    if (runCatching { com.cripta.app.work.ConversionService.startConvert(appContext, id, after) }.isFailure) complete = false
                 }
             }
         }
+        return complete
     }
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)

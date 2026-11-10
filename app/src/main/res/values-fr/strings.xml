@@ -2100,4 +2100,6 @@
     <string name="n_originals_kept">%1$d originaux n\'ont pas pu être supprimés : ils sont toujours sur le téléphone</string>
     <string name="n_maybe_incomplete">" · %1$s copies peut-être incomplètes"</string>
     <string name="reset_failed">Réinitialisation incomplète : les anciennes données n\'ont pas pu être supprimées. Réessaie.</string>
+    <string name="n_backup_failed_reason">Échec de la sauvegarde (%1$s). Vérifie la destination et réessaie.</string>
+    <string name="bulk_partial">%1$d sur %2$d faits : le reste n\'a pas changé</string>
 </resources>

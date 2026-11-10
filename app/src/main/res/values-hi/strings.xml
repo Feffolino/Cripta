@@ -2035,4 +2035,6 @@
     <string name="n_originals_kept">%1$d मूल फ़ाइलें नहीं हटाई जा सकीं: वे अब भी फ़ोन में हैं</string>
     <string name="n_maybe_incomplete">" · %1$s प्रतियाँ शायद अधूरी"</string>
     <string name="reset_failed">रीसेट पूरा नहीं हुआ: पुराना डेटा हटाया नहीं जा सका। फिर कोशिश करें।</string>
+    <string name="n_backup_failed_reason">बैकअप विफल (%1$s)। गंतव्य जाँचें और फिर कोशिश करें।</string>
+    <string name="bulk_partial">%2$d में से %1$d हुए: बाकी जैसे थे वैसे ही रहे</string>
 </resources>

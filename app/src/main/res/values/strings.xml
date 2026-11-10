@@ -2035,4 +2035,6 @@
     <string name="n_originals_kept">%1$d originals could not be deleted: they are still on the phone</string>
     <string name="n_maybe_incomplete">" · %1$s copies maybe incomplete"</string>
     <string name="reset_failed">Reset not completed: the old data could not be deleted. Try again.</string>
+    <string name="n_backup_failed_reason">Backup failed (%1$s). Check the destination and try again.</string>
+    <string name="bulk_partial">%1$d of %2$d done: the rest was left as it was</string>
 </resources>

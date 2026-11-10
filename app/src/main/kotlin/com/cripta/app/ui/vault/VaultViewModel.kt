@@ -165,6 +165,31 @@ class VaultViewModel @Inject constructor(
         }
     }
 
+    /** How many items of a bulk action were done, counted as it goes. */
+    class BulkCount { var done = 0 }
+
+    /**
+     * Like [launchBulk], for actions the screen announces: [onDone] runs after the work with how
+     * many items were really done (0 when the vault was locked or the first one failed), so the
+     * announcement states the real result and never the number asked for.
+     */
+    private fun launchBulkCounted(what: String, onDone: (Int) -> Unit, block: suspend (BulkCount) -> Unit) = viewModelScope.launch {
+        val count = BulkCount()
+        val held = session.beginWork()
+        if (held) {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block(count) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logException(android.util.Log.ERROR, "VaultViewModel", "$what failed", e)
+            } finally {
+                session.endWork()
+            }
+        }
+        onDone(count.done)
+    }
+
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
 
     /** Per-file cover version; a cover re-keyed on its entry reloads after [ThumbnailLoader.regenerate]
@@ -587,8 +612,11 @@ class VaultViewModel @Inject constructor(
     fun createFolder(name: String) = viewModelScope.launch {
         repo.createFolder(name, currentFolderId.value)    }
 
-    fun deleteFolder(folder: FolderEntity) = launchBulk("deleteFolder") {
-        repo.deleteFolderRecursive(folder.id).forEach { thumbs.evict(it) }    }
+    /** [onDone] gets 1 when the folder was deleted, 0 when it was not. */
+    fun deleteFolder(folder: FolderEntity, onDone: (Int) -> Unit = {}) = launchBulkCounted("deleteFolder", onDone) { c ->
+        repo.deleteFolderRecursive(folder.id).forEach { thumbs.evict(it) }
+        c.done = 1
+    }
 
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
         repo.renameFolder(folder, name)    }
@@ -709,8 +737,10 @@ class VaultViewModel @Inject constructor(
     fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
         repo.setTagAlias(tagName, alias)    }
 
-    fun moveFiles(fileIds: List<String>, folderId: Long?) = launchBulk("moveFiles") {
-        fileIds.forEach { repo.moveFile(it, folderId) }    }
+    /** [onDone] gets how many files were really moved. */
+    fun moveFiles(fileIds: List<String>, folderId: Long?, onDone: (Int) -> Unit = {}) = launchBulkCounted("moveFiles", onDone) { c ->
+        fileIds.forEach { repo.moveFile(it, folderId); c.done++ }
+    }
 
     // --- Undo support (snackbar "Annulla") ---
     /** Put files back into the folders they were in before a move. */
@@ -737,9 +767,11 @@ class VaultViewModel @Inject constructor(
         }
     }
 
-    fun deleteFiles(fileIds: List<String>) = launchBulk("deleteFiles") {
+    /** [onDone] gets how many files were really deleted (or trashed). */
+    fun deleteFiles(fileIds: List<String>, onDone: (Int) -> Unit = {}) = launchBulkCounted("deleteFiles", onDone) { c ->
         // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
-        fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it) }    }
+        fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it); c.done++ }
+    }
 
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = launchBulk("reorder") {

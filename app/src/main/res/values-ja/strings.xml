@@ -1970,4 +1970,6 @@
     <string name="n_originals_kept">元のファイル%1$d件を削除できませんでした。まだ端末に残っています</string>
     <string name="n_maybe_incomplete">" · %1$s件のコピーが不完全の可能性"</string>
     <string name="reset_failed">リセットが完了しませんでした。古いデータを削除できませんでした。もう一度お試しください。</string>
+    <string name="n_backup_failed_reason">バックアップに失敗しました（%1$s）。保存先を確認して、もう一度お試しください。</string>
+    <string name="bulk_partial">%2$d件中%1$d件が完了。残りはそのままです</string>
 </resources>

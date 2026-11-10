@@ -2295,4 +2295,6 @@
     <string name="n_originals_kept">تعذّر حذف %1$d من الملفات الأصلية: ما زالت على الهاتف</string>
     <string name="n_maybe_incomplete">" · %1$s نسخ قد تكون ناقصة"</string>
     <string name="reset_failed">لم تكتمل إعادة الضبط: تعذّر حذف البيانات القديمة. حاول مرة أخرى.</string>
+    <string name="n_backup_failed_reason">فشل النسخ الاحتياطي (%1$s). تحقق من الوجهة وحاول مرة أخرى.</string>
+    <string name="bulk_partial">تم %1$d من %2$d: وبقي الباقي كما كان</string>
 </resources>

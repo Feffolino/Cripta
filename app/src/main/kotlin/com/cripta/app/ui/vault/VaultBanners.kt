@@ -199,6 +199,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         val title = when {
                             state.active -> str(R.string.importing_progress, minOf(state.done + 1, state.total), state.total)
+                            state.cancelled -> str(R.string.n_import_cancelled)
                             ok -> str(R.string.n_import_done)
                             else -> str(R.string.n_import_done_errors)
                         }
