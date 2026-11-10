@@ -214,12 +214,15 @@ fun SettingsScreen(
             if (current == SettingsPage.ETICHETTE) {
                 // The live preview stays pinned on top while the options scroll under it.
                 // Same side margin as the sections under it; the caption reads as one with the covers.
-                Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
-                    com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
-                    Text(str(R.string.live_preview), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // It is one header with the top bar: it lifts with it when the sections scroll under.
+                com.cripta.app.ui.components.LiftedHeader(topLift.lifted) {
+                    Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
+                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
+                        Text(str(R.string.live_preview), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             // Each page is a list of named sections: a search result scrolls to its section and marks it.

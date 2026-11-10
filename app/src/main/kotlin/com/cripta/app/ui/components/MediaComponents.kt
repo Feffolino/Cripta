@@ -122,13 +122,13 @@ fun MediaThumb(
 /** Neutral tile behind a cover while it loads (and around images with transparency). */
 @Composable
 fun CoverPlaceholderBackground() {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+    Box(Modifier.fillMaxSize().background(LocalTileContainer.current ?: MaterialTheme.colorScheme.surfaceContainer))
 }
 
 /** A cover without an image: the file type's icon on the neutral tile. */
 @Composable
 fun CoverPlaceholder(icon: ImageVector, size: Dp) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(LocalTileContainer.current ?: MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size))
     }
 }

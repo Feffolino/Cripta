@@ -79,9 +79,10 @@ fun criptaTopBarColors(lifted: Boolean): androidx.compose.material3.TopAppBarCol
  * so the bar never lifts alone and looks detached from what sits under it.
  *
  * The tonal pieces inside move one tier up too, so they keep standing out on the lifted header:
- * fields (normally `surfaceContainer`) take `surfaceContainerHigh`, and everything filled with
- * [tonalContainer] (chips, removable filters, neutral tag pills, progress banners) gets a touch
- * of `onSurface`, the way the surface tiers step (lighter in dark, darker in light).
+ * fields and cover tiles (normally `surfaceContainer`, the lifted header's own colour) take
+ * `surfaceContainerHigh`, and everything filled with [tonalContainer] (chips, removable filters,
+ * neutral tag pills, progress banners) gets a touch of `onSurface`, the way the surface tiers step
+ * (lighter in dark, darker in light).
  */
 @Composable
 fun LiftedHeader(
@@ -98,7 +99,11 @@ fun LiftedHeader(
     val tonal by androidx.compose.animation.animateColorAsState(
         if (lifted) scheme.onSurface.copy(alpha = 0.08f).compositeOver(scheme.secondaryContainer) else scheme.secondaryContainer,
         spec, label = "headerTonal")
-    CompositionLocalProvider(LocalFieldContainer provides field, LocalTonalContainer provides tonal) {
+    CompositionLocalProvider(
+        LocalFieldContainer provides field,
+        LocalTileContainer provides field,
+        LocalTonalContainer provides tonal,
+    ) {
         androidx.compose.foundation.layout.Column(
             modifier.fillMaxWidth().background(background),
             content = content,
@@ -112,6 +117,13 @@ fun LiftedHeader(
  * [LiftedHeader] the plain fill would sit almost on the header's own colour (light theme).
  */
 val LocalTonalContainer = androidx.compose.runtime.compositionLocalOf<Color?> { null }
+
+/**
+ * The neutral tile behind a cover without its picture ([CoverPlaceholder]); null =
+ * `surfaceContainer`. A [LiftedHeader] is itself `surfaceContainer`, so a cover drawn in it (the
+ * live preview of Impostazioni › Etichette) moves one tier up to keep its edge.
+ */
+val LocalTileContainer = androidx.compose.runtime.compositionLocalOf<Color?> { null }
 
 /** See [LocalTonalContainer]. */
 @Composable
