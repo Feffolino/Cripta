@@ -3,6 +3,28 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-10
+
+- Improve sort sheet contrast and labels, and enlarge the People favourite target `d9c5d88`
+- Test saved viewer settings and the order of hidden favourites `e74e128`
+- Show loading placeholders for the Intro and ending analysis summary `defa38a`
+- Refine the Arabic search label and Italian passphrase length message `2e82e75`
+
+## 2026-11-09
+
+- Cover corrupted backups in tests, fix lint warnings and update CI tooling `b8a136e` `4c39c52` `664ff1e` `cf66304`
+- Keep exception messages out of release logs `3206dce`
+- Wipe temporary plaintext keyset copies after use `3c05cba`
+- Show the people count and favourite-first rule in the People sort sheet `f08c5ff`
+- Put sorting first in the filter sheet and add a matching People sort sheet `dfdcd69`
+- Show loading placeholders for Favourites and folder covers, and name people in search `ce3ae0c`
+- Move the favourite star towards the corner of the face `038480c`
+- Paste links directly into a person's profile `581269a`
+- Read saved rotation preferences before opening a video `9ddc85f`
+- Open links from notes, sort favourite people first, find people in search and show loading placeholders `e38b0e1`
+- Show downloader folder levels in a fixed-height sheet `5aac08d`
+- Show the latest backup, a folder picker and a passphrase length bar `b54f35a`
+
 ## 2026-11-08
 
 - Ignore stray secrets, loose APKs, Windows metadata and Python caches `712cbfc`
