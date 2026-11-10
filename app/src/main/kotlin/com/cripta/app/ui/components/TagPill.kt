@@ -1,5 +1,9 @@
 package com.cripta.app.ui.components
 
+import com.cripta.app.ui.theme.popOn
+import com.cripta.app.ui.theme.Motion
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -147,6 +151,13 @@ fun TagPill(
     val minH = when (size) { TagPillSize.Small -> 22.dp; TagPillSize.Medium -> 32.dp; TagPillSize.Large -> 40.dp }
     val iconSize = if (size == TagPillSize.Small) 12.dp else 16.dp
 
+    // A pill that toggles eases between Off and On (colours over SHORT, the tick pops) so the change
+    // is seen under the finger; pills that only show a tag skip the animation state entirely.
+    val toggles = onClick != null
+    val shownBg = if (toggles) animateColorAsState(bg, tween(Motion.SHORT, 0, Motion.EaseOutQuart), label = "tagBg").value else bg
+    val shownFg = if (toggles) animateColorAsState(fg, tween(Motion.SHORT, 0, Motion.EaseOutQuart), label = "tagFg").value else fg
+    val markPop = if (toggles) Modifier.popOn(on) else Modifier
+
     var m = modifier
     if (onClick != null) {
         val toggle = state == TagPillState.On || state == TagPillState.Off
@@ -170,7 +181,7 @@ fun TagPill(
     }
     if (maxWidth != Dp.Unspecified) m = m.widthIn(max = maxWidth)
     Row(
-        m.heightIn(min = minH).clip(CircleShape).background(bg)
+        m.heightIn(min = minH).clip(CircleShape).background(shownBg)
             .then(if (rim != null) Modifier.border(1.dp, rim, CircleShape) else Modifier)
             .padding(horizontal = hPad, vertical = vPad),
         verticalAlignment = Alignment.CenterVertically,
@@ -181,26 +192,26 @@ fun TagPill(
         val markOnIcon = mark != null && tagIcon != null && leadingIcon == null
         val lead: ImageVector? = if (markOnIcon) null else mark ?: leadingIcon
         if (lead != null) {
-            Icon(lead, null, tint = fg, modifier = Modifier.padding(end = 4.dp).size(iconSize))
+            Icon(lead, null, tint = shownFg, modifier = Modifier.padding(end = 4.dp).size(iconSize).then(if (mark != null) markPop else Modifier))
         } else if (tagIcon == null) {
             // The tag's own colour as a dot (DS cr-tag__dot: 6dp small, 8dp otherwise), so every
             // tag is recognisable even when it is off.
             Box(Modifier.padding(end = 4.dp).size(if (size == TagPillSize.Small) 6.dp else iconSize), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (on) fg else color))
+                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (on) shownFg else color))
             }
         }
         if (tagIcon != null) {
             // Its room is kept while the icon loads, so the pill never grows under the finger.
             val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tagIcon)
             Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
-                if (markOnIcon && mark != null) Icon(mark, null, tint = fg, modifier = Modifier.matchParentSize())
-                else if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize())
+                if (markOnIcon && mark != null) Icon(mark, null, tint = shownFg, modifier = Modifier.matchParentSize().then(markPop))
+                else if (drawn != null) Icon(drawn, null, tint = shownFg, modifier = Modifier.matchParentSize())
             }
         }
         if (text.isNotEmpty()) Text(
             text,
             style = style,
-            color = fg,
+            color = shownFg,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textDecoration = if (state == TagPillState.Excluded) TextDecoration.LineThrough else null,
@@ -208,7 +219,7 @@ fun TagPill(
             // the viewer's quick bar showed empty pills. [maxWidth] bounds it where needed.
         )
         if (trailingIcon != null) {
-            Icon(trailingIcon, null, tint = fg, modifier = Modifier.padding(start = 4.dp).size(iconSize))
+            Icon(trailingIcon, null, tint = shownFg, modifier = Modifier.padding(start = 4.dp).size(iconSize))
         }
     }
 }

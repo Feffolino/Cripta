@@ -143,7 +143,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
         topBar = {
             if (selected.isNotEmpty() && p != null) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                title = { Text(str(R.string.n_selected, selected.size)) },
+                title = { com.cripta.app.ui.components.RollingCountText(selected.size) { str(R.string.n_selected, it) } },
                 navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, str(R.string.cancel_selection)) } },
                 actions = {
                     TextButton(onClick = { vm.removeFromPerson(p.id, selected); selected = emptySet() }) { com.cripta.app.ui.components.ButtonText(str(R.string.remove_short)) }

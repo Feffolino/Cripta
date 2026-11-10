@@ -291,7 +291,7 @@ private fun IntroResultsPage(
             topBar = {
                 if (selected.isNotEmpty()) TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                     colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                    title = { Text(str(R.string.n_selected_f, selected.size)) },
+                    title = { com.cripta.app.ui.components.RollingCountText(selected.size) { str(R.string.n_selected_f, it) } },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, str(R.string.cancel_selection)) } },
                     actions = {
                         TextButton(onClick = { merging = selectedSigs }, enabled = selectedSigs.size >= 2) { com.cripta.app.ui.components.ButtonText(str(R.string.merge)) }

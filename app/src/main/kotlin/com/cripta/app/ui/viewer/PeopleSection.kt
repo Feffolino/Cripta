@@ -5,6 +5,7 @@ import com.cripta.app.str
 import com.cripta.app.plural
 
 import com.cripta.app.ui.theme.CriptaIcons
+import com.cripta.app.ui.theme.popOn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -304,9 +305,13 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
             return@Row
         }
         if (p != null) IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
-            Icon(if (p.entity.favorite) CriptaIcons.Star else CriptaIcons.StarBorder,
-                if (p.entity.favorite) str(R.string.unfavorite_x, p.title) else str(R.string.favorite_x, p.title),
-                tint = if (p.entity.favorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurfaceVariant)
+            val fav = p.entity.favorite
+            androidx.compose.animation.Crossfade(fav, animationSpec = com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "personStar") { on ->
+                Icon(if (on) CriptaIcons.Star else CriptaIcons.StarBorder,
+                    if (on) str(R.string.unfavorite_x, p.title) else str(R.string.favorite_x, p.title),
+                    tint = if (on) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.popOn(fav))
+            }
         }
         Box {
             IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.face_more_actions)) }

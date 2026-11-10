@@ -1,5 +1,6 @@
 package com.cripta.app.ui.auth
 
+import com.cripta.app.ui.theme.shakeOn
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -128,7 +129,7 @@ fun AuthScreen(
             val pinOnly = !state.firstRun && (state.pin == PinStep.REQUIRED || state.pin == PinStep.SECOND)
             val hasCode = !state.firstRun && !state.noDeviceCredential && state.pin != PinStep.NONE
             val code: @Composable (Boolean) -> Unit = { compact ->
-                CodeEntry(kind = state.secretKind, busy = state.pinBusy, alternative = !pinOnly,
+                CodeEntry(kind = state.secretKind, busy = state.pinBusy, failed = state.error != null, alternative = !pinOnly,
                     compact = compact, onSubmit = onSubmitPin)
             }
             // Name and what is needed to get in.
@@ -264,6 +265,7 @@ fun AuthScreen(
 private fun CodeEntry(
     kind: com.cripta.app.security.SecretKind,
     busy: Boolean,
+    failed: Boolean,
     alternative: Boolean,
     compact: Boolean,
     onSubmit: (CharArray) -> Unit,
@@ -273,8 +275,17 @@ private fun CodeEntry(
         TextButton(onClick = { open = true }) { com.cripta.app.ui.components.ButtonText(str(R.string.auth_use_code, kind.noun)) }
         return
     }
-    if (kind == com.cripta.app.security.SecretKind.PIN) PinKeypad(busy, compact, onSubmit)
-    else PasswordEntry(busy, autoFocus = true, compact = compact, onSubmit = onSubmit)
+    // A check that ends with an error (busy -> idle, error set) is a refused code: shake once.
+    var fails by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var wasBusy by remember { mutableStateOf(busy) }
+    LaunchedEffect(busy, failed) {
+        if (wasBusy && !busy && failed) fails++
+        wasBusy = busy
+    }
+    androidx.compose.foundation.layout.Box(Modifier.shakeOn(fails)) {
+        if (kind == com.cripta.app.security.SecretKind.PIN) PinKeypad(busy, compact, onSubmit)
+        else PasswordEntry(busy, autoFocus = true, compact = compact, onSubmit = onSubmit)
+    }
 }
 
 /** Numeric keypad: dots for the digits typed, ⌫ (hold to clear), ✓ to unlock. */

@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.theme.popIn
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -243,7 +244,10 @@ internal fun ThumbBox(
             val p = f.playbackPosMs; val d = f.durationMs
             if (p != null && d != null && d > 0) (p.toFloat() / d).coerceIn(0f, 1f) else null
         } else null
-        val shownWatched = watched?.takeIf { it > 0.01f }
+        val shownWatched = watched?.takeIf { it > 0.01f }?.let { w ->
+            // A new position (back from the player with the cover on screen) slides to its width.
+            androidx.compose.animation.core.animateFloatAsState(w, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.LONG), label = "watched").value
+        }
         if (tags.isNotEmpty()) {
             TagBadges(
                 tags = tags,
@@ -262,7 +266,7 @@ internal fun ThumbBox(
         if (favorite || faces.isNotEmpty()) {
             Row(Modifier.align(Alignment.TopStart).padding(if (compact) 4.dp else 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (favorite) com.cripta.app.ui.components.CoverStar(Modifier, size = if (compact) 20.dp else 28.dp)
+                com.cripta.app.ui.components.AnimatedCoverStar(favorite, size = if (compact) 20.dp else 28.dp)
                 if (people != null && faces.isNotEmpty()) CoverFaces(faces, display?.coverPeopleSize ?: 1, people.blurred, people.crop)
             }
         }
@@ -312,6 +316,8 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
 private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall
+    // Tags the cover had when it appeared: only ones added after that animate in.
+    val knownTags = remember { tags.mapTo(mutableSetOf()) { it.id } }
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
@@ -378,9 +384,14 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
             rows.asReversed().forEachIndexed { r, row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEach { i ->
-                        com.cripta.app.ui.components.TagPill(
-                            texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp, tagIcon = tags[i].icon,
-                        )
+                        androidx.compose.runtime.key(tags[i].id) {
+                            val fresh = remember { tags[i].id !in knownTags }
+                            androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
+                            com.cripta.app.ui.components.TagPill(
+                                texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp, tagIcon = tags[i].icon,
+                                modifier = Modifier.popIn(fresh),
+                            )
+                        }
                     }
                     if (r == 0 && extra > 0) com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
                 }

@@ -494,7 +494,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             if (selected.isNotEmpty()) {
                 val chosen = overview?.people.orEmpty().filter { it.id in selected }
                 TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
-                    title = { Text(plural(R.plurals.n_selected_f_pl, selected.size)) },
+                    title = { com.cripta.app.ui.components.RollingCountText(selected.size) { plural(R.plurals.n_selected_f_pl, it) } },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, str(R.string.cancel_selection)) } },
                     actions = {
                         val allFav = chosen.isNotEmpty() && chosen.all { it.entity.favorite }

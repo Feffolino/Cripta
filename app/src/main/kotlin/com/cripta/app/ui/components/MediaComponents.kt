@@ -115,7 +115,7 @@ fun MediaThumb(
             CoverPlaceholder(icon, 28.dp)
         }
         if (isVideo) CoverPlayMark(Modifier.align(Alignment.Center))
-        if (file.isFavorite && showFavoriteBadge) CoverStar(Modifier.align(Alignment.TopStart).padding(8.dp))
+        AnimatedCoverStar(file.isFavorite && showFavoriteBadge, Modifier.align(Alignment.TopStart).padding(8.dp))
     }
 }
 
@@ -148,6 +148,22 @@ fun CoverStar(modifier: Modifier = Modifier, size: Dp = 28.dp, description: Stri
     Box(modifier.size(size).clip(CircleShape).background(OnImageGlass), contentAlignment = Alignment.Center) {
         Icon(CriptaIcons.Star, description, tint = com.cripta.app.ui.theme.Favorite, modifier = Modifier.size(size * 0.64f))
     }
+}
+
+/**
+ * [CoverStar] that comes and goes: made a favourite while on screen, it grows in from 0.7 on the
+ * quint ease-out; a cover that opens (or scrolls in) already starred shows it as is.
+ */
+@Composable
+fun AnimatedCoverStar(visible: Boolean, modifier: Modifier = Modifier, size: Dp = 28.dp) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = androidx.compose.animation.scaleIn(com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.LONG), initialScale = 0.7f) +
+            androidx.compose.animation.fadeIn(com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT)),
+        exit = androidx.compose.animation.scaleOut(com.cripta.app.ui.theme.Motion.exit(com.cripta.app.ui.theme.Motion.SHORT), targetScale = 0.7f) +
+            androidx.compose.animation.fadeOut(com.cripta.app.ui.theme.Motion.exit(com.cripta.app.ui.theme.Motion.SHORT)),
+    ) { CoverStar(size = size) }
 }
 
 /** "This is a video" mark in the middle of a cover, when no length badge says it already. */

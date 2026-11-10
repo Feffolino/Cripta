@@ -167,7 +167,7 @@ internal fun TrashDialog(
                     title = {
                         if (inSel) {
                             val n = selF.size + selD.size
-                            Text(plural(R.plurals.n_selected_m, n), maxLines = 1)
+                            com.cripta.app.ui.components.RollingCountText(n) { plural(R.plurals.n_selected_m, it) }
                         } else Column {
                             Text(if (openId == null) str(R.string.sec_trash) else byId[openId]?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             // The top level says its count and rule in the page (DS); a folder shows where it was.

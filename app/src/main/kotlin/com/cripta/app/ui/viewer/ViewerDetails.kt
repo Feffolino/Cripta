@@ -27,6 +27,7 @@ import kotlin.math.roundToLong
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.text.style.TextAlign
 import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.popOn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.fadeIn
@@ -221,6 +222,7 @@ internal fun DetailsSheet(
                         if (file.isFavorite) str(R.string.favorite) else str(R.string.favorites),
                         a.onFavorite,
                         tint = if (file.isFavorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurface,
+                        active = file.isFavorite,
                         modifier = Modifier.weight(1f).semantics {
                             stateDescription = if (file.isFavorite) str(R.string.in_favorites) else str(R.string.not_in_favorites)
                         },
@@ -454,6 +456,8 @@ private fun SheetActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurface,
+    /** A toggle's state (the favourite star): the icon pops when it turns on. */
+    active: Boolean? = null,
 ) {
     // DS cr-action: the icon on a 48dp surface-control disc, its name under it.
     Column(
@@ -461,7 +465,12 @@ private fun SheetActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = if (tint == MaterialTheme.colorScheme.onSurface) MaterialTheme.colorScheme.onSurface else tint)
+            val iconTint by androidx.compose.animation.animateColorAsState(tint,
+                androidx.compose.animation.core.tween(com.cripta.app.ui.theme.Motion.MEDIUM, 0, com.cripta.app.ui.theme.Motion.EaseOutQuart), label = "actionTint")
+            androidx.compose.animation.Crossfade(icon, animationSpec = com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "actionIcon") { glyph ->
+                Icon(glyph, null, tint = iconTint,
+                    modifier = if (active != null) Modifier.popOn(active) else Modifier)
+            }
         }
         // Up to two lines, balanced: "Converti in MP4" reads in full instead of a cryptic short label.
         Text(label, style = MaterialTheme.typography.bodySmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,

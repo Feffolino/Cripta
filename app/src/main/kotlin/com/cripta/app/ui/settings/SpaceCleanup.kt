@@ -203,7 +203,7 @@ internal fun VaultCleanupDialog(
                         androidx.compose.foundation.layout.WindowInsetsSides.Horizontal +
                             androidx.compose.foundation.layout.WindowInsetsSides.Top
                     ),
-                    title = { Text(if (sel.isEmpty()) str(R.string.cleanup_title) else plural(R.plurals.n_selected_m, sel.size)) },
+                    title = { if (sel.isEmpty()) Text(str(R.string.cleanup_title)) else com.cripta.app.ui.components.RollingCountText(sel.size) { plural(R.plurals.n_selected_m, it) } },
                     navigationIcon = {
                         IconButton(onClick = { if (sel.isNotEmpty()) selected = emptySet() else onDismiss() }) {
                             Icon(if (sel.isNotEmpty()) CriptaIcons.Close else CriptaIcons.ArrowBack, str(R.string.back))

@@ -122,9 +122,40 @@ fun CriptaTheme(
     val fontResolver = androidx.compose.ui.platform.LocalFontFamilyResolver.current
     androidx.compose.runtime.LaunchedEffect(fontResolver) { runCatching { fontResolver.preload(Manrope) } }
     MaterialTheme(
-        colorScheme = colors,
+        colorScheme = animateColorScheme(colors),
         typography = CriptaTypography,
         shapes = CriptaShapes,
         content = content,
+    )
+}
+
+/**
+ * Switching light / dark (Impostazioni › Aspetto, or the system following the time of day) fades
+ * every role over [Motion.MEDIUM] instead of repainting the whole app in one frame.
+ */
+@Composable
+private fun animateColorScheme(target: androidx.compose.material3.ColorScheme): androidx.compose.material3.ColorScheme {
+    val spec = androidx.compose.animation.core.tween<Color>(Motion.MEDIUM, 0, Motion.EaseOutQuart)
+    @Composable fun a(c: Color) = androidx.compose.animation.animateColorAsState(c, spec, label = "scheme").value
+    return target.copy(
+        primary = a(target.primary), onPrimary = a(target.onPrimary),
+        primaryContainer = a(target.primaryContainer), onPrimaryContainer = a(target.onPrimaryContainer),
+        inversePrimary = a(target.inversePrimary),
+        secondary = a(target.secondary), onSecondary = a(target.onSecondary),
+        secondaryContainer = a(target.secondaryContainer), onSecondaryContainer = a(target.onSecondaryContainer),
+        tertiary = a(target.tertiary), onTertiary = a(target.onTertiary),
+        tertiaryContainer = a(target.tertiaryContainer), onTertiaryContainer = a(target.onTertiaryContainer),
+        background = a(target.background), onBackground = a(target.onBackground),
+        surface = a(target.surface), onSurface = a(target.onSurface),
+        surfaceVariant = a(target.surfaceVariant), onSurfaceVariant = a(target.onSurfaceVariant),
+        surfaceTint = a(target.surfaceTint),
+        inverseSurface = a(target.inverseSurface), inverseOnSurface = a(target.inverseOnSurface),
+        error = a(target.error), onError = a(target.onError),
+        errorContainer = a(target.errorContainer), onErrorContainer = a(target.onErrorContainer),
+        outline = a(target.outline), outlineVariant = a(target.outlineVariant), scrim = a(target.scrim),
+        surfaceBright = a(target.surfaceBright), surfaceDim = a(target.surfaceDim),
+        surfaceContainer = a(target.surfaceContainer), surfaceContainerHigh = a(target.surfaceContainerHigh),
+        surfaceContainerHighest = a(target.surfaceContainerHighest), surfaceContainerLow = a(target.surfaceContainerLow),
+        surfaceContainerLowest = a(target.surfaceContainerLowest),
     )
 }

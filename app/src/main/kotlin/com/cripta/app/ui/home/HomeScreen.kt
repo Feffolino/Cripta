@@ -356,18 +356,18 @@ private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolea
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(horizontal = 4.dp)) {
-            SummaryTile(CriptaIcons.Image, com.cripta.app.ui.components.formatCount(photos), str(R.string.photos), Modifier.weight(1f), onPhotos, compact, loading)
-            SummaryTile(CriptaIcons.Movie, com.cripta.app.ui.components.formatCount(videos), str(R.string.videos), Modifier.weight(1f), onVideos, compact, loading)
+            SummaryTile(CriptaIcons.Image, photos, str(R.string.photos), Modifier.weight(1f), onPhotos, compact, loading)
+            SummaryTile(CriptaIcons.Movie, videos, str(R.string.videos), Modifier.weight(1f), onVideos, compact, loading)
             // The third tile opens the "Altro" filter (notes, PDFs, any other file): it counts all of
             // them, so the number matches what opens. Named "Note" while notes are all there is.
-            SummaryTile(CriptaIcons.Description, com.cripta.app.ui.components.formatCount(others), if (onlyNotes) str(R.string.notes) else str(R.string.other),
+            SummaryTile(CriptaIcons.Description, others, if (onlyNotes) str(R.string.notes) else str(R.string.other),
                 Modifier.weight(1f), onNotes, compact, loading)
         }
     }
 }
 
 @Composable
-private fun SummaryTile(icon: ImageVector, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false,
+private fun SummaryTile(icon: ImageVector, count: Int, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false,
                         loading: Boolean = false) {
     val source = remember { MutableInteractionSource() }
     val interaction = if (loading) Modifier.clearAndSetSemantics {} else
@@ -381,7 +381,15 @@ private fun SummaryTile(icon: ImageVector, value: String, label: String, modifie
         val figure = if (compact) MaterialTheme.typography.titleLarge else com.cripta.app.ui.theme.FigureStyle
         // Loading: the figure is a block as tall as its line, so the strip keeps its height.
         if (loading) com.cripta.app.ui.components.Skeleton(Modifier.padding(vertical = 3.dp).width(40.dp).height(with(androidx.compose.ui.platform.LocalDensity.current) { figure.lineHeight.toDp() } - 6.dp))
-        else Text(value, style = figure, maxLines = 1)
+        else {
+            // A changed count (an import landed, files deleted) runs to its new value instead of
+            // jumping; the first value shows as is. Tabular figures keep the width steady.
+            val shown by androidx.compose.animation.core.animateIntAsState(count,
+                tween(Motion.LONG * 2, 0, Motion.EaseOutQuint), label = "summaryCount")
+            Text(com.cripta.app.ui.components.formatCount(shown), style = figure, maxLines = 1,
+                // TalkBack reads the final count, never a passing one.
+                modifier = Modifier.semantics { contentDescription = com.cripta.app.ui.components.formatCount(count) })
+        }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

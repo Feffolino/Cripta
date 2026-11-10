@@ -378,7 +378,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = { onTab(tab.route) },
-                            icon = { Icon(if (selected) tab.icon else tab.iconRest, tab.label) },
+                            icon = { TabIcon(selected, tab.icon, tab.iconRest, tab.label) },
                             label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
                             // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
@@ -436,7 +436,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                         NavigationRailItem(
                             selected = selected,
                             onClick = { onTab(tab.route) },
-                            icon = { Icon(if (selected) tab.icon else tab.iconRest, tab.label) },
+                            icon = { TabIcon(selected, tab.icon, tab.iconRest, tab.label) },
                             label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
                             // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
@@ -596,4 +596,13 @@ private fun androidx.navigation.NavController.openViewer(from: androidx.navigati
 /** Open the note [fileId] in its editor from the page [from], under the same rule as [openViewer]. */
 private fun androidx.navigation.NavController.openNote(from: androidx.navigation.NavBackStackEntry, fileId: String) {
     if (from.lifecycle.currentState == androidx.lifecycle.Lifecycle.State.RESUMED) navigate("note/$fileId")
+}
+
+/** The tab's glyph: outline at rest, filled when current, cross-faded so the switch reads as one change. */
+@Composable
+private fun TabIcon(selected: Boolean, filled: androidx.compose.ui.graphics.vector.ImageVector,
+                    rest: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
+    androidx.compose.animation.Crossfade(selected, animationSpec = Motion.enter(Motion.MEDIUM), label = "tabIcon") { on ->
+        Icon(if (on) filled else rest, label)
+    }
 }

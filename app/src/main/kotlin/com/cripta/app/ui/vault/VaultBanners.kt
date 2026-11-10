@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.theme.riseIn
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -69,7 +70,7 @@ internal fun EmptyState(
 ) {
     // Landscape: smaller badge and padding + scroll, so the import button is always reachable.
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val outer = if (landscape) modifier.verticalScroll(rememberScrollState()).padding(16.dp) else modifier.padding(32.dp)
+    val outer = (if (landscape) modifier.verticalScroll(rememberScrollState()).padding(16.dp) else modifier.padding(32.dp)).riseIn()
     val badge = if (landscape) 56.dp else 96.dp
     val glyph = if (landscape) 28.dp else 44.dp
     if (!filtering && folderName != null) {
