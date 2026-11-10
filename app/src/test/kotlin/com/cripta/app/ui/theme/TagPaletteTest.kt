@@ -45,21 +45,6 @@ class TagPaletteTest {
     }
 
     @Test
-    fun `on the light theme a pastel takes a fuller tone that stands out and keeps black text`() {
-        val lightPageBg = Color(0xFFF7F8FA)
-        for (c in TagPalette) {
-            val shown = shownOnLightTheme(c)
-            assertTrue("$c page", contrast(shown, lightPageBg) >= 2.3)
-            assertTrue("$c black", contrast(shown, Color.Black) >= 7.0)
-            assertEquals("$c hue", Hsv.of(c.toArgb()).h, Hsv.of(shown.toArgb()).h, 12f)
-        }
-        val dark = Color(0xFF1E3A8A)
-        assertEquals(dark, shownOnLightTheme(dark))
-        val grey = Hsv.of(shownOnLightTheme(Color(0xFFE5E7EB)).toArgb())
-        assertTrue("grey stays grey: ${grey.s}", grey.s < 0.12f)
-    }
-
-    @Test
     fun `hex codes round trip and bad ones are refused`() {
         assertEquals(0xFF6D9DF5.toInt(), parseColorHex("#6D9DF5"))
         assertEquals(0xFF6D9DF5.toInt(), parseColorHex(" 6d9df5 "))

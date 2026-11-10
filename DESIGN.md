@@ -33,20 +33,30 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
 - Tag and folder colours are the user's and share one palette, `TagPalette`: twelve pastel hues in
   OKLCH at lightness 0.86 and a soft chroma (0.10 at most), the first the accent's own blue
   (`#B9D2FF`), then indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a
-  blue-tinted slate; black reads on each at 13:1 or more. A colour is always shown in full, never
-  tinted down or mixed with black: tag pills, cover marks, the folder's disc and its empty card.
-  On the light theme's pages a pastel would almost vanish, so a colour lighter than OKLCH 0.70 is
-  drawn at 0.70, same hue, chroma at least 0.13 (`shownTagColor`): the presets stand out at about
-  2.4:1 and keep black text at 7.4:1. The saved colour never changes; marks over a picture and the
-  dark theme show it as chosen. Before the presets, in the first slot, both editors offer "Altro", a
+  blue-tinted slate; black reads on each at 13:1 or more. Before the presets, in the first slot, both editors offer "Altro", a
   round rainbow that opens a colour of the user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
   saved as a plain ARGB value like a preset; presets of earlier palettes move to the current ones
-  once (`FormerPresetColors`, database versions 36 and 37). Text and symbols on a colour are black
-  or white, whichever reads at 4.5:1 (black on every preset).
+  once (`FormerPresetColors`, database versions 36 and 37).
+- **One hue, several tones** (`tagTones` in `ui/theme/TagTones.kt`). A tag or folder saves one
+  colour (a plain ARGB value, never changed); the app takes its OKLCH hue and draws the tone that
+  suits the place, so a pastel never glares on the dark pages nor vanishes on the light ones:
+  - *container*, the ground of a tag pill, of an empty folder and the veil on the pictures that
+    peek out behind a folder's cover: `oklch(0.32 0.06 H)` dark, `oklch(0.90 0.06 H)` light;
+  - *on container*, the text and signs on it: `oklch(0.88 0.08 H)` dark, `oklch(0.40 0.12 H)`
+    light (about 8.8:1 and 6.8:1);
+  - *mark*, a small sign of the colour on a page (the dot of an Off pill, a colour swatch, the dot
+    of a folder without an emoji, the folder symbol): `oklch(0.80 0.11 H)` dark with a near-black
+    (`#0A0C10`) tick or letter, `oklch(0.55 0.14 H)` light with a white one;
+  - *pastel*, the saved preset itself (L 0.86), only on covers: the marks with an acronym and the
+    "Pillole piene", with a thin dark rim (`rgba(10,12,16,0.45)`, 1.5dp) and a soft shadow
+    (0 1px 3px at 35%), black text.
+  Chroma is trimmed where sRGB cannot hold it. The slate keeps 35% of the chroma (a tinted grey);
+  a colour of the user's own keeps its share of a preset's chroma (its own over 0.10, at most all
+  of it), so a grey stays grey, and its pastel is its hue at L 0.86.
 - Anything drawn over a picture (length, star, play mark, people's faces, the watched bar) sits on
   the dark glass `OnImageGlass` (black at 55%: the design system's 40% plus blur, darker here so
   white text keeps 4.5:1 without the blur), never on a gradient over the whole cover. Tags over a picture are the one
-  exception: their own colour, at 90% on the glass or in full (see Covers).
+  exception: their pastel, at 90% on the glass or in full (see Covers).
 
 ## Type
 
@@ -114,22 +124,23 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
 
 - **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
   Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Colour means "on":
-  Plain (a tag shown on a file) is the tag colour in full, black or white text at 4.5:1;
+  Plain (a tag shown on a file) is the container tone of the tag's hue with its on-container text;
   On (assigned, filtered) is the same plus a tick, so it reads
   apart from Off even with tag colours off. The tick takes the room of the dot, the pin or the
   tag's icon: turning a tag on or off never changes the pill's width (nothing after it moves). Over a picture (`onImage = true`) the pill is
-  the tag colour at 90% on the dark glass, with a 1dp rim of the same colour at 85%, text
-  black or white at 4.5:1. Off is neutral with muted text and only a dot in the tag colour (or the
-  tag's icon at 55%).
+  the tag's pastel at 90% on the dark glass, with a 1dp rim of the pastel at 85%, black text. Off
+  is neutral with muted text and only a dot in the mark tone (or the tag's icon at 55%).
   Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
   a weight (it would measure to nothing in a LazyRow).
 - **Tag icons** (`ui/tagicons/`): Fluent Emoji Flat by Microsoft (MIT, licence in
   `assets/tagicons/`), about 1,480 emoji drawn in their own colours, before the name in place of the
   colour dot. They are never tinted: not by the tag colour, the text colour or the state, and tag
-  colours off (Impostazioni › Etichette) leave them as they are. A Plain pill shows the icon in full,
-  Off at 55% opacity, On and Excluded put the tick or the "no" sign in its place; over a picture
-  it is as in the other states. On a folder it sits on the colour disc, which keeps the folder's
-  colour. The set has no skin tones and leaves out the abstract signs, the arrows, the keycaps and
+  colours off (Impostazioni › Etichette) leave them as they are. An emoji is never drawn on a
+  circle, anywhere: not in the pill, not on a cover mark, not on a folder (the pill and the cover
+  mark always change together). In the pill it sits straight on the ground, 18dp (Medium, Large)
+  or 14dp (Small), no shadow: a Plain pill shows it in full, Off at 55% opacity, On and Excluded
+  put the tick or the "no" sign in its place; over a picture it is as in the other states. On a
+  folder it stands alone (see Folders). The set has no skin tones and leaves out the abstract signs, the arrows, the keycaps and
   the few drawings that need a filter or are too detailed for 14 to 18dp (`scripts/tagicons.py`
   builds it from the npm package, with the names and keywords in the twelve languages from Unicode
   CLDR). Icon names saved by earlier versions (Tabler's, Fluent's) still lead to their closest
@@ -137,11 +148,14 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   English, common icons, and a searchable list. Folder customisation shows the search and results
   beside its colour controls. On a cover a tag shows only its symbol or its
   acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
-  `CoverTagStyle`): **Bollini** (default), round marks of one size (22dp, 18dp on small covers),
-  with its icon, else its alias (two characters at most), else its initial; **Pillole piene**,
-  pills with the icon and alias. Both are opaque, no rim, filled with the tag colour in full (the
-  accent when tag colours are off, `coverMarkFill`); the icon in its own colours, the alias black
-  or white, whichever reads at 4.5:1 (`coverMarkInk`). The "+N"
+  `CoverTagStyle`): **Bollini** (default), slots of one size (22dp, 18dp on small covers): a tag
+  with an emoji (its icon, or an alias that is an emoji) shows the emoji alone, 2dp smaller than
+  the slot, held on any picture by a soft shadow (`cover-emoji-shadow`: a 1px halo at 50% and
+  0 1px 1.5px at 30%; the only place emoji get a shadow); any other shows its alias (two
+  characters at most), else its initial, black on a round mark in its pastel; **Pillole piene**,
+  pills with the icon and alias on the pastel. Pastel marks are opaque, with the thin dark rim and
+  the soft shadow (`coverMarkFill`, `coverMarkInk`); with tag colours off they take the blue
+  preset (`#B9D2FF`). The "+N"
   mark stays on the dark glass, white. Both pack from the bottom edge in up to 3 rows, then "+N".
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
@@ -192,9 +206,12 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   simili" (remembered: never grouped again). No confirmation with the trash on, "Annulla" at the
   bottom; the last page says what was freed.
 - **Folders** (`FolderMosaic`): a stack — the cover in front (chosen from the folder menu,
-  "Scegli la copertina", else the newest file), the next two pictures peeking above it, dimmed
-  (the folder colour when there are none). The folder glyph (colour + emoji), star and count go
-  with the name underneath, never on the picture. No "more" button: actions are on long-press,
+  "Scegli la copertina", else the newest file), the next two pictures peeking above it, veiled by
+  the folder's container tone (60% the far one, 45% the near one; the container alone when there
+  are none). An empty folder is its container with its emoji (or the folder symbol in the mark
+  tone) alone, 48dp. Under the cover the folder's emoji alone, 20dp, never on a disc, or a 10dp
+  dot in its mark tone when it has no emoji; a folder without a colour takes the accent's quiet
+  tones. Star and count go with the name underneath, never on the picture. No "more" button: actions are on long-press,
   so the name keeps the whole width. In Raccolta and inside a folder the folders are a grid
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
   Video, Altro, Preferiti); the files follow under a "File" heading. Typing a name in the search
@@ -221,8 +238,10 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
 - **"+"**: adds things. Its actions (Importa, Cartella, Nota) open in one tonal pill to the left
   of the button, each a round accent icon with its name under it. "Apri a caso" opens rather than
   adds, so it is its own small button above the "+".
-- **Tag colours off** (Settings › Etichette): `TagPill` itself switches every tag to the accent,
-  so no screen can show tag colours the user turned off.
+- **Tag colours off** (Settings › Etichette): `TagPill` itself switches every tag to the accent's
+  quiet tones (`tagOffTones`: the pill on `#1E2A3D` dark / `#D6E4FF` light, the accent as text,
+  moved towards ink where it would read below 4.5:1), and cover marks take the blue preset, so no
+  screen can show tag colours the user turned off.
 - **Etichette** (Impostazioni): the live cover preview pinned on top, then "Libreria etichette"
   (each tag a plain 56dp row, `TagLibraryList`: the pill as it looks everywhere, a tap edits it,
   Modifica / Elimina in the row's ⋮, the delete in the error colour; "Mostra tutte" grows the list
@@ -236,8 +255,8 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   row with the pin icon. "Colore" is one line that scrolls sideways (`ColorChoiceRow`, shared with
   the folder dialog): first, always in view, "Altro" (a round rainbow; once a custom colour is
   chosen it sits inside the rainbow, ticked, and a tap opens it again), then, scrolling beside it,
-  "A" automatic (or none for a folder) and the twelve presets. The chosen swatch is
-  told by a ring and a tick, never by colour alone.
+  "A" automatic (or none for a folder) and the twelve presets, each swatch in its mark tone with
+  the tone's own ink. The chosen swatch is told by a ring and a tick, never by colour alone.
 - **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then
   slides in; the previous level never flashes.

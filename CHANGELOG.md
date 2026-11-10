@@ -3,6 +3,12 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-11
+
+- Draw tag and folder colours in tones of their hue: a quiet tonal ground with its own text on pages, a stronger mark for dots and swatches, the pastel only on covers (with a thin rim and a soft shadow)
+- Show tag and folder emoji alone, never on a circle: in the pill, on cover marks (with a soft shadow) and on folders
+- Veil the pictures behind a folder's cover with its tone, and ground an empty folder in it
+
 ## 2026-11-10
 
 - On the light theme, draw pastel tag and folder colours in a fuller tone of the same hue so they stand out from the page

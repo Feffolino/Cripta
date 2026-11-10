@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -176,29 +175,25 @@ fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
 }
 
 /**
- * Folder symbol tinted by [color], or the folder's [icon] in its place; an [emoji] of an older vault
- * (until it is turned into an icon) otherwise. [open]: the folder symbol drawn open (a drag hovering it).
+ * A folder's sign, never on a disc: its [icon] (an emoji) alone, or the [emoji] of an older vault
+ * (until it is turned into an icon); otherwise the folder symbol in the mark tone of its [color]
+ * (the accent without one). [open]: the folder symbol drawn open (a drag hovering it).
  */
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
-    // The folder's colour in full (a fuller tone of a pastel on the light theme); the symbol on it in black or white.
-    val c = color?.let { com.cripta.app.ui.theme.shownTagColor(Color(it)) }
+    val tones = com.cripta.app.ui.theme.rememberTagTones(color?.let { Color(it) }, colored = true)
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
-        if (c != null) {
-            Box(Modifier.matchParentSize().clip(CircleShape).background(c))
-        }
         if (resolved != null) {
             // Blank for the frame it takes to build, rather than flashing the folder symbol.
-            if (vector != null) Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.6f))
+            if (vector != null) Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize())
         } else if (!emoji.isNullOrBlank()) {
             // Sized in dp (not scaled by the user's font size) so the emoji always fits its box.
-            val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
+            val emojiSize = with(LocalDensity.current) { (size * 0.82f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
-            val tint = if (c == null) MaterialTheme.colorScheme.primary else if (c.luminance() >= 0.175f) Color.Black else Color.White
-            Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = tint, modifier = Modifier.size(size * 0.68f))
+            Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = tones.mark, modifier = Modifier.matchParentSize())
         }
     }
 }

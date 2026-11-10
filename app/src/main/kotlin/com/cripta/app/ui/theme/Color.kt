@@ -51,9 +51,9 @@ val LightOutlineVariant = Color(0xFFD9DFEA)
  * The one colour palette of tags and folders (the quick presets of both editors, the automatic
  * colour of a name, "Colori casuali"). Twelve pastel hues in OKLCH at one light lightness (0.86)
  * and a soft chroma (0.10 at most, less where sRGB cannot hold it that light), the first the
- * accent's own hue, the last a blue-tinted slate. Tags show them in full, never darkened, with
- * black text (13:1 or more on every preset). Text on any colour, a preset or the user's own, is
- * black or white, whichever reads at 4.5:1. Colours already saved with a tag or folder are plain
+ * accent's own hue, the last a blue-tinted slate. The pastel itself is drawn only on covers, with
+ * black text (13:1 or more on every preset); pages draw the tones of its hue ([tagTones]: a tonal
+ * container, its text, a stronger mark). Colours already saved with a tag or folder are plain
  * ARGB values; the presets of earlier palettes move to these ([FormerPresetColors]).
  */
 val TagPalette = listOf(
@@ -148,8 +148,9 @@ object DefaultTagColor {
 }
 
 /**
- * "Etichette colorate" (Settings › Etichette). Off: every tag pill uses the app accent instead of
- * its own colour, wherever it is drawn (read by TagPill, so no screen can forget it).
+ * "Etichette colorate" (Settings › Etichette). Off: every tag pill takes the accent's quiet tones
+ * ([tagOffTones]) and every cover mark the blue preset, wherever it is drawn (read by TagPill and
+ * [rememberTagTones], so no screen can forget it).
  */
 object TagColorsEnabled {
     var on by mutableStateOf(true)
@@ -201,53 +202,3 @@ val androidx.compose.material3.ColorScheme.accentTint: Color
 // (40% black gave about 2.9:1).
 val Glass = Color(0x99000000)
 
-/** Highest OKLCH lightness of a tag or folder colour drawn on a page of the light theme. */
-private const val LIGHT_THEME_MAX_L = 0.70f
-/** Chroma a coloured (not grey) tag or folder colour gets at least on the light theme. */
-private const val LIGHT_THEME_MIN_C = 0.13f
-
-/**
- * [color] as drawn on a page of the light theme: a pastel would almost vanish on the near-white
- * surfaces, so a colour lighter than OKLCH 0.70 is shown at 0.70, same hue, chroma at least 0.13
- * (greys stay grey), trimmed only where sRGB cannot hold it. The presets then stand out from the
- * page at about 2.4:1 and keep black text at 7.4:1 or more. Darker colours are drawn as they are;
- * the saved colour never changes, and the dark theme shows it as chosen.
- */
-fun shownOnLightTheme(color: Color): Color {
-    fun lin(c: Float) = if (c <= 0.04045f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
-    fun enc(c: Float) = if (c <= 0.0031308f) c * 12.92f else (1.055 * Math.pow(c.toDouble(), 1 / 2.4) - 0.055).toFloat()
-    val r = lin(color.red); val g = lin(color.green); val b = lin(color.blue)
-    val l0 = Math.cbrt((0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b))
-    val m0 = Math.cbrt((0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b))
-    val s0 = Math.cbrt((0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b))
-    val okL = (0.2104542553 * l0 + 0.7936177850 * m0 - 0.0040720468 * s0).toFloat()
-    if (okL <= LIGHT_THEME_MAX_L) return color
-    val okA = 1.9779984951 * l0 - 2.4285922050 * m0 + 0.4505937099 * s0
-    val okB = 0.0259040371 * l0 + 0.7827717662 * m0 - 0.8086757660 * s0
-    val hue = Math.atan2(okB, okA)
-    var chroma = Math.hypot(okA, okB)
-    if (chroma > 0.03) chroma = maxOf(chroma, LIGHT_THEME_MIN_C.toDouble())
-    val lightness = LIGHT_THEME_MAX_L.toDouble()
-    while (true) {
-        val a = chroma * Math.cos(hue); val bb = chroma * Math.sin(hue)
-        val l = Math.pow(lightness + 0.3963377774 * a + 0.2158037573 * bb, 3.0)
-        val m = Math.pow(lightness - 0.1055613458 * a - 0.0638541728 * bb, 3.0)
-        val s = Math.pow(lightness - 0.0894841775 * a - 1.2914855480 * bb, 3.0)
-        val lr = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
-        val lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
-        val lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-        val inGamut = listOf(lr, lg, lb).all { it in -1e-4..1.0001 }
-        if (inGamut || chroma <= 0.0) {
-            fun ch(v: Double) = enc(v.coerceIn(0.0, 1.0).toFloat()).coerceIn(0f, 1f)
-            return Color(ch(lr), ch(lg), ch(lb), color.alpha)
-        }
-        chroma = (chroma - 0.002).coerceAtLeast(0.0)
-    }
-}
-
-/** A tag or folder colour as drawn on the current theme's pages ([shownOnLightTheme] on the light one). */
-@androidx.compose.runtime.Composable
-fun shownTagColor(color: Color): Color {
-    val light = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f
-    return androidx.compose.runtime.remember(color, light) { if (light) shownOnLightTheme(color) else color }
-}

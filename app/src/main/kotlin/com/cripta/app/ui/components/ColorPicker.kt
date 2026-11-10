@@ -85,14 +85,19 @@ fun ColorChoiceRow(
         val slot = if (selected == null) 0 else presetIndex + 1
         if (slot > 1) scroll.scrollTo(with(density) { ((slot - 1) * SWATCH_SLOT_DP).dp.roundToPx() })
     }
+    // Every colour is shown in its mark tone for this theme (a swatch is a sign of the colour on a
+    // page, not the pastel), its tick in the tone's own ink.
+    val dark = com.cripta.app.ui.theme.isDarkPage()
+    val marks = remember(dark) { presets.map { com.cripta.app.ui.theme.tagTones(Color(it), dark) } }
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val customName = str(R.string.colour_custom)
+        val ownTones = if (custom) remember(selected, dark) { com.cripta.app.ui.theme.tagTones(Color(selected!!), dark) } else null
         Swatch(null, custom, if (custom) customName + " " + colorHex(selected!!) else customName,
-            own = if (custom) com.cripta.app.ui.theme.shownTagColor(Color(selected!!)) else null) { editing = true }
+            own = ownTones?.mark, ownInk = ownTones?.onMark) { editing = true }
         Row(Modifier.weight(1f).horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Swatch(noneFill, selected == null, noneDescription, label = noneLabel, cross = noneLabel == null) { onPick(null) }
             presets.forEachIndexed { i, argb ->
-                Swatch(com.cripta.app.ui.theme.shownTagColor(Color(argb)), selected == argb, str(PALETTE_NAMES[i])) { onPick(argb) }
+                Swatch(marks[i].mark, selected == argb, str(PALETTE_NAMES[i]), ink = marks[i].onMark) { onPick(argb) }
             }
         }
     }
@@ -116,6 +121,10 @@ private fun Swatch(
     label: String? = null,
     cross: Boolean = false,
     own: Color? = null,
+    /** Tick or letter on [fill]; by default black or white, whichever reads on it. */
+    ink: Color? = null,
+    /** Tick on [own]. */
+    ownInk: Color? = null,
     onClick: () -> Unit,
 ) {
     val base = fill ?: MaterialTheme.colorScheme.surfaceContainerHigh
@@ -130,13 +139,13 @@ private fun Swatch(
         contentAlignment = Alignment.Center,
     ) {
         // White or black, whichever reads on this colour (light colours took white before).
-        val ink = readableOn(Color.White, base)
+        val ink = ink ?: readableOn(Color.White, base)
         when {
             // The rainbow, as colour pickers usually draw "a colour of your own"; the chosen one inside.
             fill == null -> if (own != null) Box(
                 Modifier.size(22.dp).clip(CircleShape).background(own),
                 contentAlignment = Alignment.Center,
-            ) { Icon(CriptaIcons.Check, null, tint = readableOn(Color.White, own), modifier = Modifier.size(14.dp)) }
+            ) { Icon(CriptaIcons.Check, null, tint = ownInk ?: readableOn(Color.White, own), modifier = Modifier.size(14.dp)) }
             label != null && !selected -> Text(label, color = ink, style = MaterialTheme.typography.labelLarge)
             cross && !selected -> Icon(CriptaIcons.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             selected -> Icon(CriptaIcons.Check, null, tint = ink, modifier = Modifier.size(18.dp))

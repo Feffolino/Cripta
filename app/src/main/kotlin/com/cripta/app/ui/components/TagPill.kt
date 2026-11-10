@@ -24,14 +24,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -73,12 +71,13 @@ fun tagText(tag: TagEntity): String =
  * rows, filters, tag pickers, the viewer's quick bar, Home and the downloader, in three sizes.
  *
  * Colour means "this tag is on the file / in the filter"; neutral means "not":
- * - Plain (a tag shown on a file): the tag's colour in full, as the user chose it, black or white
- *   text (whichever reads at 4.5:1). Over a picture the same colour at 90% on the dark glass,
- *   with a rim of the same colour.
- * - On (assigned / filtered): the same full colour and text, plus a tick. Told apart from Off at a
+ * - Plain (a tag shown on a file): the tonal container of the tag's hue with its own text
+ *   ([com.cripta.app.ui.theme.TagTones]). Over a picture the tag's pastel at 90% on the dark
+ *   glass, black text, with a rim of the pastel.
+ * - On (assigned / filtered): the same container and text, plus a tick. Told apart from Off at a
  *   glance even when every tag has one colour (tag colours off).
- * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's colour.
+ * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's mark tone.
+ * A tag's emoji sits straight on the pill, never on a disc.
  * - Excluded: neutral, struck through, with a "no" sign.
  *
  * On, Off and Excluded take the same width (the tick takes the room of the dot, the pin or the
@@ -112,26 +111,29 @@ fun TagPill(
     tagIcon: String? = null,
 ) {
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tagIcon)
-    // With tag colours off (Settings › Etichette) every tag takes the accent, here for every screen.
-    val chosen = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
-    // On a page of the light theme a pastel takes a fuller tone of its hue; over a picture it stays.
-    val color = if (onImage) chosen else com.cripta.app.ui.theme.shownTagColor(chosen)
+    // The tones of the tag's hue for this theme; with tag colours off (Settings › Etichette) the
+    // accent's quiet tones, here for every screen.
+    val tones = com.cripta.app.ui.theme.rememberTagTones(color)
     val on = state == TagPillState.On
     val colored = on || state == TagPillState.Plain
     val neutral = if (onImage) OnImageGlass else tonalContainer()
     val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
-    // The tag's colour as the user chose it, never darkened or tinted down; over a picture it
-    // lets the picture through a little (90% on the dark glass).
+    // On a page the tonal container of the hue with its own text (never the pastel, which glares
+    // on the dark pages); over a picture the pastel lets the picture through a little (90% on the
+    // dark glass) with black text.
     val bg = when {
         !colored -> neutral
-        onImage -> color.copy(alpha = 0.9f).compositeOver(OnImageGlass)
-        else -> color.compositeOver(base)
+        onImage -> tones.pastel.copy(alpha = 0.9f).compositeOver(OnImageGlass)
+        else -> tones.container.compositeOver(base)
     }
-    val rim = if (colored && onImage) color.copy(alpha = 0.85f) else null
-    val fg = remember(bg, colored, muted) {
-        // Black or white, whichever reads at 4.5:1 on the colour (black on every preset).
-        if (!colored) muted else if (bg.luminance() >= 0.175f) Color.Black else Color.White
+    val rim = if (colored && onImage) tones.pastel.copy(alpha = 0.85f) else null
+    val fg = when {
+        !colored -> muted
+        onImage -> tones.onPastel
+        else -> tones.onContainer
     }
+    // The tag's sign: the dot of a pill without an icon, in the mark tone (the pastel over a picture).
+    val dot = if (onImage) tones.pastel else tones.mark
     // DS cr-tag: sm 22dp / 11sp bold, md 32dp / 13sp, lg 40dp / 14sp.
     val style = when (size) {
         TagPillSize.Small -> MaterialTheme.typography.labelSmall
@@ -189,7 +191,7 @@ fun TagPill(
             // The tag's own colour as a dot (DS cr-tag__dot: 6dp small, 8dp otherwise), so every
             // tag is recognisable even when it is off.
             Box(Modifier.padding(end = 4.dp).size(if (size == TagPillSize.Small) 6.dp else iconSize), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (colored) shownFg else color))
+                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(dot))
             }
         }
         if (resolved != null) {
@@ -197,8 +199,8 @@ fun TagPill(
             val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
             Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
                 if (markOnIcon && mark != null) Icon(mark, null, tint = shownFg, modifier = Modifier.matchParentSize().then(markPop))
-                // The icon keeps its own colours (it is not tinted); Off, the only state that shows it
-                // beside a neutral pill, dims it.
+                // The emoji alone, straight on the pill: no disc behind it, no shadow (the shadow is
+                // only for the marks on covers). It keeps its own colours; Off dims it to 55%.
                 else if (drawn != null) Icon(drawn, null, tint = Color.Unspecified,
                     modifier = Modifier.matchParentSize().alpha(if (state == TagPillState.Off) OFF_ICON_ALPHA else 1f))
             }

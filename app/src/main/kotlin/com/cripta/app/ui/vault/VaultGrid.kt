@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -201,10 +203,9 @@ internal fun badgeText(tag: TagEntity, @Suppress("UNUSED_PARAMETER") display: Di
     else -> tagAlias(tag)
 }
 
-/** A tag's colour on screen: its own, or the app accent for every tag when tag colours are off. */
-@Composable
+/** A tag's colour: its own, or the blue preset for every tag when tag colours are off (pills then take the accent's tones). */
 private fun tagHue(tag: TagEntity, display: DisplayPrefs?): Color =
-    if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary
+    if (display?.tagColors != false) com.cripta.app.ui.theme.tagColor(tag) else com.cripta.app.ui.theme.TagOffPastel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -314,7 +315,8 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
  * - [CoverTagStyle.BUBBLE] (default): round 22dp marks of one size, the tag's icon or its initial,
  *   so a row of them reads as a tidy strip and hides little of the picture;
  * - [CoverTagStyle.PILL]: pills with the tag's alias (and icon), no see-through.
- * Both fill with the tag's colour in full ([coverMarkFill]) and draw in black or white ([coverMarkInk]).
+ * Both fill with the tag's pastel ([coverMarkFill], a thin dark rim and a soft shadow) and draw in
+ * black ([coverMarkInk]); a tag with an emoji shows the emoji alone, never on a disc.
  * Up to 3 rows (automatic: by cover width, or fixed by the user), filled from the bottom; a "+N"
  * mark appears only once every row is full. A tag assigned while the cover is on screen pops in.
  */
@@ -347,7 +349,7 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
         // On-screen width of each mark, capped to a full row: a bubble is a fixed circle; a pill is
         // its measured text plus the icon and 8dp of padding on each side.
         val hPadPx = with(density) { 16.dp.toPx() }
-        val iconPx = with(density) { 12.dp.toPx() }
+        val iconPx = with(density) { 14.dp.toPx() }
         val iconGapPx = with(density) { 4.dp.toPx() }
         val bubblePx = with(density) { bubbleDp.toPx() }
         val widths = remember(texts, availPx, tags, bubbles, bubblePx) {
@@ -424,34 +426,95 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
 private fun bubbleText(tag: TagEntity): String =
     tag.alias?.takeIf { it.isNotBlank() }?.take(2) ?: tag.name.take(1).uppercase(com.cripta.app.Strings.locale)
 
-/** A cover mark's fill: the tag's colour as the user chose it, opaque, never darkened. */
-internal fun coverMarkFill(color: Color): Color = color.copy(alpha = 1f)
+/** A cover mark's fill: the tag's pastel ([com.cripta.app.ui.theme.tagPastel]), opaque: covers are the one place it is drawn. */
+internal fun coverMarkFill(color: Color): Color = com.cripta.app.ui.theme.tagPastel(color.copy(alpha = 1f))
 
-/** Text on a cover mark: black or white, whichever reads at 4.5:1 on [fill] (black on every preset). */
+/** Text on a cover mark: black or white, whichever reads at 4.5:1 on [fill] (black on every pastel). */
 internal fun coverMarkInk(fill: Color): Color = if (fill.luminance() >= 0.175f) Color.Black else Color.White
 
-/** One round mark in the tag's colour ([coverMarkFill]), its icon or initial in [coverMarkInk]. */
+/** True when [text] is an emoji (or a few), not letters or digits: an acronym like "🌊" is drawn as an emoji. */
+internal fun isEmojiText(text: String): Boolean {
+    val t = text.trim()
+    if (t.isEmpty()) return false
+    var symbol = false
+    var i = 0
+    while (i < t.length) {
+        val cp = t.codePointAt(i)
+        if (Character.isLetterOrDigit(cp)) return false
+        if (Character.getType(cp) == Character.OTHER_SYMBOL.toInt() || cp >= 0x1F000) symbol = true
+        i += Character.charCount(cp)
+    }
+    return symbol
+}
+
+/** DS `cover-mark-rim`: a thin dark rim (rgba(10,12,16,0.45)) that holds a pastel mark on any picture. */
+private val CoverMarkRim = Color(0x730A0C10)
+/** DS cover mark shadow (0 1px 3px rgba(0,0,0,0.35)). */
+private val CoverMarkShadow = Color(0x59000000)
+
+/** The ground of a pastel cover mark in [shape]: a soft shadow, the [fill], a thin dark rim. */
+private fun Modifier.coverMark(fill: Color, shape: androidx.compose.ui.graphics.Shape): Modifier =
+    this.shadow(2.dp, shape, clip = false, ambientColor = CoverMarkShadow, spotColor = CoverMarkShadow)
+        .clip(shape).background(fill).border(1.5.dp, CoverMarkRim, shape)
+
+/**
+ * A tag's emoji alone on a cover, no disc behind it, held on any picture by a soft shadow
+ * (DS `cover-emoji-shadow`: a 1px halo at 50% and 0 1px 1.5px at 30%). Only cover marks have it.
+ */
 @Composable
-private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
-    val bg = coverMarkFill(color)
-    val fg = coverMarkInk(bg)
-    val icon = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tag.icon)
-    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
-    Box(
-        modifier.size(size).clip(CircleShape).background(bg).semantics { contentDescription = tag.name },
-        contentAlignment = Alignment.Center,
-    ) {
-        when {
-            drawn != null -> Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.58f))
-            // Its room is kept while the icon loads, so nothing shifts.
-            icon != null -> Unit
-            else -> Text(text.ifEmpty { tagAlias(tag) }, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
-                color = fg, maxLines = 1)
-        }
+private fun CoverEmoji(vector: ImageVector, size: androidx.compose.ui.unit.Dp) {
+    Box(Modifier.size(size)) {
+        Icon(vector, null, tint = Color(0x4D000000), modifier = Modifier.matchParentSize().offset(y = 1.dp)
+            .blur(1.5.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded))
+        Icon(vector, null, tint = Color(0x80000000), modifier = Modifier.matchParentSize()
+            .blur(1.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded))
+        Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize())
     }
 }
 
-/** A pill in the tag's colour ([coverMarkFill], no rim), its icon and alias in [coverMarkInk]. */
+/**
+ * One cover mark of a tag. With an emoji (its icon, or an acronym that is an emoji) the emoji alone,
+ * 2dp smaller than the slot, with [CoverEmoji]'s shadow: never on a disc. Otherwise a round mark in
+ * the tag's pastel ([coverMarkFill], rim and shadow), its acronym or initial in [coverMarkInk].
+ */
+@Composable
+private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
+    val icon = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tag.icon)
+    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
+    val label = text.ifEmpty { tagAlias(tag) }
+    val emojiAlias = icon == null && isEmojiText(label)
+    if (icon != null || emojiAlias) {
+        val emoji = size - 2.dp
+        Box(modifier.size(size).semantics { contentDescription = tag.name }, contentAlignment = Alignment.Center) {
+            when {
+                drawn != null -> CoverEmoji(drawn, emoji)
+                // Its room is kept while the icon loads, so nothing shifts.
+                icon != null -> Unit
+                else -> {
+                    val density = LocalDensity.current
+                    val sp = with(density) { (emoji * 0.82f).toSp() }
+                    Text(label, maxLines = 1, softWrap = false, style = androidx.compose.ui.text.TextStyle(
+                        fontSize = sp, lineHeight = sp,
+                        shadow = androidx.compose.ui.graphics.Shadow(Color(0x80000000),
+                            Offset(0f, with(density) { 1.dp.toPx() }), with(density) { 2.dp.toPx() }),
+                    ))
+                }
+            }
+        }
+        return
+    }
+    val bg = coverMarkFill(color)
+    val fg = coverMarkInk(bg)
+    Box(
+        modifier.size(size).coverMark(bg, CircleShape).semantics { contentDescription = tag.name },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
+            color = fg, maxLines = 1)
+    }
+}
+
+/** A pill in the tag's pastel ([coverMarkFill], rim and shadow), its emoji and acronym in [coverMarkInk]. */
 @Composable
 private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val bg = coverMarkFill(color)
@@ -460,11 +523,11 @@ private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: a
     val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
     val shownText = if (icon == null) text.ifEmpty { tagAlias(tag) } else text
     Row(
-        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).clip(CircleShape).background(bg)
+        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).coverMark(bg, CircleShape)
             .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize()) }
+        if (icon != null) Box(Modifier.size(14.dp)) { if (drawn != null) Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize()) }
         if (icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
         if (shownText.isNotEmpty()) Text(shownText, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

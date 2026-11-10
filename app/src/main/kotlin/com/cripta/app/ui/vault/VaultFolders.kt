@@ -5,7 +5,6 @@ import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
 import com.cripta.app.ui.theme.CriptaIcons
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -172,7 +171,9 @@ fun FolderMosaic(
     /** The count in the accent colour (files just landed). */
     countFlash: Boolean = false,
 ) {
-    val accent = folder.color?.let { com.cripta.app.ui.theme.shownTagColor(Color(it)) } ?: MaterialTheme.colorScheme.primary
+    // The tones of the folder's colour (the accent's quiet tones without one): the container
+    // grounds the empty cover and veils the pictures behind, the mark is its dot.
+    val tones = com.cripta.app.ui.theme.rememberTagTones(folder.color?.let { Color(it) }, colored = true)
     val lift by animateFloatAsState(if (highlighted) 1.08f else 1f, Motion.enter(Motion.MEDIUM), label = "folderLift")
     val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
     // Landing squeeze: 1 -> 0.93 -> 1, ease-out both ways (no overshoot).
@@ -185,17 +186,19 @@ fun FolderMosaic(
     val primary = MaterialTheme.colorScheme.primary
     val shape = com.cripta.app.ui.theme.CoverShape
     val tile = MaterialTheme.colorScheme.surfaceContainer
-    // Sheets without a picture of their own (folders with 1-2 files) take the folder's colour, the
-    // farther one a step softer so the stack keeps its depth.
-    // A folder without a colour of its own keeps the quiet accent tints.
-    val own = folder.color != null
-    val farSheet = remember(accent, tile, own) { accent.copy(alpha = if (own) 0.70f else 0.30f).compositeOver(tile) }
-    val nearSheet = remember(accent, tile, own) { accent.copy(alpha = if (own) 0.85f else 0.55f).compositeOver(tile) }
+    // The two sheets behind are the folder's container tone, the farther a step softer so the stack
+    // keeps its depth; their pictures show through it, veiled by the container (60% far, 45% near).
+    val container = tones.container
+    val farSheet = remember(container, tile) { container.copy(alpha = 0.65f).compositeOver(tile) }
+    val nearSheet = remember(container, tile) { container.copy(alpha = 0.85f).compositeOver(tile) }
     @Composable
-    fun sheetPicture(f: com.cripta.app.data.db.FileEntity?, dim: Float) {
+    fun sheetPicture(f: com.cripta.app.data.db.FileEntity?, veil: Float) {
         if (f == null) return
         val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-        bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, alpha = dim, modifier = Modifier.fillMaxSize()) }
+        bmp?.let {
+            Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(container.copy(alpha = veil)))
+        }
     }
     // Scale outermost, so the caller's clip/click area scales with the card.
     // DS FolderStack: the cover in front (4:3), the next two peeking above it, dimmed.
@@ -203,20 +206,21 @@ fun FolderMosaic(
         Box(Modifier.fillMaxWidth().padding(top = 12.dp)) {
             Box(Modifier.offset(y = (-12).dp).padding(horizontal = 24.dp).fillMaxWidth().height(40.dp).clip(shape)
                 .background(farSheet)) {
-                sheetPicture(previews.getOrNull(2), 0.3f)
+                sheetPicture(previews.getOrNull(2), 0.60f)
             }
             Box(Modifier.offset(y = (-6).dp).padding(horizontal = 16.dp).fillMaxWidth().height(40.dp).clip(shape).background(nearSheet)) {
                 sheetPicture(previews.getOrNull(1), 0.45f)
             }
             Box(
                 Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(shape)
-                    .background(if (own) accent else accent.copy(alpha = 0.16f).compositeOver(tile))
+                    .background(container)
                     .then(if (hl > 0f) Modifier.border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 val f = previews.firstOrNull()
                 if (f == null) {
-                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 44.dp, open = highlighted)
+                    // An empty folder: its container with the emoji (or the folder symbol) alone, 48dp.
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 48.dp, open = highlighted)
                 } else {
                     val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                     bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
@@ -231,11 +235,11 @@ fun FolderMosaic(
                 }
             }
         }
-        // DS: the folder's colour as a small square (or its own icon), the name in `title`, the star
-        // after it when favourite, the count as a caption under.
+        // DS: the folder's emoji alone (20dp, no disc), else a 10dp dot in its mark tone; the name in
+        // `title`, the star after it when favourite, the count as a caption under.
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (folder.icon.isNullOrBlank() && folder.emoji.isNullOrBlank()) {
-                Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(accent))
+                Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tones.mark))
             } else {
                 com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 20.dp, open = highlighted)
             }
