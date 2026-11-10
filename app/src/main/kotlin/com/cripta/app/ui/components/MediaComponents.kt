@@ -182,10 +182,10 @@ val FOLDER_COLORS: List<Int> = listOf(
 
 /**
  * Folder symbol tinted by [color], or the folder's [icon] in its place; an [emoji] of an older vault
- * (until it is turned into an icon) otherwise.
+ * (until it is turned into an icon) otherwise. [open]: the folder symbol drawn open (a drag hovering it).
  */
 @Composable
-fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp) {
+fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
     val c = color?.let { Color(it) }
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
@@ -200,7 +200,7 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp) {
             val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
-            Icon(CriptaIcons.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
+            Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
         }
     }
 }

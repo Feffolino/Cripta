@@ -1314,6 +1314,8 @@
     <string name="hide_folders">隐藏文件夹</string>
     <string name="folders_count_prefix">"文件夹 · "</string>
     <string name="leave_selection_to_open">请退出选择模式后再打开文件夹</string>
+    <string name="drag_into">移到 %1$s</string>
+    <string name="drag_onto_folder">拖到文件夹上</string>
     <string name="customise">自定义</string>
     <string name="choose_cover">选择封面</string>
     <string name="in_whole_vault">在整个保险库中</string>

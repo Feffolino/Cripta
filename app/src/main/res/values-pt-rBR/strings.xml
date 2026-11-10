@@ -1412,6 +1412,8 @@
     <string name="hide_folders">Ocultar as pastas</string>
     <string name="folders_count_prefix">"Pastas · "</string>
     <string name="leave_selection_to_open">Saia da seleção para abrir uma pasta</string>
+    <string name="drag_into">Mover para %1$s</string>
+    <string name="drag_onto_folder">Arraste para uma pasta</string>
     <string name="customise">Personalizar</string>
     <string name="choose_cover">Escolher a capa</string>
     <string name="in_whole_vault">em todo o cofre</string>

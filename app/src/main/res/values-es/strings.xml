@@ -1412,6 +1412,8 @@
     <string name="hide_folders">Ocultar las carpetas</string>
     <string name="folders_count_prefix">"Carpetas · "</string>
     <string name="leave_selection_to_open">Sal de la selección para abrir una carpeta</string>
+    <string name="drag_into">Mover a %1$s</string>
+    <string name="drag_onto_folder">Arrastra a una carpeta</string>
     <string name="customise">Personalizar</string>
     <string name="choose_cover">Elegir la portada</string>
     <string name="in_whole_vault">en toda la caja fuerte</string>

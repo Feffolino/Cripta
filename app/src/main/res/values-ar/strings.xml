@@ -1559,6 +1559,8 @@
     <string name="hide_folders">إخفاء المجلدات</string>
     <string name="folders_count_prefix">"المجلدات · "</string>
     <string name="leave_selection_to_open">اخرج من التحديد لفتح مجلد</string>
+    <string name="drag_into">نقل إلى %1$s</string>
+    <string name="drag_onto_folder">اسحب إلى مجلد</string>
     <string name="customise">تخصيص</string>
     <string name="choose_cover">اختيار الغلاف</string>
     <string name="in_whole_vault">في الخزنة كلها</string>

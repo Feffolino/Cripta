@@ -1412,6 +1412,8 @@
     <string name="hide_folders">Masquer les dossiers</string>
     <string name="folders_count_prefix">"Dossiers · "</string>
     <string name="leave_selection_to_open">Quittez la sélection pour ouvrir un dossier</string>
+    <string name="drag_into">Déplacer vers %1$s</string>
+    <string name="drag_onto_folder">Faites glisser sur un dossier</string>
     <string name="customise">Personnaliser</string>
     <string name="choose_cover">Choisir la vignette</string>
     <string name="in_whole_vault">dans tout le coffre</string>

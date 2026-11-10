@@ -1461,6 +1461,8 @@
     <string name="hide_folders">Скрыть папки</string>
     <string name="folders_count_prefix">"Папки · "</string>
     <string name="leave_selection_to_open">Выйдите из выбора, чтобы открыть папку</string>
+    <string name="drag_into">Переместить в %1$s</string>
+    <string name="drag_onto_folder">Перетащите на папку</string>
     <string name="customise">Настроить</string>
     <string name="choose_cover">Выбрать обложку</string>
     <string name="in_whole_vault">во всём хранилище</string>

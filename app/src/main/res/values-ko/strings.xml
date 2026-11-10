@@ -1314,6 +1314,8 @@
     <string name="hide_folders">폴더 숨기기</string>
     <string name="folders_count_prefix">"폴더 · "</string>
     <string name="leave_selection_to_open">선택 모드를 나가야 폴더를 열 수 있습니다</string>
+    <string name="drag_into">%1$s(으)로 이동</string>
+    <string name="drag_onto_folder">폴더로 끌어다 놓으세요</string>
     <string name="customise">맞춤 설정</string>
     <string name="choose_cover">표지 선택</string>
     <string name="in_whole_vault">보관함 전체에서</string>

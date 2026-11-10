@@ -1363,6 +1363,8 @@
     <string name="hide_folders">Hide the folders</string>
     <string name="folders_count_prefix">"Folders · "</string>
     <string name="leave_selection_to_open">Leave the selection to open a folder</string>
+    <string name="drag_into">Move to %1$s</string>
+    <string name="drag_onto_folder">Drag onto a folder</string>
     <string name="customise">Customise</string>
     <string name="choose_cover">Choose the cover</string>
     <string name="in_whole_vault">in the whole vault</string>

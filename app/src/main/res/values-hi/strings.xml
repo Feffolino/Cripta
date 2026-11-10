@@ -1363,6 +1363,8 @@
     <string name="hide_folders">फ़ोल्डर छिपाएँ</string>
     <string name="folders_count_prefix">"फ़ोल्डर · "</string>
     <string name="leave_selection_to_open">फ़ोल्डर खोलने के लिए चयन से बाहर आएँ</string>
+    <string name="drag_into">%1$s में ले जाएँ</string>
+    <string name="drag_onto_folder">किसी फ़ोल्डर पर खींचें</string>
     <string name="customise">मनमुताबिक बनाएँ</string>
     <string name="choose_cover">कवर चुनें</string>
     <string name="in_whole_vault">पूरे वॉल्ट में</string>

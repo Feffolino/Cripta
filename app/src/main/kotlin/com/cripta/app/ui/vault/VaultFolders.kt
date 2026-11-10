@@ -165,10 +165,23 @@ fun FolderMosaic(
     highlighted: Boolean = false,
     /** A star action on the Favorites screen; regular cards keep their actions menu. */
     onRemoveFavorite: (() -> Unit)? = null,
+    /** Bumped (incremented) when dropped files land on the card: it gives a short squeeze. */
+    bump: Int = 0,
+    /** While dropped files land, the count shown is at least this (it ticks up per file). */
+    countAtLeast: Int? = null,
+    /** The count in the accent colour (files just landed). */
+    countFlash: Boolean = false,
 ) {
     val accent = folder.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-    val lift by animateFloatAsState(if (highlighted) 1.05f else 1f, Motion.enter(Motion.SHORT), label = "folderLift")
+    val lift by animateFloatAsState(if (highlighted) 1.08f else 1f, Motion.enter(Motion.MEDIUM), label = "folderLift")
     val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
+    // Landing squeeze: 1 -> 0.93 -> 1, ease-out both ways (no overshoot).
+    val squeeze = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(bump) {
+        if (bump == 0) return@LaunchedEffect
+        squeeze.animateTo(0.93f, Motion.enter(Motion.SHORT))
+        squeeze.animateTo(1f, Motion.enter(Motion.MEDIUM))
+    }
     val primary = MaterialTheme.colorScheme.primary
     val shape = com.cripta.app.ui.theme.CoverShape
     val tile = MaterialTheme.colorScheme.surfaceContainer
@@ -183,7 +196,7 @@ fun FolderMosaic(
     }
     // Scale outermost, so the caller's clip/click area scales with the card.
     // DS FolderStack: the cover in front (4:3), the next two peeking above it, dimmed.
-    Column(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.then(modifier)) {
+    Column(Modifier.graphicsLayer { scaleX = lift * squeeze.value; scaleY = lift * squeeze.value }.then(modifier)) {
         Box(Modifier.fillMaxWidth().padding(top = 12.dp)) {
             Box(Modifier.offset(y = (-12).dp).padding(horizontal = 24.dp).fillMaxWidth().height(40.dp).clip(shape)
                 .background(farSheet)) {
@@ -200,12 +213,19 @@ fun FolderMosaic(
             ) {
                 val f = previews.firstOrNull()
                 if (f == null) {
-                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 44.dp)
+                    com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 44.dp, open = highlighted)
                 } else {
                     val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
                     bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
                 if (hl > 0f) Box(Modifier.matchParentSize().background(primary.copy(alpha = 0.18f * hl)))
+                // Over a cover, the open folder says "drop here" (the glyph of an empty card opens itself).
+                if (hl > 0f && f != null) {
+                    Box(Modifier.size(44.dp).graphicsLayer { alpha = hl }.clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {
+                        Icon(CriptaIcons.FolderOpen, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    }
+                }
             }
         }
         // DS: the folder's colour as a small square (or its own icon), the name in `title`, the star
@@ -214,7 +234,7 @@ fun FolderMosaic(
             if (folder.icon.isNullOrBlank() && folder.emoji.isNullOrBlank()) {
                 Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(accent))
             } else {
-                com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 20.dp)
+                com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 20.dp, open = highlighted)
             }
             Column(Modifier.weight(1f).padding(start = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -235,10 +255,12 @@ fun FolderMosaic(
             }
         }
         if (showInfo) {
-            val n = stat?.count ?: 0
+            val n = maxOf(stat?.count ?: 0, countAtLeast ?: 0)
+            val countColor by androidx.compose.animation.animateColorAsState(
+                if (countFlash) primary else MaterialTheme.colorScheme.onSurfaceVariant, Motion.enter(Motion.SHORT), label = "folderCount")
             Text(if (n == 0) str(R.string.empty_f) else plural(R.plurals.files_n, n, com.cripta.app.ui.components.formatCount(n)),
                 maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                color = countColor, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }

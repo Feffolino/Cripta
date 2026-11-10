@@ -1314,6 +1314,8 @@
     <string name="hide_folders">フォルダーを隠す</string>
     <string name="folders_count_prefix">"フォルダー · "</string>
     <string name="leave_selection_to_open">選択を終了してからフォルダーを開いてください</string>
+    <string name="drag_into">%1$s に移動</string>
+    <string name="drag_onto_folder">フォルダーまでドラッグ</string>
     <string name="customise">カスタマイズ</string>
     <string name="choose_cover">カバーを選択</string>
     <string name="in_whole_vault">保管庫全体から</string>

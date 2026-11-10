@@ -65,6 +65,7 @@ object CriptaIcons {
     val FilterList: ImageVector by lazy { load(R.drawable.tabler_filter) }
     val Fingerprint: ImageVector by lazy { load(R.drawable.tabler_fingerprint) }
     val Folder: ImageVector by lazy { load(R.drawable.tabler_folder) }
+    val FolderOpen: ImageVector by lazy { load(R.drawable.tabler_folder_open) }
     val FolderFilled: ImageVector by lazy { load(R.drawable.tabler_folder_filled) }
     val GraphicEq: ImageVector by lazy { load(R.drawable.tabler_wave_sine) }
     val GridView: ImageVector by lazy { load(R.drawable.tabler_layout_grid) }

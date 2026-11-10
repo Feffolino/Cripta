@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -61,6 +62,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -68,6 +70,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -75,7 +78,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.runtime.rememberUpdatedState
@@ -231,13 +243,22 @@ fun VaultScreen(
     /** Ids of the files on screen now; selection actions only ever act on these. A derived state
      *  (read through the delegate) so long-lived gesture handlers never see a stale set. */
     val visibleIds by remember { derivedStateOf { files.mapTo(HashSet<String>()) { it.file.id } } }
-    // Swipe/range multi-select (gallery-style) drag state.
+    // Long-press drag on the grid. Started on an unselected file it is a gallery-style range
+    // select; started on a selected file it carries the selection ("move drag") to a folder.
     val gridState = rememberLazyGridState()
     var dragAnchor by remember { mutableStateOf<String?>(null) }
     var dragBase by remember { mutableStateOf(setOf<String>()) }
-    var dragDeselect by remember { mutableStateOf(false) }
     var hoverFolder by remember { mutableStateOf<Long?>(null) }
+    /** The dragging finger, in the coordinates of the box around the grid. */
     var selPointer by remember { mutableStateOf(Offset.Zero) }
+    /** Files held by a move drag, in grid order (null when no move drag is on). */
+    var carried by remember { mutableStateOf<List<String>?>(null) }
+    /** Each carried file's folder when the drag started: what the drop's "Annulla" restores. */
+    var carriedFrom by remember { mutableStateOf<Map<String, Long?>>(emptyMap()) }
+    /** The level (folder id, null = root) the move drag started in. */
+    var carryOrigin by remember { mutableStateOf<Long?>(null) }
+    /** Grid auto-scroll speed in px/s while a dragging finger is near an edge (0 = still). */
+    var autoScrollSpeed by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     var batchTag by remember { mutableStateOf(false) }
     var showNewFolder by remember { mutableStateOf(false) }
     var tagTargetId by remember { mutableStateOf<String?>(null) }
@@ -293,6 +314,16 @@ fun VaultScreen(
         vm.moveFiles(ids, target)
         notify(str(R.string.moved_to, plural(R.plurals.moved_items, ids.size), folderLabel(target))) {
             vm.restoreFolders(prev)
+        }
+    }
+    /** Drop of a move drag. The drag may have changed folder, so the files can be off screen:
+     *  the undo snapshot is [from], taken when the drag started. */
+    fun moveCarried(ids: List<String>, from: Map<String, Long?>, target: Long?) {
+        val moving = ids.filter { from.containsKey(it) && from[it] != target }
+        if (moving.isEmpty()) return
+        vm.moveFiles(moving, target)
+        notify(str(R.string.moved_to, plural(R.plurals.moved_items, moving.size), folderLabel(target))) {
+            vm.restoreFolders(moving.associateWith { from[it] })
         }
     }
     fun favoriteWithUndo(requested: List<String>, fav: Boolean) {
@@ -352,6 +383,8 @@ fun VaultScreen(
             path.isNotEmpty() -> vm.goUp()
         }
     }
+    // While a move drag holds files, Back climbs one level and the files stay in hand.
+    BackHandler(enabled = carried != null && path.isNotEmpty()) { vm.goUp() }
     // Registered last, so it wins: Back first closes the open speed-dial.
     BackHandler(enabled = fabExpanded) { fabExpanded = false }
 
@@ -763,10 +796,175 @@ fun VaultScreen(
                     CustomAccessibilityAction(str(R.string.delete)) { selection = setOf(id); confirmMultiDelete = true; true },
                 )
             }
-            // Folder cards live in a horizontal row; their on-screen bounds let a drag-selection
-            // still be dropped onto a folder (the grid's own hit-testing can't see inside the row).
+            // Folder cards live in a horizontal row; their on-screen bounds (clipped to what is
+            // visible, registered as cards scroll in) are the drop targets of a move drag.
             val folderBounds = remember { androidx.compose.runtime.mutableStateMapOf<Long, androidx.compose.ui.geometry.Rect>() }
-            var gridCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+            /** The box around the grid, whose coordinates the drag uses. */
+            var dragAreaCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+            /** Pointer that last went down on the grid itself (not on the fast scroller over it). */
+            val gridDown = remember { arrayOfNulls<androidx.compose.ui.input.pointer.PointerId>(1) }
+            val currentLevel by rememberUpdatedState(path.lastOrNull()?.id)
+            val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+            val flingBehavior = androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
+            val dragDensity = LocalDensity.current
+            val dragAnim = animationsEnabled()
+            /** The move drag's visual layer (stack of covers, pick-up, drop, way back). */
+            val dragFx = remember { MoveDragFx() }
+            /** Files a move drag lifted out of the grid: faded, with a dashed slot, until dropped or put back. */
+            var lifted by remember { mutableStateOf<Set<String>>(emptySet()) }
+            /** The cell a move drag started from: where the stack goes back on cancel. */
+            val moveAnchor = remember { arrayOfNulls<String>(1) }
+            /** How deep the dragging finger is in an auto-scroll edge zone (see [edgeDepth]). */
+            var edgeNow by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+            // Landing on a folder: its card squeezes, its count ticks up in the accent colour.
+            var landFolder by remember { mutableStateOf<Long?>(null) }
+            var landBump by remember { mutableIntStateOf(0) }
+            var landCount by remember { mutableStateOf<Int?>(null) }
+            var landFlash by remember { mutableStateOf(false) }
+            /** After a drop, the grid closes the gaps with a placement animation (off otherwise). */
+            var closingGaps by remember { mutableStateOf(false) }
+
+            /** A visible file's cover, in the drag area's coordinates. */
+            fun coverRect(info: androidx.compose.foundation.lazy.grid.LazyGridItemInfo): androidx.compose.ui.geometry.Rect = with(dragDensity) {
+                val o = Offset(info.offset.x.toFloat(), info.offset.y.toFloat())
+                if (viewMode == ViewMode.GRID) androidx.compose.ui.geometry.Rect(o, androidx.compose.ui.geometry.Size(info.size.width.toFloat(), info.size.width.toFloat()))
+                else androidx.compose.ui.geometry.Rect(o + Offset(4.dp.toPx(), 6.dp.toPx()), androidx.compose.ui.geometry.Size(76.dp.toPx(), 76.dp.toPx()))
+            }
+            fun coverRectOf(key: String) = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { coverRect(it) }
+            /** Centre of a folder card's picture, in the drag area's coordinates (null when not on screen). */
+            fun folderTileCenter(id: Long): Offset? {
+                val r = folderBounds[id] ?: return null
+                val area = dragAreaCoords?.takeIf { it.isAttached } ?: return null
+                val o = area.localToRoot(Offset.Zero)
+                val tileH = with(dragDensity) { 12.dp.toPx() } + r.width * 0.375f
+                return Offset(r.center.x, r.top + tileH) - o
+            }
+
+            fun folderUnder(pos: Offset): Long? {
+                val root = dragAreaCoords?.takeIf { it.isAttached }?.localToRoot(pos) ?: return null
+                return folderBounds.entries.firstOrNull { it.value.contains(root) }?.key
+            }
+            /** Re-reads the file under the finger (after it moved, or the grid scrolled under it)
+             *  and selects the anchor-to-finger range. A move drag never changes the selection. */
+            fun updateRange() {
+                if (carried != null) return
+                val anchor = dragAnchor ?: return
+                val cur = (keyAt(selPointer, gridState) as? String)?.takeIf { it in currentIdSet } ?: return
+                val ai = currentOrderedIds.indexOf(anchor)
+                val ci = currentOrderedIds.indexOf(cur)
+                if (ai >= 0 && ci >= 0) {
+                    selection = dragBase + currentOrderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1)
+                }
+            }
+            /** Long-press landed at [pos]: starts a range select or a move drag. False if no file is there. */
+            fun startDrag(pos: Offset): Boolean {
+                val key = (keyAt(pos, gridState) as? String)?.takeIf { it in currentIdSet } ?: return false
+                selPointer = pos
+                hoverFolder = null
+                if (key in selection) {
+                    val held = selection
+                    carried = currentOrderedIds.filter { it in held }
+                    carriedFrom = files.filter { it.file.id in held }.associate { it.file.id to it.file.folderId }
+                    carryOrigin = currentLevel
+                    moveAnchor[0] = key
+                    lifted = held
+                    pressedKey = null
+                    // The anchor's cover tops the stack where it is; the other selected cells on
+                    // screen (nearest first) fly to the finger. Off-screen ones only join the count.
+                    val byId = files.filter { it.file.id in held }.associateBy { it.file.id }
+                    val anchorRect = coverRectOf(key)
+                    val anchorFile = byId[key]?.file
+                    if (anchorRect != null && anchorFile != null) {
+                        val others = gridState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                            val k = info.key as? String ?: return@mapNotNull null
+                            if (k == key) return@mapNotNull null
+                            byId[k]?.file?.let { it to coverRect(info) }
+                        }.sortedBy { (it.second.center - anchorRect.center).getDistance() }
+                        dragFx.start(uiScope, anchorFile, anchorRect, others, dragAnim)
+                    }
+                } else {
+                    dragAnchor = key
+                    dragBase = selection
+                    selection = selection + key
+                }
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                return true
+            }
+            /** Finger lifted ([drop]) or gesture cancelled. A move drag drops on the folder under the
+             *  finger, else into the folder now open if the drag changed folder; otherwise nothing moves. */
+            fun endDrag(drop: Boolean) {
+                val ids = carried
+                if (ids != null) {
+                    val from = carriedFrom
+                    val target = if (drop) moveDropTarget(hoverFolder, currentLevel, carryOrigin) else DropTarget.Stay
+                    if (target is DropTarget.Into) {
+                        selection = emptySet()
+                        val dest = target.id
+                        // Released on a folder card: the covers fly into it. Into the open folder
+                        // (no card for it): the stack just fades where it is.
+                        val tile = hoverFolder?.let { folderTileCenter(it) }
+                        val shownCount = if (tile != null && dest != null && display.showFolderInfo) folderStats[dest]?.count ?: 0 else null
+                        val moving = ids.count { from.containsKey(it) && from[it] != dest }
+                        landFolder = if (tile != null) dest else null
+                        dragFx.drop(uiScope, tile, dragAnim,
+                            onArrive = { k, total ->
+                                if (k == 0) landBump++
+                                if (shownCount != null) {
+                                    landFlash = true
+                                    landCount = shownCount + (moving * (k + 1) + total - 1) / total
+                                }
+                            },
+                            onDone = {
+                                closingGaps = true
+                                moveCarried(ids, from, dest)
+                                lifted = emptySet()
+                                uiScope.launch {
+                                    kotlinx.coroutines.delay(if (dragAnim) Motion.LONG + 500L else 0L)
+                                    closingGaps = false; landFlash = false; landCount = null; landFolder = null
+                                }
+                            })
+                    } else {
+                        // Back where it started: opening another folder had cleared the selection.
+                        if (currentLevel == carryOrigin && selection.isEmpty()) selection = ids.filterTo(HashSet()) { it in visibleIds }
+                        val back = if (currentLevel == carryOrigin) moveAnchor[0]?.let { coverRectOf(it)?.center } else null
+                        dragFx.cancel(uiScope, back, dragAnim)
+                        lifted = emptySet()
+                    }
+                }
+                carried = null; carriedFrom = emptyMap(); dragAnchor = null; hoverFolder = null
+                autoScrollSpeed = 0f; edgeNow = 0f
+            }
+            // The folder under a move drag's finger: followed also when the finger is still and the
+            // folders move under it (second finger scrolling the row, auto-scroll, a level change).
+            LaunchedEffect(Unit) {
+                snapshotFlow { if (carried != null) folderUnder(selPointer) else null }.collect { over ->
+                    if (carried == null) return@collect
+                    if (over != null && over != hoverFolder) {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    }
+                    hoverFolder = over
+                }
+            }
+            // Auto-scroll: a dragging finger near the grid's top or bottom edge scrolls it, faster the
+            // deeper it is in the edge zone; the range follows the file now under the still finger.
+            val autoScrolling by remember { derivedStateOf { autoScrollSpeed != 0f } }
+            LaunchedEffect(autoScrolling) {
+                if (!autoScrolling) return@LaunchedEffect
+                var last = androidx.compose.runtime.withFrameNanos { it }
+                while (true) {
+                    val now = androidx.compose.runtime.withFrameNanos { it }
+                    val dy = autoScrollSpeed * (now - last) / 1_000_000_000f
+                    last = now
+                    if (dy == 0f) break
+                    try {
+                        gridState.scrollBy(dy)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        // Pre-empted by another scroll (a level change restoring its position): go on.
+                        ensureActive()
+                    }
+                    updateRange()
+                }
+            }
 
             val foldersCollapsed by vm.foldersCollapsed.collectAsStateWithLifecycle()
             val folderRow: @Composable () -> Unit = {
@@ -805,9 +1003,12 @@ fun VaultScreen(
                             androidx.compose.runtime.DisposableEffect(folder.id) {
                                 onDispose { folderBounds.remove(folder.id) }
                             }
-                            // While selecting, a folder tap would silently drop the selection: say why instead.
+                            // While selecting, a folder tap would silently drop the selection: say why
+                            // instead. During a move drag (a second finger) it opens the folder and the
+                            // first finger keeps the files.
                             val open = {
-                                if (inSelection) notify(str(R.string.leave_selection_to_open))
+                                if (carried != null) vm.enterFolder(folder)
+                                else if (inSelection) notify(str(R.string.leave_selection_to_open))
                                 else vm.enterFolder(folder)
                             }
                             FolderMosaic(
@@ -817,13 +1018,16 @@ fun VaultScreen(
                                 thumb = { vm.thumb(it) },
                                 showInfo = display.showFolderInfo,
                                 highlighted = hoverFolder == folder.id,
+                                bump = if (landFolder == folder.id) landBump else 0,
+                                countAtLeast = if (landFolder == folder.id) landCount else null,
+                                countFlash = landFolder == folder.id && landFlash,
                                 modifier = sizing
                                     .onGloballyPositioned { folderBounds[folder.id] = it.boundsInRoot() }
                                     .combinedClickable(
                                         onClickLabel = str(R.string.open),
                                         onLongClickLabel = str(R.string.folder_actions),
                                         onClick = open,
-                                        onLongClick = { folderMenu = folder },
+                                        onLongClick = { if (carried == null) folderMenu = folder },
                                     )
                                     .semantics {
                                         this.customActions = listOf(
@@ -904,8 +1108,96 @@ fun VaultScreen(
             // Before the effect above runs (the first frame after a folder change) the level is
             // already hidden, so the old content can't show for that frame either.
             val levelPending = (path.lastOrNull()?.id ?: ROOT_KEY) != shownLevel
+            // The long-press drag lives on this box, not on the grid: a move drag can change folder
+            // (second finger, Back), and the grid leaves the screen when the new folder is empty.
             Box(
                 Modifier.weight(1f).fillMaxWidth()
+                    .onGloballyPositioned { dragAreaCoords = it }
+                    // Manual order keeps its own long-press drag (reordering).
+                    .then(if (manual) Modifier else Modifier.pointerInput(Unit) {
+                        var flingJob: kotlinx.coroutines.Job? = null
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            if (gridDown[0] != down.id) return@awaitEachGesture
+                            val press = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                            if (!startDrag(press.position)) return@awaitEachGesture
+                            val zone = 72.dp.toPx()
+                            val maxSpeed = 1600.dp.toPx()
+                            val slop = viewConfiguration.touchSlop
+                            // Auto-scroll waits until the finger has moved: a long-press near an edge
+                            // must not set the grid running by itself.
+                            var armed = false
+                            var dropped = false
+                            var helper: PointerId? = null
+                            var helperTravel = 0f
+                            var helperScrolling = false
+                            val tracker = VelocityTracker()
+                            try {
+                                while (true) {
+                                    // Initial pass: the held finger belongs to this gesture alone, so
+                                    // the grid neither scrolls nor taps with it.
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val main = event.changes.firstOrNull { it.id == press.id } ?: break
+                                    if (!main.pressed) {
+                                        // A cancelled touch stream arrives already consumed: no drop then.
+                                        dropped = !main.isConsumed
+                                        main.consume()
+                                        break
+                                    }
+                                    if (main.positionChanged()) {
+                                        selPointer = main.position
+                                        if (!armed && (main.position - press.position).getDistance() > slop) armed = true
+                                        if (armed) {
+                                            val depth = edgeDepth(main.position.y, size.height.toFloat(), zone)
+                                            edgeNow = depth
+                                            autoScrollSpeed = edgeSpeed(depth, maxSpeed)
+                                        }
+                                        updateRange()
+                                    }
+                                    main.consume()
+                                    if (carried == null) continue
+                                    // Main pass, during a move drag: a second finger that nothing under
+                                    // it used (the folder row scrolls sideways and folders open by
+                                    // themselves) scrolls the grid, with a fling when it lets go.
+                                    val after = awaitPointerEvent(PointerEventPass.Main)
+                                    for (c in after.changes) {
+                                        if (c.id == press.id) continue
+                                        if (c.changedToDownIgnoreConsumed() && helper == null) {
+                                            helper = c.id
+                                            helperTravel = 0f
+                                            helperScrolling = false
+                                            tracker.resetTracking()
+                                            flingJob?.cancel()
+                                        }
+                                        if (c.id != helper) continue
+                                        tracker.addPosition(c.uptimeMillis, c.position)
+                                        if (!c.pressed) {
+                                            helper = null
+                                            if (helperScrolling) {
+                                                val v = tracker.calculateVelocity().y
+                                                flingJob = uiScope.launch { gridState.scroll { with(flingBehavior) { performFling(-v) } } }
+                                            }
+                                        } else if (!c.isConsumed) {
+                                            val dy = c.positionChange().y
+                                            if (!helperScrolling) {
+                                                helperTravel += dy
+                                                if (kotlin.math.abs(helperTravel) > slop) helperScrolling = true
+                                            }
+                                            if (helperScrolling && dy != 0f) {
+                                                gridState.dispatchRawDelta(-dy)
+                                                c.consume()
+                                            }
+                                        }
+                                    }
+                                }
+                            } finally {
+                                endDrag(dropped)
+                            }
+                        }
+                    }),
+            ) {
+            Box(
+                Modifier.fillMaxSize()
                     .graphicsLayer { translationX = levelX.value; alpha = if (levelPending) 0f else levelAlpha.value },
             ) {
             // Before the first level has been read there is nothing to say yet (not "empty").
@@ -948,7 +1240,6 @@ fun VaultScreen(
                     columns = columns,
                     state = gridState,
                     modifier = Modifier.fillMaxSize()
-                        .onGloballyPositioned { gridCoords = it }
                         // Tap: open a file (or toggle it in selection mode). A held finger marks the
                         // cell as pressed after 60ms, so starting a scroll doesn't flash it.
                         .pointerInput(Unit) {
@@ -970,67 +1261,11 @@ fun VaultScreen(
                                 },
                             )
                         }
-                        // Long-press a file then drag = gallery-style range select (or deselect if
-                        // the anchor was already selected); release over a folder to move there.
+                        // Marks the pointers that land on the grid itself: the long-press drag is
+                        // handled by the box around it (it must outlive a change of folder), and
+                        // only these may start it (not one on the fast scroller over the grid).
                         .pointerInput(Unit) {
-                            val onStart: (Offset) -> Unit = { off ->
-                                selPointer = off
-                                hoverFolder = null
-                                val key = keyAt(off, gridState) as? String
-                                if (key != null && key in currentIdSet) {
-                                    dragAnchor = key
-                                    dragDeselect = key in selection
-                                    dragBase = selection
-                                    if (!dragDeselect) selection = selection + key
-                                }
-                            }
-                            val onMove: (Offset) -> Unit = { delta ->
-                                selPointer += delta
-                                val anchor = dragAnchor
-                                if (anchor != null) {
-                                    val curKey = keyAt(selPointer, gridState) as? String
-                                    val rootPos = gridCoords?.takeIf { it.isAttached }?.localToRoot(selPointer)
-                                    val overFolder = rootPos?.let { p -> folderBounds.entries.firstOrNull { it.value.contains(p) }?.key }
-                                    if (overFolder != null) {
-                                        hoverFolder = overFolder
-                                    } else {
-                                        hoverFolder = null
-                                        val cur = curKey?.takeIf { it in currentIdSet }
-                                        if (cur != null) {
-                                            val ai = currentOrderedIds.indexOf(anchor)
-                                            val ci = currentOrderedIds.indexOf(cur)
-                                            if (ai >= 0 && ci >= 0) {
-                                                val range = currentOrderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1).toSet()
-                                                selection = if (dragDeselect) dragBase - range else dragBase + range
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            val onEnd: () -> Unit = {
-                                val target = hoverFolder
-                                // A deselecting drag never moves: ending it over a folder moved
-                                // whatever was still selected there.
-                                if (target != null && !dragDeselect && selection.isNotEmpty()) {
-                                    val ids = selection.toList()
-                                    selection = emptySet()
-                                    moveWithUndo(ids, target)
-                                }
-                                dragAnchor = null; hoverFolder = null
-                            }
-                            // Long-press an item then drag to range-select; a plain long-press selects one.
-                            try {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { off -> onStart(off) },
-                                    onDrag = { _, amount -> onMove(amount) },
-                                    onDragEnd = { onEnd() },
-                                    onDragCancel = { dragAnchor = null; hoverFolder = null },
-                                )
-                            } finally {
-                                // If the handler is torn down mid-drag (no onDragCancel then), don't
-                                // leave a stale anchor / highlighted drop folder behind.
-                                dragAnchor = null; hoverFolder = null
-                            }
+                            awaitEachGesture { gridDown[0] = awaitFirstDown(requireUnconsumed = false).id }
                         },
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1047,6 +1282,7 @@ fun VaultScreen(
                         items(group, key = { it.file.id }, span = { GridItemSpan(1) }) { fwt ->
                             val id = fwt.file.id
                             val isSel = id in selection
+                            val slotOutline = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                             // Gestures are handled by the grid (drag range-select); each cell still
                             // exposes its actions and state to accessibility services.
                             val cellSemantics = Modifier.semantics(mergeDescendants = true) {
@@ -1061,8 +1297,11 @@ fun VaultScreen(
                             FileCell(fwt, viewMode, isSel, inSelection, display,
                                 // No placement animation: toggling a filter reshuffles the whole
                                 // result set and every cell used to visibly slide to its new slot.
-                                Modifier.animateItem(placementSpec = null)
+                                // Only right after a drop do the cells glide over the gaps it left.
+                                Modifier.animateItem(placementSpec = if (closingGaps) Motion.enter(Motion.LONG) else null)
                                     .pressScale(pressedKey == id, if (viewMode == ViewMode.GRID) 0.96f else 0.98f)
+                                    // Files held by a move drag stay behind faded, their slot dashed.
+                                    .leftBehind(id in lifted, slotOutline)
                                     .then(cellSemantics),
                                 coverOverrides[id], coverVersions[id] ?: 0,
                                 { vm.thumb(fwt.file) })
@@ -1096,6 +1335,28 @@ fun VaultScreen(
                     FastScroller(gridState, Modifier.align(Alignment.CenterEnd), labelAt = { scrollLabels.getOrNull(it) })
                 }
             }
+            }
+            EdgeScrollBands { edgeNow }
+            // The carried files follow the finger as a stack of covers, saying where they would land.
+            // The last texts stay while the stack flies off.
+            val held = carried
+            val stackText = remember { arrayOf(0 to "") }
+            if (held != null) {
+                stackText[0] = held.size to when (val t = moveDropTarget(hoverFolder, currentLevel, carryOrigin)) {
+                    is DropTarget.Into -> str(R.string.drag_into, folderLabel(t.id))
+                    DropTarget.Stay -> str(R.string.drag_onto_folder)
+                }
+            }
+            dragFx.Layer(
+                finger = { selPointer },
+                hoverAt = { hoverFolder?.let { folderTileCenter(it) } },
+                hovering = hoverFolder != null,
+                caption = stackText[0].second,
+                count = stackText[0].first,
+                thumb = { vm.thumb(it) },
+                animate = dragAnim,
+                density = dragDensity,
+            )
             }
         }
         // Scrim behind the open speed-dial: dims the content and closes the menu on tap.
@@ -1451,3 +1712,4 @@ private fun keyAt(pos: Offset, state: LazyGridState): Any? =
         pos.x >= info.offset.x && pos.x <= info.offset.x + info.size.width &&
             pos.y >= info.offset.y && pos.y <= info.offset.y + info.size.height
     }?.key
+

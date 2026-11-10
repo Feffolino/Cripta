@@ -1412,6 +1412,8 @@
     <string name="hide_folders">Nascondi le cartelle</string>
     <string name="folders_count_prefix">"Cartelle · "</string>
     <string name="leave_selection_to_open">Esci dalla selezione per aprire una cartella</string>
+    <string name="drag_into">Sposta in %1$s</string>
+    <string name="drag_onto_folder">Trascina su una cartella</string>
     <string name="customise">Personalizza</string>
     <string name="choose_cover">Scegli la copertina</string>
     <string name="in_whole_vault">in tutto il vault</string>
