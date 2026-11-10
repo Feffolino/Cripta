@@ -1,0 +1,382 @@
+accessible	♿	車椅子	バリアフリー|バリヤフリー|車椅子
+aerial-lift	🚡	ロープウェイ	ゴンドラ|ロープウェイ|乗り物
+air-balloon		熱気球	熱気球
+alarm	⏰	目覚まし時計	アラーム|時計|時間|目覚まし|目覚まし時計
+alert-triangle		警告 三角形	警告 三角形
+alien	👽	エイリアン	UFO|エイリアン|ユーフォー|宇宙人|異星人|顔
+apple	🍎	赤リンゴ	りんご|アップル|果物|赤リンゴ
+archive		アーカイブ	アーカイブ
+artboard		アートボード	アートボード
+article		記事	記事
+atom-2		原子 2	原子 2
+automatic-gearbox		自動変速機	自動変速機
+award	🏅	メダル	スポーツ|メダル|優勝|表彰|金|金メダル
+baby-carriage		ベビーカー	ベビーカー
+badge		バッジ	バッジ
+badges		バッジ	バッジ
+ball-bowling	🎳	ボウリング	ストライク|スポーツ|ボウリング|ボール|球
+balloon	🎈	風船	バルーン|風船
+ballpen	🖊	ペン	ペン|ボールペン|文具|文房具
+bandage	🩹	絆創膏	けが|ばんそうこう|傷|手当て|絆創膏|薬
+barbell		バーベル	バーベル
+basket	🧺	かご	かご|ピクニック|収穫|洗濯
+bath		浴槽	浴槽
+bed-flat		ベッド 平ら	ベッド 平ら
+bed	🛏	ベッド	ベッド|ホテル|寝る|睡眠
+beer	🍺 🍻	ビールジョッキ	お酒|アルコール|オクトーバーフェスト|ジョッキ|バー|ビール|ビールで乾杯|ビールジョッキ|乾杯|宴会|居酒屋
+bell-ringing-2		ベル 鳴っている 2	ベル 鳴っている 2
+bell-ringing		ベル 鳴っている	ベル 鳴っている
+bell	🔔	ベル	ベル|教会|鈴|鐘
+bike	🚲	自転車	サイクリング|乗り物|自転車
+biohazard	☣	バイオハザード	バイオハザード|危険|有害物質
+blade		刃	刃
+blender		ミキサー	ミキサー
+bone	🦴	骨	犬|骨|骨格
+book	📕	閉じた本	書籍|本|赤い本|閉じた本
+bookmark	🔖	しおり	しおり|タグ|ブックマーク|付箋
+bookmarks		ブックマーク	ブックマーク
+bottle		瓶	瓶
+bow		リボン	リボン
+bowl-chopsticks	🥢	はし	おはし|はし|箸
+bowl-spoon	🥣	ボウルとスプーン	おかゆ|オートミール|シリアル|ボウルとスプーン|朝食|粥
+bowl		ボウル	ボウル
+bread	🍞	食パン	パン|ベーカリー|小麦|食パン
+briefcase-2		ブリーフケース 2	ブリーフケース 2
+briefcase	💼	ブリーフケース	かばん|ブリーフケース|鞄
+bubble		吹き出し	吹き出し
+bug	🐛	毛虫	イモムシ|毛虫|芋虫|虫
+building-bridge-2		橋	橋
+bulb	💡	電球	ひらめき|ぴこーん|マンガ|明かり|電球
+bus	🚌	バス	スクールバス|バス|乗り物|車
+butterfly	🦋	チョウ	チョウ|バタフライ|昆虫|虫|蝶
+cactus	🌵	サボテン	サボテン|植物|砂漠
+calculator		電卓	電卓
+calendar-event		カレンダー イベント	カレンダー イベント
+calendar-month		カレンダー 月	カレンダー 月
+calendar-week		カレンダー 週	カレンダー 週
+calendar	📅	カレンダー	カレンダー|スケジュール|予定|日付
+camera	📷	カメラ	カメラ|写真
+campfire		キャンプファイヤー	キャンプファイヤー
+candle	🕯	ろうそく	ろうそく|キャンドル|ロウソク|明かり
+cannabis		大麻	大麻
+capsule-horizontal		カプセル 水平	カプセル 水平
+capsule		カプセル	カプセル
+car-4wd		四輪駆動車	四輪駆動車
+car-crane		移動式クレーン	移動式クレーン
+car-fan		車 扇風機	車 扇風機
+car-suv		車 SUV	車 SUV
+car	🚗	自動車	ドライブ|乗り物|乗用車|自動車|車
+carambola		スターフルーツ	スターフルーツ
+caravan		キャンピングトレーラー	キャンピングトレーラー
+cardboards		段ボール製VRゴーグル	段ボール製VRゴーグル
+cash-banknote		紙幣	紙幣
+check		チェック	チェック
+chef-hat		コック帽	コック帽
+cherry	🍒	さくらんぼ	さくらんぼ|チェリー|果物
+chess-bishop		ビショップ	ビショップ
+chess-king		チェスのキング	チェスのキング
+chess-knight		チェスのナイト	チェスのナイト
+chess-queen		チェスのクイーン	チェスのクイーン
+chess-rook		チェスのルーク	チェスのルーク
+chess		チェス	チェス
+christmas-tree	🎄	クリスマスツリー	クリスマス|クリスマスイブ|クリスマスツリー|ツリー
+circle-key		円 鍵	円 鍵
+circle-percentage		円 パーセント	円 パーセント
+circle		円	円
+clipboard	📋	クリップボード	クリップ|クリップボード|メモ|文具|文房具
+clock-hour-1		時計 時 1	時計 時 1
+clock-hour-10		時計 時 10	時計 時 10
+clock-hour-11		時計 時 11	時計 時 11
+clock-hour-12		時計 時 12	時計 時 12
+clock-hour-2		時計 時 2	時計 時 2
+clock-hour-3		時計 時 3	時計 時 3
+clock-hour-4		時計 時 4	時計 時 4
+clock-hour-5		時計 時 5	時計 時 5
+clock-hour-6		時計 時 6	時計 時 6
+clock-hour-7		時計 時 7	時計 時 7
+clock-hour-8		時計 時 8	時計 時 8
+clock-hour-9		時計 時 9	時計 時 9
+clock		時計	時計
+cloud-computing		クラウドコンピューティング	クラウドコンピューティング
+cloud	☁	雲	天気|曇り|雲
+clover	🍀	四つ葉のクローバー	4|クローバー|四つ葉のクローバー|植物|草|葉
+clubs	♣	クラブ	カード|クラブ|クローバー|トランプ
+coin-bitcoin		硬貨 ビットコイン	硬貨 ビットコイン
+coin-euro		硬貨 ユーロ	硬貨 ユーロ
+coin-monero		硬貨 モネロ	硬貨 モネロ
+coin-pound		硬貨 ポンド	硬貨 ポンド
+coin-rupee		硬貨 ルピー	硬貨 ルピー
+coin-taka		硬貨 タカ	硬貨 タカ
+coin-yen		硬貨 円	硬貨 円
+coin-yuan		硬貨 元	硬貨 元
+coin	🪙	コイン	お金|コイン|小銭|硬貨|金貨|銀貨
+compass	🧭	コンパス	オリエンテーリング|コンパス|方位磁針|方角|磁石|航海|航空
+cone-2		コーン 2	コーン 2
+cone		コーン	コーン
+confetti	🎊 🎉	くす玉	お祝い|くす玉|クラッカー|パーティー|パーティークラッカー|紙吹雪|誕生日
+cookie	🍪	クッキー	お菓子|クッキー|スイーツ|チョコレートチップ|デザート
+copyleft		コピーレフト	コピーレフト
+copyright	©	著作権マーク	Cマーク|コピーライト|著作権|著作権マーク|記号
+credit-card	💳	クレジットカード	お金|カード|キャッシュカード|クレジットカード|支払い|銀行
+cross	✝	十字架	キリスト教|クロス|ラテン十字|十字架|宗教
+crown	👑	王冠	クラウン|冠|王冠|王族
+device-cctv		デバイス 監視カメラ	デバイス 監視カメラ
+device-desktop	🖥	デスクトップパソコン	PC|コンピューター|デスクトップ|デスクトップパソコン|パソコン|モニター
+device-floppy	💾	フロッピー	FD|コンピューター|ディスク|フロッピー|フロッピーディスク
+device-gamepad-2		デバイス ゲームパッド 2	デバイス ゲームパッド 2
+device-gamepad-3		デバイス ゲームパッド 3	デバイス ゲームパッド 3
+device-gamepad	🎮	テレビゲーム	ゲーム|コントローラ|テレビゲーム|ビデオゲーム
+device-heart-monitor		心拍モニター	心拍モニター
+device-mobile	📱	携帯電話	スマホ|スマートフォン|モバイル|携帯|携帯電話
+device-remote		デバイス リモコン	デバイス リモコン
+device-speaker	🔊	スピーカー音量大	スピーカー|スピーカー音量大|ボリューム|大音量|音量|音量大
+device-tablet		デバイス タブレット	デバイス タブレット
+device-tv-old		レトロなテレビ	レトロなテレビ
+device-tv	📺	テレビ	TV|テレビ|ビデオ
+device-usb		デバイス USB	デバイス USB
+device-watch	⌚	腕時計	ウォッチ|時計|時間|腕時計
+diamond	💎	宝石	ジュエリー|ダイア|ダイヤ|ダイヤモンド|宝石
+diamonds	♦	ダイヤ	カード|ダイア|ダイヤ|トランプ
+dice-1		サイコロ 1	サイコロ 1
+dice-2		サイコロ 2	サイコロ 2
+dice-3		サイコロ 3	サイコロ 3
+dice-4		サイコロ 4	サイコロ 4
+dice-5		サイコロ 5	サイコロ 5
+dice-6		サイコロ 6	サイコロ 6
+dice	🎲	サイコロ	ゲーム|サイコロ|ダイス
+disc	💿	CD	Blu-ray|CD|DVD|コンピューター|ディスク|ブルーレイ|光ディスク
+discount		割引	割引
+drop-circle		しずく 円	しずく 円
+droplet	💧	水滴	しずく|たらーっ|水|水滴|汗|涙
+droplets		しずく	しずく
+dual-screen		デュアル スクリーン	デュアル スクリーン
+dumpling	🥟	点心	ぎょうざ|ギョーザ|点心|肉まん|餃子
+egg-cracked		卵 ひび割れ	卵 ひび割れ
+egg-fried	🍳	料理	フライパン|レストラン|卵|料理|朝食|目玉焼き
+egg	🥚	卵	卵
+elevator	🛗	エレベーター	アクセシビリティ|エレベーター|バリアフリー|リフト|昇降機
+engine		エンジン	エンジン
+escalator-down		エスカレーター 下	エスカレーター 下
+escalator-up		エスカレーター 上	エスカレーター 上
+escalator		エスカレーター	エスカレーター
+explicit		露骨な内容	露骨な内容
+eye	👁	片目	からだ|一つ目|片目|目
+eyeglass-2		眼鏡 2	眼鏡 2
+eyeglass	👓	メガネ	メガネ|眼鏡
+face-mask	😷	マスク顔	ドクター|マスク|マスク顔|医師|歯科医|病気|花粉症|顔|風邪
+feather	🪶	羽	羽|羽根|羽毛|軽い|飛ぶ|鳥
+fence		柵	柵
+ferry	⛴	フェリー	フェリー|乗り物|客船|船
+fidget-spinner		ハンドスピナー	ハンドスピナー
+file-description		ファイル 説明	ファイル 説明
+file-dollar		ファイル ドル	ファイル ドル
+file-euro		ファイル ユーロ	ファイル ユーロ
+file-horizontal		ファイル 水平	ファイル 水平
+file-invoice		ファイル 請求書	ファイル 請求書
+file-music		ファイル 音楽	ファイル 音楽
+file-pencil		ファイル 鉛筆	ファイル 鉛筆
+file-star		ファイル 星	ファイル 星
+file-text		ファイル テキスト	ファイル テキスト
+file		ファイル	ファイル
+files		ファイル	ファイル
+fish-bone		魚の骨	魚の骨
+flag-2		旗 2	旗 2
+flag-3		旗 3	旗 3
+flag	🏁	チェッカーフラッグ	スポーツ|チェッカーフラッグ|フラグ|フラッグ|レーシング|レース|勝利|旗
+flame	🔥	火	ファイアー|ファイヤー|火|炎|熱い|燃える
+flare		光のきらめき	光のきらめき
+flask-2		フラスコ 2	フラスコ 2
+flask		フラスコ	フラスコ
+flower		花	花
+folder-open	📂	開いたフォルダー	ファイル|フォルダー|文具|文房具|開いたフォルダー|開く
+folder	📁	フォルダー	ファイル|フォルダー|文具|文房具
+folders		フォルダ	フォルダ
+forbid-2		禁止 2	禁止 2
+forbid	🚫	車両通行止め	標識|禁止|規制|車両通行止め|通行止め|道路
+fountain	⛲	噴水	噴水
+garden-cart		ガーデンカート	ガーデンカート
+gas-station		ガソリンスタンド	ガソリンスタンド
+ghost-2		おばけ 2	おばけ 2
+ghost-3		おばけ 3	おばけ 3
+ghost	👻	お化け	お化け|ゴースト|ハロウィーン|ユーレイ|幽霊|怖い
+gift-card		ギフトカード	ギフトカード
+gift	🎁	プレゼント	お祝い|ギフト|プレゼント|リボン|箱
+glass-full	🍷	ワイングラス	お酒|アルコール|グラス|バー|ワイン|ワイングラス
+glass		グラス	グラス
+globe	🌐 🌍 🌎 🌏	子午線のある地球	アジア|アフリカ|アメリカ|アメリカ大陸|インターネット|オーストラリア|ヨーロッパ|世界|地球|地球（アジアとオーストラリア）|地球（アメリカ大陸）|地球（ヨーロッパとアフリカ）|子午線|子午線のある地球
+golf	⛳	ゴルフ	ゴルフ|スポーツ|フラグ|フラッグ|ホール|旗
+guitar-pick		ギターピック	ギターピック
+hanger-2		ハンガー 2	ハンガー 2
+headphones	🎧	ヘッドホン	イヤホン|ヘッドフォン|ヘッドホン|音楽
+headset		ヘッドセット	ヘッドセット
+heart-broken	💔	割れたハート	ハート|ハートブレイク|別れ|別れた|割れたハート|壊れたハート|失恋
+heart	❤	赤いハート	ハート|愛|赤|赤いハート
+helicopter-landing		ヘリコプター 着陸	ヘリコプター 着陸
+helicopter	🚁	ヘリコプター	ヘリ|ヘリコプター|乗り物
+hexagon		六角形	六角形
+home-2		家 2	家 2
+home	🏠 🏡	家	マイホーム|一戸建て|家|庭|庭付きの家|建物|郊外
+hospital-circle	🏥	病院	医者|建物|病院|薬
+hourglass	⌛ ⏳	砂時計	タイマー|時計|時間|砂|砂が落ちている砂時計|砂時計
+ironing-1		アイロンがけ 1	アイロンがけ 1
+ironing-2		アイロンがけ 2	アイロンがけ 2
+ironing-3		アイロンがけ 3	アイロンがけ 3
+ironing-steam		アイロンがけ 湯気	アイロンがけ 湯気
+ironing		アイロンがけ	アイロンがけ
+jetpack		ジェットパック	ジェットパック
+jewish-star	✡	ダビデの星	ダビデの星|ユダヤ教|六芒星|宗教|星
+key	🔑	鍵	キー|パスワード|鍵|開錠
+keyboard	⌨	キーボード	PC|キーボード|コンピューター|パソコン
+label-important		ラベル 重要	ラベル 重要
+label	🏷	荷札	タグ|ラベル|荷札
+leaf		葉	葉
+lemon-2		レモン 2	レモン 2
+library		図書館	図書館
+lifebuoy		浮き輪	浮き輪
+location		位置	位置
+lock-square-rounded		鍵 四角 角丸	鍵 四角 角丸
+lock	🔒 🔐	閉じた錠	キー|セキュリティ|ロック|南京錠|安全|施錠|錠|鍵|閉じた錠|閉じた錠と鍵
+lungs	🫁	肺	呼吸|肺|臓器
+macro		マクロ	マクロ
+magnet	🧲	U字型磁石	U字型磁石|マグネット|引き付ける|正負|磁石|蹄鉄
+mail-opened		郵便 開封済み	郵便 開封済み
+mail	✉	封筒	Eメール|メール|封筒|手紙|郵便|電子メール
+man	👨	男性	大人|男|男性|顔
+manual-gearbox		手動変速機	手動変速機
+map-pin	📍	丸い押しピン	ピン|プッシュピン|丸い押しピン|地図|押しピン|文具|文房具|画びょう
+medical-cross		医療十字	医療十字
+meeple		ゲームの駒	ゲームの駒
+melon	🍈	メロン	マスクメロン|メロン|果物|野菜
+message-2		メッセージ 2	メッセージ 2
+message-chatbot		メッセージ チャットボット	メッセージ チャットボット
+message-circle		メッセージ 円	メッセージ 円
+message		メッセージ	メッセージ
+messages		メッセージ	メッセージ
+meteor	☄	彗星	すい星|宇宙|彗星
+microphone	🎤	マイク	カラオケ|マイク|歌|音楽
+microscope	🔬	顕微鏡	サイエンス|実験|研究|科学|顕微鏡
+microwave		電子レンジ	電子レンジ
+military-rank		軍の階級	軍の階級
+milk		牛乳	牛乳
+mood-angry	😠 😡	ぷんぷん	かんかん|ふくれっ面|ぷんぷん|不満|怒った|怒った顔|怒り|激怒|赤い顔|顔
+mood-confused		気分 困惑	気分 困惑
+mood-crazy-happy	😂 🤣	嬉し泣き	あはは|うけるね|スマイル|大笑い|嬉し泣き|泣き笑い|涙|爆笑|笑い転げる|笑う|笑顔|顔
+mood-empty		気分 空	気分 空
+mood-happy	😀 😁	にっこり笑う	にっこり|にっこり笑う|にやっと笑う|スマイル|ナイス|ハッピー|笑う|笑顔|顔
+mood-kid	👶	赤ん坊	ベビー|子供|新生児|赤ちゃん|赤ん坊|顔
+mood-neutral		気分 無表情	気分 無表情
+mood-sad	😢 😭	泣き顔	ひどい|号泣|号泣する顔|大泣き|寂しい|悲しい|泣き顔|泣く|涙|顔
+mood-smile	🙂 😊	微笑む	にこにこ|ほほえみ|スマイル|ハッピー|微笑み|微笑む|満足|目を細める|笑顔|頬を赤らめる|顔
+mood-wrrr		気分 歯ぎしり	気分 歯ぎしり
+moon	🌙	三日月	三日月|宇宙|月
+motorbike	🏍	オートバイ	オートバイ|オートレース|スポーツ|バイク|モータースポーツ|乗り物
+mountain	⛰	山	山|山岳
+mouse	🖱	マウス	PC|コンピューター|パソコン|マウス
+mug	☕	温かい飲み物	カフェ|カフェイン|コーヒー|ホットドリンク|温かい飲み物|紅茶|飲み物
+mushroom	🍄	キノコ	きのこ|キノコ|マッシュルーム|毒|菌類|野菜
+nurse		看護師	看護師
+octagon		八角形	八角形
+oval-vertical		楕円 縦	楕円 縦
+oval		楕円	楕円
+paint		ペンキ	ペンキ
+palette	🎨	絵の具パレット	パレット|画家|絵|絵の具パレット|絵画|美術館|芸術
+parking-circle		駐車場 円	駐車場 円
+paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	肉球	アクセシビリティ|イヌ|イヌの顔|サービス|ネコ|ネコの顔|プードル|ペット|不吉|介助犬|動物|子犬|子猫|犬|猫|盲導犬|肉球|補助|補助犬|視覚|足跡|障がい|顔|黒|黒猫
+pencil	✏	鉛筆	文具|文房具|鉛筆
+pennant-2		ペナント 2	ペナント 2
+pennant		ペナント	ペナント
+pentagon		五角形	五角形
+phone-call		電話 通話	電話 通話
+phone-calling		電話 発信中	電話 発信中
+phone		電話	電話
+photo	🖼	絵画	アート|絵|絵画|美術館|芸術|額
+pig	🐷 🐖	ブタの顔	ブタ|ブタの顔|ポーク|動物|家畜|豚|顔
+pill	💊	薬	カプセル|ビタミン剤|医者|病気|薬
+pin	📌	押しピン	押しピン|文具|文房具|画鋲
+pinned		ピン留め	ピン留め
+pizza	🍕	ピザ	チーズ|ピザ|ピッツァ|ペパロニ
+plane-arrival	🛬	飛行機着陸	乗り物|着陸|航空機|飛行機|飛行機着陸
+plane-departure	🛫	飛行機離陸	乗り物|航空機|離陸|飛行機|飛行機離陸
+plane-tilt		飛行機 傾き	飛行機 傾き
+plane	✈	飛行機	ジェット機|乗り物|旅行|航空機|飛行機
+play-card-star		星のトランプ	星のトランプ
+play-card	🃏	ジョーカー	カード|ジジ|ジョーカー|トランプ|ババ
+polaroid		インスタント写真	インスタント写真
+poo	💩	うんち	うんこ|うんち|臭い|顔
+presentation		プレゼン	プレゼン
+puzzle	🧩	ジグソーパズル	ジグソーパズル|パズル|ピース|組み合わせ|鍵
+radar		レーダー	レーダー
+radioactive	☢	放射能	危険|放射性|放射線|放射能
+receipt-dollar		レシート ドル	レシート ドル
+receipt-euro		レシート ユーロ	レシート ユーロ
+receipt-pound		レシート ポンド	レシート ポンド
+receipt-rupee		レシート ルピー	レシート ルピー
+receipt-yen		レシート 円	レシート 円
+receipt-yuan		レシート 元	レシート 元
+receipt	🧾	レシート	レシート|会計|簿記|請求書|領収書
+rectangle-vertical		長方形 縦	長方形 縦
+rectangle		長方形	長方形
+registered	®	登録商標マーク	Rマーク|登録商標|登録商標マーク|記号
+report-money		報告書 お金	報告書 お金
+rollercoaster		ジェットコースター	ジェットコースター
+rosette-discount		ロゼット 割引	ロゼット 割引
+rosette	🏵	花飾り	植物|花|花飾り
+salad		サラダ	サラダ
+satellite	🛰	人工衛星	人工衛星|宇宙
+scale	⚖	天秤	はかり|バランス|化学|天秤|天秤座|実験|星座
+school	🏫	学校	学校|建物|校舎
+scuba-diving-tank		ダイビング用ボンベ	ダイビング用ボンベ
+seedling	🌱	新芽	双葉|新芽|芽
+shield-checkered		盾 チェッカー	盾 チェッカー
+shield-half		盾 半分	盾 半分
+shield-lock		盾 鍵	盾 鍵
+shield	🛡	盾	シールド|盾|防具
+shirt	👕	Tシャツ	Tシャツ|シャツ|服
+shopping-cart	🛒	ショッピングカート	カート|ショッピング|ショッピングカート|スーパー|買い物
+sign-left		標識 左	標識 左
+sign-right		標識 右	標識 右
+soup		スープ	スープ
+spade	♠	スペード	カード|スペード|トランプ
+sparkles	✨	きらきら	きらきら|ぴかぴか|キラキラ|スター|星
+speedboat	🚤	スピードボート	スピードボート|ボート|モーターボート|乗り物|快速艇|船
+spider	🕷	クモ	クモ|スパイダー|虫
+square-rotated		四角 回転	四角 回転
+square-rounded		四角 角丸	四角 角丸
+square		四角	四角
+star-half		星 半分	星 半分
+star	⭐	スター	スター|天文学|星
+stars		星	星
+steering-wheel		ハンドル	ハンドル
+sun-high		太陽 高	太陽 高
+sun-low		太陽 低	太陽 低
+sun	☀	太陽	天気|太陽|日光|晴れ
+sunglasses	🕶	サングラス	サングラス|メガネ|眼鏡
+sunrise	🌅	日の出	太陽|日の出|日光|朝|朝日
+sunset-2		日没 2	日没 2
+sunset	🌇	夕日	ビル|夕方|夕日|夕暮れ|太陽|日暮れ|日没
+tag		タグ	タグ
+tags		タグ	タグ
+test-pipe-2		試験 パイプ 2	試験 パイプ 2
+thumb-down	👎	サムズダウン	NG|だめ|サムズダウン|ブーイング|ボツ|下|手
+thumb-up	👍	サムズアップ	OK|いいね|オッケー|オーケー|グッド|サムズアップ|上|了解|手|親指
+ticket	🎫	チケット	チケット|入場券|切符|半券
+tools-kitchen-2	🍴	ナイフとフォーク	ごちそう|カトラリー|ディナー|ナイフ|ナイフとフォーク|フォーク|レストラン|朝食|食事|食器
+train	🚆	電車正面	乗り物|列車|電車|電車正面
+trash		ゴミ箱	ゴミ箱
+triangle-inverted		三角形 反転	三角形 反転
+triangle		三角形	三角形
+trolley		台車	台車
+trophy	🏆	トロフィー	チャンピオン|トロフィー|優勝|優勝カップ|表彰|賞杯
+truck		トラック	トラック
+ufo	🛸	空飛ぶ円盤	UFO|乗り物|宇宙|宇宙人|未確認飛行物体|空飛ぶ円盤
+umbrella	☂	傘	傘|天気|持ち物|雨
+user	👤	人のシルエット	1人|シルエット|上半身|人のシルエット|謎の人
+video	📹 🎥	ビデオカメラ	カメラ|シネマ|ハリウッド|ビデオ|ビデオカメラ|フィルム|ムービー|動画|撮影|映画|映画カメラ|録画
+windmill		風車	風車
+windsock		吹き流し	吹き流し
+woman	👩	女性	大人|女|女性|顔
+world	🗺	世界地図	マップ|世界|世界地図|地図
+writing-sign		筆記 標識	筆記 標識
+writing	✍	書いている手	手|手で書く|手書き|書いている手
+yin-yang	☯	陰陽	インヤン|宗教|道教|陰陽
+zeppelin		飛行船	飛行船

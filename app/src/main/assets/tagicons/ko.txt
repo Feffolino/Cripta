@@ -1,0 +1,382 @@
+accessible	♿	휠체어	장애|장애인|접근|휠체어|휠체어 표시
+aerial-lift	🚡	케이블카	곤돌라|공중|산악 케이블카|차|케이블카
+air-balloon		열기구	열기구
+alarm	⏰	알람 시계	늦은|대기|시간|시계|알람
+alert-triangle		경고 삼각형	경고 삼각형
+alien	👽	외계인	UFO|괴물|동화|몬스터|에일리언|왕눈이|외계생명체|외계인|판타지
+apple	🍎	빨간 사과	건강|과일|다이어트|빨간|사과|식품|음식
+archive		보관	보관
+artboard		아트보드	아트보드
+article		기사	기사
+atom-2		원자 2	원자 2
+automatic-gearbox		자동 변속기	자동 변속기
+award	🏅	스포츠 메달	경기|금메달|메달|스포츠|승자|어워드
+baby-carriage		유모차	유모차
+badge		배지	배지
+badges		배지	배지
+ball-bowling	🎳	볼링	게임|공|볼링|볼링공|볼링핀|스트라이크|스포츠
+balloon	🎈	풍선	기념|생일|축하|파티|풍선
+ballpen	🖊	펜	볼펜|펜
+bandage	🩹	반창고	반창고|밴드
+barbell		바벨	바벨
+basket	🧺	바구니	바구니|빨래바구니|소풍
+bath		욕조	욕조
+bed-flat		침대 평평한	침대 평평한
+bed	🛏	침대	잠|침대|호텔
+beer	🍺 🍻	맥주잔	500잔|독일|맥주|맥주잔|맥주컵|바|서머에일|술|술집|옥토버페스트|원샷|음료|음주|짠|짠 하는 맥주잔|파인트|호프
+bell-ringing-2		종 울리는 2	종 울리는 2
+bell-ringing		종 울리는	종 울리는
+bell	🔔	종	교회|벨|소리|쉬는시간|종
+bike	🚲	자전거	교통수단|라이드|바이크|바이크 갱|사이클링|스피닝|스핀 클래스|자전거
+biohazard	☣	생물학적 위험	바이오하자드|바이오해저드|생물학적 위험|표시
+blade		칼날	칼날
+blender		블렌더	블렌더
+bone	🦴	뼈다귀	개|뼈|뼈다귀|스켈레톤|위시본
+book	📕	펼치지 않은 책	교육|도서|책|펼치지 않은 책
+bookmark	🔖	북마크	마크|북마크|책갈피|표시
+bookmarks		북마크	북마크
+bottle		병	병
+bow		리본	리본
+bowl-chopsticks	🥢	젓가락	젓가락
+bowl-spoon	🥣	스푼과 사발	그릇과 숟가락|스푼과 사발|시리얼|씨리얼|아침|아침식사|오트밀|죽|콘지
+bowl		그릇	그릇
+bread	🍞	빵	레스토랑|빵|식당|식빵|식품|토스트|한덩이|호밀
+briefcase-2		서류가방 2	서류가방 2
+briefcase	💼	서류 가방	가방|사무실|서류 가방
+bubble		말풍선	말풍선
+bug	🐛	송충이	곤충|동물|벌레|송충이|정원
+building-bridge-2		다리	다리
+bulb	💡	전구	기발한 생각|빛|아이디어|아하|전구|전기
+bus	🚌	버스	교통수단|버스|차|학교
+butterfly	🦋	나비	곤충|나비|날개|이쁜
+cactus	🌵	선인장	가뭄|나무|사막|선인장|식물
+calculator		계산기	계산기
+calendar-event		달력 이벤트	달력 이벤트
+calendar-month		달력 월	달력 월
+calendar-week		달력 주	달력 주
+calendar	📅	달력	날짜|달력|일정|캘린더
+camera	📷	카메라	동영상|비디오|사진|사진 촬영|셀카|스냅|여행|지난 시절|카메라
+campfire		모닥불	모닥불
+candle	🕯	양초	빛|양초|캔들
+cannabis		대마	대마
+capsule-horizontal		캡슐 가로	캡슐 가로
+capsule		캡슐	캡슐
+car-4wd		사륜구동차	사륜구동차
+car-crane		이동식 크레인	이동식 크레인
+car-fan		자동차 선풍기	자동차 선풍기
+car-suv		자동차 SUV	자동차 SUV
+car	🚗	자동차	교통수단|승용차|운전|자동차|차량
+carambola		스타프루트	스타프루트
+caravan		캠핑 트레일러	캠핑 트레일러
+cardboards		종이 VR 헤드셋	종이 VR 헤드셋
+cash-banknote		지폐	지폐
+check		체크	체크
+chef-hat		요리사 모자	요리사 모자
+cherry	🍒	체리	과일|체리
+chess-bishop		비숍	비숍
+chess-king		체스 킹	체스 킹
+chess-knight		체스 나이트	체스 나이트
+chess-queen		체스 퀸	체스 퀸
+chess-rook		체스 룩	체스 룩
+chess		체스	체스
+christmas-tree	🎄	크리스마스 트리	축하|크리스마스|크리스마스 트리
+circle-key		원 열쇠	원 열쇠
+circle-percentage		원 백분율	원 백분율
+circle		원	원
+clipboard	📋	클립보드	노트|클리핑|클립|클립보드|할일
+clock-hour-1		시계 시간 1	시계 시간 1
+clock-hour-10		시계 시간 10	시계 시간 10
+clock-hour-11		시계 시간 11	시계 시간 11
+clock-hour-12		시계 시간 12	시계 시간 12
+clock-hour-2		시계 시간 2	시계 시간 2
+clock-hour-3		시계 시간 3	시계 시간 3
+clock-hour-4		시계 시간 4	시계 시간 4
+clock-hour-5		시계 시간 5	시계 시간 5
+clock-hour-6		시계 시간 6	시계 시간 6
+clock-hour-7		시계 시간 7	시계 시간 7
+clock-hour-8		시계 시간 8	시계 시간 8
+clock-hour-9		시계 시간 9	시계 시간 9
+clock		시계	시계
+cloud-computing		클라우드 컴퓨팅	클라우드 컴퓨팅
+cloud	☁	구름	구름|날씨|흐림
+clover	🍀	네잎클로버	4|네잎클로버|식물|아이리쉬|잎|클로버|행운
+clubs	♣	클럽	게임|카드 게임|클럽|클로바 무늬
+coin-bitcoin		동전 비트코인	동전 비트코인
+coin-euro		동전 유로	동전 유로
+coin-monero		동전 모네로	동전 모네로
+coin-pound		동전 파운드	동전 파운드
+coin-rupee		동전 루피	동전 루피
+coin-taka		동전 타카	동전 타카
+coin-yen		동전 엔	동전 엔
+coin-yuan		동전 위안	동전 위안
+coin	🪙	동전	골드|금|금속|달러|돈|동전|보물|부자|유로|은|코인
+compass	🧭	나침반	길찾기|나침반|네비게이션|오리엔티어링|자석
+cone-2		원뿔 2	원뿔 2
+cone		원뿔	원뿔
+confetti	🎊 🎉	박 터트리기	공|기념|박 터트리기|색종이 꽃가루처|생일|신나는|야호|우후|짠|축하|파티
+cookie	🍪	쿠키	달콤|초코 쿠키|초코칩 쿠키|초콜렛 칩|쿠키
+copyleft		카피레프트	카피레프트
+copyright	©	저작권	동그라미 C|씨|저작권
+credit-card	💳	신용카드	돈|신용카드|은행|지불|카드|페이|현금
+cross	✝	라틴 십자가	기독교|라틴 십자가|십자가|종교|크리스찬
+crown	👑	왕관	승리|여왕|왕|왕관|왕족|의류
+device-cctv		기기 감시 카메라	기기 감시 카메라
+device-desktop	🖥	데스크톱 컴퓨터	데스크톱|모니터|컴퓨터
+device-floppy	💾	플로피 디스크	디스켓|디스크|컴퓨터|플로피 디스크
+device-gamepad-2		기기 게임패드 2	기기 게임패드 2
+device-gamepad-3		기기 게임패드 3	기기 게임패드 3
+device-gamepad	🎮	비디오 게임	게임|게임패드|비디오 게임|엔터테인먼트|컨트롤러
+device-heart-monitor		심장 모니터	심장 모니터
+device-mobile	📱	휴대전화	모바일폰|셀폰|전화|커뮤니케이션|휴대전화|휴대폰
+device-remote		기기 리모컨	기기 리모컨
+device-speaker	🔊	스피커 소리 크게	높게|소리|소리 큼|소리 키우기|스피커 소리 크게|음악|크게
+device-tablet		기기 태블릿	기기 태블릿
+device-tv-old		옛날 텔레비전	옛날 텔레비전
+device-tv	📺	텔레비전	TV|비디오|텔레비전|티비
+device-usb		기기 USB	기기 USB
+device-watch	⌚	시계	손목 시계|시간|시계
+diamond	💎	원석	결혼식|다이아몬드|돈|로맨스|보석|약혼|원석
+diamonds	♦	다이아몬드	게임|다이아몬드|다이아몬드 무늬|카드
+dice-1		주사위 1	주사위 1
+dice-2		주사위 2	주사위 2
+dice-3		주사위 3	주사위 3
+dice-4		주사위 4	주사위 4
+dice-5		주사위 5	주사위 5
+dice-6		주사위 6	주사위 6
+dice	🎲	주사위	게임|경기|경기에서 짐|엔터테인먼트|주사위
+disc	💿	씨디	CD|DVD|광학|디비디|디스크|블루레이|시디|씨디
+discount		할인	할인
+drop-circle		물방울 원	물방울 원
+droplet	💧	물방울	날씨|눈물|달콤|땀|만화|물방울|자연|추위|코믹
+droplets		물방울	물방울
+dual-screen		듀얼 스크린	듀얼 스크린
+dumpling	🥟	만두	교자|덤플링|만두
+egg-cracked		달걀 금이 간	달걀 금이 간
+egg-fried	🍳	프라이팬	계란|계란 프라이|레스토랑|식당|써니사이드업|아침식사|요리|팬|프라이팬
+egg	🥚	달걀	계란|달걀|식품|음식
+elevator	🛗	엘리베이터	승강 장치|승강기|엘리베이터|접근성
+engine		엔진	엔진
+escalator-down		에스컬레이터 아래	에스컬레이터 아래
+escalator-up		에스컬레이터 위	에스컬레이터 위
+escalator		에스컬레이터	에스컬레이터
+explicit		노골적인 콘텐츠	노골적인 콘텐츠
+eye	👁	눈	눈|눈 하나|눈 한개|몸|시력|신체|얼굴|한 눈
+eyeglass-2		안경 2	안경 2
+eyeglass	👓	안경	눈|안경|안경류|의류
+face-mask	😷	마스크 낀 얼굴	감기|마스크|마스크 낀 얼굴|병균|세균|아픈|약|얼굴|의사|의학|치과의사|피부과 의사|황사
+feather	🪶	깃털	가벼운|깃|깃털|비행|새
+fence		울타리	울타리
+ferry	⛴	페리	보트|승객|연락선|페리
+fidget-spinner		피젯 스피너	피젯 스피너
+file-description		파일 설명	파일 설명
+file-dollar		파일 달러	파일 달러
+file-euro		파일 유로	파일 유로
+file-horizontal		파일 가로	파일 가로
+file-invoice		파일 송장	파일 송장
+file-music		파일 음악	파일 음악
+file-pencil		파일 연필	파일 연필
+file-star		파일 별	파일 별
+file-text		파일 텍스트	파일 텍스트
+file		파일	파일
+files		파일	파일
+fish-bone		생선 가시	생선 가시
+flag-2		깃발 2	깃발 2
+flag-3		깃발 3	깃발 3
+flag	🏁	격자 무늬 깃발	격자 무늬|격자 무늬 깃발|결승선 깃발|경기|깃발|레이싱|스포츠|체크 무늬|체크 무늬 깃발
+flame	🔥	불	도구|뜨거운|불|불꽃|화끈한|화재
+flare		섬광	섬광
+flask-2		플라스크 2	플라스크 2
+flask		플라스크	플라스크
+flower		꽃	꽃
+folder-open	📂	폴더 열기	열기|열린 파일 폴더|열린 폴더|파일|폴더
+folder	📁	폴더	파일|폴더
+folders		폴더	폴더
+forbid-2		금지 2	금지 2
+forbid	🚫	금지	금지|들어오지 마시오|안됨|진입 금지 표시
+fountain	⛲	분수	분수|분수대
+garden-cart		정원용 카트	정원용 카트
+gas-station		주유소	주유소
+ghost-2		유령 2	유령 2
+ghost-3		유령 3	유령 3
+ghost	👻	유령	고스트|귀신|귀신얼굴|동화|어이없는|얼굴|유령|판타지|할로윈|흥분한
+gift-card		기프트 카드	기프트 카드
+gift	🎁	선물	놀람|박스|선물|축하|크리스마스|포장
+glass-full	🍷	와인잔	글래스|바|술|와인|와인글라스|와인바|와인잔|음료|음주|클럽
+glass		잔	잔
+globe	🌐 🌍 🌎 🌏	자오선 지구	경도|글로벌|미국이 보이는 지구|미대륙|미대륙이 보이는 지구|미주|세계|아메리카|아시아|아시아와 호주가 보이는 지구|아프리카|월드|월드와이드|웹|위도|유럽|유럽과 아프리카가 보이는 지구|인터넷|자오선|지구|지구본|호주
+golf	⛳	골프	골프|구멍|홀|홀에 깃발
+guitar-pick		기타 피크	기타 피크
+hanger-2		옷걸이 2	옷걸이 2
+headphones	🎧	헤드폰	소리|음악 감상|이어버드|이어폰|헤드폰
+headset		헤드셋	헤드셋
+heart-broken	💔	깨진 하트	가슴이 아픈|감정|결별|깨진 하트|슬픔|외로움|이별|이별의 고통|이별의 아픔|헤어짐
+heart	❤	빨간색 하트	감정|마음|빨간색 하트|사랑|하트
+helicopter-landing		헬리콥터 착륙	헬리콥터 착륙
+helicopter	🚁	헬리콥터	교통수단|로플콥터|여행|콥터|헬기|헬리콥터
+hexagon		육각형	육각형
+home-2		집 2	집 2
+home	🏠 🏡	집	건물|교외|마음이 머무는 곳|빌딩|시골집|정원|정원이 있는 주택|정원이 있는 집|정착|주택|주택 수리|집
+hospital-circle	🏥	병원	건물|메디컬|병원|빌딩|의사|의학
+hourglass	⌛ ⏳	시간이 다 된 모래시계	기다림|모래|모래가 떨어지는 모래시계|모래시계|시간|시간이 남은 모래시계|시간이 다 된 모래시계|욜로|타이머
+ironing-1		다림질 1	다림질 1
+ironing-2		다림질 2	다림질 2
+ironing-3		다림질 3	다림질 3
+ironing-steam		다림질 김	다림질 김
+ironing		다림질	다림질
+jetpack		제트팩	제트팩
+jewish-star	✡	다윗의 별	다비드|다비드별|다윗|다윗의 별|별|유대교|유대인|종교
+key	🔑	열쇠	열쇠|잠금해제|중요 열쇠|패스워드
+keyboard	⌨	키보드	컴퓨터|키보드
+label-important		라벨 중요	라벨 중요
+label	🏷	라벨	라벨|택
+leaf		잎	잎
+lemon-2		레몬 2	레몬 2
+library		도서관	도서관
+lifebuoy		구명부표	구명부표
+location		위치	위치
+lock-square-rounded		자물쇠 사각형 둥근	자물쇠 사각형 둥근
+lock	🔒 🔐	자물쇠	락|보안|사적인|안전|열쇠|자물쇠|자물쇠와 열쇠|자전거 자물쇠|잠금
+lungs	🫁	폐	내쉬기|들이마시기|숨|장기|폐|호흡
+macro		매크로	매크로
+magnet	🧲	자석	u자|마그넷|말굽 자석|양극 음극|자력|자석|편자
+mail-opened		우편 열린	우편 열린
+mail	✉	봉투	봉투|이메일|편지
+man	👨	남자	남성|남자|남자친구|성인|친구
+manual-gearbox		수동 변속기	수동 변속기
+map-pin	📍	둥근 머리 핀	둥근 머리 압정|둥근 머리 핀|압정|지도|핀
+medical-cross		의료 십자가	의료 십자가
+meeple		게임 말	게임 말
+melon	🍈	멜론	과일|멜론|야채|채소|칸탈루프
+message-2		메시지 2	메시지 2
+message-chatbot		메시지 챗봇	메시지 챗봇
+message-circle		메시지 원	메시지 원
+message		메시지	메시지
+messages		메시지	메시지
+meteor	☄	혜성	우주|혜성
+microphone	🎤	마이크	가라오케|노래|노래방|마이크|소리|음악|행사
+microscope	🔬	현미경	과학|기구|도구|실험|연구실|장치|현미경
+microwave		전자레인지	전자레인지
+military-rank		군 계급	군 계급
+milk		우유	우유
+mood-angry	😠 😡	화난 얼굴	느낌|분노|불행|불행한|비난|뾰로통한 얼굴|뾰로통함|새빨간|얼굴|열받은|좌절|화|화난|화난 얼굴|황당
+mood-confused		기분 혼란	기분 혼란
+mood-crazy-happy	😂 🤣	기쁨의 눈물을 흘리는 얼굴	ㅋㅋㅋ|ㅎㅎ|ㅎㅎㅎ|구르기|기쁨의 눈물을 흘리는 얼굴|너무 웃겨서 눈물|너무 웃기는|눈물|눈물나게 웃긴|데굴데굴|바닥을 구르며 웃는 얼굴|빵 터짐|스마일|얼굴|완전 재미있는|울면서 웃음|웃음|하하|행복|헤헤
+mood-empty		기분 빈	기분 빈
+mood-happy	😀 😁	활짝 웃는 얼굴	나이스|눈|눈웃음|눈웃음 짓는 웃는 얼굴|미소|미소 짓는 눈으로 웃는 얼굴|발랄함|스마일|얼굴|웃음|치아|행복|환호|활짝 웃는 얼굴
+mood-kid	👶	아기	갓난아기|아기|어린|어린이|유아|응애응애|임신
+mood-neutral		기분 무표정	기분 무표정
+mood-sad	😢 😭	우는 얼굴	감정|그리움|끔찍한|눈물|대성통곡|불행|슬픔|얼굴|엉엉|엉엉 우는 얼굴|우는 얼굴|울음|훌쩍
+mood-smile	🙂 😊	살짝 미소 짓는 얼굴	기쁨|눈|눈웃음|눈웃음 지으며 웃는 얼굴|만족|미소|미소 짓는 눈으로 살짝 웃는 얼굴|발그레|살짝 미소 짓는 얼굴|스마일|얼굴|웃는 얼굴|행복
+mood-wrrr		기분 이를 악물기	기분 이를 악물기
+moon	🌙	초승달	달|라마단|우주|초승달
+motorbike	🏍	오토바이	경주|레이싱|모터사이클|오토바이
+mountain	⛰	산	산|산 정상
+mouse	🖱	컴퓨터 마우스	마우스|컴퓨터
+mug	☕	뜨거운 음료	김|뜨거운 음료|뜨거움|아침|음료|차|카페|카페인|커피
+mushroom	🍄	버섯	균류|나무|독버섯|버섯|식물
+nurse		간호사	간호사
+octagon		팔각형	팔각형
+oval-vertical		타원 세로	타원 세로
+oval		타원	타원
+paint		페인트	페인트
+palette	🎨	팔레트	그림|그림 그리기|다채로운|미술|박물관|엔터테인먼트|예술|예술가 팔레트|예술적인|팔레트|화가
+parking-circle		주차장 원	주차장 원
+paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	곰발바닥	강아지|강아지 얼굴|개|개띠|검은|검은 고양이|고양이|고양이 같은|고양이 얼굴|곰발바닥|곰발자국|괭이|냐옹이|동물|동물 발자국|멍멍이|발|보조|보조견|복실복실한|불길한|불행|사랑스러운|새끼 고양이|서비스|시각장애|안내|안내견|애완동물|야옹|야옹이|얼굴|접근성|집사|키티|푸들|할로윈|핼러윈
+pencil	✏	연필	연필|필기도구
+pennant-2		페넌트 2	페넌트 2
+pennant		페넌트	페넌트
+pentagon		오각형	오각형
+phone-call		전화 통화	전화 통화
+phone-calling		전화 통화 중	전화 통화 중
+phone		전화	전화
+photo	🖼	그림 액자	그림|박물관|액자|액자에 걸린 사진|예술|작품
+pig	🐷 🐖	돼지 얼굴	꿀꿀이|농장|동물|돼지|돼지 얼굴|돼지고기|돼지띠|베이컨|암퇘지|윌버
+pill	💊	알약	비타민|아픔|알약|약|약물|의사|의학
+pin	📌	압정	압정|콜라주|핀
+pinned		고정됨	고정됨
+pizza	🍕	피자	배고픔|식품|음식|조각|치즈|페페로니|피자|피자 한 조각
+plane-arrival	🛬	비행기 착륙	도착|도착하는 중|랜딩 중|비행기|비행기 착륙|항공기
+plane-departure	🛫	비행기 이륙	비행기|이륙|체크인|출발
+plane-tilt		비행기 기울어진	비행기 기울어진
+plane	✈	비행기	비행|비행기|여행|제트|항공
+play-card-star		별이 있는 트럼프 카드	별이 있는 트럼프 카드
+play-card	🃏	조커	게임|와일드카드|조커|카드
+polaroid		즉석 사진	즉석 사진
+poo	💩	똥	괴물|냄새|냄새가 지독한|똥|똥덩어리|똥무더기|만화|몬스터|아 짜증나|얼굴|코믹
+presentation		프레젠테이션	프레젠테이션
+puzzle	🧩	퍼즐	조각|조각퍼즐|직소|직소퍼즐|퍼즐
+radar		레이더	레이더
+radioactive	☢	방사능	방사능|방사선|위험|주의|표시
+receipt-dollar		영수증 달러	영수증 달러
+receipt-euro		영수증 유로	영수증 유로
+receipt-pound		영수증 파운드	영수증 파운드
+receipt-rupee		영수증 루피	영수증 루피
+receipt-yen		영수증 엔	영수증 엔
+receipt-yuan		영수증 위안	영수증 위안
+receipt	🧾	영수증	기록|영수증|증빙|청구|회계
+rectangle-vertical		직사각형 세로	직사각형 세로
+rectangle		직사각형	직사각형
+registered	®	등록상표	동그라미 R|등록상표|알
+report-money		보고서 돈	보고서 돈
+rollercoaster		롤러코스터	롤러코스터
+rosette-discount		로제트 할인	로제트 할인
+rosette	🏵	장미	꽃|로제트|식물|장미|장미 모양
+salad		샐러드	샐러드
+satellite	🛰	인공위성	우주|인공위성
+scale	⚖	접시저울	공평한|균형|별자리|저울|접시저울|정의|천칭자리
+school	🏫	학교	건물|공부|빌딩|스쿨|학교
+scuba-diving-tank		스쿠버 탱크	스쿠버 탱크
+seedling	🌱	새싹	새싹|식물|싹이 돋다|어린 나무|어린잎
+shield-checkered		방패 체크무늬	방패 체크무늬
+shield-half		방패 반	방패 반
+shield-lock		방패 자물쇠	방패 자물쇠
+shield	🛡	방패	무기|방패|보호
+shirt	👕	티셔츠	쇼핑|옷|의류|주말|칼라|티|티셔츠|파란색
+shopping-cart	🛒	쇼핑카트	쇼핑|쇼핑카트|장보기|카트
+sign-left		표지판 왼쪽	표지판 왼쪽
+sign-right		표지판 오른쪽	표지판 오른쪽
+soup		수프	수프
+spade	♠	스페이드	게임|스페이드|스페이드 모양|카드
+sparkles	✨	블링블링	마술|매직|반짝거림|반짝반짝|별|블링블링
+speedboat	🚤	쾌속정	럭셔리|보트|선박|억만장자|여름|여행|쾌속정|호수
+spider	🕷	거미	거미|곤충|벌레|스파이더
+square-rotated		사각형 회전	사각형 회전
+square-rounded		사각형 둥근	사각형 둥근
+square		사각형	사각형
+star-half		별 반	별 반
+star	⭐	별	별|천문학|화이트 미디엄 별|흰색 미디엄 별
+stars		별	별
+steering-wheel		운전대	운전대
+sun-high		해 높음	해 높음
+sun-low		해 낮음	해 낮음
+sun	☀	태양	날씨|더움|맑음|태양|해|화창한
+sunglasses	🕶	선글라스	눈|선글라스|안경|안경류|어두운
+sunrise	🌅	일출	아침|일출|자연|해|해가 뜸
+sunset-2		일몰 2	일몰 2
+sunset	🌇	일몰	건물|노을|도시에 해가 짐|빌딩|일몰|해|해가 짐|해질녘|황혼
+tag		태그	태그
+tags		태그	태그
+test-pipe-2		시험 파이프 2	시험 파이프 2
+thumb-down	👎	내린 엄지	-1|내린 엄지|싫어요|야유|엄지|좋지 않아|최악
+thumb-up	👍	올린 엄지	+1|굿|나이스|당근|따봉|손|엄지|엄지 척|예스|오케이|올린 엄지|좋아|좋아요|최고
+ticket	🎫	티켓	공연|엔터테인먼트|입장|티켓|표|표 확인
+tools-kitchen-2	🍴	포크와 나이프	나이프|레스토랑|맛있음|먹다|배고픔|식당|식품|아침밥|아침식사|야미|요리|음식|저녁식사|점심식사|포크|포크와 나이프
+train	🚆	기차	기차|도착|철도|칙칙폭폭
+trash		휴지통	휴지통
+triangle-inverted		삼각형 뒤집힌	삼각형 뒤집힌
+triangle		삼각형	삼각형
+trolley		카트	카트
+trophy	🏆	트로피	상|스포츠|승리|우승|챔스|챔피온|트로피
+truck		트럭	트럭
+ufo	🛸	비행접시	UFO|비행접시|외계인|우주 생명체
+umbrella	☂	우산	비|우산
+user	👤	사람 그림자	미스테리한|사람|사람 그림자|상반신|상체|실루엣
+video	📹 🎥	캠코더	동영상 촬영|발리우드|비디오|시네마|영화|영화 카메라|지난 시절|촬영|카메라|캠코더|할리우드
+windmill		풍차	풍차
+windsock		풍향 자루	풍향 자루
+woman	👩	여자	성인|여성|여자|헤어컷
+world	🗺	세계 지도	세계|지도
+writing-sign		쓰기 표지판	쓰기 표지판
+writing	✍	글을 쓰고 있는 손	글쓰기|글을 쓰고 있는 손|손|연필 쥔 손
+yin-yang	☯	음양	도교|둘다|모두 아닌|삶|양|어려운|음|음양|종교
+zeppelin		비행선	비행선

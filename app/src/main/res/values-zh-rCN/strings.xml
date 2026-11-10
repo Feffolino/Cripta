@@ -434,7 +434,7 @@
     <string name="icon_for">“%1$s”的结果</string>
     <string name="icon_most_used">最常用</string>
     <string name="icon_all_short">全部</string>
-    <string name="icon_credit">Microsoft 的 Fluent Emoji，MIT 许可。</string>
+    <string name="icon_credit">Tabler Icons Filled（MIT）。搜索词来自 Unicode CLDR。</string>
     <string name="favorites">收藏夹</string>
     <string name="back">返回</string>
     <string name="favorites_sort">收藏排序</string>

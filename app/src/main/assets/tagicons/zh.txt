@@ -1,0 +1,382 @@
+accessible	♿	轮椅标识	无障碍|残疾|残障|轮椅|轮椅标识|轮椅符号
+aerial-lift	🚡	索道	空中|索道|缆车
+air-balloon		热气球	热气球
+alarm	⏰	闹钟	小时|时间|钟|闹钟
+alert-triangle		警告 三角形	警告 三角形
+alien	👽	外星人	ufo|外太空|外星|外星人|太空|幻想|星际|脸|飞碟
+apple	🍎	红苹果	健康|水果|熟|红|红苹果|苹果|食物
+archive		归档	归档
+artboard		画板	画板
+article		文章	文章
+atom-2		原子 2	原子 2
+automatic-gearbox		自动变速箱	自动变速箱
+award	🏅	奖牌	奖牌|获胜|运动会奖牌|运动员|金牌
+baby-carriage		婴儿车	婴儿车
+badge		徽章	徽章
+badges		徽章	徽章
+ball-bowling	🎳	保龄球	保龄球|全倒|球|运动
+balloon	🎈	气球	庆祝|气球|生日|节日
+ballpen	🖊	笔	原子笔|圆珠笔|油笔|笔
+bandage	🩹	创可贴	OK绷|伤口|创可贴|受伤|绷带|胶布
+barbell		杠铃	杠铃
+basket	🧺	筐	农作|洗衣|种植|筐|篮子|脏衣篮|野餐
+bath		浴缸	浴缸
+bed-flat		床 平坦	床 平坦
+bed	🛏	床	宾馆|床|床垫|床铺|睡|睡眠|睡觉
+beer	🍺 🍻	啤酒	啤酒|啤酒节|喝酒|干杯|杯|碰杯|酒|酒吧
+bell-ringing-2		铃铛 响铃 2	铃铛 响铃 2
+bell-ringing		铃铛 响铃	铃铛 响铃
+bell	🔔	铃铛	叮当|响铃|钟|钟声|铃声|铃铛
+bike	🚲	自行车	单车|脚踏车|自行车|自行车骑士|飞驰|骑车|骑车疾驰
+biohazard	☣	生物危害	动物|当心感染|污染|生物危害|警告
+blade		刀片	刀片
+blender		搅拌机	搅拌机
+bone	🦴	骨头	叉骨|狗|骨头|骨骼
+book	📕	合上的书本	书|书本|书本合起|合上|合上的书本
+bookmark	🔖	书签	书签|标签|读书|阅读
+bookmarks		书签	书签
+bottle		瓶	瓶
+bow		蝴蝶结	蝴蝶结
+bowl-chopsticks	🥢	筷子	筷子|箸
+bowl-spoon	🥣	碗勺	早餐|燕麦|燕麦粥|碗中汤匙|碗勺|碗和汤匙|稀饭|粥|谷物
+bowl		碗	碗
+bread	🍞	面包	一条面包|全麦面包|小麦|淀粉|烤面包|谷类|面包|食物|餐厅
+briefcase-2		公文包 2	公文包 2
+briefcase	💼	公文包	上班|公事包|公文包|办公室|包|手提包|文件
+bubble		对话气泡	对话气泡
+bug	🐛	毛毛虫	昆虫|毛毛虫|毛虫
+building-bridge-2		桥	桥
+bulb	💡	灯泡	主意|想法|灯泡|点子|电|电灯泡|白炽灯
+bus	🚌	公交车	公交|公交车|公共汽车|大巴
+butterfly	🦋	蝴蝶	昆虫|漂亮|美丽|蝴蝶
+cactus	🌵	仙人掌	仙人掌|干旱|植物|沙漠
+calculator		计算器	计算器
+calendar-event		日历 活动	日历 活动
+calendar-month		日历 月	日历 月
+calendar-week		日历 周	日历 周
+calendar	📅	日历	日历|日期
+camera	📷	相机	卡片相机|拍照|摄影|照片|照相机|相机|自拍
+campfire		篝火	篝火
+candle	🕯	蜡烛	光|烛光|烛火|照明|燃烧|蜡烛
+cannabis		大麻	大麻
+capsule-horizontal		胶囊 水平	胶囊 水平
+capsule		胶囊	胶囊
+car-4wd		四驱车	四驱车
+car-crane		汽车起重机	汽车起重机
+car-fan		汽车 风扇	汽车 风扇
+car-suv		汽车 运动型多用途车	汽车 运动型多用途车
+car	🚗	汽车	开车|汽车|轿车
+carambola		杨桃	杨桃
+caravan		拖挂房车	拖挂房车
+cardboards		纸板虚拟现实眼镜	纸板虚拟现实眼镜
+cash-banknote		纸币	纸币
+check		对勾	对勾
+chef-hat		厨师帽	厨师帽
+cherry	🍒	樱桃	樱桃|水果
+chess-bishop		国际象棋的象	国际象棋的象
+chess-king		国际象棋的王	国际象棋的王
+chess-knight		国际象棋的马	国际象棋的马
+chess-queen		国际象棋的后	国际象棋的后
+chess-rook		国际象棋的车	国际象棋的车
+chess		国际象棋	国际象棋
+christmas-tree	🎄	圣诞树	圣诞|圣诞树|庆祝|树|装饰
+circle-key		圆圈 钥匙	圆圈 钥匙
+circle-percentage		圆圈 百分比	圆圈 百分比
+circle		圆圈	圆圈
+clipboard	📋	剪贴板	写字夹板|写字板|剪贴板|剪贴簿|夹子|待办事项|待办表|纸张
+clock-hour-1		时钟 小时 1	时钟 小时 1
+clock-hour-10		时钟 小时 10	时钟 小时 10
+clock-hour-11		时钟 小时 11	时钟 小时 11
+clock-hour-12		时钟 小时 12	时钟 小时 12
+clock-hour-2		时钟 小时 2	时钟 小时 2
+clock-hour-3		时钟 小时 3	时钟 小时 3
+clock-hour-4		时钟 小时 4	时钟 小时 4
+clock-hour-5		时钟 小时 5	时钟 小时 5
+clock-hour-6		时钟 小时 6	时钟 小时 6
+clock-hour-7		时钟 小时 7	时钟 小时 7
+clock-hour-8		时钟 小时 8	时钟 小时 8
+clock-hour-9		时钟 小时 9	时钟 小时 9
+clock		时钟	时钟
+cloud-computing		云计算	云计算
+cloud	☁	云	云|云彩|云朵|天气|阴
+clover	🍀	四叶草	四叶草|幸运|爱尔兰的
+clubs	♣	梅花	扑克|梅花|梅花花色|牌|草花
+coin-bitcoin		硬币 比特币	硬币 比特币
+coin-euro		硬币 欧元	硬币 欧元
+coin-monero		硬币 门罗币	硬币 门罗币
+coin-pound		硬币 英镑	硬币 英镑
+coin-rupee		硬币 卢比	硬币 卢比
+coin-taka		硬币 塔卡	硬币 塔卡
+coin-yen		硬币 日元	硬币 日元
+coin-yuan		硬币 人民币	硬币 人民币
+coin	🪙	硬币	富有|欧元|硬币|美元|财富|金|金属|金币|钱|银
+compass	🧭	指南针	定向|导航|指南针|方向|磁性|罗盘
+cone-2		锥 2	锥 2
+cone		锥	锥
+confetti	🎊 🎉	五彩纸屑球	五彩纸屑|五彩纸屑球|兴奋|呱呱叫|庆祝|彩带|彩色纸屑|拉炮|拉炮彩带|派对|派对礼宾花|球|生日|舞会
+cookie	🍪	饼干	巧克力片|曲奇|曲奇饼|甜点|饼干
+copyleft		著佐权	著佐权
+copyright	©	版权	版权
+credit-card	💳	信用卡	信用|信用卡|借记卡|刷卡|卡|收钱|现金|现金卡|贷记卡|银行|银行卡
+cross	✝	十字架	十字架|基督|天主教|宗教
+crown	👑	皇冠	国王|权力的游戏|王冠|王后|皇冠|皇家
+device-cctv		设备 监控摄像头	设备 监控摄像头
+device-desktop	🖥	台式电脑	PC|个人电脑|台式|台式电脑|显示器|显示屏|电脑|计算机
+device-floppy	💾	软盘	3.5英寸|便携|存储|电脑|磁盘|软盘
+device-gamepad-2		设备 游戏手柄 2	设备 游戏手柄 2
+device-gamepad-3		设备 游戏手柄 3	设备 游戏手柄 3
+device-gamepad	🎮	游戏手柄	手柄|游戏|游戏手柄|游戏控制器|电子游戏
+device-heart-monitor		心脏监护仪	心脏监护仪
+device-mobile	📱	手机	手提电话|手机|智能手机|电话|移动|移动电话|移动通信|通信
+device-remote		设备 遥控器	设备 遥控器
+device-speaker	🔊	高音量的扬声器	大声|大音量|扬声器|音量|高音量|高音量的扬声器
+device-tablet		设备 平板	设备 平板
+device-tv-old		老式电视机	老式电视机
+device-tv	📺	电视机	电视|电视机|看电视|节目|视频
+device-usb		设备 USB	设备 USB
+device-watch	⌚	手表	手表|时间|表
+diamond	💎	宝石	婚礼|宝石|珠宝|订婚|钻石
+diamonds	♦	方片	扑克|方块|方片|牌|牌局
+dice-1		骰子 1	骰子 1
+dice-2		骰子 2	骰子 2
+dice-3		骰子 3	骰子 3
+dice-4		骰子 4	骰子 4
+dice-5		骰子 5	骰子 5
+dice-6		骰子 6	骰子 6
+dice	🎲	骰子	掷骰子|色子|骰子|骰子游戏
+disc	💿	光盘	cd|专辑|光盘|存储|影片|蓝光|音乐
+discount		折扣	折扣
+drop-circle		水滴 圆圈	水滴 圆圈
+droplet	💧	水滴	冷|天气|水|水滴|泪|眼泪
+droplets		水滴	水滴
+dual-screen		双 屏幕	双 屏幕
+dumpling	🥟	饺子	恩潘纳达|水饺|波兰饺子|煎饺|饺子
+egg-cracked		鸡蛋 裂开的	鸡蛋 裂开的
+egg-fried	🍳	煎蛋	一面老一面嫩的煎蛋|做菜|只煎一面老|平底锅|早餐|煎|煎蛋|蛋|食堂
+egg	🥚	蛋	蛋|食物
+elevator	🛗	电梯	升降机|可达性|电梯
+engine		发动机	发动机
+escalator-down		自动扶梯 下	自动扶梯 下
+escalator-up		自动扶梯 上	自动扶梯 上
+escalator		自动扶梯	自动扶梯
+explicit		露骨内容	露骨内容
+eye	👁	眼睛	单眼|看|眼|眼睛|身体
+eyeglass-2		眼镜 2	眼镜 2
+eyeglass	👓	眼镜	服饰|眼睛|眼镜
+face-mask	😷	感冒	医生|口罩|感冒|戴口罩|戴口罩的脸|生病|病菌|脸
+feather	🪶	羽毛	羽毛|轻|飞|鸟
+fence		栅栏	栅栏
+ferry	⛴	渡轮	旅客|渡船|渡轮|轮船
+fidget-spinner		指尖陀螺	指尖陀螺
+file-description		文件 说明	文件 说明
+file-dollar		文件 美元	文件 美元
+file-euro		文件 欧元	文件 欧元
+file-horizontal		文件 水平	文件 水平
+file-invoice		文件 发票	文件 发票
+file-music		文件 音乐	文件 音乐
+file-pencil		文件 铅笔	文件 铅笔
+file-star		文件 星星	文件 星星
+file-text		文件 文本	文件 文本
+file		文件	文件
+files		文件	文件
+fish-bone		鱼骨	鱼骨
+flag-2		旗帜 2	旗帜 2
+flag-3		旗帜 3	旗帜 3
+flag	🏁	黑白方格旗	方格|格子旗|竞赛|终点|终点旗|黑白方格
+flame	🔥	火焰	火|火焰|烧|燃烧
+flare		闪光	闪光
+flask-2		烧瓶 2	烧瓶 2
+flask		烧瓶	烧瓶
+flower		花	花
+folder-open	📂	打开的文件夹	办公|打开|打开文件夹|打开的文件夹|文件|文件夹|文具
+folder	📁	文件夹	办公|文件|文件夹|文具|硬纸夹
+folders		文件夹	文件夹
+forbid-2		禁止 2	禁止 2
+forbid	🚫	禁止	不准|不许|严禁|禁入|禁止|禁行|阻止
+fountain	⛲	喷泉	喷泉
+garden-cart		园艺手推车	园艺手推车
+gas-station		加油站	加油站
+ghost-2		鬼 2	鬼 2
+ghost-3		鬼 3	鬼 3
+ghost	👻	鬼	万圣节|妖怪|幻想|幽灵|怪物|神话故事|脸|鬼|鬼脸
+gift-card		礼品卡	礼品卡
+gift	🎁	礼物	包礼物|包装|圣诞|庆祝|惊喜|生日礼物|盒子|礼品|礼物
+glass-full	🍷	葡萄酒	俱乐部|喝酒|葡萄酒|酒|酒吧|酒杯|饮料
+glass		杯	杯
+globe	🌐 🌍 🌎 🌏	带经纬线的地球	世界|亚洲|亚澳|全球|地球|地球上的亚洲|地球上的亚洲澳洲|地球上的欧洲非洲|地球上的美洲|子午线|带经纬线的地球|欧洲|澳洲|经纬|经线|美洲|非洲
+golf	⛳	高尔夫球洞	果岭|果岭旗|球洞|高尔夫|高尔夫球洞|高球
+guitar-pick		吉他拨片	吉他拨片
+hanger-2		衣架 2	衣架 2
+headphones	🎧	耳机	头戴式耳机|耳塞|耳机
+headset		耳麦	耳麦
+heart-broken	💔	心碎	伤心|心碎
+heart	❤	红心	心|爱|红心
+helicopter-landing		直升机 降落	直升机 降落
+helicopter	🚁	直升机	旅行|直升机|直升飞机
+hexagon		六边形	六边形
+home-2		家 2	家 2
+home	🏠 🏡	房子	乡村家园|住家|别墅|家|庭院|庭院居家|建筑|心之所在|房子|房屋|花园|郊区
+hospital-circle	🏥	医院	医生|医药|医院|建筑|看病
+hourglass	⌛ ⏳	沙漏	时间|沙|沙正往下流的沙漏|沙漏|等待|计时|计时器
+ironing-1		熨烫 1	熨烫 1
+ironing-2		熨烫 2	熨烫 2
+ironing-3		熨烫 3	熨烫 3
+ironing-steam		熨烫 蒸汽	熨烫 蒸汽
+ironing		熨烫	熨烫
+jetpack		喷气背包	喷气背包
+jewish-star	✡	六芒星	六芒星|六角星|大卫之星|大卫星|宗教|犹太|犹太教
+key	🔑	钥匙	密码|密钥|开锁|解锁|钥匙|锁
+keyboard	⌨	键盘	打字|按键|电脑|输入|键盘
+label-important		标签 重要	标签 重要
+label	🏷	标签	吊牌|标签|标记|行李牌
+leaf		叶子	叶子
+lemon-2		柠檬 2	柠檬 2
+library		图书馆	图书馆
+lifebuoy		救生圈	救生圈
+location		位置	位置
+lock-square-rounded		锁 正方形 圆角	锁 正方形 圆角
+lock	🔒 🔐	合上的锁	上锁|合上的锁|安全|私密|脚踏车锁|钥匙|钥匙和锁|锁|锁上|锁住|锁头|锁定
+lungs	🫁	肺	吸气|呼吸|呼吸作用|呼气|器官|肺|肺部|身体
+macro		微距	微距
+magnet	🧲	磁铁	U 型|吸引|吸引力|正负|磁性|磁铁|马蹄铁
+mail-opened		邮件 已打开	邮件 已打开
+mail	✉	信封	信件|信封|信息|来信|电子邮件|电邮|邮件
+man	👨	男人	兄弟|成人|男|男人
+manual-gearbox		手动变速箱	手动变速箱
+map-pin	📍	圆图钉	位置|固定|图钉|圆图钉
+medical-cross		医疗十字	医疗十字
+meeple		游戏棋子	游戏棋子
+melon	🍈	甜瓜	哈密瓜|水果|甜瓜|蜜瓜|香瓜
+message-2		消息 2	消息 2
+message-chatbot		消息 聊天机器人	消息 聊天机器人
+message-circle		消息 圆圈	消息 圆圈
+message		消息	消息
+messages		消息	消息
+meteor	☄	彗星	太空|彗星
+microphone	🎤	麦克风	k歌|卡拉OK|卡拉ok|唱K|唱歌|麦|麦克|麦克风
+microscope	🔬	显微镜	实验|实验室|工具|显微镜|生物|科学|细胞
+microwave		微波炉	微波炉
+military-rank		军衔	军衔
+milk		牛奶	牛奶
+mood-angry	😠 😡	生气	不爽|不高兴|发火|发飙|怒|怒火中烧|愤怒|生气|脸
+mood-confused		心情 困惑	心情 困惑
+mood-crazy-happy	😂 🤣	笑哭了	lol|lolol|乐翻了|哈哈|喜极而泣|地板|大笑|太扯了|打滚|满地打滚的笑|眼泪|笑|笑哭|笑哭了|笑得流泪|笑得满地打滚|脸|超扯
+mood-empty		心情 空	心情 空
+mood-happy	😀 😁	嘿嘿	嘻嘻|嘿嘿|笑脸|笑颜|脸|露齿而笑|高兴
+mood-kid	👶	小宝贝	孩子|宝宝|小宝贝|小毛头
+mood-neutral		心情 中性	心情 中性
+mood-sad	😢 😭	哭	伤心|哀伤|哭|哭脸|大哭|放声大哭|放声大哭的脸|泪|痛哭|脸
+mood-smile	🙂 😊	呵呵	呵呵|害羞|开心|微笑|浅笑的脸|满意|笑|笑脸相迎|羞涩|羞涩微笑|脸|脸红
+mood-wrrr		心情 咬牙	心情 咬牙
+moon	🌙	弯月	娥眉月|弯月|新月形|月亮|残月|蛾眉月
+motorbike	🏍	摩托车	摩托|摩托车|赛车
+mountain	⛰	山	山|峰
+mouse	🖱	电脑鼠标	有线鼠标|激光鼠标|点击|点按|电脑|电脑鼠标|鼠标
+mug	☕	热饮	咖啡|早晨|星巴克|热气腾腾|热饮|茶|饮料
+mushroom	🍄	蘑菇	毒蕈|真菌|蘑菇
+nurse		护士	护士
+octagon		八边形	八边形
+oval-vertical		椭圆 垂直	椭圆 垂直
+oval		椭圆	椭圆
+paint		油漆	油漆
+palette	🎨	调色盘	创意|博物馆|多种色彩|娱乐|画家|画画|绘画|艺术|调色板|调色盘
+parking-circle		停车场 圆圈	停车场 圆圈
+paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	爪印	万圣节|不吉利|动物|卷毛狗|喵|喵星人|宠物|导盲犬|小狗|小猫|工作犬|指引|无障碍|服务|服务犬|毛茸茸|汪星人|爪|爪印|爪子|犬|狗|狗脸|猫|猫咪|猫科|猫脸|盲|盲人|脸|贵宾犬|足迹|辅助|黑猫|黑色
+pencil	✏	铅笔	橡皮|橡皮擦|画画|画笔|笔|绘画|铅笔
+pennant-2		三角旗 2	三角旗 2
+pennant		三角旗	三角旗
+pentagon		五边形	五边形
+phone-call		电话 呼叫	电话 呼叫
+phone-calling		电话 呼叫中	电话 呼叫中
+phone		电话	电话
+photo	🖼	带框的画	加框的照片|博物馆|带框的画|框|照片|画|画框|艺术
+pig	🐷 🐖	猪头	八戒|培根|猪|猪头|猪肉|脸
+pill	💊	药丸	医生|吃药|治疗|生病|用药|维他命|药|药丸|药物
+pin	📌	图钉	固定|图钉|拼贴|按钉
+pinned		已固定	已固定
+pizza	🍕	披萨	一片比萨|披萨|比萨|比萨饼|起司|辣味香肠|食物|饿
+plane-arrival	🛬	航班降落	到达|着陆|航班|航班降落|降落|飞机
+plane-departure	🛫	航班起飞	值机|出境|报到|登机|离境|航班|航班起飞|起飞|飞机
+plane-tilt		纸飞机 倾斜	纸飞机 倾斜
+plane	✈	飞机	喷气机|旅行|飞机|飞行
+play-card-star		带星星的扑克牌	带星星的扑克牌
+play-card	🃏	大小王	大小王|大王|小丑|小王|扑克|扑克小丑|牌|百搭牌|鬼牌
+polaroid		即时照片	即时照片
+poo	💩	大便	大便|好臭|屎|怪物|粑粑|脸|臭
+presentation		演示	演示
+puzzle	🧩	拼图	图片|拼图|智力游戏|相扣|线索|联锁|部件
+radar		雷达	雷达
+radioactive	☢	辐射	放射性|标识|辐射
+receipt-dollar		收据 美元	收据 美元
+receipt-euro		收据 欧元	收据 欧元
+receipt-pound		收据 英镑	收据 英镑
+receipt-rupee		收据 卢比	收据 卢比
+receipt-yen		收据 日元	收据 日元
+receipt-yuan		收据 人民币	收据 人民币
+receipt	🧾	收据	会计|信封|凭据|发票|收据|收条|簿记|记账|证据|证明|账单
+rectangle-vertical		矩形 垂直	矩形 垂直
+rectangle		矩形	矩形
+registered	®	注册	注册|注册标记
+report-money		报告 钱	报告 钱
+rollercoaster		过山车	过山车
+rosette-discount		玫瑰花结 折扣	玫瑰花结 折扣
+rosette	🏵	圆形花饰	光荣花|圆形花饰|植物|花|花圈
+salad		沙拉	沙拉
+satellite	🛰	卫星	卫星|太空
+scale	⚖	天平	公平|公正|天平|天秤|天秤座|星座|正义|法律
+school	🏫	学校	学校|建筑|教学楼
+scuba-diving-tank		潜水气瓶	潜水气瓶
+seedling	🌱	幼苗	发芽|幼苗|芽|苗
+shield-checkered		盾牌 格子	盾牌 格子
+shield-half		盾牌 半	盾牌 半
+shield-lock		盾牌 锁	盾牌 锁
+shield	🛡	盾牌	武器|盾|盾牌|防御
+shirt	👕	T恤	T恤|休闲服装|恤衫
+shopping-cart	🛒	购物车	手推车|购物|购物车|采购
+sign-left		标志 左	标志 左
+sign-right		标志 右	标志 右
+soup		汤	汤
+spade	♠	黑桃	扑克|牌|葵扇|黑桃|黑桃花色
+sparkles	✨	闪亮	星星|火花|闪亮|闪光|闪耀
+speedboat	🚤	快艇	亿万富翁|快艇|船|豪华游艇
+spider	🕷	蜘蛛	昆虫|蜘蛛
+square-rotated		正方形 旋转	正方形 旋转
+square-rounded		正方形 圆角	正方形 圆角
+square		正方形	正方形
+star-half		星星 半	星星 半
+star	⭐	星星	五角星|星星|白色星星
+stars		星星	星星
+steering-wheel		方向盘	方向盘
+sun-high		太阳 高	太阳 高
+sun-low		太阳 低	太阳 低
+sun	☀	太阳	光线|太阳|晴|晴天|阳光明媚|阳光普照
+sunglasses	🕶	墨镜	墨镜|太阳镜
+sunrise	🌅	日出	大自然|太阳|日出|早晨|清晨
+sunset-2		日落 2	日落 2
+sunset	🌇	日落	夕阳|日落
+tag		标签	标签
+tags		标签	标签
+test-pipe-2		试 管 2	试 管 2
+thumb-down	👎	拇指向下	不赞成|反对|否决|手|拇指向下|责备
+thumb-up	👍	拇指向上	同意|好|手|拇指|拇指向上|真棒|赞|赞成|顶一下
+ticket	🎫	票	入场券|电影票|票|票根|车票|门票
+tools-kitchen-2	🍴	刀叉	中餐|刀|刀叉|午餐|叉|吃|吃早餐|吃饭|好吃|早餐|晚餐|烹调|西餐|餐具|饿了
+train	🚆	火车	到站|呜呜|火车|铁路
+trash		垃圾桶	垃圾桶
+triangle-inverted		三角形 倒置	三角形 倒置
+triangle		三角形	三角形
+trolley		手推车	手推车
+trophy	🏆	奖杯	冠军|奖励|奖品|奖杯|奖赏|胜利|获胜
+truck		卡车	卡车
+ufo	🛸	飞碟	UFO|不明飞行物|外星人|外星球|飞碟
+umbrella	☂	伞	伞|雨|雨伞
+user	👤	人像	人像|剪影|半身|半身像
+video	📹 🎥	摄像机	录像|录像机|录影|拍摄|摄像机|摄录机|摄影|摄影机|电影|电影摄影机|视频
+windmill		风车	风车
+windsock		风向袋	风向袋
+woman	👩	女人	女|女人|淑女|金发
+world	🗺	世界地图	世界|世界地图|地图
+writing-sign		书写 标志	书写 标志
+writing	✍	写字	写|写字|手|笔
+yin-yang	☯	阴阳	太极|宗教|道|道教|阳|阴|阴阳
+zeppelin		齐柏林飞艇	齐柏林飞艇

@@ -111,6 +111,7 @@ fun TagPill(
     /** The tag's own icon ([com.cripta.app.ui.tagicons.TagIcons] name), before the text. */
     tagIcon: String? = null,
 ) {
+    val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tagIcon)
     // With tag colours off (Settings › Etichette) every tag takes the accent, here for every screen.
     val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
     val on = state == TagPillState.On
@@ -189,20 +190,20 @@ fun TagPill(
         // The tick (or the "no" sign) takes the place of what leads when off (the pin, else the
         // tag's icon, else the dot), in a slot of one size: a tap never changes the pill's width.
         val mark = when (state) { TagPillState.On -> CriptaIcons.Check; TagPillState.Excluded -> CriptaIcons.Block; else -> null }
-        val markOnIcon = mark != null && tagIcon != null && leadingIcon == null
+        val markOnIcon = mark != null && resolved != null && leadingIcon == null
         val lead: ImageVector? = if (markOnIcon) null else mark ?: leadingIcon
         if (lead != null) {
             Icon(lead, null, tint = shownFg, modifier = Modifier.padding(end = 4.dp).size(iconSize).then(if (mark != null) markPop else Modifier))
-        } else if (tagIcon == null) {
+        } else if (resolved == null) {
             // The tag's own colour as a dot (DS cr-tag__dot: 6dp small, 8dp otherwise), so every
             // tag is recognisable even when it is off.
             Box(Modifier.padding(end = 4.dp).size(if (size == TagPillSize.Small) 6.dp else iconSize), contentAlignment = Alignment.Center) {
                 Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (on) shownFg else color))
             }
         }
-        if (tagIcon != null) {
+        if (resolved != null) {
             // Its room is kept while the icon loads, so the pill never grows under the finger.
-            val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tagIcon)
+            val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
             Box(Modifier.padding(end = if (text.isEmpty()) 0.dp else 4.dp).size(iconSize + 2.dp)) {
                 if (markOnIcon && mark != null) Icon(mark, null, tint = shownFg, modifier = Modifier.matchParentSize().then(markPop))
                 else if (drawn != null) Icon(drawn, null, tint = shownFg, modifier = Modifier.matchParentSize())

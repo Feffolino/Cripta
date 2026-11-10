@@ -497,7 +497,7 @@
     <string name="icon_for">Для «%1$s»</string>
     <string name="icon_most_used">Часто используемые</string>
     <string name="icon_all_short">Все</string>
-    <string name="icon_credit">Fluent Emoji от Microsoft, лицензия MIT.</string>
+    <string name="icon_credit">Tabler Icons Filled (MIT). Поисковые термины из Unicode CLDR.</string>
     <string name="favorites">Избранное</string>
     <string name="back">Назад</string>
     <string name="favorites_sort">Сортировка избранного</string>

@@ -64,7 +64,7 @@ Tabler Icons v3.49.0 (MIT, licence in `assets/licenses/`), outline, converted to
 `res/drawable/tabler_*.xml` and reached only through `ui/theme/CriptaIcons.kt` (properties keep the
 Material names). The navigation bar shows the outline at rest and the filled glyph on the current
 tab. The player's Media3 transport icons are Tabler too (`res/values/exo_controls_tabler.xml`).
-Tag icons are a separate set (see Components) and are not Tabler.
+Tag icons use a curated subset of Tabler Icons Filled (see Components).
 
 ## Structure
 
@@ -111,9 +111,9 @@ Tag icons are a separate set (see Components) and are not Tabler.
   white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour.
   Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
   a weight (it would measure to nothing in a LazyRow).
-- **Tag icons** (`ui/tagicons/`): Microsoft's Fluent Emoji, high-contrast set (MIT, licence in
+- **Tag icons** (`ui/tagicons/`): Tabler Icons Filled (MIT, licence in
   `assets/tagicons/`), one colour, drawn in the pill's text colour before the name (in place of
-  the colour dot). The editor offers icons fitting the tag's name (Italian or English words), the
+  the colour dot). The editor offers icons fitting the tag's name in the app language and English, the
   common ones, and a searchable list of all. On a cover a tag shows only its symbol or its
   acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
   `CoverTagStyle`): **Bollini** (default), round marks of one size (22dp, 18dp on small covers),

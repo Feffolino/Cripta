@@ -1680,6 +1680,9 @@ class VaultRepository @Inject constructor(
         coverFiles: MutableList<java.io.File>,
         onSettings: (ByteArray) -> Unit,
     ): RestoreReport {
+        val resolveIcon = com.cripta.app.ui.tagicons.TagIcons.migrationResolver(context)
+        fun restoredIcon(name: String): String? = if (resolveIcon == null) name else resolveIcon(name)
+
         // Leave 16 MiB for database writes and encryption overhead on the blob partition.
         val quota = RestoreQuota((context.filesDir.usableSpace - 16L * 1024 * 1024).coerceAtLeast(0),
             currentCoroutineContext()[Job])
@@ -1708,7 +1711,7 @@ class VaultRepository @Inject constructor(
                 // v2: folder colour / emoji (older backups; turned into an icon at the next unlock); then an icon.
                 val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
                 val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
-                val icon = if (o.has("icon") && !o.isNull("icon")) o.getString("icon") else null
+                val icon = if (o.has("icon") && !o.isNull("icon")) restoredIcon(o.getString("icon")) else null
                 if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
                 if (emoji != null && icon == null) db.folderDao().setEmoji(newId, emoji)
                 idMap[oldId] = newId; it.remove(); progressed = true
@@ -1730,7 +1733,7 @@ class VaultRepository @Inject constructor(
             if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
             // Optional (older backups have no colour).
             if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
-            if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, o.getString("icon"))
+            if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, restoredIcon(o.getString("icon")))
             // Keeps the "Recenti" row as it was.
             o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
         }

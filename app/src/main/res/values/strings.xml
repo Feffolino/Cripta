@@ -455,7 +455,7 @@
     <string name="icon_for">For “%1$s”</string>
     <string name="icon_most_used">Most used</string>
     <string name="icon_all_short">All</string>
-    <string name="icon_credit">Fluent Emoji by Microsoft, MIT license.</string>
+    <string name="icon_credit">Tabler Icons Filled (MIT). Search terms from Unicode CLDR.</string>
     <string name="favorites">Favourites</string>
     <string name="back">Back</string>
     <string name="favorites_sort">Sort favourites</string>

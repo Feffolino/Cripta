@@ -43,18 +43,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** An icon's name for TalkBack: Italian ("cuore rosso") once the names are loaded. */
-private fun spoken(name: String) = TagIcons.title(name)
-
 /** One icon in a picker: a round cell, ringed in the accent when chosen. */
 @Composable
 private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick: () -> Unit) {
+    val context = LocalContext.current
     val icon = rememberTagIcon(name)
+    val title by produceState(name?.replace('-', ' '), name, context) {
+        value = name?.let { TagIcons.title(context, it) }
+    }
     Box(
         Modifier.size(size).clip(CircleShape)
             .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .clickable(role = Role.RadioButton, onClick = onClick)
-            .semantics { this.selected = selected; contentDescription = name?.let { spoken(it) } ?: str(R.string.icon_none) },
+            .semantics { this.selected = selected; contentDescription = title ?: str(R.string.icon_none) },
         contentAlignment = Alignment.Center,
     ) {
         when {
@@ -65,7 +66,7 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
 }
 
 /**
- * The editor's "Icona" row: the icon chosen, a few fitting the tag's name (Italian or English) or
+ * The editor's "Icona" row: the icon chosen, a few fitting the tag's name (localized or English) or
  * common ones, and "Tutte le icone" for the full searchable list.
  */
 @Composable
@@ -75,6 +76,7 @@ fun TagIconField(
     showLabel: Boolean = true,
 ) {
     val context = LocalContext.current
+    val resolved = rememberResolvedTagIcon(icon)
     val suggested by produceState(emptyList<String>(), name) {
         value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.DEFAULTS.take(10) }
     }
@@ -82,9 +84,9 @@ fun TagIconField(
         if (showLabel) Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            IconCell(null, icon == null) { onPick(null) }
+            IconCell(null, resolved == null) { onPick(null) }
             // The chosen one stays first even when the name suggests others.
-            (listOfNotNull(icon) + suggested.filter { it != icon }).forEach { n -> IconCell(n, n == icon) { onPick(n) } }
+            (listOfNotNull(resolved) + suggested.filter { it != resolved }).forEach { n -> IconCell(n, n == resolved) { onPick(n) } }
         }
         TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
             com.cripta.app.ui.components.ButtonText(str(R.string.icon_all))
@@ -93,12 +95,13 @@ fun TagIconField(
 }
 
 /**
- * All the icons: searchable (Italian or English words), with those fitting [tagName] first and the
+ * All the icons: searchable (localized or English words), with those fitting [tagName] first and the
  * common ones next, then every icon to browse.
  */
 @Composable
 fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val resolved = rememberResolvedTagIcon(selected)
     var query by remember { mutableStateOf("") }
     val all by produceState(emptyList<String>()) { value = TagIcons.names(context) }
     val forName by produceState(emptyList<String>(), tagName) { value = TagIcons.suggest(context, tagName, 18) }
@@ -127,17 +130,17 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
                             Text(str(R.string.icon_none_for, query.trim()),
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        items(f, key = { "s-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
+                        items(f, key = { "s-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                     } else {
-                        item(key = "none") { IconCell(null, selected == null) { onPick(null) } }
+                        item(key = "none") { IconCell(null, resolved == null) { onPick(null) } }
                         if (forName.isNotEmpty()) {
                             header(str(R.string.icon_for, tagName.trim()))
-                            items(forName, key = { "n-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
+                            items(forName, key = { "n-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                         }
                         header(str(R.string.icon_most_used))
-                        items(TagIcons.DEFAULTS, key = { "d-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
+                        items(TagIcons.DEFAULTS, key = { "d-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                         header(str(R.string.icon_all_short))
-                        items(all, key = { "a-$it" }) { n -> IconCell(n, n == selected) { onPick(n) } }
+                        items(all, key = { "a-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                     }
                 }
                 Text(str(R.string.icon_credit), style = MaterialTheme.typography.labelSmall,

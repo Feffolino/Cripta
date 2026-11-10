@@ -1,0 +1,382 @@
+accessible	♿	symbole Accès handicapés	accès|accès handicapés|fauteuil roulant|mobilité réduite|symbole Accès handicapés
+aerial-lift	🚡	tramway aérien	moyen de transport|tramway|tramway aérien|télécabine
+air-balloon		montgolfière	montgolfière
+alarm	⏰	réveil	alarme|attendre|dring|heure|matin|retard|réveil|sonnerie
+alert-triangle		alerte triangle	alerte triangle
+alien	👽	alien	alien|créature|espace|extraterrestre|monstre|ovni|science-fiction|visage|émoticône
+apple	🍎	pomme rouge	fruit|nourriture|pomme|pomme rouge
+archive		archive	archive
+artboard		plan de travail	plan de travail
+article		article	article
+atom-2		atome 2	atome 2
+automatic-gearbox		boîte automatique	boîte automatique
+award	🏅	médaille sportive	champion|championne|médaille|médaille d’or|médaille sportive|sport|vainqueur|victoire
+baby-carriage		landau	landau
+badge		badge	badge
+badges		insignes	insignes
+ball-bowling	🎳	bowling	boule|bowling|jeu|partie|quilles|sport|strike
+balloon	🎈	ballon gonflable	anniversaire|ballon|ballon de baudruche|ballon gonflable|fête
+ballpen	🖊	stylo	stylo|stylo bille|stylo-bille|écrire
+bandage	🩹	sparadrap	bandage|bobo|médecine|pansement|premiers secours|sparadrap
+barbell		haltère	haltère
+basket	🧺	panier	agriculture|cueillette|lessive|linge|panier|pique-nique
+bath		baignoire	baignoire
+bed-flat		lit plat	lit plat
+bed	🛏	lit	dormir|hôtel|lit
+beer	🍺 🍻	chope	alcool|bar|bière|boisson|chope|chope de bière|chopes de bière|oktoberfest|picoler|pinte|santé|tchin|trinquer
+bell-ringing-2		cloche qui sonne 2	cloche qui sonne 2
+bell-ringing		cloche qui sonne	cloche qui sonne
+bell	🔔	cloche	cloche|clochette|sonner
+bike	🚲	vélo	bicyclette|cyclisme|moyen de transport|voyage|vélo
+biohazard	☣	danger biologique	danger|danger biologique|symbole
+blade		lame	lame
+blender		mixeur	mixeur
+bone	🦴	os	chien|halloween|os|squelette
+book	📕	livre fermé	apprendre|enseignement|lire|littérature|livre|livre fermé|livre rouge|manuel scolaire|savoir|école
+bookmark	🔖	marque-page	marque-page|marqueur|signet
+bookmarks		signets	signets
+bottle		bouteille	bouteille
+bow		nœud	nœud
+bowl-chopsticks	🥢	baguettes	baguettes|hashi
+bowl-spoon	🥣	bol avec cuillère	bol avec cuillère|bol avec une cuillère|congee|céréales|déjeuner|petit déjeuner|soupe
+bowl		bol	bol
+bread	🍞	pain	miche|nourriture|pain|pain de mie
+briefcase-2		mallette 2	mallette 2
+briefcase	💼	porte-documents	accessoire|bureau|cartable|porte-documents
+bubble		bulle	bulle
+bug	🐛	chenille	animal|chenille|insecte|jardin
+building-bridge-2		pont	pont
+bulb	💡	ampoule	BD|allumer|ampoule|bande dessinée|dessin|idée|lampe|lumière
+bus	🚌	bus	bus|moyen de transport|véhicule|école
+butterfly	🦋	papillon	animal|insecte|mignon|papillon|printemps
+cactus	🌵	cactus	cactus|désert|nature|piquant|plante|sécheresse|épines
+calculator		calculatrice	calculatrice
+calendar-event		calendrier événement	calendrier événement
+calendar-month		calendrier mois	calendrier mois
+calendar-week		calendrier semaine	calendrier semaine
+calendar	📅	calendrier	calendrier|date
+camera	📷	appareil photo	appareil photo|photo|selfie|vidéo
+campfire		feu de camp	feu de camp
+candle	🕯	bougie	bougie|chandelle|lumière
+cannabis		cannabis	cannabis
+capsule-horizontal		capsule horizontal	capsule horizontal
+capsule		capsule	capsule
+car-4wd		tout-terrain	tout-terrain
+car-crane		grue mobile	grue mobile
+car-fan		voiture ventilateur	voiture ventilateur
+car-suv		voiture SUV	voiture SUV
+car	🚗	voiture	automobile|conduire|moyen de transport|voiture|voyage|véhicule
+carambola		carambole	carambole
+caravan		caravane	caravane
+cardboards		casque VR en carton	casque VR en carton
+cash-banknote		billet de banque	billet de banque
+check		coche	coche
+chef-hat		toque de chef	toque de chef
+cherry	🍒	cerises	cerise|cerises|fruit|nourriture
+chess-bishop		fou	fou
+chess-king		roi des échecs	roi des échecs
+chess-knight		cavalier	cavalier
+chess-queen		dame des échecs	dame des échecs
+chess-rook		tour des échecs	tour des échecs
+chess		échecs	échecs
+christmas-tree	🎄	sapin de Noël	Noël|Sapin de Noël|arbre|fête|fêtes|guirlandes|sapin de Noël
+circle-key		cercle clé	cercle clé
+circle-percentage		cercle pourcentage	cercle pourcentage
+circle		cercle	cercle
+clipboard	📋	porte-bloc	fournitures|liste|porte-bloc|presse-papiers
+clock-hour-1		horloge heure 1	horloge heure 1
+clock-hour-10		horloge heure 10	horloge heure 10
+clock-hour-11		horloge heure 11	horloge heure 11
+clock-hour-12		horloge heure 12	horloge heure 12
+clock-hour-2		horloge heure 2	horloge heure 2
+clock-hour-3		horloge heure 3	horloge heure 3
+clock-hour-4		horloge heure 4	horloge heure 4
+clock-hour-5		horloge heure 5	horloge heure 5
+clock-hour-6		horloge heure 6	horloge heure 6
+clock-hour-7		horloge heure 7	horloge heure 7
+clock-hour-8		horloge heure 8	horloge heure 8
+clock-hour-9		horloge heure 9	horloge heure 9
+clock		horloge	horloge
+cloud-computing		informatique en nuage	informatique en nuage
+cloud	☁	nuage	gris|météo|nuage
+clover	🍀	trèfle à quatre feuilles	4|Irlande|chance|feuilles|plante|porte-bonheur|quatre|trèfle|trèfle à quatre feuilles
+clubs	♣	trèfle cartes	cartes à jouer|couleur|jeu|noir|trèfle|trèfle cartes
+coin-bitcoin		pièce bitcoin	pièce bitcoin
+coin-euro		pièce euro	pièce euro
+coin-monero		pièce monero	pièce monero
+coin-pound		pièce livre sterling	pièce livre sterling
+coin-rupee		pièce roupie	pièce roupie
+coin-taka		pièce taka	pièce taka
+coin-yen		pièce yen	pièce yen
+coin-yuan		pièce yuan	pièce yuan
+coin	🪙	pièce	argent|euro|fortune|métal|or|pièce|pièce de monnaie|riche|sou|trésor
+compass	🧭	boussole	boussole|compas|direction|magnétique|navigation|orientation
+cone-2		cône 2	cône 2
+cone		cône	cône
+confetti	🎊 🎉	confettis	anniversaire|confettis|cotillons|fête|super
+cookie	🍪	cookie	biscuit|cookie|dessert|goûter|gâteau|nourriture|pépites de chocolat|sucré
+copyleft		copyleft	copyleft
+copyright	©	symbole copyright	c|copyright|droits d’auteur|propriété intellectuelle|symbole Copyright|symbole copyright|©
+credit-card	💳	carte bancaire	argent|bancaire|banque|carte|carte de crédit|payer
+cross	✝	croix latine	chrétien|chrétienne|croix|croix latine|religion
+crown	👑	couronne	accessoire|couronne|famille royale|monarchie|monarque|reine|roi|royauté|succès|vêtements
+device-cctv		appareil vidéosurveillance	appareil vidéosurveillance
+device-desktop	🖥	ordinateur de bureau	moniteur|ordinateur|ordinateur de bureau
+device-floppy	💾	disquette	disque|disquette|informatique|ordinateur
+device-gamepad-2		appareil manette de jeu 2	appareil manette de jeu 2
+device-gamepad-3		appareil manette de jeu 3	appareil manette de jeu 3
+device-gamepad	🎮	jeu vidéo	jeu vidéo|joystick|manette|playstation|xbox
+device-heart-monitor		moniteur cardiaque	moniteur cardiaque
+device-mobile	📱	téléphone portable	communication|smartphone|téléphone|téléphone portable
+device-remote		appareil télécommande	appareil télécommande
+device-speaker	🔊	volume des enceintes élevé	enceinte|fort|haut-parleur|haut-parleur d’enceinte|musique|son|volume des enceintes élevé|volume élevé
+device-tablet		appareil tablette	appareil tablette
+device-tv-old		téléviseur ancien	téléviseur ancien
+device-tv	📺	téléviseur	TV|petit écran|télé|téléviseur|télévision
+device-usb		appareil USB	appareil USB
+device-watch	⌚	montre	heure|montre
+diamond	💎	pierre précieuse	argent|bijou|diamant|fiançailles|joyau|mariage|pierre précieuse|romantique
+diamonds	♦	carreau	carreau|carreaux|carte|couleur|jeu
+dice-1		dé 1	dé 1
+dice-2		dé 2	dé 2
+dice-3		dé 3	dé 3
+dice-4		dé 4	dé 4
+dice-5		dé 5	dé 5
+dice-6		dé 6	dé 6
+dice	🎲	dés	dé|dés|hasard|jeu
+disc	💿	CD	CD|DVD|blu-ray|disque
+discount		remise	remise
+drop-circle		goutte cercle	goutte cercle
+droplet	💧	goutte d’eau	BD|eau|froid|goutte|goutte d’eau|larme|météo|nature|pluie|sueurs froides|tristesse
+droplets		gouttes	gouttes
+dual-screen		double écran	double écran
+dumpling	🥟	boulette de pâte	boulette de pâte|dumpling|empanada|gyoza|jiaozi|pierogi|potsticker|ravioli
+egg-cracked		œuf fêlé	œuf fêlé
+egg-fried	🍳	œuf au plat	cuisine|friture|nourriture|petit-déjeuner|poêle|poêle à frire|se faire cuire un œuf|œuf|œuf au plat
+egg	🥚	œuf	nourriture|œuf
+elevator	🛗	ascenseur	accessibilité|ascenseur|descente|monte-charge|monte-personnes|montée
+engine		moteur	moteur
+escalator-down		escalator bas	escalator bas
+escalator-up		escalator haut	escalator haut
+escalator		escalator	escalator
+explicit		contenu explicite	contenu explicite
+eye	👁	œil	corps|œil
+eyeglass-2		lunettes 2	lunettes 2
+eyeglass	👓	lunettes de vue	accessoire|lunettes|lunettes de vue|vêtements|yeux|œil
+face-mask	😷	visage avec masque	bactéries|dentiste|docteur|germes|malade|masque|masque chirurgical|médecin|rhume|visage avec masque|émoticône
+feather	🪶	plume	léger|oiseau|plumage|plume|voler|écrire|écrivain
+fence		clôture	clôture
+ferry	⛴	ferry	bateau|ferry|moyen de transport|voyage
+fidget-spinner		hand spinner	hand spinner
+file-description		fichier description	fichier description
+file-dollar		fichier dollar	fichier dollar
+file-euro		fichier euro	fichier euro
+file-horizontal		fichier horizontal	fichier horizontal
+file-invoice		fichier facture	fichier facture
+file-music		fichier musique	fichier musique
+file-pencil		fichier crayon	fichier crayon
+file-star		fichier étoile	fichier étoile
+file-text		fichier texte	fichier texte
+file		fichier	fichier
+files		fichiers	fichiers
+fish-bone		arête de poisson	arête de poisson
+flag-2		drapeau 2	drapeau 2
+flag-3		drapeau 3	drapeau 3
+flag	🏁	drapeau à damier	course automobile|damier|drapeau|drapeau à damier|formule 1|ligne d’arrivée|sport automobile|vainqueur
+flame	🔥	feu	allumer|brûler|chaud|feu|flamme|fournaise|incendie
+flare		éclat	éclat
+flask-2		fiole 2	fiole 2
+flask		fiole	fiole
+flower		fleur	fleur
+folder-open	📂	dossier ouvert	dossier|dossier ouvert|ouvrir|ouvrir le dossier|répertoire
+folder	📁	dossier	dossier|fichier|répertoire
+folders		dossiers	dossiers
+forbid-2		interdiction 2	interdiction 2
+forbid	🚫	symbole d’interdiction	entrée interdite|interdiction|interdit|symbole d’interdiction
+fountain	⛲	fontaine	eau|fontaine
+garden-cart		chariot de jardin	chariot de jardin
+gas-station		station-service	station-service
+ghost-2		fantôme 2	fantôme 2
+ghost-3		fantôme 3	fantôme 3
+ghost	👻	fantôme	Halloween|blague|bouh|créature|effrayant|fantastique|fantôme|hanter|monstre|peur|visage|visage de fantôme
+gift-card		carte cadeau	carte cadeau
+gift	🎁	cadeau	Noël|anniversaire|cadeau|cadeau emballé|fête|nœud|surprise
+glass-full	🍷	verre de vin	alcool|bar|boisson|club|restaurant|verre|verre de vin|verre à vin|vin
+glass		verre	verre
+globe	🌐 🌍 🌎 🌏	globe avec méridiens	Afrique|Amérique|Asie|Australie|Europe|Internet|Terre|afrique|amérique|asie|australie|espace|europe|globe|globe avec méridiens|globe présentant l’Amérique|globe présentant l’Asie et l’Australie|globe présentant l’Europe et l’Afrique|globe terrestre|globe tourné sur les Amériques|globe tourné sur l’Afrique et l’Europe|globe tourné sur l’Asie et l’Australie|monde|méridiens|net|planète|toile
+golf	⛳	drapeau de golf	drapeau de golf|golf|sport|trou
+guitar-pick		médiator	médiator
+hanger-2		cintre 2	cintre 2
+headphones	🎧	casque	casque|musique|son|écouteur|écouteurs
+headset		casque micro	casque micro
+heart-broken	💔	cœur brisé	amour|cœur|cœur brisé|malheureux|sentiment|séparé|triste
+heart	❤	cœur rouge	amour|cœur|cœur rouge|sentiment
+helicopter-landing		hélicoptère atterrissage	hélicoptère atterrissage
+helicopter	🚁	hélicoptère	hélico|hélicoptère|moyen de transport|véhicule
+hexagon		hexagone	hexagone
+home-2		maison 2	maison 2
+home	🏠 🏡	maison	bâtiment|foyer|jardin|maison|maison avec jardin|maison simple|pavillon|résidentiel
+hospital-circle	🏥	hôpital	bâtiment|docteur|hôpital|médecin|urgences
+hourglass	⌛ ⏳	sablier	attendre|chronomètre|minuteur|sable|sablier|sablier avec sable qui coule|temps
+ironing-1		repassage 1	repassage 1
+ironing-2		repassage 2	repassage 2
+ironing-3		repassage 3	repassage 3
+ironing-steam		repassage vapeur	repassage vapeur
+ironing		repassage	repassage
+jetpack		réacteur dorsal	réacteur dorsal
+jewish-star	✡	étoile de David	David|Juif|judaïsme|juif|juive|religion|étoile|étoile de David
+key	🔑	clé	clé|mot de passe|ouvrir|serrure
+keyboard	⌨	clavier	clavier|informatique|ordinateur
+label-important		étiquette important	étiquette important
+label	🏷	étiquette	étiquette
+leaf		feuille	feuille
+lemon-2		citron 2	citron 2
+library		bibliothèque	bibliothèque
+lifebuoy		bouée	bouée
+location		emplacement	emplacement
+lock-square-rounded		cadenas carré arrondi	cadenas carré arrondi
+lock	🔒 🔐	cadenas fermé	cadenas|cadenas avec une clé|cadenas fermé|cadenas fermé avec clé|clé|fermé|privé|sécurisé|verrouiller|verrouillé
+lungs	🫁	poumons	anatomie|expiration|inspiration|organe|poumons|respiration|respirer|souffle
+macro		macro	macro
+magnet	🧲	aimant	aimant|aimanter|attirer|attraction|fer à cheval|magnet|magnétique|positif négatif
+mail-opened		courrier ouvert	courrier ouvert
+mail	✉	enveloppe	courrier électronique|e-mail|enveloppe|lettre|message
+man	👨	homme	ami|garçon|homme|personne|petit ami|pote
+manual-gearbox		boîte manuelle	boîte manuelle
+map-pin	📍	épingle	carte|emplacement|fournitures|punaise ronde|épingle
+medical-cross		croix médicale	croix médicale
+meeple		pion de jeu	pion de jeu
+melon	🍈	melon	fruit|melon
+message-2		message 2	message 2
+message-chatbot		message robot conversationnel	message robot conversationnel
+message-circle		message cercle	message cercle
+message		message	message
+messages		messages	messages
+meteor	☄	comète	comète|espace|météore
+microphone	🎤	micro	chanter|karaoke|karaoké|micro|microphone|musique
+microscope	🔬	microscope	expérience|laboratoire|microscope|outil|science
+microwave		micro-ondes	micro-ondes
+military-rank		grade militaire	grade militaire
+milk		lait	lait
+mood-angry	😠 😡	visage en colère	colère|exaspéré|frustré|furieux|fâché|mécontent|rageur|rouge|rouge de colère|sourcils froncés|visage boudeur|visage en colère|émoticône|énervé
+mood-confused		humeur perplexe	humeur perplexe
+mood-crazy-happy	😂 🤣	visage riant aux larmes	content|drôle|heureux|hilare|joie|joyeux|larmes|lol|mdr|pleurer de joie|pleurer de rire|rire|rire aux larmes|se rouler par terre|se rouler par terre de rire|se tordre de rire|sourire|visage|visage qui rit aux larmes|visage riant aux larmes|émoticône
+mood-empty		humeur vide	humeur vide
+mood-happy	😀 😁	visage rieur	content|dents|grand sourire|heureux|joyeux|rire|sourire|sourire de toutes ses dents|super|visage|visage rieur|visage souriant aux yeux rieurs|visage souriant avec yeux souriants|visage très souriant|yeux souriants|émoticône
+mood-kid	👶	bébé	bébé|enceinte|enfant|nouveau-né|petit|émoticône
+mood-neutral		humeur neutre	humeur neutre
+mood-sad	😢 😭	visage qui pleure	horrible|larme|larmes|malheureux|pleurer|pleurs|sangloter|triste|visage|visage qui pleure|visage qui pleure à chaudes larmes|émoticône
+mood-smile	🙂 😊	visage avec un léger sourire	content|heureux|léger sourire|rougir|satisfait|sourire|visage|visage avec un léger sourire|visage qui rougit|visage souriant|visage souriant avec yeux rieurs|visage souriant avec yeux souriants|yeux|émoticône|œil
+mood-wrrr		humeur grincement de dents	humeur grincement de dents
+moon	🌙	croissant de lune	Ramadan|croissant|croissant de lune|espace|lune|nuit
+motorbike	🏍	moto	course|moto
+mountain	⛰	montagne	montagne|nature|sommet|voyage
+mouse	🖱	souris d’ordinateur	informatique|souris|souris d’ordinateur
+mug	☕	boisson chaude	boisson|boisson chaude|café|caféine|matin|thé
+mushroom	🍄	champignon	Mario|champignon|champignon vénéneux|plante
+nurse		infirmier	infirmier
+octagon		octogone	octogone
+oval-vertical		ovale vertical	ovale vertical
+oval		ovale	ovale
+paint		peinture	peinture
+palette	🎨	palette de peinture	art|artiste|couleurs|musée de peinture|palette de peinture|peindre|peintre|peinture
+parking-circle		parking cercle	parking cercle
+paw	🐾 🐱 🐈 🐈‍⬛ 🐶 🐕 🦮 🐩 🐕‍🦺	empreintes d’animaux	aboyer|accessibilité|aide|animal|animal domestique|assistance|aveugle|caniche|chat|chat noir|chaton|chien|chien d’assistance|chien guide|chien-guide|chiot|empreintes|empreintes de pattes|empreintes d’animaux|félin|guide|halloween|handicap|malchanceux|malvoyant|matou|miaou|miauler|minou|noir|non-voyant|pattes|superstition|tête de chat|tête de chien|visage
+pencil	✏	crayon	crayon|crayon à papier|gomme|mine
+pennant-2		fanion 2	fanion 2
+pennant		fanion	fanion
+pentagon		pentagone	pentagone
+phone-call		téléphone appel	téléphone appel
+phone-calling		téléphone appel en cours	téléphone appel en cours
+phone		téléphone	téléphone
+photo	🖼	cadre avec image	art|cadre avec image|image|musée|peinture|tableau|tableau encadré
+pig	🐷 🐖	tête de cochon	animal|cochon|ferme|gros|jambon|porc|truie|tête de cochon|visage
+pill	💊	pilule	docteur|gélule|malade|médecine|médicament|pilule|vitamines
+pin	📌	punaise	fournitures|punaise
+pinned		épinglé	épinglé
+pizza	🍕	pizza	fromage|nourriture|part|pepperoni|pizza|tranche
+plane-arrival	🛬	avion à l’atterrissage	arrivée|atterrissage|avion|avion à l’atterrissage|moyen de transport|voyage
+plane-departure	🛫	avion au décollage	avion|avion au décollage|décollage|départ|moyen de transport|voyage
+plane-tilt		avion incliné	avion incliné
+plane	✈	avion	avion|avion en vol|jet|moyen de transport|vol|voyage|véhicule
+play-card-star		carte à jouer étoilée	carte à jouer étoilée
+play-card	🃏	carte Joker	Joker|carte Joker|cartes à jouer|jeu
+polaroid		photo instantanée	photo instantanée
+poo	💩	tas de crotte	BD|bande dessinée|caca|crotte|dessin|excrément|odeur|popo|puer|sentir mauvais|tas de crotte|visage
+presentation		présentation	présentation
+puzzle	🧩	pièce de puzzle	assemblage|indice|interloqué|pièce de puzzle|pièce manquante|puzzle|énigme
+radar		radar	radar
+radioactive	☢	radioactif	radioactif|radioactivité|symbole
+receipt-dollar		reçu dollar	reçu dollar
+receipt-euro		reçu euro	reçu euro
+receipt-pound		reçu livre sterling	reçu livre sterling
+receipt-rupee		reçu roupie	reçu roupie
+receipt-yen		reçu yen	reçu yen
+receipt-yuan		reçu yuan	reçu yuan
+receipt	🧾	reçu	compta|comptabilité|comptable|facture|faire les comptes|justificatif|preuve|reçu|ticket de caisse
+rectangle-vertical		rectangle vertical	rectangle vertical
+rectangle		rectangle	rectangle
+registered	®	marque déposée	marque commerciale|marque déposée|r|®
+report-money		rapport argent	rapport argent
+rollercoaster		montagnes russes	montagnes russes
+rosette-discount		rosette remise	rosette remise
+rosette	🏵	rosette	plante|rosette
+salad		salade	salade
+satellite	🛰	satellite	espace|satellite
+scale	⚖	balance à poids	astrologie|balance|balance à poids|horoscope|justice|poids|zodiaque
+school	🏫	école	bâtiment|école
+scuba-diving-tank		bouteille de plongée	bouteille de plongée
+seedling	🌱	jeune pousse	germe|jeune plant|jeune pousse|plante|plantule|pousser|printemps|semis
+shield-checkered		bouclier à damier	bouclier à damier
+shield-half		bouclier moitié	bouclier moitié
+shield-lock		bouclier cadenas	bouclier cadenas
+shield	🛡	bouclier	arme|bouclier
+shirt	👕	T-shirt	T-shirt|bleu|chemise|courses|décontracté|polo|shopping|tee-shirt|vêtements|week-end
+shopping-cart	🛒	chariot	caddie|chariot|courses|panier|shopping|supermarché
+sign-left		panneau gauche	panneau gauche
+sign-right		panneau droite	panneau droite
+soup		soupe	soupe
+spade	♠	pique	carte|couleur|jeu|pique
+sparkles	✨	étincelles	*|magie|nuit|nuit étoilée|scintiller|étincelles|étoile|étoiles
+speedboat	🚤	hors-bord	bateau|hors-bord|luxe|moyen de transport|vedette|voyage|été
+spider	🕷	araignée	animal|araignée|insecte
+square-rotated		carré pivoté	carré pivoté
+square-rounded		carré arrondi	carré arrondi
+square		carré	carré
+star-half		étoile moitié	étoile moitié
+star	⭐	étoile	astronomie|nuit|étoile
+stars		étoiles	étoiles
+steering-wheel		volant	volant
+sun-high		soleil haut	soleil haut
+sun-low		soleil bas	soleil bas
+sun	☀	soleil	beau temps|brillant|espace|grand soleil|météo|rayons|soleil
+sunglasses	🕶	lunettes de soleil	lunettes|lunettes de soleil|lunettes noires|soleil
+sunrise	🌅	soleil levant	lever de soleil|matin|nature|soleil|soleil levant|voyage
+sunset-2		coucher du soleil 2	coucher du soleil 2
+sunset	🌇	coucher de soleil	coucher de soleil|coucher de soleil en ville|crépuscule|soir|soleil|tombée de la nuit|ville|voyage
+tag		étiquette	étiquette
+tags		étiquettes	étiquettes
+test-pipe-2		essai tuyau 2	essai tuyau 2
+thumb-down	👎	pouce vers le bas	bas|main|mauvais|non|nul|pouce|pouce baissé|pouce vers le bas
+thumb-up	👍	pouce vers le haut	+1|OK|bien|compris|d’accord|génial|haut|oui|super
+ticket	🎫	billet	billet|place|spectacle
+tools-kitchen-2	🍴	fourchette et couteau	couteau et fourchette|couverts|faim|fourchette et couteau|manger|nourriture|repas|restaurant
+train	🚆	train	arrivée|chemin de fer|moyen de transport|rail|train|voyage
+trash		corbeille	corbeille
+triangle-inverted		triangle inversé	triangle inversé
+triangle		triangle	triangle
+trolley		chariot	chariot
+trophy	🏆	trophée	champion|championne|coupe|gagner|prix|trophée|victoire
+truck		camion	camion
+ufo	🛸	soucoupe volante	OVNI|alien|extraterrestre|ovni|soucoupe volante
+umbrella	☂	parapluie ouvert	parapluie|parapluie ouvert|pluie
+user	👤	silhouette de buste	buste|mystère|ombre|silhouette de buste
+video	📹 🎥	caméscope	caméra|caméscope|cinéma|film|filmer|réalisateur|réalisatrice|vidéo
+windmill		moulin à vent	moulin à vent
+windsock		manche à air	manche à air
+woman	👩	femme	blonde|coupe de cheveux|femme|personne
+world	🗺	carte du monde	carte|carte du monde|monde|planisphère|voyage
+writing-sign		écriture panneau	écriture panneau
+writing	✍	main qui écrit	main|main qui écrit|écrire
+yin-yang	☯	yin yang	complémentaire|religion|tao|taoïsme|yang|yin
+zeppelin		dirigeable	dirigeable

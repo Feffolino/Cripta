@@ -187,12 +187,13 @@ val FOLDER_COLORS: List<Int> = listOf(
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
     val c = color?.let { Color(it) }
-    val vector = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
+    val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
+    val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         if (c != null) {
             Box(Modifier.matchParentSize().clip(CircleShape).background(c.copy(alpha = 0.22f)))
         }
-        if (!icon.isNullOrBlank()) {
+        if (resolved != null) {
             // Blank for the frame it takes to build, rather than flashing the folder symbol.
             if (vector != null) Icon(vector, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.6f))
         } else if (!emoji.isNullOrBlank()) {

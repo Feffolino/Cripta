@@ -4,12 +4,11 @@ import android.content.Context
 import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.platform.LocalContext
@@ -18,315 +17,384 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.security.MessageDigest
 import java.text.Normalizer
+import java.util.Locale
 
 /**
- * The icons a tag can carry: Microsoft's Fluent Emoji, high-contrast set (MIT, see
- * assets/tagicons/LICENSE.txt), one colour, drawn in the tag's text colour. Stored as path data in
- * assets/tagicons (name, then the shapes: "f:" filled, "e:" filled even-odd, "s<w>:" stroked), read
- * once on first use; each icon is built when first drawn.
- *
- * Names are the English emoji names ("red-heart"). assets/tagicons/it.txt gives each one its emoji
- * and its Italian name and keywords (Unicode CLDR, built by scripts/tagicons_it.py), so the search
- * takes Italian words too; [IT] adds a few library subjects CLDR doesn't word that way.
+ * A filtered set of Tabler Icons Filled on a 24-unit viewport. The catalog is loaded once and
+ * vectors are built on demand. Locale indexes use Unicode CLDR annotations and a dictionary.
+ * Legacy Fluent names are resolved before lookup. See assets/tagicons/LICENSE.txt for credits.
  */
 object TagIcons {
-    private const val ASSET = "tagicons/fluent-emoji-high-contrast.txt"
-    private const val ITALIAN = "tagicons/it.txt"
+    private const val DIRECTORY = "tagicons"
+    private val languages = setOf("en", "it", "ar", "de", "es", "fr", "hi", "ja", "ko", "pt", "ru", "zh")
+    private val namePattern = Regex("[a-z0-9]+(?:-[a-z0-9]+)*")
+    private val wordSeparators = Regex("[^\\p{L}\\p{M}\\p{N}]+")
+    private val latinMarks = Regex("(\\p{sc=Latin})\\p{M}+")
+    private val cjk = Regex("[\\p{sc=Han}\\p{sc=Hiragana}\\p{sc=Katakana}]")
     private val lock = Mutex()
-    @Volatile private var specs: Map<String, String>? = null
+    @Volatile private var catalog: Catalog? = null
+    private val lexicons = LruCache<String, Map<String, Terms>>(3)
+    private val vectors = LruCache<String, ImageVector>(400)
 
-    /** An icon's emoji, Italian name, and the stems of its Italian name and keywords. */
-    private class Italian(val emoji: String, val title: String, val titleStems: List<String>, val keywordStems: Set<String>)
-    @Volatile private var italian: Map<String, Italian>? = null
-    /** Emoji (without FE0F) -> icon name. */
-    @Volatile private var byEmoji: Map<String, String>? = null
-    private val built = LruCache<String, ImageVector>(400)
+    private data class Catalog(
+        val paths: Map<String, String>,
+        val legacy: Map<String, String>,
+        val legacyEmoji: Map<String, String>,
+    )
 
-    /** Every icon name, in the file's (alphabetical) order. */
-    suspend fun names(context: Context): List<String> = load(context).keys.toList()
+    private data class Terms(
+        val emojis: List<String>,
+        val title: String,
+        val titleWords: List<String>,
+        val keywordWords: Set<String>,
+    )
 
-    private suspend fun load(context: Context): Map<String, String> = specs ?: lock.withLock {
-        specs ?: withContext(Dispatchers.IO) {
-            val map = LinkedHashMap<String, String>(1700)
-            context.applicationContext.assets.open(ASSET).bufferedReader().useLines { lines ->
-                lines.forEach { l ->
-                    val tab = l.indexOf('\t')
-                    if (tab > 0) map[l.substring(0, tab)] = l.substring(tab + 1)
-                }
-            }
-            map
-        }.also { specs = it }
+    private fun verifiedBody(asset: String): String? {
+        val normalized = asset.replace("\r\n", "\n")
+        val body = normalized.substringAfter('\n', "")
+        val digest = MessageDigest.getInstance("SHA-256").digest(body.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        return body.takeIf { it.isNotEmpty() && digest == normalized.substringBefore('\n') }
     }
 
-    private suspend fun italian(context: Context): Map<String, Italian> = italian ?: lock.withLock {
-        italian ?: withContext(Dispatchers.IO) {
-            val map = HashMap<String, Italian>(1700)
-            val emojis = HashMap<String, String>(1700)
-            context.applicationContext.assets.open(ITALIAN).bufferedReader().useLines { lines ->
-                lines.forEach { l ->
-                    val p = l.split('	')
-                    if (p.size < 4) return@forEach
-                    val keywords = p[3].split('|').flatMap { words(it) }.map(::stem).toSet()
-                    map[p[0]] = Italian(p[1], p[2], words(p[2]).map(::stem), keywords)
-                    // The first icon wins: the file is alphabetical, the plain form before its variants.
-                    emojis.putIfAbsent(p[1], p[0])
-                }
-            }
-            byEmoji = emojis
-            map
-        }.also { italian = it }
+    internal fun parseCatalog(asset: String): Map<String, String> {
+        val body = verifiedBody(asset) ?: return emptyMap()
+        val icons = LinkedHashMap<String, String>()
+        for (line in body.trimEnd('\n').lineSequence()) {
+            val name = line.substringBefore('\t')
+            val paths = line.substringAfter('\t', "")
+            if (!namePattern.matches(name) || paths.split('|').any { part ->
+                    !(part.startsWith("f:M") || part.startsWith("e:M") ||
+                        part.startsWith("f:m") || part.startsWith("e:m"))
+                } || icons.put(name, paths) != null
+            ) return emptyMap()
+        }
+        return icons
     }
 
-    /** The Italian name of icon [name] ("cuore rosso"), or its English words while not loaded. */
-    fun title(name: String): String = italian?.get(name)?.title ?: name.replace('-', ' ')
+    private suspend fun load(context: Context): Catalog? = catalog ?: lock.withLock {
+        catalog ?: withContext(Dispatchers.IO) { readCatalog(context) }?.also { catalog = it }
+    }
 
-    /** The icon drawing [emoji] (a single emoji, FE0F or not), or null when there is none. */
+    private fun readCatalog(context: Context): Catalog? {
+        try {
+            val assets = context.applicationContext.assets
+            val paths = assets.open("$DIRECTORY/tabler-filled.txt").bufferedReader().use { parseCatalog(it.readText()) }
+            if (paths.isEmpty()) return null
+            val legacy = mutableMapOf<String, String>()
+            val emojis = mutableMapOf<String, String>()
+            val aliases = assets.open("$DIRECTORY/legacy.txt").bufferedReader().use { verifiedBody(it.readText()) }
+                ?: return null
+            for (line in aliases.trimEnd('\n').lineSequence()) {
+                val fields = line.split('\t')
+                if (fields.size !in 2..3 || !namePattern.matches(fields[0]) || fields[1] !in paths ||
+                    legacy.put(fields[0], fields[1]) != null
+                ) return null
+                fields.getOrNull(2)?.let { emojis.putIfAbsent(emojiKey(it), fields[1]) }
+            }
+            return if (legacy.isEmpty()) null else Catalog(paths, legacy, emojis)
+        } catch (_: IOException) {
+            return null
+        }
+    }
+
+    private fun language(context: Context): String =
+        context.resources.configuration.locales[0].language.takeIf { it in languages } ?: "en"
+
+    private suspend fun terms(context: Context, lang: String): Map<String, Terms> =
+        lexicons.get(lang) ?: lock.withLock {
+            lexicons.get(lang) ?: withContext(Dispatchers.IO) {
+                context.applicationContext.assets.open("$DIRECTORY/$lang.txt").bufferedReader().useLines { lines ->
+                    lines.associate { line ->
+                        val (name, emojis, title, keywords) = line.split('\t', limit = 4)
+                        name to Terms(
+                            emojis.split(' ').filter(String::isNotEmpty), title, words(title, lang),
+                            keywords.split('|').flatMap { words(it, lang) }.toSet(),
+                        )
+                    }
+                }
+            }.also { lexicons.put(lang, it) }
+        }
+
+    /** Every icon name in alphabetical order. */
+    suspend fun names(context: Context): List<String> = load(context)?.paths?.keys?.toList().orEmpty()
+
+    suspend fun title(context: Context, name: String): String {
+        val resolved = resolveName(context, name) ?: return name.replace('-', ' ')
+        return terms(context, language(context))[resolved]?.title ?: resolved.replace('-', ' ')
+    }
+
+    /** A null resolver means the assets could not be validated. Leave stored names intact. */
+    internal fun migrationResolver(context: Context): ((String) -> String?)? =
+        (catalog ?: readCatalog(context))?.let { loaded -> { name -> resolve(loaded, name) } }
+
+    suspend fun resolveName(context: Context, name: String): String? = load(context)?.let { resolve(it, name) }
+
+    private fun resolve(loaded: Catalog, name: String): String? =
+        name.takeIf { it in loaded.paths } ?: loaded.legacy[name]
+
+    private fun emojiKey(emoji: String) = emoji.trim().replace("\uFE0F", "")
+
+    /** The drawing corresponding to a single emoji, with or without its variation selector. */
     suspend fun forEmoji(context: Context, emoji: String): String? {
-        italian(context)
-        return byEmoji?.get(emoji.trim().replace("️", ""))?.takeIf { it in load(context) }
+        val loaded = load(context) ?: return null
+        val key = emojiKey(emoji)
+        return terms(context, "en").entries.firstOrNull { key in it.value.emojis }?.key
+            ?: loaded.legacyEmoji[key]
     }
 
     suspend fun vector(context: Context, name: String): ImageVector? {
-        built.get(name)?.let { return it }
-        val spec = load(context)[name] ?: return null
-        return withContext(Dispatchers.Default) { build(name, spec) }.also { built.put(name, it) }
+        val loaded = load(context) ?: return null
+        val resolved = resolve(loaded, name) ?: return null
+        vectors.get(resolved)?.let { return it }
+        return withContext(Dispatchers.Default) {
+            build(resolved, loaded.paths.getValue(resolved))
+        }.also { vectors.put(resolved, it) }
     }
 
-    /** Already built (no loading): for places that draw many at once and can wait a frame. */
-    fun cached(name: String): ImageVector? = built.get(name)
+    /** Already built, without loading. */
+    fun cached(name: String): ImageVector? = catalog?.let { resolve(it, name) }?.let(vectors::get)
 
     private fun build(name: String, spec: String): ImageVector {
-        val b = ImageVector.Builder(name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 32f, viewportHeight = 32f)
+        val builder = ImageVector.Builder(
+            name = name, defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        )
         for (part in spec.split('|')) {
-            val colon = part.indexOf(':')
-            if (colon < 1) continue
-            val kind = part.substring(0, colon)
-            val nodes = runCatching { addPathNodes(part.substring(colon + 1)) }.getOrNull() ?: continue
+            builder.addPath(
+                addPathNodes(part.drop(2)),
+                fill = SolidColor(Color.Black),
+                pathFillType = if (part.startsWith("e:")) PathFillType.EvenOdd else PathFillType.NonZero,
+            )
+        }
+        return builder.build()
+    }
+
+    private fun words(text: String, lang: String): List<String> =
+        wordSeparators.split(
+            Normalizer.normalize(text.lowercase(Locale.ROOT), Normalizer.Form.NFKC)
+                .let { Normalizer.normalize(it, Normalizer.Form.NFD).replace(latinMarks, "\$1") }
+                .let { Normalizer.normalize(it, Normalizer.Form.NFC) }
+        ).filter(String::isNotEmpty).map { if (lang == "it") stem(it) else it }
+
+    /** Italian plural and gender endings, only on Latin words. */
+    private fun stem(word: String) =
+        if (word.length > 4 && word.all { it in 'a'..'z' }) word.trimEnd('a', 'e', 'i', 'o') else word
+
+    private val italianSubjects by lazy {
+        buildMap<String, List<String>> {
+            for ((keywords, names) in IT) {
+                for (word in keywords.split(' ')) {
+                    val stem = stem(word)
+                    put(stem, get(stem).orEmpty() + names.split(' '))
+                }
+            }
+        }
+    }
+
+    /** Search localized names and keywords alongside English names and tags. */
+    suspend fun search(context: Context, text: String, limit: Int = 200): List<String> =
+        withContext(Dispatchers.Default) {
+            val names = load(context)?.paths?.keys ?: return@withContext emptyList()
+            val lang = language(context)
+            val query = words(text, lang)
+            val englishQuery = words(text, "en")
+            if (query.isEmpty()) return@withContext DEFAULTS.filter { it in names }.take(limit)
+            val english = terms(context, "en")
+            val local = if (lang == "en") english else terms(context, lang)
+            val subjects = if (lang == "it") query.flatMap { italianSubjects[it].orEmpty() }.distinct() else emptyList()
+
+            names.mapNotNull { name ->
+                val subject = subjects.indexOf(name)
+                val score = maxOf(
+                    if (subject >= 0) (120 - subject).coerceAtLeast(1) else 0,
+                    score(local[name], query, lang == "ja" || lang == "zh"),
+                    score(english[name], englishQuery, false),
+                    match(name.split('-'), englishQuery, 94, false),
+                )
+                if (score == 0) null else name to score
+            }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.length }.thenBy { it.first })
+                .take(limit).map { it.first }
+        }
+
+    private fun score(terms: Terms?, query: List<String>, substring: Boolean): Int =
+        if (terms == null) 0 else maxOf(
+            match(terms.titleWords, query, 100, substring),
+            match(terms.keywordWords, query, 75, substring),
+        )
+
+    private fun match(words: Collection<String>, query: List<String>, exact: Int, substring: Boolean): Int =
+        query.maxOfOrNull { word ->
             when {
-                kind.startsWith("s") -> b.addPath(nodes, stroke = SolidColor(Color.Black),
-                    strokeLineWidth = kind.drop(1).toFloatOrNull() ?: 1f, strokeLineJoin = StrokeJoin.Round, strokeLineCap = StrokeCap.Round)
-                else -> b.addPath(nodes, fill = SolidColor(Color.Black),
-                    pathFillType = if (kind == "e") PathFillType.EvenOdd else PathFillType.NonZero)
+                word in words -> exact
+                substring && cjk.containsMatchIn(word) && words.any { word in it } -> exact - 10
+                word.length >= 3 && words.any { it.startsWith(word) } -> exact - 25
+                else -> 0
             }
-        }
-        return b.build()
-    }
+        } ?: 0
 
-    /** Lower case, no accents, letters and digits only (words split on anything else). */
-    private fun words(s: String): List<String> =
-        Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
-            .split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
-
-    /** "gatti" and "gatto" meet at "gatt": Italian plural / gender endings dropped. */
-    private fun stem(w: String) = if (w.length > 4) w.trimEnd('a', 'e', 'i', 'o') else w
-
-    private val itIndex: Map<String, List<String>> by lazy {
-        val m = HashMap<String, MutableList<String>>()
-        for ((k, v) in IT) for (key in k.split(' ')) m.getOrPut(stem(key)) { ArrayList() } += v.split(' ')
-        m
-    }
-
-    /**
-     * Icons for [text], best first: Italian or English names sharing its words, then Italian
-     * keywords and the subjects in [IT]. Empty text: [DEFAULTS].
-     */
-    suspend fun search(context: Context, text: String, limit: Int = 200): List<String> = withContext(Dispatchers.Default) {
-        val all = load(context)
-        val ita = italian(context)
-        val ws = words(text).filter { it.length >= 2 }
-        if (ws.isEmpty()) return@withContext DEFAULTS.filter { d -> d in all }
-        val score = HashMap<String, Int>()
-        fun add(name: String, s: Int) { if (name in all) score.merge(name, s, ::maxOf) }
-        for (name in all.keys) {
-            val parts = name.split('-')
-            for (w in ws) {
-                when {
-                    parts.contains(w) -> add(name, 90 - parts.size)
-                    w.length >= 3 && parts.any { it.startsWith(w) } -> add(name, 60 - parts.size)
-                    w.length >= 4 && name.contains(w) -> add(name, 40 - parts.size)
-                }
-            }
-        }
-        // Italian names and keywords: the name counts more than a keyword, a whole word more than a start.
-        for ((name, info) in ita) {
-            for (w in ws) {
-                val st = stem(w)
-                when {
-                    st in info.titleStems -> add(name, 95 - info.titleStems.size)
-                    st in info.keywordStems -> add(name, 75 - info.titleStems.size)
-                    w.length >= 3 && info.titleStems.any { s -> s.startsWith(st) } -> add(name, 65 - info.titleStems.size)
-                    w.length >= 4 && info.keywordStems.any { s -> s.startsWith(st) } -> add(name, 45 - info.titleStems.size)
-                }
-            }
-        }
-        for (w in ws) {
-            val st = stem(w)
-            val hits = itIndex[st] ?: itIndex.entries.firstOrNull { (k, _) -> k.length >= 4 && st.length >= 4 && (k.startsWith(st) || st.startsWith(k)) }?.value
-            hits?.forEachIndexed { i, target ->
-                // A whole name ("red-heart") or a word that names several ("heart").
-                if (target in all) add(target, 100 - i)
-                else for (name in all.keys) if (name.split('-').contains(target)) add(name, 70 - i - name.count { it == '-' })
-            }
-        }
-        score.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key.length })
-            .map { it.key }.take(limit)
-    }
-
-    /** A few icons fitting the tag's name, for the editor's first row. */
     suspend fun suggest(context: Context, tagName: String, limit: Int = 12): List<String> =
-        if (words(tagName).isEmpty()) emptyList() else search(context, tagName, limit)
-
-    /** Offered before anything is typed: common subjects of a private library. */
+        if (words(tagName, "en").isEmpty()) emptyList() else search(context, tagName, limit)
+    /** Common subjects offered before typing. */
     val DEFAULTS = listOf(
-        "red-heart", "star", "glowing-star", "fire", "sparkles", "crown", "gem-stone", "locked", "key", "eyes",
-        "camera", "movie-camera", "film-frames", "clapper-board", "television", "musical-note", "headphone", "microphone",
-        "house", "airplane", "beach-with-umbrella", "mountain", "camping", "globe-showing-europe-africa", "world-map",
-        "birthday-cake", "party-popper", "wrapped-gift", "christmas-tree", "jack-o-lantern", "balloon",
-        "people-hugging", "baby", "kiss-mark", "ring", "bouquet", "rose", "sunflower", "four-leaf-clover",
-        "dog-face", "cat-face", "paw-prints", "horse-face", "fish", "butterfly",
-        "fork-and-knife", "pizza", "hamburger", "hot-beverage", "wine-glass", "beer-mug", "cocktail-glass",
-        "soccer-ball", "basketball", "bicycle", "automobile", "motorcycle", "flexed-biceps", "trophy",
-        "books", "graduation-cap", "briefcase", "laptop", "mobile-phone", "video-game", "artist-palette",
-        "sun", "crescent-moon", "cloud", "snowflake", "rainbow", "water-wave", "evergreen-tree",
-        "money-bag", "shopping-bags", "hospital", "pill", "bookmark", "pushpin", "label", "check-mark-button",
-        "warning", "prohibited", "hundred-points", "thumbs-up", "smiling-face-with-heart-eyes", "face-with-tears-of-joy",
-        "ghost", "skull", "alien", "robot", "unicorn", "dragon",
+        "heart", "star", "stars", "flame", "sparkles", "crown", "diamond", "lock",
+        "key", "eye", "camera", "video", "polaroid", "device-tv", "disc", "headphones",
+        "microphone", "home", "plane", "umbrella", "mountain", "campfire", "globe", "world",
+        "candle", "confetti", "gift", "christmas-tree", "balloon", "man", "mood-kid", "flower",
+        "clover", "paw", "fish-bone", "butterfly", "tools-kitchen-2", "pizza", "bread", "mug",
+        "glass-full", "beer", "ball-bowling", "bike", "car", "motorbike", "barbell", "trophy",
+        "book", "award", "briefcase", "device-desktop", "device-mobile", "device-gamepad", "palette", "sun",
+        "moon", "cloud", "droplet", "sunrise", "cash-banknote", "garden-cart", "hospital-circle", "pill",
+        "bookmark", "pin", "label", "check", "alert-triangle", "forbid", "thumb-up", "mood-crazy-happy",
+        "ghost", "alien", "message-chatbot",
     )
 
-    /**
-     * Italian word(s) -> icon names or English name words, most fitting first. Words sharing a stem
-     * ("gatto", "gatti", "gatta") meet through [stem].
-     */
-    private val IT: Map<String, String> = mapOf(
-        "amore cuore cuori innamorato romantico" to "red-heart heart-with-arrow growing-heart beating-heart two-hearts love-letter heart",
-        "bacio baci" to "kiss-mark kissing-face face-blowing-a-kiss kiss",
-        "preferito preferiti top migliori" to "star glowing-star red-heart trophy crown",
-        "stella stelle" to "star glowing-star shooting-star dizzy",
-        "fuoco caldo hot piccante" to "fire hot-pepper hot-face heart-on-fire",
-        "famiglia parenti" to "people-hugging house-with-garden houses busts-in-silhouette",
-        "bambino bambini bimbo bimba neonato figlio figlia" to "baby baby-bottle child boy girl baby-chick",
-        "mamma madre" to "woman breast-feeding people-hugging",
-        "papa padre" to "man people-hugging",
-        "amici amico amica gruppo" to "busts-in-silhouette people-hugging handshake clinking-glasses",
-        "persona persone gente ritratto" to "bust-in-silhouette busts-in-silhouette person",
-        "matrimonio nozze sposi sposa sposo" to "ring wedding bouquet person-with-veil church",
-        "anniversario" to "ring two-hearts bouquet",
-        "compleanno festa party" to "birthday-cake party-popper balloon wrapped-gift confetti-ball",
-        "regalo regali" to "wrapped-gift",
-        "natale" to "christmas-tree santa-claus wrapped-gift snowman",
-        "halloween" to "jack-o-lantern ghost bat",
-        "capodanno" to "fireworks sparkler bottle-with-popping-cork",
-        "pasqua" to "egg rabbit-face hatching-chick",
-        "viaggio viaggi vacanza vacanze" to "airplane luggage beach-with-umbrella world-map globe-showing-europe-africa",
-        "aereo volo aeroporto" to "airplane airplane-departure airplane-arrival",
-        "mare spiaggia estate" to "beach-with-umbrella water-wave sun bikini desert-island",
-        "montagna montagne neve sci" to "mountain snow-capped-mountain skier snowflake",
-        "lago fiume acqua" to "water-wave droplet",
-        "campeggio tenda" to "camping",
-        "citta" to "cityscape cityscape-at-dusk classical-building",
-        "casa" to "house house-with-garden houses",
-        "giardino" to "house-with-garden seedling potted-plant",
-        "natura" to "evergreen-tree deciduous-tree leaf-fluttering-in-wind herb",
-        "albero alberi bosco foresta" to "evergreen-tree deciduous-tree",
-        "fiore fiori" to "rose tulip sunflower blossom cherry-blossom bouquet hibiscus",
-        "rosa" to "rose",
-        "pianta piante" to "potted-plant seedling herb",
-        "sole" to "sun sun-with-face sunrise",
-        "luna notte" to "crescent-moon full-moon night-with-stars",
-        "pioggia" to "cloud-with-rain umbrella-with-rain-drops",
-        "inverno freddo" to "snowflake snowman cold-face",
-        "autunno" to "fallen-leaf maple-leaf",
-        "primavera" to "cherry-blossom tulip blossom",
-        "cielo nuvola nuvole" to "cloud sun-behind-cloud",
-        "arcobaleno" to "rainbow",
-        "animale animali" to "paw-prints dog-face cat-face",
-        "cane cani cucciolo" to "dog-face dog guide-dog poodle paw-prints",
-        "gatto gatti micio" to "cat-face cat black-cat",
-        "cavallo" to "horse-face horse",
-        "uccello uccelli" to "bird eagle dove parrot",
-        "pesce pesci" to "fish tropical-fish",
+    private val IT = mapOf(
+        "amore cuore cuori innamorato romantico" to "heart mail",
+        "bacio baci" to "heart",
+        "preferito preferiti top migliori" to "star stars heart trophy crown",
+        "stella stelle" to "star stars",
+        "fuoco caldo hot piccante" to "flame mood-wrrr heart",
+        "famiglia parenti" to "man home",
+        "bambino bambini bimbo bimba neonato figlio figlia" to "mood-kid bottle egg-cracked",
+        "mamma madre" to "woman man",
+        "papa padre" to "man",
+        "amici amico amica gruppo" to "man glass-full",
+        "persona persone gente ritratto" to "user man",
+        "matrimonio nozze sposi sposa sposo" to "diamond cross flower",
+        "anniversario" to "diamond heart flower",
+        "compleanno festa party" to "candle confetti balloon gift",
+        "regalo regali" to "gift",
+        "natale" to "christmas-tree gift droplet",
+        "halloween" to "ghost",
+        "capodanno" to "confetti sparkles bottle",
+        "pasqua" to "egg paw egg-cracked",
+        "viaggio viaggi vacanza vacanze" to "plane briefcase umbrella world globe",
+        "aereo volo aeroporto" to "plane plane-departure plane-arrival",
+        "mare spiaggia estate" to "umbrella droplet sun shirt",
+        "montagna montagne neve sci" to "mountain droplet",
+        "lago fiume acqua" to "droplet",
+        "campeggio tenda" to "campfire",
+        "citta" to "home",
+        "casa" to "home",
+        "giardino" to "home seedling",
+        "natura" to "christmas-tree leaf seedling",
+        "albero alberi bosco foresta" to "christmas-tree",
+        "fiore fiori" to "flower",
+        "rosa" to "flower",
+        "pianta piante" to "seedling",
+        "sole" to "sun sunrise",
+        "luna notte" to "moon",
+        "pioggia" to "cloud umbrella",
+        "inverno freddo" to "droplet mood-sad",
+        "autunno" to "leaf",
+        "primavera" to "flower",
+        "cielo nuvola nuvole" to "cloud",
+        "arcobaleno" to "sunrise",
+        "animale animali" to "paw",
+        "cane cani cucciolo" to "paw",
+        "gatto gatti micio" to "paw",
+        "cavallo" to "paw",
+        "uccello uccelli" to "feather",
+        "pesce pesci" to "fish-bone",
         "farfalla" to "butterfly",
-        "coniglio" to "rabbit-face rabbit",
-        "orso" to "bear teddy-bear",
-        "cibo mangiare pranzo cena ristorante" to "fork-and-knife fork-and-knife-with-plate pizza spaghetti",
+        "coniglio" to "paw",
+        "orso" to "paw",
+        "cibo mangiare pranzo cena ristorante" to "tools-kitchen-2 pizza soup",
         "pizza" to "pizza",
-        "pasta spaghetti" to "spaghetti",
-        "dolce dolci torta" to "shortcake birthday-cake cupcake doughnut cookie",
-        "gelato" to "ice-cream soft-ice-cream",
-        "caffe colazione" to "hot-beverage croissant",
-        "vino" to "wine-glass",
-        "birra" to "beer-mug clinking-beer-mugs",
-        "cocktail aperitivo" to "cocktail-glass tropical-drink",
-        "frutta" to "red-apple banana grapes strawberry",
-        "cucina cucinare ricetta ricette" to "cooking cook pot-of-food",
-        "musica canzone canzoni concerto" to "musical-note musical-notes headphone microphone guitar",
-        "film cinema" to "movie-camera clapper-board film-frames cinema popcorn",
-        "serie tv televisione" to "television clapper-board",
-        "video" to "movie-camera video-camera film-frames",
-        "foto fotografia" to "camera camera-with-flash framed-picture",
-        "libro libri lettura" to "books open-book closed-book",
-        "scuola studio universita" to "graduation-cap school books pencil",
-        "lavoro ufficio" to "briefcase office-building laptop",
-        "soldi denaro banca" to "money-bag dollar-banknote euro-banknote bank coin",
-        "spesa shopping acquisti" to "shopping-bags shopping-cart",
-        "moda vestiti" to "dress t-shirt high-heeled-shoe handbag",
-        "sport palestra allenamento" to "flexed-biceps person-lifting-weights soccer-ball trophy",
-        "calcio" to "soccer-ball goal-net",
-        "basket" to "basketball",
-        "tennis" to "tennis",
-        "bici bicicletta" to "bicycle",
-        "corsa" to "running-shoe person-running",
-        "nuoto piscina" to "person-swimming goggles",
-        "auto macchina" to "automobile racing-car",
-        "moto" to "motorcycle",
-        "treno" to "locomotive high-speed-train",
-        "gioco giochi videogioco" to "video-game joystick game-die puzzle-piece",
-        "arte disegno pittura" to "artist-palette paintbrush crayon framed-picture",
-        "tecnologia computer" to "laptop desktop-computer keyboard",
-        "telefono cellulare" to "mobile-phone telephone",
-        "salute medico ospedale" to "hospital stethoscope pill syringe",
-        "medicina" to "pill syringe",
-        "bellezza trucco" to "lipstick nail-polish",
-        "segreto privato" to "locked locked-with-key key shushing-face",
-        "importante urgente" to "warning double-exclamation-mark red-exclamation-mark",
-        "fatto completato visto" to "check-mark-button check-mark",
-        "da vedere dopo" to "eyes bookmark hourglass-not-done",
-        "nuovo nuovi" to "new-button sparkles",
-        "vecchio vecchi ricordi ricordo" to "hourglass-done film-frames framed-picture",
-        "divertente ridere risate" to "face-with-tears-of-joy rolling-on-the-floor-laughing grinning-face",
-        "triste" to "crying-face loudly-crying-face disappointed-face",
-        "felice" to "smiling-face-with-smiling-eyes grinning-face beaming-face-with-smiling-eyes",
-        "arrabbiato" to "angry-face pouting-face",
-        "paura horror" to "face-screaming-in-fear ghost skull",
-        "religione chiesa" to "church latin-cross",
-        "fantasia magia" to "unicorn crystal-ball magic-wand dragon",
-        "spazio" to "rocket ringed-planet milky-way astronaut",
-        "tramonto alba" to "sunset sunrise sunrise-over-mountains",
-        "trofeo vittoria premio" to "trophy 1st-place-medal sports-medal",
+        "pasta spaghetti" to "soup",
+        "dolce dolci torta" to "cookie candle",
+        "gelato" to "milk",
+        "caffe colazione" to "mug bread",
+        "vino" to "glass-full",
+        "birra" to "beer",
+        "cocktail aperitivo" to "glass-full",
+        "frutta" to "apple melon",
+        "cucina cucinare ricetta ricette" to "chef-hat flask",
+        "musica canzone canzoni concerto" to "disc headphones microphone guitar-pick",
+        "film cinema" to "video polaroid bowl",
+        "serie tv televisione" to "device-tv video",
+        "video" to "video polaroid",
+        "foto fotografia" to "camera photo",
+        "libro libri lettura" to "book",
+        "scuola studio universita" to "award school book pencil",
+        "lavoro ufficio" to "briefcase home device-desktop",
+        "soldi denaro banca" to "cash-banknote coin",
+        "spesa shopping acquisti" to "garden-cart shopping-cart",
+        "moda vestiti" to "shirt hanger-2 briefcase",
+        "sport palestra allenamento" to "barbell ball-bowling trophy",
+        "calcio" to "ball-bowling trophy",
+        "basket" to "ball-bowling",
+        "tennis" to "ball-bowling",
+        "bici bicicletta" to "bike",
+        "corsa" to "barbell",
+        "nuoto piscina" to "scuba-diving-tank eyeglass",
+        "auto macchina" to "car",
+        "moto" to "motorbike",
+        "treno" to "train",
+        "gioco giochi videogioco" to "device-gamepad dice puzzle",
+        "arte disegno pittura" to "palette paint pencil photo",
+        "tecnologia computer" to "device-desktop keyboard",
+        "telefono cellulare" to "device-mobile phone",
+        "salute medico ospedale" to "hospital-circle medical-cross pill",
+        "medicina" to "pill",
+        "bellezza trucco" to "paint",
+        "segreto privato" to "lock key",
+        "importante urgente" to "alert-triangle",
+        "fatto completato visto" to "check",
+        "da vedere dopo" to "eye bookmark hourglass",
+        "nuovo nuovi" to "sparkles",
+        "vecchio vecchi ricordi ricordo" to "hourglass polaroid photo",
+        "divertente ridere risate" to "mood-crazy-happy mood-happy",
+        "triste" to "mood-sad",
+        "felice" to "mood-smile mood-happy",
+        "arrabbiato" to "mood-angry",
+        "paura horror" to "ghost",
+        "religione chiesa" to "cross",
+        "fantasia magia" to "alien sparkles",
+        "spazio" to "ufo satellite meteor",
+        "tramonto alba" to "sunset sunrise",
+        "trofeo vittoria premio" to "trophy award",
         "re regina" to "crown",
-        "diamante gioiello" to "gem-stone ring",
-        "chiave" to "key old-key",
-        "orologio tempo" to "alarm-clock hourglass-done watch",
-        "calendario evento" to "calendar spiral-calendar",
-        "nota note appunti" to "memo spiral-notepad pencil",
-        "documento documenti" to "page-facing-up file-folder clipboard",
-        "cartella" to "file-folder open-file-folder",
-        "posta email lettera" to "envelope e-mail love-letter",
-        "mondo" to "globe-showing-europe-africa world-map globe-with-meridians",
-        "italia" to "pizza spaghetti",
-        "bandiera" to "chequered-flag triangular-flag",
-        "notizie" to "newspaper",
-        "idea" to "light-bulb",
-        "scienza" to "microscope alembic dna atom-symbol",
+        "diamante gioiello" to "diamond",
+        "chiave" to "key",
+        "orologio tempo" to "alarm hourglass device-watch",
+        "calendario evento" to "calendar",
+        "nota note appunti" to "pencil clipboard",
+        "documento documenti" to "article folder clipboard",
+        "cartella" to "folder folder-open",
+        "posta email lettera" to "mail",
+        "mondo" to "globe world",
+        "italia" to "pizza soup",
+        "bandiera" to "flag",
+        "notizie" to "article",
+        "idea" to "bulb",
+        "scienza" to "microscope flask atom-2",
     )
+
 }
 
-/** The icon [name] drawn as an [ImageVector], or null while it loads (or for no icon). */
+/** Resolve a saved icon name so unknown legacy values render like an unset icon. */
+@Composable
+internal fun rememberResolvedTagIcon(name: String?): String? {
+    if (name.isNullOrBlank()) return null
+    val context = LocalContext.current
+    return key(name) {
+        val resolved by produceState<String?>(name) { value = TagIcons.resolveName(context, name) }
+        resolved
+    }
+}
+
+/** The icon drawn as an ImageVector, or null while it loads or when it is unknown. */
 @Composable
 fun rememberTagIcon(name: String?): ImageVector? {
     if (name.isNullOrBlank()) return null
     val context = LocalContext.current
-    val icon by produceState(TagIcons.cached(name), name) { value = TagIcons.vector(context, name) }
-    return icon
+    return key(name) {
+        val icon by produceState(TagIcons.cached(name)) { value = TagIcons.vector(context, name) }
+        icon
+    }
 }

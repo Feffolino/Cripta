@@ -455,7 +455,7 @@
     <string name="icon_for">“%1$s” के लिए</string>
     <string name="icon_most_used">सबसे अधिक इस्तेमाल</string>
     <string name="icon_all_short">सभी</string>
-    <string name="icon_credit">Microsoft के Fluent Emoji, MIT लाइसेंस।</string>
+    <string name="icon_credit">Tabler Icons Filled (MIT)। खोज शब्द Unicode CLDR से।</string>
     <string name="favorites">पसंदीदा</string>
     <string name="back">वापस</string>
     <string name="favorites_sort">पसंदीदा का क्रम</string>

@@ -443,7 +443,8 @@ internal fun coverMarkFill(color: Color): Color {
 private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val bg = coverMarkFill(color)
     val fg = Color.White
-    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
+    val icon = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tag.icon)
+    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
     Box(
         modifier.size(size).clip(CircleShape).background(bg).semantics { contentDescription = tag.name },
         contentAlignment = Alignment.Center,
@@ -451,8 +452,8 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
         when {
             drawn != null -> Icon(drawn, null, tint = fg, modifier = Modifier.size(size * 0.58f))
             // Its room is kept while the icon loads, so nothing shifts.
-            tag.icon != null -> Unit
-            else -> Text(text, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
+            icon != null -> Unit
+            else -> Text(text.ifEmpty { tagAlias(tag) }, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
                 color = fg, maxLines = 1)
         }
     }
@@ -463,15 +464,17 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
 private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val fg = Color.White
     val bg = coverMarkFill(color)
-    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
+    val icon = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tag.icon)
+    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
+    val shownText = if (icon == null) text.ifEmpty { tagAlias(tag) } else text
     Row(
         modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).clip(CircleShape).background(bg)
             .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (tag.icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize()) }
-        if (tag.icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
-        if (text.isNotEmpty()) Text(text, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
+        if (icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize()) }
+        if (icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
+        if (shownText.isNotEmpty()) Text(shownText, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
