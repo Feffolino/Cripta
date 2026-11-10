@@ -326,7 +326,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   the surface-container tier, no border; they breathe slowly and stand still with animations off.
   The content replaces them in place, with the "loaded" flag the screen already has. Favourites
   and the folder-cover sheet follow it too, as do the figures and results button in Intro and
-  ending settings; a spinner is left only where the shape is unknown
+  ending settings, and the space bar of Impostazioni and Spazio e pulizia
+  (`DeviceSpaceBarSkeleton`: label and figure, the bar, three legend entries, at the text's real
+  line heights); a spinner is left only where the shape is unknown
   (viewer, note editor).
 - Navigation: tabs cross-fade with a slight drift towards the tab chosen; pages (people, a
   profile, favourites, a note, a Settings page) slide in along X from the right and Back reverses

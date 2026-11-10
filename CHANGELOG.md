@@ -7,6 +7,7 @@ Entries marked **stable** went out as a stable release.
 
 - Offer a colour of your own for tags and folders ("Altro": hue, saturation and brightness sliders or a typed code) next to the presets
 - Give tags and folders one shared palette of twelve colours that matches the app's blue accent; colours saved before keep working
+- Show a placeholder for the space bar in Impostazioni and Spazio e pulizia until the figures are known
 - Scroll the tag colour swatches sideways on one line
 - Make the grid auto-scroll during a drag start later and speed up more gently
 - Draw tag and folder icons as Fluent Emoji Flat in full colour (about 1,480 emoji, searchable by name in all twelve app languages); icons saved before keep working

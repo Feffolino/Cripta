@@ -79,8 +79,9 @@ internal fun MainSettingsList(
                 // DS Impostazioni: the space used, as a counted row, closes "I tuoi dati".
                 if (g == SettingsGroup.DATA) item(key = "device-space", span = full) {
                     // The whole phone storage: Cripta, the rest, free. Shown from the last reading
-                    // (no jump on every visit); before the very first one, nothing.
-                    space?.let { DeviceSpaceBar(it, Modifier.padding(top = 8.dp), onClick = onOpenSpace) }
+                    // (no jump on every visit); before the very first one, a placeholder of its size.
+                    if (space != null) DeviceSpaceBar(space, Modifier.padding(top = 8.dp), onClick = onOpenSpace)
+                    else DeviceSpaceBarSkeleton(Modifier.padding(top = 8.dp))
                 }
             }
         }

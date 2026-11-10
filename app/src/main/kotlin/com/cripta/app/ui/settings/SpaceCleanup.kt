@@ -89,6 +89,50 @@ internal fun DeviceSpaceBar(report: SpaceReport, modifier: Modifier = Modifier, 
     }
 }
 
+/** A text line's height in dp, so a placeholder block takes the room the real text will. */
+@Composable
+private fun lineHeightDp(style: androidx.compose.ui.text.TextStyle): androidx.compose.ui.unit.Dp =
+    with(androidx.compose.ui.platform.LocalDensity.current) {
+        if (style.lineHeight.isSp) style.lineHeight.toDp() else (style.fontSize * 1.4f).toDp()
+    }
+
+/** A placeholder for one line of text: [width] wide, in a slot as tall as the line itself. */
+@Composable
+private fun SkeletonLine(width: androidx.compose.ui.unit.Dp, line: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    Box(modifier.height(line), contentAlignment = Alignment.CenterStart) {
+        com.cripta.app.ui.components.Skeleton(Modifier.width(width).height(line * 0.7f))
+    }
+}
+
+/**
+ * [DeviceSpaceBar] before its first reading: the label and figure, the bar, the three legend
+ * entries, as blocks of the same heights, so the real bar replaces it without moving anything.
+ */
+@Composable
+internal fun DeviceSpaceBarSkeleton(modifier: Modifier = Modifier) {
+    val body = lineHeightDp(MaterialTheme.typography.bodyMedium)
+    val small = lineHeightDp(MaterialTheme.typography.bodySmall)
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            SkeletonLine(110.dp, body)
+            Spacer(Modifier.weight(1f))
+            SkeletonLine(90.dp, body)
+        }
+        com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().height(10.dp), CircleShape)
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            repeat(3) {
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.Top) {
+                    com.cripta.app.ui.components.Skeleton(Modifier.padding(top = 4.dp).size(10.dp), CircleShape)
+                    Column(Modifier.padding(start = 8.dp)) {
+                        SkeletonLine(48.dp, small)
+                        SkeletonLine(56.dp, body)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun LegendItem(color: Color, label: String, value: String, modifier: Modifier) {
     Row(modifier.semantics(mergeDescendants = true) { }, verticalAlignment = Alignment.Top) {
@@ -125,15 +169,19 @@ internal fun SpaceDetails(
     onEmptyTrash: () -> Unit,
 ) {
     if (report == null) {
-        // The rows that will be here (label and figure, then the bar), as blocks of the same size.
-        repeat(4) {
-            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.height(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    com.cripta.app.ui.components.Skeleton(Modifier.width(110.dp).height(14.dp))
-                    Spacer(Modifier.weight(1f))
-                    com.cripta.app.ui.components.Skeleton(Modifier.width(60.dp).height(14.dp))
+        // What will be here: the phone bar, then the kinds (label and figure, a thin bar under each).
+        DeviceSpaceBarSkeleton()
+        Column(Modifier.padding(top = 12.dp)) {
+            val body = lineHeightDp(MaterialTheme.typography.bodyMedium)
+            repeat(3) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SkeletonLine(110.dp, body)
+                        Spacer(Modifier.weight(1f))
+                        SkeletonLine(60.dp, body)
+                    }
+                    com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().height(6.dp), CircleShape)
                 }
-                com.cripta.app.ui.components.Skeleton(Modifier.fillMaxWidth().height(10.dp), CircleShape)
             }
         }
         return
