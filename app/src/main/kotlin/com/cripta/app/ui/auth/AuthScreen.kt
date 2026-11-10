@@ -40,6 +40,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -307,7 +311,26 @@ private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> 
             digits = "" // never kept around, and cleared for the next try after a wrong PIN
         }
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
+    // A hardware keyboard types the PIN too: digits, Enter to unlock, Backspace to delete.
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    Column(
+        Modifier.focusRequester(focus).focusable().onPreviewKeyEvent { e: androidx.compose.ui.input.key.KeyEvent ->
+            if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            val code = e.nativeKeyEvent.keyCode
+            when {
+                code in android.view.KeyEvent.KEYCODE_0..android.view.KeyEvent.KEYCODE_9 -> { add('0' + (code - android.view.KeyEvent.KEYCODE_0)); true }
+                code in android.view.KeyEvent.KEYCODE_NUMPAD_0..android.view.KeyEvent.KEYCODE_NUMPAD_9 -> { add('0' + (code - android.view.KeyEvent.KEYCODE_NUMPAD_0)); true }
+                code == android.view.KeyEvent.KEYCODE_ENTER || code == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> { submit(); true }
+                code == android.view.KeyEvent.KEYCODE_DEL || code == android.view.KeyEvent.KEYCODE_FORWARD_DEL -> {
+                    if (!busy && digits.isNotEmpty()) { tap(); digits = digits.dropLast(1) }
+                    true
+                }
+                else -> false
+            }
+        },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap),
+    ) {
         androidx.compose.foundation.layout.Box(
             Modifier.size(width = 240.dp, height = 28.dp).semantics {
                 liveRegion = LiveRegionMode.Polite
@@ -319,11 +342,15 @@ private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> 
                 busy -> androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
                 digits.isEmpty() -> Text(str(R.string.auth_enter_pin), style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    repeat(digits.length) {
-                        androidx.compose.foundation.layout.Box(
-                            Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape),
-                        )
+                else -> {
+                    // Up to 16 digits in 240dp: past ten the dots shrink and close up so none is lost.
+                    val many = digits.length > 10
+                    Row(horizontalArrangement = Arrangement.spacedBy(if (many) 4.dp else 10.dp)) {
+                        repeat(digits.length) {
+                            androidx.compose.foundation.layout.Box(
+                                Modifier.size(if (many) 8.dp else 12.dp).background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape),
+                            )
+                        }
                     }
                 }
             }

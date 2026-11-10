@@ -2038,4 +2038,7 @@
     <string name="n_backup_failed_reason">बैकअप विफल (%1$s)। गंतव्य जाँचें और फिर कोशिश करें।</string>
     <string name="bulk_partial">%2$d में से %1$d हुए: बाकी जैसे थे वैसे ही रहे</string>
     <string name="tag_missing">हटाया गया टैग</string>
+    <string name="pdf_page_failed">पृष्ठ %1$d दिखाया नहीं जा सका</string>
+    <string name="image_cant_show">यह तस्वीर दिखाई नहीं जा सकी: फ़ाइल क्षतिग्रस्त हो सकती है या ऐसे फ़ॉर्मैट में हो सकती है जिसे फ़ोन नहीं पढ़ सकता।</string>
+    <string name="viewer_show_controls">नियंत्रण दिखाएँ</string>
 </resources>

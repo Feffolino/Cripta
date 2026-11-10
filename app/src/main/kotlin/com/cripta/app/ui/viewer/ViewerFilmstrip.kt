@@ -127,6 +127,8 @@ internal fun Filmstrip(
             val dim by animateFloatAsState(if (sel) 1f else 0.6f, Motion.enter(Motion.MEDIUM), label = "stripDim")
             val ring by animateFloatAsState(if (sel) 1f else 0f, Motion.enter(Motion.MEDIUM), label = "stripRing")
             val bmp by produceState<Bitmap?>(null, id) { value = vm.thumbOf(id) }
+            // With its name: "File 3 of 12" alone made a known file findable only by its position.
+            val name by produceState<String?>(null, id) { value = vm.fileById(id)?.originalName }
             if (rect && prefs.stripTrueAspect) {
                 LaunchedEffect(id) {
                     val f = vm.fileById(id)
@@ -142,7 +144,7 @@ internal fun Filmstrip(
                 Modifier.height(maxOf(48.dp, h)).width(maxOf(48.dp, h * aspect))
                     .clickable(onClickLabel = str(R.string.open)) { onPick(i) }
                     .semantics {
-                        this.contentDescription = str(R.string.file_x_of_y, i + 1, ids.size)
+                        this.contentDescription = (name?.let { "$it, " } ?: "") + str(R.string.file_x_of_y, i + 1, ids.size)
                         this.selected = sel
                     },
                 contentAlignment = Alignment.Center,

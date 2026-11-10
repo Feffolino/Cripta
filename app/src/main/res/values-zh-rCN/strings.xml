@@ -1973,4 +1973,7 @@
     <string name="n_backup_failed_reason">备份失败（%1$s）。请检查目标位置后重试。</string>
     <string name="bulk_partial">已完成 %1$d/%2$d：其余保持原样</string>
     <string name="tag_missing">已删除的标签</string>
+    <string name="pdf_page_failed">无法显示第 %1$d 页</string>
+    <string name="image_cant_show">无法显示这张图片：文件可能已损坏，或格式不受此手机支持。</string>
+    <string name="viewer_show_controls">显示控件</string>
 </resources>

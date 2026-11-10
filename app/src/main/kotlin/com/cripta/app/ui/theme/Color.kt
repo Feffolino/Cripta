@@ -125,4 +125,6 @@ val androidx.compose.material3.ColorScheme.accentTint: Color
     get() = if (background.luminance() > 0.5f) AccentTintLight else AccentTintDark
 
 /** DS `glass`: dark glass under anything drawn on a picture. */
-val Glass = BadgeScrim
+// Darker than the badges' scrim: white text and icons on it stay at 4.5:1 even over a white frame
+// (40% black gave about 2.9:1).
+val Glass = Color(0x99000000)

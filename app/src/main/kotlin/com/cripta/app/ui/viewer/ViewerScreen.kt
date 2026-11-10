@@ -65,6 +65,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.pointer.pointerInput
@@ -287,6 +289,15 @@ fun ViewerScreen(
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
+            // Hidden controls are out of the accessibility tree and a tap on the content brings them
+            // back: an action says the same to a screen reader, which has no such tap.
+            .semantics {
+                if (!chromeVisible) customActions = listOf(
+                    androidx.compose.ui.semantics.CustomAccessibilityAction(str(R.string.viewer_show_controls)) {
+                        chromeTouch++; chromeVisible = true; true
+                    },
+                )
+            }
             // Seen in the Initial pass, before the pager: decides the gesture's axis as soon as it
             // passes the touch slop. Nothing is consumed, so the page below still gets every touch.
             .pointerInput(Unit) {

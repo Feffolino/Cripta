@@ -2103,4 +2103,7 @@
     <string name="n_backup_failed_reason">O backup falhou (%1$s). Verifique o destino e tente novamente.</string>
     <string name="bulk_partial">%1$d de %2$d feitos: o resto ficou como estava</string>
     <string name="tag_missing">Tag excluída</string>
+    <string name="pdf_page_failed">Não foi possível mostrar a página %1$d</string>
+    <string name="image_cant_show">Não foi possível mostrar esta imagem: o arquivo pode estar danificado ou em um formato que o telefone não consegue ler.</string>
+    <string name="viewer_show_controls">Mostrar controles</string>
 </resources>

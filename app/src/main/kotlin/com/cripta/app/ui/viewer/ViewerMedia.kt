@@ -219,8 +219,11 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
     // the last gesture dragged, its tap and a quick second tap are not a tap / double tap.
     var dragEndedAt by remember { mutableLongStateOf(0L) }
     val afterDrag = { android.os.SystemClock.uptimeMillis() - dragEndedAt < 600L }
+    var failed by remember(bytes) { mutableStateOf(false) }
 
+    Box(Modifier.fillMaxSize()) {
     AsyncImage(
+        onError = { failed = true },
         model = ImageRequest.Builder(ctx).data(bytes).diskCachePolicy(CachePolicy.DISABLED).build(),
         contentDescription = name,
         contentScale = ContentScale.Fit,
@@ -289,6 +292,12 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                 translationX = offX.value; translationY = offY.value
             },
     )
+    // Coil could not decode it: say so, instead of an empty black page.
+    if (failed) Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(CriptaIcons.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp))
+        Text(str(R.string.image_cant_show), color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+    }
+    }
 }
 
 /**
@@ -470,11 +479,23 @@ private fun PdfView(bytes: ByteArray, onSingleTap: () -> Unit) {
                     },
                 ) {
                     items(doc.pageCount) { index ->
-                        val bmp by produceState<Bitmap?>(initialValue = null, index, doc) { value = doc.render(index) }
+                        var failed by remember(index, doc) { mutableStateOf(false) }
+                        val bmp by produceState<Bitmap?>(initialValue = null, index, doc) {
+                            value = doc.render(index)
+                            // Null after the attempt: this page cannot be drawn (not "still loading").
+                            if (value == null) failed = true
+                        }
                         val b = bmp
                         val desc = str(R.string.page_of, index + 1, doc.pageCount)
                         if (b != null) {
                             Image(b.asImageBitmap(), desc, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                        } else if (failed) {
+                            Column(Modifier.fillMaxWidth().height(240.dp).semantics { contentDescription = desc },
+                                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+                                Icon(CriptaIcons.ErrorOutline, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(32.dp))
+                                Text(str(R.string.pdf_page_failed, index + 1), color = Color.White, textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 8.dp))
+                            }
                         } else {
                             Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
                                 DelayedSpinner(color = Color.White)

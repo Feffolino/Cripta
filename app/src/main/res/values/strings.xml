@@ -2038,4 +2038,7 @@
     <string name="n_backup_failed_reason">Backup failed (%1$s). Check the destination and try again.</string>
     <string name="bulk_partial">%1$d of %2$d done: the rest was left as it was</string>
     <string name="tag_missing">Deleted tag</string>
+    <string name="pdf_page_failed">Page %1$d could not be shown</string>
+    <string name="image_cant_show">This picture could not be shown: the file may be damaged or in a format this phone cannot read.</string>
+    <string name="viewer_show_controls">Show controls</string>
 </resources>

@@ -2103,4 +2103,7 @@
     <string name="n_backup_failed_reason">Backup non riuscito (%1$s). Controlla la destinazione e riprova.</string>
     <string name="bulk_partial">Fatti %1$d su %2$d: il resto è rimasto com\'era</string>
     <string name="tag_missing">Tag eliminato</string>
+    <string name="pdf_page_failed">Non è stato possibile mostrare la pagina %1$d</string>
+    <string name="image_cant_show">Non è stato possibile mostrare questa immagine: il file potrebbe essere danneggiato o in un formato che il telefono non legge.</string>
+    <string name="viewer_show_controls">Mostra i comandi</string>
 </resources>

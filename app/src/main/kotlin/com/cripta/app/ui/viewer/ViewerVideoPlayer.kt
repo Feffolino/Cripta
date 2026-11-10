@@ -250,6 +250,7 @@ internal fun VideoPlayer(
             if (r.play) player.play()
         }
     }
+    var advanceAfterChip by remember(file.id) { mutableStateOf(false) }
     fun skipSegment(s: SegmentSkipper.Segment) {
         if (s.kind == SegmentSkipper.Kind.OUTRO && nextId != null && !prefs.loop) latestOnNext()
         else player.seekTo(if (s.kind == SegmentSkipper.Kind.OUTRO && player.duration > 0) player.duration else s.endMs)
@@ -258,12 +259,24 @@ internal fun VideoPlayer(
         while (true) {
             val a = if (inPip) SegmentSkipper.Action.None
                 else skipper.at(player.currentPosition, skipSegments, scrubbing, prefs.introAutoSkip, prefs.outroAutoSkip)
-            if (a is SegmentSkipper.Action.AutoSkip) { skipSegment(a.segment); skippedChip = a.segment }
+            if (a is SegmentSkipper.Action.AutoSkip) {
+                // Moving on to the next video closes this player, and the chip with it: the advance
+                // waits a few seconds behind the chip, so "Annulla" can still be tapped.
+                if (a.segment.kind == SegmentSkipper.Kind.OUTRO && nextId != null && !prefs.loop) advanceAfterChip = true
+                else skipSegment(a.segment)
+                skippedChip = a.segment
+            }
             skipAction = a
             delay(250)
         }
     }
-    LaunchedEffect(skippedChip) { if (skippedChip != null) { delay(3_000); skippedChip = null } }
+    LaunchedEffect(skippedChip) {
+        if (skippedChip != null) {
+            delay(3_000)
+            if (advanceAfterChip) { advanceAfterChip = false; latestOnNext() }
+            skippedChip = null
+        }
+    }
     val rotationLocked by vm.rotationLocked.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? android.app.Activity
     val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
@@ -672,6 +685,8 @@ internal fun VideoPlayer(
                     } else {
                         val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
                         audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (level * max).toInt(), 0)
+                        // "Avvia senza audio" mutes the player itself: the gesture is how it comes back.
+                        if (level > 0f && player.volume == 0f) player.volume = 1f
                         gestureLabel = GestureHud(
                             when { level <= 0f -> CriptaIcons.VolumeOff; level < 0.5f -> CriptaIcons.VolumeDown; else -> CriptaIcons.VolumeUp },
                             String.format(com.cripta.app.Strings.locale, "%d%%", (level * 100).toInt()), level,
@@ -775,7 +790,7 @@ internal fun VideoPlayer(
                 Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (s.kind == SegmentSkipper.Kind.INTRO) str(R.string.intro_skipped) else str(R.string.ending_skipped),
                         color = Color.White, style = MaterialTheme.typography.labelLarge)
-                    com.cripta.app.ui.components.TextButton(onClick = { skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
+                    com.cripta.app.ui.components.TextButton(onClick = { advanceAfterChip = false; skipper.undo(s.kind); player.seekTo(s.startMs); skippedChip = null }) {
                         com.cripta.app.ui.components.ButtonText(str(R.string.cancel))
                     }
                 }

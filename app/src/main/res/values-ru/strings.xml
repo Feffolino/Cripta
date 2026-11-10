@@ -2168,4 +2168,7 @@
     <string name="n_backup_failed_reason">Не удалось создать резервную копию (%1$s). Проверь место сохранения и попробуй снова.</string>
     <string name="bulk_partial">Выполнено %1$d из %2$d: остальное осталось как было</string>
     <string name="tag_missing">Удалённый тег</string>
+    <string name="pdf_page_failed">Не удалось показать страницу %1$d</string>
+    <string name="image_cant_show">Не удалось показать это изображение: файл может быть повреждён или в формате, который телефон не читает.</string>
+    <string name="viewer_show_controls">Показать элементы управления</string>
 </resources>

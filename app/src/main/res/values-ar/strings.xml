@@ -2298,4 +2298,7 @@
     <string name="n_backup_failed_reason">فشل النسخ الاحتياطي (%1$s). تحقق من الوجهة وحاول مرة أخرى.</string>
     <string name="bulk_partial">تم %1$d من %2$d: وبقي الباقي كما كان</string>
     <string name="tag_missing">وسم محذوف</string>
+    <string name="pdf_page_failed">تعذّر عرض الصفحة %1$d</string>
+    <string name="image_cant_show">تعذّر عرض هذه الصورة: قد يكون الملف تالفاً أو بتنسيق لا يستطيع الهاتف قراءته.</string>
+    <string name="viewer_show_controls">إظهار عناصر التحكم</string>
 </resources>

@@ -2103,4 +2103,7 @@
     <string name="n_backup_failed_reason">La copia de seguridad falló (%1$s). Revisa el destino e inténtalo de nuevo.</string>
     <string name="bulk_partial">Hechos %1$d de %2$d: el resto quedó como estaba</string>
     <string name="tag_missing">Etiqueta eliminada</string>
+    <string name="pdf_page_failed">No se pudo mostrar la página %1$d</string>
+    <string name="image_cant_show">No se pudo mostrar esta imagen: el archivo puede estar dañado o en un formato que el teléfono no puede leer.</string>
+    <string name="viewer_show_controls">Mostrar controles</string>
 </resources>

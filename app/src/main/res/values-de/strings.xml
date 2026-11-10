@@ -2038,4 +2038,7 @@
     <string name="n_backup_failed_reason">Sicherung fehlgeschlagen (%1$s). Prüfe das Ziel und versuche es erneut.</string>
     <string name="bulk_partial">%1$d von %2$d erledigt: der Rest blieb unverändert</string>
     <string name="tag_missing">Gelöschter Tag</string>
+    <string name="pdf_page_failed">Seite %1$d konnte nicht angezeigt werden</string>
+    <string name="image_cant_show">Dieses Bild konnte nicht angezeigt werden: Die Datei ist evtl. beschädigt oder in einem Format, das dieses Telefon nicht lesen kann.</string>
+    <string name="viewer_show_controls">Steuerelemente anzeigen</string>
 </resources>
