@@ -18,7 +18,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -43,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -537,8 +537,10 @@ internal fun takeGraphemes(s: String, max: Int): String {
 }
 
 /** Round colour swatch; [label] marks the special "automatic" choice. */
-/** "A" (automatic / default colour) followed by the tag palette; [onPick] gets null for "A". */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * "A" (automatic / default colour) followed by the tag palette, on one line that scrolls sideways;
+ * [onPick] gets null for "A". It opens scrolled to the chosen colour.
+ */
 @Composable
 internal fun TagColorPicker(
     selected: Int?,
@@ -546,7 +548,14 @@ internal fun TagColorPicker(
     autoDescription: String,
     onPick: (Int?) -> Unit,
 ) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val scroll = rememberScrollState()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    LaunchedEffect(Unit) {
+        val index = com.cripta.app.ui.theme.TagPalette.indexOfFirst { it.toArgb() == selected } + 1
+        // Each swatch takes the 48dp touch target plus the 8dp gap; the chosen one stays second.
+        if (index > 1) scroll.scrollTo(with(density) { ((index - 1) * 56).dp.roundToPx() })
+    }
+    Row(Modifier.fillMaxWidth().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ColorDot(autoColor, selected = selected == null, label = "A", description = autoDescription) { onPick(null) }
         com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
             val argb = c.toArgb()
