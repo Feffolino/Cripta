@@ -71,6 +71,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -121,7 +122,8 @@ fun DownloadScreen(
 ) {
     val ctx = LocalContext.current
     val clipboard = LocalClipboardManager.current
-    var url by remember { mutableStateOf(initialUrl.orEmpty()) }
+    // Saved across a recreated Activity and a change of tab: a link and a choice not yet sent are kept.
+    var url by rememberSaveable { mutableStateOf(initialUrl.orEmpty()) }
     val qualities = listOf<Pair<Int?, String>>(null to str(R.string.quality_auto), 1080 to "1080p", 720 to "720p", 480 to "480p", 360 to "360p")
     val heights = qualities.map { it.first }
     val downloads by vm.downloads.collectAsStateWithLifecycle()
@@ -133,10 +135,10 @@ fun DownloadScreen(
     val defaults by vm.defaults.collectAsStateWithLifecycle()
 
     // Destination + quality start from the last used ones (loaded once), then follow the user.
-    var quality by remember { mutableStateOf<Int?>(null) }
-    var folderId by remember { mutableStateOf<Long?>(null) }
-    var tagIds by remember { mutableStateOf(setOf<Long>()) }
-    var defaultsApplied by remember { mutableStateOf(false) }
+    var quality by rememberSaveable { mutableStateOf<Int?>(null) }
+    var folderId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var tagIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
+    var defaultsApplied by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(defaults) {
         val d = defaults
         if (d != null && !defaultsApplied) {
@@ -157,6 +159,7 @@ fun DownloadScreen(
     // Debounced size probe (and "already downloaded" check) whenever the link settles.
     LaunchedEffect(url) {
         val u = url.trim()
+        vm.onLinkEdited(u)
         // Not a link (yet): nothing to probe, and no misleading "estimate failed".
         if (!looksLikeUrl(u)) { vm.resetEstimate() } else { delay(700); vm.estimate(u, heights) }
     }

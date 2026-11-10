@@ -133,7 +133,12 @@ class YtdlpDownloader @Inject constructor(
      * rendition does, while exact per-rendition sizes are still used when the site provides them.
      * Returns null only when nothing at all can be estimated.
      */
-    fun estimateBytes(info: VideoInfo, maxHeight: Int?): Long? {
+    fun estimateBytes(info: VideoInfo, maxHeight: Int?): Long? = DownloadEstimate.bytes(info, maxHeight)
+}
+
+/** The size estimate of a download, apart from the downloader so it can be tested. */
+internal object DownloadEstimate {
+    fun bytes(info: VideoInfo, maxHeight: Int?): Long? {
         val formats = info.formats ?: return null
         val dur = info.duration.toLong().coerceAtLeast(0)
         fun declaredSize(f: VideoFormat): Long = when {
@@ -148,8 +153,11 @@ class YtdlpDownloader @Inject constructor(
 
         val videos = formats.filter { it.vcodec != null && it.vcodec != "none" && it.height > 0 }
         if (videos.isEmpty()) return null
+        // The download never goes above the cap: a source with only larger renditions cannot be
+        // fetched at this quality, so there is no estimate (falling back to the smallest one showed
+        // a size for a download that would then fail).
         val video = if (maxHeight == null) videos.maxByOrNull { it.height }
-        else (videos.filter { it.height <= maxHeight }.maxByOrNull { it.height } ?: videos.minByOrNull { it.height })
+        else videos.filter { it.height <= maxHeight }.maxByOrNull { it.height }
         video ?: return null
 
         // Video part: the rendition's own size when known, otherwise scale the highest rendition that

@@ -112,6 +112,15 @@ class DownloadViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The field now holds [u]: what was shown for another link (the "already in the vault" notice
+     * and its Open button, the size and preview) goes at once, not when the new check ends.
+     */
+    fun onLinkEdited(u: String) {
+        if (_existing.value?.sourceUrl?.trim() != u) { existingJob?.cancel(); _existing.value = null }
+        if (u != estimatedUrl && _estimate.value !is Estimate.Idle) { estimateJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle }
+    }
+
     fun resetEstimate() {
         estimateJob?.cancel(); existingJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle; _existing.value = null
     }

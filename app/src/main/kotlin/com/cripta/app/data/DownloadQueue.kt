@@ -53,8 +53,12 @@ class DownloadQueue @Inject constructor(private val repo: VaultRepository) {
         updateDownload(next.id) { it.copy(phase = DownloadPhase.PREPARING) }
         return next
     }
-    /** Remove a waiting or finished link from the list (a running one must be cancelled first). */
-    fun removeDownload(id: String) {
+    /**
+     * Remove a waiting or finished link from the list (a running one must be cancelled first).
+     * Under the same lock as [takeNextDownload]: between its read and its marking the link looked
+     * removable, and was handed to the service after it had vanished from the list.
+     */
+    @Synchronized fun removeDownload(id: String) {
         val removable = _downloads.value.any { it.id == id && !it.active }
         _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
         if (removable) scope.launch { repo.deletePendingJob(id) }
