@@ -105,6 +105,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.ViewMode
@@ -286,6 +287,9 @@ fun VaultScreen(
     var showStats by remember { mutableStateOf(false) }
     /** Grid cell under a finger held down (after a short delay, so a scroll doesn't flash it). */
     var pressedKey by remember { mutableStateOf<String?>(null) }
+    /** Height of the floating buttons and of their open menu (the snackbar keeps above them). */
+    var fabStackPx by remember { mutableIntStateOf(0) }
+    var fabMenuPx by remember { mutableIntStateOf(0) }
 
     // Feedback for every action, with "Annulla" where the change can be reverted.
     val snackbar = remember { SnackbarHostState() }
@@ -433,7 +437,7 @@ fun VaultScreen(
     androidx.compose.runtime.CompositionLocalProvider(LocalCoverPeople provides coverPeople) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        snackbarHost = { SnackbarHost(snackbar) },
+        // The snackbar is placed by the screen itself (below), above whatever sits on the bottom edge.
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 scrollBehavior = scrollBehavior,
@@ -607,6 +611,8 @@ fun VaultScreen(
             }
         },
         floatingActionButton = {
+          // Height of the buttons on screen (0 while hidden), so the snackbar can sit above them.
+          Box(Modifier.onSizeChanged { fabStackPx = it.height }) {
             if (!inSelection) {
                 AnimatedVisibility(
                     visible = fabsVisible,
@@ -667,7 +673,7 @@ fun VaultScreen(
                                     exit = fadeOut(Motion.exit(Motion.SHORT)) +
                                         scaleOut(Motion.exit(Motion.SHORT), targetScale = 0.9f, transformOrigin = origin),
                                 ) {
-                                    FabMenu(actions)
+                                    Box(Modifier.onSizeChanged { fabMenuPx = it.height }) { FabMenu(actions) }
                                 }
                             }
                             // "+" turns 45 degrees into an "x" while the actions are open.
@@ -690,10 +696,23 @@ fun VaultScreen(
                     }
                 }
             }
+          }
         },
     ) { pad ->
       Box(Modifier.fillMaxSize().padding(pad)) {
         Column(Modifier.fillMaxSize().nestedScroll(fabScroll)) {
+            // Everything above the grid (search, chips, banners, strips) is one header with the top
+            // bar: when the grid scrolls under it, the whole header lifts, not the bar alone.
+            val headerColor by androidx.compose.animation.animateColorAsState(
+                if (topLift.lifted) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+                androidx.compose.animation.core.tween(Motion.SHORT), label = "headerLift",
+            )
+            Column(Modifier.fillMaxWidth().background(headerColor)) {
+            // On the lifted header the search pill moves one tier up, so it keeps standing out.
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.cripta.app.ui.components.LocalFieldContainer provides
+                    (if (topLift.lifted) MaterialTheme.colorScheme.surfaceContainerHigh else null),
+            ) {
             // Search field: always at the root (DS Cartelle); inside a folder revealed from the
             // top-bar icon, and it stays while a query is typed.
             val showSearch = path.isEmpty() || searchExpanded || filters.query.isNotEmpty()
@@ -754,6 +773,8 @@ fun VaultScreen(
             )
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
+            }
+            }
             }
             }
 
@@ -856,12 +877,13 @@ fun VaultScreen(
                     selection = dragBase + currentOrderedIds.subList(minOf(ai, ci), maxOf(ai, ci) + 1)
                 }
             }
-            /** Long-press landed at [pos]: starts a range select or a move drag. False if no file is there. */
-            fun startDrag(pos: Offset): Boolean {
+            /** Long-press landed at [pos]: starts a move drag ([carry], only on a selected file) or a
+             *  range select. False if no file is there. */
+            fun startDrag(pos: Offset, carry: Boolean): Boolean {
                 val key = (keyAt(pos, gridState) as? String)?.takeIf { it in currentIdSet } ?: return false
                 selPointer = pos
                 hoverFolder = null
-                if (key in selection) {
+                if (carry && key in selection) {
                     val held = selection
                     carried = currentOrderedIds.filter { it in held }
                     carriedFrom = files.filter { it.file.id in held }.associate { it.file.id to it.file.folderId }
@@ -1120,10 +1142,32 @@ fun VaultScreen(
                             val down = awaitFirstDown(requireUnconsumed = false)
                             if (gridDown[0] != down.id) return@awaitEachGesture
                             val press = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
-                            if (!startDrag(press.position)) return@awaitEachGesture
+                            val slop = viewConfiguration.touchSlop
+                            val pressedKey0 = (keyAt(press.position, gridState) as? String)?.takeIf { it in currentIdSet }
+                                ?: return@awaitEachGesture
+                            // On a file already selected the long-press is ambiguous: dragging at once
+                            // goes on with the quick selection (from this file), holding still a moment
+                            // longer lifts the selection to move it.
+                            var carry = false
+                            if (pressedKey0 in selection) {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                val moved = withTimeoutOrNull(LIFT_AFTER_MS) {
+                                    while (true) {
+                                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                                        val c = e.changes.firstOrNull { it.id == press.id } ?: return@withTimeoutOrNull false
+                                        if (!c.pressed) { c.consume(); return@withTimeoutOrNull false }
+                                        val far = (c.position - press.position).getDistance() > slop
+                                        c.consume()
+                                        if (far) return@withTimeoutOrNull true
+                                    }
+                                    @Suppress("UNREACHABLE_CODE") false
+                                }
+                                if (moved == false) return@awaitEachGesture
+                                carry = moved == null
+                            }
+                            if (!startDrag(press.position, carry)) return@awaitEachGesture
                             val zone = 72.dp.toPx()
                             val maxSpeed = 1600.dp.toPx()
-                            val slop = viewConfiguration.touchSlop
                             // Auto-scroll waits until the finger has moved: a long-press near an edge
                             // must not set the grid running by itself.
                             var armed = false
@@ -1359,6 +1403,17 @@ fun VaultScreen(
             )
             }
         }
+        // Snackbar: always above the navigation bar and above what is on the bottom edge right now
+        // (the "+" and "a caso" buttons, their open menu, or the selection bar), following them as
+        // they come and go.
+        val snackLift by androidx.compose.animation.core.animateDpAsState(
+            with(LocalDensity.current) {
+                if (inSelection || fabStackPx == 0) 8.dp
+                else (fabStackPx + if (fabExpanded) fabMenuPx else 0).toDp() + 16.dp + 12.dp
+            },
+            Motion.enter(Motion.MEDIUM), label = "snackLift",
+        )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = snackLift))
         // Scrim behind the open speed-dial: dims the content and closes the menu on tap.
         AnimatedVisibility(
             visible = fabExpanded && !inSelection,
@@ -1713,3 +1768,7 @@ private fun keyAt(pos: Offset, state: LazyGridState): Any? =
             pos.y >= info.offset.y && pos.y <= info.offset.y + info.size.height
     }?.key
 
+
+/** How long a finger must stay still after the long-press on a selected file to lift the selection
+ *  (moving before that goes on with the quick selection instead). */
+private const val LIFT_AFTER_MS = 300L

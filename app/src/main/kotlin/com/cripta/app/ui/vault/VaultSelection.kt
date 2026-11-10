@@ -65,6 +65,9 @@ internal fun SelectionCountTitle(count: Int) {
             },
             label = "selCount",
         ) { n -> Text("$n", maxLines = 1) }
+        // The suffix is a separate text (the number animates on its own): Android trims the
+        // resource, so the gap between "3" and "selezionati" is drawn here.
+        androidx.compose.foundation.layout.Spacer(Modifier.width(5.dp))
         Text(if (count == 1) str(R.string.selected_suffix_one) else str(R.string.selected_suffix_many), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
