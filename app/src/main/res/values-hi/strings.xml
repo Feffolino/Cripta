@@ -1497,6 +1497,15 @@
     <string name="colour_teal">नीला-हरा</string>
     <string name="colour_pink">गुलाबी</string>
     <string name="colour_grey">स्लेटी</string>
+    <string name="colour_indigo">इंडिगो</string>
+    <string name="colour_orange">नारंगी</string>
+    <string name="colour_lime">नींबू हरा</string>
+    <string name="colour_cyan">सियान</string>
+    <string name="colour_custom">अपना रंग</string>
+    <string name="colour_hue">रंगत</string>
+    <string name="colour_saturation">संतृप्ति</string>
+    <string name="colour_brightness">चमक</string>
+    <string name="colour_code">रंग कोड</string>
     <string name="folder_x_empty">\"%1$s\" खाली है</string>
     <string name="folder_empty_hint">यहाँ फ़ाइलें आयात करें या पीछे जाकर फ़ाइल दबाकर रखें और इस फ़ोल्डर पर खींचें।</string>
     <string name="import_here">यहाँ आयात करें</string>

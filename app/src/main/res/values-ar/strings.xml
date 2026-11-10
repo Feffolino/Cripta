@@ -1733,6 +1733,15 @@
     <string name="colour_teal">أزرق مخضر</string>
     <string name="colour_pink">وردي</string>
     <string name="colour_grey">رمادي</string>
+    <string name="colour_indigo">نيلي</string>
+    <string name="colour_orange">برتقالي</string>
+    <string name="colour_lime">ليموني</string>
+    <string name="colour_cyan">سماوي</string>
+    <string name="colour_custom">لون مخصص</string>
+    <string name="colour_hue">درجة اللون</string>
+    <string name="colour_saturation">التشبع</string>
+    <string name="colour_brightness">السطوع</string>
+    <string name="colour_code">رمز اللون</string>
     <string name="folder_x_empty">\"%1$s\" فارغ</string>
     <string name="folder_empty_hint">استورد ملفات هنا، أو ارجع واضغط مطولاً على ملف واسحبه إلى هذا المجلد.</string>
     <string name="import_here">استيراد هنا</string>

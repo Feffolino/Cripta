@@ -1497,6 +1497,15 @@
     <string name="colour_teal">Petrol</string>
     <string name="colour_pink">Rosa</string>
     <string name="colour_grey">Grau</string>
+    <string name="colour_indigo">Indigo</string>
+    <string name="colour_orange">Orange</string>
+    <string name="colour_lime">Limette</string>
+    <string name="colour_cyan">Cyan</string>
+    <string name="colour_custom">Eigene Farbe</string>
+    <string name="colour_hue">Farbton</string>
+    <string name="colour_saturation">Sättigung</string>
+    <string name="colour_brightness">Helligkeit</string>
+    <string name="colour_code">Farbcode</string>
     <string name="folder_x_empty">\"%1$s\" ist leer</string>
     <string name="folder_empty_hint">Importiere Dateien hierher oder gehe zurück, drücke eine Datei lange und ziehe sie auf diesen Ordner.</string>
     <string name="import_here">Hier importieren</string>

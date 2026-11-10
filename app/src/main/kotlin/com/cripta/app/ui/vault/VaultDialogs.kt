@@ -172,15 +172,10 @@ internal fun FolderStyleDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(str(R.string.colour), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    ColorSwatch(null, color == null, str(R.string.no_colour)) { color = null }
-                    com.cripta.app.ui.components.FOLDER_COLORS.forEachIndexed { i, c ->
-                        ColorSwatch(c, color == c, FOLDER_COLOR_NAMES.getOrElse(i) { str(R.string.colour_n, i + 1) }) { color = c }
-                    }
-                }
+                com.cripta.app.ui.components.ColorChoiceRow(
+                    selected = color, noneFill = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    noneDescription = str(R.string.no_colour), onPick = { color = it },
+                )
                 Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TagIconChoices(folderName, icon, 220.dp) { icon = it }
             }
@@ -188,37 +183,6 @@ internal fun FolderStyleDialog(
         confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
-}
-
-/** Spoken names of [com.cripta.app.ui.components.FOLDER_COLORS], same order. */
-private val FOLDER_COLOR_NAMES get() = listOf(
-    R.string.colour_blue, R.string.colour_green, R.string.colour_amber, R.string.colour_red,
-    R.string.colour_purple, R.string.colour_teal, R.string.colour_pink, R.string.colour_grey,
-).map { str(it) }
-
-/** Colour choice: 48dp target, radio semantics with its name, a check (not only a ring) when chosen. */
-@Composable
-private fun ColorSwatch(color: Int?, selected: Boolean, name: String, onClick: () -> Unit) {
-    val fill = color?.let { Color(it) } ?: MaterialTheme.colorScheme.surface
-    Box(
-        Modifier.minimumInteractiveComponentSize()
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(fill)
-            .border(
-                if (selected) 3.dp else 1.dp,
-                if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
-                CircleShape,
-            )
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .semantics { this.contentDescription = name },
-        contentAlignment = Alignment.Center,
-    ) {
-        when {
-            color == null -> Icon(CriptaIcons.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-            selected -> Icon(CriptaIcons.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-    }
 }
 
 @Composable

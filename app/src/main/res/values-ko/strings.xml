@@ -1438,6 +1438,15 @@
     <string name="colour_teal">청록</string>
     <string name="colour_pink">분홍</string>
     <string name="colour_grey">회색</string>
+    <string name="colour_indigo">남색</string>
+    <string name="colour_orange">주황</string>
+    <string name="colour_lime">라임</string>
+    <string name="colour_cyan">시안</string>
+    <string name="colour_custom">사용자 지정 색상</string>
+    <string name="colour_hue">색조</string>
+    <string name="colour_saturation">채도</string>
+    <string name="colour_brightness">밝기</string>
+    <string name="colour_code">색상 코드</string>
     <string name="folder_x_empty">\"%1$s\" 폴더는 비어 있습니다</string>
     <string name="folder_empty_hint">여기로 파일을 가져오거나, 돌아가서 파일을 길게 누르고 이 폴더로 드래그하세요.</string>
     <string name="import_here">여기로 가져오기</string>

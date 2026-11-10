@@ -174,19 +174,14 @@ fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
     }
 }
 
-/** Preset folder tint colors (ARGB) offered in the customization dialog. */
-val FOLDER_COLORS: List<Int> = listOf(
-    0xFF4F86C6, 0xFF63B76C, 0xFFE0A030, 0xFFD9645B,
-    0xFF9B6BCC, 0xFF3FB0B3, 0xFFC65B9B, 0xFF7A8794,
-).map { it.toInt() }
-
 /**
  * Folder symbol tinted by [color], or the folder's [icon] in its place; an [emoji] of an older vault
  * (until it is turned into an icon) otherwise. [open]: the folder symbol drawn open (a drag hovering it).
  */
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
-    val c = color?.let { Color(it) }
+    // The user's own colour is nudged until the symbol reads at 3:1 on the page (an own dark or light pick).
+    val c = color?.let { com.cripta.app.ui.theme.readableOn(Color(it), MaterialTheme.colorScheme.surface, 3.0) }
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {

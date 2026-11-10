@@ -536,10 +536,10 @@ internal fun takeGraphemes(s: String, max: Int): String {
     return s.substring(0, end)
 }
 
-/** Round colour swatch; [label] marks the special "automatic" choice. */
 /**
- * "A" (automatic / default colour) followed by the tag palette, on one line that scrolls sideways;
- * [onPick] gets null for "A". It opens scrolled to the chosen colour.
+ * "A" (automatic / default colour), the shared palette, then a colour of the user's own, on one
+ * line that scrolls sideways ([com.cripta.app.ui.components.ColorChoiceRow]); [onPick] gets null for
+ * "A". It opens scrolled to the chosen colour.
  */
 @Composable
 internal fun TagColorPicker(
@@ -548,43 +548,8 @@ internal fun TagColorPicker(
     autoDescription: String,
     onPick: (Int?) -> Unit,
 ) {
-    val scroll = rememberScrollState()
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    LaunchedEffect(Unit) {
-        val index = com.cripta.app.ui.theme.TagPalette.indexOfFirst { it.toArgb() == selected } + 1
-        // Each swatch takes the 48dp touch target plus the 8dp gap; the chosen one stays second.
-        if (index > 1) scroll.scrollTo(with(density) { ((index - 1) * 56).dp.roundToPx() })
-    }
-    Row(Modifier.fillMaxWidth().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ColorDot(autoColor, selected = selected == null, label = "A", description = autoDescription) { onPick(null) }
-        com.cripta.app.ui.theme.TagPalette.forEachIndexed { i, c ->
-            val argb = c.toArgb()
-            ColorDot(c, selected = selected == argb, description = str(R.string.colour_n, i + 1)) { onPick(argb) }
-        }
-    }
-}
-
-@Composable
-private fun ColorDot(
-    c: androidx.compose.ui.graphics.Color,
-    selected: Boolean,
-    label: String? = null,
-    description: String? = null,
-    onClick: () -> Unit,
-) {
-    androidx.compose.foundation.layout.Box(
-        Modifier.minimumInteractiveComponentSize()
-            .size(36.dp)
-            .clip(androidx.compose.foundation.shape.CircleShape)
-            .background(c)
-            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, androidx.compose.foundation.shape.CircleShape) else Modifier)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .semantics { if (description != null) contentDescription = description },
-        contentAlignment = androidx.compose.ui.Alignment.Center,
-    ) {
-        // White or black, whichever reads on this colour (light tag colours took white text before).
-        val ink = com.cripta.app.ui.theme.readableOn(androidx.compose.ui.graphics.Color.White, c)
-        if (label != null) Text(label, color = ink, style = MaterialTheme.typography.labelLarge)
-        else if (selected) Icon(CriptaIcons.Check, null, tint = ink, modifier = Modifier.size(18.dp))
-    }
+    com.cripta.app.ui.components.ColorChoiceRow(
+        selected = selected, noneFill = autoColor, noneDescription = autoDescription,
+        onPick = onPick, noneLabel = "A",
+    )
 }

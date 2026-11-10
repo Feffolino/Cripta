@@ -30,8 +30,16 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   Never one colour per category, per file type or per screen section.
 - Colours come only from the theme roles; no hex values in screens. Exceptions: the player's black
   stage and tag colours.
-- Tag colours ([TagPalette]) are the user's. Text on a tag tint goes through `readableOn()` so it
-  reaches 4.5:1 in both themes and with custom colours.
+- Tag and folder colours are the user's and share one palette, `TagPalette`: twelve hues in OKLCH at
+  one lightness (about 0.70) and a calm chroma, the first the accent's own blue (`#6D9DF5`), then
+  indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a blue-tinted slate. They sit
+  on the dark surfaces like the accent does; black reads on each at 6.8:1 or more and white on its
+  cover mark at 4.4:1 or more. Beside the presets, both editors offer "Altro", a colour of the
+  user's own (hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
+  saved as a plain ARGB value like a preset, so an older preset shows as "Altro" and keeps working.
+  Text on a tag tint goes through `readableOn()` so it reaches 4.5:1 in both themes and with any
+  colour; a folder symbol is nudged to 3:1 on the page, and the cover mark darkens a light colour
+  (`coverMarkFill`).
 - Anything drawn over a picture (length, star, play mark, people's faces, the watched bar) sits on
   the dark glass `OnImageGlass` (black at 55%: the design system's 40% plus blur, darker here so
   white text keeps 4.5:1 without the blur), never on a gradient over the whole cover. Tags over a picture are the one
@@ -223,7 +231,10 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   Sulle copertine, Colori, Assegnazione rapida. The **tag editor** (`LabelEditorDialog`) opens
   with a live preview (the pill and the cover mark, the colour cross-fading at 120 ms), then name
   and alias fields, "Icona" and "Colore" under accent headings, "Fissa in alto" as a plain switch
-  row with the pin icon.
+  row with the pin icon. "Colore" is one line that scrolls sideways (`ColorChoiceRow`, shared with
+  the folder dialog): "A" automatic (or none for a folder), the twelve presets, then "Altro" (a
+  colour wheel; once a custom colour is chosen it shows that colour, ticked). The chosen swatch is
+  told by a ring and a tick, never by colour alone.
 - **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then
   slides in; the previous level never flashes.

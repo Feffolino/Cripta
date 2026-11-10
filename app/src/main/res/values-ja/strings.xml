@@ -1438,6 +1438,15 @@
     <string name="colour_teal">青緑</string>
     <string name="colour_pink">ピンク</string>
     <string name="colour_grey">グレー</string>
+    <string name="colour_indigo">インディゴ</string>
+    <string name="colour_orange">オレンジ</string>
+    <string name="colour_lime">ライム</string>
+    <string name="colour_cyan">シアン</string>
+    <string name="colour_custom">カスタムカラー</string>
+    <string name="colour_hue">色相</string>
+    <string name="colour_saturation">彩度</string>
+    <string name="colour_brightness">明度</string>
+    <string name="colour_code">カラーコード</string>
     <string name="folder_x_empty">\"%1$s\" は空です</string>
     <string name="folder_empty_hint">ここにファイルを読み込むか、戻ってファイルを長押しし、このフォルダーにドラッグしてください。</string>
     <string name="import_here">ここに読み込む</string>

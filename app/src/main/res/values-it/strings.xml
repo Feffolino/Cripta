@@ -1556,6 +1556,15 @@
     <string name="colour_teal">Turchese</string>
     <string name="colour_pink">Rosa</string>
     <string name="colour_grey">Grigio</string>
+    <string name="colour_indigo">Indaco</string>
+    <string name="colour_orange">Arancione</string>
+    <string name="colour_lime">Lime</string>
+    <string name="colour_cyan">Ciano</string>
+    <string name="colour_custom">Colore personalizzato</string>
+    <string name="colour_hue">Tonalità</string>
+    <string name="colour_saturation">Saturazione</string>
+    <string name="colour_brightness">Luminosità</string>
+    <string name="colour_code">Codice colore</string>
     <string name="folder_x_empty">\"%1$s\" è vuota</string>
     <string name="folder_empty_hint">Importa qui dei file, oppure torna indietro, tieni premuto un file e trascinalo su questa cartella.</string>
     <string name="import_here">Importa qui</string>

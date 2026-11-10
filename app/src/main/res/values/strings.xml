@@ -1497,6 +1497,15 @@
     <string name="colour_teal">Teal</string>
     <string name="colour_pink">Pink</string>
     <string name="colour_grey">Grey</string>
+    <string name="colour_indigo">Indigo</string>
+    <string name="colour_orange">Orange</string>
+    <string name="colour_lime">Lime</string>
+    <string name="colour_cyan">Cyan</string>
+    <string name="colour_custom">Custom colour</string>
+    <string name="colour_hue">Hue</string>
+    <string name="colour_saturation">Saturation</string>
+    <string name="colour_brightness">Brightness</string>
+    <string name="colour_code">Colour code</string>
     <string name="folder_x_empty">\"%1$s\" is empty</string>
     <string name="folder_empty_hint">Import files here, or go back, press and hold a file and drag it onto this folder.</string>
     <string name="import_here">Import here</string>

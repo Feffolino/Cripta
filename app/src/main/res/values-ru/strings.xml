@@ -1615,6 +1615,15 @@
     <string name="colour_teal">Бирюзовый</string>
     <string name="colour_pink">Розовый</string>
     <string name="colour_grey">Серый</string>
+    <string name="colour_indigo">Индиго</string>
+    <string name="colour_orange">Оранжевый</string>
+    <string name="colour_lime">Лаймовый</string>
+    <string name="colour_cyan">Циан</string>
+    <string name="colour_custom">Свой цвет</string>
+    <string name="colour_hue">Оттенок</string>
+    <string name="colour_saturation">Насыщенность</string>
+    <string name="colour_brightness">Яркость</string>
+    <string name="colour_code">Код цвета</string>
     <string name="folder_x_empty">\"%1$s\" пуста</string>
     <string name="folder_empty_hint">Импортируйте файлы сюда или вернитесь, удерживайте файл и перетащите на эту папку.</string>
     <string name="import_here">Импортировать сюда</string>

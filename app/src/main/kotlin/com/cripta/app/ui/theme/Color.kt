@@ -48,23 +48,28 @@ val LightOutline = Color(0xFF7E889A)
 val LightOutlineVariant = Color(0xFFD9DFEA)
 
 /**
- * Tag palette: sober, muted mid-tones (no neon), told apart by hue rather than by brightness. The
- * quick presets of the tag editor, the automatic colour of a name and "Colori casuali" all use it.
- * Text on them always goes through [readableOn], so it stays >= 4.5:1 in both themes.
+ * The one colour palette of tags and folders (the quick presets of both editors, the automatic
+ * colour of a name, "Colori casuali"). Twelve hues in OKLCH at one lightness (about 0.70) and a
+ * calm chroma, so they sit together on the dark surfaces like the blue accent does (the first is
+ * the accent's own hue); the last is a blue-tinted slate. Every one keeps black text at 6.8:1 or
+ * more and white on a cover mark ([coverMarkFill]) at 4.4:1 or more. Text on any colour, a preset
+ * or the user's own, goes through [readableOn], so it stays >= 4.5:1 in both themes. Colours
+ * already saved with a tag or folder are plain ARGB values: an old preset keeps working, and
+ * shows as a custom colour in the editors.
  */
 val TagPalette = listOf(
-    Color(0xFF5B7DB1), // slate blue
-    Color(0xFF6B6FB5), // dusty indigo
-    Color(0xFF8A6FB0), // muted violet
-    Color(0xFFA86B95), // mauve
-    Color(0xFFB5677A), // dusty rose
-    Color(0xFFB8735A), // terracotta
-    Color(0xFFA88A4E), // ochre
-    Color(0xFF7F8F52), // olive
-    Color(0xFF5E9473), // sage
-    Color(0xFF4F8F8C), // teal grey
-    Color(0xFF4F8AA3), // steel cyan
-    Color(0xFF8A8580), // warm grey
+    Color(0xFF6D9DF5), // blue
+    Color(0xFF918BE5), // indigo
+    Color(0xFFB37FD2), // purple
+    Color(0xFFDA7BAA), // pink
+    Color(0xFFE27170), // red
+    Color(0xFFE48B53), // orange
+    Color(0xFFD7A94F), // amber
+    Color(0xFFA3BA55), // lime
+    Color(0xFF5CB572), // green
+    Color(0xFF46B3A6), // teal
+    Color(0xFF51B3D0), // cyan
+    Color(0xFF8A939F), // slate
 )
 
 /**

@@ -1556,6 +1556,15 @@
     <string name="colour_teal">Verde-azulado</string>
     <string name="colour_pink">Rosa</string>
     <string name="colour_grey">Cinza</string>
+    <string name="colour_indigo">Índigo</string>
+    <string name="colour_orange">Laranja</string>
+    <string name="colour_lime">Lima</string>
+    <string name="colour_cyan">Ciano</string>
+    <string name="colour_custom">Cor personalizada</string>
+    <string name="colour_hue">Matiz</string>
+    <string name="colour_saturation">Saturação</string>
+    <string name="colour_brightness">Brilho</string>
+    <string name="colour_code">Código da cor</string>
     <string name="folder_x_empty">\"%1$s\" está vazia</string>
     <string name="folder_empty_hint">Importe arquivos aqui ou volte, mantenha um arquivo pressionado e arraste-o para esta pasta.</string>
     <string name="import_here">Importar aqui</string>

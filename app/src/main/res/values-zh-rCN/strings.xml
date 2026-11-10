@@ -1438,6 +1438,15 @@
     <string name="colour_teal">青色</string>
     <string name="colour_pink">粉色</string>
     <string name="colour_grey">灰色</string>
+    <string name="colour_indigo">靛蓝</string>
+    <string name="colour_orange">橙色</string>
+    <string name="colour_lime">青柠</string>
+    <string name="colour_cyan">青蓝</string>
+    <string name="colour_custom">自定义颜色</string>
+    <string name="colour_hue">色相</string>
+    <string name="colour_saturation">饱和度</string>
+    <string name="colour_brightness">亮度</string>
+    <string name="colour_code">颜色代码</string>
     <string name="folder_x_empty">\"%1$s\" 为空</string>
     <string name="folder_empty_hint">可在此导入文件，或返回后长按文件并将其拖到此文件夹。</string>
     <string name="import_here">导入到此处</string>
