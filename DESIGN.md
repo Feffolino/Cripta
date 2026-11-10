@@ -84,8 +84,10 @@ Tag icons are a separate set (see Components) and are not Tabler.
   frame in the people suggestions.
 - Top bars are the page itself (same background) and lift one tier only when content scrolls under
   them (`criptaTopBarColors(lifted)`, from the list's real position, so a page opening already
-  scrolled shows the lifted bar at once). The navigation bar is a flat tier with an accent pill on the
-  current tab.
+  scrolled shows the lifted bar at once). Anything fixed between the bar and the list (search,
+  chips, banners, strips) is one header with the bar (`LiftedHeader`): it lifts with it, never the
+  bar alone, and its tonal pieces step one tier up (`tonalContainer()`). The navigation bar is a
+  flat tier with an accent pill on the current tab.
 - Counted figures are lines, not tiles: `CountRow` (label left, "1.234 di 5.678" right, optional
   bar). Side-by-side tiles cut 4-digit numbers.
 

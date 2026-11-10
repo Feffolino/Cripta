@@ -173,7 +173,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
     ) {
         val ok = state.failed == 0
         val container = when {
-            state.active -> MaterialTheme.colorScheme.secondaryContainer
+            state.active -> com.cripta.app.ui.components.tonalContainer()
             ok -> MaterialTheme.colorScheme.primaryContainer
             else -> MaterialTheme.colorScheme.errorContainer
         }
@@ -274,7 +274,7 @@ fun ConvertBanner(
         exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
     ) {
         val container = when {
-            state.active -> MaterialTheme.colorScheme.secondaryContainer
+            state.active -> com.cripta.app.ui.components.tonalContainer()
             state.lastOk -> MaterialTheme.colorScheme.primaryContainer
             else -> MaterialTheme.colorScheme.errorContainer
         }

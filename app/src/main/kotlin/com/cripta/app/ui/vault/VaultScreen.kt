@@ -703,16 +703,7 @@ fun VaultScreen(
         Column(Modifier.fillMaxSize().nestedScroll(fabScroll)) {
             // Everything above the grid (search, chips, banners, strips) is one header with the top
             // bar: when the grid scrolls under it, the whole header lifts, not the bar alone.
-            val headerColor by androidx.compose.animation.animateColorAsState(
-                if (topLift.lifted) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
-                androidx.compose.animation.core.tween(Motion.SHORT), label = "headerLift",
-            )
-            Column(Modifier.fillMaxWidth().background(headerColor)) {
-            // On the lifted header the search pill moves one tier up, so it keeps standing out.
-            androidx.compose.runtime.CompositionLocalProvider(
-                com.cripta.app.ui.components.LocalFieldContainer provides
-                    (if (topLift.lifted) MaterialTheme.colorScheme.surfaceContainerHigh else null),
-            ) {
+            com.cripta.app.ui.components.LiftedHeader(topLift.lifted) {
             // Search field: always at the root (DS Cartelle); inside a folder revealed from the
             // top-bar icon, and it stays while a query is typed.
             val showSearch = path.isEmpty() || searchExpanded || filters.query.isNotEmpty()
@@ -773,7 +764,6 @@ fun VaultScreen(
             )
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
-            }
             }
             }
             }

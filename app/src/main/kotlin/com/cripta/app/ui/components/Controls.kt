@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -69,6 +71,51 @@ fun criptaTopBarColors(lifted: Boolean): androidx.compose.material3.TopAppBarCol
     )
     return androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = color, scrolledContainerColor = color)
 }
+
+/**
+ * Everything fixed between a page's top bar and its scrolling content (search field, chips,
+ * banners, strips) as one header with the bar: when the content scrolls under it, the whole
+ * header lifts one tier together with the bar (pass the same [lifted] as [criptaTopBarColors]),
+ * so the bar never lifts alone and looks detached from what sits under it.
+ *
+ * The tonal pieces inside move one tier up too, so they keep standing out on the lifted header:
+ * fields (normally `surfaceContainer`) take `surfaceContainerHigh`, and everything filled with
+ * [tonalContainer] (chips, removable filters, neutral tag pills, progress banners) gets a touch
+ * of `onSurface`, the way the surface tiers step (lighter in dark, darker in light).
+ */
+@Composable
+fun LiftedHeader(
+    lifted: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val spec = androidx.compose.animation.core.tween<Color>(com.cripta.app.ui.theme.Motion.SHORT)
+    val background by androidx.compose.animation.animateColorAsState(
+        if (lifted) scheme.surfaceContainer else scheme.background, spec, label = "headerLift")
+    val field by androidx.compose.animation.animateColorAsState(
+        if (lifted) scheme.surfaceContainerHigh else scheme.surfaceContainer, spec, label = "headerField")
+    val tonal by androidx.compose.animation.animateColorAsState(
+        if (lifted) scheme.onSurface.copy(alpha = 0.08f).compositeOver(scheme.secondaryContainer) else scheme.secondaryContainer,
+        spec, label = "headerTonal")
+    CompositionLocalProvider(LocalFieldContainer provides field, LocalTonalContainer provides tonal) {
+        androidx.compose.foundation.layout.Column(
+            modifier.fillMaxWidth().background(background),
+            content = content,
+        )
+    }
+}
+
+/**
+ * The fill of the app's tonal pieces (off chips, removable filters, neutral tag pills, progress
+ * banners) where the surface behind them is not the page; null = `secondaryContainer`. On a
+ * [LiftedHeader] the plain fill would sit almost on the header's own colour (light theme).
+ */
+val LocalTonalContainer = androidx.compose.runtime.compositionLocalOf<Color?> { null }
+
+/** See [LocalTonalContainer]. */
+@Composable
+fun tonalContainer(): Color = LocalTonalContainer.current ?: MaterialTheme.colorScheme.secondaryContainer
 
 /** Whether a page's content is scrolled under its top bar; written by [TrackTopBarLift]. */
 @androidx.compose.runtime.Stable
@@ -204,7 +251,7 @@ fun ChoiceChip(
     enabled: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
+    val bg = if (selected) MaterialTheme.colorScheme.primary else tonalContainer()
     val fg = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     Row(
         modifier.minimumInteractiveComponentSize()
@@ -246,7 +293,7 @@ fun ActionChip(
         modifier.minimumInteractiveComponentSize()
             .heightIn(min = 36.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .background(tonalContainer())
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .alpha(if (enabled) 1f else 0.5f)
             .padding(start = if (leadingIcon != null) 10.dp else 14.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),

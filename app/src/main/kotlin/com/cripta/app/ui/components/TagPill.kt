@@ -115,7 +115,7 @@ fun TagPill(
     val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
     val on = state == TagPillState.On
     val colored = on || state == TagPillState.Plain
-    val neutral = if (onImage) OnImageGlass else MaterialTheme.colorScheme.secondaryContainer
+    val neutral = if (onImage) OnImageGlass else tonalContainer()
     val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
     val ink = MaterialTheme.colorScheme.onSurface
     // Over a picture the pill lets it through a little; the text is judged against the tag's own
@@ -227,7 +227,7 @@ fun TagPill(
 /** Neutral "+N" pill in the same shape, for tags that didn't fit. */
 @Composable
 fun MoreTagsPill(count: Int, onImage: Boolean, modifier: Modifier = Modifier) {
-    val bg = if (onImage) OnImageGlass else MaterialTheme.colorScheme.secondaryContainer
+    val bg = if (onImage) OnImageGlass else tonalContainer()
     val fg = if (onImage) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     Box(modifier.heightIn(min = 22.dp).clip(CircleShape).background(bg).padding(horizontal = 8.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
         Text("+$count", style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1)

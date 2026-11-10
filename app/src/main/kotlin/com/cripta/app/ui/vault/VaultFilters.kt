@@ -154,7 +154,7 @@ private fun TagDismissChip(tag: TagEntity, excluded: Boolean, tagColors: Boolean
 /** Removable filter chip: 48dp touch target, announced as "Rimuovi filtro …". */
 @Composable
 private fun DismissChip(label: String, description: String = label, onClear: () -> Unit) {
-    Surface(onClick = onClear, color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape) {
+    Surface(onClick = onClear, color = com.cripta.app.ui.components.tonalContainer(), shape = CircleShape) {
         Row(
             Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
