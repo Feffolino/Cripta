@@ -16,7 +16,7 @@ import net.sqlcipher.database.SupportFactory
         SignatureEntity::class, SignatureSoundEntity::class,
         FaceScanEntity::class, FaceTrackEntity::class, PersonEntity::class, PersonMediaEntity::class, FaceRejectionEntity::class, FaceMergeEntity::class,
         IgnoredFaceEntity::class, FaceApartEntity::class, DupPrintEntity::class, DupApartEntity::class],
-    version = 35,
+    version = 36,
     exportSchema = false,
 )
 abstract class CriptaDatabase : RoomDatabase() {
@@ -51,6 +51,19 @@ abstract class CriptaDatabase : RoomDatabase() {
                     }
                 }
             }
+        }
+
+        /** Tag and folder colours saved from an earlier palette move to the lighter one, same hue. */
+        internal fun migratePresetColors(db: SupportSQLiteDatabase) {
+            for (table in listOf("tags", "folders")) {
+                for ((old, new) in com.cripta.app.ui.theme.FormerPresetColors) {
+                    db.execSQL("UPDATE $table SET color = ? WHERE color = ?", arrayOf<Any>(new, old))
+                }
+            }
+        }
+
+        internal val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(db: SupportSQLiteDatabase) = migratePresetColors(db)
         }
 
         /** Tag and folder icons are Fluent Emoji Flat names: from Tabler's (version 34) or Fluent's own (33). */
@@ -389,7 +402,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             val factory = SupportFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(fluentIconsMigration(context, 33), fluentIconsMigration(context, 34))
+                .addMigrations(fluentIconsMigration(context, 33), fluentIconsMigration(context, 34), MIGRATION_35_36)
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
                 // No destructive fallback: a missing migration must fail loudly, never wipe the vault.
                 .build()

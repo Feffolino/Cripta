@@ -315,7 +315,8 @@ class SettingsStore @Inject constructor(
                 coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
                 coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.BUBBLE },
                 tagColors = p[tagColorsKey] ?: true,
-                defaultTagColor = p[defaultTagColorKey],
+                // A preset of an earlier palette reads as its lighter successor.
+                defaultTagColor = p[defaultTagColorKey]?.let { com.cripta.app.ui.theme.currentPresetColor(it) },
                 showDurationBadge = p[durationBadgeKey] ?: true,
                 coverPeople = p[coverPeopleKey] ?: true,
                 coverPeopleSize = (p[coverPeopleSizeKey] ?: 1).coerceIn(0, 2),
