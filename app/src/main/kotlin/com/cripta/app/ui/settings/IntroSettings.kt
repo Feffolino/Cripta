@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.combinedClickable
 import com.cripta.app.media.intro.SegmentKind
 import androidx.compose.material3.ButtonDefaults
@@ -64,6 +65,7 @@ import com.cripta.app.data.db.MediaSegmentEntity
 import com.cripta.app.data.intro.IntroRepository
 import com.cripta.app.ui.components.ChipFlowRow
 import com.cripta.app.ui.components.MediaThumb
+import com.cripta.app.ui.components.Skeleton
 import kotlinx.coroutines.delay
 
 /**
@@ -128,7 +130,17 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
                        onStop: () -> Unit, onResults: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (o == null) {
-            Text(str(R.string.reading_state), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            repeat(3) {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp).height(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Skeleton(Modifier.width(104.dp).height(14.dp))
+                    Skeleton(Modifier.width(40.dp).height(14.dp))
+                }
+            }
+            Skeleton(Modifier.padding(top = 8.dp).fillMaxWidth().height(48.dp), CircleShape)
             return@Column
         }
         // One line per figure: any number fits ("Analizzati 1.234 di 5.678"), nothing is cut.

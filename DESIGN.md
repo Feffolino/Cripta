@@ -280,7 +280,8 @@ Tag icons are a separate set (see Components) and are not Tabler.
   and shape of what replaces them (covers, rows, round faces, the figures of the Home strip), on
   the surface-container tier, no border; they breathe slowly and stand still with animations off.
   The content replaces them in place, with the "loaded" flag the screen already has. Favourites
-  and the folder-cover sheet follow it too; a spinner is left only where the shape is unknown
+  and the folder-cover sheet follow it too, as do the figures and results button in Intro and
+  ending settings; a spinner is left only where the shape is unknown
   (viewer, note editor).
 - Navigation: tabs cross-fade with a slight drift towards the tab chosen; pages (people, a
   profile, favourites, a note, a Settings page) slide in along X from the right and Back reverses
