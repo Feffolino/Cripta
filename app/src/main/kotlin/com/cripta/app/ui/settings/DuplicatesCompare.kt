@@ -241,7 +241,7 @@ fun SimilarPager(
     onClearNotice: () -> Unit,
     onDismiss: () -> Unit,
     /** Space freed and groups resolved so far, and groups marked "non simili". */
-    freed: Pair<Long, Int> = 0L to 0,
+    freed: DupFreed = DupFreed(),
     apart: Int = 0,
     initialPage: Int = 0,
     onPage: (Int) -> Unit = {},
@@ -312,9 +312,9 @@ fun SimilarPager(
 
 /** No group left: what the session freed, or that the scan found nothing. */
 @Composable
-private fun DoneOrEmpty(freed: Pair<Long, Int>, apart: Int, emptyText: String, onClose: () -> Unit, modifier: Modifier) {
+private fun DoneOrEmpty(freed: DupFreed, apart: Int, emptyText: String, onClose: () -> Unit, modifier: Modifier) {
     Column(modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        if (freed.second == 0 && apart == 0) {
+        if (freed.groups == 0 && apart == 0) {
             Text(emptyText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column
         }
@@ -323,7 +323,12 @@ private fun DoneOrEmpty(freed: Pair<Long, Int>, apart: Int, emptyText: String, o
         }
         Text(str(R.string.all_sorted), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp))
         Text(buildString {
-            if (freed.second > 0) append(str(R.string.dup_freed, formatBytes(freed.first), plural(R.plurals.groups_n, freed.second)))
+            if (freed.bytes > 0) append(str(R.string.dup_freed, formatBytes(freed.bytes), plural(R.plurals.groups_n, freed.groups)))
+            // In the trash the files still take their space: say so instead of "freed".
+            if (freed.trashedBytes > 0) {
+                if (isNotEmpty()) append(" ")
+                append(str(R.string.dup_to_trash, formatBytes(freed.trashedBytes), plural(R.plurals.groups_n, freed.groups)))
+            }
             if (apart > 0) {
                 if (isNotEmpty()) append(" ")
                 append(plural(R.plurals.groups_apart, apart))

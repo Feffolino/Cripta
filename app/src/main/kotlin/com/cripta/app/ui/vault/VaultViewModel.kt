@@ -679,10 +679,12 @@ class VaultViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.dismissImportOriginalsChoice(appContext)
     }
 
-    fun deleteOriginals(uris: List<android.net.Uri>) = viewModelScope.launch {
+    /** [onNotDeleted] gets how many originals the provider kept (0 = all gone). */
+    fun deleteOriginals(uris: List<android.net.Uri>, onNotDeleted: (Int) -> Unit = {}) = viewModelScope.launch {
         com.cripta.app.work.ConversionService.dismissImportOriginalsChoice(appContext)
-        repo.deleteOriginals(uris)
+        val kept = runCatching { repo.deleteOriginals(uris) }.getOrDefault(uris.size)
         repo.clearPendingOriginals()
+        onNotDeleted(kept)
     }
 
     fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {

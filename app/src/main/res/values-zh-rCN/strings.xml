@@ -1964,4 +1964,10 @@
     <string name="backup_choose_all">全部</string>
     <string name="backup_choose_none">全不选</string>
     <string name="backup_folders_total">已选 %1$s / %2$s · %3$s</string>
+    <string name="dup_to_trash">已将 %1$s 移入回收站（%2$s）。</string>
+    <string name="dup_no_other_copy">保险库中没有这个文件的其他副本：未删除任何内容</string>
+    <string name="n_originals_kept_title">原文件未删除</string>
+    <string name="n_originals_kept">有 %1$d 个原文件无法删除：它们仍在手机上</string>
+    <string name="n_maybe_incomplete">" · %1$s 个副本可能不完整"</string>
+    <string name="reset_failed">重置未完成：无法删除旧数据。请重试。</string>
 </resources>

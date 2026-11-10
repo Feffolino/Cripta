@@ -171,7 +171,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
         enter = androidx.compose.animation.expandVertically() + fadeIn(),
         exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
     ) {
-        val ok = state.failed == 0
+        val ok = state.failed == 0 && state.incomplete == 0
         val container = when {
             state.active -> com.cripta.app.ui.components.tonalContainer()
             ok -> MaterialTheme.colorScheme.primaryContainer
@@ -211,6 +211,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
                         } else buildString {
                             append(plural(R.plurals.import_encrypted, state.succeeded))
                             if (state.failed > 0) append(str(R.string.n_not_imported, state.failed))
+                            if (state.incomplete > 0) append(str(R.string.n_maybe_incomplete, state.incomplete))
                         }
                         Text(sub, style = MaterialTheme.typography.bodySmall, color = onContainer,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)

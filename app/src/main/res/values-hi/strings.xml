@@ -2029,4 +2029,10 @@
     <string name="backup_choose_all">सभी</string>
     <string name="backup_choose_none">कोई नहीं</string>
     <string name="backup_folders_total">%2$s में से %1$s चुने गए · %3$s</string>
+    <string name="dup_to_trash">%2$s में %1$s ट्रैश में भेजे गए।</string>
+    <string name="dup_no_other_copy">वॉल्ट में इस फ़ाइल की कोई और प्रति नहीं बची: कुछ नहीं हटाया गया</string>
+    <string name="n_originals_kept_title">मूल फ़ाइलें नहीं हटाई गईं</string>
+    <string name="n_originals_kept">%1$d मूल फ़ाइलें नहीं हटाई जा सकीं: वे अब भी फ़ोन में हैं</string>
+    <string name="n_maybe_incomplete">" · %1$s प्रतियाँ शायद अधूरी"</string>
+    <string name="reset_failed">रीसेट पूरा नहीं हुआ: पुराना डेटा हटाया नहीं जा सका। फिर कोशिश करें।</string>
 </resources>

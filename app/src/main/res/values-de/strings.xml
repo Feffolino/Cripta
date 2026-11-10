@@ -2029,4 +2029,10 @@
     <string name="backup_choose_all">Alle</string>
     <string name="backup_choose_none">Keine</string>
     <string name="backup_folders_total">%1$s von %2$s gewählt · %3$s</string>
+    <string name="dup_to_trash">%1$s in %2$s in den Papierkorb verschoben.</string>
+    <string name="dup_no_other_copy">Keine weitere Kopie dieser Datei im Tresor: nichts gelöscht</string>
+    <string name="n_originals_kept_title">Originale nicht gelöscht</string>
+    <string name="n_originals_kept">%1$d Originale konnten nicht gelöscht werden: Sie sind noch auf dem Telefon</string>
+    <string name="n_maybe_incomplete">" · %1$s Kopien evtl. unvollständig"</string>
+    <string name="reset_failed">Zurücksetzen nicht abgeschlossen: Die alten Daten konnten nicht gelöscht werden. Versuche es erneut.</string>
 </resources>

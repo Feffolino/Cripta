@@ -2159,4 +2159,10 @@
     <string name="backup_choose_all">Все</string>
     <string name="backup_choose_none">Ни одной</string>
     <string name="backup_folders_total">Выбрано %1$s из %2$s · %3$s</string>
+    <string name="dup_to_trash">В корзину перемещено %1$s в %2$s.</string>
+    <string name="dup_no_other_copy">В хранилище не осталось другой копии этого файла: ничего не удалено</string>
+    <string name="n_originals_kept_title">Оригиналы не удалены</string>
+    <string name="n_originals_kept">Не удалось удалить оригиналы: %1$d. Они остались на телефоне</string>
+    <string name="n_maybe_incomplete">" · возможно неполных копий: %1$s"</string>
+    <string name="reset_failed">Сброс не завершён: старые данные не удалось удалить. Попробуй ещё раз.</string>
 </resources>

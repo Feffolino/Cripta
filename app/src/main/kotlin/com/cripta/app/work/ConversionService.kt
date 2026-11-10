@@ -142,11 +142,12 @@ class ConversionService : Service() {
             beginJob(startId)
             scope.launch {
                 try {
-                    repo.deleteOriginals(uris)
+                    reportOriginalsNotDeleted(repo.deleteOriginals(uris))
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     logException(android.util.Log.ERROR, "ConversionService", "delete originals failed", e)
+                    reportOriginalsNotDeleted(uris.size)
                 } finally {
                     if (active.decrementAndGet() == 0) stopWhenIdle()
                 }
@@ -654,7 +655,11 @@ class ConversionService : Service() {
             // One failed item doesn't stop the batch, but a cancellation does.
             try {
                 if (f == null) failed++
-                else { if (tree != null) repo.exportToTree(f, tree) else repo.restoreToGallery(f); saved++ }
+                else {
+                    // MediaStore may refuse the entry (null): nothing was written, so not "saved".
+                    val written = if (tree != null) { repo.exportToTree(f, tree); true } else repo.restoreToGallery(f) != null
+                    if (written) saved++ else failed++
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -766,7 +771,7 @@ class ConversionService : Service() {
                 // would otherwise have the only complete copy deleted).
                 val complete = size <= 0 || (imported?.sizeBytes ?: 0L) >= size
                 if (ok && !complete) android.util.Log.w("ConversionService", "import shorter than reported: original kept")
-                repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size))
+                repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size), incomplete = ok && !complete)
                 if (ok && complete) done += uri
                 val cur = repo.importState.value
                 if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, str(R.string.n_queued_lower), eta, cancelGen))
@@ -777,7 +782,7 @@ class ConversionService : Service() {
                     val title = when {
                         cancelled -> str(R.string.n_import_cancelled)
                         fin.succeeded == 0 && fin.failed > 0 -> str(R.string.n_import_failed)
-                        fin.failed == 0 -> str(R.string.n_import_done)
+                        fin.failed == 0 && fin.incomplete == 0 -> str(R.string.n_import_done)
                         else -> str(R.string.n_import_done_errors)
                     }
                     val text = importSummary(fin)
@@ -798,6 +803,7 @@ class ConversionService : Service() {
     private fun importSummary(fin: VaultRepository.ImportState) = buildString {
         append(plural(R.plurals.import_encrypted, fin.succeeded))
         if (fin.failed > 0) append(str(R.string.n_not_imported, fin.failed))
+        if (fin.incomplete > 0) append(str(R.string.n_maybe_incomplete, fin.incomplete))
         if (fin.duplicates.isNotEmpty()) append(str(R.string.n_already_there, fin.duplicates.size))
         // Short: the same text is the Hyper Island's line.
         if (fin.versionAsks > 0) append(str(R.string.n_same_name_confirm, fin.versionAsks))
@@ -835,7 +841,7 @@ class ConversionService : Service() {
      * shredded here — at most it is moved to the trash when "Sostituisci" is chosen.
      */
     private suspend fun convertOne(id: String, afterOverride: com.cripta.app.data.ConvertAfter? = null) {
-        val file = repo.fileById(id) ?: return
+        if (repo.fileById(id) == null) return
         repo.setConverting(id, true)
         // Counted outside update(): its lambda re-runs on a contended write, counting this twice.
         val ahead = convertWaiting.incrementAndGet() - 1
@@ -847,6 +853,16 @@ class ConversionService : Service() {
         }
         convertWaiting.decrementAndGet()
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        // Read again now that it is this file's turn: renamed, moved, favourited or played while it
+        // waited, the snapshot taken before the queue would bring the old values back.
+        val file = repo.fileById(id)?.takeIf { it.deletedAt == null }
+        if (file == null) {
+            repo.setConverting(id, false)
+            currentConvertJob = null
+            repo.updateConvertStatus { it.copy(currentName = null, pct = 0, waiting = convertWaiting.get()) }
+            convertMutex.unlock()
+            return
+        }
         repo.updateConvertStatus { it.copy(currentName = file.originalName, pct = 0, waiting = convertWaiting.get(), lastResult = null) }
         // No file names in notifications (the in-app banner shows it, behind the lock).
         val queued = { convertWaiting.get().let { if (it > 0) str(R.string.n_n_queued, it) else null } }
@@ -1152,7 +1168,10 @@ class ConversionService : Service() {
                 while (true) {
                     kotlinx.coroutines.yield()   // a cancelled scan stops between chunks
                     val askedNow = generateSequence { introAsked.poll() }.toList().distinct().filter { askedIds.add(it) }
-                    val chunk = askedNow.mapNotNull { intro.forget(it) }.toMutableList()
+                    // Not forgotten here: each asked video loses its old result right before its own
+                    // analysis (below), so cancelling halfway leaves the others as they were.
+                    val askedSet = askedNow.toHashSet()
+                    val chunk = askedNow.mapNotNull { intro.askable(it) }.toMutableList()
                     if (askedNow.isEmpty()) while (chunk.size < INTRO_CHUNK && next < todo.size) {
                         val t = todo[next++]
                         if (t.id !in askedIds) chunk += t
@@ -1167,6 +1186,7 @@ class ConversionService : Service() {
                                 while (true) {
                                     val f = chunk.getOrNull(cursor.getAndIncrement()) ?: break
                                     val t0 = SystemClock.elapsedRealtime()
+                                    if (f.id in askedSet && intro.forget(f.id) == null) { finished.incrementAndGet(); progress(); continue }
                                     if (intro.fingerprint(f, quick)) { analysedCount.incrementAndGet(); newIds += f.id } else skippedCount.incrementAndGet()
                                     lastSec.set((SystemClock.elapsedRealtime() - t0) / 1000)
                                     finished.incrementAndGet()
@@ -1500,6 +1520,13 @@ class ConversionService : Service() {
         }
     }
 
+    /** Originals the provider kept: the user is told, they are still readable copies on the phone. */
+    private fun reportOriginalsNotDeleted(count: Int) {
+        if (count <= 0) return
+        notifyResult(str(R.string.n_originals_kept_title), str(R.string.n_originals_kept, count),
+            ResultKind.IMPORT, state = ResultState.FAILED)
+    }
+
     private suspend fun applyDeletePolicy(uris: List<Uri>) {
         if (uris.isEmpty()) return
         val policy = try {
@@ -1512,11 +1539,12 @@ class ConversionService : Service() {
         // Only originals that were actually imported are ever touched (a failed import keeps its file).
         when (policy) {
             DeleteOriginalPolicy.ALWAYS -> try {
-                repo.deleteOriginals(uris)
+                reportOriginalsNotDeleted(repo.deleteOriginals(uris))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 logException(android.util.Log.ERROR, "ConversionService", "delete originals failed", e)
+                reportOriginalsNotDeleted(uris.size)
             }
             // "Chiedi": the app shows the keep/delete prompt in the vault, and the import's result
             // notification becomes the same choice (it stays in the Hyper Island until answered).

@@ -178,6 +178,14 @@ interface FileDao {
     @Query("SELECT id FROM files WHERE folderId = :folderId")
     suspend fun idsInFolder(folderId: Long): List<String>
 
+    /** Live files only: a folder's permanent delete must not touch what is already in the trash. */
+    @Query("SELECT id FROM files WHERE folderId = :folderId AND deletedAt IS NULL")
+    suspend fun liveIdsInFolder(folderId: Long): List<String>
+
+    /** Take trashed files out of folders about to disappear: they stay in the trash, at the root. */
+    @Query("UPDATE files SET folderId = NULL WHERE folderId IN (:folderIds) AND deletedAt IS NOT NULL")
+    suspend fun detachTrashedFromFolders(folderIds: List<Long>)
+
     @Query("SELECT id FROM files WHERE folderId IN (:folderIds) AND deletedAt IS NOT NULL")
     suspend fun trashedIdsInFolders(folderIds: List<Long>): List<String>
 

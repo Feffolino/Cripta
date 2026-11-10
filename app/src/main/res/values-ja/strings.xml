@@ -1964,4 +1964,10 @@
     <string name="backup_choose_all">すべて</string>
     <string name="backup_choose_none">なし</string>
     <string name="backup_folders_total">%2$s 件中 %1$s 件を選択 · %3$s</string>
+    <string name="dup_to_trash">%2$sで%1$sをゴミ箱に移動しました。</string>
+    <string name="dup_no_other_copy">このファイルの他のコピーが保管庫にありません。何も削除していません</string>
+    <string name="n_originals_kept_title">元のファイルを削除できませんでした</string>
+    <string name="n_originals_kept">元のファイル%1$d件を削除できませんでした。まだ端末に残っています</string>
+    <string name="n_maybe_incomplete">" · %1$s件のコピーが不完全の可能性"</string>
+    <string name="reset_failed">リセットが完了しませんでした。古いデータを削除できませんでした。もう一度お試しください。</string>
 </resources>

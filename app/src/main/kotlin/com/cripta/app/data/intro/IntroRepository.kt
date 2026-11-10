@@ -331,9 +331,13 @@ class IntroRepository @Inject constructor(
         return com.cripta.app.data.SkipReasons.text(p.first().status)
     }
 
+    /** The live video [fileId], or null: what a manual "analyse" may work on. Changes nothing. */
+    suspend fun askable(fileId: String): FileEntity? =
+        repo.fileById(fileId)?.takeIf { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) }
+
     /** Forget [fileId]'s fingerprint and detected segments (its own marks stay) before analysing it again. */
     suspend fun forget(fileId: String): FileEntity? {
-        val f = repo.fileById(fileId)?.takeIf { it.deletedAt == null && VaultRepository.isVideo(it.mimeType) } ?: return null
+        val f = askable(fileId) ?: return null
         db.withTransaction {
             dao.clearPrints(fileId)
             dao.segmentsOf(fileId).filter { it.source == "auto" }.forEach { dao.deleteSegment(fileId, it.kind) }

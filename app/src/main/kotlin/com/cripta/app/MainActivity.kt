@@ -230,7 +230,13 @@ class MainActivity : FragmentActivity() {
                         onReset = {
                             lifecycleScope.launch {
                                 // Closes and deletes the database: never on the main thread.
-                                withContext(Dispatchers.IO) { runCatching { keyVault.resetVault() } }
+                                val reset = withContext(Dispatchers.IO) { runCatching { keyVault.resetVault() }.getOrDefault(false) }
+                                if (!reset) {
+                                    // The old data is still there and so are the settings: the dialog
+                                    // stays, and the reset can be tried again.
+                                    android.widget.Toast.makeText(this@MainActivity, str(R.string.reset_failed), android.widget.Toast.LENGTH_LONG).show()
+                                    return@launch
+                                }
                                 keyInvalidated.value = false
                                 authUi.value = authUi.value.copy(firstRun = !keyVault.isInitialized, error = null)
                                 authenticate() // key gone -> this now runs first-time setup

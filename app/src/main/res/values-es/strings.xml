@@ -2094,4 +2094,10 @@
     <string name="backup_choose_all">Todas</string>
     <string name="backup_choose_none">Ninguna</string>
     <string name="backup_folders_total">%1$s de %2$s elegidas · %3$s</string>
+    <string name="dup_to_trash">Se movieron %1$s a la papelera en %2$s.</string>
+    <string name="dup_no_other_copy">No queda otra copia de este archivo en la bóveda: no se eliminó nada</string>
+    <string name="n_originals_kept_title">Originales no eliminados</string>
+    <string name="n_originals_kept">No se pudieron eliminar %1$d originales: siguen en el teléfono</string>
+    <string name="n_maybe_incomplete">" · %1$s copias quizá incompletas"</string>
+    <string name="reset_failed">Restablecimiento incompleto: no se pudieron eliminar los datos antiguos. Inténtalo de nuevo.</string>
 </resources>

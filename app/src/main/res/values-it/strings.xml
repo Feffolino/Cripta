@@ -2094,4 +2094,10 @@
     <string name="backup_choose_all">Tutte</string>
     <string name="backup_choose_none">Nessuna</string>
     <string name="backup_folders_total">Scelte %1$s di %2$s · %3$s</string>
+    <string name="dup_to_trash">Spostati %1$s nel cestino in %2$s.</string>
+    <string name="dup_no_other_copy">Non resta nessun\'altra copia di questo file nel vault: nulla eliminato</string>
+    <string name="n_originals_kept_title">Originali non eliminati</string>
+    <string name="n_originals_kept">%1$d originali non si sono potuti eliminare: sono ancora sul telefono</string>
+    <string name="n_maybe_incomplete">" · %1$s copie forse incomplete"</string>
+    <string name="reset_failed">Reset non completato: i vecchi dati non si sono potuti eliminare. Riprova.</string>
 </resources>

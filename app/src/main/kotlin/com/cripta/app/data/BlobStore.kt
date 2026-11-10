@@ -42,9 +42,14 @@ class BlobStore @Inject constructor(
         dir.listFiles { f -> f.name.endsWith(".tmp") }?.forEach { runCatching { it.delete() } }
     }
 
-    /** Delete every blob. Used when resetting a vault whose key was permanently invalidated. */
-    fun wipeAll() {
-        dir.listFiles()?.forEach { runCatching { it.delete() } }
+    /**
+     * Delete every blob. Used when resetting a vault whose key was permanently invalidated.
+     * Returns false when some blob is still there.
+     */
+    fun wipeAll(): Boolean {
+        var all = true
+        dir.listFiles()?.forEach { if (!runCatching { it.delete() }.getOrDefault(false) && it.exists()) all = false }
+        return all
     }
 
     /**

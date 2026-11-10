@@ -802,7 +802,7 @@ class SettingsViewModel @Inject constructor(
         _dupGroups.value = buildGroups(r.groups, exact)
         _dupScannedCount.value = r.scanned
         _dupMode.value = if (exact) DupMode.EXACT else DupMode.SIMILAR
-        _dupFreed.value = 0L to 0
+        _dupFreed.value = DupFreed()
         _dupApart.value = 0
         lastSimilarPage = 0
         dupStore.markSeen()
@@ -857,11 +857,20 @@ class SettingsViewModel @Inject constructor(
         val remove = unchangedSinceScan(group.candidates.filter { it.file.id !in keepIds })
         if (remove.isEmpty()) return@launchHeld
         val freedNow = group.candidates.filter { it.file.id in remove }.sumOf { it.file.sizeBytes }
-        val moved = repo.mergeDuplicates(keepId, remove)
-        lastFreed = freedNow
-        _dupFreed.value = _dupFreed.value.let { (b, n) -> (b + freedNow) to (n + 1) }
+        val outcome = repo.mergeDuplicates(keepId, remove)
+        if (!outcome.merged) {
+            // The kept copy went away between the check and the merge: nothing was deleted.
+            dropFromResults(setOf(keepId))
+            _dupNotice.value = str(R.string.dup_keep_gone)
+            return@launchHeld
+        }
+        val moved = outcome.tagsMoved
         // Copies sent to the trash keep their cover (restoring them must not lose a chosen cover).
         val trash = trashOn()
+        // With the trash on the blobs stay on the phone: the space is only freed when it is emptied.
+        lastFreed = if (trash) DupFreed(trashedBytes = freedNow, groups = 1) else DupFreed(bytes = freedNow, groups = 1)
+        _dupFreed.value = _dupFreed.value + lastFreed
+        keptBefore = KeptBefore(keepId, moved, outcome.previousFavorite, outcome.previousSourceUrl)
         if (!trash) remove.forEach { thumbs.evict(it) }
         _dupUndo.value = if (trash) remove else emptyList()
         beforeResolution = if (trash) snapshotResults() else null
@@ -876,9 +885,12 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Space freed and groups resolved since the results were opened, for "Tutto sistemato". */
-    private val _dupFreed = kotlinx.coroutines.flow.MutableStateFlow(0L to 0)
-    val dupFreed: StateFlow<Pair<Long, Int>> = _dupFreed
-    private var lastFreed = 0L
+    private val _dupFreed = kotlinx.coroutines.flow.MutableStateFlow(DupFreed())
+    val dupFreed: StateFlow<DupFreed> = _dupFreed
+    private var lastFreed = DupFreed()
+    /** What the last resolution gave the kept copy, taken back by [undoDuplicates]. */
+    private class KeptBefore(val keepId: String, val addedTags: List<String>, val favorite: Boolean, val sourceUrl: String?)
+    private var keptBefore: KeptBefore? = null
     /** Groups the user said are not alike since the results were opened. */
     private val _dupApart = kotlinx.coroutines.flow.MutableStateFlow(0)
     val dupApart: StateFlow<Int> = _dupApart
@@ -890,6 +902,7 @@ class SettingsViewModel @Inject constructor(
         scanner.keepApart(fileIds)
         _dupApart.value += 1
         _dupUndo.value = emptyList()
+        keptBefore = null
         dropFromResults(fileIds.toSet())
         _dupNotice.value = str(R.string.dup_marked_not_similar)
     }
@@ -916,8 +929,11 @@ class SettingsViewModel @Inject constructor(
         if (ids.isEmpty()) return@launchHeld
         _dupUndo.value = emptyList()
         ids.forEach { repo.restore(it) }
-        if (lastFreed > 0) _dupFreed.value = _dupFreed.value.let { (b, n) -> (b - lastFreed).coerceAtLeast(0) to (n - 1).coerceAtLeast(0) }
-        lastFreed = 0
+        // The copies are back: the kept one gives back the tags, favorite mark and link it received.
+        keptBefore?.let { repo.undoMergeOnKept(it.keepId, it.addedTags, it.favorite, it.sourceUrl) }
+        keptBefore = null
+        _dupFreed.value = _dupFreed.value - lastFreed
+        lastFreed = DupFreed()
         // The group comes back too, re-read (the kept copy has the tags it was given meanwhile).
         beforeResolution?.let { r ->
             _dupGroups.value = r.dup
@@ -939,11 +955,30 @@ class SettingsViewModel @Inject constructor(
         group?.candidates?.firstOrNull { it.file.id == fileId }?.let { c ->
             if (unchangedSinceScan(listOf(c)).isEmpty()) { dropFromResults(setOf(fileId)); return@launchHeld }
         }
-        val heir = group?.let { g ->
-            if (g.bestId != fileId) g.bestId
-            else rank(g.candidates.filter { it.file.id != fileId }).firstOrNull()?.file?.id
+        var moved = emptyList<String>()
+        if (group != null) {
+            // The heir must still be live: a copy trashed or deleted since the scan cannot take the
+            // tags, and deleting this one would then leave no live copy at all.
+            val others = group.candidates.filter { it.file.id != fileId }
+            val live = others.filter { c -> repo.fileById(c.file.id)?.let { it.deletedAt == null } == true }
+            val heir = (live.firstOrNull { it.file.id == group.bestId } ?: rank(live).firstOrNull())?.file?.id
+            if (heir == null) {
+                dropFromResults(others.map { it.file.id }.toSet())
+                _dupNotice.value = str(R.string.dup_no_other_copy)
+                return@launchHeld
+            }
+            val outcome = repo.mergeDuplicates(heir, listOf(fileId))
+            if (!outcome.merged) {
+                dropFromResults(setOf(heir))
+                _dupNotice.value = str(R.string.dup_keep_gone)
+                return@launchHeld
+            }
+            moved = outcome.tagsMoved
+            keptBefore = KeptBefore(heir, moved, outcome.previousFavorite, outcome.previousSourceUrl)
+        } else {
+            repo.deleteOrTrash(fileId)
+            keptBefore = null
         }
-        val moved = if (heir != null) repo.mergeDuplicates(heir, listOf(fileId)) else { repo.deleteOrTrash(fileId); emptyList() }
         val trash = trashOn()
         if (!trash) thumbs.evict(fileId)
         _dupUndo.value = if (trash) listOf(fileId) else emptyList()
@@ -1002,8 +1037,19 @@ class SettingsViewModel @Inject constructor(
         _dupGroups.value = emptyList()
         _dupNotice.value = null
         _dupUndo.value = emptyList()
+        keptBefore = null
         beforeResolution = null
         _exactGroups.value = emptyList()
         _similarGroups.value = emptyList()
     }
+}
+
+/**
+ * Space and groups settled by the duplicate resolutions of this session: [bytes] really freed,
+ * [trashedBytes] only moved to the trash (still on the phone), [groups] resolved.
+ */
+data class DupFreed(val bytes: Long = 0L, val trashedBytes: Long = 0L, val groups: Int = 0) {
+    operator fun plus(o: DupFreed) = DupFreed(bytes + o.bytes, trashedBytes + o.trashedBytes, groups + o.groups)
+    operator fun minus(o: DupFreed) = DupFreed(
+        (bytes - o.bytes).coerceAtLeast(0), (trashedBytes - o.trashedBytes).coerceAtLeast(0), (groups - o.groups).coerceAtLeast(0))
 }

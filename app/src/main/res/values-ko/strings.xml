@@ -1964,4 +1964,10 @@
     <string name="backup_choose_all">전체</string>
     <string name="backup_choose_none">없음</string>
     <string name="backup_folders_total">%2$s개 중 %1$s개 선택 · %3$s</string>
+    <string name="dup_to_trash">%2$s에서 %1$s을(를) 휴지통으로 옮겼습니다.</string>
+    <string name="dup_no_other_copy">보관함에 이 파일의 다른 사본이 없습니다. 아무것도 삭제하지 않았습니다</string>
+    <string name="n_originals_kept_title">원본이 삭제되지 않았습니다</string>
+    <string name="n_originals_kept">원본 %1$d개를 삭제하지 못했습니다. 아직 휴대폰에 남아 있습니다</string>
+    <string name="n_maybe_incomplete">" · 사본 %1$s개가 불완전할 수 있음"</string>
+    <string name="reset_failed">초기화가 완료되지 않았습니다. 이전 데이터를 삭제하지 못했습니다. 다시 시도하세요.</string>
 </resources>

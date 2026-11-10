@@ -2289,4 +2289,10 @@
     <string name="backup_choose_all">الكل</string>
     <string name="backup_choose_none">لا شيء</string>
     <string name="backup_folders_total">تم اختيار %1$s من %2$s · %3$s</string>
+    <string name="dup_to_trash">تم نقل %1$s إلى سلة المهملات في %2$s.</string>
+    <string name="dup_no_other_copy">لا توجد نسخة أخرى من هذا الملف في الخزنة: لم يُحذف شيء</string>
+    <string name="n_originals_kept_title">لم تُحذف الملفات الأصلية</string>
+    <string name="n_originals_kept">تعذّر حذف %1$d من الملفات الأصلية: ما زالت على الهاتف</string>
+    <string name="n_maybe_incomplete">" · %1$s نسخ قد تكون ناقصة"</string>
+    <string name="reset_failed">لم تكتمل إعادة الضبط: تعذّر حذف البيانات القديمة. حاول مرة أخرى.</string>
 </resources>

@@ -144,6 +144,8 @@ class VaultRepository @Inject constructor(
         /** Weight ([com.cripta.app.util.batchWeight]) of every file of the running batches, and of the finished ones. */
         val weightTotal: Long = 0,
         val weightDone: Long = 0,
+        /** Copies kept in the vault that came out shorter than the source said: maybe incomplete. */
+        val incomplete: Int = 0,
     ) {
         val succeeded: Int get() = done - failed
         /**
@@ -186,9 +188,10 @@ class VaultRepository @Inject constructor(
     fun importBytes(bytes: Long) = _importState.update { it.copy(currentBytes = bytes) }
 
     /** One item of [weight] finished; [uri] is its source when it was imported successfully. */
-    fun importItemDone(ok: Boolean, uri: Uri? = null, weight: Long = 0) = _importState.update {
+    fun importItemDone(ok: Boolean, uri: Uri? = null, weight: Long = 0, incomplete: Boolean = false) = _importState.update {
         it.copy(
             done = it.done + 1, failed = it.failed + if (ok) 0 else 1, currentBytes = 0, currentTotalBytes = 0,
+            incomplete = it.incomplete + if (ok && incomplete) 1 else 0,
             weightDone = it.weightDone + weight,
             importedUris = if (ok && uri != null) it.importedUris + uri else it.importedUris,
         )
@@ -405,8 +408,11 @@ class VaultRepository @Inject constructor(
             return@withContext emptyList()
         }
         val deletedIds = mutableListOf<String>()
+        // Files already in the trash stay restorable: they leave the folder (to the root) instead of
+        // being destroyed along with it. Only the live ones are shredded.
+        db.fileDao().detachTrashedFromFolders(subtree)
         for (fid in subtree) {
-            db.fileDao().idsInFolder(fid).forEach { secureDelete(it); deletedIds.add(it) }
+            db.fileDao().liveIdsInFolder(fid).forEach { if (secureDelete(it)) deletedIds.add(it) }
         }
         // delete deepest first
         for (fid in subtree.reversed()) {
@@ -1041,7 +1047,11 @@ class VaultRepository @Inject constructor(
         }
         values.clear()
         values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
+        // No row updated: the entry stays pending (invisible in the gallery), so it is not a saved file.
+        if (resolver.update(uri, values, null, null) <= 0) {
+            runCatching { resolver.delete(uri, null, null) }
+            return@withContext null
+        }
         uri
     }
 
@@ -1110,8 +1120,10 @@ class VaultRepository @Inject constructor(
      * favorite mark carries over, and their source link is copied when the kept file has none.
      * Returns the names of the tags that were newly added to the kept file.
      */
-    suspend fun mergeDuplicates(keepId: String, removeIds: List<String>): List<String> = withContext(Dispatchers.IO) {
-        val keep = db.fileDao().withTagsById(keepId) ?: return@withContext emptyList()
+    suspend fun mergeDuplicates(keepId: String, removeIds: List<String>): MergeOutcome = withContext(Dispatchers.IO) {
+        val keep = db.fileDao().withTagsById(keepId)
+        // The copy to keep is gone or in the trash: removing the others would leave no live copy.
+        if (keep == null || keep.file.deletedAt != null) return@withContext MergeOutcome.NOTHING
         val keepTags = keep.tags.map { it.name }.toSet()
         val moved = LinkedHashSet<String>()
         var favorite = keep.file.isFavorite
@@ -1127,7 +1139,33 @@ class VaultRepository @Inject constructor(
         if (link != keep.file.sourceUrl) db.fileDao().setSourceUrl(keepId, link)
         for (id in removeIds.filter { it != keepId }.distinct()) deleteOrTrash(id)
         notifyChanged()
-        moved.toList()
+        MergeOutcome(true, moved.toList(), keep.file.isFavorite, keep.file.sourceUrl)
+    }
+
+    /**
+     * Give the kept copy back what [mergeDuplicates] added to it (the tags it did not have, a
+     * favorite mark, a source link), so undoing a resolution leaves both copies as they were.
+     */
+    suspend fun undoMergeOnKept(keepId: String, addedTags: List<String>, favorite: Boolean, sourceUrl: String?) =
+        withContext(Dispatchers.IO) {
+            val keep = db.fileDao().byId(keepId) ?: return@withContext
+            for (name in addedTags) db.tagDao().byName(name)?.let { db.tagDao().unlink(keepId, it.id) }
+            if (keep.isFavorite != favorite) db.fileDao().setFavorite(keepId, favorite)
+            if (keep.sourceUrl != sourceUrl) db.fileDao().setSourceUrl(keepId, sourceUrl)
+            notifyChanged()
+        }
+
+    /**
+     * What [mergeDuplicates] did: [merged] is false when nothing was deleted (the copy to keep is
+     * missing or trashed). [tagsMoved], [previousFavorite] and [previousSourceUrl] describe the kept copy.
+     */
+    data class MergeOutcome(
+        val merged: Boolean,
+        val tagsMoved: List<String> = emptyList(),
+        val previousFavorite: Boolean = false,
+        val previousSourceUrl: String? = null,
+    ) {
+        companion object { val NOTHING = MergeOutcome(false) }
     }
 
     /** Tag names per file id (one query per file; meant for small sets like duplicate groups). */
@@ -1363,17 +1401,21 @@ class VaultRepository @Inject constructor(
         if (tagIds.isNotEmpty()) notifyChanged()
     }
 
-    /** Best-effort deletion of the original picked files (SAF documents). */
-    suspend fun deleteOriginals(uris: List<Uri>) = withContext(Dispatchers.IO) {
+    /**
+     * Best-effort deletion of the original picked files (SAF documents). Returns how many could NOT
+     * be deleted (the provider refused, or reported nothing deleted): they are still readable copies.
+     */
+    suspend fun deleteOriginals(uris: List<Uri>): Int = withContext(Dispatchers.IO) {
+        var notDeleted = 0
         uris.forEach { uri ->
-            runCatching {
+            val gone = runCatching {
                 android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri)
-            }.onFailure {
-                runCatching {
-                    androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
-                }
-            }
+            }.getOrDefault(false) || runCatching {
+                androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete() == true
+            }.getOrDefault(false)
+            if (!gone) notDeleted++
         }
+        notDeleted
     }
 
     private fun queryNameSize(uri: Uri): Pair<String, Long> {

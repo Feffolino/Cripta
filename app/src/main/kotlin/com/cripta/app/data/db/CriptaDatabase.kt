@@ -369,8 +369,10 @@ abstract class CriptaDatabase : RoomDatabase() {
         }
 
         /** Delete the encrypted database file (and its -wal/-shm siblings). Used on vault reset. */
-        fun deleteDatabase(context: Context) {
-            context.deleteDatabase(NAME)
+        fun deleteDatabase(context: Context): Boolean {
+            val deleted = context.deleteDatabase(NAME)
+            // false is also "there was no file": only a file still on disk is a failure.
+            return deleted || !context.getDatabasePath(NAME).exists()
         }
 
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */

@@ -2029,4 +2029,10 @@
     <string name="backup_choose_all">All</string>
     <string name="backup_choose_none">None</string>
     <string name="backup_folders_total">%1$s of %2$s chosen · %3$s</string>
+    <string name="dup_to_trash">Moved %1$s to the trash in %2$s.</string>
+    <string name="dup_no_other_copy">No other copy of this file is left in the vault: nothing deleted</string>
+    <string name="n_originals_kept_title">Originals not deleted</string>
+    <string name="n_originals_kept">%1$d originals could not be deleted: they are still on the phone</string>
+    <string name="n_maybe_incomplete">" · %1$s copies maybe incomplete"</string>
+    <string name="reset_failed">Reset not completed: the old data could not be deleted. Try again.</string>
 </resources>

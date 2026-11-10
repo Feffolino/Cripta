@@ -308,21 +308,30 @@ class KeyVault @Inject constructor(
      * ciphertext (Keystore key, wrapped blobs, encrypted DB, file blobs) and returns the app to a
      * clean first-run state. Destructive and irreversible. Blocking (closes and deletes the
      * database): call it off the main thread.
+     *
+     * The data goes first and the key material only once it is gone: a database left behind next to
+     * a brand-new key could never be opened. Returns false when the database or the blobs could not
+     * be deleted; nothing of the keys or settings is touched then, and the reset can be repeated.
      */
-    fun resetVault() {
+    fun resetVault(): Boolean {
         // Close synchronously: the database file is deleted right below.
         session.lockAndCloseNow()
+        val database = runCatching { CriptaDatabase.deleteDatabase(context) }.getOrDefault(false)
+        val files = runCatching { blobs.wipeAll() }.getOrDefault(false)
+        // Covers sealed with the lost key (picked ones and the cache): unreadable, only taking space.
+        runCatching { java.io.File(context.filesDir, "covers").deleteRecursively() }
+        runCatching { java.io.File(context.cacheDir, "thumbs").deleteRecursively() }
+        if (!database || !files) {
+            android.util.Log.w("KeyVault", "vault reset incomplete: database=$database blobs=$files")
+            return false
+        }
         // Drop both possible keys (legacy + safe) so no orphan alias survives the reset.
         runCatching { kek.deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2).deleteKey() }
         runCatching { PinCrypto.deletePepper() }
         prefs.edit().clear().apply()
-        runCatching { CriptaDatabase.deleteDatabase(context) }
-        runCatching { blobs.wipeAll() }
-        // Covers sealed with the lost key (picked ones and the cache): unreadable, only taking space.
-        runCatching { java.io.File(context.filesDir, "covers").deleteRecursively() }
-        runCatching { java.io.File(context.cacheDir, "thumbs").deleteRecursively() }
+        return true
     }
 
     private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
