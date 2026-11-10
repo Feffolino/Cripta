@@ -2,16 +2,37 @@ accessible	♿	Symbol „Rollstuhl“	Rollstuhl|Symbol „Rollstuhl“|barrieref
 aerial-lift	🚡	Bergseilbahn	Bergseilbahn|Gondel|Seilbahn
 air-balloon		Heißluftballon	Heißluftballon
 alarm	⏰	Wecker	Uhr|Uhrzeit|Wecker|Zeit
+alert-circle		Warnung Kreis	Warnung Kreis
 alert-triangle		Warnung Dreieck	Warnung Dreieck
 alien	👽	Außerirdischer	Alien|All|Außerirdische|Außerirdischer|Fantasy|Gesicht|Monster|Märchen|UFO|Weltraum|Wesen|außerirdisch
 apple	🍎	roter Apfel	Apfel|Frucht|Obst|rot|roter Apfel
 archive		Archiv	Archiv
+arrow-badge-down		Pfeil Ausweis unten	Pfeil Ausweis unten
+arrow-badge-left		Pfeil Ausweis links	Pfeil Ausweis links
+arrow-badge-right		Pfeil Ausweis rechts	Pfeil Ausweis rechts
+arrow-badge-up		Pfeil Ausweis oben	Pfeil Ausweis oben
+arrow-big-down		Pfeil groß unten	Pfeil groß unten
+arrow-big-left		Pfeil groß links	Pfeil groß links
+arrow-big-right		Pfeil groß rechts	Pfeil groß rechts
+arrow-big-up		Pfeil groß oben	Pfeil groß oben
 artboard		Zeichenfläche	Zeichenfläche
 article		Artikel	Artikel
+asset		Ressource	Ressource
 atom-2		Atom 2	Atom 2
 automatic-gearbox		Automatikgetriebe	Automatikgetriebe
 award	🏅	Sportmedaille	Gewinn|Goldmedaille|Medaille|Sportmedaille
 baby-carriage		Kinderwagen	Kinderwagen
+badge-3d		Ausweis 3d	Ausweis 3d
+badge-4k		Ausweis 4k	Ausweis 4k
+badge-8k		Ausweis 8k	Ausweis 8k
+badge-ad		Ausweis Werbung	Ausweis Werbung
+badge-ar		Ausweis ar	Ausweis ar
+badge-cc		Ausweis cc	Ausweis cc
+badge-hd		Ausweis hd	Ausweis hd
+badge-sd		Ausweis sd	Ausweis sd
+badge-tm		Ausweis tm	Ausweis tm
+badge-vo		Ausweis vo	Ausweis vo
+badge-vr		Ausweis vr	Ausweis vr
 badge		Ausweis	Ausweis
 badges		Abzeichen	Abzeichen
 ball-bowling	🎳	Bowling	Bowling|Bowlingkugel|Kugel|Spiel
@@ -19,8 +40,11 @@ balloon	🎈	Luftballon	Ballon|Feier|Geburtstag|Luftballon
 ballpen	🖊	Kugelschreiber	Kugelschreiber|Stift
 bandage	🩹	Heftpflaster	Heftpflaster|Pflaster|Wunde|verletzt
 barbell		Langhantel	Langhantel
+barrier-block		Sperre Block	Sperre Block
 basket	🧺	Korb	Bauernhof|Korb|Landwirtschaft|Picknick|Tragekorb|Wäsche|Wäschekorb
 bath		Badewanne	Badewanne
+battery-automotive		Batterie Auto	Batterie Auto
+battery-vertical-1		Batterie vertikal 1	Batterie vertikal 1
 bed-flat		Bett flach	Bett flach
 bed	🛏	Bett	Bett|Hotel|schlafen|Übernachtung
 beer	🍺 🍻	Bierkrug	Bar|Bier|Bierkrug|Bierkrüge|Krug|Oktoberfest|Weizen|Weizenbier|anstoßen|prosit|prost
@@ -28,10 +52,14 @@ bell-ringing-2		Glocke klingelnd 2	Glocke klingelnd 2
 bell-ringing		Glocke klingelnd	Glocke klingelnd
 bell	🔔	Glocke	Glocke|Klingeling|Ton eingeschaltet|ding dong
 bike	🚲	Fahrrad	BMX|Fahrrad|Rad|Radeln|Radler|Spinning
+binoculars		Fernglas	Fernglas
 biohazard	☣	Biogefährdung	Biogefährdung|Zeichen
 blade		Klinge	Klinge
 blender		Standmixer	Standmixer
+bolt	⚡	Hochspannung	Blitz|Elektrizität|Gefahr|Gewitter|Hochspannung|Hochspannungszeichen|Strom
+bomb	💣	Bombe	Bombe|Comic|Dynamit|Explodieren
 bone	🦴	Knochen	Hund|Hundeknochen|Kauknochen|Knochen|Skelett
+bong		Bong	Bong
 book	📕	geschlossenes Buch	Buch|Geschlossenes Buch|geschlossen|geschlossenes Buch
 bookmark	🔖	Lesezeichen	Etikett|Lesen|Lesezeichen
 bookmarks		Lesezeichen	Lesezeichen
@@ -40,9 +68,39 @@ bow		Schleife	Schleife
 bowl-chopsticks	🥢	Essstäbchen	Essstäbchen|Hashi|Stäbchen|chinesisches essen|essen|japanisches essen|stäbchen
 bowl-spoon	🥣	Schüssel mit Löffel	Cerealien|Frühstück|Reisbrei|Schüssel mit Löffel|brei|essen|haferbrei|schüssel|suppe
 bowl		Schüssel	Schüssel
+brand-apple		Marke apple	Marke apple
+brand-discord		Marke discord	Marke discord
+brand-dribbble		Marke dribbble	Marke dribbble
+brand-facebook		Marke facebook	Marke facebook
+brand-github		Marke github	Marke github
+brand-google		Marke google	Marke google
+brand-instagram		Marke instagram	Marke instagram
+brand-kick		Marke kick	Marke kick
+brand-linkedin		Marke linkedin	Marke linkedin
+brand-messenger		Marke messenger	Marke messenger
+brand-open-source		Marke offen Quelle	Marke offen Quelle
+brand-opera		Marke opera	Marke opera
+brand-paypal		Marke paypal	Marke paypal
+brand-pinterest		Marke pinterest	Marke pinterest
+brand-signal		Marke Signal	Marke Signal
+brand-sketch		Marke sketch	Marke sketch
+brand-snapchat		Marke snapchat	Marke snapchat
+brand-spotify		Marke spotify	Marke spotify
+brand-steam		Marke Dampf	Marke Dampf
+brand-tabler		Marke tabler	Marke tabler
+brand-tiktok		Marke tiktok	Marke tiktok
+brand-tinder		Marke tinder	Marke tinder
+brand-tumblr		Marke tumblr	Marke tumblr
+brand-twitter		Marke twitter	Marke twitter
+brand-vimeo		Marke vimeo	Marke vimeo
+brand-whatsapp		Marke whatsapp	Marke whatsapp
+brand-windows		Marke windows	Marke windows
+brand-x		Marke x	Marke x
+brand-youtube		Marke youtube	Marke youtube
 bread	🍞	Brot	Brot|Brotlaib|Essen|Kohlenhydrate|Laib Brot|Toast|Weizen|Weißbrot
 briefcase-2		Aktentasche 2	Aktentasche 2
 briefcase	💼	Aktentasche	Aktentasche|Tasche
+bubble-text		Sprechblase Text	Sprechblase Text
 bubble		Sprechblase	Sprechblase
 bug	🐛	Raupe	Insekt|Raupe|Tier|gefräßig
 building-bridge-2		Brücke	Brücke
@@ -69,7 +127,9 @@ car	🚗	Auto	Auto|Fahrzeug|Verkehr|fahren|rot
 carambola		Sternfrucht	Sternfrucht
 caravan		Wohnwagen	Wohnwagen
 cardboards		VR-Brille aus Pappe	VR-Brille aus Pappe
+cards		Spielkarten	Spielkarten
 cash-banknote		Geldschein	Geldschein
+charging-pile		Ladesäule	Ladesäule
 check		Häkchen	Häkchen
 chef-hat		Kochmütze	Kochmütze
 cherry	🍒	Kirschen	Frucht|Kirsche|Kirschen|Obst
@@ -81,8 +141,49 @@ chess-rook		Schachturm	Schachturm
 chess		Schach	Schach
 christmas-tree	🎄	Weihnachtsbaum	Baum|Tanne|Weihnachten|Weihnachtsbaum
 circle-key		Kreis Schlüssel	Kreis Schlüssel
+circle-letter-a		Kreis Buchstabe a	Kreis Buchstabe a
+circle-letter-b		Kreis Buchstabe b	Kreis Buchstabe b
+circle-letter-c		Kreis Buchstabe c	Kreis Buchstabe c
+circle-letter-d		Kreis Buchstabe d	Kreis Buchstabe d
+circle-letter-e		Kreis Buchstabe e	Kreis Buchstabe e
+circle-letter-f		Kreis Buchstabe f	Kreis Buchstabe f
+circle-letter-g		Kreis Buchstabe g	Kreis Buchstabe g
+circle-letter-h		Kreis Buchstabe h	Kreis Buchstabe h
+circle-letter-i		Kreis Buchstabe i	Kreis Buchstabe i
+circle-letter-j		Kreis Buchstabe j	Kreis Buchstabe j
+circle-letter-k		Kreis Buchstabe k	Kreis Buchstabe k
+circle-letter-l		Kreis Buchstabe l	Kreis Buchstabe l
+circle-letter-m		Kreis Buchstabe m	Kreis Buchstabe m
+circle-letter-n		Kreis Buchstabe n	Kreis Buchstabe n
+circle-letter-o		Kreis Buchstabe o	Kreis Buchstabe o
+circle-letter-p		Kreis Buchstabe p	Kreis Buchstabe p
+circle-letter-q		Kreis Buchstabe q	Kreis Buchstabe q
+circle-letter-r		Kreis Buchstabe r	Kreis Buchstabe r
+circle-letter-s		Kreis Buchstabe s	Kreis Buchstabe s
+circle-letter-t		Kreis Buchstabe t	Kreis Buchstabe t
+circle-letter-u		Kreis Buchstabe u	Kreis Buchstabe u
+circle-letter-v		Kreis Buchstabe v	Kreis Buchstabe v
+circle-letter-w		Kreis Buchstabe w	Kreis Buchstabe w
+circle-letter-x		Kreis Buchstabe x	Kreis Buchstabe x
+circle-letter-y		Kreis Buchstabe y	Kreis Buchstabe y
+circle-letter-z		Kreis Buchstabe z	Kreis Buchstabe z
+circle-number-0		Kreis Zahl 0	Kreis Zahl 0
+circle-number-1		Kreis Zahl 1	Kreis Zahl 1
+circle-number-2		Kreis Zahl 2	Kreis Zahl 2
+circle-number-3		Kreis Zahl 3	Kreis Zahl 3
+circle-number-4		Kreis Zahl 4	Kreis Zahl 4
+circle-number-5		Kreis Zahl 5	Kreis Zahl 5
+circle-number-6		Kreis Zahl 6	Kreis Zahl 6
+circle-number-7		Kreis Zahl 7	Kreis Zahl 7
+circle-number-8		Kreis Zahl 8	Kreis Zahl 8
+circle-number-9		Kreis Zahl 9	Kreis Zahl 9
 circle-percentage		Kreis Prozent	Kreis Prozent
 circle		Kreis	Kreis
+clipboard-check		Klemmbrett Häkchen	Klemmbrett Häkchen
+clipboard-data		Klemmbrett Daten	Klemmbrett Daten
+clipboard-plus		Klemmbrett Plus	Klemmbrett Plus
+clipboard-text		Klemmbrett Text	Klemmbrett Text
+clipboard-x		Klemmbrett x	Klemmbrett x
 clipboard	📋	Klemmbrett	Clipboard|Clpboard|Klemmbrett|Zwischenablage
 clock-hour-1		Uhr Stunde 1	Uhr Stunde 1
 clock-hour-10		Uhr Stunde 10	Uhr Stunde 10
@@ -101,6 +202,8 @@ cloud-computing		Cloud-Computing	Cloud-Computing
 cloud	☁	Wolke	Wetter|Wolke|wolkig
 clover	🍀	Glücksklee	Blatt|Glück|Glücksklee|Klee|Kleeblatt|Pflanze|Silverster|Vierblättriges Kleeblatt|vier|vierblättrig
 clubs	♣	Kreuz	Kartenspiel|Kreuz
+code-circle-2		Code Kreis 2	Code Kreis 2
+code-circle		Code Kreis	Code Kreis
 coin-bitcoin		Münze Bitcoin	Münze Bitcoin
 coin-euro		Münze Euro	Münze Euro
 coin-monero		Münze Monero	Münze Monero
@@ -114,12 +217,21 @@ compass	🧭	Kompass	Himmelsrichtung|Kompass|Navigation|Orientierung|Richtung|Wi
 cone-2		Kegel 2	Kegel 2
 cone		Kegel	Kegel
 confetti	🎊 🎉	Konfettiball	Böller|Feier|Knaller|Konfetti|Konfettiball|Konfettibombe|Party|juhu|super|yay
+cookie-man		Keks Mann	Keks Mann
 cookie	🍪	Keks	Cookie|Keks|Plätchen
 copyleft		Copyleft	Copyleft
 copyright	©	Copyright	C|Copyright
 credit-card	💳	Kreditkarte	Bankkarte|EC-Karte|Geldkarte|Guthaben|Karte|Kreditkarte
+crop-1-1		Zuschnitt 1 1	Zuschnitt 1 1
+crop-16-9		Zuschnitt 16 9	Zuschnitt 16 9
+crop-3-2		Zuschnitt 3 2	Zuschnitt 3 2
+crop-5-4		Zuschnitt 5 4	Zuschnitt 5 4
+crop-7-5		Zuschnitt 7 5	Zuschnitt 7 5
+crop-landscape		Zuschnitt Querformat	Zuschnitt Querformat
+crop-portrait		Zuschnitt Hochformat	Zuschnitt Hochformat
 cross	✝	lateinisches Kreuz	Christentum|Kreuz|Religion|lateinisch|römisch
 crown	👑	Krone	Kopfbedeckung|Krone|König|Königin|Majestät
+database		Datenbank	Datenbank
 device-cctv		Gerät Videoüberwachung	Gerät Videoüberwachung
 device-desktop	🖥	Desktopcomputer	Bildschirm|Computer|Desktop|Desktopcomputer|Monitor|iMac
 device-floppy	💾	Diskette	Datenträger|Diskette
@@ -127,12 +239,15 @@ device-gamepad-2		Gerät Gamepad 2	Gerät Gamepad 2
 device-gamepad-3		Gerät Gamepad 3	Gerät Gamepad 3
 device-gamepad	🎮	Gamepad	Gamepad|Gaming|Unterhaltung|Videospiel
 device-heart-monitor		Herzmonitor	Herzmonitor
+device-imac		Gerät imac	Gerät imac
+device-ipad		Gerät ipad	Gerät ipad
 device-mobile	📱	Mobiltelefon	Handy|Mobiltelefon|Smartphone|iPhone|telefonieren
 device-remote		Gerät Fernbedienung	Gerät Fernbedienung
 device-speaker	🔊	Lautsprecher mit hoher Lautstärke	Dezibel|Lautsprecher mit drei Schallwellen|Lautsprecher mit hoher Lautstärke|Musik|Schallwellen|laut
 device-tablet		Gerät Tablet	Gerät Tablet
 device-tv-old		alter Fernseher	alter Fernseher
 device-tv	📺	Fernseher	Fernsehen|Fernseher|Film|TV
+device-unknown		Gerät unbekannt	Gerät unbekannt
 device-usb		Gerät USB	Gerät USB
 device-watch	⌚	Armbanduhr	Armbanduhr|Uhr|Zeit
 diamond	💎	Edelstein	Diamant|Edelstein
@@ -144,8 +259,10 @@ dice-4		Würfel 4	Würfel 4
 dice-5		Würfel 5	Würfel 5
 dice-6		Würfel 6	Würfel 6
 dice	🎲	Spielwürfel	Casino|Spiel|Spielwürfel|Unterhaltung|Würfel|Zufall|würfeln
+directions		Wegbeschreibung	Wegbeschreibung
 disc	💿	CD	Blu-Ray|CD|DVD
 discount		Rabatt	Rabatt
+download		herunterladen	herunterladen
 drop-circle		Tropfen Kreis	Tropfen Kreis
 droplet	💧	Tropfen	Schweiß|Tropfen|Träne|Wasser|Wassertropfen
 droplets		Tropfen	Tropfen
@@ -164,19 +281,25 @@ eye	👁	Auge	Auge|Blick|Körper|Körperteil|schauen|sehen
 eyeglass-2		Brille 2	Brille 2
 eyeglass	👓	Brille	Accessoire|Brille
 face-mask	😷	Gesicht mit Atemschutzmaske	Arzt|Atemschutzmaske|Bazillen|Gesicht|Krankheit|Mund|Mundschutz|Schutzmaske|Smiley|Viren|Virus|erkältet|krank
+favicon		Website-Symbol	Website-Symbol
 feather	🪶	Feder	Feder|Federn|Gefieder|Vogelfeder|federleicht|fliegen|leicht
 fence		Zaun	Zaun
 ferry	⛴	Fähre	Fähre|Schiff
 fidget-spinner		Fidget Spinner	Fidget Spinner
+file-check		Datei Häkchen	Datei Häkchen
+file-code		Datei Code	Datei Code
 file-description		Datei Beschreibung	Datei Beschreibung
 file-dollar		Datei Dollar	Datei Dollar
 file-euro		Datei Euro	Datei Euro
 file-horizontal		Datei horizontal	Datei horizontal
 file-invoice		Datei Rechnung	Datei Rechnung
 file-music		Datei Musik	Datei Musik
-file-pencil		Datei Bleistift	Datei Bleistift
+file-neutral		Datei neutral	Datei neutral
+file-sad		Datei traurig	Datei traurig
+file-smile		Datei Lächeln	Datei Lächeln
 file-star		Datei Stern	Datei Stern
 file-text		Datei Text	Datei Text
+file-time		Datei Zeit	Datei Zeit
 file		Datei	Datei
 files		Dateien	Dateien
 fish-bone		Fischgräte	Fischgräte
@@ -218,10 +341,7 @@ home-2		Haus 2	Haus 2
 home	🏠 🏡	Haus	Baum|Gebäude|Haus|Haus mit Baum|Haus mit Garten|Zuhause
 hospital-circle	🏥	Krankenhaus	Ambulanz|Arzt|Gebäude|Krankenhaus|Medizin|Notaufnahme|krank
 hourglass	⌛ ⏳	Sanduhr	Laufende Sanduhr|Prozess|Sanduhr|Vorgang läuft|Zeit|laufende Sanduhr
-ironing-1		Bügeln 1	Bügeln 1
-ironing-2		Bügeln 2	Bügeln 2
-ironing-3		Bügeln 3	Bügeln 3
-ironing-steam		Bügeln Dampf	Bügeln Dampf
+icons		Symbole	Symbole
 ironing		Bügeln	Bügeln
 jetpack		Raketenrucksack	Raketenrucksack
 jewish-star	✡	Davidstern	Davidstern|Religion|jüdisch
@@ -230,9 +350,11 @@ keyboard	⌨	Tastatur	Computer|Keyboard|Tastatur
 label-important		Etikett wichtig	Etikett wichtig
 label	🏷	Etikett	Etikett|Label|Marke
 leaf		Blatt	Blatt
+lego		lego	lego
 lemon-2		Zitrone 2	Zitrone 2
 library		Bibliothek	Bibliothek
 lifebuoy		Rettungsring	Rettungsring
+link	🔗	Linksymbol	Kettenglieder|Linksymbol|Verknüpfung|Verknüpfungssymbol|verknüpfen|zwei Ringe
 location		Standort	Standort
 lock-square-rounded		Schloss Quadrat abgerundet	Schloss Quadrat abgerundet
 lock	🔒 🔐	geschlossenes Schloss	Datenschutz|Geschlossenes Schloss|Schloss|Schloss mit Schlüssel|Sicherheit|geschlossen|geschlossenes Schloss|privat
@@ -250,9 +372,12 @@ melon	🍈	Honigmelone	Frucht|Honigmelone|Melone|Obst|cantaloupe
 message-2		Nachricht 2	Nachricht 2
 message-chatbot		Nachricht Chatbot	Nachricht Chatbot
 message-circle		Nachricht Kreis	Nachricht Kreis
+message-report		Nachricht Bericht	Nachricht Bericht
 message		Nachricht	Nachricht
 messages		Nachrichten	Nachrichten
 meteor	☄	Komet	Komet|Weltall
+michelin-star		michelin Stern	michelin Stern
+mickey		mickey	mickey
 microphone	🎤	Mikrofon	Karaoke|Mikrofon|Singen|Unterhaltung
 microscope	🔬	Mikroskop	Labor|Mikroskop|Wissenschaft|untersuchen
 microwave		Mikrowelle	Mikrowelle
@@ -278,6 +403,7 @@ nurse		Pflegekraft	Pflegekraft
 octagon		Achteck	Achteck
 oval-vertical		Oval vertikal	Oval vertikal
 oval		Oval	Oval
+pacman		pacman	pacman
 paint		Farbe	Farbe
 palette	🎨	Mischpalette	Farben|Kunst|Künstler|Mischpalette|Palette
 parking-circle		Parkplatz Kreis	Parkplatz Kreis
@@ -299,12 +425,28 @@ plane-arrival	🛬	Landung eines Flugzeugs	Ankunft|Flieger|Flughafen|Flugzeug|La
 plane-departure	🛫	Abflug	Abflug|Flughafen|Flugzeug|Start|Start eines Flugzeugs|fliegen
 plane-tilt		Flugzeug geneigt	Flugzeug geneigt
 plane	✈	Flugzeug	Flieger|Flugzeug
+play-card-1		Spiel Karte 1	Spiel Karte 1
+play-card-10		Spiel Karte 10	Spiel Karte 10
+play-card-2		Spiel Karte 2	Spiel Karte 2
+play-card-3		Spiel Karte 3	Spiel Karte 3
+play-card-4		Spiel Karte 4	Spiel Karte 4
+play-card-5		Spiel Karte 5	Spiel Karte 5
+play-card-6		Spiel Karte 6	Spiel Karte 6
+play-card-7		Spiel Karte 7	Spiel Karte 7
+play-card-8		Spiel Karte 8	Spiel Karte 8
+play-card-9		Spiel Karte 9	Spiel Karte 9
+play-card-a		Spiel Karte a	Spiel Karte a
+play-card-j		Spiel Karte j	Spiel Karte j
+play-card-k		Spiel Karte k	Spiel Karte k
+play-card-q		Spiel Karte q	Spiel Karte q
 play-card-star		Spielkarte mit Stern	Spielkarte mit Stern
 play-card	🃏	Jokerkarte	Joker|Jokerkarte|Spielkarte
 polaroid		Sofortbild	Sofortbild
 poo	💩	Kothaufen	Kot|Kothaufen|Mist
+presentation-analytics		Präsentation Analyse	Präsentation Analyse
 presentation		Präsentation	Präsentation
 puzzle	🧩	Puzzleteil	Bestandteile|Hinweise|Hobby|Puzzle|Puzzlestück|Puzzleteil|Puzzleteile|Spiel|Teile|passen|puzzeln|zusammenpassen|zusammensetzen
+quote		Zitat	Zitat
 radar		Radar	Radar
 radioactive	☢	Radioaktiv	Radioaktiv|radioaktiv
 receipt-dollar		Beleg Dollar	Beleg Dollar
@@ -319,6 +461,7 @@ rectangle		Rechteck	Rechteck
 registered	®	Registered-Trademark	Markenzeichen|R|Registered-Trademark
 report-money		Bericht Geld	Bericht Geld
 rollercoaster		Achterbahn	Achterbahn
+rosette-discount-check		Rosette Rabatt Häkchen	Rosette Rabatt Häkchen
 rosette-discount		Rosette Rabatt	Rosette Rabatt
 rosette	🏵	Rosette	Pflanze|Rosette
 salad		Salat	Salat
@@ -327,6 +470,9 @@ scale	⚖	Waage	Gerechtigkeit|Gewicht|Waage|Werkzeug|wiegen
 school	🏫	Schule	Gebäude|Schule|Schulgebäude
 scuba-diving-tank		Tauchflasche	Tauchflasche
 seedling	🌱	Spross	Spross|junge Pflanze
+send		senden	senden
+settings		Einstellungen	Einstellungen
+shield-check		Schild Häkchen	Schild Häkchen
 shield-checkered		Schild kariert	Schild kariert
 shield-half		Schild halb	Schild halb
 shield-lock		Schild Schloss	Schild Schloss
@@ -337,12 +483,55 @@ sign-left		Schild links	Schild links
 sign-right		Schild rechts	Schild rechts
 soup		Suppe	Suppe
 spade	♠	Pik	Karten|Kartenspiel|Pik
+sparkles-2		Funkeln 2	Funkeln 2
 sparkles	✨	funkelnde Sterne	*|Funkelnde Sterne|Sterne|funkel|funkeln|funkelnde Sterne
 speedboat	🚤	Schnellboot	Boot|Luxus|Schnellboot|See|Sommer|Wasser|Yacht
 spider	🕷	Spinne	Insekt|Spinne|Tier
+square-letter-q		Quadrat Buchstabe q	Quadrat Buchstabe q
 square-rotated		Quadrat gedreht	Quadrat gedreht
+square-rounded-check		Quadrat abgerundet Häkchen	Quadrat abgerundet Häkchen
+square-rounded-letter-a		Quadrat abgerundet Buchstabe a	Quadrat abgerundet Buchstabe a
+square-rounded-letter-b		Quadrat abgerundet Buchstabe b	Quadrat abgerundet Buchstabe b
+square-rounded-letter-c		Quadrat abgerundet Buchstabe c	Quadrat abgerundet Buchstabe c
+square-rounded-letter-d		Quadrat abgerundet Buchstabe d	Quadrat abgerundet Buchstabe d
+square-rounded-letter-e		Quadrat abgerundet Buchstabe e	Quadrat abgerundet Buchstabe e
+square-rounded-letter-f		Quadrat abgerundet Buchstabe f	Quadrat abgerundet Buchstabe f
+square-rounded-letter-g		Quadrat abgerundet Buchstabe g	Quadrat abgerundet Buchstabe g
+square-rounded-letter-h		Quadrat abgerundet Buchstabe h	Quadrat abgerundet Buchstabe h
+square-rounded-letter-i		Quadrat abgerundet Buchstabe i	Quadrat abgerundet Buchstabe i
+square-rounded-letter-j		Quadrat abgerundet Buchstabe j	Quadrat abgerundet Buchstabe j
+square-rounded-letter-k		Quadrat abgerundet Buchstabe k	Quadrat abgerundet Buchstabe k
+square-rounded-letter-l		Quadrat abgerundet Buchstabe l	Quadrat abgerundet Buchstabe l
+square-rounded-letter-m		Quadrat abgerundet Buchstabe m	Quadrat abgerundet Buchstabe m
+square-rounded-letter-n		Quadrat abgerundet Buchstabe n	Quadrat abgerundet Buchstabe n
+square-rounded-letter-o		Quadrat abgerundet Buchstabe o	Quadrat abgerundet Buchstabe o
+square-rounded-letter-p		Quadrat abgerundet Buchstabe p	Quadrat abgerundet Buchstabe p
+square-rounded-letter-q		Quadrat abgerundet Buchstabe q	Quadrat abgerundet Buchstabe q
+square-rounded-letter-r		Quadrat abgerundet Buchstabe r	Quadrat abgerundet Buchstabe r
+square-rounded-letter-s		Quadrat abgerundet Buchstabe s	Quadrat abgerundet Buchstabe s
+square-rounded-letter-t		Quadrat abgerundet Buchstabe t	Quadrat abgerundet Buchstabe t
+square-rounded-letter-u		Quadrat abgerundet Buchstabe u	Quadrat abgerundet Buchstabe u
+square-rounded-letter-v		Quadrat abgerundet Buchstabe v	Quadrat abgerundet Buchstabe v
+square-rounded-letter-w		Quadrat abgerundet Buchstabe w	Quadrat abgerundet Buchstabe w
+square-rounded-letter-x		Quadrat abgerundet Buchstabe x	Quadrat abgerundet Buchstabe x
+square-rounded-letter-y		Quadrat abgerundet Buchstabe y	Quadrat abgerundet Buchstabe y
+square-rounded-letter-z		Quadrat abgerundet Buchstabe z	Quadrat abgerundet Buchstabe z
+square-rounded-minus		Quadrat abgerundet Minus	Quadrat abgerundet Minus
+square-rounded-number-0		Quadrat abgerundet Zahl 0	Quadrat abgerundet Zahl 0
+square-rounded-number-1		Quadrat abgerundet Zahl 1	Quadrat abgerundet Zahl 1
+square-rounded-number-2		Quadrat abgerundet Zahl 2	Quadrat abgerundet Zahl 2
+square-rounded-number-3		Quadrat abgerundet Zahl 3	Quadrat abgerundet Zahl 3
+square-rounded-number-4		Quadrat abgerundet Zahl 4	Quadrat abgerundet Zahl 4
+square-rounded-number-5		Quadrat abgerundet Zahl 5	Quadrat abgerundet Zahl 5
+square-rounded-number-6		Quadrat abgerundet Zahl 6	Quadrat abgerundet Zahl 6
+square-rounded-number-7		Quadrat abgerundet Zahl 7	Quadrat abgerundet Zahl 7
+square-rounded-number-8		Quadrat abgerundet Zahl 8	Quadrat abgerundet Zahl 8
+square-rounded-number-9		Quadrat abgerundet Zahl 9	Quadrat abgerundet Zahl 9
+square-rounded-plus		Quadrat abgerundet Plus	Quadrat abgerundet Plus
+square-rounded-x		Quadrat abgerundet x	Quadrat abgerundet x
 square-rounded		Quadrat abgerundet	Quadrat abgerundet
 square		Quadrat	Quadrat
+stack-2		Stapel 2	Stapel 2
 star-half		Stern halb	Stern halb
 star	⭐	weißer mittelgroßer Stern	Himmel|Stern|astronomie|gelber Stern|weißer mittelgroßer Stern
 stars		Sterne	Sterne
@@ -362,8 +551,10 @@ thumb-up	👍	Daumen hoch	Daumen|Daumen hoch|Finger|Hand|einverstanden|gut|in Or
 ticket	🎫	Ticket	Konzert|Ticket|Unterhaltung
 tools-kitchen-2	🍴	Messer und Gabel	Abendessen|Besteck|Essen|Frühstück|Gabel|Gabel und Messer|Geschirr|Hunger|Messer|Messer und Gabel|Mittagessen|Restaurant|lecker
 train	🚆	Zug	Bahn|Eisenbahn|ICE|Zug
+trash-x		Papierkorb x	Papierkorb x
 trash		Papierkorb	Papierkorb
 triangle-inverted		Dreieck umgekehrt	Dreieck umgekehrt
+triangle-square-circle		Dreieck Quadrat Kreis	Dreieck Quadrat Kreis
 triangle		Dreieck	Dreieck
 trolley		Trolley	Trolley
 trophy	🏆	Pokal	Bundesliga|Champion|Pokal|Preis|Sieger|Sport|Trophäe|gewinnen
@@ -378,5 +569,10 @@ woman	👩	Frau	Frau|Gesicht|erwachsen
 world	🗺	Weltkarte	Karte|Landkarte|Welt|Weltkarte|reisen
 writing-sign		Schreiben Schild	Schreiben Schild
 writing	✍	schreibende Hand	Hand|Stift|schreiben|schreibend
+x		x	x
 yin-yang	☯	Yin und Yang	Daoismus|Religion|Yang|Yin|Yin und Yang
 zeppelin		Zeppelin	Zeppelin
+zoom-cancel		Zoom abbrechen	Zoom abbrechen
+zoom-check		Zoom Häkchen	Zoom Häkchen
+zoom-exclamation		Zoom Ausrufezeichen	Zoom Ausrufezeichen
+zoom		Zoom	Zoom

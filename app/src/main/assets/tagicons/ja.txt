@@ -2,16 +2,37 @@ accessible	♿	車椅子	バリアフリー|バリヤフリー|車椅子
 aerial-lift	🚡	ロープウェイ	ゴンドラ|ロープウェイ|乗り物
 air-balloon		熱気球	熱気球
 alarm	⏰	目覚まし時計	アラーム|時計|時間|目覚まし|目覚まし時計
+alert-circle		警告 円	警告 円
 alert-triangle		警告 三角形	警告 三角形
 alien	👽	エイリアン	UFO|エイリアン|ユーフォー|宇宙人|異星人|顔
 apple	🍎	赤リンゴ	りんご|アップル|果物|赤リンゴ
 archive		アーカイブ	アーカイブ
+arrow-badge-down		矢印 バッジ 下	矢印 バッジ 下
+arrow-badge-left		矢印 バッジ 左	矢印 バッジ 左
+arrow-badge-right		矢印 バッジ 右	矢印 バッジ 右
+arrow-badge-up		矢印 バッジ 上	矢印 バッジ 上
+arrow-big-down		矢印 大きい 下	矢印 大きい 下
+arrow-big-left		矢印 大きい 左	矢印 大きい 左
+arrow-big-right		矢印 大きい 右	矢印 大きい 右
+arrow-big-up		矢印 大きい 上	矢印 大きい 上
 artboard		アートボード	アートボード
 article		記事	記事
+asset		素材	素材
 atom-2		原子 2	原子 2
 automatic-gearbox		自動変速機	自動変速機
 award	🏅	メダル	スポーツ|メダル|優勝|表彰|金|金メダル
 baby-carriage		ベビーカー	ベビーカー
+badge-3d		バッジ 3d	バッジ 3d
+badge-4k		バッジ 4k	バッジ 4k
+badge-8k		バッジ 8k	バッジ 8k
+badge-ad		バッジ 広告	バッジ 広告
+badge-ar		バッジ ar	バッジ ar
+badge-cc		バッジ cc	バッジ cc
+badge-hd		バッジ hd	バッジ hd
+badge-sd		バッジ sd	バッジ sd
+badge-tm		バッジ tm	バッジ tm
+badge-vo		バッジ vo	バッジ vo
+badge-vr		バッジ vr	バッジ vr
 badge		バッジ	バッジ
 badges		バッジ	バッジ
 ball-bowling	🎳	ボウリング	ストライク|スポーツ|ボウリング|ボール|球
@@ -19,8 +40,11 @@ balloon	🎈	風船	バルーン|風船
 ballpen	🖊	ペン	ペン|ボールペン|文具|文房具
 bandage	🩹	絆創膏	けが|ばんそうこう|傷|手当て|絆創膏|薬
 barbell		バーベル	バーベル
+barrier-block		バリケード ブロック	バリケード ブロック
 basket	🧺	かご	かご|ピクニック|収穫|洗濯
 bath		浴槽	浴槽
+battery-automotive		電池 自動車	電池 自動車
+battery-vertical-1		電池 縦 1	電池 縦 1
 bed-flat		ベッド 平ら	ベッド 平ら
 bed	🛏	ベッド	ベッド|ホテル|寝る|睡眠
 beer	🍺 🍻	ビールジョッキ	お酒|アルコール|オクトーバーフェスト|ジョッキ|バー|ビール|ビールで乾杯|ビールジョッキ|乾杯|宴会|居酒屋
@@ -28,10 +52,14 @@ bell-ringing-2		ベル 鳴っている 2	ベル 鳴っている 2
 bell-ringing		ベル 鳴っている	ベル 鳴っている
 bell	🔔	ベル	ベル|教会|鈴|鐘
 bike	🚲	自転車	サイクリング|乗り物|自転車
+binoculars		双眼鏡	双眼鏡
 biohazard	☣	バイオハザード	バイオハザード|危険|有害物質
 blade		刃	刃
 blender		ミキサー	ミキサー
+bolt	⚡	高電圧	危険|稲妻|雷|電気|高電圧
+bomb	💣	爆弾	危険|爆弾|爆発
 bone	🦴	骨	犬|骨|骨格
+bong		ボング	ボング
 book	📕	閉じた本	書籍|本|赤い本|閉じた本
 bookmark	🔖	しおり	しおり|タグ|ブックマーク|付箋
 bookmarks		ブックマーク	ブックマーク
@@ -40,9 +68,39 @@ bow		リボン	リボン
 bowl-chopsticks	🥢	はし	おはし|はし|箸
 bowl-spoon	🥣	ボウルとスプーン	おかゆ|オートミール|シリアル|ボウルとスプーン|朝食|粥
 bowl		ボウル	ボウル
+brand-apple		ブランド apple	ブランド apple
+brand-discord		ブランド discord	ブランド discord
+brand-dribbble		ブランド dribbble	ブランド dribbble
+brand-facebook		ブランド facebook	ブランド facebook
+brand-github		ブランド github	ブランド github
+brand-google		ブランド google	ブランド google
+brand-instagram		ブランド instagram	ブランド instagram
+brand-kick		ブランド kick	ブランド kick
+brand-linkedin		ブランド linkedin	ブランド linkedin
+brand-messenger		ブランド messenger	ブランド messenger
+brand-open-source		ブランド 開く ソース	ブランド 開く ソース
+brand-opera		ブランド opera	ブランド opera
+brand-paypal		ブランド paypal	ブランド paypal
+brand-pinterest		ブランド pinterest	ブランド pinterest
+brand-signal		ブランド 信号	ブランド 信号
+brand-sketch		ブランド sketch	ブランド sketch
+brand-snapchat		ブランド snapchat	ブランド snapchat
+brand-spotify		ブランド spotify	ブランド spotify
+brand-steam		ブランド 湯気	ブランド 湯気
+brand-tabler		ブランド tabler	ブランド tabler
+brand-tiktok		ブランド tiktok	ブランド tiktok
+brand-tinder		ブランド tinder	ブランド tinder
+brand-tumblr		ブランド tumblr	ブランド tumblr
+brand-twitter		ブランド twitter	ブランド twitter
+brand-vimeo		ブランド vimeo	ブランド vimeo
+brand-whatsapp		ブランド whatsapp	ブランド whatsapp
+brand-windows		ブランド windows	ブランド windows
+brand-x		ブランド x	ブランド x
+brand-youtube		ブランド youtube	ブランド youtube
 bread	🍞	食パン	パン|ベーカリー|小麦|食パン
 briefcase-2		ブリーフケース 2	ブリーフケース 2
 briefcase	💼	ブリーフケース	かばん|ブリーフケース|鞄
+bubble-text		吹き出し テキスト	吹き出し テキスト
 bubble		吹き出し	吹き出し
 bug	🐛	毛虫	イモムシ|毛虫|芋虫|虫
 building-bridge-2		橋	橋
@@ -69,7 +127,9 @@ car	🚗	自動車	ドライブ|乗り物|乗用車|自動車|車
 carambola		スターフルーツ	スターフルーツ
 caravan		キャンピングトレーラー	キャンピングトレーラー
 cardboards		段ボール製VRゴーグル	段ボール製VRゴーグル
+cards		トランプ	トランプ
 cash-banknote		紙幣	紙幣
+charging-pile		充電スタンド	充電スタンド
 check		チェック	チェック
 chef-hat		コック帽	コック帽
 cherry	🍒	さくらんぼ	さくらんぼ|チェリー|果物
@@ -81,8 +141,49 @@ chess-rook		チェスのルーク	チェスのルーク
 chess		チェス	チェス
 christmas-tree	🎄	クリスマスツリー	クリスマス|クリスマスイブ|クリスマスツリー|ツリー
 circle-key		円 鍵	円 鍵
+circle-letter-a		円 文字 a	円 文字 a
+circle-letter-b		円 文字 b	円 文字 b
+circle-letter-c		円 文字 c	円 文字 c
+circle-letter-d		円 文字 d	円 文字 d
+circle-letter-e		円 文字 e	円 文字 e
+circle-letter-f		円 文字 f	円 文字 f
+circle-letter-g		円 文字 g	円 文字 g
+circle-letter-h		円 文字 h	円 文字 h
+circle-letter-i		円 文字 i	円 文字 i
+circle-letter-j		円 文字 j	円 文字 j
+circle-letter-k		円 文字 k	円 文字 k
+circle-letter-l		円 文字 l	円 文字 l
+circle-letter-m		円 文字 m	円 文字 m
+circle-letter-n		円 文字 n	円 文字 n
+circle-letter-o		円 文字 o	円 文字 o
+circle-letter-p		円 文字 p	円 文字 p
+circle-letter-q		円 文字 q	円 文字 q
+circle-letter-r		円 文字 r	円 文字 r
+circle-letter-s		円 文字 s	円 文字 s
+circle-letter-t		円 文字 t	円 文字 t
+circle-letter-u		円 文字 u	円 文字 u
+circle-letter-v		円 文字 v	円 文字 v
+circle-letter-w		円 文字 w	円 文字 w
+circle-letter-x		円 文字 x	円 文字 x
+circle-letter-y		円 文字 y	円 文字 y
+circle-letter-z		円 文字 z	円 文字 z
+circle-number-0		円 数字 0	円 数字 0
+circle-number-1		円 数字 1	円 数字 1
+circle-number-2		円 数字 2	円 数字 2
+circle-number-3		円 数字 3	円 数字 3
+circle-number-4		円 数字 4	円 数字 4
+circle-number-5		円 数字 5	円 数字 5
+circle-number-6		円 数字 6	円 数字 6
+circle-number-7		円 数字 7	円 数字 7
+circle-number-8		円 数字 8	円 数字 8
+circle-number-9		円 数字 9	円 数字 9
 circle-percentage		円 パーセント	円 パーセント
 circle		円	円
+clipboard-check		クリップボード チェック	クリップボード チェック
+clipboard-data		クリップボード データ	クリップボード データ
+clipboard-plus		クリップボード プラス	クリップボード プラス
+clipboard-text		クリップボード テキスト	クリップボード テキスト
+clipboard-x		クリップボード x	クリップボード x
 clipboard	📋	クリップボード	クリップ|クリップボード|メモ|文具|文房具
 clock-hour-1		時計 時 1	時計 時 1
 clock-hour-10		時計 時 10	時計 時 10
@@ -101,6 +202,8 @@ cloud-computing		クラウドコンピューティング	クラウドコンピ�
 cloud	☁	雲	天気|曇り|雲
 clover	🍀	四つ葉のクローバー	4|クローバー|四つ葉のクローバー|植物|草|葉
 clubs	♣	クラブ	カード|クラブ|クローバー|トランプ
+code-circle-2		コード 円 2	コード 円 2
+code-circle		コード 円	コード 円
 coin-bitcoin		硬貨 ビットコイン	硬貨 ビットコイン
 coin-euro		硬貨 ユーロ	硬貨 ユーロ
 coin-monero		硬貨 モネロ	硬貨 モネロ
@@ -114,12 +217,21 @@ compass	🧭	コンパス	オリエンテーリング|コンパス|方位磁針|
 cone-2		コーン 2	コーン 2
 cone		コーン	コーン
 confetti	🎊 🎉	くす玉	お祝い|くす玉|クラッカー|パーティー|パーティークラッカー|紙吹雪|誕生日
+cookie-man		クッキー 男性	クッキー 男性
 cookie	🍪	クッキー	お菓子|クッキー|スイーツ|チョコレートチップ|デザート
 copyleft		コピーレフト	コピーレフト
 copyright	©	著作権マーク	Cマーク|コピーライト|著作権|著作権マーク|記号
 credit-card	💳	クレジットカード	お金|カード|キャッシュカード|クレジットカード|支払い|銀行
+crop-1-1		切り抜き 1 1	切り抜き 1 1
+crop-16-9		切り抜き 16 9	切り抜き 16 9
+crop-3-2		切り抜き 3 2	切り抜き 3 2
+crop-5-4		切り抜き 5 4	切り抜き 5 4
+crop-7-5		切り抜き 7 5	切り抜き 7 5
+crop-landscape		切り抜き 横向き	切り抜き 横向き
+crop-portrait		切り抜き 縦向き	切り抜き 縦向き
 cross	✝	十字架	キリスト教|クロス|ラテン十字|十字架|宗教
 crown	👑	王冠	クラウン|冠|王冠|王族
+database		データベース	データベース
 device-cctv		デバイス 監視カメラ	デバイス 監視カメラ
 device-desktop	🖥	デスクトップパソコン	PC|コンピューター|デスクトップ|デスクトップパソコン|パソコン|モニター
 device-floppy	💾	フロッピー	FD|コンピューター|ディスク|フロッピー|フロッピーディスク
@@ -127,12 +239,15 @@ device-gamepad-2		デバイス ゲームパッド 2	デバイス ゲームパッ
 device-gamepad-3		デバイス ゲームパッド 3	デバイス ゲームパッド 3
 device-gamepad	🎮	テレビゲーム	ゲーム|コントローラ|テレビゲーム|ビデオゲーム
 device-heart-monitor		心拍モニター	心拍モニター
+device-imac		デバイス imac	デバイス imac
+device-ipad		デバイス ipad	デバイス ipad
 device-mobile	📱	携帯電話	スマホ|スマートフォン|モバイル|携帯|携帯電話
 device-remote		デバイス リモコン	デバイス リモコン
 device-speaker	🔊	スピーカー音量大	スピーカー|スピーカー音量大|ボリューム|大音量|音量|音量大
 device-tablet		デバイス タブレット	デバイス タブレット
 device-tv-old		レトロなテレビ	レトロなテレビ
 device-tv	📺	テレビ	TV|テレビ|ビデオ
+device-unknown		デバイス 不明	デバイス 不明
 device-usb		デバイス USB	デバイス USB
 device-watch	⌚	腕時計	ウォッチ|時計|時間|腕時計
 diamond	💎	宝石	ジュエリー|ダイア|ダイヤ|ダイヤモンド|宝石
@@ -144,8 +259,10 @@ dice-4		サイコロ 4	サイコロ 4
 dice-5		サイコロ 5	サイコロ 5
 dice-6		サイコロ 6	サイコロ 6
 dice	🎲	サイコロ	ゲーム|サイコロ|ダイス
+directions		道案内	道案内
 disc	💿	CD	Blu-ray|CD|DVD|コンピューター|ディスク|ブルーレイ|光ディスク
 discount		割引	割引
+download		ダウンロード	ダウンロード
 drop-circle		しずく 円	しずく 円
 droplet	💧	水滴	しずく|たらーっ|水|水滴|汗|涙
 droplets		しずく	しずく
@@ -164,19 +281,25 @@ eye	👁	片目	からだ|一つ目|片目|目
 eyeglass-2		眼鏡 2	眼鏡 2
 eyeglass	👓	メガネ	メガネ|眼鏡
 face-mask	😷	マスク顔	ドクター|マスク|マスク顔|医師|歯科医|病気|花粉症|顔|風邪
+favicon		ファビコン	ファビコン
 feather	🪶	羽	羽|羽根|羽毛|軽い|飛ぶ|鳥
 fence		柵	柵
 ferry	⛴	フェリー	フェリー|乗り物|客船|船
 fidget-spinner		ハンドスピナー	ハンドスピナー
+file-check		ファイル チェック	ファイル チェック
+file-code		ファイル コード	ファイル コード
 file-description		ファイル 説明	ファイル 説明
 file-dollar		ファイル ドル	ファイル ドル
 file-euro		ファイル ユーロ	ファイル ユーロ
 file-horizontal		ファイル 水平	ファイル 水平
 file-invoice		ファイル 請求書	ファイル 請求書
 file-music		ファイル 音楽	ファイル 音楽
-file-pencil		ファイル 鉛筆	ファイル 鉛筆
+file-neutral		ファイル 無表情	ファイル 無表情
+file-sad		ファイル 悲しい	ファイル 悲しい
+file-smile		ファイル 笑顔	ファイル 笑顔
 file-star		ファイル 星	ファイル 星
 file-text		ファイル テキスト	ファイル テキスト
+file-time		ファイル 時間	ファイル 時間
 file		ファイル	ファイル
 files		ファイル	ファイル
 fish-bone		魚の骨	魚の骨
@@ -218,10 +341,7 @@ home-2		家 2	家 2
 home	🏠 🏡	家	マイホーム|一戸建て|家|庭|庭付きの家|建物|郊外
 hospital-circle	🏥	病院	医者|建物|病院|薬
 hourglass	⌛ ⏳	砂時計	タイマー|時計|時間|砂|砂が落ちている砂時計|砂時計
-ironing-1		アイロンがけ 1	アイロンがけ 1
-ironing-2		アイロンがけ 2	アイロンがけ 2
-ironing-3		アイロンがけ 3	アイロンがけ 3
-ironing-steam		アイロンがけ 湯気	アイロンがけ 湯気
+icons		アイコン	アイコン
 ironing		アイロンがけ	アイロンがけ
 jetpack		ジェットパック	ジェットパック
 jewish-star	✡	ダビデの星	ダビデの星|ユダヤ教|六芒星|宗教|星
@@ -230,9 +350,11 @@ keyboard	⌨	キーボード	PC|キーボード|コンピューター|パソコ�
 label-important		ラベル 重要	ラベル 重要
 label	🏷	荷札	タグ|ラベル|荷札
 leaf		葉	葉
+lego		lego	lego
 lemon-2		レモン 2	レモン 2
 library		図書館	図書館
 lifebuoy		浮き輪	浮き輪
+link	🔗	リンクシンボル	リンク|リンクシンボル|環
 location		位置	位置
 lock-square-rounded		鍵 四角 角丸	鍵 四角 角丸
 lock	🔒 🔐	閉じた錠	キー|セキュリティ|ロック|南京錠|安全|施錠|錠|鍵|閉じた錠|閉じた錠と鍵
@@ -250,9 +372,12 @@ melon	🍈	メロン	マスクメロン|メロン|果物|野菜
 message-2		メッセージ 2	メッセージ 2
 message-chatbot		メッセージ チャットボット	メッセージ チャットボット
 message-circle		メッセージ 円	メッセージ 円
+message-report		メッセージ 報告書	メッセージ 報告書
 message		メッセージ	メッセージ
 messages		メッセージ	メッセージ
 meteor	☄	彗星	すい星|宇宙|彗星
+michelin-star		michelin 星	michelin 星
+mickey		mickey	mickey
 microphone	🎤	マイク	カラオケ|マイク|歌|音楽
 microscope	🔬	顕微鏡	サイエンス|実験|研究|科学|顕微鏡
 microwave		電子レンジ	電子レンジ
@@ -278,6 +403,7 @@ nurse		看護師	看護師
 octagon		八角形	八角形
 oval-vertical		楕円 縦	楕円 縦
 oval		楕円	楕円
+pacman		pacman	pacman
 paint		ペンキ	ペンキ
 palette	🎨	絵の具パレット	パレット|画家|絵|絵の具パレット|絵画|美術館|芸術
 parking-circle		駐車場 円	駐車場 円
@@ -299,12 +425,28 @@ plane-arrival	🛬	飛行機着陸	乗り物|着陸|航空機|飛行機|飛行�
 plane-departure	🛫	飛行機離陸	乗り物|航空機|離陸|飛行機|飛行機離陸
 plane-tilt		飛行機 傾き	飛行機 傾き
 plane	✈	飛行機	ジェット機|乗り物|旅行|航空機|飛行機
+play-card-1		遊び カード 1	遊び カード 1
+play-card-10		遊び カード 10	遊び カード 10
+play-card-2		遊び カード 2	遊び カード 2
+play-card-3		遊び カード 3	遊び カード 3
+play-card-4		遊び カード 4	遊び カード 4
+play-card-5		遊び カード 5	遊び カード 5
+play-card-6		遊び カード 6	遊び カード 6
+play-card-7		遊び カード 7	遊び カード 7
+play-card-8		遊び カード 8	遊び カード 8
+play-card-9		遊び カード 9	遊び カード 9
+play-card-a		遊び カード a	遊び カード a
+play-card-j		遊び カード j	遊び カード j
+play-card-k		遊び カード k	遊び カード k
+play-card-q		遊び カード q	遊び カード q
 play-card-star		星のトランプ	星のトランプ
 play-card	🃏	ジョーカー	カード|ジジ|ジョーカー|トランプ|ババ
 polaroid		インスタント写真	インスタント写真
 poo	💩	うんち	うんこ|うんち|臭い|顔
+presentation-analytics		プレゼン 分析	プレゼン 分析
 presentation		プレゼン	プレゼン
 puzzle	🧩	ジグソーパズル	ジグソーパズル|パズル|ピース|組み合わせ|鍵
+quote		引用	引用
 radar		レーダー	レーダー
 radioactive	☢	放射能	危険|放射性|放射線|放射能
 receipt-dollar		レシート ドル	レシート ドル
@@ -319,6 +461,7 @@ rectangle		長方形	長方形
 registered	®	登録商標マーク	Rマーク|登録商標|登録商標マーク|記号
 report-money		報告書 お金	報告書 お金
 rollercoaster		ジェットコースター	ジェットコースター
+rosette-discount-check		ロゼット 割引 チェック	ロゼット 割引 チェック
 rosette-discount		ロゼット 割引	ロゼット 割引
 rosette	🏵	花飾り	植物|花|花飾り
 salad		サラダ	サラダ
@@ -327,6 +470,9 @@ scale	⚖	天秤	はかり|バランス|化学|天秤|天秤座|実験|星座
 school	🏫	学校	学校|建物|校舎
 scuba-diving-tank		ダイビング用ボンベ	ダイビング用ボンベ
 seedling	🌱	新芽	双葉|新芽|芽
+send		送信	送信
+settings		設定	設定
+shield-check		盾 チェック	盾 チェック
 shield-checkered		盾 チェッカー	盾 チェッカー
 shield-half		盾 半分	盾 半分
 shield-lock		盾 鍵	盾 鍵
@@ -337,12 +483,55 @@ sign-left		標識 左	標識 左
 sign-right		標識 右	標識 右
 soup		スープ	スープ
 spade	♠	スペード	カード|スペード|トランプ
+sparkles-2		きらめき 2	きらめき 2
 sparkles	✨	きらきら	きらきら|ぴかぴか|キラキラ|スター|星
 speedboat	🚤	スピードボート	スピードボート|ボート|モーターボート|乗り物|快速艇|船
 spider	🕷	クモ	クモ|スパイダー|虫
+square-letter-q		四角 文字 q	四角 文字 q
 square-rotated		四角 回転	四角 回転
+square-rounded-check		四角 角丸 チェック	四角 角丸 チェック
+square-rounded-letter-a		四角 角丸 文字 a	四角 角丸 文字 a
+square-rounded-letter-b		四角 角丸 文字 b	四角 角丸 文字 b
+square-rounded-letter-c		四角 角丸 文字 c	四角 角丸 文字 c
+square-rounded-letter-d		四角 角丸 文字 d	四角 角丸 文字 d
+square-rounded-letter-e		四角 角丸 文字 e	四角 角丸 文字 e
+square-rounded-letter-f		四角 角丸 文字 f	四角 角丸 文字 f
+square-rounded-letter-g		四角 角丸 文字 g	四角 角丸 文字 g
+square-rounded-letter-h		四角 角丸 文字 h	四角 角丸 文字 h
+square-rounded-letter-i		四角 角丸 文字 i	四角 角丸 文字 i
+square-rounded-letter-j		四角 角丸 文字 j	四角 角丸 文字 j
+square-rounded-letter-k		四角 角丸 文字 k	四角 角丸 文字 k
+square-rounded-letter-l		四角 角丸 文字 l	四角 角丸 文字 l
+square-rounded-letter-m		四角 角丸 文字 m	四角 角丸 文字 m
+square-rounded-letter-n		四角 角丸 文字 n	四角 角丸 文字 n
+square-rounded-letter-o		四角 角丸 文字 o	四角 角丸 文字 o
+square-rounded-letter-p		四角 角丸 文字 p	四角 角丸 文字 p
+square-rounded-letter-q		四角 角丸 文字 q	四角 角丸 文字 q
+square-rounded-letter-r		四角 角丸 文字 r	四角 角丸 文字 r
+square-rounded-letter-s		四角 角丸 文字 s	四角 角丸 文字 s
+square-rounded-letter-t		四角 角丸 文字 t	四角 角丸 文字 t
+square-rounded-letter-u		四角 角丸 文字 u	四角 角丸 文字 u
+square-rounded-letter-v		四角 角丸 文字 v	四角 角丸 文字 v
+square-rounded-letter-w		四角 角丸 文字 w	四角 角丸 文字 w
+square-rounded-letter-x		四角 角丸 文字 x	四角 角丸 文字 x
+square-rounded-letter-y		四角 角丸 文字 y	四角 角丸 文字 y
+square-rounded-letter-z		四角 角丸 文字 z	四角 角丸 文字 z
+square-rounded-minus		四角 角丸 マイナス	四角 角丸 マイナス
+square-rounded-number-0		四角 角丸 数字 0	四角 角丸 数字 0
+square-rounded-number-1		四角 角丸 数字 1	四角 角丸 数字 1
+square-rounded-number-2		四角 角丸 数字 2	四角 角丸 数字 2
+square-rounded-number-3		四角 角丸 数字 3	四角 角丸 数字 3
+square-rounded-number-4		四角 角丸 数字 4	四角 角丸 数字 4
+square-rounded-number-5		四角 角丸 数字 5	四角 角丸 数字 5
+square-rounded-number-6		四角 角丸 数字 6	四角 角丸 数字 6
+square-rounded-number-7		四角 角丸 数字 7	四角 角丸 数字 7
+square-rounded-number-8		四角 角丸 数字 8	四角 角丸 数字 8
+square-rounded-number-9		四角 角丸 数字 9	四角 角丸 数字 9
+square-rounded-plus		四角 角丸 プラス	四角 角丸 プラス
+square-rounded-x		四角 角丸 x	四角 角丸 x
 square-rounded		四角 角丸	四角 角丸
 square		四角	四角
+stack-2		積み重ね 2	積み重ね 2
 star-half		星 半分	星 半分
 star	⭐	スター	スター|天文学|星
 stars		星	星
@@ -362,8 +551,10 @@ thumb-up	👍	サムズアップ	OK|いいね|オッケー|オーケー|グッ�
 ticket	🎫	チケット	チケット|入場券|切符|半券
 tools-kitchen-2	🍴	ナイフとフォーク	ごちそう|カトラリー|ディナー|ナイフ|ナイフとフォーク|フォーク|レストラン|朝食|食事|食器
 train	🚆	電車正面	乗り物|列車|電車|電車正面
+trash-x		ゴミ箱 x	ゴミ箱 x
 trash		ゴミ箱	ゴミ箱
 triangle-inverted		三角形 反転	三角形 反転
+triangle-square-circle		三角形 四角 円	三角形 四角 円
 triangle		三角形	三角形
 trolley		台車	台車
 trophy	🏆	トロフィー	チャンピオン|トロフィー|優勝|優勝カップ|表彰|賞杯
@@ -378,5 +569,10 @@ woman	👩	女性	大人|女|女性|顔
 world	🗺	世界地図	マップ|世界|世界地図|地図
 writing-sign		筆記 標識	筆記 標識
 writing	✍	書いている手	手|手で書く|手書き|書いている手
+x		x	x
 yin-yang	☯	陰陽	インヤン|宗教|道教|陰陽
 zeppelin		飛行船	飛行船
+zoom-cancel		ズーム キャンセル	ズーム キャンセル
+zoom-check		ズーム チェック	ズーム チェック
+zoom-exclamation		ズーム 感嘆符	ズーム 感嘆符
+zoom		ズーム	ズーム

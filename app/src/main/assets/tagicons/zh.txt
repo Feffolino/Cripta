@@ -2,16 +2,37 @@ accessible	♿	轮椅标识	无障碍|残疾|残障|轮椅|轮椅标识|轮椅�
 aerial-lift	🚡	索道	空中|索道|缆车
 air-balloon		热气球	热气球
 alarm	⏰	闹钟	小时|时间|钟|闹钟
+alert-circle		警告 圆圈	警告 圆圈
 alert-triangle		警告 三角形	警告 三角形
 alien	👽	外星人	ufo|外太空|外星|外星人|太空|幻想|星际|脸|飞碟
 apple	🍎	红苹果	健康|水果|熟|红|红苹果|苹果|食物
 archive		归档	归档
+arrow-badge-down		箭头 徽章 下	箭头 徽章 下
+arrow-badge-left		箭头 徽章 左	箭头 徽章 左
+arrow-badge-right		箭头 徽章 右	箭头 徽章 右
+arrow-badge-up		箭头 徽章 上	箭头 徽章 上
+arrow-big-down		箭头 大 下	箭头 大 下
+arrow-big-left		箭头 大 左	箭头 大 左
+arrow-big-right		箭头 大 右	箭头 大 右
+arrow-big-up		箭头 大 上	箭头 大 上
 artboard		画板	画板
 article		文章	文章
+asset		资源	资源
 atom-2		原子 2	原子 2
 automatic-gearbox		自动变速箱	自动变速箱
 award	🏅	奖牌	奖牌|获胜|运动会奖牌|运动员|金牌
 baby-carriage		婴儿车	婴儿车
+badge-3d		徽章 3d	徽章 3d
+badge-4k		徽章 4k	徽章 4k
+badge-8k		徽章 8k	徽章 8k
+badge-ad		徽章 广告	徽章 广告
+badge-ar		徽章 ar	徽章 ar
+badge-cc		徽章 cc	徽章 cc
+badge-hd		徽章 hd	徽章 hd
+badge-sd		徽章 sd	徽章 sd
+badge-tm		徽章 tm	徽章 tm
+badge-vo		徽章 vo	徽章 vo
+badge-vr		徽章 vr	徽章 vr
 badge		徽章	徽章
 badges		徽章	徽章
 ball-bowling	🎳	保龄球	保龄球|全倒|球|运动
@@ -19,8 +40,11 @@ balloon	🎈	气球	庆祝|气球|生日|节日
 ballpen	🖊	笔	原子笔|圆珠笔|油笔|笔
 bandage	🩹	创可贴	OK绷|伤口|创可贴|受伤|绷带|胶布
 barbell		杠铃	杠铃
+barrier-block		路障 块	路障 块
 basket	🧺	筐	农作|洗衣|种植|筐|篮子|脏衣篮|野餐
 bath		浴缸	浴缸
+battery-automotive		电池 汽车	电池 汽车
+battery-vertical-1		电池 垂直 1	电池 垂直 1
 bed-flat		床 平坦	床 平坦
 bed	🛏	床	宾馆|床|床垫|床铺|睡|睡眠|睡觉
 beer	🍺 🍻	啤酒	啤酒|啤酒节|喝酒|干杯|杯|碰杯|酒|酒吧
@@ -28,10 +52,14 @@ bell-ringing-2		铃铛 响铃 2	铃铛 响铃 2
 bell-ringing		铃铛 响铃	铃铛 响铃
 bell	🔔	铃铛	叮当|响铃|钟|钟声|铃声|铃铛
 bike	🚲	自行车	单车|脚踏车|自行车|自行车骑士|飞驰|骑车|骑车疾驰
+binoculars		双筒望远镜	双筒望远镜
 biohazard	☣	生物危害	动物|当心感染|污染|生物危害|警告
 blade		刀片	刀片
 blender		搅拌机	搅拌机
+bolt	⚡	高压	危险|有电|闪电|高压
+bomb	💣	炸弹	炸弹|爆炸
 bone	🦴	骨头	叉骨|狗|骨头|骨骼
+bong		水烟壶	水烟壶
 book	📕	合上的书本	书|书本|书本合起|合上|合上的书本
 bookmark	🔖	书签	书签|标签|读书|阅读
 bookmarks		书签	书签
@@ -40,9 +68,39 @@ bow		蝴蝶结	蝴蝶结
 bowl-chopsticks	🥢	筷子	筷子|箸
 bowl-spoon	🥣	碗勺	早餐|燕麦|燕麦粥|碗中汤匙|碗勺|碗和汤匙|稀饭|粥|谷物
 bowl		碗	碗
+brand-apple		品牌 apple	品牌 apple
+brand-discord		品牌 discord	品牌 discord
+brand-dribbble		品牌 dribbble	品牌 dribbble
+brand-facebook		品牌 facebook	品牌 facebook
+brand-github		品牌 github	品牌 github
+brand-google		品牌 google	品牌 google
+brand-instagram		品牌 instagram	品牌 instagram
+brand-kick		品牌 kick	品牌 kick
+brand-linkedin		品牌 linkedin	品牌 linkedin
+brand-messenger		品牌 messenger	品牌 messenger
+brand-open-source		品牌 打开 来源	品牌 打开 来源
+brand-opera		品牌 opera	品牌 opera
+brand-paypal		品牌 paypal	品牌 paypal
+brand-pinterest		品牌 pinterest	品牌 pinterest
+brand-signal		品牌 信号	品牌 信号
+brand-sketch		品牌 sketch	品牌 sketch
+brand-snapchat		品牌 snapchat	品牌 snapchat
+brand-spotify		品牌 spotify	品牌 spotify
+brand-steam		品牌 蒸汽	品牌 蒸汽
+brand-tabler		品牌 tabler	品牌 tabler
+brand-tiktok		品牌 tiktok	品牌 tiktok
+brand-tinder		品牌 tinder	品牌 tinder
+brand-tumblr		品牌 tumblr	品牌 tumblr
+brand-twitter		品牌 twitter	品牌 twitter
+brand-vimeo		品牌 vimeo	品牌 vimeo
+brand-whatsapp		品牌 whatsapp	品牌 whatsapp
+brand-windows		品牌 windows	品牌 windows
+brand-x		品牌 x	品牌 x
+brand-youtube		品牌 youtube	品牌 youtube
 bread	🍞	面包	一条面包|全麦面包|小麦|淀粉|烤面包|谷类|面包|食物|餐厅
 briefcase-2		公文包 2	公文包 2
 briefcase	💼	公文包	上班|公事包|公文包|办公室|包|手提包|文件
+bubble-text		对话气泡 文本	对话气泡 文本
 bubble		对话气泡	对话气泡
 bug	🐛	毛毛虫	昆虫|毛毛虫|毛虫
 building-bridge-2		桥	桥
@@ -69,7 +127,9 @@ car	🚗	汽车	开车|汽车|轿车
 carambola		杨桃	杨桃
 caravan		拖挂房车	拖挂房车
 cardboards		纸板虚拟现实眼镜	纸板虚拟现实眼镜
+cards		扑克牌	扑克牌
 cash-banknote		纸币	纸币
+charging-pile		充电桩	充电桩
 check		对勾	对勾
 chef-hat		厨师帽	厨师帽
 cherry	🍒	樱桃	樱桃|水果
@@ -81,8 +141,49 @@ chess-rook		国际象棋的车	国际象棋的车
 chess		国际象棋	国际象棋
 christmas-tree	🎄	圣诞树	圣诞|圣诞树|庆祝|树|装饰
 circle-key		圆圈 钥匙	圆圈 钥匙
+circle-letter-a		圆圈 字母 a	圆圈 字母 a
+circle-letter-b		圆圈 字母 b	圆圈 字母 b
+circle-letter-c		圆圈 字母 c	圆圈 字母 c
+circle-letter-d		圆圈 字母 d	圆圈 字母 d
+circle-letter-e		圆圈 字母 e	圆圈 字母 e
+circle-letter-f		圆圈 字母 f	圆圈 字母 f
+circle-letter-g		圆圈 字母 g	圆圈 字母 g
+circle-letter-h		圆圈 字母 h	圆圈 字母 h
+circle-letter-i		圆圈 字母 i	圆圈 字母 i
+circle-letter-j		圆圈 字母 j	圆圈 字母 j
+circle-letter-k		圆圈 字母 k	圆圈 字母 k
+circle-letter-l		圆圈 字母 l	圆圈 字母 l
+circle-letter-m		圆圈 字母 m	圆圈 字母 m
+circle-letter-n		圆圈 字母 n	圆圈 字母 n
+circle-letter-o		圆圈 字母 o	圆圈 字母 o
+circle-letter-p		圆圈 字母 p	圆圈 字母 p
+circle-letter-q		圆圈 字母 q	圆圈 字母 q
+circle-letter-r		圆圈 字母 r	圆圈 字母 r
+circle-letter-s		圆圈 字母 s	圆圈 字母 s
+circle-letter-t		圆圈 字母 t	圆圈 字母 t
+circle-letter-u		圆圈 字母 u	圆圈 字母 u
+circle-letter-v		圆圈 字母 v	圆圈 字母 v
+circle-letter-w		圆圈 字母 w	圆圈 字母 w
+circle-letter-x		圆圈 字母 x	圆圈 字母 x
+circle-letter-y		圆圈 字母 y	圆圈 字母 y
+circle-letter-z		圆圈 字母 z	圆圈 字母 z
+circle-number-0		圆圈 数字 0	圆圈 数字 0
+circle-number-1		圆圈 数字 1	圆圈 数字 1
+circle-number-2		圆圈 数字 2	圆圈 数字 2
+circle-number-3		圆圈 数字 3	圆圈 数字 3
+circle-number-4		圆圈 数字 4	圆圈 数字 4
+circle-number-5		圆圈 数字 5	圆圈 数字 5
+circle-number-6		圆圈 数字 6	圆圈 数字 6
+circle-number-7		圆圈 数字 7	圆圈 数字 7
+circle-number-8		圆圈 数字 8	圆圈 数字 8
+circle-number-9		圆圈 数字 9	圆圈 数字 9
 circle-percentage		圆圈 百分比	圆圈 百分比
 circle		圆圈	圆圈
+clipboard-check		夹板 对勾	夹板 对勾
+clipboard-data		夹板 数据	夹板 数据
+clipboard-plus		夹板 加号	夹板 加号
+clipboard-text		夹板 文本	夹板 文本
+clipboard-x		夹板 x	夹板 x
 clipboard	📋	剪贴板	写字夹板|写字板|剪贴板|剪贴簿|夹子|待办事项|待办表|纸张
 clock-hour-1		时钟 小时 1	时钟 小时 1
 clock-hour-10		时钟 小时 10	时钟 小时 10
@@ -101,6 +202,8 @@ cloud-computing		云计算	云计算
 cloud	☁	云	云|云彩|云朵|天气|阴
 clover	🍀	四叶草	四叶草|幸运|爱尔兰的
 clubs	♣	梅花	扑克|梅花|梅花花色|牌|草花
+code-circle-2		代码 圆圈 2	代码 圆圈 2
+code-circle		代码 圆圈	代码 圆圈
 coin-bitcoin		硬币 比特币	硬币 比特币
 coin-euro		硬币 欧元	硬币 欧元
 coin-monero		硬币 门罗币	硬币 门罗币
@@ -114,12 +217,21 @@ compass	🧭	指南针	定向|导航|指南针|方向|磁性|罗盘
 cone-2		锥 2	锥 2
 cone		锥	锥
 confetti	🎊 🎉	五彩纸屑球	五彩纸屑|五彩纸屑球|兴奋|呱呱叫|庆祝|彩带|彩色纸屑|拉炮|拉炮彩带|派对|派对礼宾花|球|生日|舞会
+cookie-man		饼干 男人	饼干 男人
 cookie	🍪	饼干	巧克力片|曲奇|曲奇饼|甜点|饼干
 copyleft		著佐权	著佐权
 copyright	©	版权	版权
 credit-card	💳	信用卡	信用|信用卡|借记卡|刷卡|卡|收钱|现金|现金卡|贷记卡|银行|银行卡
+crop-1-1		裁剪 1 1	裁剪 1 1
+crop-16-9		裁剪 16 9	裁剪 16 9
+crop-3-2		裁剪 3 2	裁剪 3 2
+crop-5-4		裁剪 5 4	裁剪 5 4
+crop-7-5		裁剪 7 5	裁剪 7 5
+crop-landscape		裁剪 横向	裁剪 横向
+crop-portrait		裁剪 纵向	裁剪 纵向
 cross	✝	十字架	十字架|基督|天主教|宗教
 crown	👑	皇冠	国王|权力的游戏|王冠|王后|皇冠|皇家
+database		数据库	数据库
 device-cctv		设备 监控摄像头	设备 监控摄像头
 device-desktop	🖥	台式电脑	PC|个人电脑|台式|台式电脑|显示器|显示屏|电脑|计算机
 device-floppy	💾	软盘	3.5英寸|便携|存储|电脑|磁盘|软盘
@@ -127,12 +239,15 @@ device-gamepad-2		设备 游戏手柄 2	设备 游戏手柄 2
 device-gamepad-3		设备 游戏手柄 3	设备 游戏手柄 3
 device-gamepad	🎮	游戏手柄	手柄|游戏|游戏手柄|游戏控制器|电子游戏
 device-heart-monitor		心脏监护仪	心脏监护仪
+device-imac		设备 imac	设备 imac
+device-ipad		设备 ipad	设备 ipad
 device-mobile	📱	手机	手提电话|手机|智能手机|电话|移动|移动电话|移动通信|通信
 device-remote		设备 遥控器	设备 遥控器
 device-speaker	🔊	高音量的扬声器	大声|大音量|扬声器|音量|高音量|高音量的扬声器
 device-tablet		设备 平板	设备 平板
 device-tv-old		老式电视机	老式电视机
 device-tv	📺	电视机	电视|电视机|看电视|节目|视频
+device-unknown		设备 未知	设备 未知
 device-usb		设备 USB	设备 USB
 device-watch	⌚	手表	手表|时间|表
 diamond	💎	宝石	婚礼|宝石|珠宝|订婚|钻石
@@ -144,8 +259,10 @@ dice-4		骰子 4	骰子 4
 dice-5		骰子 5	骰子 5
 dice-6		骰子 6	骰子 6
 dice	🎲	骰子	掷骰子|色子|骰子|骰子游戏
+directions		路线指引	路线指引
 disc	💿	光盘	cd|专辑|光盘|存储|影片|蓝光|音乐
 discount		折扣	折扣
+download		下载	下载
 drop-circle		水滴 圆圈	水滴 圆圈
 droplet	💧	水滴	冷|天气|水|水滴|泪|眼泪
 droplets		水滴	水滴
@@ -164,19 +281,25 @@ eye	👁	眼睛	单眼|看|眼|眼睛|身体
 eyeglass-2		眼镜 2	眼镜 2
 eyeglass	👓	眼镜	服饰|眼睛|眼镜
 face-mask	😷	感冒	医生|口罩|感冒|戴口罩|戴口罩的脸|生病|病菌|脸
+favicon		网站图标	网站图标
 feather	🪶	羽毛	羽毛|轻|飞|鸟
 fence		栅栏	栅栏
 ferry	⛴	渡轮	旅客|渡船|渡轮|轮船
 fidget-spinner		指尖陀螺	指尖陀螺
+file-check		文件 对勾	文件 对勾
+file-code		文件 代码	文件 代码
 file-description		文件 说明	文件 说明
 file-dollar		文件 美元	文件 美元
 file-euro		文件 欧元	文件 欧元
 file-horizontal		文件 水平	文件 水平
 file-invoice		文件 发票	文件 发票
 file-music		文件 音乐	文件 音乐
-file-pencil		文件 铅笔	文件 铅笔
+file-neutral		文件 中性	文件 中性
+file-sad		文件 悲伤	文件 悲伤
+file-smile		文件 微笑	文件 微笑
 file-star		文件 星星	文件 星星
 file-text		文件 文本	文件 文本
+file-time		文件 时间	文件 时间
 file		文件	文件
 files		文件	文件
 fish-bone		鱼骨	鱼骨
@@ -218,10 +341,7 @@ home-2		家 2	家 2
 home	🏠 🏡	房子	乡村家园|住家|别墅|家|庭院|庭院居家|建筑|心之所在|房子|房屋|花园|郊区
 hospital-circle	🏥	医院	医生|医药|医院|建筑|看病
 hourglass	⌛ ⏳	沙漏	时间|沙|沙正往下流的沙漏|沙漏|等待|计时|计时器
-ironing-1		熨烫 1	熨烫 1
-ironing-2		熨烫 2	熨烫 2
-ironing-3		熨烫 3	熨烫 3
-ironing-steam		熨烫 蒸汽	熨烫 蒸汽
+icons		图标	图标
 ironing		熨烫	熨烫
 jetpack		喷气背包	喷气背包
 jewish-star	✡	六芒星	六芒星|六角星|大卫之星|大卫星|宗教|犹太|犹太教
@@ -230,9 +350,11 @@ keyboard	⌨	键盘	打字|按键|电脑|输入|键盘
 label-important		标签 重要	标签 重要
 label	🏷	标签	吊牌|标签|标记|行李牌
 leaf		叶子	叶子
+lego		lego	lego
 lemon-2		柠檬 2	柠檬 2
 library		图书馆	图书馆
 lifebuoy		救生圈	救生圈
+link	🔗	链接	网址|链接|链条|锁链
 location		位置	位置
 lock-square-rounded		锁 正方形 圆角	锁 正方形 圆角
 lock	🔒 🔐	合上的锁	上锁|合上的锁|安全|私密|脚踏车锁|钥匙|钥匙和锁|锁|锁上|锁住|锁头|锁定
@@ -250,9 +372,12 @@ melon	🍈	甜瓜	哈密瓜|水果|甜瓜|蜜瓜|香瓜
 message-2		消息 2	消息 2
 message-chatbot		消息 聊天机器人	消息 聊天机器人
 message-circle		消息 圆圈	消息 圆圈
+message-report		消息 报告	消息 报告
 message		消息	消息
 messages		消息	消息
 meteor	☄	彗星	太空|彗星
+michelin-star		michelin 星星	michelin 星星
+mickey		mickey	mickey
 microphone	🎤	麦克风	k歌|卡拉OK|卡拉ok|唱K|唱歌|麦|麦克|麦克风
 microscope	🔬	显微镜	实验|实验室|工具|显微镜|生物|科学|细胞
 microwave		微波炉	微波炉
@@ -278,6 +403,7 @@ nurse		护士	护士
 octagon		八边形	八边形
 oval-vertical		椭圆 垂直	椭圆 垂直
 oval		椭圆	椭圆
+pacman		pacman	pacman
 paint		油漆	油漆
 palette	🎨	调色盘	创意|博物馆|多种色彩|娱乐|画家|画画|绘画|艺术|调色板|调色盘
 parking-circle		停车场 圆圈	停车场 圆圈
@@ -299,12 +425,28 @@ plane-arrival	🛬	航班降落	到达|着陆|航班|航班降落|降落|飞机
 plane-departure	🛫	航班起飞	值机|出境|报到|登机|离境|航班|航班起飞|起飞|飞机
 plane-tilt		纸飞机 倾斜	纸飞机 倾斜
 plane	✈	飞机	喷气机|旅行|飞机|飞行
+play-card-1		游戏 卡片 1	游戏 卡片 1
+play-card-10		游戏 卡片 10	游戏 卡片 10
+play-card-2		游戏 卡片 2	游戏 卡片 2
+play-card-3		游戏 卡片 3	游戏 卡片 3
+play-card-4		游戏 卡片 4	游戏 卡片 4
+play-card-5		游戏 卡片 5	游戏 卡片 5
+play-card-6		游戏 卡片 6	游戏 卡片 6
+play-card-7		游戏 卡片 7	游戏 卡片 7
+play-card-8		游戏 卡片 8	游戏 卡片 8
+play-card-9		游戏 卡片 9	游戏 卡片 9
+play-card-a		游戏 卡片 a	游戏 卡片 a
+play-card-j		游戏 卡片 j	游戏 卡片 j
+play-card-k		游戏 卡片 k	游戏 卡片 k
+play-card-q		游戏 卡片 q	游戏 卡片 q
 play-card-star		带星星的扑克牌	带星星的扑克牌
 play-card	🃏	大小王	大小王|大王|小丑|小王|扑克|扑克小丑|牌|百搭牌|鬼牌
 polaroid		即时照片	即时照片
 poo	💩	大便	大便|好臭|屎|怪物|粑粑|脸|臭
+presentation-analytics		演示 分析	演示 分析
 presentation		演示	演示
 puzzle	🧩	拼图	图片|拼图|智力游戏|相扣|线索|联锁|部件
+quote		引语	引语
 radar		雷达	雷达
 radioactive	☢	辐射	放射性|标识|辐射
 receipt-dollar		收据 美元	收据 美元
@@ -319,6 +461,7 @@ rectangle		矩形	矩形
 registered	®	注册	注册|注册标记
 report-money		报告 钱	报告 钱
 rollercoaster		过山车	过山车
+rosette-discount-check		玫瑰花结 折扣 对勾	玫瑰花结 折扣 对勾
 rosette-discount		玫瑰花结 折扣	玫瑰花结 折扣
 rosette	🏵	圆形花饰	光荣花|圆形花饰|植物|花|花圈
 salad		沙拉	沙拉
@@ -327,6 +470,9 @@ scale	⚖	天平	公平|公正|天平|天秤|天秤座|星座|正义|法律
 school	🏫	学校	学校|建筑|教学楼
 scuba-diving-tank		潜水气瓶	潜水气瓶
 seedling	🌱	幼苗	发芽|幼苗|芽|苗
+send		发送	发送
+settings		设置	设置
+shield-check		盾牌 对勾	盾牌 对勾
 shield-checkered		盾牌 格子	盾牌 格子
 shield-half		盾牌 半	盾牌 半
 shield-lock		盾牌 锁	盾牌 锁
@@ -337,12 +483,55 @@ sign-left		标志 左	标志 左
 sign-right		标志 右	标志 右
 soup		汤	汤
 spade	♠	黑桃	扑克|牌|葵扇|黑桃|黑桃花色
+sparkles-2		闪光 2	闪光 2
 sparkles	✨	闪亮	星星|火花|闪亮|闪光|闪耀
 speedboat	🚤	快艇	亿万富翁|快艇|船|豪华游艇
 spider	🕷	蜘蛛	昆虫|蜘蛛
+square-letter-q		正方形 字母 q	正方形 字母 q
 square-rotated		正方形 旋转	正方形 旋转
+square-rounded-check		正方形 圆角 对勾	正方形 圆角 对勾
+square-rounded-letter-a		正方形 圆角 字母 a	正方形 圆角 字母 a
+square-rounded-letter-b		正方形 圆角 字母 b	正方形 圆角 字母 b
+square-rounded-letter-c		正方形 圆角 字母 c	正方形 圆角 字母 c
+square-rounded-letter-d		正方形 圆角 字母 d	正方形 圆角 字母 d
+square-rounded-letter-e		正方形 圆角 字母 e	正方形 圆角 字母 e
+square-rounded-letter-f		正方形 圆角 字母 f	正方形 圆角 字母 f
+square-rounded-letter-g		正方形 圆角 字母 g	正方形 圆角 字母 g
+square-rounded-letter-h		正方形 圆角 字母 h	正方形 圆角 字母 h
+square-rounded-letter-i		正方形 圆角 字母 i	正方形 圆角 字母 i
+square-rounded-letter-j		正方形 圆角 字母 j	正方形 圆角 字母 j
+square-rounded-letter-k		正方形 圆角 字母 k	正方形 圆角 字母 k
+square-rounded-letter-l		正方形 圆角 字母 l	正方形 圆角 字母 l
+square-rounded-letter-m		正方形 圆角 字母 m	正方形 圆角 字母 m
+square-rounded-letter-n		正方形 圆角 字母 n	正方形 圆角 字母 n
+square-rounded-letter-o		正方形 圆角 字母 o	正方形 圆角 字母 o
+square-rounded-letter-p		正方形 圆角 字母 p	正方形 圆角 字母 p
+square-rounded-letter-q		正方形 圆角 字母 q	正方形 圆角 字母 q
+square-rounded-letter-r		正方形 圆角 字母 r	正方形 圆角 字母 r
+square-rounded-letter-s		正方形 圆角 字母 s	正方形 圆角 字母 s
+square-rounded-letter-t		正方形 圆角 字母 t	正方形 圆角 字母 t
+square-rounded-letter-u		正方形 圆角 字母 u	正方形 圆角 字母 u
+square-rounded-letter-v		正方形 圆角 字母 v	正方形 圆角 字母 v
+square-rounded-letter-w		正方形 圆角 字母 w	正方形 圆角 字母 w
+square-rounded-letter-x		正方形 圆角 字母 x	正方形 圆角 字母 x
+square-rounded-letter-y		正方形 圆角 字母 y	正方形 圆角 字母 y
+square-rounded-letter-z		正方形 圆角 字母 z	正方形 圆角 字母 z
+square-rounded-minus		正方形 圆角 减号	正方形 圆角 减号
+square-rounded-number-0		正方形 圆角 数字 0	正方形 圆角 数字 0
+square-rounded-number-1		正方形 圆角 数字 1	正方形 圆角 数字 1
+square-rounded-number-2		正方形 圆角 数字 2	正方形 圆角 数字 2
+square-rounded-number-3		正方形 圆角 数字 3	正方形 圆角 数字 3
+square-rounded-number-4		正方形 圆角 数字 4	正方形 圆角 数字 4
+square-rounded-number-5		正方形 圆角 数字 5	正方形 圆角 数字 5
+square-rounded-number-6		正方形 圆角 数字 6	正方形 圆角 数字 6
+square-rounded-number-7		正方形 圆角 数字 7	正方形 圆角 数字 7
+square-rounded-number-8		正方形 圆角 数字 8	正方形 圆角 数字 8
+square-rounded-number-9		正方形 圆角 数字 9	正方形 圆角 数字 9
+square-rounded-plus		正方形 圆角 加号	正方形 圆角 加号
+square-rounded-x		正方形 圆角 x	正方形 圆角 x
 square-rounded		正方形 圆角	正方形 圆角
 square		正方形	正方形
+stack-2		堆叠 2	堆叠 2
 star-half		星星 半	星星 半
 star	⭐	星星	五角星|星星|白色星星
 stars		星星	星星
@@ -362,8 +551,10 @@ thumb-up	👍	拇指向上	同意|好|手|拇指|拇指向上|真棒|赞|赞成|
 ticket	🎫	票	入场券|电影票|票|票根|车票|门票
 tools-kitchen-2	🍴	刀叉	中餐|刀|刀叉|午餐|叉|吃|吃早餐|吃饭|好吃|早餐|晚餐|烹调|西餐|餐具|饿了
 train	🚆	火车	到站|呜呜|火车|铁路
+trash-x		垃圾桶 x	垃圾桶 x
 trash		垃圾桶	垃圾桶
 triangle-inverted		三角形 倒置	三角形 倒置
+triangle-square-circle		三角形 正方形 圆圈	三角形 正方形 圆圈
 triangle		三角形	三角形
 trolley		手推车	手推车
 trophy	🏆	奖杯	冠军|奖励|奖品|奖杯|奖赏|胜利|获胜
@@ -378,5 +569,10 @@ woman	👩	女人	女|女人|淑女|金发
 world	🗺	世界地图	世界|世界地图|地图
 writing-sign		书写 标志	书写 标志
 writing	✍	写字	写|写字|手|笔
+x		x	x
 yin-yang	☯	阴阳	太极|宗教|道|道教|阳|阴|阴阳
 zeppelin		齐柏林飞艇	齐柏林飞艇
+zoom-cancel		缩放 取消	缩放 取消
+zoom-check		缩放 对勾	缩放 对勾
+zoom-exclamation		缩放 感叹号	缩放 感叹号
+zoom		缩放	缩放

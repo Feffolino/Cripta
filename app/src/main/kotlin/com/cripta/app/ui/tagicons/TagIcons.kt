@@ -90,12 +90,12 @@ object TagIcons {
                 ?: return null
             for (line in aliases.trimEnd('\n').lineSequence()) {
                 val fields = line.split('\t')
-                if (fields.size !in 2..3 || !namePattern.matches(fields[0]) || fields[1] !in paths ||
+                if (fields.size !in 2..3 || !namePattern.matches(fields[0]) || !namePattern.matches(fields[1]) ||
                     legacy.put(fields[0], fields[1]) != null
                 ) return null
-                fields.getOrNull(2)?.let { emojis.putIfAbsent(emojiKey(it), fields[1]) }
+                if (fields[1] in paths) fields.getOrNull(2)?.let { emojis.putIfAbsent(emojiKey(it), fields[1]) }
             }
-            return if (legacy.isEmpty()) null else Catalog(paths, legacy, emojis)
+            return if (legacy.isEmpty()) null else Catalog(paths, legacy.filterValues { it in paths }, emojis)
         } catch (_: IOException) {
             return null
         }
@@ -230,7 +230,9 @@ object TagIcons {
         query.maxOfOrNull { word ->
             when {
                 word in words -> exact
-                substring && cjk.containsMatchIn(word) && words.any { word in it } -> exact - 10
+                substring && cjk.containsMatchIn(word) && words.any {
+                    word in it || (it.length >= 2 && cjk.containsMatchIn(it) && it in word)
+                } -> exact - 10
                 word.length >= 3 && words.any { it.startsWith(word) } -> exact - 25
                 else -> 0
             }

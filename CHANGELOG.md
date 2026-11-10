@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-10
 
+- Apply the manually selected Tabler Filled catalog to tags and folders, and search for icons by folder name
 - Use Tabler Filled for tag and folder icons, with search in all twelve app languages
 - Improve sort sheet contrast and labels, and enlarge the People favourite target `d9c5d88`
 - Test saved viewer settings and the order of hidden favourites `e74e128`

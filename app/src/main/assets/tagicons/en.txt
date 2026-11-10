@@ -2,16 +2,37 @@ accessible	♿	wheelchair symbol	a11y|access|accessibility|accessible|ada|barrie
 aerial-lift	🚡	aerial tramway	aerial|cable|cable-car|cableway|car|chairlift|gondola|lift|mountain|ropeway|ski|ski-lift|tramway|transport
 air-balloon		air balloon	adventure|air|balloon|flight|fly|hot-air-balloon|sky|tourism|travel|trip
 alarm	⏰	alarm clock	alarm|alarm-clock|clock|hours|hrs|late|morning|reminder|ring|time|timer|waiting|wake-up
+alert-circle		alert circle	alert|attention|caution|circle|danger|error|exclamation|info|notice|round|warning
 alert-triangle		alert triangle	alert|attention|caution|danger|error|exclamation|hazard|notice|risk|triangle|warning
 alien	👽	alien	alien|creature|et|extraterrestrial|face|fairy|fairytale|fantasy|martian|monster|outer-space|sci-fi|space|tale|ufo
 apple	🍎	red apple	apple|diet|food|fresh|fruit|health|healthy|nutrition|red|ripe|snack|vegetarian
 archive		archive	archive|archived|backup|box|files|records|save|storage|storage-box
+arrow-badge-down		arrow badge down	arrow|arrowhead|badge|bottom|caret|chevron|direction|down|downward|rank|south
+arrow-badge-left		arrow badge left	arrow|arrowhead|back|badge|caret|chevron|direction|left|previous|rank|west
+arrow-badge-right		arrow badge right	arrow|arrowhead|badge|caret|chevron|direction|east|forward|next|rank|right
+arrow-badge-up		arrow badge up	arrow|arrowhead|badge|caret|chevron|direction|north|rank|top|upward
+arrow-big-down		arrow big down	arrow|big|bold|bottom|direction|down|download|downvote|downward|large|south|thick
+arrow-big-left		arrow big left	arrow|back|big|bold|direction|large|left|pointer|previous|thick|west
+arrow-big-right		arrow big right	arrow|big|bold|direction|east|forward|large|next|pointer|right|thick
+arrow-big-up		arrow big up	arrow|big|bold|direction|large|north|shift|thick|top|upvote|upward
 artboard		artboard	art-board|artboard|canvas|design|drawing|frame|graphics|layout|workspace
 article		article	article|blog|content|document|news|newspaper|page|post|story|text
+asset		asset	asset|assets|component|library|module|network|node|resource
 atom-2		atom 2	atom|chemistry|electron|laboratory|molecule|nuclear|physics|react|science
 automatic-gearbox		automatic gearbox	automotive|car|car-transmission|drive|gear-shift|gear-shifter|shifter|stick|transmission|vehicle
 award	🏅	sports medal	achievement|award|badge|certificate|gold|medal|prize|reward|ribbon|sports|winner
 baby-carriage		baby carriage	baby|buggy|carriage|child|child-care|family|infant|newborn|pram|pushchair|stroller
+badge-3d		badge 3d	3d|3d-movie|badge|cinema|glasses|label|movie|stereoscopic|three-dimensional|video
+badge-4k		badge 4k	4k|badge|display|quality|resolution|screen|uhd|ultra-hd|video
+badge-8k		badge 8k	8k|badge|display|hd|label|quality|resolution|screen|tag|uhd|video|video-quality
+badge-ad		badge ad	ad|ads|advertisement|badge|label|marketing|promoted|promotion|sponsored|tag
+badge-ar		badge ar	3d|ar|ar-badge|augmented-reality|badge|label|mixed-reality|tag|technology|virtual
+badge-cc		badge cc	accessibility|badge|captions|cc|closed-captions|label|subtitles|subtitles-on|transcript|video
+badge-hd		badge hd	1080p|720p|badge|display|hd|high-definition|quality|resolution|screen|video
+badge-sd		badge sd	480p|badge|display|low-quality|quality|resolution|screen|sd|standard-definition|video
+badge-tm		badge tm	badge|brand|copyright|label|legal|registered|symbol|tag|tm|trademark|trademark-symbol
+badge-vo		badge vo	audio|badge|dubbing|label|narration|narrator|video|vo|voice-over|voiceover
+badge-vr		badge vr	3d|badge|headset|label|tag|technology|virtual|virtual-reality|vr|vr-badge|vr-headset
 badge		badge	army|badge|chevron|insignia|label|military|rank|rank-insignia|tag
 badges		badges	badge|badges|chevron|insignia|label|military|multiple|rank|ranks|tag
 ball-bowling	🎳	bowling	athletics|ball|bowling|game|match|play|sport|sports|strike|team-sport|ten-pin
@@ -19,8 +40,11 @@ balloon	🎈	balloon	balloon|balloons|birthday|celebrate|celebration|decoration|
 ballpen	🖊	pen	ballpen|ballpoint|edit|pen|sign|signature|stationery|write|writing
 bandage	🩹	adhesive bandage	adhesive|band-aid|bandage|bandaid|first-aid|injury|medical|plaster|wound
 barbell		barbell	barbell|dumbbell|exercise|fitness|gym|training|weightlifting|weights|workout
+barrier-block		barrier block	barrier|block|blocked|construction|obstacle|road-closed|roadblock|roadblock-sign|roadwork|under-construction
 basket	🧺	basket	basket|buy|cart|checkout|ecommerce|farming|laundry|picnic|shop|shopping|shopping-basket|store
 bath		bath	bath|bathing|bathroom|bathtub|hotel|relax|shower|spa|tub|wash
+battery-automotive		battery automotive	12v|accumulator|automotive|battery|car-battery|car-maintenance|electric|power|vehicle
+battery-vertical-1		battery vertical 1	battery|charge|energy|level|low|mobile|phone|power|vertical
 bed-flat		bed flat	accommodation|bedroom|furniture|hotel|lie-down|night|rest|sleep
 bed	🛏	bed	accommodation|bed|bedroom|furniture|hotel|night|rest|sleep
 beer	🍺 🍻	beer mug	alcohol|ale|bar|beer|booze|bottoms|brewery|cheers|clink|clinking|clinking beer mugs|drink|drinking|drinks|mug|mugs|octoberfest|oktoberfest|pint|pub|stein|summer
@@ -28,10 +52,14 @@ bell-ringing-2		bell ringing 2	active|alarm|alert|bell|new-notification|notifica
 bell-ringing		bell ringing	active|alarm|alert|bell|new-notification|notification|notify|reminder|ring|ringing
 bell	🔔	bell	alarm|alert|bell|break|church|inbox|notification|notifications|notify|reminder|ring|sound|subscribe
 bike	🚲	bicycle	bicycle|bike|bike-lane|class|cycle|cycling|cyclist|gang|mountain-bike|ride|spin|spinning|transport|vehicle
+binoculars		binoculars	binoculars|explore|find|search|sightseeing|spy|view|watch|zoom
 biohazard	☣	biohazard	biohazard|biological|contamination|danger|hazard|sign|toxic|virus|warning
 blade		blade	barber|beard|blade|cut|grooming|razor|razor-blade|sharp|shave|shaving
 blender		blender	appliance|cooking|food-processor|juice|kitchen|kitchen-appliance|mixer|smoothie
+bolt	⚡	high voltage	bolt|danger|electric|electricity|energy|fast|flash|high|lightning|nature|power|thunder|thunderbolt|voltage|zap
+bomb	💣	bomb	blast|bomb|boom|boom-explosion|comic|danger|dangerous|dynamite|explosion|explosive|grenade|hot|mine
 bone	🦴	bone	anatomy|bone|bones|broken-bone|dog|dog-bone|fracture|medical|orthopedic|pet|skeleton|wishbone
+bong		bong	420|bong|cannabis|drugs|marijuana|pipe|smoke|smoking|weed
 book	📕	closed book	book|closed|ebook|education|library|literature|novel|read|reading|study
 bookmark	🔖	bookmark	bookmark|bookmarks|favorite|mark|marker|read-later|ribbon|save|saved|tag
 bookmarks		bookmarks	bookmarks|collection|favorite|marker|multiple|read-later|save|saved|saved-items|tag
@@ -40,9 +68,39 @@ bow		bow	archer|archery|arrow|bow|bow-and-arrow|hunting|longbow|target|weapon
 bowl-chopsticks	🥢	chopsticks	asian|chopsticks|food|hashi|jeotgarak|kuaizi|meal|noodles|ramen|restaurant|rice
 bowl-spoon	🥣	bowl with spoon	bowl|breakfast|cereal|cereal-bowl|congee|food|meal|oatmeal|porridge|soup|soup-bowl|spoon
 bowl		bowl	bowl|cereal|dinner|dish|food|kitchen|meal|salad-bowl|soup
+brand-apple		brand apple	apple|brand|company|ios|ipad|iphone|logo|mac|macos|tech
+brand-discord		brand discord	brand|chat|community|discord|gaming|logo|messaging|server|voice
+brand-dribbble		brand dribbble	brand|community|design|designer|dribbble|logo|portfolio|shots|showcase
+brand-facebook		brand facebook	brand|community|facebook|fb|logo|meta|social|social-media|social-network
+brand-github		brand github	brand|code|developer|git|github|hosting|logo|microsoft|octocat|repository|version-control
+brand-google		brand google	alphabet|brand|google|internet|logo|search|search-engine|web
+brand-instagram		brand instagram	brand|ig|instagram|logo|meta|photos|reels|social|social-media|stories
+brand-kick		brand kick	brand|kick|live-streaming|logo|streamer|streaming|twitch-alternative|video
+brand-linkedin		brand linkedin	brand|business|career|jobs|linkedin|logo|microsoft|network|professional|social
+brand-messenger		brand messenger	brand|chat|facebook-messenger|logo|message|messaging|messenger|meta
+brand-open-source		brand open source	brand|code|community|free-software|license|logo|open|open-source|osi|oss|source
+brand-opera		brand opera	brand|browser|internet|logo|norway|opera|opera-gx|web
+brand-paypal		brand paypal	brand|checkout|finance|logo|money|online-payment|payment|paypal|transfer
+brand-pinterest		brand pinterest	boards|brand|images|inspiration|logo|pins|pinterest|social
+brand-signal		brand signal	brand|chat|encrypted|logo|messaging|messenger|private|secure|signal
+brand-sketch		brand sketch	brand|design|editor|logo|mac|prototyping|sketch|ui|vector
+brand-snapchat		brand snapchat	brand|ghost|logo|messaging|photos|snap|snapchat|social|stories
+brand-spotify		brand spotify	audio|brand|logo|music|playlist|podcast|songs|spotify|streaming
+brand-steam		brand steam	brand|games|gaming|logo|pc|steam|store|valve|video-game
+brand-tabler		brand tabler	brand|dashboard|icons|logo|open-source|tabler|tabler-icons|ui
+brand-tiktok		brand tiktok	brand|bytedance|logo|music|short-video|social|social-media|tiktok|video
+brand-tinder		brand tinder	app|brand|dating|flame|logo|love|match|swipe|tinder
+brand-tumblr		brand tumblr	blog|blogging|brand|logo|microblog|posts|social|social-media|tumblr
+brand-twitter		brand twitter	bird|brand|logo|microblog|social|social-media|tweet|twitter|x
+brand-vimeo		brand vimeo	brand|creators|hosting|logo|player|streaming|video|videos|vimeo
+brand-whatsapp		brand whatsapp	brand|chat|logo|message|messaging|messenger|meta|phone|whatsapp
+brand-windows		brand windows	brand|desktop|logo|microsoft|operating-system|os|pc|windows
+brand-x		brand x	brand|logo|microblog|social|social-media|tweet|twitter|x
+brand-youtube		brand youtube	brand|channel|google|logo|play|player|streaming|video|youtube|youtuber
 bread	🍞	bread	baguette|bakery|bread|breakfast|carbs|food|grain|loaf|restaurant|sandwich|toast|wheat
 briefcase-2		briefcase 2	bag|briefcase|business|career|job|office|portfolio|suitcase|work
 briefcase	💼	briefcase	bag|briefcase|business|career|job|office|portfolio|suitcase|work
+bubble-text		bubble text	bubble|chat|comment|conversation|dialog|lines|message|reply|speech-bubble|talk|text
 bubble		bubble	balloon|bubble|chat|comment|conversation|dialog|message|reply|speech-bubble|talk|thought
 bug	🐛	bug	animal|beetle|bug|debug|defect|error|fix|garden|insect|issue|problem|software
 building-bridge-2		building bridge 2	architecture|bridge|building|construction|crossing|infrastructure|landmark|overpass|river|road
@@ -69,7 +127,9 @@ car	🚗	automobile	auto|automobile|car|drive|driving|sedan|transport|travel|veh
 carambola		carambola	carambola|exotic|food|fruit|healthy|star-fruit|starfruit|tropical|vitamin
 caravan		caravan	camper|camping|caravan|rv|trailer|travel|vacation|vehicle
 cardboards		cardboards	cardboard|cardboards|glasses|goggles|google-cardboard|headset|metaverse|virtual-reality|vr
+cards		cards	card-game|cards|casino|deck|gambling|game|playing-cards|poker
 cash-banknote		cash banknote	banknote|bill|cash|currency|dollar|finance|money|note|pay|payment|salary
+charging-pile		charging pile	charger|charging|charging-station|electric-car|electricity|ev|ev-charger|pile|plug
 check		check	approve|check|checkmark|complete|confirm|correct|done|ok|success|tick|yes
 chef-hat		chef hat	chef|cook|cooking|cuisine|culinary|food|hat|kitchen|recipe|restaurant|toque
 cherry	🍒	cherries	berries|berry|cherries|cherry|dessert|food|fruit|healthy|red|summer|sweet
@@ -81,8 +141,49 @@ chess-rook		chess rook	board-game|castle|chess|chess-piece|game|piece|play|rook|
 chess		chess	board-game|checkmate|chess|chess-pawn|chessboard|game|pawn|piece|play|strategy
 christmas-tree	🎄	Christmas tree	Christmas|celebration|christmas|decoration|evergreen|festive|fir|holiday|new-year|pine|spruce|tree|winter|xmas
 circle-key		circle key	access|auth|circle|key|login|password|round|security|unlock
+circle-letter-a		circle letter a	a|alphabet|badge|character|circle|initial|letter|letter-a|monogram|round|uppercase
+circle-letter-b		circle letter b	alphabet|b|badge|character|circle|initial|letter|letter-b|monogram|round|uppercase
+circle-letter-c		circle letter c	alphabet|badge|c|character|circle|initial|letter|letter-c|monogram|round|uppercase
+circle-letter-d		circle letter d	alphabet|badge|character|circle|d|initial|letter|letter-d|monogram|round|uppercase
+circle-letter-e		circle letter e	alphabet|badge|character|circle|e|initial|letter|letter-e|monogram|round|uppercase
+circle-letter-f		circle letter f	alphabet|badge|character|circle|f|initial|letter|letter-f|monogram|round|uppercase
+circle-letter-g		circle letter g	alphabet|badge|character|circle|g|initial|letter|letter-g|monogram|round|uppercase
+circle-letter-h		circle letter h	alphabet|badge|character|circle|h|initial|letter|letter-h|monogram|round|uppercase
+circle-letter-i		circle letter i	alphabet|badge|character|circle|i|initial|letter|letter-i|monogram|round|uppercase
+circle-letter-j		circle letter j	alphabet|badge|character|circle|initial|j|letter|letter-j|monogram|round|uppercase
+circle-letter-k		circle letter k	alphabet|badge|character|circle|initial|k|letter|letter-k|monogram|round|uppercase
+circle-letter-l		circle letter l	alphabet|badge|character|circle|initial|l|letter|letter-l|monogram|round|uppercase
+circle-letter-m		circle letter m	alphabet|badge|character|circle|initial|letter|letter-m|m|monogram|round|uppercase
+circle-letter-n		circle letter n	alphabet|badge|character|circle|initial|letter|letter-n|monogram|n|round|uppercase
+circle-letter-o		circle letter o	alphabet|badge|character|circle|initial|letter|letter-o|monogram|o|round|uppercase
+circle-letter-p		circle letter p	alphabet|badge|character|circle|initial|letter|letter-p|monogram|p|round|uppercase
+circle-letter-q		circle letter q	alphabet|badge|character|circle|initial|letter|letter-q|monogram|q|round|uppercase
+circle-letter-r		circle letter r	alphabet|badge|character|circle|initial|letter|letter-r|monogram|r|round|uppercase
+circle-letter-s		circle letter s	alphabet|badge|character|circle|initial|letter|letter-s|monogram|round|s|uppercase
+circle-letter-t		circle letter t	alphabet|badge|character|circle|initial|letter|letter-t|monogram|round|t|uppercase
+circle-letter-u		circle letter u	alphabet|badge|character|circle|initial|letter|letter-u|monogram|round|u|uppercase
+circle-letter-v		circle letter v	alphabet|badge|character|circle|initial|letter|letter-v|monogram|round|uppercase|v
+circle-letter-w		circle letter w	alphabet|badge|character|circle|initial|letter|letter-w|monogram|round|uppercase|w
+circle-letter-x		circle letter x	alphabet|badge|character|circle|initial|letter|letter-x|monogram|round|uppercase|x
+circle-letter-y		circle letter y	alphabet|badge|character|circle|initial|letter|letter-y|monogram|round|uppercase|y
+circle-letter-z		circle letter z	alphabet|badge|character|circle|initial|letter|letter-z|monogram|round|uppercase|z
+circle-number-0		circle number 0	0|badge|circle|count|digit|number|numeral|round|step|zero
+circle-number-1		circle number 1	1|badge|circle|count|digit|number|numeral|one|round|step
+circle-number-2		circle number 2	2|badge|circle|count|digit|number|numeral|round|step|two
+circle-number-3		circle number 3	3|badge|circle|count|digit|number|numeral|round|step|three
+circle-number-4		circle number 4	4|badge|circle|count|digit|four|number|numeral|round|step
+circle-number-5		circle number 5	5|badge|circle|count|digit|five|number|numeral|round|step
+circle-number-6		circle number 6	6|badge|circle|count|digit|number|numeral|round|six|step
+circle-number-7		circle number 7	7|badge|circle|count|digit|number|numeral|round|seven|step
+circle-number-8		circle number 8	8|badge|circle|count|digit|eight|number|numeral|round|step
+circle-number-9		circle number 9	9|badge|circle|count|digit|nine|number|numeral|round|step
 circle-percentage		circle percentage	circle|discount|interest|percent|percentage|rate|ratio|round|sale|tax
 circle		circle	circle|dot|ellipse|full-stop|geometry|radio|record|ring|round|shape
+clipboard-check		clipboard check	approved|check|checklist|clipboard|completed|document|done|notes|paste|task|task-done|tick|todo
+clipboard-data		clipboard data	analytics|chart|clipboard|data|document|notes|paste|report|statistics|stats|task
+clipboard-plus		clipboard plus	add|clipboard|create|document|new|notes|paste|plus|task
+clipboard-text		clipboard text	clipboard|content|document|lines|notes|paste|report|task|text
+clipboard-x		clipboard x	cancel|clipboard|close|delete|document|failed|notes|paste|rejected|remove|task|x
 clipboard	📋	clipboard	board|checklist|clipboard|copy|do|document|list|notes|paste|task
 clock-hour-1		clock hour 1	1|1-oclock|clock|clock-face|hour|schedule|time|timer|watch
 clock-hour-10		clock hour 10	10|10-oclock|clock|clock-face|hour|schedule|time|timer|watch
@@ -101,6 +202,8 @@ cloud-computing		cloud computing	cloud|cloud-computing|computing|data-center|hos
 cloud	☁	cloud	cloud|cloud-storage|cloudy|forecast|icloud|internet|online|overcast|server|sync|weather
 clover	🍀	four leaf clover	4|clover|four|four-leaf|ireland|irish|leaf|luck|lucky|plant|shamrock|st-patricks
 clubs	♣	club suit	card|card-suit|cards|casino|club|clubs|gambling|game|playing-cards|poker|suit
+code-circle-2		code circle 2	badge|brackets|circle|code|coding|developer|html|programming
+code-circle		code circle	badge|brackets|circle|code|coding|developer|html|programming
 coin-bitcoin		coin bitcoin	bitcoin|blockchain|btc|cash|change|coin|crypto|cryptocurrency|currency|finance|money|payment
 coin-euro		coin euro	cash|change|coin|currency|eur|euro|europe|finance|money|payment
 coin-monero		coin monero	cash|change|coin|crypto|cryptocurrency|currency|finance|monero|money|payment|privacy|xmr
@@ -114,12 +217,21 @@ compass	🧭	compass	compass|direction|discover|explore|magnetic|navigation|nort
 cone-2		cone 2	3d|cone|geometry|inverted|math|object|shape|solid
 cone		cone	3d|cone|geometry|math|object|shape|solid|traffic-cone
 confetti	🎊 🎉	confetti ball	awesome|ball|birthday|celebrate|celebration|confetti|congratulations|excited|festive|hooray|party|party popper|party-popper|popper|tada|woohoo
+cookie-man		cookie man	bakery|biscuit|christmas|cookie|dessert|gingerbread|gingerbread-man|sweet
 cookie	🍪	cookie	bakery|biscuit|browser-cookies|chip|chocolate|consent|cookie|cookies|dessert|privacy|snack|sweet
 copyleft		copyleft	copyleft|free-software|gpl|legal|license|open-source|rights|symbol
 copyright	©	copyright	C|c-symbol|copyright|intellectual-property|legal|license|rights|symbol|trademark
 credit-card	💳	credit card	bank|bank-card|billing|card|cash|charge|checkout|credit|credit-card|debit-card|mastercard|money|pay|payment|purchase|visa
+crop-1-1		crop 1 1	1-1|1x1|aspect-ratio|crop|edit|frame|image|photo|resize|square|trim
+crop-16-9		crop 16 9	16-9|16x9|aspect-ratio|crop|edit|frame|image|landscape|photo|resize|trim|video|widescreen
+crop-3-2		crop 3 2	3-2|3x2|aspect-ratio|crop|edit|frame|image|photo|resize|trim
+crop-5-4		crop 5 4	5-4|5x4|aspect-ratio|crop|edit|frame|image|photo|resize|trim
+crop-7-5		crop 7 5	7-5|7x5|aspect-ratio|crop|edit|frame|image|photo|resize|trim
+crop-landscape		crop landscape	aspect-ratio|crop|edit|frame|horizontal|image|landscape|photo|resize|trim|wide
+crop-portrait		crop portrait	aspect-ratio|crop|edit|frame|image|photo|portrait|resize|tall|trim|vertical
 cross	✝	latin cross	Christian|christ|christian|christianity|church|cross|crucifix|faith|jesus|latin|prayer|religion
 crown	👑	crown	clothing|crown|family|king|leader|medieval|premium|pro|queen|royal|royalty|vip|win|winner
+database		database	backend|data|database|db|disk|records|server|sql|storage|table
 device-cctv		device cctv	cam|camera|cctv|device|monitoring|security|security-camera|surveillance|video
 device-desktop	🖥	desktop computer	computer|desktop|device|display|imac|monitor|pc|screen|workstation
 device-floppy	💾	floppy disk	computer|device|disk|diskette|file|floppy|floppy-disk|retro|save|storage
@@ -127,12 +239,15 @@ device-gamepad-2		device gamepad 2	console|controller|device|game-controller|gam
 device-gamepad-3		device gamepad 3	console|controller|d-pad|device|game-controller|gamepad|gaming|joystick|play|video-game
 device-gamepad	🎮	video game	console|controller|device|entertainment|game|game-controller|gamepad|gaming|joypad|joystick|play|video|video-game
 device-heart-monitor		device heart monitor	device|ecg|ekg|health|heart|heart-monitor|heart-rate|hospital|medical|monitor|pulse|vital-signs
+device-imac		device imac	all-in-one|apple|computer|desktop|device|imac|mac|monitor|pc|screen
+device-ipad		device ipad	apple|device|ios|ipad|mobile|portrait|tablet|touchscreen
 device-mobile	📱	mobile phone	android|app|cell|cell-phone|cellphone|communication|device|handset|iphone|mobile|mobile-phone|phone|smartphone|telephone
 device-remote		device remote	channel|clicker|controller|device|home|remote|remote-control|television|tv
 device-speaker	🔊	speaker high volume	audio|device|hifi|high|loud|loudspeaker|music|sound|speaker|stereo|subwoofer|volume
 device-tablet		device tablet	android|device|e-reader|ipad|kindle|mobile|portable|tablet|touchscreen
 device-tv-old		device tv old	antenna|broadcast|crt|device|old|old-tv|retro|screen|television|tv|video|vintage
 device-tv	📺	television	device|display|monitor|movie|screen|smart-tv|streaming|television|tv|video
+device-unknown		device unknown	device|hardware|help|missing|question|undefined|unidentified|unknown-device|unrecognized
 device-usb		device usb	connector|flash-drive|memory-stick|pendrive|plug|port|storage|thumb-drive|usb|usb-stick
 device-watch	⌚	watch	apple-watch|clock|device|fitness-tracker|smartwatch|time|watch|wearable|wristwatch
 diamond	💎	gem stone	crystal|diamond|engagement|gem|jewel|jewellery|jewelry|luxury|money|premium|romance|stone|valuable|vip|wedding
@@ -144,8 +259,10 @@ dice-4		dice 4	board-game|chance|dice|die|four|gambling|game|number-4|random|rol
 dice-5		dice 5	board-game|chance|dice|die|five|gambling|game|number-5|random|roll
 dice-6		dice 6	board-game|chance|dice|die|gambling|game|number-6|random|roll|six
 dice	🎲	game die	board-game|casino|chance|dice|die|entertainment|gambling|game|luck|random|roll
+directions		directions	crossroads|directions|guide|map|navigation|route|signpost|travel|way
 disc	💿	optical disk	CD|album|blu-ray|cd|compact-disc|computer|disc|disk|dvd|media|music|optical|vinyl
 discount		discount	coupon|deal|discount|offer|percent|percentage|price-tag|promo|reduction|sale
+download		download	arrow-down|download|fetch|get|import|receive|save|transfer|tray
 drop-circle		drop circle	circle|color|drop|droplet|ink|liquid|oil|rain|water
 droplet	💧	droplet	blood|cold|color|comic|drop|droplet|fill|humidity|ink|liquid|nature|rain|sad|sweat|tear|water|weather
 droplets		droplets	drip|droplets|drops|humidity|liquid|moisture|rain|splash|water|wet
@@ -164,19 +281,25 @@ eye	👁	eye	1|body|eye|one|password-show|preview|see|show|view|visibility|visib
 eyeglass-2		eyeglass 2	eyeglasses|eyewear|glasses|nerd|optician|optics|reading|spectacles|vision
 eyeglass	👓	glasses	clothing|eye|eyeglasses|eyewear|glasses|nerd|optician|optics|reading|spectacles|vision
 face-mask	😷	face with medical mask	cold|coronavirus|covid|dentist|dermatologist|doctor|dr|face|face-mask|germs|hygiene|mask|medical|medicine|pandemic|protection|sick|surgical-mask|virus
+favicon		favicon	bookmark|brand|browser-tab|favicon|icon|site-icon|tab|web|website
 feather	🪶	feather	bird|feather|flight|light|lightweight|plumage|plume|quill|write|writing
 fence		fence	barrier|boundary|enclosure|farm|fence|garden|property|wooden-fence|yard
 ferry	⛴	ferry	boat|cruise|ferry|ocean|passenger|port|sailing|sea|ship|transport|travel
 fidget-spinner		fidget spinner	fidget|fidget-spinner|loader|loading|rotate|spin|spinner|stress-relief|toy
+file-check		file check	approved|check|checkmark|complete|confirmed|document|done|file|file-check|success|tick|verified
+file-code		file code	code|coding|developer|document|file|html|programming|script|source-code
 file-description		file description	article|content|description|details|document|file|lines|notes|page|report|text
 file-dollar		file dollar	cost|currency|doc|document|dollar|file|finance|money|page|paper|payment|price|sheet|usd
 file-euro		file euro	bill|document|eur|euro|file|finance|invoice|money|payment|price|receipt
 file-horizontal		file horizontal	document|file|horizontal|landscape|orientation|page|paper|sheet
 file-invoice		file invoice	accounting|bill|billing|document|file|finance|invoice|order|payment|receipt|statement
 file-music		file music	audio|document|file|media|mp3|music|song|sound|track|wav
-file-pencil		file pencil	compose|document|draft|edit|file|modify|pencil|rename|update|write
+file-neutral		file neutral	document|emotion|face|feedback|file|indifferent|meh|neutral|okay
+file-sad		file sad	document|emotion|error|face|feedback|file|negative|sad|unhappy
+file-smile		file smile	document|emotion|face|feedback|file|happy|joy|positive|smile
 file-star		file star	bookmark|doc|document|favorite|favourite|featured|file|page|paper|rating|sheet|star|starred
 file-text		file text	article|content|doc|document|file|notes|page|paper|text|txt
+file-time		file time	clock|deadline|document|file|history|pending|recent|schedule|time|timestamp
 file		file	blank|doc|document|draft|file|new-file|page|paper|sheet
 files		files	collection|copy|documents|duplicate|files|multiple|pages|papers|stack
 fish-bone		fish bone	bone|bones|cat-food|dead|fish|fish-bone|ishikawa|leftovers|seafood|skeleton
@@ -218,10 +341,7 @@ home-2		home 2	building|dashboard|home|homepage|house|main|real-estate|residence
 home	🏠 🏡	house	building|country|dashboard|garden|heart|home|homepage|house|house with garden|main|ranch|real-estate|residence|settle|simple|start|suburban|suburbia|where
 hospital-circle	🏥	hospital	building|circle|clinic|doctor|emergency|h|health|healthcare|hospital|medical|medicine|sign
 hourglass	⌛ ⏳	hourglass done	countdown|deadline|done|flowing|hourglass|hourglass not done|hours|loading|not|sand|sand-timer|time|timer|wait|waiting|yolo
-ironing-1		ironing 1	care-label|clothes|garment|iron|ironing|laundry|low-heat|low-temperature|one-dot|synthetic|wrinkle
-ironing-2		ironing 2	care-label|clothes|garment|iron|ironing|laundry|medium-heat|medium-temperature|silk|two-dots|wool|wrinkle
-ironing-3		ironing 3	care-label|clothes|cotton|garment|high-heat|high-temperature|iron|ironing|laundry|linen|three-dots|wrinkle
-ironing-steam		ironing steam	care-label|clothes|garment|iron|ironing|laundry|steam|steam-iron|steamer|wrinkle
+icons		icons	assets|design|graphics|icon-set|icons|library|shapes|symbols
 ironing		ironing	care-label|clothes|garment|housework|iron|ironing|laundry|press|steam|wrinkle
 jetpack		jetpack	flight|fly|future|jetpack|rocket|sci-fi|space|transport
 jewish-star	✡	star of David	David|Jew|Jewish|hexagram|israel|jewish|judaism|magen-david|religion|star|star-of-david
@@ -230,9 +350,11 @@ keyboard	⌨	keyboard	computer|device|hardware|input|keyboard|keys|type|typing
 label-important		label important	badge|flag|highlight|important|label|marker|priority|tag
 label	🏷	label	badge|category|label|marker|price-tag|sticker|tag
 leaf		leaf	eco|ecology|environment|green|leaf|nature|organic|plant|vegan
+lego		lego	block|brick|building-block|kids|lego|minifigure|play|toy
 lemon-2		lemon 2	citrus|food|fruit|lemon|lime|sour|vitamin
 library		library	archive|books|bookshelf|collection|knowledge|library|reading|shelf
 lifebuoy		lifebuoy	assistance|help|life-ring|lifebuoy|lifesaver|rescue|safety|support
+link	🔗	link	anchor|attach|chain|connection|href|hyperlink|link|links|url
 location		location	arrow|compass|direction|gps|location|map|navigation|pointer|position
 lock-square-rounded		lock square rounded	lock|locked|padlock|private|protected|rounded|secure|square|square-rounded|squircle
 lock	🔒 🔐	locked	bike|closed|key|lock|locked|locked with key|padlock|password|private|protected|secure|security
@@ -250,9 +372,12 @@ melon	🍈	melon	cantaloupe|food|fruit|healthy|juicy|melon|slice|summer|sweet|wa
 message-2		message 2	chat|comment|communication|conversation|dm|feedback|lines|message|messaging|reply|sms|speech-bubble|text-message
 message-chatbot		message chatbot	ai|assistant|auto-reply|bot|chat|chatbot|customer-service|message|robot|speech-bubble|support|virtual-assistant
 message-circle		message circle	bubble|chat|circle|comment|communication|conversation|dm|message|messaging|reply|round|sms|speech-bubble|whatsapp
+message-report		message report	abuse|chat|comment|complaint|feedback|flag|message|moderation|report|spam|speech-bubble|warning
 message		message	chat|comment|communication|conversation|dm|feedback|inbox|message|messaging|reply|sms|speech-bubble|text-message
 messages		messages	chat|comments|communication|conversation|dialogue|discussion|forum|group-chat|messages|speech-bubbles|thread
 meteor	☄	comet	asteroid|astronomy|comet|cosmos|falling-star|meteor|shooting-star|space
+michelin-star		michelin star	award|chef|fine-dining|gourmet|guide|michelin|rating|restaurant|star
+mickey		mickey	animation|cartoon|character|disney|ears|kids|mickey|mouse
 microphone	🎤	microphone	audio|dictation|input|karaoke|mic|microphone|music|podcast|record|recording|sing|sound|speak|voice
 microscope	🔬	microscope	biology|chemistry|experiment|lab|laboratory|magnify|microbiology|microscope|research|science|tool
 microwave		microwave	appliance|cooking|food|heat|kitchen|microwave|oven|reheat
@@ -278,6 +403,7 @@ nurse		nurse	caregiver|doctor|hat|health|healthcare|hospital|medical|nurse|nurse
 octagon		octagon	8-sides|eight-sided|figure|geometry|octagon|octagonal|outline|polygon|shape|stop-sign
 oval-vertical		oval vertical	egg|ellipse|elliptical|figure|geometry|outline|oval|round|shape|vertical
 oval		oval	egg|ellipse|elliptical|figure|geometry|outline|oval|oval-horizontal|round|shape
+pacman		pacman	arcade|game|ghost|pac-man|pacman|pie-chart|retro|video-game
 paint		paint	brush|color|colour|decorate|paint|paint-roller|painting|roller|wall
 palette	🎨	artist palette	art|artist|artsy|arty|color|colorful|colour|creative|entertainment|museum|paint|painter|painting|palette|palette-colors|swatch|theme
 parking-circle		parking circle	badge|car|p|park|parking|parking-lot|round|sign|vehicle
@@ -299,12 +425,28 @@ plane-arrival	🛬	airplane arrival	aeroplane|aircraft|airplane|airport|arrival|
 plane-departure	🛫	airplane departure	aeroplane|aircraft|airplane|airport|check-in|departure|departures|flight|plane|take-off|takeoff|travel
 plane-tilt		plane tilt	aircraft|airplane|airport|flight|fly|jet|plane|takeoff|tilt|travel
 plane	✈	airplane	aeroplane|aircraft|airplane|airplane-mode|airport|flight|fly|flying|jet|plane|travel|trip
+play-card-1		play card 1	1|ace|card|card-game|cards|casino|deck|one|playing-card|poker
+play-card-10		play card 10	10|card|card-game|cards|casino|deck|number|playing-card|poker|ten
+play-card-2		play card 2	2|card|card-game|cards|casino|deck|number|playing-card|poker|two
+play-card-3		play card 3	3|card|card-game|cards|casino|deck|number|playing-card|poker|three
+play-card-4		play card 4	4|card|card-game|cards|casino|deck|four|number|playing-card|poker
+play-card-5		play card 5	5|card|card-game|cards|casino|deck|five|number|playing-card|poker
+play-card-6		play card 6	6|card|card-game|cards|casino|deck|number|playing-card|poker|six
+play-card-7		play card 7	7|card|card-game|cards|casino|deck|number|playing-card|poker|seven
+play-card-8		play card 8	8|card|card-game|cards|casino|deck|eight|number|playing-card|poker
+play-card-9		play card 9	9|card|card-game|cards|casino|deck|nine|number|playing-card|poker
+play-card-a		play card a	a|ace|blackjack|card|card-game|cards|casino|deck|playing-card|poker
+play-card-j		play card j	card|card-game|cards|casino|deck|face-card|j|jack|playing-card|poker
+play-card-k		play card k	card|card-game|cards|casino|crown|deck|face-card|k|king|playing-card|poker
+play-card-q		play card q	card|card-game|cards|casino|crown|deck|face-card|playing-card|poker|q|queen
 play-card-star		play card star	bonus|card|card-game|casino|deck|joker|playing-card|poker|star|wild-card
 play-card	🃏	joker	card|card-game|cards|casino|clubs|deck|diamonds|game|hearts|joker|playing-card|poker|solitaire|spades|wildcard
 polaroid		polaroid	camera|film|image|instant-camera|instant-photo|memories|photo|picture|polaroid|snapshot
 poo	💩	pile of poo	bs|comic|crap|doo|dung|emoji|face|fml|funny|monster|pile|poo|poop|shit|smelly|smh|stink|stinks|stinky|toilet|turd
+presentation-analytics		presentation analytics	analytics|business|chart|dashboard|graph|meeting|presentation|report|slides|statistics
 presentation		presentation	chart|keynote|lecture|meeting|powerpoint|presentation|presentation-board|screen|slides|slideshow|whiteboard
 puzzle	🧩	puzzle piece	add-on|addon|clue|extension|game|interlocking|jigsaw|piece|plugin|puzzle|solution
+quote		quote	blockquote|citation|cite|punctuation|quotation|quotation-marks|quote|testimonial|text
 radar		radar	detection|gps|locate|radar|scan|search|signal|sonar|tracking
 radioactive	☢	radioactive	atomic|biohazard|danger|hazard|nuclear|radiation|radioactive|reactor|sign|toxic|warning
 receipt-dollar		receipt dollar	bill|currency|dollar|invoice|money|payment|receipt|transaction|usd
@@ -319,6 +461,7 @@ rectangle		rectangle	box|frame|geometry|horizontal|rectangle|shape
 registered	®	registered	R|brand|copyright|legal|r|registered|registered-trademark|symbol|trademark
 report-money		report money	business|finance|financial-report|money|report|results|revenue|sales
 rollercoaster		rollercoaster	amusement-park|attraction|fun|funfair|ride|roller-coaster|rollercoaster|theme-park
+rosette-discount-check		rosette discount check	approved|badge|certified|check|discount|official|tick|verified|verified-badge
 rosette-discount		rosette discount	badge|coupon|deal|discount|discount-badge|offer|percent|promo|rosette|sale
 rosette	🏵	rosette	award|badge|certificate|medal|plant|rosette|seal|verified
 salad		salad	bowl|diet|food|healthy|meal|salad|vegan|vegetables|vegetarian
@@ -327,6 +470,9 @@ scale	⚖	balance scale	Libra|balance|equality|justice|law|legal|libra|scale|sca
 school	🏫	school	academic|building|college|education|graduation|hat|learning|mortarboard|school|student|university
 scuba-diving-tank		scuba diving tank	air-tank|diver|diving|oxygen-tank|scuba|tank|underwater
 seedling	🌱	seedling	eco|garden|grow|growth|nature|plant|sapling|seed|seedling|sprout|young
+send		send	email|mail|message|paper-plane|post|send|submit
+settings		settings	cog|config|configuration|control|gear|options|preferences|settings|setup
+shield-check		shield check	approved|check|guard|protect|protection|safe|safety|secure|secured|security|shield|tick|verified
 shield-checkered		shield checkered	checkered|coat-of-arms|crest|guard|heraldry|knight|protection|security|shield
 shield-half		shield half	guard|half|partial|protection|safety|secure|security|shield
 shield-lock		shield lock	encrypted|guard|lock|locked|password|private|protect|protection|safety|secure|security|shield
@@ -337,12 +483,55 @@ sign-left		sign left	arrow-left|direction|direction-sign|left|road-sign|sign|sig
 sign-right		sign right	arrow-right|direction|direction-sign|east|right|road-sign|sign|signpost
 soup		soup	bowl|food|hot|meal|ramen|soup
 spade	♠	spade suit	card|cards|casino|game|playing-card|poker|spade|spades|suit
+sparkles-2		sparkles 2	ai|glitter|magic|new|shine|sparkles|stars
 sparkles	✨	sparkles	*|ai|clean|glitter|magic|new|shine|sparkle|sparkles|star|stars
 speedboat	🚤	speedboat	billionaire|boat|lake|luxury|millionaire|motorboat|ship|speed|speedboat|summer|travel|water
 spider	🕷	spider	animal|arachnid|bug|cobweb|halloween|insect|spider
+square-letter-q		square letter q	alphabet|box|character|letter|q|square
 square-rotated		square rotated	diamond|geometry|kite|lozenge|quadrilateral|rhombus|rhombus-shape|rotated|shape|square
+square-rounded-check		square rounded check	approved|check|checkbox|checked|checkmark|confirmed|done|rounded|square|squircle|success|tick
+square-rounded-letter-a		square rounded letter a	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-b		square rounded letter b	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-c		square rounded letter c	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-d		square rounded letter d	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-e		square rounded letter e	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-f		square rounded letter f	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-g		square rounded letter g	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-h		square rounded letter h	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-i		square rounded letter i	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-j		square rounded letter j	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-k		square rounded letter k	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-l		square rounded letter l	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-m		square rounded letter m	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-n		square rounded letter n	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-o		square rounded letter o	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-p		square rounded letter p	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-q		square rounded letter q	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-r		square rounded letter r	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-s		square rounded letter s	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-t		square rounded letter t	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-u		square rounded letter u	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-v		square rounded letter v	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-w		square rounded letter w	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-x		square rounded letter x	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-y		square rounded letter y	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-letter-z		square rounded letter z	alphabet|badge|box|character|initial|latin|letter|rounded|square|squircle
+square-rounded-minus		square rounded minus	button|collapse|delete|minus|remove|rounded|square|squircle|subtract
+square-rounded-number-0		square rounded number 0	badge|box|count|digit|number|numbered|numeral|rounded|square|squircle|step|zero
+square-rounded-number-1		square rounded number 1	badge|box|count|digit|number|numbered|numeral|one|rounded|square|squircle|step
+square-rounded-number-2		square rounded number 2	badge|box|count|digit|number|numbered|numeral|rounded|square|squircle|step|two
+square-rounded-number-3		square rounded number 3	badge|box|count|digit|number|numbered|numeral|rounded|square|squircle|step|three
+square-rounded-number-4		square rounded number 4	badge|box|count|digit|four|number|numbered|numeral|rounded|square|squircle|step
+square-rounded-number-5		square rounded number 5	badge|box|count|digit|five|number|numbered|numeral|rounded|square|squircle|step
+square-rounded-number-6		square rounded number 6	badge|box|count|digit|number|numbered|numeral|rounded|six|square|squircle|step
+square-rounded-number-7		square rounded number 7	badge|box|count|digit|number|numbered|numeral|rounded|seven|square|squircle|step
+square-rounded-number-8		square rounded number 8	badge|box|count|digit|eight|number|numbered|numeral|rounded|square|squircle|step
+square-rounded-number-9		square rounded number 9	badge|box|count|digit|nine|number|numbered|numeral|rounded|square|squircle|step
+square-rounded-plus		square rounded plus	add|button|create|expand|insert|new|plus|rounded|square|squircle
+square-rounded-x		square rounded x	cancel|clear|close|cross|delete|dismiss|exit|remove|rounded|square|squircle|times
 square-rounded		square rounded	box|checkbox|geometry|rectangle|rounded|shape|square|squircle
 square		square	box|checkbox|geometry|rectangle|shape|square|stop
+stack-2		stack 2	components|elements|layers|layout|levels|pile|stack|stacked|z-order
 star-half		star half	favorite|half|half-star|partial|rate|rating|rating-star|review|score|star|stars
 star	⭐	star	astronomy|bookmark|favorite|favourite|featured|like|medium|rate|rating|review|star|stars|white
 stars		stars	favorites|magic|night|rating|shine|sky|space|sparkle|stars
@@ -362,8 +551,10 @@ thumb-up	👍	thumbs up	+1|approve|feedback|good|hand|like|positive|reaction|thu
 ticket	🎫	ticket	admission|cinema|concert|coupon|event|pass|stub|ticket|voucher
 tools-kitchen-2	🍴	fork and knife	breakfast|breaky|cooking|cutlery|delicious|dining|dinner|eat|feed|food|fork|hungry|knife|lunch|restaurant|utensils|yum|yummy
 train	🚆	train	arrived|choo|locomotive|metro|rail|railroad|railway|train|transport|travel
+trash-x		trash x	bin|delete|discard|empty-trash|garbage|remove|rubbish|trash|trash-can|waste
 trash		trash	bin|delete|garbage|recycle-bin|remove|rubbish|trash|trash-can|waste-basket
 triangle-inverted		triangle inverted	delta|geometry|inverted|polygon|shape|triangle|triangular|upside-down
+triangle-square-circle		triangle square circle	circle|delta|elements|geometry|polygon|primitives|shapes|square|triangle
 triangle		triangle	delta|geometry|polygon|shape|triangle|triangular|warning
 trolley		trolley	cart|delivery|dolly|hand-truck|handcart|luggage|moving|trolley
 trophy	🏆	trophy	achievement|award|champion|champs|cup|prize|slay|sport|success|trophy|victory|win|winner|winning
@@ -378,5 +569,10 @@ woman	👩	woman	adult|female|feminine|gender|girl|lady|person|woman|women
 world	🗺	world map	earth|global|globe|international|internet|language|map|planet|web|world
 writing-sign		writing sign	agreement|contract|document|esign|pen|sign|signature|signing|writing
 writing	✍	writing hand	compose|document|edit|hand|note|pen|signing|write|writing
+x		x	cancel|clear|close|cross|delete|dismiss|exit|multiply|remove|times|x
 yin-yang	☯	yin yang	balance|difficult|harmony|lives|peace|religion|symbol|tao|taoism|taoist|total|yang|yin|yin-yang|yinyang
 zeppelin		zeppelin	aircraft|airship|aviation|balloon|blimp|dirigible|zeppelin|zeppelins
+zoom-cancel		zoom cancel	cancel|clear-search|close|magnifier|magnifying-glass|search|stop|zoom
+zoom-check		zoom check	approved|check|confirmed|done|found|magnifier|magnifying-glass|search|success|verified|zoom
+zoom-exclamation		zoom exclamation	alert|attention|error|exclamation|magnifier|magnifying-glass|no-results|search|warning|zoom
+zoom		zoom	find|lookup|magnifier|magnify|magnifying-glass|search|zoom|zooming

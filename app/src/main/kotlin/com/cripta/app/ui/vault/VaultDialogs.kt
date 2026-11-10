@@ -5,6 +5,7 @@ import com.cripta.app.str
 import com.cripta.app.plural
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.components.CriptaAlertDialog
+import com.cripta.app.ui.tagicons.TagIconChoices
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -151,11 +152,6 @@ internal fun FolderStyleDialog(
 ) {
     var color by remember { mutableStateOf(initialColor) }
     var icon by remember { mutableStateOf(initialIcon) }
-    var browsing by remember { mutableStateOf(false) }
-    if (browsing) {
-        com.cripta.app.ui.tagicons.TagIconPicker(folderName, icon, onPick = { icon = it; browsing = false }, onDismiss = { browsing = false })
-        return
-    }
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(str(R.string.customise_folder)) },
@@ -171,7 +167,8 @@ internal fun FolderStyleDialog(
                         ColorSwatch(c, color == c, FOLDER_COLOR_NAMES.getOrElse(i) { str(R.string.colour_n, i + 1) }) { color = c }
                     }
                 }
-                com.cripta.app.ui.tagicons.TagIconField(name = folderName, icon = icon, onPick = { icon = it }, onBrowse = { browsing = true })
+                Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TagIconChoices(folderName, icon, 220.dp) { icon = it }
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },

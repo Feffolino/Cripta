@@ -1,72 +1,97 @@
 # Exact icon names override individual name words.
 # Columns: en|it|ar|de|es|fr|hi|ja|ko|pt-BR|ru|zh-CN
+ad|pubblicità|إعلان|Werbung|anuncio|publicité|विज्ञापन|広告|광고|anúncio|реклама|广告
 air-balloon|mongolfiera|منطاد هواء ساخن|Heißluftballon|globo aerostático|montgolfière|गर्म हवा का गुब्बारा|熱気球|열기구|balão de ar quente|воздушный шар|热气球
 alert|avviso|تنبيه|Warnung|alerta|alerte|चेतावनी|警告|경고|alerta|предупреждение|警告
+analytics|analisi|تحليلات|Analyse|análisis|analyse|विश्लेषण|分析|분석|análise|аналитика|分析
 archive|archivio|أرشيف|Archiv|archivo|archive|संग्रह|アーカイブ|보관|arquivo|архив|归档
+arrow|freccia|سهم|Pfeil|flecha|flèche|तीर|矢印|화살표|seta|стрелка|箭头
 artboard|tavola da disegno|لوحة رسم|Zeichenfläche|mesa de trabajo|plan de travail|चित्रफलक|アートボード|아트보드|prancheta|монтажная область|画板
 article|articolo|مقال|Artikel|artículo|article|लेख|記事|기사|artigo|статья|文章
+asset|risorsa|أصل|Ressource|recurso|ressource|संसाधन|素材|리소스|recurso|ресурс|资源
 atom|atomo|ذرة|Atom|átomo|atome|परमाणु|原子|원자|átomo|атом|原子
 automatic-gearbox|cambio automatico|علبة تروس آلية|Automatikgetriebe|caja de cambios automática|boîte automatique|स्वचालित गियरबॉक्स|自動変速機|자동 변속기|câmbio automático|автоматическая коробка передач|自动变速箱
+automotive|auto|سيارة|Auto|automóvil|automobile|मोटर वाहन|自動車|자동차|automotivo|автомобильный|汽车
 baby-carriage|carrozzina|عربة أطفال|Kinderwagen|cochecito de bebé|landau|बच्चे की गाड़ी|ベビーカー|유모차|carrinho de bebê|детская коляска|婴儿车
-badge|badge|شارة|Ausweis|credencial|badge|बैज|バッジ|배지|crachá|бейдж|徽章
 badges|distintivi|شارات|Abzeichen|insignias|insignes|बैज|バッジ|배지|distintivos|значки|徽章
+badge|badge|شارة|Ausweis|credencial|badge|बैज|バッジ|배지|crachá|бейдж|徽章
 barbell|bilanciere|ثقل|Langhantel|barra de pesas|haltère|बारबेल|バーベル|바벨|haltere|штанга|杠铃
+barrier|barriera|حاجز|Sperre|barrera|barrière|अवरोध|バリケード|차단벽|barreira|барьер|路障
 bath|vasca da bagno|حوض استحمام|Badewanne|bañera|baignoire|बाथटब|浴槽|욕조|banheira|ванна|浴缸
+battery|batteria|بطارية|Batterie|batería|batterie|बैटरी|電池|배터리|bateria|батарея|电池
 bed|letto|سرير|Bett|cama|lit|बिस्तर|ベッド|침대|cama|кровать|床
 bell|campanella|جرس|Glocke|campana|cloche|घंटी|ベル|종|sino|колокольчик|铃铛
+big|grande|كبير|groß|grande|grande|बड़ा|大きい|큰|grande|большой|大
+binoculars|binocolo|منظار|Fernglas|prismáticos|jumelles|दूरबीन|双眼鏡|쌍안경|binóculos|бинокль|双筒望远镜
 bitcoin|bitcoin|بيتكوين|Bitcoin|bitcoin|bitcoin|बिटकॉइन|ビットコイン|비트코인|bitcoin|биткоин|比特币
 blade|lama|شفرة|Klinge|hoja|lame|धार|刃|칼날|lâmina|лезвие|刀片
 blender|frullatore|خلاط|Standmixer|licuadora|mixeur|ब्लेंडर|ミキサー|블렌더|liquidificador|блендер|搅拌机
+block|blocco|كتلة|Block|bloque|bloc|ब्लॉक|ブロック|블록|bloco|блок|块
+bong|bong|غليون مائي|Bong|bong|bang|बॉन्ग|ボング|봉|bong|бонг|水烟壶
 bookmarks|segnalibri|إشارات مرجعية|Lesezeichen|marcadores|signets|बुकमार्क|ブックマーク|북마크|marcadores|закладки|书签
 bottle|bottiglia|زجاجة|Flasche|botella|bouteille|बोतल|瓶|병|garrafa|бутылка|瓶
-bow|fiocco|ربطة|Schleife|lazo|nœud|फीता|リボン|리본|laço|бант|蝴蝶结
 bowl|ciotola|وعاء|Schüssel|cuenco|bol|कटोरा|ボウル|그릇|tigela|миска|碗
+bow|fiocco|ربطة|Schleife|lazo|nœud|फीता|リボン|리본|laço|бант|蝴蝶结
+brand|marchio|علامة تجارية|Marke|marca|marque|ब्रांड|ブランド|브랜드|marca|бренд|品牌
 briefcase|valigetta|حقيبة عمل|Aktentasche|maletín|mallette|ब्रीफ़केस|ブリーフケース|서류가방|pasta|портфель|公文包
 bubble|fumetto|فقاعة|Sprechblase|bocadillo|bulle|संवाद बुलबुला|吹き出し|말풍선|balão de fala|облачко речи|对话气泡
 building-bridge-2|ponte|جسر|Brücke|puente|pont|पुल|橋|다리|ponte|мост|桥
 calculator|calcolatrice|آلة حاسبة|Taschenrechner|calculadora|calculatrice|कैलकुलेटर|電卓|계산기|calculadora|калькулятор|计算器
 calendar|calendario|تقويم|Kalender|calendario|calendrier|कैलेंडर|カレンダー|달력|calendário|календарь|日历
-call|chiamata|مكالمة|Anruf|llamada|appel|कॉल|通話|통화|chamada|звонок|呼叫
 calling|in chiamata|جارٍ الاتصال|Anruf läuft|llamando|appel en cours|कॉल जारी|発信中|통화 중|ligando|вызов|呼叫中
+call|chiamata|مكالمة|Anruf|llamada|appel|कॉल|通話|통화|chamada|звонок|呼叫
 campfire|falò|نار المخيم|Lagerfeuer|fogata|feu de camp|अलाव|キャンプファイヤー|모닥불|fogueira|костёр|篝火
+cancel|annulla|إلغاء|abbrechen|cancelar|annuler|रद्द करें|キャンセル|취소|cancelar|отмена|取消
 cannabis|cannabis|قنب|Cannabis|cannabis|cannabis|भांग|大麻|대마|cannabis|конопля|大麻
 capsule|capsula|كبسولة|Kapsel|cápsula|capsule|कैप्सूल|カプセル|캡슐|cápsula|капсула|胶囊
-car|auto|سيارة|Auto|coche|voiture|कार|車|자동차|carro|машина|汽车
 car-4wd|fuoristrada|سيارة دفع رباعي|Geländewagen|todoterreno|tout-terrain|चार पहिया ड्राइव वाली गाड़ी|四輪駆動車|사륜구동차|carro com tração nas quatro rodas|полноприводный автомобиль|四驱车
 car-crane|autogru|رافعة متنقلة|Autokran|grúa móvil|grue mobile|मोबाइल क्रेन|移動式クレーン|이동식 크레인|guindaste móvel|автокран|汽车起重机
 carambola|carambola|كرمبولا|Sternfrucht|carambola|carambole|कमरख|スターフルーツ|스타프루트|carambola|карамбола|杨桃
 caravan|roulotte|مقطورة سكنية|Wohnwagen|caravana|caravane|कारवाँ|キャンピングトレーラー|캠핑 트레일러|trailer|жилой прицеп|拖挂房车
 cardboards|visore di cartone|نظارة واقع افتراضي كرتونية|VR-Brille aus Pappe|visor de cartón|casque VR en carton|गत्ते का वीआर हेडसेट|段ボール製VRゴーグル|종이 VR 헤드셋|visor de papelão|картонные VR-очки|纸板虚拟现实眼镜
+cards|carte da gioco|أوراق اللعب|Spielkarten|naipes|cartes à jouer|ताश के पत्ते|トランプ|트럼프 카드|cartas de baralho|игральные карты|扑克牌
+card|carta|بطاقة|Karte|tarjeta|carte|कार्ड|カード|카드|cartão|карта|卡片
+car|auto|سيارة|Auto|coche|voiture|कार|車|자동차|carro|машина|汽车
 cash-banknote|banconota|ورقة نقدية|Geldschein|billete|billet de banque|बैंकनोट|紙幣|지폐|cédula|банкнота|纸币
 cctv|videosorveglianza|مراقبة بالكاميرا|Videoüberwachung|videovigilancia|vidéosurveillance|सीसीटीवी|監視カメラ|감시 카메라|câmera de segurança|камера наблюдения|监控摄像头
+charging-pile|colonnina di ricarica|محطة شحن|Ladesäule|estación de recarga|borne de recharge|चार्जिंग स्टेशन|充電スタンド|충전소|estação de recarga|зарядная станция|充电桩
+charging|ricarica|شحن|Laden|carga|recharge|चार्जिंग|充電|충전|recarga|зарядка|充电
 chatbot|chatbot|روبوت محادثة|Chatbot|chatbot|robot conversationnel|चैटबॉट|チャットボット|챗봇|chatbot|чат-бот|聊天机器人
-check|spunta|علامة صح|Häkchen|marca|coche|सही|チェック|체크|marca|галочка|对勾
 checkered|a scacchi|مربعات|kariert|a cuadros|à damier|चेकर|チェッカー|체크무늬|xadrez|клетчатый|格子
+check|spunta|علامة صح|Häkchen|marca|coche|सही|チェック|체크|marca|галочка|对勾
 chef-hat|cappello da cuoco|قبعة طاهٍ|Kochmütze|gorro de chef|toque de chef|रसोइए की टोपी|コック帽|요리사 모자|chapéu de cozinheiro|поварской колпак|厨师帽
-chess|scacchi|شطرنج|Schach|ajedrez|échecs|शतरंज|チェス|체스|xadrez|шахматы|国际象棋
 chess-bishop|alfiere|فيل الشطرنج|Schachläufer|alfil|fou|शतरंज का ऊँट|ビショップ|비숍|bispo|шахматный слон|国际象棋的象
 chess-king|re degli scacchi|ملك الشطرنج|Schachkönig|rey de ajedrez|roi des échecs|शतरंज का राजा|チェスのキング|체스 킹|rei do xadrez|шахматный король|国际象棋的王
 chess-knight|cavallo degli scacchi|حصان الشطرنج|Schachspringer|caballo de ajedrez|cavalier|शतरंज का घोड़ा|チェスのナイト|체스 나이트|cavalo do xadrez|шахматный конь|国际象棋的马
 chess-queen|regina degli scacchi|ملكة الشطرنج|Schachdame|dama de ajedrez|dame des échecs|शतरंज की रानी|チェスのクイーン|체스 퀸|dama do xadrez|шахматный ферзь|国际象棋的后
 chess-rook|torre degli scacchi|رخ الشطرنج|Schachturm|torre de ajedrez|tour des échecs|शतरंज का हाथी|チェスのルーク|체스 룩|torre do xadrez|шахматная ладья|国际象棋的车
+chess|scacchi|شطرنج|Schach|ajedrez|échecs|शतरंज|チェス|체스|xadrez|шахматы|国际象棋
 circle|cerchio|دائرة|Kreis|círculo|cercle|वृत्त|円|원|círculo|круг|圆圈
+clipboard|portablocco|لوح مشبكي|Klemmbrett|portapapeles|porte-bloc|क्लिपबोर्ड|クリップボード|클립보드|prancheta|планшет с зажимом|夹板
 clock|orologio|ساعة|Uhr|reloj|horloge|घड़ी|時計|시계|relógio|часы|时钟
 cloud-computing|informatica in cloud|حوسبة سحابية|Cloud-Computing|computación en la nube|informatique en nuage|क्लाउड कंप्यूटिंग|クラウドコンピューティング|클라우드 컴퓨팅|computação em nuvem|облачные вычисления|云计算
+code|codice|شفرة|Code|código|code|कोड|コード|코드|código|код|代码
 coin|moneta|عملة معدنية|Münze|moneda|pièce|सिक्का|硬貨|동전|moeda|монета|硬币
 cone|cono|مخروط|Kegel|cono|cône|शंकु|コーン|원뿔|cone|конус|锥
 confused|confuso|حائر|verwirrt|confundido|perplexe|उलझन में|困惑|혼란|confuso|растерянный|困惑
+cookie|biscotto|بسكويت|Keks|galleta|biscuit|बिस्कुट|クッキー|쿠키|biscoito|печенье|饼干
 copyleft|copyleft|حقوق متروكة|Copyleft|copyleft|copyleft|कॉपीलेफ्ट|コピーレフト|카피레프트|copyleft|копилефт|著佐权
 cracked|incrinato|متشقق|gesprungen|agrietado|fêlé|चटका हुआ|ひび割れ|금이 간|rachado|треснувший|裂开的
+crop|ritaglio|قص|Zuschnitt|recorte|recadrage|काट-छाँट|切り抜き|자르기|recorte|кадрирование|裁剪
+database|database|قاعدة بيانات|Datenbank|base de datos|base de données|डेटाबेस|データベース|데이터베이스|banco de dados|база данных|数据库
+data|dati|بيانات|Daten|datos|données|डेटा|データ|데이터|dados|данные|数据
 description|descrizione|وصف|Beschreibung|descripción|description|विवरण|説明|설명|descrição|описание|说明
-device|dispositivo|جهاز|Gerät|dispositivo|appareil|डिवाइस|デバイス|기기|dispositivo|устройство|设备
 device-heart-monitor|cardiomonitor|جهاز مراقبة القلب|Herzmonitor|monitor cardíaco|moniteur cardiaque|हृदय मॉनिटर|心拍モニター|심장 모니터|monitor cardíaco|кардиомонитор|心脏监护仪
 device-tv-old|televisore d’epoca|تلفاز قديم|alter Fernseher|televisor antiguo|téléviseur ancien|पुराना टीवी|レトロなテレビ|옛날 텔레비전|televisor antigo|старый телевизор|老式电视机
+device|dispositivo|جهاز|Gerät|dispositivo|appareil|डिवाइस|デバイス|기기|dispositivo|устройство|设备
 dice|dado|نرد|Würfel|dado|dé|पासा|サイコロ|주사위|dado|кубик|骰子
+directions|indicazioni|اتجاهات|Wegbeschreibung|indicaciones|itinéraire|दिशा-निर्देश|道案内|길 안내|direções|указания|路线指引
 discount|sconto|خصم|Rabatt|descuento|remise|छूट|割引|할인|desconto|скидка|折扣
 dollar|dollaro|دولار|Dollar|dólar|dollar|डॉलर|ドル|달러|dólar|доллар|美元
+download|scarica|تنزيل|herunterladen|descargar|télécharger|डाउनलोड|ダウンロード|다운로드|baixar|скачать|下载
 down|giù|أسفل|unten|abajo|bas|नीचे|下|아래|baixo|вниз|下
-drop|goccia|قطرة|Tropfen|gota|goutte|बूंद|しずく|물방울|gota|капля|水滴
 droplets|gocce|قطرات|Tropfen|gotas|gouttes|बूँदें|しずく|물방울|gotas|капли|水滴
+drop|goccia|قطرة|Tropfen|gota|goutte|बूंद|しずく|물방울|gota|капля|水滴
 dual|doppio|مزدوج|doppelt|doble|double|दोहरा|デュアル|듀얼|duplo|двойной|双
 egg|uovo|بيضة|Ei|huevo|œuf|अंडा|卵|달걀|ovo|яйцо|鸡蛋
 empty|vuoto|فارغ|leer|vacío|vide|खाली|空|빈|vazio|пустой|空
@@ -74,13 +99,15 @@ engine|motore|محرك|Motor|motor|moteur|इंजन|エンジン|엔진|motor
 escalator|scala mobile|سلم متحرك|Rolltreppe|escalera mecánica|escalator|एस्केलेटर|エスカレーター|에스컬레이터|escada rolante|эскалатор|自动扶梯
 euro|euro|يورو|Euro|euro|euro|यूरो|ユーロ|유로|euro|евро|欧元
 event|evento|حدث|Ereignis|evento|événement|कार्यक्रम|イベント|이벤트|evento|событие|活动
+exclamation|punto esclamativo|علامة تعجب|Ausrufezeichen|signo de exclamación|point d’exclamation|विस्मयादिबोधक चिह्न|感嘆符|느낌표|ponto de exclamação|восклицательный знак|感叹号
 explicit|contenuto esplicito|محتوى صريح|explizite Inhalte|contenido explícito|contenu explicite|स्पष्ट सामग्री|露骨な内容|노골적인 콘텐츠|conteúdo explícito|откровенный контент|露骨内容
 eyeglass|occhiali|نظارة|Brille|gafas|lunettes|चश्मा|眼鏡|안경|óculos|очки|眼镜
 fan|ventilatore|مروحة|Ventilator|ventilador|ventilateur|पंखा|扇風機|선풍기|ventilador|вентилятор|风扇
+favicon|icona del sito|أيقونة الموقع|Website-Symbol|icono del sitio|icône de site|साइट आइकन|ファビコン|파비콘|ícone do site|значок сайта|网站图标
 fence|recinzione|سياج|Zaun|valla|clôture|बाड़|柵|울타리|cerca|забор|栅栏
 fidget-spinner|fidget spinner|لعبة سبينر|Fidget Spinner|fidget spinner|hand spinner|फिजेट स्पिनर|ハンドスピナー|피젯 스피너|fidget spinner|спиннер|指尖陀螺
-file|file|ملف|Datei|archivo|fichier|फ़ाइल|ファイル|파일|arquivo|файл|文件
 files|file|ملفات|Dateien|archivos|fichiers|फ़ाइलें|ファイル|파일|arquivos|файлы|文件
+file|file|ملف|Datei|archivo|fichier|फ़ाइल|ファイル|파일|arquivo|файл|文件
 fish-bone|lisca di pesce|عظمة سمك|Fischgräte|espina de pescado|arête de poisson|मछली की हड्डी|魚の骨|생선 가시|espinha de peixe|рыбья кость|鱼骨
 flag|bandiera|علم|Flagge|bandera|drapeau|झंडा|旗|깃발|bandeira|флаг|旗帜
 flare|bagliore|وميض|Lichtschein|destello|éclat|चमक|光のきらめき|섬광|clarão|вспышка|闪光
@@ -105,6 +132,7 @@ high|alto|عال|hoch|alto|haut|उच्च|高|높음|alto|высокий|高
 home|casa|منزل|Haus|casa|maison|घर|家|집|casa|дом|家
 horizontal|orizzontale|أفقي|horizontal|horizontal|horizontal|क्षैतिज|水平|가로|horizontal|горизонтальный|水平
 hour|ora|ساعة|Stunde|hora|heure|घंटा|時|시간|hora|час|小时
+icons|icone|أيقونات|Symbole|iconos|icônes|आइकन|アイコン|아이콘|ícones|значки|图标
 important|importante|مهم|wichtig|importante|important|महत्वपूर्ण|重要|중요|importante|важное|重要
 inverted|rovesciato|مقلوب|umgekehrt|invertido|inversé|उलटा|反転|뒤집힌|invertido|перевёрнутый|倒置
 invoice|fattura|فاتورة|Rechnung|factura|facture|चालान|請求書|송장|fatura|счёт|发票
@@ -113,33 +141,40 @@ jetpack|zaino a razzo|حقيبة نفاثة|Raketenrucksack|mochila propulsora|r
 key|chiave|مفتاح|Schlüssel|llave|clé|चाबी|鍵|열쇠|chave|ключ|钥匙
 label|etichetta|ملصق|Etikett|etiqueta|étiquette|लेबल|ラベル|라벨|etiqueta|этикетка|标签
 landing|atterraggio|هبوط|Landung|aterrizaje|atterrissage|लैंडिंग|着陸|착륙|pouso|посадка|降落
+landscape|orizzontale|أفقي|Querformat|horizontal|paysage|लैंडस्केप|横向き|가로 방향|paisagem|альбомная ориентация|横向
 leaf|foglia|ورقة شجر|Blatt|hoja|feuille|पत्ता|葉|잎|folha|лист|叶子
 left|sinistra|يسار|links|izquierda|gauche|बाएं|左|왼쪽|esquerda|влево|左
 lemon|limone|ليمون|Zitrone|limón|citron|नींबू|レモン|레몬|limão|лимон|柠檬
+letter|lettera|حرف|Buchstabe|letra|lettre|अक्षर|文字|글자|letra|буква|字母
 library|biblioteca|مكتبة|Bibliothek|biblioteca|bibliothèque|पुस्तकालय|図書館|도서관|biblioteca|библиотека|图书馆
 lifebuoy|salvagente|طوق نجاة|Rettungsring|salvavidas|bouée|लाइफ़बॉय|浮き輪|구명부표|boia|спасательный круг|救生圈
+link|collegamento|رابط|Link|enlace|lien|लिंक|リンク|링크|link|ссылка|链接
 location|posizione|موقع|Standort|ubicación|emplacement|स्थान|位置|위치|localização|местоположение|位置
 lock|lucchetto|قفل|Schloss|candado|cadenas|ताला|鍵|자물쇠|cadeado|замок|锁
 low|basso|منخفض|niedrig|bajo|bas|कम|低|낮음|baixo|низкий|低
 macro|macro|تصوير مقرّب|Makro|macro|macro|मैक्रो|マクロ|매크로|macro|макро|微距
 mail|posta|بريد|Post|correo|courrier|डाक|郵便|우편|correio|почта|邮件
 manual-gearbox|cambio manuale|علبة تروس يدوية|Schaltgetriebe|caja de cambios manual|boîte manuelle|मैन्युअल गियरबॉक्स|手動変速機|수동 변속기|câmbio manual|механическая коробка передач|手动变速箱
+man|uomo|رجل|Mann|hombre|homme|आदमी|男性|남자|homem|мужчина|男人
 medical-cross|croce medica|صليب طبي|medizinisches Kreuz|cruz médica|croix médicale|चिकित्सा क्रॉस|医療十字|의료 십자가|cruz médica|медицинский крест|医疗十字
 meeple|pedina da gioco|قطعة لعبة|Spielfigur|ficha de juego|pion de jeu|खेल की गोटी|ゲームの駒|게임 말|peão de jogo|игровая фигурка|游戏棋子
-message|messaggio|رسالة|Nachricht|mensaje|message|संदेश|メッセージ|메시지|mensagem|сообщение|消息
 messages|messaggi|رسائل|Nachrichten|mensajes|messages|संदेश|メッセージ|메시지|mensagens|сообщения|消息
+message|messaggio|رسالة|Nachricht|mensaje|message|संदेश|メッセージ|메시지|mensagem|сообщение|消息
 microwave|microonde|ميكروويف|Mikrowelle|microondas|micro-ondes|माइक्रोवेव|電子レンジ|전자레인지|micro-ondas|микроволновка|微波炉
 military-rank|grado militare|رتبة عسكرية|militärischer Dienstgrad|rango militar|grade militaire|सैन्य पद|軍の階級|군 계급|patente militar|воинское звание|军衔
 milk|latte|حليب|Milch|leche|lait|दूध|牛乳|우유|leite|молоко|牛奶
+minus|meno|ناقص|Minus|menos|moins|ऋण चिह्न|マイナス|빼기|menos|минус|减号
 monero|monero|مونيرو|Monero|monero|monero|मोनेरो|モネロ|모네로|monero|монеро|门罗币
 money|denaro|مال|Geld|dinero|argent|पैसा|お金|돈|dinheiro|деньги|钱
 month|mese|شهر|Monat|mes|mois|महीना|月|월|mês|месяц|月
 mood|umore|مزاج|Stimmung|ánimo|humeur|मनोदशा|気分|기분|humor|настроение|心情
 music|musica|موسيقى|Musik|música|musique|संगीत|音楽|음악|música|музыка|音乐
 neutral|neutro|محايد|neutral|neutro|neutre|तटस्थ|無表情|무표정|neutro|нейтральный|中性
+number|numero|رقم|Zahl|número|nombre|संख्या|数字|숫자|número|число|数字
 nurse|infermiere|ممرض|Pflegekraft|enfermero|infirmier|नर्स|看護師|간호사|enfermeiro|медсестра|护士
 octagon|ottagono|مثمن|Achteck|octágono|octogone|अष्टभुज|八角形|팔각형|octógono|восьмиугольник|八边形
 opened|aperto|مفتوح|geöffnet|abierto|ouvert|खुला|開封済み|열린|aberto|открытый|已打开
+open|aperto|مفتوح|offen|abierto|ouvert|खुला|開く|열림|aberto|открытый|打开
 oval|ovale|بيضاوي|Oval|óvalo|ovale|अंडाकार|楕円|타원|oval|овал|椭圆
 paint|vernice|طلاء|Farbe|pintura|peinture|पेंट|ペンキ|페인트|tinta|краска|油漆
 parking|parcheggio|موقف سيارات|Parkplatz|estacionamiento|parking|पार्किंग|駐車場|주차장|estacionamento|парковка|停车场
@@ -152,9 +187,13 @@ pinned|appuntato|مثبّت|angeheftet|fijado|épinglé|पिन किया �
 pipe|tubo|أنبوب|Rohr|tubería|tuyau|पाइप|パイプ|파이프|cano|труба|管
 plane|aereo|طائرة|Flugzeug|avión|avion|विमान|飛行機|비행기|avião|самолётик|纸飞机
 play-card-star|carta da gioco con stella|ورقة لعب بنجمة|Spielkarte mit Stern|naipe con estrella|carte à jouer étoilée|तारे वाला ताश का पत्ता|星のトランプ|별이 있는 트럼프 카드|carta de baralho com estrela|игральная карта со звездой|带星星的扑克牌
+play|gioco|لعب|Spiel|juego|jeu|खेल|遊び|놀이|jogo|игра|游戏
+plus|più|زائد|Plus|más|plus|धन चिह्न|プラス|더하기|mais|плюс|加号
 polaroid|foto istantanea|صورة فورية|Sofortbild|foto instantánea|photo instantanée|तत्काल फ़ोटो|インスタント写真|즉석 사진|foto instantânea|мгновенное фото|即时照片
+portrait|verticale|عمودي|Hochformat|vertical|portrait|पोर्ट्रेट|縦向き|세로 방향|retrato|книжная ориентация|纵向
 pound|sterlina|جنيه إسترليني|Pfund Sterling|libra esterlina|livre sterling|पाउंड स्टर्लिंग|ポンド|파운드|libra esterlina|фунт стерлингов|英镑
 presentation|presentazione|عرض تقديمي|Präsentation|presentación|présentation|प्रस्तुति|プレゼン|프레젠테이션|apresentação|презентация|演示
+quote|citazione|اقتباس|Zitat|cita|citation|उद्धरण|引用|인용|citação|цитата|引语
 radar|radar|رادار|Radar|radar|radar|रडार|レーダー|레이더|radar|радар|雷达
 receipt|scontrino|إيصال|Beleg|recibo|reçu|रसीद|レシート|영수증|recibo|чек|收据
 rectangle|rettangolo|مستطيل|Rechteck|rectángulo|rectangle|आयत|長方形|직사각형|retângulo|прямоугольник|矩形
@@ -167,31 +206,41 @@ rosette|coccarda|وردة زخرفية|Rosette|roseta|rosette|गुलाबा
 rotated|ruotato|مُدار|gedreht|girado|pivoté|घुमाया हुआ|回転|회전|girado|повёрнутый|旋转
 rounded|arrotondato|مستدير|abgerundet|redondeado|arrondi|गोल किनारे|角丸|둥근|arredondado|скруглённый|圆角
 rupee|rupia|روبية|Rupie|rupia|roupie|रुपया|ルピー|루피|rupia|рупия|卢比
+sad|triste|حزين|traurig|triste|triste|उदास|悲しい|슬픈|triste|грустный|悲伤
 salad|insalata|سلطة|Salat|ensalada|salade|सलाद|サラダ|샐러드|salada|салат|沙拉
 screen|schermo|شاشة|Leinwand|pantalla|écran|स्क्रीन|スクリーン|스크린|tela|экран|屏幕
 scuba-diving-tank|bombola da sub|أسطوانة غوص|Tauchflasche|botella de buceo|bouteille de plongée|गोताखोरी का सिलिंडर|ダイビング用ボンベ|스쿠버 탱크|cilindro de mergulho|баллон для дайвинга|潜水气瓶
+send|invia|إرسال|senden|enviar|envoyer|भेजें|送信|보내기|enviar|отправить|发送
+settings|impostazioni|الإعدادات|Einstellungen|ajustes|paramètres|सेटिंग्स|設定|설정|configurações|настройки|设置
 shield|scudo|درع|Schild|escudo|bouclier|ढाल|盾|방패|escudo|щит|盾牌
+signal|segnale|إشارة|Signal|señal|signal|संकेत|信号|신호|sinal|сигнал|信号
 sign|segnale|إشارة|Schild|señal|panneau|संकेत|標識|표지판|placa|знак|标志
+smile|sorriso|ابتسامة|Lächeln|sonrisa|sourire|मुस्कान|笑顔|미소|sorriso|улыбка|微笑
 soup|zuppa|حساء|Suppe|sopa|soupe|सूप|スープ|수프|sopa|суп|汤
+source|sorgente|مصدر|Quelle|fuente|source|स्रोत|ソース|소스|fonte|источник|来源
+sparkles|scintille|بريق|Funkeln|destellos|scintillements|चमक|きらめき|반짝임|brilhos|искры|闪光
 square|quadrato|مربع|Quadrat|cuadrado|carré|वर्ग|四角|사각형|quadrado|квадрат|正方形
-star|stella|نجمة|Stern|estrella|étoile|तारा|星|별|estrela|звезда|星星
+stack|pila|كومة|Stapel|pila|pile|ढेर|積み重ね|더미|pilha|стопка|堆叠
 stars|stelle|نجوم|Sterne|estrellas|étoiles|तारे|星|별|estrelas|звёзды|星星
+star|stella|نجمة|Stern|estrella|étoile|तारा|星|별|estrela|звезда|星星
 steam|vapore|بخار|Dampf|vapor|vapeur|भाप|湯気|김|vapor|пар|蒸汽
 steering-wheel|volante|عجلة القيادة|Lenkrad|volante|volant|स्टीयरिंग व्हील|ハンドル|운전대|volante|руль|方向盘
-sun|sole|شمس|Sonne|sol|soleil|सूरज|太陽|해|sol|солнце|太阳
 sunset|tramonto|غروب الشمس|Sonnenuntergang|puesta de sol|coucher du soleil|सूर्यास्त|日没|일몰|pôr do sol|закат|日落
+sun|sole|شمس|Sonne|sol|soleil|सूरज|太陽|해|sol|солнце|太阳
 suv|SUV|سيارة دفع رباعي|SUV|SUV|SUV|एसयूवी|SUV|SUV|SUV|внедорожник|运动型多用途车
 tablet|tablet|جهاز لوحي|Tablet|tableta|tablette|टैबलेट|タブレット|태블릿|tablet|планшет|平板
-tag|etichetta|وسم|Etikett|etiqueta|étiquette|टैग|タグ|태그|etiqueta|тег|标签
 tags|etichette|وسوم|Etiketten|etiquetas|étiquettes|टैग|タグ|태그|etiquetas|метки|标签
+tag|etichetta|وسم|Etikett|etiqueta|étiquette|टैग|タグ|태그|etiqueta|тег|标签
 taka|taka|تاكا|Taka|taka|taka|टका|タカ|타카|taka|така|塔卡
 test|provetta|اختبار|Reagenz|ensayo|essai|परख|試験|시험|ensaio|пробирка|试
 text|testo|نص|Text|texto|texte|टेक्स्ट|テキスト|텍스트|texto|текст|文本
 tilt|inclinato|مائل|geneigt|inclinado|incliné|झुका|傾き|기울어진|inclinado|наклон|倾斜
+time|tempo|وقت|Zeit|tiempo|temps|समय|時間|시간|tempo|время|时间
 trash|cestino|سلة المهملات|Papierkorb|papelera|corbeille|कूड़ादान|ゴミ箱|휴지통|lixeira|корзина|垃圾桶
 triangle|triangolo|مثلث|Dreieck|triángulo|triangle|त्रिभुज|三角形|삼각형|triângulo|треугольник|三角形
 trolley|carrello|عربة|Trolley|carrito|chariot|ट्रॉली|台車|카트|carrinho|тележка|手推车
 truck|camion|شاحنة|Lastwagen|camión|camion|ट्रक|トラック|트럭|caminhão|грузовик|卡车
+unknown|sconosciuto|مجهول|unbekannt|desconocido|inconnu|अज्ञात|不明|알 수 없음|desconhecido|неизвестный|未知
 up|su|أعلى|oben|arriba|haut|ऊपर|上|위|cima|вверх|上
 usb|USB|يو إس بي|USB|USB|USB|यूएसबी|USB|USB|USB|USB|USB
 vertical|verticale|عمودي|vertikal|vertical|vertical|ऊर्ध्वाधर|縦|세로|vertical|вертикальный|垂直
@@ -203,3 +252,4 @@ wrrr|digrigna i denti|يصرّ على أسنانه|Zähneknirschen|rechinar de d
 yen|yen|ين|Yen|yen|yen|येन|円|엔|iene|иена|日元
 yuan|yuan|يوان|Yuan|yuan|yuan|युआन|元|위안|yuan|юань|人民币
 zeppelin|dirigibile|منطاد زيبلين|Zeppelin|dirigible|dirigeable|ज़ेपेलिन|飛行船|비행선|dirigível|дирижабль|齐柏林飞艇
+zoom|zoom|تكبير|Zoom|zoom|zoom|ज़ूम|ズーム|확대|zoom|масштаб|缩放

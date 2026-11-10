@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -78,7 +79,7 @@ fun TagIconField(
     val context = LocalContext.current
     val resolved = rememberResolvedTagIcon(icon)
     val suggested by produceState(emptyList<String>(), name) {
-        value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.DEFAULTS.take(10) }
+        value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.search(context, "", 10) }
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (showLabel) Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -94,59 +95,68 @@ fun TagIconField(
     }
 }
 
-/**
- * All the icons: searchable (localized or English words), with those fitting [tagName] first and the
- * common ones next, then every icon to browse.
- */
+/** The label editor's standalone icon picker. */
 @Composable
 fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    com.cripta.app.ui.components.CriptaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(str(R.string.icon)) },
+        text = { TagIconChoices(tagName, selected, 380.dp, onPick) },
+        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
+    )
+}
+
+/** Search the shared catalog, or browse suggestions for the label or folder name. */
+@Composable
+internal fun TagIconChoices(name: String, selected: String?, gridHeight: Dp, onPick: (String?) -> Unit) {
     val context = LocalContext.current
     val resolved = rememberResolvedTagIcon(selected)
     var query by remember { mutableStateOf("") }
     val all by produceState(emptyList<String>()) { value = TagIcons.names(context) }
-    val forName by produceState(emptyList<String>(), tagName) { value = TagIcons.suggest(context, tagName, 18) }
-    val found by produceState<List<String>?>(null, query) {
-        value = if (query.isBlank()) null else TagIcons.search(context, query)
+    val common = remember(all) { TagIcons.DEFAULTS.filter { it in all } }
+    val forName by produceState(emptyList<String>(), name) { value = TagIcons.suggest(context, name, 18) }
+    val found by key(query) {
+        produceState<List<String>?>(null) {
+            if (query.isNotBlank()) value = TagIcons.search(context, query)
+        }
     }
-    com.cripta.app.ui.components.CriptaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(str(R.string.icon)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                com.cripta.app.ui.components.CriptaTextField(
-                    value = query, onValueChange = { query = it }, singleLine = true,
-                    leadingIcon = { Icon(CriptaIcons.Search, null) },
-                    placeholder = { Text(str(R.string.icon_search_hint)) }, modifier = Modifier.fillMaxWidth(),
-                )
-                LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(380.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    fun header(text: String) = item(span = { GridItemSpan(maxLineSpan) }, contentType = "h") {
-                        Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp).semantics { heading() })
-                    }
-                    val f = found
-                    if (f != null) {
-                        if (f.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        com.cripta.app.ui.components.CriptaTextField(
+            value = query, onValueChange = { query = it }, singleLine = true,
+            leadingIcon = { Icon(CriptaIcons.Search, null) },
+            placeholder = { Text(str(R.string.icon_search_hint)) }, modifier = Modifier.fillMaxWidth(),
+        )
+        key(query) {
+            LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(gridHeight),
+                horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                fun header(text: String) = item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp).semantics { heading() })
+                }
+                if (query.isNotBlank()) {
+                    val results = found
+                    if (results != null) {
+                        if (results.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
                             Text(str(R.string.icon_none_for, query.trim()),
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        items(f, key = { "s-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
-                    } else {
-                        item(key = "none") { IconCell(null, resolved == null) { onPick(null) } }
-                        if (forName.isNotEmpty()) {
-                            header(str(R.string.icon_for, tagName.trim()))
-                            items(forName, key = { "n-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
-                        }
-                        header(str(R.string.icon_most_used))
-                        items(TagIcons.DEFAULTS, key = { "d-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
-                        header(str(R.string.icon_all_short))
-                        items(all, key = { "a-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
+                        items(results, key = { "s-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                     }
+                } else {
+                    item(key = "none") { IconCell(null, resolved == null) { onPick(null) } }
+                    if (forName.isNotEmpty()) {
+                        header(str(R.string.icon_for, name.trim()))
+                        items(forName, key = { "n-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
+                    }
+                    header(str(R.string.icon_most_used))
+                    items(common, key = { "d-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
+                    header(str(R.string.icon_all_short))
+                    items(all, key = { "a-$it" }) { n -> IconCell(n, n == resolved) { onPick(n) } }
                 }
-                Text(str(R.string.icon_credit), style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } },
-    )
+        }
+        Text(str(R.string.icon_credit), style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

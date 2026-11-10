@@ -11,6 +11,8 @@ import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent / "app/src/main/assets/tagicons"
+KEEP_FILE = HERE / "tagicons_keep.txt"
+TABLER_VERSION = "3.49.0"
 LANGUAGES = "en it ar de es fr hi ja ko pt ru zh".split()
 EXCLUDED_CATEGORIES = set("Arrows Brand Letters Numbers Text Charts Design".split())
 EXCLUDED_NAMES = set("""
@@ -197,16 +199,45 @@ def write(name, contents):
     (ASSETS / name).write_text(contents, encoding="utf-8", newline="\n")
 
 
+def selection(path, available):
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    if (data.get("version"), data.get("source"), data.get("tablerVersion"), data.get("style")) != (
+        1, "@tabler/icons", TABLER_VERSION, "filled",
+    ):
+        raise ValueError("The selection must come from the Tabler Filled picker for this version")
+    keep, exclude = data["keep"], data["exclude"]
+    if not isinstance(keep, list) or not isinstance(exclude, list):
+        raise ValueError("Expected keep and exclude lists")
+    kept, excluded = set(keep), set(exclude)
+    if len(kept) != len(keep) or len(excluded) != len(exclude) or kept & excluded or kept | excluded != available:
+        raise ValueError("The selection must partition the entire Filled catalog without duplicates")
+    return kept
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("packages", type=Path, help="Directory containing icons and both CLDR packages")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--selection", type=Path, help="Import a JSON export from the manual icon picker")
+    mode.add_argument("--automatic", action="store_true", help="Preview the original automatic filter")
     args = parser.parse_args()
     tabler = args.packages / "icons/package"
+    if json.loads((tabler / "package.json").read_text(encoding="utf-8"))["version"] != TABLER_VERSION:
+        raise ValueError(f"Expected @tabler/icons {TABLER_VERSION}")
     metadata = json.loads((tabler / "icons.json").read_text(encoding="utf-8"))
     files = sorted((tabler / "icons/filled").glob("*.svg"))
-    icons = {svg.stem: glyph(svg) for svg in files if allowed(svg.stem, metadata[svg.stem]["category"])}
-    if not icons:
-        raise ValueError("No Filled icons found")
+    available = {svg.stem for svg in files}
+    if args.selection:
+        keep = selection(args.selection, available)
+    elif args.automatic:
+        keep = {name for name in available if allowed(name, metadata[name]["category"])}
+        print(f"{len(keep)} kept, {len(files) - len(keep)} excluded by the automatic filter")
+        return
+    else:
+        keep = set(KEEP_FILE.read_text(encoding="utf-8").splitlines())
+    if not keep or keep - available:
+        raise ValueError("The selection must contain only known Filled icons")
+    icons = {svg.stem: glyph(svg) for svg in files if svg.stem in keep}
     catalog = "".join(f"{name}\t{paths}\n" for name, paths in icons.items())
     digest = hashlib.sha256(catalog.encode()).hexdigest()
     write("tabler-filled.txt", f"{digest}\n{catalog}")
@@ -250,6 +281,8 @@ def main():
         print(lang, dict(sources))
     print(f"{len(icons)} kept, {len(files) - len(icons)} excluded")
     print("Missing dictionary entries:", " ".join(sorted(used_words - translations.keys())))
+    if args.selection:
+        KEEP_FILE.write_text("".join(f"{name}\n" for name in sorted(keep)), encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

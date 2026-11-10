@@ -2,16 +2,37 @@ accessible	♿	휠체어	장애|장애인|접근|휠체어|휠체어 표시
 aerial-lift	🚡	케이블카	곤돌라|공중|산악 케이블카|차|케이블카
 air-balloon		열기구	열기구
 alarm	⏰	알람 시계	늦은|대기|시간|시계|알람
+alert-circle		경고 원	경고 원
 alert-triangle		경고 삼각형	경고 삼각형
 alien	👽	외계인	UFO|괴물|동화|몬스터|에일리언|왕눈이|외계생명체|외계인|판타지
 apple	🍎	빨간 사과	건강|과일|다이어트|빨간|사과|식품|음식
 archive		보관	보관
+arrow-badge-down		화살표 배지 아래	화살표 배지 아래
+arrow-badge-left		화살표 배지 왼쪽	화살표 배지 왼쪽
+arrow-badge-right		화살표 배지 오른쪽	화살표 배지 오른쪽
+arrow-badge-up		화살표 배지 위	화살표 배지 위
+arrow-big-down		화살표 큰 아래	화살표 큰 아래
+arrow-big-left		화살표 큰 왼쪽	화살표 큰 왼쪽
+arrow-big-right		화살표 큰 오른쪽	화살표 큰 오른쪽
+arrow-big-up		화살표 큰 위	화살표 큰 위
 artboard		아트보드	아트보드
 article		기사	기사
+asset		리소스	리소스
 atom-2		원자 2	원자 2
 automatic-gearbox		자동 변속기	자동 변속기
 award	🏅	스포츠 메달	경기|금메달|메달|스포츠|승자|어워드
 baby-carriage		유모차	유모차
+badge-3d		배지 3d	배지 3d
+badge-4k		배지 4k	배지 4k
+badge-8k		배지 8k	배지 8k
+badge-ad		배지 광고	배지 광고
+badge-ar		배지 ar	배지 ar
+badge-cc		배지 cc	배지 cc
+badge-hd		배지 hd	배지 hd
+badge-sd		배지 sd	배지 sd
+badge-tm		배지 tm	배지 tm
+badge-vo		배지 vo	배지 vo
+badge-vr		배지 vr	배지 vr
 badge		배지	배지
 badges		배지	배지
 ball-bowling	🎳	볼링	게임|공|볼링|볼링공|볼링핀|스트라이크|스포츠
@@ -19,8 +40,11 @@ balloon	🎈	풍선	기념|생일|축하|파티|풍선
 ballpen	🖊	펜	볼펜|펜
 bandage	🩹	반창고	반창고|밴드
 barbell		바벨	바벨
+barrier-block		차단벽 블록	차단벽 블록
 basket	🧺	바구니	바구니|빨래바구니|소풍
 bath		욕조	욕조
+battery-automotive		배터리 자동차	배터리 자동차
+battery-vertical-1		배터리 세로 1	배터리 세로 1
 bed-flat		침대 평평한	침대 평평한
 bed	🛏	침대	잠|침대|호텔
 beer	🍺 🍻	맥주잔	500잔|독일|맥주|맥주잔|맥주컵|바|서머에일|술|술집|옥토버페스트|원샷|음료|음주|짠|짠 하는 맥주잔|파인트|호프
@@ -28,10 +52,14 @@ bell-ringing-2		종 울리는 2	종 울리는 2
 bell-ringing		종 울리는	종 울리는
 bell	🔔	종	교회|벨|소리|쉬는시간|종
 bike	🚲	자전거	교통수단|라이드|바이크|바이크 갱|사이클링|스피닝|스핀 클래스|자전거
+binoculars		쌍안경	쌍안경
 biohazard	☣	생물학적 위험	바이오하자드|바이오해저드|생물학적 위험|표시
 blade		칼날	칼날
 blender		블렌더	블렌더
+bolt	⚡	고압 주의	고압|고압 경고|고압 주의|메신저|번개|벼락|위험|자연|잽|전기|전력|전압
+bomb	💣	폭탄	뜨거운|만화|위험한|코믹|폭발|폭탄
 bone	🦴	뼈다귀	개|뼈|뼈다귀|스켈레톤|위시본
+bong		봉	봉
 book	📕	펼치지 않은 책	교육|도서|책|펼치지 않은 책
 bookmark	🔖	북마크	마크|북마크|책갈피|표시
 bookmarks		북마크	북마크
@@ -40,9 +68,39 @@ bow		리본	리본
 bowl-chopsticks	🥢	젓가락	젓가락
 bowl-spoon	🥣	스푼과 사발	그릇과 숟가락|스푼과 사발|시리얼|씨리얼|아침|아침식사|오트밀|죽|콘지
 bowl		그릇	그릇
+brand-apple		브랜드 apple	브랜드 apple
+brand-discord		브랜드 discord	브랜드 discord
+brand-dribbble		브랜드 dribbble	브랜드 dribbble
+brand-facebook		브랜드 facebook	브랜드 facebook
+brand-github		브랜드 github	브랜드 github
+brand-google		브랜드 google	브랜드 google
+brand-instagram		브랜드 instagram	브랜드 instagram
+brand-kick		브랜드 kick	브랜드 kick
+brand-linkedin		브랜드 linkedin	브랜드 linkedin
+brand-messenger		브랜드 messenger	브랜드 messenger
+brand-open-source		브랜드 열림 소스	브랜드 열림 소스
+brand-opera		브랜드 opera	브랜드 opera
+brand-paypal		브랜드 paypal	브랜드 paypal
+brand-pinterest		브랜드 pinterest	브랜드 pinterest
+brand-signal		브랜드 신호	브랜드 신호
+brand-sketch		브랜드 sketch	브랜드 sketch
+brand-snapchat		브랜드 snapchat	브랜드 snapchat
+brand-spotify		브랜드 spotify	브랜드 spotify
+brand-steam		브랜드 김	브랜드 김
+brand-tabler		브랜드 tabler	브랜드 tabler
+brand-tiktok		브랜드 tiktok	브랜드 tiktok
+brand-tinder		브랜드 tinder	브랜드 tinder
+brand-tumblr		브랜드 tumblr	브랜드 tumblr
+brand-twitter		브랜드 twitter	브랜드 twitter
+brand-vimeo		브랜드 vimeo	브랜드 vimeo
+brand-whatsapp		브랜드 whatsapp	브랜드 whatsapp
+brand-windows		브랜드 windows	브랜드 windows
+brand-x		브랜드 x	브랜드 x
+brand-youtube		브랜드 youtube	브랜드 youtube
 bread	🍞	빵	레스토랑|빵|식당|식빵|식품|토스트|한덩이|호밀
 briefcase-2		서류가방 2	서류가방 2
 briefcase	💼	서류 가방	가방|사무실|서류 가방
+bubble-text		말풍선 텍스트	말풍선 텍스트
 bubble		말풍선	말풍선
 bug	🐛	송충이	곤충|동물|벌레|송충이|정원
 building-bridge-2		다리	다리
@@ -69,7 +127,9 @@ car	🚗	자동차	교통수단|승용차|운전|자동차|차량
 carambola		스타프루트	스타프루트
 caravan		캠핑 트레일러	캠핑 트레일러
 cardboards		종이 VR 헤드셋	종이 VR 헤드셋
+cards		트럼프 카드	트럼프 카드
 cash-banknote		지폐	지폐
+charging-pile		충전소	충전소
 check		체크	체크
 chef-hat		요리사 모자	요리사 모자
 cherry	🍒	체리	과일|체리
@@ -81,8 +141,49 @@ chess-rook		체스 룩	체스 룩
 chess		체스	체스
 christmas-tree	🎄	크리스마스 트리	축하|크리스마스|크리스마스 트리
 circle-key		원 열쇠	원 열쇠
+circle-letter-a		원 글자 a	원 글자 a
+circle-letter-b		원 글자 b	원 글자 b
+circle-letter-c		원 글자 c	원 글자 c
+circle-letter-d		원 글자 d	원 글자 d
+circle-letter-e		원 글자 e	원 글자 e
+circle-letter-f		원 글자 f	원 글자 f
+circle-letter-g		원 글자 g	원 글자 g
+circle-letter-h		원 글자 h	원 글자 h
+circle-letter-i		원 글자 i	원 글자 i
+circle-letter-j		원 글자 j	원 글자 j
+circle-letter-k		원 글자 k	원 글자 k
+circle-letter-l		원 글자 l	원 글자 l
+circle-letter-m		원 글자 m	원 글자 m
+circle-letter-n		원 글자 n	원 글자 n
+circle-letter-o		원 글자 o	원 글자 o
+circle-letter-p		원 글자 p	원 글자 p
+circle-letter-q		원 글자 q	원 글자 q
+circle-letter-r		원 글자 r	원 글자 r
+circle-letter-s		원 글자 s	원 글자 s
+circle-letter-t		원 글자 t	원 글자 t
+circle-letter-u		원 글자 u	원 글자 u
+circle-letter-v		원 글자 v	원 글자 v
+circle-letter-w		원 글자 w	원 글자 w
+circle-letter-x		원 글자 x	원 글자 x
+circle-letter-y		원 글자 y	원 글자 y
+circle-letter-z		원 글자 z	원 글자 z
+circle-number-0		원 숫자 0	원 숫자 0
+circle-number-1		원 숫자 1	원 숫자 1
+circle-number-2		원 숫자 2	원 숫자 2
+circle-number-3		원 숫자 3	원 숫자 3
+circle-number-4		원 숫자 4	원 숫자 4
+circle-number-5		원 숫자 5	원 숫자 5
+circle-number-6		원 숫자 6	원 숫자 6
+circle-number-7		원 숫자 7	원 숫자 7
+circle-number-8		원 숫자 8	원 숫자 8
+circle-number-9		원 숫자 9	원 숫자 9
 circle-percentage		원 백분율	원 백분율
 circle		원	원
+clipboard-check		클립보드 체크	클립보드 체크
+clipboard-data		클립보드 데이터	클립보드 데이터
+clipboard-plus		클립보드 더하기	클립보드 더하기
+clipboard-text		클립보드 텍스트	클립보드 텍스트
+clipboard-x		클립보드 x	클립보드 x
 clipboard	📋	클립보드	노트|클리핑|클립|클립보드|할일
 clock-hour-1		시계 시간 1	시계 시간 1
 clock-hour-10		시계 시간 10	시계 시간 10
@@ -101,6 +202,8 @@ cloud-computing		클라우드 컴퓨팅	클라우드 컴퓨팅
 cloud	☁	구름	구름|날씨|흐림
 clover	🍀	네잎클로버	4|네잎클로버|식물|아이리쉬|잎|클로버|행운
 clubs	♣	클럽	게임|카드 게임|클럽|클로바 무늬
+code-circle-2		코드 원 2	코드 원 2
+code-circle		코드 원	코드 원
 coin-bitcoin		동전 비트코인	동전 비트코인
 coin-euro		동전 유로	동전 유로
 coin-monero		동전 모네로	동전 모네로
@@ -114,12 +217,21 @@ compass	🧭	나침반	길찾기|나침반|네비게이션|오리엔티어링|�
 cone-2		원뿔 2	원뿔 2
 cone		원뿔	원뿔
 confetti	🎊 🎉	박 터트리기	공|기념|박 터트리기|색종이 꽃가루처|생일|신나는|야호|우후|짠|축하|파티
+cookie-man		쿠키 남자	쿠키 남자
 cookie	🍪	쿠키	달콤|초코 쿠키|초코칩 쿠키|초콜렛 칩|쿠키
 copyleft		카피레프트	카피레프트
 copyright	©	저작권	동그라미 C|씨|저작권
 credit-card	💳	신용카드	돈|신용카드|은행|지불|카드|페이|현금
+crop-1-1		자르기 1 1	자르기 1 1
+crop-16-9		자르기 16 9	자르기 16 9
+crop-3-2		자르기 3 2	자르기 3 2
+crop-5-4		자르기 5 4	자르기 5 4
+crop-7-5		자르기 7 5	자르기 7 5
+crop-landscape		자르기 가로 방향	자르기 가로 방향
+crop-portrait		자르기 세로 방향	자르기 세로 방향
 cross	✝	라틴 십자가	기독교|라틴 십자가|십자가|종교|크리스찬
 crown	👑	왕관	승리|여왕|왕|왕관|왕족|의류
+database		데이터베이스	데이터베이스
 device-cctv		기기 감시 카메라	기기 감시 카메라
 device-desktop	🖥	데스크톱 컴퓨터	데스크톱|모니터|컴퓨터
 device-floppy	💾	플로피 디스크	디스켓|디스크|컴퓨터|플로피 디스크
@@ -127,12 +239,15 @@ device-gamepad-2		기기 게임패드 2	기기 게임패드 2
 device-gamepad-3		기기 게임패드 3	기기 게임패드 3
 device-gamepad	🎮	비디오 게임	게임|게임패드|비디오 게임|엔터테인먼트|컨트롤러
 device-heart-monitor		심장 모니터	심장 모니터
+device-imac		기기 imac	기기 imac
+device-ipad		기기 ipad	기기 ipad
 device-mobile	📱	휴대전화	모바일폰|셀폰|전화|커뮤니케이션|휴대전화|휴대폰
 device-remote		기기 리모컨	기기 리모컨
 device-speaker	🔊	스피커 소리 크게	높게|소리|소리 큼|소리 키우기|스피커 소리 크게|음악|크게
 device-tablet		기기 태블릿	기기 태블릿
 device-tv-old		옛날 텔레비전	옛날 텔레비전
 device-tv	📺	텔레비전	TV|비디오|텔레비전|티비
+device-unknown		기기 알 수 없음	기기 알 수 없음
 device-usb		기기 USB	기기 USB
 device-watch	⌚	시계	손목 시계|시간|시계
 diamond	💎	원석	결혼식|다이아몬드|돈|로맨스|보석|약혼|원석
@@ -144,8 +259,10 @@ dice-4		주사위 4	주사위 4
 dice-5		주사위 5	주사위 5
 dice-6		주사위 6	주사위 6
 dice	🎲	주사위	게임|경기|경기에서 짐|엔터테인먼트|주사위
+directions		길 안내	길 안내
 disc	💿	씨디	CD|DVD|광학|디비디|디스크|블루레이|시디|씨디
 discount		할인	할인
+download		다운로드	다운로드
 drop-circle		물방울 원	물방울 원
 droplet	💧	물방울	날씨|눈물|달콤|땀|만화|물방울|자연|추위|코믹
 droplets		물방울	물방울
@@ -164,19 +281,25 @@ eye	👁	눈	눈|눈 하나|눈 한개|몸|시력|신체|얼굴|한 눈
 eyeglass-2		안경 2	안경 2
 eyeglass	👓	안경	눈|안경|안경류|의류
 face-mask	😷	마스크 낀 얼굴	감기|마스크|마스크 낀 얼굴|병균|세균|아픈|약|얼굴|의사|의학|치과의사|피부과 의사|황사
+favicon		파비콘	파비콘
 feather	🪶	깃털	가벼운|깃|깃털|비행|새
 fence		울타리	울타리
 ferry	⛴	페리	보트|승객|연락선|페리
 fidget-spinner		피젯 스피너	피젯 스피너
+file-check		파일 체크	파일 체크
+file-code		파일 코드	파일 코드
 file-description		파일 설명	파일 설명
 file-dollar		파일 달러	파일 달러
 file-euro		파일 유로	파일 유로
 file-horizontal		파일 가로	파일 가로
 file-invoice		파일 송장	파일 송장
 file-music		파일 음악	파일 음악
-file-pencil		파일 연필	파일 연필
+file-neutral		파일 무표정	파일 무표정
+file-sad		파일 슬픈	파일 슬픈
+file-smile		파일 미소	파일 미소
 file-star		파일 별	파일 별
 file-text		파일 텍스트	파일 텍스트
+file-time		파일 시간	파일 시간
 file		파일	파일
 files		파일	파일
 fish-bone		생선 가시	생선 가시
@@ -218,10 +341,7 @@ home-2		집 2	집 2
 home	🏠 🏡	집	건물|교외|마음이 머무는 곳|빌딩|시골집|정원|정원이 있는 주택|정원이 있는 집|정착|주택|주택 수리|집
 hospital-circle	🏥	병원	건물|메디컬|병원|빌딩|의사|의학
 hourglass	⌛ ⏳	시간이 다 된 모래시계	기다림|모래|모래가 떨어지는 모래시계|모래시계|시간|시간이 남은 모래시계|시간이 다 된 모래시계|욜로|타이머
-ironing-1		다림질 1	다림질 1
-ironing-2		다림질 2	다림질 2
-ironing-3		다림질 3	다림질 3
-ironing-steam		다림질 김	다림질 김
+icons		아이콘	아이콘
 ironing		다림질	다림질
 jetpack		제트팩	제트팩
 jewish-star	✡	다윗의 별	다비드|다비드별|다윗|다윗의 별|별|유대교|유대인|종교
@@ -230,9 +350,11 @@ keyboard	⌨	키보드	컴퓨터|키보드
 label-important		라벨 중요	라벨 중요
 label	🏷	라벨	라벨|택
 leaf		잎	잎
+lego		lego	lego
 lemon-2		레몬 2	레몬 2
 library		도서관	도서관
 lifebuoy		구명부표	구명부표
+link	🔗	링크	링크|링크 표시|이음
 location		위치	위치
 lock-square-rounded		자물쇠 사각형 둥근	자물쇠 사각형 둥근
 lock	🔒 🔐	자물쇠	락|보안|사적인|안전|열쇠|자물쇠|자물쇠와 열쇠|자전거 자물쇠|잠금
@@ -250,9 +372,12 @@ melon	🍈	멜론	과일|멜론|야채|채소|칸탈루프
 message-2		메시지 2	메시지 2
 message-chatbot		메시지 챗봇	메시지 챗봇
 message-circle		메시지 원	메시지 원
+message-report		메시지 보고서	메시지 보고서
 message		메시지	메시지
 messages		메시지	메시지
 meteor	☄	혜성	우주|혜성
+michelin-star		michelin 별	michelin 별
+mickey		mickey	mickey
 microphone	🎤	마이크	가라오케|노래|노래방|마이크|소리|음악|행사
 microscope	🔬	현미경	과학|기구|도구|실험|연구실|장치|현미경
 microwave		전자레인지	전자레인지
@@ -278,6 +403,7 @@ nurse		간호사	간호사
 octagon		팔각형	팔각형
 oval-vertical		타원 세로	타원 세로
 oval		타원	타원
+pacman		pacman	pacman
 paint		페인트	페인트
 palette	🎨	팔레트	그림|그림 그리기|다채로운|미술|박물관|엔터테인먼트|예술|예술가 팔레트|예술적인|팔레트|화가
 parking-circle		주차장 원	주차장 원
@@ -299,12 +425,28 @@ plane-arrival	🛬	비행기 착륙	도착|도착하는 중|랜딩 중|비행기
 plane-departure	🛫	비행기 이륙	비행기|이륙|체크인|출발
 plane-tilt		비행기 기울어진	비행기 기울어진
 plane	✈	비행기	비행|비행기|여행|제트|항공
+play-card-1		놀이 카드 1	놀이 카드 1
+play-card-10		놀이 카드 10	놀이 카드 10
+play-card-2		놀이 카드 2	놀이 카드 2
+play-card-3		놀이 카드 3	놀이 카드 3
+play-card-4		놀이 카드 4	놀이 카드 4
+play-card-5		놀이 카드 5	놀이 카드 5
+play-card-6		놀이 카드 6	놀이 카드 6
+play-card-7		놀이 카드 7	놀이 카드 7
+play-card-8		놀이 카드 8	놀이 카드 8
+play-card-9		놀이 카드 9	놀이 카드 9
+play-card-a		놀이 카드 a	놀이 카드 a
+play-card-j		놀이 카드 j	놀이 카드 j
+play-card-k		놀이 카드 k	놀이 카드 k
+play-card-q		놀이 카드 q	놀이 카드 q
 play-card-star		별이 있는 트럼프 카드	별이 있는 트럼프 카드
 play-card	🃏	조커	게임|와일드카드|조커|카드
 polaroid		즉석 사진	즉석 사진
 poo	💩	똥	괴물|냄새|냄새가 지독한|똥|똥덩어리|똥무더기|만화|몬스터|아 짜증나|얼굴|코믹
+presentation-analytics		프레젠테이션 분석	프레젠테이션 분석
 presentation		프레젠테이션	프레젠테이션
 puzzle	🧩	퍼즐	조각|조각퍼즐|직소|직소퍼즐|퍼즐
+quote		인용	인용
 radar		레이더	레이더
 radioactive	☢	방사능	방사능|방사선|위험|주의|표시
 receipt-dollar		영수증 달러	영수증 달러
@@ -319,6 +461,7 @@ rectangle		직사각형	직사각형
 registered	®	등록상표	동그라미 R|등록상표|알
 report-money		보고서 돈	보고서 돈
 rollercoaster		롤러코스터	롤러코스터
+rosette-discount-check		로제트 할인 체크	로제트 할인 체크
 rosette-discount		로제트 할인	로제트 할인
 rosette	🏵	장미	꽃|로제트|식물|장미|장미 모양
 salad		샐러드	샐러드
@@ -327,6 +470,9 @@ scale	⚖	접시저울	공평한|균형|별자리|저울|접시저울|정의|천
 school	🏫	학교	건물|공부|빌딩|스쿨|학교
 scuba-diving-tank		스쿠버 탱크	스쿠버 탱크
 seedling	🌱	새싹	새싹|식물|싹이 돋다|어린 나무|어린잎
+send		보내기	보내기
+settings		설정	설정
+shield-check		방패 체크	방패 체크
 shield-checkered		방패 체크무늬	방패 체크무늬
 shield-half		방패 반	방패 반
 shield-lock		방패 자물쇠	방패 자물쇠
@@ -337,12 +483,55 @@ sign-left		표지판 왼쪽	표지판 왼쪽
 sign-right		표지판 오른쪽	표지판 오른쪽
 soup		수프	수프
 spade	♠	스페이드	게임|스페이드|스페이드 모양|카드
+sparkles-2		반짝임 2	반짝임 2
 sparkles	✨	블링블링	마술|매직|반짝거림|반짝반짝|별|블링블링
 speedboat	🚤	쾌속정	럭셔리|보트|선박|억만장자|여름|여행|쾌속정|호수
 spider	🕷	거미	거미|곤충|벌레|스파이더
+square-letter-q		사각형 글자 q	사각형 글자 q
 square-rotated		사각형 회전	사각형 회전
+square-rounded-check		사각형 둥근 체크	사각형 둥근 체크
+square-rounded-letter-a		사각형 둥근 글자 a	사각형 둥근 글자 a
+square-rounded-letter-b		사각형 둥근 글자 b	사각형 둥근 글자 b
+square-rounded-letter-c		사각형 둥근 글자 c	사각형 둥근 글자 c
+square-rounded-letter-d		사각형 둥근 글자 d	사각형 둥근 글자 d
+square-rounded-letter-e		사각형 둥근 글자 e	사각형 둥근 글자 e
+square-rounded-letter-f		사각형 둥근 글자 f	사각형 둥근 글자 f
+square-rounded-letter-g		사각형 둥근 글자 g	사각형 둥근 글자 g
+square-rounded-letter-h		사각형 둥근 글자 h	사각형 둥근 글자 h
+square-rounded-letter-i		사각형 둥근 글자 i	사각형 둥근 글자 i
+square-rounded-letter-j		사각형 둥근 글자 j	사각형 둥근 글자 j
+square-rounded-letter-k		사각형 둥근 글자 k	사각형 둥근 글자 k
+square-rounded-letter-l		사각형 둥근 글자 l	사각형 둥근 글자 l
+square-rounded-letter-m		사각형 둥근 글자 m	사각형 둥근 글자 m
+square-rounded-letter-n		사각형 둥근 글자 n	사각형 둥근 글자 n
+square-rounded-letter-o		사각형 둥근 글자 o	사각형 둥근 글자 o
+square-rounded-letter-p		사각형 둥근 글자 p	사각형 둥근 글자 p
+square-rounded-letter-q		사각형 둥근 글자 q	사각형 둥근 글자 q
+square-rounded-letter-r		사각형 둥근 글자 r	사각형 둥근 글자 r
+square-rounded-letter-s		사각형 둥근 글자 s	사각형 둥근 글자 s
+square-rounded-letter-t		사각형 둥근 글자 t	사각형 둥근 글자 t
+square-rounded-letter-u		사각형 둥근 글자 u	사각형 둥근 글자 u
+square-rounded-letter-v		사각형 둥근 글자 v	사각형 둥근 글자 v
+square-rounded-letter-w		사각형 둥근 글자 w	사각형 둥근 글자 w
+square-rounded-letter-x		사각형 둥근 글자 x	사각형 둥근 글자 x
+square-rounded-letter-y		사각형 둥근 글자 y	사각형 둥근 글자 y
+square-rounded-letter-z		사각형 둥근 글자 z	사각형 둥근 글자 z
+square-rounded-minus		사각형 둥근 빼기	사각형 둥근 빼기
+square-rounded-number-0		사각형 둥근 숫자 0	사각형 둥근 숫자 0
+square-rounded-number-1		사각형 둥근 숫자 1	사각형 둥근 숫자 1
+square-rounded-number-2		사각형 둥근 숫자 2	사각형 둥근 숫자 2
+square-rounded-number-3		사각형 둥근 숫자 3	사각형 둥근 숫자 3
+square-rounded-number-4		사각형 둥근 숫자 4	사각형 둥근 숫자 4
+square-rounded-number-5		사각형 둥근 숫자 5	사각형 둥근 숫자 5
+square-rounded-number-6		사각형 둥근 숫자 6	사각형 둥근 숫자 6
+square-rounded-number-7		사각형 둥근 숫자 7	사각형 둥근 숫자 7
+square-rounded-number-8		사각형 둥근 숫자 8	사각형 둥근 숫자 8
+square-rounded-number-9		사각형 둥근 숫자 9	사각형 둥근 숫자 9
+square-rounded-plus		사각형 둥근 더하기	사각형 둥근 더하기
+square-rounded-x		사각형 둥근 x	사각형 둥근 x
 square-rounded		사각형 둥근	사각형 둥근
 square		사각형	사각형
+stack-2		더미 2	더미 2
 star-half		별 반	별 반
 star	⭐	별	별|천문학|화이트 미디엄 별|흰색 미디엄 별
 stars		별	별
@@ -362,8 +551,10 @@ thumb-up	👍	올린 엄지	+1|굿|나이스|당근|따봉|손|엄지|엄지 척
 ticket	🎫	티켓	공연|엔터테인먼트|입장|티켓|표|표 확인
 tools-kitchen-2	🍴	포크와 나이프	나이프|레스토랑|맛있음|먹다|배고픔|식당|식품|아침밥|아침식사|야미|요리|음식|저녁식사|점심식사|포크|포크와 나이프
 train	🚆	기차	기차|도착|철도|칙칙폭폭
+trash-x		휴지통 x	휴지통 x
 trash		휴지통	휴지통
 triangle-inverted		삼각형 뒤집힌	삼각형 뒤집힌
+triangle-square-circle		삼각형 사각형 원	삼각형 사각형 원
 triangle		삼각형	삼각형
 trolley		카트	카트
 trophy	🏆	트로피	상|스포츠|승리|우승|챔스|챔피온|트로피
@@ -378,5 +569,10 @@ woman	👩	여자	성인|여성|여자|헤어컷
 world	🗺	세계 지도	세계|지도
 writing-sign		쓰기 표지판	쓰기 표지판
 writing	✍	글을 쓰고 있는 손	글쓰기|글을 쓰고 있는 손|손|연필 쥔 손
+x		x	x
 yin-yang	☯	음양	도교|둘다|모두 아닌|삶|양|어려운|음|음양|종교
 zeppelin		비행선	비행선
+zoom-cancel		확대 취소	확대 취소
+zoom-check		확대 체크	확대 체크
+zoom-exclamation		확대 느낌표	확대 느낌표
+zoom		확대	확대

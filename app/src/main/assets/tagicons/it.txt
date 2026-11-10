@@ -2,16 +2,37 @@ accessible	♿	simbolo della disabilità	accesso|accesso sedia a rotelle|disabil
 aerial-lift	🚡	funivia aerea	aerea|funicolare|funivia|montagna|sci|sciare|tram|trasporto
 air-balloon		mongolfiera	mongolfiera
 alarm	⏰	sveglia	attesa|mattino|ora|ore|suono|sveglia|svegliarsi|tempo
+alert-circle		avviso cerchio	avviso cerchio
 alert-triangle		avviso triangolo	avviso triangolo
 alien	👽	alieno	ET|UFO|alieno|extraterrestre|faccina|favola|marziani|mostro|spazio
 apple	🍎	mela rossa	cibo|dieta|frutta|frutto|mela|rossa
 archive		archivio	archivio
+arrow-badge-down		freccia badge giù	freccia badge giù
+arrow-badge-left		freccia badge sinistra	freccia badge sinistra
+arrow-badge-right		freccia badge destra	freccia badge destra
+arrow-badge-up		freccia badge su	freccia badge su
+arrow-big-down		freccia grande giù	freccia grande giù
+arrow-big-left		freccia grande sinistra	freccia grande sinistra
+arrow-big-right		freccia grande destra	freccia grande destra
+arrow-big-up		freccia grande su	freccia grande su
 artboard		tavola da disegno	tavola da disegno
 article		articolo	articolo
+asset		risorsa	risorsa
 atom-2		atomo 2	atomo 2
 automatic-gearbox		cambio automatico	cambio automatico
 award	🏅	medaglia sportiva	campione|corsa|gara|medaglia|medaglia sportiva|podio|risultato sportivo|sport|vincere|vittoria
 baby-carriage		carrozzina	carrozzina
+badge-3d		badge 3d	badge 3d
+badge-4k		badge 4k	badge 4k
+badge-8k		badge 8k	badge 8k
+badge-ad		badge pubblicità	badge pubblicità
+badge-ar		badge ar	badge ar
+badge-cc		badge cc	badge cc
+badge-hd		badge hd	badge hd
+badge-sd		badge sd	badge sd
+badge-tm		badge tm	badge tm
+badge-vo		badge vo	badge vo
+badge-vr		badge vr	badge vr
 badge		badge	badge
 badges		distintivi	distintivi
 ball-bowling	🎳	bowling	birilli|bowling|giocare|gioco|palla|palla da bowling|sport
@@ -19,8 +40,11 @@ balloon	🎈	palloncino	auguri|compleanno|festa|palloncino
 ballpen	🖊	penna a sfera	compiti|disegnare|penna|penna a sfera|scrivere|scrivere a penna|scuola|stilografica|ufficio
 bandage	🩹	cerotto	cerotto|cerotto adesivo
 barbell		bilanciere	bilanciere
+barrier-block		barriera blocco	barriera blocco
 basket	🧺	cesto	biancheria|bucato|cestino|cesto|orto|picnic
 bath		vasca da bagno	vasca da bagno
+battery-automotive		batteria auto	batteria auto
+battery-vertical-1		batteria verticale 1	batteria verticale 1
 bed-flat		letto piatto	letto piatto
 bed	🛏	letto	arredamento|dormire|hotel|letto|mobili|relax|sonno|stanchezza
 beer	🍺 🍻	boccale di birra	Germania|alcool|bar|bere|birra|birre|boccale di birra|boccali di birra|boccali di birra che brindano|brindisi|celebrare|cin cin|estate|festeggiare|octoberfest|pinta|pub|ristorante|sete
@@ -28,10 +52,14 @@ bell-ringing-2		campanella che suona 2	campanella che suona 2
 bell-ringing		campanella che suona	campanella che suona
 bell	🔔	campana	campana|campanella|campanello|chiesa|musica|scuola|stonato|suono
 bike	🚲	bicicletta	bici|bicicletta|due ruote|gita|mezzo|pedalare|spinning|sport|trasporti|trasporto|veicolo
+binoculars		binocolo	binocolo
 biohazard	☣	simbolo del rischio biologico	biorischio|pericolo|rischio biologico|simbolo del rischio biologico|sostanze pericolose
 blade		lama	lama
 blender		frullatore	frullatore
+bolt	⚡	alta tensione	alta|fulmine|pericolo|simbolo|tensione|tuono
+bomb	💣	bomba	bomba|boom|emozione|esplosione|fumetto|pericolo
 bone	🦴	osso	cane|ossa|osso|osso a forchetta|scheletro
+bong		bong	bong
 book	📕	libro chiuso	biblioteca|istruzione|leggere|libreria|libro|libro chiuso|rosso|scuola|studiare|università
 bookmark	🔖	segnalibro	etichetta|leggere|lettura|libro|segnalibro
 bookmarks		segnalibri	segnalibri
@@ -40,9 +68,39 @@ bow		fiocco	fiocco
 bowl-chopsticks	🥢	bacchette	bacchette|bastoncini|cibo asiatico|hashi|jeotgarak|kuaizi
 bowl-spoon	🥣	ciotola con cucchiaio	cereali|cibo|ciotola|ciotola con cucchiaio|colazione|porridge|scodella|tazza|zuppa|zuppiera
 bowl		ciotola	ciotola
+brand-apple		marchio apple	marchio apple
+brand-discord		marchio discord	marchio discord
+brand-dribbble		marchio dribbble	marchio dribbble
+brand-facebook		marchio facebook	marchio facebook
+brand-github		marchio github	marchio github
+brand-google		marchio google	marchio google
+brand-instagram		marchio instagram	marchio instagram
+brand-kick		marchio kick	marchio kick
+brand-linkedin		marchio linkedin	marchio linkedin
+brand-messenger		marchio messenger	marchio messenger
+brand-open-source		marchio aperto sorgente	marchio aperto sorgente
+brand-opera		marchio opera	marchio opera
+brand-paypal		marchio paypal	marchio paypal
+brand-pinterest		marchio pinterest	marchio pinterest
+brand-signal		marchio segnale	marchio segnale
+brand-sketch		marchio sketch	marchio sketch
+brand-snapchat		marchio snapchat	marchio snapchat
+brand-spotify		marchio spotify	marchio spotify
+brand-steam		marchio vapore	marchio vapore
+brand-tabler		marchio tabler	marchio tabler
+brand-tiktok		marchio tiktok	marchio tiktok
+brand-tinder		marchio tinder	marchio tinder
+brand-tumblr		marchio tumblr	marchio tumblr
+brand-twitter		marchio twitter	marchio twitter
+brand-vimeo		marchio vimeo	marchio vimeo
+brand-whatsapp		marchio whatsapp	marchio whatsapp
+brand-windows		marchio windows	marchio windows
+brand-x		marchio x	marchio x
+brand-youtube		marchio youtube	marchio youtube
 bread	🍞	pane in cassetta	carboidrati|cereali|cibo|pancarré|pane|pane a cassetta|pane in cassetta|ristorante|toast
 briefcase-2		valigetta 2	valigetta 2
 briefcase	💼	valigetta 24 ore	24 ore|borsa|documenti|lavoro|porta documenti|ufficio|valigetta|valigetta 24 ore
+bubble-text		fumetto testo	fumetto testo
 bubble		fumetto	fumetto
 bug	🐛	insetto	animale|bruco|giardino|millepiedi
 building-bridge-2		ponte	ponte
@@ -69,7 +127,9 @@ car	🚗	auto	auto|automobile|guidare|macchina|mezzo|trasporti|veicolo|viaggiare
 carambola		carambola	carambola
 caravan		roulotte	roulotte
 cardboards		visore di cartone	visore di cartone
+cards		carte da gioco	carte da gioco
 cash-banknote		banconota	banconota
+charging-pile		colonnina di ricarica	colonnina di ricarica
 check		spunta	spunta
 chef-hat		cappello da cuoco	cappello da cuoco
 cherry	🍒	ciliegie	cibo|ciliegia|ciliegie|frutta|frutto
@@ -81,8 +141,49 @@ chess-rook		torre degli scacchi	torre degli scacchi
 chess		scacchi	scacchi
 christmas-tree	🎄	albero di Natale	Natale|albero|albero di Natale|celebrare|festa|festeggiare|festoni|natura|palline|pino
 circle-key		cerchio chiave	cerchio chiave
+circle-letter-a		cerchio lettera a	cerchio lettera a
+circle-letter-b		cerchio lettera b	cerchio lettera b
+circle-letter-c		cerchio lettera c	cerchio lettera c
+circle-letter-d		cerchio lettera d	cerchio lettera d
+circle-letter-e		cerchio lettera e	cerchio lettera e
+circle-letter-f		cerchio lettera f	cerchio lettera f
+circle-letter-g		cerchio lettera g	cerchio lettera g
+circle-letter-h		cerchio lettera h	cerchio lettera h
+circle-letter-i		cerchio lettera i	cerchio lettera i
+circle-letter-j		cerchio lettera j	cerchio lettera j
+circle-letter-k		cerchio lettera k	cerchio lettera k
+circle-letter-l		cerchio lettera l	cerchio lettera l
+circle-letter-m		cerchio lettera m	cerchio lettera m
+circle-letter-n		cerchio lettera n	cerchio lettera n
+circle-letter-o		cerchio lettera o	cerchio lettera o
+circle-letter-p		cerchio lettera p	cerchio lettera p
+circle-letter-q		cerchio lettera q	cerchio lettera q
+circle-letter-r		cerchio lettera r	cerchio lettera r
+circle-letter-s		cerchio lettera s	cerchio lettera s
+circle-letter-t		cerchio lettera t	cerchio lettera t
+circle-letter-u		cerchio lettera u	cerchio lettera u
+circle-letter-v		cerchio lettera v	cerchio lettera v
+circle-letter-w		cerchio lettera w	cerchio lettera w
+circle-letter-x		cerchio lettera x	cerchio lettera x
+circle-letter-y		cerchio lettera y	cerchio lettera y
+circle-letter-z		cerchio lettera z	cerchio lettera z
+circle-number-0		cerchio numero 0	cerchio numero 0
+circle-number-1		cerchio numero 1	cerchio numero 1
+circle-number-2		cerchio numero 2	cerchio numero 2
+circle-number-3		cerchio numero 3	cerchio numero 3
+circle-number-4		cerchio numero 4	cerchio numero 4
+circle-number-5		cerchio numero 5	cerchio numero 5
+circle-number-6		cerchio numero 6	cerchio numero 6
+circle-number-7		cerchio numero 7	cerchio numero 7
+circle-number-8		cerchio numero 8	cerchio numero 8
+circle-number-9		cerchio numero 9	cerchio numero 9
 circle-percentage		cerchio percentuale	cerchio percentuale
 circle		cerchio	cerchio
+clipboard-check		portablocco spunta	portablocco spunta
+clipboard-data		portablocco dati	portablocco dati
+clipboard-plus		portablocco più	portablocco più
+clipboard-text		portablocco testo	portablocco testo
+clipboard-x		portablocco x	portablocco x
 clipboard	📋	portablocco	appunti|blocco|blocco note|cartella|portablocco|tavoletta
 clock-hour-1		orologio ora 1	orologio ora 1
 clock-hour-10		orologio ora 10	orologio ora 10
@@ -101,6 +202,8 @@ cloud-computing		informatica in cloud	informatica in cloud
 cloud	☁	nuvola	meteo|natura|nuvola|nuvola nera|nuvoletta
 clover	🍀	quadrifoglio	foglia|fortuna|natura|pianta|piante|quadrifoglio|quattro
 clubs	♣	fiori	carte|fiori|seme
+code-circle-2		codice cerchio 2	codice cerchio 2
+code-circle		codice cerchio	codice cerchio
 coin-bitcoin		moneta bitcoin	moneta bitcoin
 coin-euro		moneta euro	moneta euro
 coin-monero		moneta monero	moneta monero
@@ -114,12 +217,21 @@ compass	🧭	bussola	bussola|direzione|magnetica|navigazione|orientamento
 cone-2		cono 2	cono 2
 cone		cono	cono
 confetti	🎊 🎉	coriandoli	auguri|carnevale|compleanno|congratulazioni|coriandoli|decorazioni|evviva|felicità|festa|festeggiare|palla|palla di coriandoli|party|spara coriandoli|stelle filanti|urrà|yahoo
+cookie-man		biscotto uomo	biscotto uomo
 cookie	🍪	biscotto	biscottino|biscotto|cibo|cioccolato|cookie|dessert|dolce|gocce di cioccolato|ristorante|zucchero
 copyleft		copyleft	copyleft
 copyright	©	copyright	copyright
 credit-card	💳	carta di credito	addebito|banca|carta|carta di credito|credito|denaro|pagare|soldi
+crop-1-1		ritaglio 1 1	ritaglio 1 1
+crop-16-9		ritaglio 16 9	ritaglio 16 9
+crop-3-2		ritaglio 3 2	ritaglio 3 2
+crop-5-4		ritaglio 5 4	ritaglio 5 4
+crop-7-5		ritaglio 7 5	ritaglio 7 5
+crop-landscape		ritaglio orizzontale	ritaglio orizzontale
+crop-portrait		ritaglio verticale	ritaglio verticale
 cross	✝	croce latina	Cristianesimo|cattolicesimo|croce|croce latina|religione
 crown	👑	corona	abbigliamento|corona|famiglia reale|medioevo|principe|principessa|re|regale|regina|vincere
+database		database	database
 device-cctv		dispositivo videosorveglianza	dispositivo videosorveglianza
 device-desktop	🖥	computer fisso	PC tutto in uno|computer|computer fisso|desktop|desktop PC|monitor
 device-floppy	💾	floppy disc	computer|disc|dischetto|floppy
@@ -127,12 +239,15 @@ device-gamepad-2		dispositivo controller di gioco 2	dispositivo controller di gi
 device-gamepad-3		dispositivo controller di gioco 3	dispositivo controller di gioco 3
 device-gamepad	🎮	gamepad	console|gamepad|giocare|gioco|joystick|videogioco
 device-heart-monitor		cardiomonitor	cardiomonitor
+device-imac		dispositivo imac	dispositivo imac
+device-ipad		dispositivo ipad	dispositivo ipad
 device-mobile	📱	telefono cellulare	cellulare|chiamare|comunicare|smartphone|telefono
 device-remote		dispositivo telecomando	dispositivo telecomando
 device-speaker	🔊	altoparlante a volume alto	alto|altoparlante a volume alto|audio|megafono|musica|speaker|suono|volume
 device-tablet		dispositivo tablet	dispositivo tablet
 device-tv-old		televisore d’epoca	televisore d’epoca
 device-tv	📺	televisore	TV|arredamento|televisione|televisore
+device-unknown		dispositivo sconosciuto	dispositivo sconosciuto
 device-usb		dispositivo USB	dispositivo USB
 device-watch	⌚	orologio	orologio|orologio da polso|tempo
 diamond	💎	gemma	diamante|fidanzamento|gemma|gioiello|per sempre|pietra preziosa|romanticismo|romantico|soldi
@@ -144,8 +259,10 @@ dice-4		dado 4	dado 4
 dice-5		dado 5	dado 5
 dice-6		dado 6	dado 6
 dice	🎲	dado	dadi|dado|gioco|gioco dei dadi
+directions		indicazioni	indicazioni
 disc	💿	disco ottico	CD|DVD|blu-ray|computer|disco|disco ottico
 discount		sconto	sconto
+download		scarica	scarica
 drop-circle		goccia cerchio	goccia cerchio
 droplet	💧	goccia	acqua|freddo|fumetto|goccia|lacrima|natura|sudore|triste
 droplets		gocce	gocce
@@ -164,19 +281,25 @@ eye	👁	occhio	1 occhio|corpo|faccia|occhio
 eyeglass-2		occhiali 2	occhiali 2
 eyeglass	👓	occhiali da vista	abbigliamento|nerd|occhiali|occhiali da vista
 face-mask	😷	faccina con mascherina	dentista|dottore|faccina con mascherina|germi|infermiera|infermiere|malato|mascherina|medicina|raffreddato|raffreddore|smog
+favicon		icona del sito	icona del sito
 feather	🪶	piuma	leggero|penna|piuma|piumaggio|uccello|volo
 fence		recinzione	recinzione
 ferry	⛴	traghetto	barca|crociera|mare|nave|traghetto|traversata
 fidget-spinner		fidget spinner	fidget spinner
+file-check		file spunta	file spunta
+file-code		file codice	file codice
 file-description		file descrizione	file descrizione
 file-dollar		file dollaro	file dollaro
 file-euro		file euro	file euro
 file-horizontal		file orizzontale	file orizzontale
 file-invoice		file fattura	file fattura
 file-music		file musica	file musica
-file-pencil		file matita	file matita
+file-neutral		file neutro	file neutro
+file-sad		file triste	file triste
+file-smile		file sorriso	file sorriso
 file-star		file stella	file stella
 file-text		file testo	file testo
+file-time		file tempo	file tempo
 file		file	file
 files		file	file
 fish-bone		lisca di pesce	lisca di pesce
@@ -218,10 +341,7 @@ home-2		casa 2	casa 2
 home	🏠 🏡	casa	abitazione|casa|casa con giardino|casa di campagna|casetta|edificio|fattoria|giardino|nido|villa|villetta
 hospital-circle	🏥	ospedale	COVID|clinica|edificio|emergenza|infermiera|infermiere|malattia|medici|medicina|ospedale|pronto soccorso
 hourglass	⌛ ⏳	clessidra	clessidra|clessidra che scorre|sabbia|tempo
-ironing-1		stiratura 1	stiratura 1
-ironing-2		stiratura 2	stiratura 2
-ironing-3		stiratura 3	stiratura 3
-ironing-steam		stiratura vapore	stiratura vapore
+icons		icone	icone
 ironing		stiratura	stiratura
 jetpack		zaino a razzo	zaino a razzo
 jewish-star	✡	stella di David	David|Ebraismo|ebreo|sei punte|simbolo ebraico|stella|stella a sei punte|stella di David
@@ -230,9 +350,11 @@ keyboard	⌨	tastiera	computer|tasti|tastiera|tastiera senza fili
 label-important		etichetta importante	etichetta importante
 label	🏷	etichetta	etichetta|identificativo|prezzo|talloncino
 leaf		foglia	foglia
+lego		lego	lego
 lemon-2		limone 2	limone 2
 library		biblioteca	biblioteca
 lifebuoy		salvagente	salvagente
+link	🔗	collegamento	collegamento|due anelli|link|simbolo link
 location		posizione	posizione
 lock-square-rounded		lucchetto quadrato arrotondato	lucchetto quadrato arrotondato
 lock	🔒 🔐	lucchetto chiuso	chiave|chiuso|chiuso a chiave|lucchetto|lucchetto chiuso|lucchetto chiuso a chave|lucchetto chiuso con chiave|segreto|sicurezza|sicuro
@@ -250,9 +372,12 @@ melon	🍈	melone	cibo|frutta|frutto|melone
 message-2		messaggio 2	messaggio 2
 message-chatbot		messaggio chatbot	messaggio chatbot
 message-circle		messaggio cerchio	messaggio cerchio
+message-report		messaggio rapporto	messaggio rapporto
 message		messaggio	messaggio
 messages		messaggi	messaggi
 meteor	☄	cometa	cometa|natura|spazio|stella cometa
+michelin-star		michelin stella	michelin stella
+mickey		mickey	mickey
 microphone	🎤	microfono	Karaoke|cantare|concerto|intrattenimento|microfono|musica|palco|presentare|spettacolo|teatro
 microscope	🔬	microscopio	analisi|esperimento|microrganismo|microscopio|ricerca|scienza|scienziata|scienziato|strumento
 microwave		microonde	microonde
@@ -278,6 +403,7 @@ nurse		infermiere	infermiere
 octagon		ottagono	ottagono
 oval-vertical		ovale verticale	ovale verticale
 oval		ovale	ovale
+pacman		pacman	pacman
 paint		vernice	vernice
 palette	🎨	tavolozza	arte|artista|colori|creativo|dipingere|palette|pittore|pittura|tavolozza|tavolozza dei colori
 parking-circle		parcheggio cerchio	parcheggio cerchio
@@ -299,12 +425,28 @@ plane-arrival	🛬	atterraggio	aereo|aeroplano|aeroporto|arrivare|arrivi|arrivo|
 plane-departure	🛫	decollo	aereo|andare|check-in|decollo|partenza|partenze|partire|pista di decollo|trasporti|trasporto|vacanza|viaggiare
 plane-tilt		aereo inclinato	aereo inclinato
 plane	✈	aeroplano	aereo|aeroplano|jet|partenza|velivolo|viaggio
+play-card-1		gioco carta 1	gioco carta 1
+play-card-10		gioco carta 10	gioco carta 10
+play-card-2		gioco carta 2	gioco carta 2
+play-card-3		gioco carta 3	gioco carta 3
+play-card-4		gioco carta 4	gioco carta 4
+play-card-5		gioco carta 5	gioco carta 5
+play-card-6		gioco carta 6	gioco carta 6
+play-card-7		gioco carta 7	gioco carta 7
+play-card-8		gioco carta 8	gioco carta 8
+play-card-9		gioco carta 9	gioco carta 9
+play-card-a		gioco carta a	gioco carta a
+play-card-j		gioco carta j	gioco carta j
+play-card-k		gioco carta k	gioco carta k
+play-card-q		gioco carta q	gioco carta q
 play-card-star		carta da gioco con stella	carta da gioco con stella
 play-card	🃏	jolly	Joker|carta|carta da gioco|gioco|jolly
 polaroid		foto istantanea	foto istantanea
 poo	💩	cacca	buona fortuna|cacca|fortuna|fortunato|popò|pupù|puzza
+presentation-analytics		presentazione analisi	presentazione analisi
 presentation		presentazione	presentazione
 puzzle	🧩	pezzo di puzzle	incastrarsi|incastro|indizio|pezzo|pezzo di puzzle|pezzo mancante|puzzle|tassello|tessera del puzzle
+quote		citazione	citazione
 radar		radar	radar
 radioactive	☢	simbolo della radioattività	pericolo|radioattività|radioattivo|rifiuti tossici|scorie|simbolo della radioattività
 receipt-dollar		scontrino dollaro	scontrino dollaro
@@ -319,6 +461,7 @@ rectangle		rettangolo	rettangolo
 registered	®	marchio registrato	marchio registrato|marchio registrato cerchiato
 report-money		rapporto denaro	rapporto denaro
 rollercoaster		montagne russe	montagne russe
+rosette-discount-check		coccarda sconto spunta	coccarda sconto spunta
 rosette-discount		coccarda sconto	coccarda sconto
 rosette	🏵	rosetta	coccarda|fiore|natura|pianta|rosetta
 salad		insalata	insalata
@@ -327,6 +470,9 @@ scale	⚖	bilancia a doppio piatto	bilancia|bilancia a doppio piatto|chili|giust
 school	🏫	scuola	alunni|classe|classi|edificio|imparare|insegnante|liceo|maestra|scuola|università
 scuba-diving-tank		bombola da sub	bombola da sub
 seedling	🌱	germoglio	germoglio|natura|pianta|piantina|primavera
+send		invia	invia
+settings		impostazioni	impostazioni
+shield-check		scudo spunta	scudo spunta
 shield-checkered		scudo a scacchi	scudo a scacchi
 shield-half		scudo metà	scudo metà
 shield-lock		scudo lucchetto	scudo lucchetto
@@ -337,12 +483,55 @@ sign-left		segnale sinistra	segnale sinistra
 sign-right		segnale destra	segnale destra
 soup		zuppa	zuppa
 spade	♠	picche	carte|picche|seme
+sparkles-2		scintille 2	scintille 2
 sparkles	✨	stelline	scintille|spendente|stelle|stelline
 speedboat	🚤	motoscafo	barca|lago|lusso|mare|mezzo|milionario|motoscafo|vacanza|vacanze|veicolo|veloce
 spider	🕷	ragno	animale|aracnide|disgusto|insetto|ragno|schifo
+square-letter-q		quadrato lettera q	quadrato lettera q
 square-rotated		quadrato ruotato	quadrato ruotato
+square-rounded-check		quadrato arrotondato spunta	quadrato arrotondato spunta
+square-rounded-letter-a		quadrato arrotondato lettera a	quadrato arrotondato lettera a
+square-rounded-letter-b		quadrato arrotondato lettera b	quadrato arrotondato lettera b
+square-rounded-letter-c		quadrato arrotondato lettera c	quadrato arrotondato lettera c
+square-rounded-letter-d		quadrato arrotondato lettera d	quadrato arrotondato lettera d
+square-rounded-letter-e		quadrato arrotondato lettera e	quadrato arrotondato lettera e
+square-rounded-letter-f		quadrato arrotondato lettera f	quadrato arrotondato lettera f
+square-rounded-letter-g		quadrato arrotondato lettera g	quadrato arrotondato lettera g
+square-rounded-letter-h		quadrato arrotondato lettera h	quadrato arrotondato lettera h
+square-rounded-letter-i		quadrato arrotondato lettera i	quadrato arrotondato lettera i
+square-rounded-letter-j		quadrato arrotondato lettera j	quadrato arrotondato lettera j
+square-rounded-letter-k		quadrato arrotondato lettera k	quadrato arrotondato lettera k
+square-rounded-letter-l		quadrato arrotondato lettera l	quadrato arrotondato lettera l
+square-rounded-letter-m		quadrato arrotondato lettera m	quadrato arrotondato lettera m
+square-rounded-letter-n		quadrato arrotondato lettera n	quadrato arrotondato lettera n
+square-rounded-letter-o		quadrato arrotondato lettera o	quadrato arrotondato lettera o
+square-rounded-letter-p		quadrato arrotondato lettera p	quadrato arrotondato lettera p
+square-rounded-letter-q		quadrato arrotondato lettera q	quadrato arrotondato lettera q
+square-rounded-letter-r		quadrato arrotondato lettera r	quadrato arrotondato lettera r
+square-rounded-letter-s		quadrato arrotondato lettera s	quadrato arrotondato lettera s
+square-rounded-letter-t		quadrato arrotondato lettera t	quadrato arrotondato lettera t
+square-rounded-letter-u		quadrato arrotondato lettera u	quadrato arrotondato lettera u
+square-rounded-letter-v		quadrato arrotondato lettera v	quadrato arrotondato lettera v
+square-rounded-letter-w		quadrato arrotondato lettera w	quadrato arrotondato lettera w
+square-rounded-letter-x		quadrato arrotondato lettera x	quadrato arrotondato lettera x
+square-rounded-letter-y		quadrato arrotondato lettera y	quadrato arrotondato lettera y
+square-rounded-letter-z		quadrato arrotondato lettera z	quadrato arrotondato lettera z
+square-rounded-minus		quadrato arrotondato meno	quadrato arrotondato meno
+square-rounded-number-0		quadrato arrotondato numero 0	quadrato arrotondato numero 0
+square-rounded-number-1		quadrato arrotondato numero 1	quadrato arrotondato numero 1
+square-rounded-number-2		quadrato arrotondato numero 2	quadrato arrotondato numero 2
+square-rounded-number-3		quadrato arrotondato numero 3	quadrato arrotondato numero 3
+square-rounded-number-4		quadrato arrotondato numero 4	quadrato arrotondato numero 4
+square-rounded-number-5		quadrato arrotondato numero 5	quadrato arrotondato numero 5
+square-rounded-number-6		quadrato arrotondato numero 6	quadrato arrotondato numero 6
+square-rounded-number-7		quadrato arrotondato numero 7	quadrato arrotondato numero 7
+square-rounded-number-8		quadrato arrotondato numero 8	quadrato arrotondato numero 8
+square-rounded-number-9		quadrato arrotondato numero 9	quadrato arrotondato numero 9
+square-rounded-plus		quadrato arrotondato più	quadrato arrotondato più
+square-rounded-x		quadrato arrotondato x	quadrato arrotondato x
 square-rounded		quadrato arrotondato	quadrato arrotondato
 square		quadrato	quadrato
+stack-2		pila 2	pila 2
 star-half		stella metà	stella metà
 star	⭐	stella	astro|natura|stella|stella gialla|stellina
 stars		stelle	stelle
@@ -362,8 +551,10 @@ thumb-up	👍	pollice in su	+1|bene|capito|certo|dito|d’accordo|mi piace|ok|pe
 ticket	🎫	biglietto	ammissione|biglietto|cartellino|ingresso
 tools-kitchen-2	🍴	forchetta e coltello	affamata|affamato|cena|che fame|cibo|cucinare|fame|forchetta e coltello|mangiare|posate|pranzo|ristorante
 train	🚆	treno	arrivo|binari|ferrovia|freccia|mezzo|trasporto|treno|veloce
+trash-x		cestino x	cestino x
 trash		cestino	cestino
 triangle-inverted		triangolo rovesciato	triangolo rovesciato
+triangle-square-circle		triangolo quadrato cerchio	triangolo quadrato cerchio
 triangle		triangolo	triangolo
 trolley		carrello	carrello
 trophy	🏆	coppa	campione|coppa|premio|sport|trofeo|vincere|vincitore|vittoria
@@ -378,5 +569,10 @@ woman	👩	donna	bionda|capelli|donna|femmina|persona|persone|ragazza|viso
 world	🗺	mappa mondiale	cartina|mappa|mappa mondiale|mondo|viaggiare
 writing-sign		scrittura segnale	scrittura segnale
 writing	✍	mano che scrive	disegnare|mano che scrive|penna|scrivere|scrivere a mano
+x		x	x
 yin-yang	☯	Yin e Yang	Confucianesimo|Taoismo|Yin e Yang|religione|simbolo
 zeppelin		dirigibile	dirigibile
+zoom-cancel		zoom annulla	zoom annulla
+zoom-check		zoom spunta	zoom spunta
+zoom-exclamation		zoom punto esclamativo	zoom punto esclamativo
+zoom		zoom	zoom

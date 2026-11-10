@@ -3,6 +3,7 @@ package com.cripta.app.ui.tagicons
 import android.app.Application
 import android.content.res.Configuration
 import androidx.room.Room
+import com.cripta.app.R
 import com.cripta.app.data.db.CriptaDatabase
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -52,19 +53,47 @@ class TagIconsTest {
     }
 
     @Test
+    fun folderNamesUseTheSharedSearchCatalog() = runBlocking {
+        val names = mapOf(
+            "en" to "Family photo album",
+            "it" to "Foto di famiglia",
+            "ar" to "صورة العائلة",
+            "de" to "Kamera Urlaub",
+            "es" to "Cámara de viaje",
+            "fr" to "Appareil photo",
+            "hi" to "कैमरा यात्रा",
+            "ja" to "家族写真",
+            "ko" to "가족 사진",
+            "pt-BR" to "Câmera de viagem",
+            "ru" to "Семейное фото",
+            "zh-CN" to "家庭照片",
+        )
+        for ((lang, name) in names) {
+            val localized = locale(lang)
+            assertTrue("$lang: $name", "camera" in TagIcons.suggest(localized, name))
+            assertTrue(localized.getString(R.string.icon_for, name).contains(name))
+        }
+        val suggestions = TagIcons.suggest(locale("it"), "Foto di famiglia")
+        assertTrue("camera" in suggestions)
+        assertTrue("home" in suggestions)
+        assertTrue("arrow-big-left" in TagIcons.search(locale("it"), "arrow"))
+        assertNull(TagIcons.resolveName(context, "file-pencil"))
+    }
+
+    @Test
     fun titlesFollowTheLocaleAndResolveLegacyNames() = runBlocking {
         assertEquals("cuore rosso", TagIcons.title(locale("it"), "red-heart"))
         assertEquals("赤いハート", TagIcons.title(locale("ja"), "heart"))
     }
 
     @Test
-    fun catalogIsCompleteFilteredAndBuildsFilledVectors() = runBlocking {
+    fun manualCatalogBuildsFilledVectors() = runBlocking {
         val asset = context.assets.open("tagicons/tabler-filled.txt").bufferedReader().use { it.readText() }
         val icons = TagIcons.parseCatalog(asset)
         assertTrue(icons.keys.containsAll(TagIcons.DEFAULTS))
         assertTrue(icons.keys.containsAll(listOf("heart", "paw", "key", "crown")))
-        assertTrue(icons.keys.none { it.startsWith("arrow-") || it.startsWith("brand-") || it.endsWith("-logo") })
-        assertTrue(icons.keys.none { it.startsWith("battery") || it.startsWith("player-") || it.startsWith("layout") })
+        assertTrue(icons.keys.containsAll(listOf("arrow-big-left", "brand-tabler", "battery-automotive")))
+        assertTrue(icons.keys.none { it in setOf("file-pencil", "ironing-1", "ironing-2", "ironing-3", "ironing-steam") })
         assertTrue(TagIcons.parseCatalog(asset.dropLast(10)).isEmpty())
         assertTrue(TagIcons.parseCatalog("").isEmpty())
         for (name in icons.keys) {
