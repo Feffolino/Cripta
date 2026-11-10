@@ -757,7 +757,8 @@ fun VaultScreen(
             ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                 { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                 { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
-                people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors)
+                people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors,
+                wholeVault = searchesWholeVault(filters.active, filters.wholeVault, filterLocalOnly))
             if (path.size >= 2 && !filters.active) {
                 Breadcrumb(pathNames, onGo = vm::goToDepth)
             }
@@ -786,8 +787,8 @@ fun VaultScreen(
                 else gridColumns
             val columnCount = if (viewMode == ViewMode.GRID) gridCount else if (screenW >= 840) 2 else 1
             val columns = GridCells.Fixed(columnCount)
-            val grouped = remember(files, display.showDateHeaders) {
-                if (display.showDateHeaders) groupByDay(files) else listOf("" to files)
+            val grouped = remember(files, display.showDateHeaders, sortKey, sortAscending) {
+                if (shouldGroupByDay(display.showDateHeaders, sortKey, sortAscending)) groupByDay(files) else listOf("" to files)
             }
             val orderedIds = remember(grouped) { grouped.flatMap { it.second.map { f -> f.file.id } } }
             val idSet = remember(orderedIds) { orderedIds.toSet() }
@@ -1356,26 +1357,23 @@ fun VaultScreen(
                     // Label per grid item for the fast-scroll bubble: where you are (day / letter /
                     // size, depending on the sort) and the position in the list.
                     val scrollLabels = remember(grouped, showFolders, sortKey) {
-                        val out = ArrayList<String?>()
-                        if (showFolders) out += str(R.string.home_folders)
                         val fmt = DateTimeFormatter.ofPattern("d MMM yyyy", com.cripta.app.Strings.locale).withDecimalStyle(java.time.format.DecimalStyle.of(com.cripta.app.Strings.locale))
-                        val total = grouped.sumOf { it.second.size }
-                        var n = 0
-                        grouped.forEach { (label, group) ->
-                            if (label.isNotEmpty()) out += label
-                            group.forEach { f ->
-                                n++
-                                val key = when (sortKey) {
-                                    SortKey.NAME -> f.file.originalName.firstOrNull()?.uppercaseChar()?.toString() ?: "#"
-                                    SortKey.SIZE -> com.cripta.app.ui.components.formatBytes(f.file.sizeBytes)
-                                    else -> label.ifEmpty {
-                                        Instant.ofEpochMilli(f.file.importedAt).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt)
+                        fastScrollLabels(
+                            folderRow = if (showFolders) str(R.string.home_folders) else null,
+                            // The grid adds a "File" heading under the folders when no day heading does.
+                            fileHeading = if (showFolders && files.isNotEmpty() && grouped.firstOrNull()?.first.isNullOrEmpty()) str(R.string.file_) else null,
+                            groups = grouped.map { (label, group) ->
+                                label to group.map { f ->
+                                    when (sortKey) {
+                                        SortKey.NAME -> f.file.originalName.firstOrNull()?.uppercaseChar()?.toString() ?: "#"
+                                        SortKey.SIZE -> com.cripta.app.ui.components.formatBytes(f.file.sizeBytes)
+                                        else -> label.ifEmpty {
+                                            Instant.ofEpochMilli(f.file.importedAt).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt)
+                                        }
                                     }
                                 }
-                                out += "$key · $n/$total"
-                            }
-                        }
-                        out
+                            },
+                        )
                     }
                     FastScroller(gridState, Modifier.align(Alignment.CenterEnd), labelAt = { scrollLabels.getOrNull(it) })
                 }
@@ -1760,6 +1758,33 @@ private fun SectionLabel(text: String, count: Int? = null) {
         // DS: 28dp above a section heading (14 here + the grid's row gap), 10 under it.
         modifier = Modifier.padding(top = 14.dp).semantics { heading() },
     )
+}
+
+/**
+ * Day headings only when the list is already newest-first by date: grouping any other order by day
+ * would put the days back in date order and make the grid disagree with the order chosen (and with
+ * the viewer, which follows the list as sorted).
+ */
+internal fun shouldGroupByDay(showDateHeaders: Boolean, sortKey: SortKey, ascending: Boolean): Boolean =
+    showDateHeaders && sortKey == SortKey.DATE && !ascending
+
+/**
+ * One fast-scroll label per grid item, in the grid's order: the folders row, the "File" heading
+ * the grid adds when folders show above files that have no day headings ([fileHeading], else null),
+ * every day heading, then every file ("key · n/total"). [groups]: heading ("" = none) and each
+ * file's key. A missing row shifted the bubble by one position.
+ */
+internal fun fastScrollLabels(folderRow: String?, fileHeading: String?, groups: List<Pair<String, List<String>>>): List<String?> {
+    val out = ArrayList<String?>()
+    if (folderRow != null) out += folderRow
+    if (fileHeading != null) out += fileHeading
+    val total = groups.sumOf { it.second.size }
+    var n = 0
+    for ((label, keys) in groups) {
+        if (label.isNotEmpty()) out += label
+        for (k in keys) { n++; out += "$k · $n/$total" }
+    }
+    return out
 }
 
 internal fun groupByDay(files: List<FileWithTags>): List<Pair<String, List<FileWithTags>>> {

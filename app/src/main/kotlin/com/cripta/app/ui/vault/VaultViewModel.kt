@@ -91,6 +91,17 @@ fun Filters.matches(fwt: FileWithTags): Boolean {
     return nameOk && tagsOk && notExcludedOk && typeOk && favOk && untaggedOk
 }
 
+/**
+ * The files of [list] these filters show: the filters themselves, plus the media of the people
+ * chosen ([people], null = no person filter) and of the names typed ([byName]). One definition for
+ * the vault grid and the counts of Home's saved filters, so both always agree.
+ */
+fun Filters.applyTo(list: List<FileWithTags>, people: Set<String>?, byName: Set<String>): List<FileWithTags> {
+    val noQuery = copy(query = "")
+    return list.filter { matches(it) || (it.file.id in byName && noQuery.matches(it)) }
+        .let { s -> if (people == null) s else s.filter { it.file.id in people } }
+}
+
 /** Per-type counts of a file list. */
 data class TypeCounts(
     val total: Int = 0,
@@ -369,10 +380,7 @@ class VaultViewModel @Inject constructor(
 
     private val scoped =
         combine(source, lookups, sortFlow) { (folder, list), l, sort ->
-            val f = l.f
-            val noQuery = f.copy(query = "")
-            val shown = list.filter { f.matches(it) || (it.file.id in l.byName && noQuery.matches(it)) }
-                .let { s -> if (l.people == null) s else s.filter { it.file.id in l.people } }
+            val shown = l.f.applyTo(list, l.people, l.byName)
             Scoped(list, applySort(shown, sort.first, sort.second), folder)
         }
             .flowOn(Dispatchers.Default)

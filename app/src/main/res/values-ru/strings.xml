@@ -2167,4 +2167,5 @@
     <string name="reset_failed">Сброс не завершён: старые данные не удалось удалить. Попробуй ещё раз.</string>
     <string name="n_backup_failed_reason">Не удалось создать резервную копию (%1$s). Проверь место сохранения и попробуй снова.</string>
     <string name="bulk_partial">Выполнено %1$d из %2$d: остальное осталось как было</string>
+    <string name="tag_missing">Удалённый тег</string>
 </resources>

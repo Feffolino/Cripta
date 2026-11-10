@@ -89,6 +89,8 @@ internal fun ActiveFilterBar(
     people: List<com.cripta.app.data.face.FaceRepository.Person> = emptyList(),
     onPerson: (Long) -> Unit = {},
     tagColors: Boolean = true,
+    /** The results really come from the whole vault (see [searchesWholeVault]); else the note is not shown. */
+    wholeVault: Boolean = true,
 ) {
     // Keep drawing the last active filters while the bar collapses.
     val last = remember { mutableStateOf(filters) }
@@ -117,17 +119,18 @@ internal fun ActiveFilterBar(
                     DismissChip(name, str(R.string.person_x, name)) { onPerson(id) }
                 }
                 f.tagIds.forEach { id ->
-                    val t = tagById[id] ?: return@forEach
+                    // A tag deleted since the filter was saved still narrows the results: show it, removable.
+                    val t = tagById[id] ?: run { DismissChip(str(R.string.tag_missing)) { onTag(id) }; return@forEach }
                     TagDismissChip(t, excluded = false, tagColors) { onTag(id) }
                 }
                 f.excludedTagIds.forEach { id ->
-                    val t = tagById[id] ?: return@forEach
+                    val t = tagById[id] ?: run { DismissChip(str(R.string.tag_missing)) { onExcludeTag(id) }; return@forEach }
                     TagDismissChip(t, excluded = true, tagColors) { onExcludeTag(id) }
                 }
                 TextButton(onClick = onClearAll) { com.cripta.app.ui.components.ButtonText(str(R.string.reset)) }
             }
-            // The title still names the folder, but a filter searches everywhere: say so.
-            Text(str(R.string.results_whole_vault),
+            // The title still names the folder, but this filter searches everywhere: say so (only then).
+            if (wholeVault) Text(str(R.string.results_whole_vault),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp))
         }

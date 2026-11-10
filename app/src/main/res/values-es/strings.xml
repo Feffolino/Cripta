@@ -2102,4 +2102,5 @@
     <string name="reset_failed">Restablecimiento incompleto: no se pudieron eliminar los datos antiguos. Inténtalo de nuevo.</string>
     <string name="n_backup_failed_reason">La copia de seguridad falló (%1$s). Revisa el destino e inténtalo de nuevo.</string>
     <string name="bulk_partial">Hechos %1$d de %2$d: el resto quedó como estaba</string>
+    <string name="tag_missing">Etiqueta eliminada</string>
 </resources>

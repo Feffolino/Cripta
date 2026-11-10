@@ -453,7 +453,7 @@ class SettingsViewModel @Inject constructor(
     }
     fun openPerson(personId: Long) = com.cripta.app.ui.people.PeopleNav.openPerson(personId)
     /** Cartelle filtered on [personId]. */
-    fun showPersonInVault(personId: Long) = vaultNavigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId)))
+    fun showPersonInVault(personId: Long) = vaultNavigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId), wholeVault = true))
     fun describeMedia(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     /** Open [id] among [ids] in the viewer, a video 2 s before the face at [timeMs]. */
     fun openPersonMedia(ids: List<String>, id: String, timeMs: Long?) {

@@ -2037,4 +2037,5 @@
     <string name="reset_failed">Reset not completed: the old data could not be deleted. Try again.</string>
     <string name="n_backup_failed_reason">Backup failed (%1$s). Check the destination and try again.</string>
     <string name="bulk_partial">%1$d of %2$d done: the rest was left as it was</string>
+    <string name="tag_missing">Deleted tag</string>
 </resources>

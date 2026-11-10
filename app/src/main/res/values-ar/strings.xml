@@ -2297,4 +2297,5 @@
     <string name="reset_failed">لم تكتمل إعادة الضبط: تعذّر حذف البيانات القديمة. حاول مرة أخرى.</string>
     <string name="n_backup_failed_reason">فشل النسخ الاحتياطي (%1$s). تحقق من الوجهة وحاول مرة أخرى.</string>
     <string name="bulk_partial">تم %1$d من %2$d: وبقي الباقي كما كان</string>
+    <string name="tag_missing">وسم محذوف</string>
 </resources>

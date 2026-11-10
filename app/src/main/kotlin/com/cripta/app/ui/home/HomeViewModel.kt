@@ -158,9 +158,18 @@ class HomeViewModel @Inject constructor(
 
     /** Saved filters with how many files each one currently matches. */
     val savedFilters: StateFlow<List<Pair<SavedFilterEntity, Int>>> =
-        combine(repo.changes.flatMapLatest { repo.savedFilters() }, all) { saved, files ->
-            saved.map { sf -> sf to (filtersFromJson(sf.json)?.let { f -> files.count { f.matches(it) } } ?: 0) }
-        }.flowOn(Dispatchers.Default)
+        combine(repo.changes.flatMapLatest { repo.savedFilters() }, all) { saved, files -> saved to files }
+            .mapLatest { (saved, files) ->
+                saved.map { sf ->
+                    val f = filtersFromJson(sf.json)
+                    // Counted as the vault will show it: people and typed names included, whole vault.
+                    val people = if (f == null || f.personIds.isEmpty()) null
+                        else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())
+                    val byName = if (f == null || f.query.isBlank()) emptySet()
+                        else runCatching { faces.mediaOfName(f.query) }.getOrDefault(emptySet())
+                    sf to (f?.applyTo(files, people, byName)?.size ?: 0)
+                }
+            }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val folders: StateFlow<List<FolderEntity>> =
@@ -217,10 +226,11 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** The vault, filtered on [personId]. */
-    fun openPerson(personId: Long) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId)))
+    fun openPerson(personId: Long) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId), wholeVault = true))
 
+    /** Counted over the whole vault on Home, so it opens over the whole vault (not the folder last open). */
     fun applySavedFilter(json: String) {
-        filtersFromJson(json)?.let { navigator.applyFilters(it) }
+        filtersFromJson(json)?.let { navigator.applyFilters(it.copy(wholeVault = true)) }
     }
 
     /** Open Cartelle filtered to one type (from the summary card). */

@@ -2102,4 +2102,5 @@
     <string name="reset_failed">Redefinição não concluída: não foi possível excluir os dados antigos. Tente novamente.</string>
     <string name="n_backup_failed_reason">O backup falhou (%1$s). Verifique o destino e tente novamente.</string>
     <string name="bulk_partial">%1$d de %2$d feitos: o resto ficou como estava</string>
+    <string name="tag_missing">Tag excluída</string>
 </resources>
