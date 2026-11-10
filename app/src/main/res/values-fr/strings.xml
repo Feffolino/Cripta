@@ -657,7 +657,7 @@
     <string name="tag_rename_hint">Le nom se modifie dans Paramètres › Étiquettes.</string>
     <string name="tag_alias">Libellé court (facultatif)</string>
     <string name="tag_alias_hint">À la place de l’icône sur les vignettes, ou à côté.</string>
-    <string name="tag_pin_top">📌 Épingler en haut</string>
+    <string name="tag_pin_top">Épingler en haut</string>
     <string name="tag_pin_top_hint">Toujours parmi les premières, à une position fixe.</string>
     <string name="colour">Couleur</string>
     <string name="default_colour">Couleur par défaut</string>
@@ -1682,7 +1682,7 @@
     <string name="sec_library_order">Ordre de la bibliothèque</string>
     <string name="alphabetical">Alphabétique</string>
     <string name="custom">Personnalisé</string>
-    <string name="custom_order_hint">Avec \"Personnalisé\", des flèches permettent de déplacer les étiquettes.</string>
+    <string name="custom_order_hint">Avec \"Personnalisé\", faites glisser une étiquette par sa poignée, ou maintenez-la, pour la déplacer.</string>
     <string name="sec_playback">Lecture</string>
     <string name="playback_hint">Démarrage et comportement de chaque vidéo.</string>
     <string name="resume_where_left">Reprendre là où vous en étiez</string>
@@ -1919,7 +1919,7 @@
     <string name="si_13">Barre d’étiquettes dans le lecteur</string>
     <string name="si_13_kw">rapide lecteur barre toutes étiquettes</string>
     <string name="si_14">Ordre des étiquettes</string>
-    <string name="si_14_kw">ordre alphabétique personnalisé</string>
+    <string name="si_14_kw">ordre alphabétique personnalisé glisser</string>
     <string name="si_15">Reprendre là où vous en étiez</string>
     <string name="si_15_kw">reprendre position continuer</string>
     <string name="si_16">Lire en boucle</string>

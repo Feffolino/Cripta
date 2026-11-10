@@ -720,7 +720,7 @@
     <string name="tag_rename_hint">يُغير الاسم من الإعدادات › الوسوم.</string>
     <string name="tag_alias">اسم مختصر (اختياري)</string>
     <string name="tag_alias_hint">بدلاً من الأيقونة على الأغلفة، أو بجانبها.</string>
-    <string name="tag_pin_top">📌 تثبيت في الأعلى</string>
+    <string name="tag_pin_top">تثبيت في الأعلى</string>
     <string name="tag_pin_top_hint">دائماً ضمن الأوائل، في موضع ثابت.</string>
     <string name="colour">اللون</string>
     <string name="default_colour">اللون الافتراضي</string>
@@ -1865,7 +1865,7 @@
     <string name="sec_library_order">ترتيب المكتبة</string>
     <string name="alphabetical">أبجدي</string>
     <string name="custom">مخصص</string>
-    <string name="custom_order_hint">مع \"مخصص\" تظهر أسهم لتحريك الوسوم.</string>
+    <string name="custom_order_hint">مع \"مخصص\" اسحب الوسم من مقبضه، أو اضغط عليه مطولًا، لتحريكه.</string>
     <string name="sec_playback">التشغيل</string>
     <string name="playback_hint">كيف يبدأ كل فيديو ويتصرف.</string>
     <string name="resume_where_left">الاستئناف من موضع التوقف</string>
@@ -2105,7 +2105,7 @@
     <string name="si_13">شريط الوسوم في العارض</string>
     <string name="si_13_kw">سريع عارض شريط مشغل كل الوسوم</string>
     <string name="si_14">ترتيب الوسوم</string>
-    <string name="si_14_kw">ترتيب أبجدي مخصص</string>
+    <string name="si_14_kw">ترتيب أبجدي مخصص سحب</string>
     <string name="si_15">الاستئناف من موضع التوقف</string>
     <string name="si_15_kw">استئناف موضع متابعة</string>
     <string name="si_16">تكرار مستمر</string>

@@ -657,7 +657,7 @@
     <string name="tag_rename_hint">O nome é alterado em Configurações › Etiquetas.</string>
     <string name="tag_alias">Nome curto (opcional)</string>
     <string name="tag_alias_hint">No lugar do ícone nas capas ou ao lado dele.</string>
-    <string name="tag_pin_top">📌 Fixar no topo</string>
+    <string name="tag_pin_top">Fixar no topo</string>
     <string name="tag_pin_top_hint">Sempre entre as primeiras, em uma posição fixa.</string>
     <string name="colour">Cor</string>
     <string name="default_colour">Cor padrão</string>
@@ -1682,7 +1682,7 @@
     <string name="sec_library_order">Ordem da biblioteca</string>
     <string name="alphabetical">Alfabética</string>
     <string name="custom">Personalizada</string>
-    <string name="custom_order_hint">Com \"Personalizada\", aparecem setas para mover as etiquetas.</string>
+    <string name="custom_order_hint">Com \"Personalizada\", arraste uma etiqueta pela alça, ou mantenha-a pressionada, para movê-la.</string>
     <string name="sec_playback">Reprodução</string>
     <string name="playback_hint">Como cada vídeo começa e se comporta.</string>
     <string name="resume_where_left">Retomar de onde parou</string>
@@ -1919,7 +1919,7 @@
     <string name="si_13">Barra de etiquetas no visualizador</string>
     <string name="si_13_kw">rápido visualizador barra reprodutor todas etiquetas</string>
     <string name="si_14">Ordem das etiquetas</string>
-    <string name="si_14_kw">ordem alfabética personalizada</string>
+    <string name="si_14_kw">ordem alfabética personalizada arrastar</string>
     <string name="si_15">Retomar de onde parou</string>
     <string name="si_15_kw">retomar posição continuar</string>
     <string name="si_16">Repetir em loop</string>

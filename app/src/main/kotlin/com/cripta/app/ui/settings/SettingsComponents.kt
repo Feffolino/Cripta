@@ -15,6 +15,16 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import kotlinx.coroutines.launch
 import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -236,5 +246,214 @@ internal fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/**
+ * The tag library in Impostazioni › Etichette. Each tag is a plain row (no frame) showing the tag
+ * as it looks everywhere else. A tap edits it (name, alias, icon, colour, pin); the rare delete is
+ * in the row's ⋮, in the error colour.
+ *
+ * With [reorderable] (the custom order) a tag is moved by dragging, like files in the vault grid:
+ * the handle at the row's end drags at once, a long press anywhere on the row too. The row lifts
+ * onto a tonal surface and follows the finger, the others slide out of its way (220 ms ease-out),
+ * a light tick marks each new place; on release it settles into its slot and [onMoveTo] saves
+ * the order. TalkBack gets "Su" / "Giù" actions on the row instead of the gesture.
+ */
+@Composable
+internal fun TagLibraryList(
+    tags: List<com.cripta.app.data.db.TagEntity>,
+    reorderable: Boolean,
+    colorOf: @Composable (com.cripta.app.data.db.TagEntity) -> Color,
+    onEdit: (com.cripta.app.data.db.TagEntity) -> Unit,
+    onDelete: (com.cripta.app.data.db.TagEntity) -> Unit,
+    onMoveStep: (com.cripta.app.data.db.TagEntity, up: Boolean) -> Unit,
+    onMoveTo: (com.cripta.app.data.db.TagEntity, index: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // The order just dropped, shown until the saved one comes back (no flash of the old order).
+    var pending by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<Long>?>(null) }
+    androidx.compose.runtime.LaunchedEffect(tags) { pending = null }
+    val shown = pending?.let { ids -> val byId = tags.associateBy { it.id }; ids.mapNotNull { byId[it] } } ?: tags
+    val shownNow by androidx.compose.runtime.rememberUpdatedState(shown)
+
+    var dragId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    var dragDy by androidx.compose.runtime.remember { mutableFloatStateOf(0f) }
+    var rowH by androidx.compose.runtime.remember { mutableIntStateOf(0) }
+    // The dropped row glides from where the finger left it into its slot.
+    var settleId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    val settle = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    // A long press that ends without moving still lets the row see a tap on release: from the
+    // start of a drag until just after the drop, a tap is the end of that press, not an edit.
+    var swallowTap by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val from = dragId?.let { id -> shown.indexOfFirst { it.id == id } } ?: -1
+    val target = if (from < 0 || rowH == 0) from
+        else (from + kotlin.math.round(dragDy / rowH).toInt()).coerceIn(0, shown.size - 1)
+    var lastTarget by androidx.compose.runtime.remember { mutableIntStateOf(-1) }
+    androidx.compose.runtime.LaunchedEffect(target) {
+        if (from >= 0 && lastTarget >= 0 && target != lastTarget) {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        }
+        lastTarget = target
+    }
+
+    fun start(id: Long) {
+        if (dragId != null) return
+        scope.launch { settle.snapTo(0f) }
+        settleId = null; dragDy = 0f; dragId = id; lastTarget = -1; swallowTap = true
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    }
+    fun drop() {
+        val id = dragId ?: return
+        val list = shownNow
+        val f = list.indexOfFirst { it.id == id }
+        val t = if (f < 0 || rowH == 0) f else (f + kotlin.math.round(dragDy / rowH).toInt()).coerceIn(0, list.size - 1)
+        val residual = dragDy - (t - f) * rowH
+        if (f >= 0 && t != f) {
+            val ids = list.map { it.id }.toMutableList()
+            ids.add(t, ids.removeAt(f))
+            pending = ids
+            onMoveTo(list[f], t)
+        }
+        settleId = id
+        scope.launch { kotlinx.coroutines.delay(300); swallowTap = false }
+        dragId = null; dragDy = 0f
+        scope.launch {
+            settle.snapTo(residual)
+            settle.animateTo(0f, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.MEDIUM))
+            settleId = null
+        }
+    }
+
+    Column(modifier.fillMaxWidth()) {
+        shown.forEachIndexed { index, tag ->
+            androidx.compose.runtime.key(tag.id) {
+                val dragging = dragId == tag.id
+                // The others make room: rows between the start and the target slide by one row.
+                val shift = when {
+                    from < 0 || dragging -> 0f
+                    index in (from + 1)..target -> -rowH.toFloat()
+                    index in target until from -> rowH.toFloat()
+                    else -> 0f
+                }
+                val slide by androidx.compose.animation.core.animateFloatAsState(
+                    shift, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.MEDIUM), label = "tagRowMakeRoom")
+                val lift by androidx.compose.animation.core.animateFloatAsState(
+                    if (dragging) 1f else 0f, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "tagRowLift")
+                val lifted = MaterialTheme.colorScheme.surfaceContainerHigh
+                TagLibraryRow(
+                    tag = tag,
+                    color = colorOf(tag),
+                    reorderable = reorderable,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < shown.size - 1,
+                    onEdit = { if (!swallowTap) onEdit(tag) },
+                    onDelete = { onDelete(tag) },
+                    onMoveStep = { up -> onMoveStep(tag, up) },
+                    handleModifier = Modifier.pointerInput(tag.id) {
+                        detectDragGestures(
+                            onDragStart = { start(tag.id) },
+                            onDrag = { change, d -> change.consume(); dragDy += d.y },
+                            onDragEnd = { drop() }, onDragCancel = { drop() },
+                        )
+                    },
+                    modifier = Modifier
+                        .onSizeChanged { if (it.height > 0) rowH = it.height }
+                        .zIndex(if (dragging || settleId == tag.id) 1f else 0f)
+                        .graphicsLayer {
+                            // Read the drag state here (not through an effect) so a drop never
+                            // shows one frame of the old offsets.
+                            translationY = when {
+                                dragging -> dragDy
+                                settleId == tag.id -> settle.value
+                                dragId == null -> 0f
+                                else -> slide
+                            }
+                            val sc = 1f + 0.02f * lift
+                            scaleX = sc; scaleY = sc
+                        }
+                        .drawBehind {
+                            if (lift > 0f) drawRoundRect(lifted.copy(alpha = lifted.alpha * lift),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()))
+                        }
+                        .then(if (reorderable) Modifier.pointerInput(tag.id) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { start(tag.id) },
+                                onDrag = { change, d -> change.consume(); dragDy += d.y },
+                                onDragEnd = { drop() }, onDragCancel = { drop() },
+                            )
+                        } else Modifier),
+                )
+            }
+        }
+    }
+}
+
+/** One row of [TagLibraryList]: the pill, the ⋮ (Modifica, Elimina) and, in the custom order, the drag handle. */
+@Composable
+private fun TagLibraryRow(
+    tag: com.cripta.app.data.db.TagEntity,
+    color: Color,
+    reorderable: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onMoveStep: (up: Boolean) -> Unit,
+    handleModifier: Modifier,
+    modifier: Modifier = Modifier,
+) {
+    var menu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val upLabel = str(R.string.up)
+    val downLabel = str(R.string.down)
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 56.dp).clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = str(R.string.edit_name_alias_colour), onClick = onEdit)
+            .semantics {
+                if (reorderable) customActions = listOfNotNull(
+                    if (canMoveUp) androidx.compose.ui.semantics.CustomAccessibilityAction(upLabel) { onMoveStep(true); true } else null,
+                    if (canMoveDown) androidx.compose.ui.semantics.CustomAccessibilityAction(downLabel) { onMoveStep(false); true } else null,
+                )
+            }
+            .padding(start = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f).padding(end = 8.dp)) {
+            com.cripta.app.ui.components.TagPill(
+                com.cripta.app.ui.components.tagText(tag), color,
+                size = com.cripta.app.ui.components.TagPillSize.Medium,
+                base = MaterialTheme.colorScheme.background,
+                tagIcon = tag.icon,
+                leadingIcon = if (tag.pinned) CriptaIcons.PushPin else null,
+            )
+        }
+        Box {
+            androidx.compose.material3.IconButton(onClick = { menu = true }) {
+                Icon(CriptaIcons.MoreVert, str(R.string.more_actions_for, tag.name),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.material3.DropdownMenu(menu && com.cripta.app.ui.components.vaultUnlocked(), { menu = false }) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(str(R.string.edit)) },
+                    leadingIcon = { Icon(CriptaIcons.Edit, null) },
+                    onClick = { menu = false; onEdit() },
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(str(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(CriptaIcons.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = { menu = false; onDelete() },
+                )
+            }
+        }
+        if (reorderable) {
+            // The handle: a 48dp target that drags at once (no long press needed). TalkBack uses
+            // the row's Su / Giù actions, so the handle itself is not announced.
+            Box(handleModifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Icon(CriptaIcons.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+            }
+        }
     }
 }

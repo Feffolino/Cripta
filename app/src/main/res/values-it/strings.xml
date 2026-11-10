@@ -657,7 +657,7 @@
     <string name="tag_rename_hint">Il nome si cambia da Impostazioni › Etichette.</string>
     <string name="tag_alias">Sigla (opzionale)</string>
     <string name="tag_alias_hint">Al posto dell\'icona sulle copertine, oppure accanto.</string>
-    <string name="tag_pin_top">📌 Fissa in alto</string>
+    <string name="tag_pin_top">Fissa in alto</string>
     <string name="tag_pin_top_hint">Sempre tra le prime, in posizione fissa.</string>
     <string name="colour">Colore</string>
     <string name="default_colour">Colore predefinito</string>
@@ -1682,7 +1682,7 @@
     <string name="sec_library_order">Ordine della libreria</string>
     <string name="alphabetical">Alfabetico</string>
     <string name="custom">Personalizzato</string>
-    <string name="custom_order_hint">Con \"Personalizzato\" compaiono le frecce per spostare le etichette.</string>
+    <string name="custom_order_hint">Con \"Personalizzato\" trascini un\'etichetta dalla maniglia, o tenendola premuta, per spostarla.</string>
     <string name="sec_playback">Riproduzione</string>
     <string name="playback_hint">Come parte e si comporta ogni video.</string>
     <string name="resume_where_left">Riprendi da dove eri rimasto</string>
@@ -1919,7 +1919,7 @@
     <string name="si_13">Barra etichette nel visualizzatore</string>
     <string name="si_13_kw">rapide visualizzatore quick barra player tutte</string>
     <string name="si_14">Ordine delle etichette</string>
-    <string name="si_14_kw">ordine alfabetico personalizzato</string>
+    <string name="si_14_kw">ordine alfabetico personalizzato trascina</string>
     <string name="si_15">Riprendi da dove eri rimasto</string>
     <string name="si_15_kw">riprendi posizione resume</string>
     <string name="si_16">Ripeti in loop</string>

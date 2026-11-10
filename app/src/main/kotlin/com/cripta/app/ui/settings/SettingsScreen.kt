@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
@@ -212,11 +213,12 @@ fun SettingsScreen(
           Column(Modifier.fillMaxSize().padding(pad).wrapContentWidth().widthIn(max = maxW).fillMaxWidth()) {
             if (current == SettingsPage.ETICHETTE) {
                 // The live preview stays pinned on top while the options scroll under it.
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Bottom) {
+                // Same side margin as the sections under it; the caption reads as one with the covers.
+                Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
                     com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
                     com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
-                    Text(str(R.string.live_preview), style = MaterialTheme.typography.labelMedium,
+                    Text(str(R.string.live_preview), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -283,36 +285,19 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                                // Long libraries are collapsed so the page stays short.
+                                // Long libraries are collapsed so the page stays short; opening or
+                                // closing the rest grows the list in place (ease-out, no bounce).
                                 val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
-                                visible.forEachIndexed { index, tag ->
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        // The tag as it looks everywhere else (the shared pill); tap it to change
-                                        // name, alias, colour and pin.
-                                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
-                                            com.cripta.app.ui.components.TagPill(
-                                                com.cripta.app.ui.components.tagText(tag),
-                                                if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary,
-                                                size = com.cripta.app.ui.components.TagPillSize.Medium,
-                                                base = MaterialTheme.colorScheme.background,
-                                                tagIcon = tag.icon,
-                                                leadingIcon = if (tag.pinned) CriptaIcons.PushPin else null,
-                                                onClick = { editTag = tag },
-                                                onClickLabel = str(R.string.edit_name_alias_colour),
-                                            )
-                                        }
-                                        if (custom) {
-                                            IconButton(onClick = { vm.moveTag(tag.id, up = true) }, enabled = index > 0) {
-                                                Icon(CriptaIcons.KeyboardArrowUp, str(R.string.up))
-                                            }
-                                            IconButton(onClick = { vm.moveTag(tag.id, up = false) }, enabled = index < tags.size - 1) {
-                                                Icon(CriptaIcons.KeyboardArrowDown, str(R.string.down))
-                                            }
-                                        }
-                                        IconButton(onClick = { editTag = tag }) { Icon(CriptaIcons.Edit, str(R.string.edit)) }
-                                        IconButton(onClick = { deleteTag = tag }) { Icon(CriptaIcons.Delete, str(R.string.delete)) }
-                                    }
-                                }
+                                TagLibraryList(
+                                    tags = visible,
+                                    reorderable = custom,
+                                    colorOf = { tag -> if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary },
+                                    onEdit = { editTag = it },
+                                    onDelete = { deleteTag = it },
+                                    onMoveStep = { tag, up -> vm.moveTag(tag.id, up = up) },
+                                    onMoveTo = { tag, index -> vm.moveTagTo(tag.id, index) },
+                                    modifier = Modifier.animateContentSize(Motion.enter(Motion.MEDIUM)),
+                                )
                                 if (tags.size > 8) {
                                     TextButton(onClick = { showAllTags = !showAllTags }) {
                                         com.cripta.app.ui.components.ButtonText(if (showAllTags) str(R.string.show_less) else str(R.string.show_all_n, tags.size))
@@ -321,11 +306,26 @@ fun SettingsScreen(
                             }
                             com.cripta.app.ui.components.FilledTonalButton(
                                 onClick = { addTag = true },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                             ) {
                                 Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                Text(str(R.string.add_tag))
+                                com.cripta.app.ui.components.ButtonText(str(R.string.add_tag))
+                            }
+                        }
+                    },
+                    // The order sits right under the library it sorts (its drag handles appear there).
+                    sec(str(R.string.sec_library_order)) {
+                        Section(str(R.string.sec_library_order), str(R.string.custom_order_hint)) {
+                            val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                            com.cripta.app.ui.components.ChipFlowRow {
+                                com.cripta.app.ui.components.ChoiceChip(selected = !custom,
+                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
+                                    label = { Text(str(R.string.alphabetical)) })
+                                com.cripta.app.ui.components.ChoiceChip(selected = custom,
+                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
+                                    label = { Text(str(R.string.custom)) })
                             }
                         }
                     },
@@ -345,25 +345,31 @@ fun SettingsScreen(
                         Section(str(R.string.sec_colours)) {
                             ToggleRow(str(R.string.coloured_tags), s.display.tagColors) { vm.setTagColors(it) }
                             if (s.display.tagColors) {
-                                Text(str(R.string.default_colour), style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(top = 4.dp))
-                                com.cripta.app.ui.vault.TagColorPicker(
-                                    selected = s.display.defaultTagColor,
-                                    autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
-                                    autoDescription = str(R.string.auto_colour_per_name),
-                                    onPick = { vm.setDefaultTagColor(it) },
-                                )
-                                Text(
-                                    if (s.display.defaultTagColor == null) str(R.string.default_colour_auto_desc)
-                                    else str(R.string.default_colour_set_desc),
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                // A plain settings item: title, its caption 2dp under it, then the choice.
+                                Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                    Text(str(R.string.default_colour), style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        if (s.display.defaultTagColor == null) str(R.string.default_colour_auto_desc)
+                                        else str(R.string.default_colour_set_desc),
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 2.dp),
+                                    )
+                                    Box(Modifier.padding(top = 10.dp)) {
+                                        com.cripta.app.ui.vault.TagColorPicker(
+                                            selected = s.display.defaultTagColor,
+                                            autoColor = com.cripta.app.ui.theme.autoTagColor("etichetta"),
+                                            autoDescription = str(R.string.auto_colour_per_name),
+                                            onPick = { vm.setDefaultTagColor(it) },
+                                        )
+                                    }
+                                }
                                 if (tags.isNotEmpty()) {
                                     com.cripta.app.ui.components.FilledTonalButton(onClick = { confirmRandomColors = true },
-                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
+                                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
                                         Icon(CriptaIcons.Palette, null, Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text(str(R.string.random_colours_all))
+                                        com.cripta.app.ui.components.ButtonText(str(R.string.random_colours_all))
                                     }
                                 }
                             }
@@ -387,21 +393,6 @@ fun SettingsScreen(
                                     s.display.showRecentTags -> str(R.string.viewer_tag_bar_recent, s.display.recentTagsCount)
                                     else -> str(R.string.viewer_tag_bar_all)
                                 }) { vm.setViewerQuickTags(it) }
-                        }
-                    },
-                    sec(str(R.string.sec_library_order)) {
-                        Section(str(R.string.sec_library_order)) {
-                            val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                com.cripta.app.ui.components.ChoiceChip(selected = !custom,
-                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                                    label = { Text(str(R.string.alphabetical)) })
-                                com.cripta.app.ui.components.ChoiceChip(selected = custom,
-                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                                    label = { Text(str(R.string.custom)) })
-                            }
-                            Text(str(R.string.custom_order_hint),
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                 )

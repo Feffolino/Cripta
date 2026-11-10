@@ -636,7 +636,7 @@
     <string name="tag_rename_hint">The name is changed from Settings › Tags.</string>
     <string name="tag_alias">Short label (optional)</string>
     <string name="tag_alias_hint">Instead of the icon on the covers, or next to it.</string>
-    <string name="tag_pin_top">📌 Pin to the top</string>
+    <string name="tag_pin_top">Pin to the top</string>
     <string name="tag_pin_top_hint">Always among the first, in a fixed position.</string>
     <string name="colour">Colour</string>
     <string name="default_colour">Default colour</string>
@@ -1621,7 +1621,7 @@
     <string name="sec_library_order">Library order</string>
     <string name="alphabetical">Alphabetical</string>
     <string name="custom">Custom</string>
-    <string name="custom_order_hint">With \"Custom\" arrows appear to move the tags.</string>
+    <string name="custom_order_hint">With \"Custom\", drag a tag by its handle, or hold it, to move it.</string>
     <string name="sec_playback">Playback</string>
     <string name="playback_hint">How each video starts and behaves.</string>
     <string name="resume_where_left">Resume where you left off</string>
@@ -1857,7 +1857,7 @@
     <string name="si_13">Tag bar in the viewer</string>
     <string name="si_13_kw">quick viewer bar player all tags</string>
     <string name="si_14">Tag order</string>
-    <string name="si_14_kw">order alphabetical custom</string>
+    <string name="si_14_kw">order alphabetical custom drag</string>
     <string name="si_15">Resume where you left off</string>
     <string name="si_15_kw">resume position continue</string>
     <string name="si_16">Repeat in a loop</string>

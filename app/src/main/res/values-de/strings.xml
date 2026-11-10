@@ -636,7 +636,7 @@
     <string name="tag_rename_hint">Der Name wird unter Einstellungen › Schlagwörter geändert.</string>
     <string name="tag_alias">Kurzname (optional)</string>
     <string name="tag_alias_hint">Statt des Symbols auf Vorschaubildern oder daneben.</string>
-    <string name="tag_pin_top">📌 Oben anheften</string>
+    <string name="tag_pin_top">Oben anheften</string>
     <string name="tag_pin_top_hint">Immer unter den ersten, an einer festen Position.</string>
     <string name="colour">Farbe</string>
     <string name="default_colour">Standardfarbe</string>
@@ -1621,7 +1621,7 @@
     <string name="sec_library_order">Bibliotheksreihenfolge</string>
     <string name="alphabetical">Alphabetisch</string>
     <string name="custom">Benutzerdefiniert</string>
-    <string name="custom_order_hint">Bei \"Benutzerdefiniert\" erscheinen Pfeile zum Verschieben der Schlagwörter.</string>
+    <string name="custom_order_hint">Bei \"Benutzerdefiniert\" ziehst du ein Schlagwort am Griff oder hältst es gedrückt, um es zu verschieben.</string>
     <string name="sec_playback">Wiedergabe</string>
     <string name="playback_hint">Start und Verhalten jedes Videos.</string>
     <string name="resume_where_left">An letzter Stelle fortsetzen</string>
@@ -1857,7 +1857,7 @@
     <string name="si_13">Schlagwortleiste im Player</string>
     <string name="si_13_kw">schnell Player Leiste alle Schlagwörter</string>
     <string name="si_14">Schlagwortreihenfolge</string>
-    <string name="si_14_kw">Reihenfolge alphabetisch benutzerdefiniert</string>
+    <string name="si_14_kw">Reihenfolge alphabetisch benutzerdefiniert ziehen</string>
     <string name="si_15">An letzter Stelle fortsetzen</string>
     <string name="si_15_kw">fortsetzen Position weiter</string>
     <string name="si_16">In Schleife wiederholen</string>

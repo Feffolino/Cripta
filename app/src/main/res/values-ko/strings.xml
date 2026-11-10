@@ -615,7 +615,7 @@
     <string name="tag_rename_hint">설정 › 태그에서 이름을 변경할 수 있습니다.</string>
     <string name="tag_alias">짧은 이름(선택)</string>
     <string name="tag_alias_hint">표지의 아이콘 대신 또는 옆에 표시합니다.</string>
-    <string name="tag_pin_top">📌 상단 고정</string>
+    <string name="tag_pin_top">상단 고정</string>
     <string name="tag_pin_top_hint">항상 앞부분의 고정된 위치에 표시합니다.</string>
     <string name="colour">색상</string>
     <string name="default_colour">기본 색상</string>
@@ -1560,7 +1560,7 @@
     <string name="sec_library_order">라이브러리 순서</string>
     <string name="alphabetical">이름순</string>
     <string name="custom">사용자 지정</string>
-    <string name="custom_order_hint">\"사용자 지정\"을 선택하면 태그를 이동할 화살표가 나타납니다.</string>
+    <string name="custom_order_hint">\"사용자 지정\"에서는 태그를 핸들로 드래그하거나 길게 눌러 이동합니다.</string>
     <string name="sec_playback">재생</string>
     <string name="playback_hint">각 동영상의 시작 방식과 재생 동작입니다.</string>
     <string name="resume_where_left">이전 위치에서 이어서 재생</string>
@@ -1795,7 +1795,7 @@
     <string name="si_13">뷰어 태그 막대</string>
     <string name="si_13_kw">빠른 뷰어 막대 플레이어 모든 태그</string>
     <string name="si_14">태그 순서</string>
-    <string name="si_14_kw">순서 이름순 사용자지정</string>
+    <string name="si_14_kw">순서 이름순 사용자지정 드래그</string>
     <string name="si_15">이전 위치에서 이어서 재생</string>
     <string name="si_15_kw">이어서 위치 계속</string>
     <string name="si_16">반복 재생</string>

@@ -198,6 +198,17 @@ Tag icons are a separate set (see Components) and are not Tabler.
   adds, so it is its own small button above the "+".
 - **Tag colours off** (Settings › Etichette): `TagPill` itself switches every tag to the accent,
   so no screen can show tag colours the user turned off.
+- **Etichette** (Impostazioni): the live cover preview pinned on top, then "Libreria etichette"
+  (each tag a plain 56dp row, `TagLibraryList`: the pill as it looks everywhere, a tap edits it,
+  Modifica / Elimina in the row's ⋮, the delete in the error colour; "Mostra tutte" grows the list
+  in place). With the custom order a tag moves by dragging, like files in the grid: the handle at
+  the row's end drags at once, a long press on the row too; the row lifts onto the tonal tier, the
+  others slide out of its way (220 ms), a tick of haptics marks each new place, and on release it
+  settles into its slot; TalkBack has "Su" / "Giù" on the row. "Ordine della libreria" right under it, then
+  Sulle copertine, Colori, Assegnazione rapida. The **tag editor** (`LabelEditorDialog`) opens
+  with a live preview (the pill and the cover mark, the colour cross-fading at 120 ms), then name
+  and alias fields, "Icona" and "Colore" under accent headings, "Fissa in alto" as a plain switch
+  row with the pin icon.
 - **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then
   slides in; the previous level never flashes.

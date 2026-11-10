@@ -615,7 +615,7 @@
     <string name="tag_rename_hint">可从“设置 › 标签”更改名称。</string>
     <string name="tag_alias">简称（可选）</string>
     <string name="tag_alias_hint">在封面上代替图标显示，或显示在图标旁。</string>
-    <string name="tag_pin_top">📌 置顶</string>
+    <string name="tag_pin_top">置顶</string>
     <string name="tag_pin_top_hint">始终排在前面，位置固定。</string>
     <string name="colour">颜色</string>
     <string name="default_colour">默认颜色</string>
@@ -1560,7 +1560,7 @@
     <string name="sec_library_order">标签库顺序</string>
     <string name="alphabetical">按字母顺序</string>
     <string name="custom">自定义</string>
-    <string name="custom_order_hint">选择 \"自定义\" 后会显示用于移动标签的箭头。</string>
+    <string name="custom_order_hint">选择 \"自定义\" 后，拖动标签的手柄或长按标签即可移动它。</string>
     <string name="sec_playback">播放</string>
     <string name="playback_hint">设置每个视频开始播放的方式和播放行为。</string>
     <string name="resume_where_left">从上次位置继续播放</string>
@@ -1795,7 +1795,7 @@
     <string name="si_13">查看器标签栏</string>
     <string name="si_13_kw">快速 查看器 栏 播放器 全部 标签</string>
     <string name="si_14">标签顺序</string>
-    <string name="si_14_kw">顺序 字母 自定义</string>
+    <string name="si_14_kw">顺序 字母 自定义 拖动</string>
     <string name="si_15">从上次位置继续播放</string>
     <string name="si_15_kw">续播 位置 继续</string>
     <string name="si_16">循环播放</string>

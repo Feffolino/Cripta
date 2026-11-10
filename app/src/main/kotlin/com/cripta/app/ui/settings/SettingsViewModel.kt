@@ -598,6 +598,15 @@ class SettingsViewModel @Inject constructor(
         repo.reorderTags(ordered)
     }
 
+    /** Puts tag [id] at [index] of the library (a drag in the custom order); the others close up. */
+    fun moveTagTo(id: Long, index: Int) = viewModelScope.launch {
+        val ordered = tags.value.map { it.id }.toMutableList()
+        val i = ordered.indexOf(id)
+        if (i < 0) return@launch
+        ordered.add(index.coerceIn(0, ordered.size - 1), ordered.removeAt(i))
+        repo.reorderTags(ordered)
+    }
+
     fun lockNow() = session.lock()
 
     // --- Unlock mode (app PIN) ---

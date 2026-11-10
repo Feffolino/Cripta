@@ -678,7 +678,7 @@
     <string name="tag_rename_hint">Имя меняется в разделе Настройки › Метки.</string>
     <string name="tag_alias">Краткая подпись (необязательно)</string>
     <string name="tag_alias_hint">Вместо значка на обложках или рядом с ним.</string>
-    <string name="tag_pin_top">📌 Закрепить сверху</string>
+    <string name="tag_pin_top">Закрепить сверху</string>
     <string name="tag_pin_top_hint">Всегда в начале, на фиксированном месте.</string>
     <string name="colour">Цвет</string>
     <string name="default_colour">Цвет по умолчанию</string>
@@ -1743,7 +1743,7 @@
     <string name="sec_library_order">Порядок библиотеки</string>
     <string name="alphabetical">По алфавиту</string>
     <string name="custom">Свой порядок</string>
-    <string name="custom_order_hint">При выборе \"Свой порядок\" появляются стрелки для перемещения меток.</string>
+    <string name="custom_order_hint">При выборе \"Свой порядок\" перетащите метку за маркер или удерживайте её, чтобы переместить.</string>
     <string name="sec_playback">Воспроизведение</string>
     <string name="playback_hint">Как начинается и ведёт себя каждое видео.</string>
     <string name="resume_where_left">Продолжать с места остановки</string>
@@ -1981,7 +1981,7 @@
     <string name="si_13">Панель меток в просмотрщике</string>
     <string name="si_13_kw">быстро просмотрщик панель проигрыватель все метки</string>
     <string name="si_14">Порядок меток</string>
-    <string name="si_14_kw">порядок алфавит свой</string>
+    <string name="si_14_kw">порядок алфавит свой перетащить</string>
     <string name="si_15">Продолжать с места остановки</string>
     <string name="si_15_kw">продолжить позиция просмотр</string>
     <string name="si_16">Повторять по кругу</string>

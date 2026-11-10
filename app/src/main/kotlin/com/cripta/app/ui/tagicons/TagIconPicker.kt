@@ -20,9 +20,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.Search
+import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,7 +58,7 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
         contentAlignment = Alignment.Center,
     ) {
         when {
-            name == null -> Icon(Icons.Rounded.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
+            name == null -> Icon(CriptaIcons.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
             icon != null -> Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(size * 0.58f))
         }
     }
@@ -71,13 +69,17 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
  * common ones, and "Tutte le icone" for the full searchable list.
  */
 @Composable
-fun TagIconField(name: String, icon: String?, onPick: (String?) -> Unit, onBrowse: () -> Unit) {
+fun TagIconField(
+    name: String, icon: String?, onPick: (String?) -> Unit, onBrowse: () -> Unit,
+    /** False where the caller already puts a heading over it (the tag editor). */
+    showLabel: Boolean = true,
+) {
     val context = LocalContext.current
     val suggested by produceState(emptyList<String>(), name) {
         value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.DEFAULTS.take(10) }
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (showLabel) Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             IconCell(null, icon == null) { onPick(null) }
@@ -110,7 +112,7 @@ fun TagIconPicker(tagName: String, selected: String?, onPick: (String?) -> Unit,
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 com.cripta.app.ui.components.CriptaTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                    leadingIcon = { Icon(CriptaIcons.Search, null) },
                     placeholder = { Text(str(R.string.icon_search_hint)) }, modifier = Modifier.fillMaxWidth(),
                 )
                 LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().height(380.dp),

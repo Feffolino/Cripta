@@ -29,6 +29,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -190,60 +193,66 @@ fun LabelEditorDialog(
     var alias by remember { mutableStateOf(initialAlias) }
     var color by remember { mutableStateOf(initialColor) }
 
+    // "A" = the colour every uncoloured tag gets (Settings › Etichette, else one colour per name).
+    val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
+    // A new colour cross-fades into the preview instead of jumping (120 ms, ease-out).
+    val previewColor by androidx.compose.animation.animateColorAsState(
+        color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto,
+        com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "tagPreviewColour",
+    )
+
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
+            // No frames: each part is a heading plus space (more above a heading than under it).
+            // The preview stays first, so every change below is seen as it is made.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                TagEditorPreview(name = name, alias = alias, icon = icon, color = previewColor)
                 if (nameEditable) {
                     com.cripta.app.ui.components.CriptaTextField(
                         value = name, onValueChange = { name = it },
-                        label = { Text(str(R.string.sort_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        label = { Text(str(R.string.sort_name)) }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     )
                 } else {
-                    Text("#$name", style = MaterialTheme.typography.titleMedium)
                     Text(str(R.string.tag_rename_hint), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (onIcon != null) {
-                    com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true })
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 }
                 com.cripta.app.ui.components.CriptaTextField(
                     // At most 6 visible characters, counted as graphemes.
                     value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
-                    label = { Text(str(R.string.tag_alias)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(str(R.string.tag_alias)) }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                     supportingText = { Text(str(R.string.tag_alias_hint)) },
                 )
+                if (onIcon != null) {
+                    EditorHeading(str(R.string.icon))
+                    com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true },
+                        showLabel = false)
+                }
+                if (onColor != null) {
+                    EditorHeading(str(R.string.colour))
+                    TagColorPicker(selected = color, autoColor = auto, autoDescription = str(R.string.default_colour)) { color = it }
+                }
                 if (onPinned != null) {
+                    // A plain settings row: icon, title, caption, the switch; the whole row toggles.
                     Row(
-                        Modifier.fillMaxWidth().toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it }),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        Modifier.padding(top = 16.dp).fillMaxWidth().heightIn(min = 60.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it })
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(str(R.string.tag_pin_top))
+                        Icon(CriptaIcons.PushPin, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp).size(24.dp))
+                        Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(str(R.string.tag_pin_top), style = MaterialTheme.typography.bodyLarge)
                             Text(str(R.string.tag_pin_top_hint), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                         }
                         androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
                     }
-                }
-                if (onColor != null) {
-                    Text(str(R.string.colour), style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // "A" = the colour every uncoloured tag gets (Settings › Etichette, else one
-                    // colour per name), then the palette.
-                    val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
-                    TagColorPicker(selected = color, autoColor = auto, autoDescription = str(R.string.default_colour)) { color = it }
-                    // Live preview of the badge as it will look on covers.
-                    val preview = color?.let { androidx.compose.ui.graphics.Color(it) } ?: auto
-                    // As on a cover: the acronym, else the icon alone, else the first two letters.
-                    com.cripta.app.ui.components.TagPill(
-                        alias.trim().ifBlank { if (icon != null) "" else name.take(2).uppercase().ifBlank { "AB" } },
-                        preview, tagIcon = icon,
-                    )
                 }
             }
         },
@@ -264,6 +273,42 @@ fun LabelEditorDialog(
         com.cripta.app.ui.tagicons.TagIconPicker(tagName = name, selected = icon,
             onPick = { icon = it; pickingIcon = false }, onDismiss = { pickingIcon = false })
     }
+}
+
+/**
+ * The editor's live preview: the tag as lists show it (name, alias, icon) and, beside it, the mark
+ * a cover gets (the alias, else the icon alone, else the first two letters). One TalkBack item.
+ */
+@Composable
+private fun TagEditorPreview(name: String, alias: String, icon: String?, color: androidx.compose.ui.graphics.Color) {
+    val shownName = name.trim().ifBlank { str(R.string.new_tag) }
+    val a = alias.trim()
+    Row(
+        Modifier.fillMaxWidth()
+            .clearAndSetSemantics { contentDescription = str(R.string.preview) + ": " + (if (a.isNotEmpty()) "$a $shownName" else shownName) },
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f, fill = false)) {
+            com.cripta.app.ui.components.TagPill(
+                if (a.isNotEmpty()) "$a $shownName" else shownName, color,
+                size = com.cripta.app.ui.components.TagPillSize.Medium,
+                base = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tagIcon = icon,
+            )
+        }
+        com.cripta.app.ui.components.TagPill(
+            a.ifBlank { if (icon != null) "" else name.trim().take(2).uppercase().ifBlank { "AB" } },
+            color, tagIcon = icon,
+        )
+    }
+}
+
+/** A part of the tag editor: accent heading, 24dp above it and 10dp to what it names. */
+@Composable
+private fun EditorHeading(text: String) {
+    Text(text, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 24.dp, bottom = 10.dp).semantics { heading() })
 }
 
 /**
@@ -528,7 +573,9 @@ private fun ColorDot(
             .semantics { if (description != null) contentDescription = description },
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
-        if (label != null) Text(label, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelLarge)
-        else if (selected) Icon(CriptaIcons.Check, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
+        // White or black, whichever reads on this colour (light tag colours took white text before).
+        val ink = com.cripta.app.ui.theme.readableOn(androidx.compose.ui.graphics.Color.White, c)
+        if (label != null) Text(label, color = ink, style = MaterialTheme.typography.labelLarge)
+        else if (selected) Icon(CriptaIcons.Check, null, tint = ink, modifier = Modifier.size(18.dp))
     }
 }

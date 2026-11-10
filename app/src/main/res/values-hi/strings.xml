@@ -636,7 +636,7 @@
     <string name="tag_rename_hint">नाम सेटिंग › टैग से बदलता है।</string>
     <string name="tag_alias">छोटा नाम (वैकल्पिक)</string>
     <string name="tag_alias_hint">कवर पर आइकन की जगह, या उसके साथ।</string>
-    <string name="tag_pin_top">📌 ऊपर पिन करें</string>
+    <string name="tag_pin_top">ऊपर पिन करें</string>
     <string name="tag_pin_top_hint">हमेशा सबसे पहले, एक तय जगह पर।</string>
     <string name="colour">रंग</string>
     <string name="default_colour">डिफ़ॉल्ट रंग</string>
@@ -1621,7 +1621,7 @@
     <string name="sec_library_order">लाइब्रेरी का क्रम</string>
     <string name="alphabetical">वर्णक्रम</string>
     <string name="custom">अपना क्रम</string>
-    <string name="custom_order_hint">\"अपना क्रम\" चुनने पर टैग आगे-पीछे करने के तीर दिखते हैं।</string>
+    <string name="custom_order_hint">\"अपना क्रम\" चुनने पर टैग को उसके हैंडल से, या दबाकर रखकर, खींचें और आगे-पीछे करें।</string>
     <string name="sec_playback">प्लेबैक</string>
     <string name="playback_hint">हर वीडियो कैसे शुरू और प्ले होता है।</string>
     <string name="resume_where_left">जहाँ छोड़ा था, वहीं से चलाएँ</string>
@@ -1857,7 +1857,7 @@
     <string name="si_13">व्यूअर में टैग पट्टी</string>
     <string name="si_13_kw">जल्दी व्यूअर पट्टी प्लेयर सभी टैग</string>
     <string name="si_14">टैग का क्रम</string>
-    <string name="si_14_kw">क्रम वर्णक्रम अपना क्रम</string>
+    <string name="si_14_kw">क्रम वर्णक्रम अपना क्रम खींचें</string>
     <string name="si_15">जहाँ छोड़ा था, वहीं से चलाएँ</string>
     <string name="si_15_kw">फिर चलाएँ जगह जारी</string>
     <string name="si_16">बार-बार चलाएँ</string>
