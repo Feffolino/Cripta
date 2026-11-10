@@ -1881,7 +1881,7 @@
     <string name="passphrase_restore_hint">I file del backup vengono aggiunti a quelli già nel vault; nulla viene cancellato.</string>
     <string name="passphrase">Passphrase</string>
     <string name="passphrase_too_short">Almeno %1$s caratteri (%2$s/%3$s)</string>
-    <string name="length_ok">Lunghezza ok</string>
+    <string name="length_ok">Lunghezza OK</string>
     <string name="repeat_passphrase">Ripeti la passphrase</string>
     <string name="passphrase_mismatch">Le passphrase non coincidono</string>
     <string name="si_00">Tema chiaro / scuro</string>

@@ -1554,7 +1554,7 @@
     <string name="opened">مفتوح</string>
     <string name="closed">مغلق</string>
     <string name="close_actions">إغلاق الإجراءات</string>
-    <string name="search_name_or_tag">البحث بالاسم أو الوسم أو الشخص</string>
+    <string name="search_name_or_tag">ابحث بالاسم أو الوسم أو الشخص</string>
     <string name="show_folders">عرض المجلدات</string>
     <string name="hide_folders">إخفاء المجلدات</string>
     <string name="folders_count_prefix">"المجلدات · "</string>
