@@ -959,15 +959,18 @@ fun VaultScreen(
             }
             // Auto-scroll: a dragging finger near the grid's top or bottom edge scrolls it, faster the
             // deeper it is in the edge zone; the range follows the file now under the still finger.
+            // It starts after a short wait and then speeds up gently (see edgeRamp).
             val autoScrolling by remember { derivedStateOf { autoScrollSpeed != 0f } }
             LaunchedEffect(autoScrolling) {
                 if (!autoScrolling) return@LaunchedEffect
-                var last = androidx.compose.runtime.withFrameNanos { it }
+                val start = androidx.compose.runtime.withFrameNanos { it }
+                var last = start
                 while (true) {
                     val now = androidx.compose.runtime.withFrameNanos { it }
-                    val dy = autoScrollSpeed * (now - last) / 1_000_000_000f
+                    if (autoScrollSpeed == 0f) break
+                    val dy = autoScrollSpeed * edgeRamp((now - start) / 1_000_000) * (now - last) / 1_000_000_000f
                     last = now
-                    if (dy == 0f) break
+                    if (dy == 0f) continue
                     try {
                         gridState.scrollBy(dy)
                     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1156,7 +1159,7 @@ fun VaultScreen(
                                 carry = moved == null
                             }
                             if (!startDrag(press.position, carry)) return@awaitEachGesture
-                            val zone = 72.dp.toPx()
+                            val zone = 64.dp.toPx()
                             val maxSpeed = 1600.dp.toPx()
                             // Auto-scroll waits until the finger has moved: a long-press near an edge
                             // must not set the grid running by itself.
@@ -1183,8 +1186,9 @@ fun VaultScreen(
                                         if (!armed && (main.position - press.position).getDistance() > slop) armed = true
                                         if (armed) {
                                             val depth = edgeDepth(main.position.y, size.height.toFloat(), zone)
-                                            edgeNow = depth
                                             autoScrollSpeed = edgeSpeed(depth, maxSpeed)
+                                            // The band shows only where the grid scrolls (or is about to).
+                                            edgeNow = if (autoScrollSpeed == 0f) 0f else depth
                                         }
                                         updateRange()
                                     }

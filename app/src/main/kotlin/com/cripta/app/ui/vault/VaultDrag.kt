@@ -17,8 +17,27 @@ internal fun edgeDepth(y: Float, height: Float, zone: Float): Float {
     }.coerceIn(-1f, 1f)
 }
 
-/** Auto-scroll speed for [depth] (see [edgeDepth]): squared, so the zone's edge creeps and its far end runs. */
-internal fun edgeSpeed(depth: Float, max: Float): Float = max * depth * abs(depth)
+/** The outer part of an edge zone where the finger rests without scrolling, as a share of the zone. */
+internal const val EDGE_DEAD = 0.3f
+
+/**
+ * Auto-scroll speed for [depth] (see [edgeDepth]): still in the first [EDGE_DEAD] of the zone, so a
+ * finger only grazing it does not scroll, then squared, so the zone creeps first and its far end runs.
+ */
+internal fun edgeSpeed(depth: Float, max: Float): Float {
+    val d = ((abs(depth) - EDGE_DEAD) / (1f - EDGE_DEAD)).coerceIn(0f, 1f)
+    return if (depth < 0f) -max * d * d else max * d * d
+}
+
+/** How long a finger waits in the scrolling part of an edge zone before the grid moves. */
+internal const val EDGE_DELAY_MS = 200L
+
+/** How long the auto-scroll then takes to reach the speed of the finger's depth. */
+internal const val EDGE_RAMP_MS = 450L
+
+/** Share of the auto-scroll speed [elapsedMs] after the finger entered the scrolling part of a zone. */
+internal fun edgeRamp(elapsedMs: Long): Float =
+    ((elapsedMs - EDGE_DELAY_MS).toFloat() / EDGE_RAMP_MS).coerceIn(0f, 1f)
 
 /** Where a move drag's files go when the finger lifts. */
 internal sealed interface DropTarget {
