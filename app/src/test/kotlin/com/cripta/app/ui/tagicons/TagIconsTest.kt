@@ -43,6 +43,29 @@ class TagIconsTest {
     }
 
     @Test
+    fun wordsInAnySupportedLanguageFindTheIconsWhateverTheAppLanguage() = runBlocking {
+        val queries = listOf(
+            "dog", "gatto", "gatti", "Hund", "perro", "chien", "cachorro", "кошка",
+            "犬", "小猫", "고양이", "कुत्ता", "قطة",
+        )
+        for (lang in listOf("en", "it", "ar", "de", "es", "fr", "hi", "ja", "ko", "pt-BR", "ru", "zh-CN")) {
+            val localized = locale(lang)
+            for (query in queries) {
+                assertTrue("$lang: $query", "paw" in TagIcons.search(localized, query))
+            }
+        }
+        // A match in the app language ranks before the same word in another language.
+        assertEquals("heart", TagIcons.search(locale("de"), "Herz").first())
+        // The first supported language in the list decides, like the resources do.
+        val swedishThenItalian = context.createConfigurationContext(
+            Configuration(context.resources.configuration).apply {
+                setLocales(android.os.LocaleList.forLanguageTags("sv-SE,it-IT"))
+            }
+        )
+        assertEquals("cuore rosso", TagIcons.title(swedishThenItalian, "heart"))
+    }
+
+    @Test
     fun anEmojiLeadsToItsIcon() = runBlocking {
         assertEquals("heart", TagIcons.forEmoji(context, "❤️"))
         assertEquals("heart", TagIcons.forEmoji(context, "❤"))
