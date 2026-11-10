@@ -34,8 +34,8 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   one lightness (about 0.70) and a calm chroma, the first the accent's own blue (`#6D9DF5`), then
   indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a blue-tinted slate. They sit
   on the dark surfaces like the accent does; black reads on each at 6.8:1 or more and white on its
-  cover mark at 4.4:1 or more. Beside the presets, both editors offer "Altro", a colour of the
-  user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
+  cover mark at 4.4:1 or more. Before the presets, in the first slot, both editors offer "Altro", a
+  round rainbow that opens a colour of the user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
   saved as a plain ARGB value like a preset, so an older preset shows as "Altro" and keeps working.
   Text on a tag tint goes through `readableOn()` so it reaches 4.5:1 in both themes and with any
   colour; a folder symbol is nudged to 3:1 on the page, and the cover mark darkens a light colour
@@ -232,8 +232,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   with a live preview (the pill and the cover mark, the colour cross-fading at 120 ms), then name
   and alias fields, "Icona" and "Colore" under accent headings, "Fissa in alto" as a plain switch
   row with the pin icon. "Colore" is one line that scrolls sideways (`ColorChoiceRow`, shared with
-  the folder dialog): "A" automatic (or none for a folder), the twelve presets, then "Altro" (a
-  colour wheel; once a custom colour is chosen it shows that colour, ticked). The chosen swatch is
+  the folder dialog): first "Altro" (a round rainbow; once a custom colour is chosen it shows that
+  colour, ticked, and a tap opens it again), then "A" automatic (or none for a folder) and the
+  twelve presets. The chosen swatch is
   told by a ring and a tick, never by colour alone.
 - **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then

@@ -537,8 +537,8 @@ internal fun takeGraphemes(s: String, max: Int): String {
 }
 
 /**
- * "A" (automatic / default colour), the shared palette, then a colour of the user's own, on one
- * line that scrolls sideways ([com.cripta.app.ui.components.ColorChoiceRow]); [onPick] gets null for
+ * A colour of the user's own (the round rainbow), "A" (automatic / default colour), then the shared
+ * palette, on one line that scrolls sideways ([com.cripta.app.ui.components.ColorChoiceRow]); [onPick] gets null for
  * "A". It opens scrolled to the chosen colour.
  */
 @Composable

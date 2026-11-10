@@ -59,11 +59,11 @@ private val SWATCH_SIZE = 36.dp
 private const val SWATCH_SLOT_DP = 56 // the 48dp touch target plus the 8dp gap
 
 /**
- * The colour choice of tags and folders, on one line that scrolls sideways: the "none / automatic"
- * choice ([noneFill], with [noneLabel] drawn on it or a cross), the shared [TagPalette], then "Altro":
- * a colour of the user's own, made in [CustomColorDialog]. A colour saved earlier that is not a preset
- * shows on that last swatch, chosen. [onPick] gets null for the first choice. It opens scrolled to
- * the chosen colour.
+ * The colour choice of tags and folders, on one line that scrolls sideways: first "Altro", a round
+ * rainbow that opens [CustomColorDialog] for a colour of the user's own; then the "none / automatic"
+ * choice ([noneFill], with [noneLabel] drawn on it or a cross) and the shared [TagPalette]. A colour
+ * saved earlier that is not a preset shows on the first swatch, chosen (a tap opens the dialog on
+ * it). [onPick] gets null for the "none / automatic" choice. It opens scrolled to the chosen colour.
  */
 @Composable
 fun ColorChoiceRow(
@@ -81,18 +81,18 @@ fun ColorChoiceRow(
     val scroll = rememberScrollState()
     val density = LocalDensity.current
     LaunchedEffect(Unit) {
-        // Slot 0 is "none", 1..n the presets, n+1 the custom one; the chosen one stays second.
-        val slot = when { selected == null -> 0; custom -> presets.size + 1; else -> presetIndex + 1 }
+        // Slot 0 is the custom one, 1 "none", 2..n+1 the presets; the chosen one stays second.
+        val slot = when { custom -> 0; selected == null -> 1; else -> presetIndex + 2 }
         if (slot > 1) scroll.scrollTo(with(density) { ((slot - 1) * SWATCH_SLOT_DP).dp.roundToPx() })
     }
     Row(modifier.fillMaxWidth().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val customName = str(R.string.colour_custom)
+        if (custom) Swatch(Color(selected!!), true, customName + " " + colorHex(selected)) { editing = true }
+        else Swatch(null, false, customName) { editing = true }
         Swatch(noneFill, selected == null, noneDescription, label = noneLabel, cross = noneLabel == null) { onPick(null) }
         presets.forEachIndexed { i, argb ->
             Swatch(Color(argb), selected == argb, str(PALETTE_NAMES[i])) { onPick(argb) }
         }
-        val customName = str(R.string.colour_custom)
-        if (custom) Swatch(Color(selected!!), true, customName + " " + colorHex(selected)) { editing = true }
-        else Swatch(null, false, customName) { editing = true }
     }
     if (editing) CustomColorDialog(
         initial = selected ?: presets.first(),
@@ -103,7 +103,7 @@ fun ColorChoiceRow(
 
 /**
  * One round choice: 48dp touch target, radio semantics with its name, a tick (never only a ring)
- * when chosen. [fill] null draws the colour wheel of "pick your own".
+ * when chosen. [fill] null draws the round rainbow of "pick your own".
  */
 @Composable
 private fun Swatch(
@@ -128,10 +128,8 @@ private fun Swatch(
         // White or black, whichever reads on this colour (light colours took white before).
         val ink = readableOn(Color.White, base)
         when {
-            fill == null -> Box(
-                Modifier.size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) { Icon(CriptaIcons.Palette, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp)) }
+            // The rainbow alone, as colour pickers usually draw "a colour of your own".
+            fill == null -> Unit
             label != null && !selected -> Text(label, color = ink, style = MaterialTheme.typography.labelLarge)
             cross && !selected -> Icon(CriptaIcons.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             selected -> Icon(CriptaIcons.Check, null, tint = ink, modifier = Modifier.size(18.dp))
