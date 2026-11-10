@@ -179,6 +179,8 @@ class IntroRepository @Inject constructor(
         val soundMs: Long, val startDeltaMs: Long, val endDeltaMs: Long,
         /** The members' sounds, longest first: what saving it keeps as reference sounds. */
         internal val cores: List<IntArray>,
+        /** The segment each of [cores] was cut from, same order (empty for a saved signature's own sounds). */
+        internal val coreSegments: List<MediaSegmentEntity> = emptyList(),
     )
 
     /** A video's segment and the sound it was found on (its core, before any extension). */
@@ -242,10 +244,11 @@ class IntroRepository @Inject constructor(
         }
         fun build(id: Long?, name: String?, ds: Long, de: Long, ms: List<Member>): Signature {
             val lengths = ms.map { it.core.size }.sorted()
+            val byLength = ms.sortedByDescending { it.core.size }
             return Signature(id, name, kind,
                 ms.map { files.getValue(it.seg.fileId) to it.seg }.sortedBy { it.first.originalName.lowercase() },
                 (lengths[lengths.size / 2] * Fingerprint.HOP_MS).toLong(), ds, de,
-                ms.map { it.core }.sortedByDescending { it.size })
+                byLength.map { it.core }, byLength.map { it.seg })
         }
         val named = saved.mapNotNull { s -> toSaved[s.id]?.let { build(s.id, s.name.ifBlank { null }, s.startDeltaMs, s.endDeltaMs, it) } }
         val unnamed = loose.indices.groupBy { root(it) }.values.map { g -> build(null, null, 0, 0, g.map { loose[it] }) }
@@ -288,13 +291,20 @@ class IntroRepository @Inject constructor(
      */
     suspend fun deleteSignature(sig: Signature) = db.withTransaction {
         for ((_, seg) in sig.entries) if (seg.source == "auto") dao.deleteSegment(seg.fileId, sig.kind.id)
-        val origin = sig.entries.firstOrNull()
-        val sounds = if (sig.id != null) dao.signatureSoundsOfKind(sig.kind.id).filter { it.signatureId == sig.id }.map { PrintCodec.decode(it.hashes) }
+        // Each sample keeps the video and the stretch it really came from: one origin for all of them
+        // rebuilt wrong intervals when a sample was taken out of the rejected list. A saved
+        // signature's own sounds have no origin recorded: none is invented (restoring one then
+        // searches every video for the sound).
+        val unsaved = sig.id == null
+        val sounds = if (!unsaved) dao.signatureSoundsOfKind(sig.kind.id).filter { it.signatureId == sig.id }.map { PrintCodec.decode(it.hashes) }
             else sig.cores.take(MAX_SIGNATURE_SOUNDS)
-        for (h in sounds) {
-            dao.addRejected(RejectedPrintEntity(kind = sig.kind.id, originFileId = origin?.first?.id.orEmpty(),
-                originName = sig.name ?: origin?.first?.originalName.orEmpty(), startMs = origin?.second?.startMs ?: 0,
-                endMs = (origin?.second?.startMs ?: 0) + (h.size * Fingerprint.HOP_MS).toLong(),
+        for ((i, h) in sounds.withIndex()) {
+            val seg = if (unsaved) sig.coreSegments.getOrNull(i) else null
+            val file = seg?.let { s -> sig.entries.firstOrNull { it.first.id == s.fileId }?.first }
+            val start = seg?.let { it.autoStartMs ?: it.startMs } ?: 0L
+            dao.addRejected(RejectedPrintEntity(kind = sig.kind.id, originFileId = file?.id.orEmpty(),
+                originName = sig.name ?: file?.originalName.orEmpty(), startMs = start,
+                endMs = start + (h.size * Fingerprint.HOP_MS).toLong(),
                 hashes = PrintCodec.encode(h), createdAt = System.currentTimeMillis()))
         }
         sig.id?.let { dao.deleteSignatureSounds(it); dao.deleteSignature(it) }

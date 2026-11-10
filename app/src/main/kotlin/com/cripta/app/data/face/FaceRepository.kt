@@ -551,11 +551,19 @@ class FaceRepository @Inject constructor(
         }
     }
 
-    /** Move everything of [drop] into [keep], remembering it for "Annulla". Returns the merge's id. */
-    private suspend fun mergeRows(keep: Long, drop: Long, score: Float, auto: Boolean): Long {
+    /**
+     * What "Annulla" needs of a merge beyond the log row: both people as they were (profile, cover,
+     * star) and the media both had linked, which the merge folded into one link.
+     */
+    private class MergeRecord(val logId: Long, val dropped: PersonEntity?, val keptBefore: PersonEntity?, val sharedLinks: Set<String>)
+
+    /** Move everything of [drop] into [keep], remembering it for "Annulla". */
+    private suspend fun mergeRows(keep: Long, drop: Long, score: Float, auto: Boolean): MergeRecord {
         val p = dao.persons().firstOrNull { it.id == drop }
+        val keptBefore = dao.persons().firstOrNull { it.id == keep }
         val tracks = dao.cardsOfPerson(drop).map { it.id }
         val links = dao.linksOfPerson(drop)
+        val keptLinks = dao.linksOfPerson(keep).toSet()
         val logId = dao.addMerge(FaceMergeEntity(keptId = keep, mergedId = drop, mergedName = p?.name.orEmpty(),
             mergedFavorite = p?.favorite == true, trackIds = tracks.joinToString(","), fileIds = links.joinToString(","),
             similarity = score, auto = auto, createdAt = System.currentTimeMillis()))
@@ -574,7 +582,7 @@ class FaceRepository @Inject constructor(
         }
         dao.deletePerson(drop)
         if (p?.favorite == true) dao.setFavorite(keep, true)
-        return logId
+        return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet())
     }
 
     // ---- What the screens show -------------------------------------------------------------
@@ -699,24 +707,37 @@ class FaceRepository @Inject constructor(
 
     /** "Unisci": everything goes to [into]; each merge can be undone. */
     suspend fun merge(into: Long, others: Collection<Long>): Undo {
-        val ids = change { others.filter { it != into }.map { mergeRows(into, it, 0f, auto = false) } }
-        return { ids.reversed().forEach { undoMerge(it) } }
+        val records = change { others.filter { it != into }.map { mergeRows(into, it, 0f, auto = false) } }
+        return { records.reversed().forEach { undoMerge(it) } }
     }
 
     /**
      * Take a merge back: the merged person returns with its name, the faces and media it brought
      * (those still with the other one), and the two are kept apart from then on.
      */
-    suspend fun undoMerge(mergeId: Long) = change {
-        val m = dao.mergeById(mergeId) ?: return@change
-        dao.putPerson(PersonEntity(id = m.mergedId, name = m.mergedName, favorite = m.mergedFavorite, createdAt = m.createdAt))
+    private suspend fun undoMerge(rec: MergeRecord) = change {
+        val m = dao.mergeById(rec.logId) ?: return@change
+        // The whole profile comes back (notes, links, cover), not just the name.
+        dao.putPerson(rec.dropped ?: PersonEntity(id = m.mergedId, name = m.mergedName, favorite = m.mergedFavorite, createdAt = m.createdAt))
         val tracks = m.trackIds.split(',').mapNotNull { it.toLongOrNull() }
         tracks.chunked(500).forEach { dao.moveTrackIds(it, m.keptId, m.mergedId) }
         for (f in m.fileIds.split(',').filter { it.isNotBlank() }) {
-            dao.removePersonMedia(m.keptId, f); dao.addPersonMedia(PersonMediaEntity(m.mergedId, f))
+            // A media both people had stays with the kept one too: it was theirs before the merge.
+            if (f !in rec.sharedLinks) dao.removePersonMedia(m.keptId, f)
+            dao.addPersonMedia(PersonMediaEntity(m.mergedId, f))
         }
+        // The kept person gives back the notes, links and star the merge added to them.
+        rec.keptBefore?.let { dao.setProfile(it.id, it.notes, it.links); dao.setFavorite(it.id, it.favorite) }
         for (t in tracks) dao.addRejection(FaceRejectionEntity(t, m.keptId, m.similarity))
-        dao.deleteMerge(mergeId)
+        dao.deleteMerge(rec.logId)
+    }
+
+    private suspend fun personSnapshot(id: Long?): PersonEntity? = id?.let { i -> dao.persons().firstOrNull { it.id == i } }
+
+    /** Bring [p] back with its id when the cleanup of empty people removed it (the undo of a removal). */
+    private suspend fun revive(vararg people: PersonEntity?) {
+        val now = dao.persons().map { it.id }.toSet()
+        people.filterNotNull().filter { it.id !in now }.forEach { dao.putPerson(it) }
     }
 
     /** "Non sono la stessa persona" for two people offered as alike. */
@@ -735,6 +756,7 @@ class FaceRepository @Inject constructor(
     /** The track [trackId] is not [personId]: remembered, and the face is placed again elsewhere. */
     suspend fun reject(trackId: Long, personId: Long): Undo {
         val before = dao.card(trackId)
+        val person = personSnapshot(personId)
         change {
             dao.addRejection(FaceRejectionEntity(trackId, personId, before?.similarity ?: 0f))
             dao.place(trackId, null, "auto", 0f)
@@ -742,6 +764,7 @@ class FaceRepository @Inject constructor(
         replace(listOf(trackId))
         return {
             change {
+                revive(person)
                 dao.deleteRejection(trackId, personId)
                 if (before != null) dao.place(trackId, before.personId, before.state, before.similarity)
                 dao.deleteEmptyPersons()
@@ -753,6 +776,7 @@ class FaceRepository @Inject constructor(
     suspend fun removeMedia(personId: Long, fileIds: Collection<String>): Undo {
         val before = fileIds.flatMap { f -> dao.cardsOf(f).filter { it.personId == personId } }
         val links = dao.linksOfPerson(personId).filter { it in fileIds }
+        val person = personSnapshot(personId)
         change {
             for (f in links) dao.removePersonMedia(personId, f)
             for (t in before) { dao.addRejection(FaceRejectionEntity(t.id, personId, t.similarity)); dao.place(t.id, null, "auto", 0f) }
@@ -761,6 +785,8 @@ class FaceRepository @Inject constructor(
         change { dao.deleteEmptyPersons() }
         return {
             change {
+                // The last media of a nameless person took the person away with it: back first.
+                revive(person)
                 for (t in before) { dao.deleteRejection(t.id, personId); dao.place(t.id, personId, t.state, t.similarity) }
                 for (f in links) dao.addPersonMedia(PersonMediaEntity(personId, f))
                 dao.deleteEmptyPersons()
@@ -788,8 +814,9 @@ class FaceRepository @Inject constructor(
     /** "È lui/lei": the face goes to [personId] for good (a confirmed suggestion, or picked by hand). */
     suspend fun assign(trackId: Long, personId: Long): Undo {
         val before = dao.card(trackId)
+        val previous = personSnapshot(before?.personId)
         change { dao.confirm(trackId, personId); dao.deleteEmptyPersons() }
-        return { change { if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() } }
+        return { change { revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() } }
     }
 
     /** A face the user can add by hand: shown even when the analysis would set it aside ([why]). */
@@ -869,8 +896,9 @@ class FaceRepository @Inject constructor(
 
     /** "Togli": the media [fileId] added to [personId] by hand stops being theirs. */
     suspend fun unlink(personId: Long, fileId: String): Undo {
+        val person = personSnapshot(personId)
         change { dao.removePersonMedia(personId, fileId); dao.deleteEmptyPersons() }
-        return { link(personId, fileId) }
+        return { change { revive(person) }; link(personId, fileId) }
     }
 
     /** A new named person, for "Chi è? › Nuova persona". */
@@ -1011,8 +1039,9 @@ class FaceRepository @Inject constructor(
     /** A group of faces given to [personId] at once. */
     suspend fun assignAll(trackIds: Collection<Long>, personId: Long): Undo {
         val before = trackIds.mapNotNull { dao.card(it) }
+        val previous = before.mapNotNull { it.personId }.distinct().mapNotNull { personSnapshot(it) }
         change { for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons() }
-        return { change { for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() } }
+        return { change { revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() } }
     }
 
     // ---- Embeddings in memory ---------------------------------------------------------------
