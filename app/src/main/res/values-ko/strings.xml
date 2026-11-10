@@ -1535,6 +1535,10 @@
     <string name="show_tags">태그 표시</string>
     <string name="tag_rows">태그 행 수</string>
     <string name="tag_rows_desc">자동: 큰 표지에서 최대 3행, 작은 표지에서 1행.</string>
+    <string name="tag_style">태그 모양</string>
+    <string name="tag_style_bubble">원형</string>
+    <string name="tag_style_pill">라벨</string>
+    <string name="tag_style_desc">원형: 아이콘 또는 첫 글자. 라벨: 태그 색상 위에 별칭.</string>
     <string name="sec_colours">색상</string>
     <string name="coloured_tags">색상 태그</string>
     <string name="auto_colour_per_name">자동: 이름마다 다른 색상</string>

@@ -1657,6 +1657,10 @@
     <string name="show_tags">Mostrar as etiquetas</string>
     <string name="tag_rows">Linhas de etiquetas</string>
     <string name="tag_rows_desc">Auto: até 3 linhas em capas grandes, 1 nas pequenas.</string>
+    <string name="tag_style">Aparência das etiquetas</string>
+    <string name="tag_style_bubble">Círculos</string>
+    <string name="tag_style_pill">Etiquetas cheias</string>
+    <string name="tag_style_desc">Círculos: o ícone ou a inicial. Etiquetas cheias: o apelido na cor da etiqueta.</string>
     <string name="sec_colours">Cores</string>
     <string name="coloured_tags">Etiquetas coloridas</string>
     <string name="auto_colour_per_name">Automática: uma cor diferente para cada nome</string>

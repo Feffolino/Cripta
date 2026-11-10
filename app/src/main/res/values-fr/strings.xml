@@ -1657,6 +1657,10 @@
     <string name="show_tags">Afficher les étiquettes</string>
     <string name="tag_rows">Lignes d’étiquettes</string>
     <string name="tag_rows_desc">Auto : jusqu’à 3 lignes sur les grandes vignettes, 1 sur les petites.</string>
+    <string name="tag_style">Aspect des étiquettes</string>
+    <string name="tag_style_bubble">Pastilles</string>
+    <string name="tag_style_pill">Étiquettes pleines</string>
+    <string name="tag_style_desc">Pastilles : l’icône ou l’initiale. Étiquettes pleines : l’alias sur la couleur de l’étiquette.</string>
     <string name="sec_colours">Couleurs</string>
     <string name="coloured_tags">Étiquettes colorées</string>
     <string name="auto_colour_per_name">Automatique : une couleur différente pour chaque nom</string>

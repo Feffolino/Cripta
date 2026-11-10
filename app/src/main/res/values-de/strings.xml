@@ -1596,6 +1596,10 @@
     <string name="show_tags">Schlagwörter anzeigen</string>
     <string name="tag_rows">Schlagwortzeilen</string>
     <string name="tag_rows_desc">Auto: Bis zu 3 Zeilen auf großen Vorschaubildern, 1 auf kleinen.</string>
+    <string name="tag_style">Darstellung der Schlagwörter</string>
+    <string name="tag_style_bubble">Kreise</string>
+    <string name="tag_style_pill">Volle Etiketten</string>
+    <string name="tag_style_desc">Kreise: Symbol oder Anfangsbuchstabe. Volle Etiketten: Kürzel auf der Farbe des Schlagworts.</string>
     <string name="sec_colours">Farben</string>
     <string name="coloured_tags">Farbige Schlagwörter</string>
     <string name="auto_colour_per_name">Automatisch: Eine andere Farbe je Name</string>

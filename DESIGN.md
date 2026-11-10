@@ -35,7 +35,7 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
 - Anything drawn over a picture (length, star, play mark, people's faces, the watched bar) sits on
   the dark glass `OnImageGlass` (black at 55%: the design system's 40% plus blur, darker here so
   white text keeps 4.5:1 without the blur), never on a gradient over the whole cover. Tags over a picture are the one
-  exception: a see-through tint of their own colour (see Components).
+  exception: their own colour, at 90% on the glass or in full (see Covers).
 
 ## Type
 
@@ -81,8 +81,7 @@ Tag icons are a separate set (see Components) and are not Tabler.
   search pill, sheets, dialogs), never to frame a group of options.
 - Borders exist only as state markers: selection rings and checks on covers, the chosen colour,
   icon or face in a picker, the folder highlighted while dragging onto it, the face marked on a
-  frame in the people suggestions. One exception that is not a state: the rim of a tag over a
-  picture, which keeps the tinted pill readable on any image.
+  frame in the people suggestions.
 - Top bars are the page itself (same background) and lift one tier only when content scrolls under
   them (`criptaTopBarColors(lifted)`, from the list's real position, so a page opening already
   scrolled shows the lifted bar at once). The navigation bar is a flat tier with an accent pill on the
@@ -114,7 +113,11 @@ Tag icons are a separate set (see Components) and are not Tabler.
   `assets/tagicons/`), one colour, drawn in the pill's text colour before the name (in place of
   the colour dot). The editor offers icons fitting the tag's name (Italian or English words), the
   common ones, and a searchable list of all. On a cover a tag shows only its symbol or its
-  acronym (the icon, else the alias, else a short form of the name), never the full name.
+  acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
+  `CoverTagStyle`): **Bollini** (default), round marks of one size (22dp, 18dp on small covers),
+  the tag colour at 90% on the glass with its icon, else its alias (two characters at most), else
+  its initial, in black or white; **Pillole piene**, pills in the tag colour in full, no rim, with
+  the icon and alias. Both pack from the bottom edge in up to 3 rows, then "+N".
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
@@ -275,7 +278,12 @@ Tag icons are a separate set (see Components) and are not Tabler.
 - A picked face looks the same everywhere (filters, people grid, groups, details, pickers): a 3dp
   accent ring (`FaceAvatar(selected = …)`), the name under it in the accent where there is one.
 - Motion explains a state change and is short (120 / 220 / 320 ms, ease-out, no bounce); it
-  collapses when the system removes animations.
+  collapses when the system removes animations. Shared pieces in `ui/theme/Motion.kt`: `popOn`
+  (a toggle turning on grows from 0.7: favourite stars, a tag's tick), `popIn` (something arriving
+  on a screen already up: a tag just assigned to a cover), `shakeOn` (a refused PIN or password),
+  `riseIn` (an empty state's first appearance); `RollingCountText` rolls a count up or down in
+  selection titles; Home's figures run to a new value; the tab glyph and the light / dark switch
+  cross-fade. Nothing animates on first composition or on scroll, only on a change seen live.
 - Loading: a screen that would show up empty and then jump shows `Skeleton` blocks of the size
   and shape of what replaces them (covers, rows, round faces, the figures of the Home strip), on
   the surface-container tier, no border; they breathe slowly and stand still with animations off.

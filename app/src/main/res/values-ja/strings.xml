@@ -1535,6 +1535,10 @@
     <string name="show_tags">タグを表示</string>
     <string name="tag_rows">タグの行数</string>
     <string name="tag_rows_desc">自動：大きいカバーは最大 3 行、小さいカバーは 1 行。</string>
+    <string name="tag_style">タグの表示形式</string>
+    <string name="tag_style_bubble">丸</string>
+    <string name="tag_style_pill">ラベル</string>
+    <string name="tag_style_desc">丸：アイコンまたは頭文字。ラベル：タグの色の上に略称。</string>
     <string name="sec_colours">色</string>
     <string name="coloured_tags">色付きタグ</string>
     <string name="auto_colour_per_name">自動：名前ごとに異なる色</string>

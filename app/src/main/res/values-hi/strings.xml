@@ -1596,6 +1596,10 @@
     <string name="show_tags">टैग दिखाएँ</string>
     <string name="tag_rows">टैग की पंक्तियाँ</string>
     <string name="tag_rows_desc">अपने आप: बड़े कवर पर अधिकतम 3 पंक्तियाँ, छोटे कवर पर 1।</string>
+    <string name="tag_style">टैग का रूप</string>
+    <string name="tag_style_bubble">गोले</string>
+    <string name="tag_style_pill">पूरे लेबल</string>
+    <string name="tag_style_desc">गोले: आइकन या पहला अक्षर। पूरे लेबल: टैग के रंग पर उपनाम।</string>
     <string name="sec_colours">रंग</string>
     <string name="coloured_tags">रंगीन टैग</string>
     <string name="auto_colour_per_name">अपने आप: हर नाम का अलग रंग</string>

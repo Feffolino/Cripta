@@ -1840,6 +1840,10 @@
     <string name="show_tags">عرض الوسوم</string>
     <string name="tag_rows">صفوف الوسوم</string>
     <string name="tag_rows_desc">تلقائي: حتى 3 صفوف على الأغلفة الكبيرة، وصف واحد على الصغيرة.</string>
+    <string name="tag_style">شكل الوسوم</string>
+    <string name="tag_style_bubble">دوائر</string>
+    <string name="tag_style_pill">وسوم كاملة</string>
+    <string name="tag_style_desc">دوائر: الأيقونة أو الحرف الأول. وسوم كاملة: الاسم المختصر على لون الوسم.</string>
     <string name="sec_colours">الألوان</string>
     <string name="coloured_tags">وسوم ملونة</string>
     <string name="auto_colour_per_name">تلقائي: لون مختلف لكل اسم</string>

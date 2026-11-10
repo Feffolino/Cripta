@@ -1,5 +1,10 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.compositeOver
 import com.cripta.app.ui.theme.popIn
 import com.cripta.app.R
 import com.cripta.app.str
@@ -306,28 +311,30 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
 }
 
 /**
- * Tag pills over the bottom of a cover. Each pill sits on its own dark glass, so they read on any
- * image without a gradient darkening the rest of the picture.
- * Up to 3 rows (automatic: by cover width — bigger covers show more rows — or fixed by the user),
- * packed greedily by measured width; a "+N" badge appears only once every row is full.
+ * Tags over the bottom of a cover, in the style picked in Impostazioni › Sulle copertine:
+ * - [CoverTagStyle.BUBBLE] (default): round 22dp marks of one size, the tag's icon or its initial,
+ *   so a row of them reads as a tidy strip and hides little of the picture;
+ * - [CoverTagStyle.PILL]: pills in the tag's full colour with its alias (and icon), no see-through.
+ * Up to 3 rows (automatic: by cover width, or fixed by the user), filled from the bottom; a "+N"
+ * mark appears only once every row is full. A tag assigned while the cover is on screen pops in.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall
+    val density = LocalDensity.current
+    val bubbles = (display?.coverTagStyle ?: com.cripta.app.data.CoverTagStyle.BUBBLE) == com.cripta.app.data.CoverTagStyle.BUBBLE
     // Tags the cover had when it appeared: only ones added after that animate in.
     val knownTags = remember { tags.mapTo(mutableSetOf()) { it.id } }
-    val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
-        // DS cr-cover__bl: 8dp from the edges, 4dp between pills.
+        // DS cr-cover__bl: 8dp from the edges, 4dp between marks.
         val outerPad = 8.dp
         val availDp = maxWidth - outerPad * 2
         val availPx = with(density) { availDp.toPx() }
-        val hPadPx = with(density) { 16.dp.toPx() }   // 8dp padding on each side of a pill
-        val dotPx = with(density) { 10.dp.toPx() }    // a pill without its own icon leads with a 6dp dot + 4dp
         val spacingPx = with(density) { 4.dp.toPx() }
+        val bubbleDp = if (maxWidth < 100.dp) 18.dp else 22.dp
         val rowsWanted = when (val r = display?.coverTagRows ?: 0) {
             0 -> when {
                 maxWidth >= 150.dp -> 3
@@ -336,15 +343,21 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
             }
             else -> r
         }
-        val texts = remember(tags, display?.coverTagStyle) { tags.map { badgeText(it, display) } }
-        // Measured on-screen width of each badge (text + padding), capped to a full row.
-        val iconPx = with(density) { 14.dp.toPx() }
+        val texts = remember(tags, bubbles) { tags.map { if (bubbles) bubbleText(it) else badgeText(it, display) } }
+        // On-screen width of each mark, capped to a full row: a bubble is a fixed circle; a pill is
+        // its measured text plus the icon and 8dp of padding on each side.
+        val hPadPx = with(density) { 16.dp.toPx() }
+        val iconPx = with(density) { 12.dp.toPx() }
         val iconGapPx = with(density) { 4.dp.toPx() }
-        val widths = remember(texts, availPx, tags) {
+        val bubblePx = with(density) { bubbleDp.toPx() }
+        val widths = remember(texts, availPx, tags, bubbles, bubblePx) {
             texts.mapIndexed { i, t ->
-                val text = if (t.isEmpty()) 0f else measurer.measure(t, style).size.width.toFloat()
-                val icon = if (tags[i].icon == null) dotPx else iconPx + if (t.isEmpty()) 0f else iconGapPx
-                minOf(text + icon + hPadPx, availPx)
+                if (bubbles) bubblePx
+                else {
+                    val text = if (t.isEmpty()) 0f else measurer.measure(t, style).size.width.toFloat()
+                    val icon = if (tags[i].icon == null) 0f else iconPx + if (t.isEmpty()) 0f else iconGapPx
+                    minOf(text + icon + hPadPx, availPx)
+                }
             }
         }
 
@@ -370,33 +383,84 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
         var rows = pack(0f)
         var shown = rows.sumOf { it.size }
         if (shown < tags.size) {
-            val overflowPx = measurer.measure("+${tags.size}", style).size.width + hPadPx + spacingPx
+            val overflowPx = maxOf(measurer.measure("+${tags.size}", style).size.width + hPadPx, if (bubbles) bubblePx else 0f) + spacingPx
             rows = pack(overflowPx)
             shown = rows.sumOf { it.size }
         }
         val extra = tags.size - shown
+
         Column(
-            Modifier.padding(start = outerPad, end = outerPad, bottom = outerPad),
+            Modifier.padding(outerPad),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // Filled from the bottom: the full rows sit on the cover's edge and the shorter
-            // last row (plus the "+N" pill) goes on top, so it hides less of the image.
+            // last row (plus the "+N" mark) goes on top, so it hides less of the image.
             rows.asReversed().forEachIndexed { r, row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEach { i ->
                         androidx.compose.runtime.key(tags[i].id) {
                             val fresh = remember { tags[i].id !in knownTags }
                             androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
-                            com.cripta.app.ui.components.TagPill(
-                                texts[i], tagHue(tags[i], display), onImage = true, maxWidth = availDp, tagIcon = tags[i].icon,
-                                modifier = Modifier.popIn(fresh),
-                            )
+                            val mod = Modifier.popIn(fresh)
+                            if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), bubbleDp, mod)
+                            else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), availDp, mod)
                         }
                     }
-                    if (r == 0 && extra > 0) com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
+                    if (r == 0 && extra > 0) {
+                        if (bubbles) Box(
+                            Modifier.heightIn(min = bubbleDp).widthIn(min = bubbleDp).clip(CircleShape)
+                                .background(com.cripta.app.ui.components.OnImageGlass).padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("+$extra", style = style, color = Color.White, maxLines = 1) }
+                        else com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
+                    }
                 }
             }
         }
+    }
+}
+
+/** A bubble's content when the tag has no icon: its alias (two characters at most), else its initial. */
+private fun bubbleText(tag: TagEntity): String =
+    tag.alias?.takeIf { it.isNotBlank() }?.take(2) ?: tag.name.take(1).uppercase(com.cripta.app.Strings.locale)
+
+/** Ink on a tag's full colour: black, or white on a darker colour of the user's own (as TagPill's On). */
+private fun inkOn(bg: Color): Color = if (bg.luminance() >= 0.175f) Color.Black else Color.White
+
+/** D: one round mark, the tag's colour at 90% on the dark glass, its icon or initial in the middle. */
+@Composable
+private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
+    val bg = color.copy(alpha = 0.9f).compositeOver(com.cripta.app.ui.components.OnImageGlass)
+    val fg = inkOn(bg)
+    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
+    Box(
+        modifier.size(size).clip(CircleShape).background(bg).semantics { contentDescription = tag.name },
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            drawn != null -> Icon(drawn, null, tint = fg, modifier = Modifier.size(size * 0.58f))
+            // Its room is kept while the icon loads, so nothing shifts.
+            tag.icon != null -> Unit
+            else -> Text(text, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
+                color = fg, maxLines = 1)
+        }
+    }
+}
+
+/** C: a pill in the tag's full colour (no see-through, no rim), its icon and alias in black or white. */
+@Composable
+private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
+    val fg = inkOn(color)
+    val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(tag.icon)
+    Row(
+        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).clip(CircleShape).background(color)
+            .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (tag.icon != null) Box(Modifier.size(12.dp)) { if (drawn != null) Icon(drawn, null, tint = fg, modifier = Modifier.matchParentSize()) }
+        if (tag.icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
+        if (text.isNotEmpty()) Text(text, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

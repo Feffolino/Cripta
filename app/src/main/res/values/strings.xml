@@ -1596,6 +1596,10 @@
     <string name="show_tags">Show the tags</string>
     <string name="tag_rows">Rows of tags</string>
     <string name="tag_rows_desc">Auto: up to 3 rows on large covers, 1 on small ones.</string>
+    <string name="tag_style">Tag look</string>
+    <string name="tag_style_bubble">Circles</string>
+    <string name="tag_style_pill">Full labels</string>
+    <string name="tag_style_desc">Circles: the icon or initial. Full labels: the alias on the tag colour.</string>
     <string name="sec_colours">Colours</string>
     <string name="coloured_tags">Coloured tags</string>
     <string name="auto_colour_per_name">Automatic: a different colour for each name</string>

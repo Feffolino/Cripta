@@ -37,7 +37,8 @@ enum class TagSortMode { ALPHA, CUSTOM }
  */
 enum class ConvertAfter { REPLACE, ASK, KEEP_BOTH }
 /** How a tag is written on a cover badge: its icon or acronym, or its full name. */
-enum class CoverTagStyle { ALIAS, NAME }
+/** How tags look on covers: round marks with an icon or initial (default), or full-colour pills with the alias. */
+enum class CoverTagStyle { BUBBLE, PILL }
 
 /** Shape of the covers in the player's filmstrip. */
 enum class StripShape { RECT, SQUARE, CIRCLE }
@@ -53,7 +54,7 @@ data class DisplayPrefs(
     val showRandomFab: Boolean = true,    // the "random" floating button
     /** Rows of tag badges on a grid cover: 0 = automatic (by cover size), else 1..3. */
     val coverTagRows: Int = 0,
-    val coverTagStyle: CoverTagStyle = CoverTagStyle.ALIAS,
+    val coverTagStyle: CoverTagStyle = CoverTagStyle.BUBBLE,
     /** Give each tag its own stable colour (same tag = same colour everywhere). */
     val tagColors: Boolean = true,
     /** Colour (ARGB) of every tag without its own colour; null = automatic, one per name. */
@@ -312,7 +313,7 @@ class SettingsStore @Inject constructor(
                 showNoteFab = p[showNoteFabKey] ?: true,
                 showRandomFab = p[showRandomFabKey] ?: true,
                 coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
-                coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.ALIAS },
+                coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.BUBBLE },
                 tagColors = p[tagColorsKey] ?: true,
                 defaultTagColor = p[defaultTagColorKey],
                 showDurationBadge = p[durationBadgeKey] ?: true,

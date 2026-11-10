@@ -1657,6 +1657,10 @@
     <string name="show_tags">Mostrar las etiquetas</string>
     <string name="tag_rows">Filas de etiquetas</string>
     <string name="tag_rows_desc">Auto: hasta 3 filas en portadas grandes y 1 en pequeñas.</string>
+    <string name="tag_style">Aspecto de las etiquetas</string>
+    <string name="tag_style_bubble">Círculos</string>
+    <string name="tag_style_pill">Etiquetas llenas</string>
+    <string name="tag_style_desc">Círculos: el icono o la inicial. Etiquetas llenas: el alias sobre el color de la etiqueta.</string>
     <string name="sec_colours">Colores</string>
     <string name="coloured_tags">Etiquetas de colores</string>
     <string name="auto_colour_per_name">Automático: un color distinto por nombre</string>
