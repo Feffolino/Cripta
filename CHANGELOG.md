@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-10
 
+- On the light theme, draw pastel tag and folder colours in a fuller tone of the same hue so they stand out from the page
 - Make the tag and folder palette pastel and show every colour in full, never darkened: tag pills, cover marks, the settings preview, a folder's disc and its empty card; text on a colour is black or white, whichever reads
 - Keep "Altro" (a round rainbow) first and always in view in the colour row; a colour of your own sits inside it, ticked
 - Move tags and folders coloured with a preset of an earlier palette to the new one; colours of your own stay as they are

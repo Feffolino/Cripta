@@ -113,7 +113,9 @@ fun TagPill(
 ) {
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tagIcon)
     // With tag colours off (Settings › Etichette) every tag takes the accent, here for every screen.
-    val color = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
+    val chosen = if (com.cripta.app.ui.theme.TagColorsEnabled.on) color else MaterialTheme.colorScheme.primary
+    // On a page of the light theme a pastel takes a fuller tone of its hue; over a picture it stays.
+    val color = if (onImage) chosen else com.cripta.app.ui.theme.shownTagColor(chosen)
     val on = state == TagPillState.On
     val colored = on || state == TagPillState.Plain
     val neutral = if (onImage) OnImageGlass else tonalContainer()

@@ -549,7 +549,7 @@ internal fun TagColorPicker(
     onPick: (Int?) -> Unit,
 ) {
     com.cripta.app.ui.components.ColorChoiceRow(
-        selected = selected, noneFill = autoColor, noneDescription = autoDescription,
+        selected = selected, noneFill = com.cripta.app.ui.theme.shownTagColor(autoColor), noneDescription = autoDescription,
         onPick = onPick, noneLabel = "A",
     )
 }

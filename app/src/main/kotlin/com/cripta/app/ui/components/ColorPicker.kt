@@ -88,11 +88,11 @@ fun ColorChoiceRow(
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val customName = str(R.string.colour_custom)
         Swatch(null, custom, if (custom) customName + " " + colorHex(selected!!) else customName,
-            own = if (custom) Color(selected!!) else null) { editing = true }
+            own = if (custom) com.cripta.app.ui.theme.shownTagColor(Color(selected!!)) else null) { editing = true }
         Row(Modifier.weight(1f).horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Swatch(noneFill, selected == null, noneDescription, label = noneLabel, cross = noneLabel == null) { onPick(null) }
             presets.forEachIndexed { i, argb ->
-                Swatch(Color(argb), selected == argb, str(PALETTE_NAMES[i])) { onPick(argb) }
+                Swatch(com.cripta.app.ui.theme.shownTagColor(Color(argb)), selected == argb, str(PALETTE_NAMES[i])) { onPick(argb) }
             }
         }
     }

@@ -33,9 +33,12 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
 - Tag and folder colours are the user's and share one palette, `TagPalette`: twelve pastel hues in
   OKLCH at lightness 0.86 and a soft chroma (0.10 at most), the first the accent's own blue
   (`#B9D2FF`), then indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a
-  blue-tinted slate; black reads on each at 13:1 or more. A colour is always shown as the user
-  chose it, in full, never darkened or tinted down: tag pills, cover marks, the folder's disc and
-  its empty card. Before the presets, in the first slot, both editors offer "Altro", a
+  blue-tinted slate; black reads on each at 13:1 or more. A colour is always shown in full, never
+  tinted down or mixed with black: tag pills, cover marks, the folder's disc and its empty card.
+  On the light theme's pages a pastel would almost vanish, so a colour lighter than OKLCH 0.70 is
+  drawn at 0.70, same hue, chroma at least 0.13 (`shownTagColor`): the presets stand out at about
+  2.4:1 and keep black text at 7.4:1. The saved colour never changes; marks over a picture and the
+  dark theme show it as chosen. Before the presets, in the first slot, both editors offer "Altro", a
   round rainbow that opens a colour of the user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
   saved as a plain ARGB value like a preset; presets of earlier palettes move to the current ones
   once (`FormerPresetColors`, database versions 36 and 37). Text and symbols on a colour are black

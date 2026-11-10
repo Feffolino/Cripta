@@ -172,7 +172,7 @@ fun FolderMosaic(
     /** The count in the accent colour (files just landed). */
     countFlash: Boolean = false,
 ) {
-    val accent = folder.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
+    val accent = folder.color?.let { com.cripta.app.ui.theme.shownTagColor(Color(it)) } ?: MaterialTheme.colorScheme.primary
     val lift by animateFloatAsState(if (highlighted) 1.08f else 1f, Motion.enter(Motion.MEDIUM), label = "folderLift")
     val hl by animateFloatAsState(if (highlighted) 1f else 0f, Motion.enter(Motion.SHORT), label = "folderHl")
     // Landing squeeze: 1 -> 0.93 -> 1, ease-out both ways (no overshoot).

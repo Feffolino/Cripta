@@ -181,8 +181,8 @@ fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
  */
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
-    // The folder's colour as the user chose it, in full; the symbol on it in black or white.
-    val c = color?.let { Color(it) }
+    // The folder's colour in full (a fuller tone of a pastel on the light theme); the symbol on it in black or white.
+    val c = color?.let { com.cripta.app.ui.theme.shownTagColor(Color(it)) }
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
