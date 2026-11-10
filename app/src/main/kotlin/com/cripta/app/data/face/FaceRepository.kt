@@ -444,6 +444,7 @@ class FaceRepository @Inject constructor(
             val plan = FramePlan.times(dur, deep)
             val withFaces = ArrayList<Long>()
             var lastHash: Long? = null
+            var lastReal: Long? = null
             suspend fun sample() {
                 for ((i, t) in plan.withIndex()) {
                     coroutineContext.ensureActive()
@@ -453,13 +454,14 @@ class FaceRepository @Inject constructor(
                     val img = source.at(t, exact = deep)
                     if (img == null) { bad++; continue }
                     val h = FaceStats.frameHash(img)
-                    val last = lastHash
-                    if (last != null && FaceStats.sameFrame(h, last)) { dup++; continue }
-                    lastHash = h
-                    ok++
                     // Where the frame really is: a key frame is often well before the moment asked, and
                     // the moment kept is where the details jump to and where the frame is read again.
                     val real = source.lastMs ?: t
+                    val last = lastHash
+                    // Alike AND from the same moment: an alike picture much later is another frame.
+                    if (last != null && FaceStats.isSameMoment(h, last, real, lastReal)) { dup++; continue }
+                    lastHash = h; lastReal = real
+                    ok++
                     if (onFrame(i, real, img)) withFaces += real
                 }
             }

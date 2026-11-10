@@ -33,8 +33,8 @@ object Fingerprint {
         (hz * FRAME / MonoResampler.OUT_RATE).roundToInt()
     }
 
-    /** Hashes of the first [size] samples of [pcm]. */
-    fun hashes(pcm: FloatArray, size: Int = pcm.size): IntArray {
+    /** Hashes of the first [size] samples of [pcm]; [check] runs every few frames (it may throw to stop). */
+    fun hashes(pcm: FloatArray, size: Int = pcm.size, check: () -> Unit = {}): IntArray {
         if (size < FRAME) return IntArray(0)
         val frames = (size - FRAME) / HOP + 1
         val out = IntArray(frames - 1)
@@ -42,6 +42,7 @@ object Fingerprint {
         val im = DoubleArray(FRAME)
         var prev: DoubleArray? = null
         for (f in 0 until frames) {
+            if (f and 63 == 0) check()
             val off = f * HOP
             for (i in 0 until FRAME) { re[i] = pcm[off + i] * window[i]; im[i] = 0.0 }
             fft(re, im)

@@ -66,7 +66,7 @@ class IntroRepository @Inject constructor(
             if (s.status == "skip") return@filter true
             if (quick || s.status != "ok") return@filter false
             val covered = s.bytes / 4 * Fingerprint.HOP_MS
-            covered < minOf(f.durationMs ?: 0L, HEAD_MS) - 30_000
+            coverageIsShort(f.durationMs, covered.toLong(), HEAD_MS)
         }
     }
 
@@ -99,7 +99,7 @@ class IntroRepository @Inject constructor(
         val segs = dao.allSegments().filter { it.fileId in byId }.groupBy { it.fileId }
         val entries = dao.headSizes().filter { it.fileId in byId }.map { s ->
             val own = segs[s.fileId].orEmpty()
-            Entry(byId.getValue(s.fileId), own.firstOrNull { it.kind == SegmentKind.INTRO.id }, own.firstOrNull { it.kind == SegmentKind.OUTRO.id },
+            Entry(byId.getValue(s.fileId), activeSegment(own, SegmentKind.INTRO.id), activeSegment(own, SegmentKind.OUTRO.id),
                 if (s.status == "ok") null else s.status.removePrefix("skip").removePrefix(":").ifBlank { null }?.let { com.cripta.app.data.SkipReasons.text(it) } ?: str(R.string.reason_old_version))
         }.sortedBy { it.file.originalName.lowercase() }
         Overview(live.size, entries)
@@ -367,7 +367,8 @@ class IntroRepository @Inject constructor(
         // Each part is hashed as soon as it is decoded, so only one part's audio is held at a time.
         suspend fun part(fromMs: Long, toMs: Long): Pair<Long, IntArray>? {
             val pcm = decoder.decode(file, fromMs, toMs) ?: return null
-            return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) }
+            // ensureActive inside the hashing: "Annulla" stops it within a few frames, not at the end of the stretch.
+            return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) { ensureActive() } }
         }
         var reason = "audio non decodificabile"
         val parts = when {
@@ -552,3 +553,17 @@ class IntroRepository @Inject constructor(
         const val MAX_SIGNATURE_SOUNDS = 3
     }
 }
+
+/**
+ * Whether a quick scan's print is too short to count in the complete mode: it covers less than the
+ * head that scan reads. An unknown [durationMs] is not "nothing to cover" (0 made every such video
+ * look done): the video is taken as long, and its coverage compared with the head.
+ */
+internal fun coverageIsShort(durationMs: Long?, coveredMs: Long, headMs: Long): Boolean {
+    val reach = if (durationMs == null || durationMs <= 0L) headMs else minOf(durationMs, headMs)
+    return coveredMs < reach - 30_000
+}
+
+/** The segment of [kind] that is really there: the "not an intro" marker (source "none") is not one. */
+internal fun activeSegment(segments: List<MediaSegmentEntity>, kind: String): MediaSegmentEntity? =
+    segments.firstOrNull { it.kind == kind && it.source != "none" }

@@ -76,4 +76,14 @@ object FaceStats {
     }
 
     fun sameFrame(a: Long, b: Long) = java.lang.Long.bitCount(a xor b) <= 2
+
+    /**
+     * The frame just read is the one before it: an alike picture ([sameFrame]) from the same moment
+     * (a key frame returned for two requested times). Alike pictures far apart in time are not
+     * duplicates: on a fixed camera a small face entering the scene barely changes the hash.
+     */
+    fun isSameMoment(hash: Long, last: Long, realMs: Long, lastRealMs: Long?): Boolean =
+        sameFrame(hash, last) && lastRealMs != null && kotlin.math.abs(realMs - lastRealMs) <= SAME_MOMENT_MS
+
+    private const val SAME_MOMENT_MS = 1_000L
 }
