@@ -31,9 +31,9 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
 - Colours come only from the theme roles; no hex values in screens. Exceptions: the player's black
   stage and tag colours.
 - Tag and folder colours are the user's and share one palette, `TagPalette`: twelve hues in OKLCH at
-  one lightness (about 0.70) and a calm chroma, the first the accent's own blue (`#6D9DF5`), then
+  one light lightness (0.78) and a calm chroma, the first the accent's own blue (`#90B8FE`), then
   indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a blue-tinted slate. They sit
-  on the dark surfaces like the accent does; black reads on each at 6.8:1 or more and white on its
+  on the dark surfaces like the accent does; black reads on each at 9.9:1 or more and white on its
   cover mark at 4.4:1 or more. Before the presets, in the first slot, both editors offer "Altro", a
   round rainbow that opens a colour of the user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
   saved as a plain ARGB value like a preset, so an older preset shows as "Altro" and keeps working.
