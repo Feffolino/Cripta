@@ -9,7 +9,8 @@ class PeopleOrderTest {
     private fun person(id: Long, name: String, fav: Boolean = false, ignored: Boolean = false, created: Long = id) =
         FaceRepository.Person(PersonEntity(id = id, name = name, favorite = fav, ignored = ignored, createdAt = created), emptyList(), null, emptyList())
 
-    private val people = listOf(person(1, "Zoe"), person(2, "Anna", fav = true), person(3, "Mario"), person(4, "Bea", fav = true), person(5, "Ugo", ignored = true))
+    private val people = listOf(person(1, "Zoe"), person(2, "Anna", fav = true), person(3, "Mario"),
+        person(4, "Bea", fav = true), person(5, "Ugo", fav = true, ignored = true))
 
     private fun ids(l: List<FaceRepository.Person>) = l.map { it.id }
 
