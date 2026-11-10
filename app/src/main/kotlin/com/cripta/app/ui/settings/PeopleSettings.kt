@@ -359,10 +359,11 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
 /** A star on a face: one tap adds or removes the person from the favourites. */
 @Composable
 internal fun FavoriteStar(on: Boolean, name: String, modifier: Modifier = Modifier, onToggle: () -> Unit) {
-    IconButton(onClick = onToggle, modifier = modifier.minimumInteractiveComponentSize().size(36.dp)) {
+    IconButton(onClick = onToggle, modifier = modifier.size(48.dp)) {
         Icon(if (on) CriptaIcons.Star else CriptaIcons.StarBorder, if (on) str(R.string.unfavorite_x, name) else str(R.string.favorite_x, name),
             tint = if (on) com.cripta.app.ui.theme.Favorite else androidx.compose.ui.graphics.Color.White,
-            modifier = Modifier.size(26.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
+            modifier = Modifier.offset(7.dp, (-7).dp).size(26.dp).clip(CircleShape)
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(3.dp))
     }
 }
 
@@ -734,7 +735,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover, { vm.faceCrop(it) }, 88.dp, selected = on)
-                            if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd).offset(7.dp, (-7).dp)) {
+                            if (!p.entity.ignored && selected.isEmpty()) FavoriteStar(p.entity.favorite, p.title, Modifier.align(Alignment.TopEnd)) {
                                 vm.setPersonFavorite(p.id, !p.entity.favorite)
                             }
                         }

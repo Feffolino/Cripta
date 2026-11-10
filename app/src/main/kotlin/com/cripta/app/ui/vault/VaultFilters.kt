@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +53,7 @@ import androidx.compose.foundation.layout.width
 import com.cripta.app.data.SortKey
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.readableOn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
@@ -230,13 +232,19 @@ internal fun FilterSortSheet(
     // The chip's X used to delete a saved filter at once (easy to hit by mistake): ask first.
     var savedToDelete by remember { mutableStateOf<com.cripta.app.data.db.SavedFilterEntity?>(null) }
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss, wideInLandscape = true) {
+        val colors = MaterialTheme.colorScheme
+        val accent = readableOn(colors.primary, colors.surfaceContainerHigh)
+        val textButtonColors = ButtonDefaults.textButtonColors(contentColor = accent)
         // ---- Header (DS): the title and "Azzera"; the result count is on the main button below.
         Row(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(str(R.string.filters_and_order), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            TextButton(onClick = onClear, enabled = filters.active) { com.cripta.app.ui.components.ButtonText(str(R.string.reset)) }
+            Text(str(R.string.filters_and_order), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f).semantics { heading() })
+            TextButton(onClick = onClear, enabled = filters.active, colors = textButtonColors) {
+                com.cripta.app.ui.components.ButtonText(str(R.string.reset))
+            }
         }
 
         // The order first (the group people reach for most, and short), then what to show; the
@@ -299,7 +307,7 @@ internal fun FilterSortSheet(
                     trailing = {
                         val n = filters.personIds.size
                         if (n > 0) Text(plural(R.plurals.chosen_n, n), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = accent)
                     },
                 ) {
                     PeopleFaceRow(people, filters.personIds, faceCrop, onPerson)
@@ -319,7 +327,7 @@ internal fun FilterSortSheet(
                     trailing = {
                         val n = filters.tagIds.size + filters.excludedTagIds.size
                         if (n > 0) Text(str(R.string.n_chosen, n), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = accent)
                     },
                 ) {
                     Text(str(R.string.tag_filter_hint),
@@ -427,7 +435,8 @@ internal fun FilterSortSheet(
                     else -> plural(R.plurals.show_n_files, resultCount, com.cripta.app.ui.components.formatCount(resultCount))
                 })
             }
-            TextButton(onClick = { naming = true }, enabled = filters.active, modifier = Modifier.padding(top = 4.dp)) {
+            TextButton(onClick = { naming = true }, enabled = filters.active, colors = textButtonColors,
+                modifier = Modifier.padding(top = 4.dp)) {
                 com.cripta.app.ui.components.ButtonText(str(R.string.save_these_filters))
             }
         }
@@ -463,15 +472,17 @@ internal fun PeopleFaceRow(
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
         people.forEach { p ->
             val on = p.id in chosen
+            val action = str(if (on) R.string.deselect else R.string.select)
             Column(
                 Modifier.width(84.dp).clip(MaterialTheme.shapes.small)
+                    .semantics { onClick(label = action, action = null) }
                     .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { onPerson(p.id) }
                     .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 com.cripta.app.ui.settings.FaceAvatar(p.cover, faceCrop, 68.dp, selected = on)
                 Text(p.title, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                    color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -505,8 +516,11 @@ internal fun FilterGroup(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth().semantics { heading() }, verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val colors = MaterialTheme.colorScheme
+            Text(title, style = com.cripta.app.ui.theme.HeadingStyle,
+                color = readableOn(colors.primary, colors.surfaceContainerHigh),
+                modifier = Modifier.weight(1f).semantics { heading() })
             trailing()
         }
         content()

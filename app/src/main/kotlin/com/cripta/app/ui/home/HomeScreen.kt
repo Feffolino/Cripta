@@ -81,6 +81,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import kotlinx.coroutines.launch
@@ -369,9 +370,11 @@ private fun SummaryCard(photos: Int, videos: Int, others: Int, onlyNotes: Boolea
 private fun SummaryTile(icon: ImageVector, value: String, label: String, modifier: Modifier, onClick: () -> Unit, compact: Boolean = false,
                         loading: Boolean = false) {
     val source = remember { MutableInteractionSource() }
+    val interaction = if (loading) Modifier.clearAndSetSemantics {} else
+        Modifier.clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = str(R.string.show), onClick = onClick)
     Column(
         modifier.heightIn(min = 48.dp).clip(com.cripta.app.ui.theme.RadiusLg)
-            .clickable(source, LocalIndication.current, role = Role.Button, onClickLabel = str(R.string.show), onClick = onClick)
+            .then(interaction)
             .padding(horizontal = 4.dp, vertical = if (compact) 10.dp else 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
