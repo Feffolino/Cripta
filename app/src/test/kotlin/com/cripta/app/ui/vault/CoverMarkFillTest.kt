@@ -1,35 +1,33 @@
 package com.cripta.app.ui.vault
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import com.cripta.app.ui.theme.TagPalette
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoverMarkFillTest {
-    private fun whiteContrast(bg: Color) = 1.05 / (bg.luminance() + 0.05)
+    private fun contrast(a: Color, b: Color): Double {
+        val la = a.luminance() + 0.05
+        val lb = b.luminance() + 0.05
+        return if (la > lb) la / lb else lb / la
+    }
 
     @Test
-    fun `a mid colour gets exactly 28 percent black`() {
+    fun `a mark keeps the tag's own colour`() {
         val blue = Color(0xFF3F6FD8)
-        val fill = coverMarkFill(blue)
-        val expected = lerp(blue, Color.Black, 0.28f)
-        assertEquals(expected.red, fill.red, 1e-3f)
-        assertEquals(expected.green, fill.green, 1e-3f)
-        assertEquals(expected.blue, fill.blue, 1e-3f)
-        assertEquals(1f, fill.alpha, 0f)
-    }
-
-    @Test
-    fun `a light colour is darkened until white reads at 3 to 1`() {
-        for (light in listOf(Color(0xFFFFF59D), Color(0xFFFFFFFF), Color(0xFFB2EBF2), Color(0xFFFFCC80))) {
-            assertTrue("$light", whiteContrast(coverMarkFill(light)) >= 3.0)
-        }
-    }
-
-    @Test
-    fun `a see-through colour comes out opaque`() {
+        assertEquals(blue, coverMarkFill(blue))
         assertEquals(1f, coverMarkFill(Color(0x80FF0000)).alpha, 0f)
+    }
+
+    @Test
+    fun `text on a mark reads at 4_5 to 1 on presets and on any colour of the user's own`() {
+        val own = listOf(Color.Black, Color.White, Color(0xFFFFF59D), Color(0xFF000080), Color(0xFF808080), Color(0xFF3F6FD8))
+        for (c in TagPalette + own) {
+            val fill = coverMarkFill(c)
+            assertTrue("$c", contrast(coverMarkInk(fill), fill) >= 4.5)
+        }
+        for (c in TagPalette) assertEquals(Color.Black, coverMarkInk(coverMarkFill(c)))
     }
 }

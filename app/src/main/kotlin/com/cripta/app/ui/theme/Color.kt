@@ -49,81 +49,91 @@ val LightOutlineVariant = Color(0xFFD9DFEA)
 
 /**
  * The one colour palette of tags and folders (the quick presets of both editors, the automatic
- * colour of a name, "Colori casuali"). Twelve hues in OKLCH at one light lightness (0.78) and a
- * calm chroma (less where sRGB cannot hold it that light), so they sit together on the dark
- * surfaces like the blue accent does (the first is the accent's own hue); the last is a
- * blue-tinted slate. Every one keeps black text at 9.9:1 or more and white on a cover mark
- * ([coverMarkFill]) at 4.4:1 or more. Text on any colour, a preset
- * or the user's own, goes through [readableOn], so it stays >= 4.5:1 in both themes. Colours
- * already saved with a tag or folder are plain ARGB values: an old preset keeps working, and
- * shows as a custom colour in the editors.
+ * colour of a name, "Colori casuali"). Twelve pastel hues in OKLCH at one light lightness (0.86)
+ * and a soft chroma (0.10 at most, less where sRGB cannot hold it that light), the first the
+ * accent's own hue, the last a blue-tinted slate. Tags show them in full, never darkened, with
+ * black text (13:1 or more on every preset). Text on any colour, a preset or the user's own, is
+ * black or white, whichever reads at 4.5:1. Colours already saved with a tag or folder are plain
+ * ARGB values; the presets of earlier palettes move to these ([FormerPresetColors]).
  */
 val TagPalette = listOf(
-    Color(0xFF90B8FE), // blue
-    Color(0xFFB0ADFE), // indigo
-    Color(0xFFD39EF4), // purple
-    Color(0xFFF594C3), // pink
-    Color(0xFFFE9592), // red
-    Color(0xFFF99E66), // orange
-    Color(0xFFDEAF56), // amber
-    Color(0xFFACC45F), // lime
-    Color(0xFF76CF8A), // green
-    Color(0xFF62CCBF), // teal
-    Color(0xFF66C6E4), // cyan
-    Color(0xFFAFB8C5), // slate
+    Color(0xFFB9D2FF), // blue
+    Color(0xFFCCCBFE), // indigo
+    Color(0xFFE6C0FE), // purple
+    Color(0xFFFEBAD9), // pink
+    Color(0xFFFEBEBB), // red
+    Color(0xFFFEC29F), // orange
+    Color(0xFFF2CB83), // amber
+    Color(0xFFC8DB90), // lime
+    Color(0xFFA1E4AE), // green
+    Color(0xFF7EE7D9), // teal
+    Color(0xFF80E1FF), // cyan
+    Color(0xFFC8D2DF), // slate
 )
 
 /**
- * The presets of the earlier tag and folder palettes (the darker one before [TagPalette] got light,
- * the muted one before it, the eight folder colours and the first vivid tag colours), each with the
+ * The presets of the earlier tag and folder palettes (the two before [TagPalette] became pastel,
+ * the muted one, the eight folder colours and the first vivid tag colours), each with the
  * [TagPalette] colour of the same hue that replaces it. Saved colours move over once (database
- * version 36, the default tag colour when read); a colour of the user's own is never touched.
+ * versions 36 and 37, the default tag colour when read); a colour of the user's own is never touched.
  */
 val FormerPresetColors: Map<Int, Int> = mapOf(
-    0xFF6D9DF5.toInt() to 0xFF90B8FE.toInt(),
-    0xFF918BE5.toInt() to 0xFFB0ADFE.toInt(),
-    0xFFB37FD2.toInt() to 0xFFD39EF4.toInt(),
-    0xFFDA7BAA.toInt() to 0xFFF594C3.toInt(),
-    0xFFE27170.toInt() to 0xFFFE9592.toInt(),
-    0xFFE48B53.toInt() to 0xFFF99E66.toInt(),
-    0xFFD7A94F.toInt() to 0xFFDEAF56.toInt(),
-    0xFFA3BA55.toInt() to 0xFFACC45F.toInt(),
-    0xFF5CB572.toInt() to 0xFF76CF8A.toInt(),
-    0xFF46B3A6.toInt() to 0xFF62CCBF.toInt(),
-    0xFF51B3D0.toInt() to 0xFF66C6E4.toInt(),
-    0xFF8A939F.toInt() to 0xFFAFB8C5.toInt(),
-    0xFF5B7DB1.toInt() to 0xFF90B8FE.toInt(),
-    0xFF6B6FB5.toInt() to 0xFFB0ADFE.toInt(),
-    0xFF8A6FB0.toInt() to 0xFFD39EF4.toInt(),
-    0xFFA86B95.toInt() to 0xFFF594C3.toInt(),
-    0xFFB5677A.toInt() to 0xFFFE9592.toInt(),
-    0xFFB8735A.toInt() to 0xFFF99E66.toInt(),
-    0xFFA88A4E.toInt() to 0xFFDEAF56.toInt(),
-    0xFF7F8F52.toInt() to 0xFFACC45F.toInt(),
-    0xFF5E9473.toInt() to 0xFF76CF8A.toInt(),
-    0xFF4F8F8C.toInt() to 0xFF62CCBF.toInt(),
-    0xFF4F8AA3.toInt() to 0xFF66C6E4.toInt(),
-    0xFF8A8580.toInt() to 0xFFAFB8C5.toInt(),
-    0xFF4F86C6.toInt() to 0xFF90B8FE.toInt(),
-    0xFF63B76C.toInt() to 0xFF76CF8A.toInt(),
-    0xFFE0A030.toInt() to 0xFFDEAF56.toInt(),
-    0xFFD9645B.toInt() to 0xFFFE9592.toInt(),
-    0xFF9B6BCC.toInt() to 0xFFD39EF4.toInt(),
-    0xFF3FB0B3.toInt() to 0xFF62CCBF.toInt(),
-    0xFFC65B9B.toInt() to 0xFFF594C3.toInt(),
-    0xFF7A8794.toInt() to 0xFFAFB8C5.toInt(),
-    0xFF2563EB.toInt() to 0xFF90B8FE.toInt(),
-    0xFF7C3AED.toInt() to 0xFFB0ADFE.toInt(),
-    0xFFDB2777.toInt() to 0xFFF594C3.toInt(),
-    0xFFDC2626.toInt() to 0xFFFE9592.toInt(),
-    0xFFC2410C.toInt() to 0xFFF99E66.toInt(),
-    0xFFA16207.toInt() to 0xFFDEAF56.toInt(),
-    0xFF15803D.toInt() to 0xFF76CF8A.toInt(),
-    0xFF0F766E.toInt() to 0xFF62CCBF.toInt(),
-    0xFF0E7490.toInt() to 0xFF66C6E4.toInt(),
-    0xFF4F46E5.toInt() to 0xFFB0ADFE.toInt(),
-    0xFF9333EA.toInt() to 0xFFD39EF4.toInt(),
-    0xFFBE123C.toInt() to 0xFFFE9592.toInt(),
+    0xFF90B8FE.toInt() to 0xFFB9D2FF.toInt(),
+    0xFFB0ADFE.toInt() to 0xFFCCCBFE.toInt(),
+    0xFFD39EF4.toInt() to 0xFFE6C0FE.toInt(),
+    0xFFF594C3.toInt() to 0xFFFEBAD9.toInt(),
+    0xFFFE9592.toInt() to 0xFFFEBEBB.toInt(),
+    0xFFF99E66.toInt() to 0xFFFEC29F.toInt(),
+    0xFFDEAF56.toInt() to 0xFFF2CB83.toInt(),
+    0xFFACC45F.toInt() to 0xFFC8DB90.toInt(),
+    0xFF76CF8A.toInt() to 0xFFA1E4AE.toInt(),
+    0xFF62CCBF.toInt() to 0xFF7EE7D9.toInt(),
+    0xFF66C6E4.toInt() to 0xFF80E1FF.toInt(),
+    0xFFAFB8C5.toInt() to 0xFFC8D2DF.toInt(),
+    0xFF6D9DF5.toInt() to 0xFFB9D2FF.toInt(),
+    0xFF918BE5.toInt() to 0xFFCCCBFE.toInt(),
+    0xFFB37FD2.toInt() to 0xFFE6C0FE.toInt(),
+    0xFFDA7BAA.toInt() to 0xFFFEBAD9.toInt(),
+    0xFFE27170.toInt() to 0xFFFEBEBB.toInt(),
+    0xFFE48B53.toInt() to 0xFFFEC29F.toInt(),
+    0xFFD7A94F.toInt() to 0xFFF2CB83.toInt(),
+    0xFFA3BA55.toInt() to 0xFFC8DB90.toInt(),
+    0xFF5CB572.toInt() to 0xFFA1E4AE.toInt(),
+    0xFF46B3A6.toInt() to 0xFF7EE7D9.toInt(),
+    0xFF51B3D0.toInt() to 0xFF80E1FF.toInt(),
+    0xFF8A939F.toInt() to 0xFFC8D2DF.toInt(),
+    0xFF5B7DB1.toInt() to 0xFFB9D2FF.toInt(),
+    0xFF6B6FB5.toInt() to 0xFFCCCBFE.toInt(),
+    0xFF8A6FB0.toInt() to 0xFFE6C0FE.toInt(),
+    0xFFA86B95.toInt() to 0xFFFEBAD9.toInt(),
+    0xFFB5677A.toInt() to 0xFFFEBEBB.toInt(),
+    0xFFB8735A.toInt() to 0xFFFEC29F.toInt(),
+    0xFFA88A4E.toInt() to 0xFFF2CB83.toInt(),
+    0xFF7F8F52.toInt() to 0xFFC8DB90.toInt(),
+    0xFF5E9473.toInt() to 0xFFA1E4AE.toInt(),
+    0xFF4F8F8C.toInt() to 0xFF7EE7D9.toInt(),
+    0xFF4F8AA3.toInt() to 0xFF80E1FF.toInt(),
+    0xFF8A8580.toInt() to 0xFFC8D2DF.toInt(),
+    0xFF4F86C6.toInt() to 0xFFB9D2FF.toInt(),
+    0xFF63B76C.toInt() to 0xFFA1E4AE.toInt(),
+    0xFFE0A030.toInt() to 0xFFF2CB83.toInt(),
+    0xFFD9645B.toInt() to 0xFFFEBEBB.toInt(),
+    0xFF9B6BCC.toInt() to 0xFFE6C0FE.toInt(),
+    0xFF3FB0B3.toInt() to 0xFF7EE7D9.toInt(),
+    0xFFC65B9B.toInt() to 0xFFFEBAD9.toInt(),
+    0xFF7A8794.toInt() to 0xFFC8D2DF.toInt(),
+    0xFF2563EB.toInt() to 0xFFB9D2FF.toInt(),
+    0xFF7C3AED.toInt() to 0xFFCCCBFE.toInt(),
+    0xFFDB2777.toInt() to 0xFFFEBAD9.toInt(),
+    0xFFDC2626.toInt() to 0xFFFEBEBB.toInt(),
+    0xFFC2410C.toInt() to 0xFFFEC29F.toInt(),
+    0xFFA16207.toInt() to 0xFFF2CB83.toInt(),
+    0xFF15803D.toInt() to 0xFFA1E4AE.toInt(),
+    0xFF0F766E.toInt() to 0xFF7EE7D9.toInt(),
+    0xFF0E7490.toInt() to 0xFF80E1FF.toInt(),
+    0xFF4F46E5.toInt() to 0xFFCCCBFE.toInt(),
+    0xFF9333EA.toInt() to 0xFFE6C0FE.toInt(),
+    0xFFBE123C.toInt() to 0xFFFEBEBB.toInt(),
 )
 
 /** [argb], or the [TagPalette] colour that replaces it when it is a preset of an earlier palette. */

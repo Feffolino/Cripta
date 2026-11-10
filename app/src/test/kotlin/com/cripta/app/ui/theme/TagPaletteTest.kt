@@ -3,7 +3,6 @@ package com.cripta.app.ui.theme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-import com.cripta.app.ui.vault.coverMarkFill
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -29,11 +28,8 @@ class TagPaletteTest {
     }
 
     @Test
-    fun `black reads on every preset and white reads on its cover mark`() {
-        for (c in TagPalette) {
-            assertTrue("$c black", contrast(c, Color.Black) >= 4.5)
-            assertTrue("$c cover mark", contrast(coverMarkFill(c), Color.White) >= 4.0)
-        }
+    fun `black reads on every preset at 13 to 1`() {
+        for (c in TagPalette) assertTrue("$c black", contrast(c, Color.Black) >= 13.0)
     }
 
     @Test

@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.cripta.app.data.db.TagEntity
-import com.cripta.app.ui.theme.readableOn
 
 /** Size of a [TagPill]: on covers and list rows, in pickers and filters, in the viewer's bar. */
 enum class TagPillSize { Small, Medium, Large }
@@ -62,9 +61,6 @@ enum class TagPillState { Plain, Off, On, Excluded }
  */
 val OnImageGlass = Color(0x8C000000)
 
-/** How much of a tag's colour fills its pill over a picture (the rim is stronger). */
-private const val TINT_ON_IMAGE = 0.45f
-
 /** How much of its colours a tag's icon keeps on an Off pill. */
 private const val OFF_ICON_ALPHA = 0.55f
 
@@ -77,11 +73,11 @@ fun tagText(tag: TagEntity): String =
  * rows, filters, tag pickers, the viewer's quick bar, Home and the downloader, in three sizes.
  *
  * Colour means "this tag is on the file / in the filter"; neutral means "not":
- * - Plain (a tag shown on a file): the tag's colour, translucent (35% over [base]), name in the
- *   same hue or white/black at >= 4.5:1. Over a picture: a see-through tint of the colour on a
- *   light glass, with a rim of the same colour less see-through, and white/black text.
- * - On (assigned / filtered): the tag's colour in full, white or black text, and a tick. Told
- *   apart from Off at a glance even when every tag has one colour (tag colours off).
+ * - Plain (a tag shown on a file): the tag's colour in full, as the user chose it, black or white
+ *   text (whichever reads at 4.5:1). Over a picture the same colour at 90% on the dark glass,
+ *   with a rim of the same colour.
+ * - On (assigned / filtered): the same full colour and text, plus a tick. Told apart from Off at a
+ *   glance even when every tag has one colour (tag colours off).
  * - Off (not assigned): a neutral pill, muted text, only a small dot in the tag's colour.
  * - Excluded: neutral, struck through, with a "no" sign.
  *
@@ -122,28 +118,17 @@ fun TagPill(
     val colored = on || state == TagPillState.Plain
     val neutral = if (onImage) OnImageGlass else tonalContainer()
     val muted = if (onImage) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
-    val ink = MaterialTheme.colorScheme.onSurface
-    // Over a picture the pill lets it through a little; the text is judged against the tag's own
-    // colour over a dark backdrop, the darkest tone that pill can take.
+    // The tag's colour as the user chose it, never darkened or tinted down; over a picture it
+    // lets the picture through a little (90% on the dark glass).
     val bg = when {
         !colored -> neutral
-        on && onImage -> color.copy(alpha = 0.9f).compositeOver(OnImageGlass)
-        on -> color.compositeOver(base)
-        onImage -> color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass.copy(alpha = 0.55f))
-        else -> color.copy(alpha = 0.35f).compositeOver(base)
+        onImage -> color.copy(alpha = 0.9f).compositeOver(OnImageGlass)
+        else -> color.compositeOver(base)
     }
     val rim = if (colored && onImage) color.copy(alpha = 0.85f) else null
-    val fg = remember(color, bg, colored, on, onImage, muted, ink) {
-        when {
-            !colored -> muted
-            // The full colour: on-tag (black, >= 4.5:1 on the whole palette); white only on a
-            // darker colour of the user's own.
-            on -> if (bg.luminance() >= 0.175f) Color.Black else Color.White
-            // Judged on the darkest backdrop the see-through pill can take.
-            onImage -> readableOn(Color.White, color.copy(alpha = TINT_ON_IMAGE).compositeOver(OnImageGlass))
-            // DS: the name in ink on the tag's tint; the dot carries the colour.
-            else -> ink
-        }
+    val fg = remember(bg, colored, muted) {
+        // Black or white, whichever reads at 4.5:1 on the colour (black on every preset).
+        if (!colored) muted else if (bg.luminance() >= 0.175f) Color.Black else Color.White
     }
     // DS cr-tag: sm 22dp / 11sp bold, md 32dp / 13sp, lg 40dp / 14sp.
     val style = when (size) {
@@ -202,7 +187,7 @@ fun TagPill(
             // The tag's own colour as a dot (DS cr-tag__dot: 6dp small, 8dp otherwise), so every
             // tag is recognisable even when it is off.
             Box(Modifier.padding(end = 4.dp).size(if (size == TagPillSize.Small) 6.dp else iconSize), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (on) shownFg else color))
+                Box(Modifier.size(if (size == TagPillSize.Small) 6.dp else 8.dp).clip(CircleShape).background(if (colored) shownFg else color))
             }
         }
         if (resolved != null) {

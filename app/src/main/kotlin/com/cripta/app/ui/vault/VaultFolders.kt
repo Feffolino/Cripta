@@ -185,9 +185,12 @@ fun FolderMosaic(
     val primary = MaterialTheme.colorScheme.primary
     val shape = com.cripta.app.ui.theme.CoverShape
     val tile = MaterialTheme.colorScheme.surfaceContainer
-    // Sheets without a picture of their own (folders with 1-2 files) take the folder's colour.
-    val farSheet = remember(accent, tile) { accent.copy(alpha = 0.30f).compositeOver(tile) }
-    val nearSheet = remember(accent, tile) { accent.copy(alpha = 0.55f).compositeOver(tile) }
+    // Sheets without a picture of their own (folders with 1-2 files) take the folder's colour, the
+    // farther one a step softer so the stack keeps its depth.
+    // A folder without a colour of its own keeps the quiet accent tints.
+    val own = folder.color != null
+    val farSheet = remember(accent, tile, own) { accent.copy(alpha = if (own) 0.70f else 0.30f).compositeOver(tile) }
+    val nearSheet = remember(accent, tile, own) { accent.copy(alpha = if (own) 0.85f else 0.55f).compositeOver(tile) }
     @Composable
     fun sheetPicture(f: com.cripta.app.data.db.FileEntity?, dim: Float) {
         if (f == null) return
@@ -207,7 +210,7 @@ fun FolderMosaic(
             }
             Box(
                 Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(shape)
-                    .background(accent.copy(alpha = 0.16f).compositeOver(tile))
+                    .background(if (own) accent else accent.copy(alpha = 0.16f).compositeOver(tile))
                     .then(if (hl > 0f) Modifier.border(3.dp, primary.copy(alpha = hl), shape) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {

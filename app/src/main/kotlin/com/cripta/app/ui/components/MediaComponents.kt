@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -180,13 +181,13 @@ fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
  */
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
-    // The user's own colour is nudged until the symbol reads at 3:1 on the page (an own dark or light pick).
-    val c = color?.let { com.cripta.app.ui.theme.readableOn(Color(it), MaterialTheme.colorScheme.surface, 3.0) }
+    // The folder's colour as the user chose it, in full; the symbol on it in black or white.
+    val c = color?.let { Color(it) }
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         if (c != null) {
-            Box(Modifier.matchParentSize().clip(CircleShape).background(c.copy(alpha = 0.22f)))
+            Box(Modifier.matchParentSize().clip(CircleShape).background(c))
         }
         if (resolved != null) {
             // Blank for the frame it takes to build, rather than flashing the folder symbol.
@@ -196,7 +197,8 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Bool
             val emojiSize = with(LocalDensity.current) { (size * 0.6f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
-            Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = c ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(size * 0.68f))
+            val tint = if (c == null) MaterialTheme.colorScheme.primary else if (c.luminance() >= 0.175f) Color.Black else Color.White
+            Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = tint, modifier = Modifier.size(size * 0.68f))
         }
     }
 }

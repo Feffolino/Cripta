@@ -30,16 +30,16 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   Never one colour per category, per file type or per screen section.
 - Colours come only from the theme roles; no hex values in screens. Exceptions: the player's black
   stage and tag colours.
-- Tag and folder colours are the user's and share one palette, `TagPalette`: twelve hues in OKLCH at
-  one light lightness (0.78) and a calm chroma, the first the accent's own blue (`#90B8FE`), then
-  indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a blue-tinted slate. They sit
-  on the dark surfaces like the accent does; black reads on each at 9.9:1 or more and white on its
-  cover mark at 4.4:1 or more. Before the presets, in the first slot, both editors offer "Altro", a
+- Tag and folder colours are the user's and share one palette, `TagPalette`: twelve pastel hues in
+  OKLCH at lightness 0.86 and a soft chroma (0.10 at most), the first the accent's own blue
+  (`#B9D2FF`), then indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a
+  blue-tinted slate; black reads on each at 13:1 or more. A colour is always shown as the user
+  chose it, in full, never darkened or tinted down: tag pills, cover marks, the folder's disc and
+  its empty card. Before the presets, in the first slot, both editors offer "Altro", a
   round rainbow that opens a colour of the user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
-  saved as a plain ARGB value like a preset, so an older preset shows as "Altro" and keeps working.
-  Text on a tag tint goes through `readableOn()` so it reaches 4.5:1 in both themes and with any
-  colour; a folder symbol is nudged to 3:1 on the page, and the cover mark darkens a light colour
-  (`coverMarkFill`).
+  saved as a plain ARGB value like a preset; presets of earlier palettes move to the current ones
+  once (`FormerPresetColors`, database versions 36 and 37). Text and symbols on a colour are black
+  or white, whichever reads at 4.5:1 (black on every preset).
 - Anything drawn over a picture (length, star, play mark, people's faces, the watched bar) sits on
   the dark glass `OnImageGlass` (black at 55%: the design system's 40% plus blur, darker here so
   white text keeps 4.5:1 without the blur), never on a gradient over the whole cover. Tags over a picture are the one
@@ -111,12 +111,12 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
 
 - **Tags: one component, `TagPill`** (`ui/components/TagPill.kt`), sizes Small (covers, list rows,
   Home), Medium (pickers, filters, settings library, downloader), Large (viewer quick bar). Colour means "on":
-  Plain (a tag shown on a file) is the tag colour, translucent (35% over the page), name at 4.5:1;
-  On (assigned, filtered) is the tag colour in full, white or black text, and a tick, so it reads
+  Plain (a tag shown on a file) is the tag colour in full, black or white text at 4.5:1;
+  On (assigned, filtered) is the same plus a tick, so it reads
   apart from Off even with tag colours off. The tick takes the room of the dot, the pin or the
   tag's icon: turning a tag on or off never changes the pill's width (nothing after it moves). Over a picture (`onImage = true`) the pill is
-  the tag colour at 45% (On: 90%) on a light dark glass, with a 1dp rim of the same colour at 85%, text
-  white or black at 4.5:1. Off is neutral with muted text and only a dot in the tag colour (or the
+  the tag colour at 90% on the dark glass, with a 1dp rim of the same colour at 85%, text
+  black or white at 4.5:1. Off is neutral with muted text and only a dot in the tag colour (or the
   tag's icon at 55%).
   Excluded: neutral, strike-through, "no" sign. "+N" is `MoreTagsPill`. The text is never given
   a weight (it would measure to nothing in a LazyRow).
@@ -136,10 +136,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
   `CoverTagStyle`): **Bollini** (default), round marks of one size (22dp, 18dp on small covers),
   with its icon, else its alias (two characters at most), else its initial; **Pillole piene**,
-  pills with the icon and alias. Both are opaque, no rim, filled with the tag colour (the accent
-  when tag colours are off) with 28% black mixed in, darkened further on a light colour of the
-  user's own until white reaches 3:1 (`coverMarkFill`); the icon in its own colours, the alias
-  always white. The "+N"
+  pills with the icon and alias. Both are opaque, no rim, filled with the tag colour in full (the
+  accent when tag colours are off, `coverMarkFill`); the icon in its own colours, the alias black
+  or white, whichever reads at 4.5:1 (`coverMarkInk`). The "+N"
   mark stays on the dark glass, white. Both pack from the bottom edge in up to 3 rows, then "+N".
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
@@ -232,9 +231,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   with a live preview (the pill and the cover mark, the colour cross-fading at 120 ms), then name
   and alias fields, "Icona" and "Colore" under accent headings, "Fissa in alto" as a plain switch
   row with the pin icon. "Colore" is one line that scrolls sideways (`ColorChoiceRow`, shared with
-  the folder dialog): first "Altro" (a round rainbow; once a custom colour is chosen it shows that
-  colour, ticked, and a tap opens it again), then "A" automatic (or none for a folder) and the
-  twelve presets. The chosen swatch is
+  the folder dialog): first, always in view, "Altro" (a round rainbow; once a custom colour is
+  chosen it sits inside the rainbow, ticked, and a tap opens it again), then, scrolling beside it,
+  "A" automatic (or none for a folder) and the twelve presets. The chosen swatch is
   told by a ring and a tick, never by colour alone.
 - **Favourite folders**: the cover star (`CoverStar`) on the front picture, like on files.
 - **Folder changes**: the level stays hidden until its folders and files have both loaded, then

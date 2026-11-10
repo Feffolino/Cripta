@@ -45,8 +45,8 @@ class PresetColorMigrationTest {
         ).writableDatabase
         for (table in listOf("tags", "folders")) {
             db.execSQL("CREATE TABLE `$table` (`id` TEXT NOT NULL PRIMARY KEY, `color` INTEGER)")
-            db.execSQL("INSERT INTO `$table` VALUES ('old', ?), ('own', ?), ('none', NULL), ('new', ?)",
-                arrayOf<Any>(0xFF6D9DF5.toInt(), 0xFF123456.toInt(), 0xFF90B8FE.toInt()))
+            db.execSQL("INSERT INTO `$table` VALUES ('old', ?), ('mid', ?), ('own', ?), ('none', NULL), ('new', ?)",
+                arrayOf<Any>(0xFF6D9DF5.toInt(), 0xFF90B8FE.toInt(), 0xFF123456.toInt(), 0xFFB9D2FF.toInt()))
         }
 
         CriptaDatabase.migratePresetColors(db)
@@ -55,10 +55,11 @@ class PresetColorMigrationTest {
             fun color(id: String): Int? = db.query("SELECT color FROM `$table` WHERE id = ?", arrayOf(id)).use { c ->
                 c.moveToFirst(); if (c.isNull(0)) null else c.getInt(0)
             }
-            assertEquals(0xFF90B8FE.toInt(), color("old"))
+            assertEquals(0xFFB9D2FF.toInt(), color("old"))
+            assertEquals(0xFFB9D2FF.toInt(), color("mid"))
             assertEquals(0xFF123456.toInt(), color("own"))
             assertNull(color("none"))
-            assertEquals(0xFF90B8FE.toInt(), color("new"))
+            assertEquals(0xFFB9D2FF.toInt(), color("new"))
         }
     }
 }
