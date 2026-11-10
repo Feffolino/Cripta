@@ -37,19 +37,7 @@ object TagIcons {
     private val lock = Mutex()
     @Volatile private var catalog: Catalog? = null
     private val lexicons = LruCache<String, Map<String, Terms>>(3)
-    @Volatile private var allWords: WordIndex? = null
     private val vectors = LruCache<String, ImageVector>(400)
-
-    /**
-     * The words of every language's titles and keywords, unstemmed, sorted for binary search and
-     * prefix runs. Each hit is the icon's index in [names] shifted left, plus 1 for a title word.
-     */
-    private class WordIndex(
-        val names: List<String>,
-        val words: Array<String>,
-        val hits: Array<IntArray>,
-        val cjkWords: IntArray,
-    )
 
     private data class Catalog(
         val paths: Map<String, String>,
@@ -117,62 +105,6 @@ object TagIcons {
     private fun language(context: Context): String {
         val locales = context.resources.configuration.locales
         return (0 until locales.size()).map { locales[it].language }.firstOrNull { it in languages } ?: "en"
-    }
-
-    private suspend fun everyLanguage(context: Context): WordIndex = allWords ?: lock.withLock {
-        allWords ?: withContext(Dispatchers.IO) {
-            val ids = HashMap<String, Int>()
-            val names = ArrayList<String>()
-            val hits = HashMap<String, MutableSet<Int>>()
-            for (lang in languages) {
-                context.applicationContext.assets.open("$DIRECTORY/$lang.txt").bufferedReader().useLines { lines ->
-                    for (line in lines) {
-                        val (name, _, title, keywords) = line.split('\t', limit = 4)
-                        val id = ids.getOrPut(name) { names.add(name); names.size - 1 }
-                        for (word in words(title, "")) hits.getOrPut(word) { HashSet() }.add(id shl 1 or 1)
-                        for (keyword in keywords.split('|')) {
-                            for (word in words(keyword, "")) hits.getOrPut(word) { HashSet() }.add(id shl 1)
-                        }
-                    }
-                }
-            }
-            val words = hits.keys.sorted().toTypedArray()
-            WordIndex(
-                names, words, Array(words.size) { hits.getValue(words[it]).toIntArray() },
-                words.indices.filter { cjk.containsMatchIn(words[it]) }.toIntArray(),
-            )
-        }.also { allWords = it }
-    }
-
-    /**
-     * Scores of the icons whose words in any language match [query]: a little under the same match
-     * in the app's language or in English, so those rank first. Italian stems (see [stem]) also
-     * match as prefixes, so a plural finds the singular whatever the app's language.
-     */
-    private fun WordIndex.scores(query: List<String>): Map<String, Int> {
-        val best = HashMap<String, Int>()
-        fun hit(word: Int, title: Int, keyword: Int) {
-            for (h in hits[word]) {
-                val name = names[h shr 1]
-                val score = if (h and 1 == 1) title else keyword
-                if (score > (best[name] ?: 0)) best[name] = score
-            }
-        }
-        for (word in query) {
-            val at = words.binarySearch(word)
-            if (at >= 0) hit(at, 90, 65)
-            if (word.length >= 3) {
-                var i = if (at >= 0) at + 1 else -at - 1
-                while (i < words.size && words[i].startsWith(word)) hit(i++, 65, 40)
-            }
-            if (cjk.containsMatchIn(word)) {
-                for (i in cjkWords) {
-                    val w = words[i]
-                    if (word in w || (w.length >= 2 && w in word)) hit(i, 80, 55)
-                }
-            }
-        }
-        return best
     }
 
     private suspend fun terms(context: Context, lang: String): Map<String, Terms> =
@@ -278,10 +210,7 @@ object TagIcons {
         }
     }
 
-    /**
-     * Search localized names and keywords alongside English names and tags, then the words of
-     * every other supported language, so a word typed in any of them finds its icons.
-     */
+    /** Search localized names and keywords alongside English names and tags. */
     suspend fun search(context: Context, text: String, limit: Int = 200): List<String> =
         withContext(Dispatchers.Default) {
             val names = load(context)?.paths?.keys ?: return@withContext emptyList()
@@ -292,7 +221,6 @@ object TagIcons {
             val english = terms(context, "en")
             val local = if (lang == "en") english else terms(context, lang)
             val subjects = if (lang == "it") query.flatMap { italianSubjects[it].orEmpty() }.distinct() else emptyList()
-            val anyLanguage = everyLanguage(context).scores((englishQuery + words(text, "it")).distinct())
 
             names.mapNotNull { name ->
                 val subject = subjects.indexOf(name)
@@ -301,7 +229,6 @@ object TagIcons {
                     score(local[name], query, lang == "ja" || lang == "zh"),
                     score(english[name], englishQuery, false),
                     match(name.split('-'), englishQuery, 94, false),
-                    anyLanguage[name] ?: 0,
                 )
                 if (score == 0) null else name to score
             }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.length }.thenBy { it.first })

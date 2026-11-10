@@ -5,7 +5,6 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-10
 
-- Find tag icons by words in any of the twelve languages, whatever the app's language
 - Scroll the tag colour swatches sideways on one line
 - Make the grid auto-scroll during a drag start later and speed up more gently
 - Keep the icon on more tags and folders from the old emoji set (706 names mapped instead of 253), and turn Fluent's mouse into a paw
