@@ -158,7 +158,7 @@ fun CustomColorDialog(initial: Int, onConfirm: (Int) -> Unit, onDismiss: () -> U
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(
-                    Modifier.fillMaxWidth().height(56.dp).clip(MaterialTheme.shapes.medium).background(shown),
+                    Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(shown),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(colorHex(shown.toArgb()), color = readableOn(Color.White, shown), style = MaterialTheme.typography.titleMedium)

@@ -35,7 +35,7 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
   indigo, purple, pink, red, orange, amber, lime, green, teal, cyan and a blue-tinted slate. They sit
   on the dark surfaces like the accent does; black reads on each at 6.8:1 or more and white on its
   cover mark at 4.4:1 or more. Beside the presets, both editors offer "Altro", a colour of the
-  user's own (hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
+  user's own (a pill sample, then hue, saturation and brightness sliders on gradient tracks, or the code typed); it is
   saved as a plain ARGB value like a preset, so an older preset shows as "Altro" and keeps working.
   Text on a tag tint goes through `readableOn()` so it reaches 4.5:1 in both themes and with any
   colour; a folder symbol is nudged to 3:1 on the page, and the cover mark darkens a light colour
