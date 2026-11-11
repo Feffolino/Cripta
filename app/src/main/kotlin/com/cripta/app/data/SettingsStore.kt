@@ -292,7 +292,10 @@ class SettingsStore @Inject constructor(
     val settings: Flow<Settings> = context.dataStore.data
         // A read error (storage trouble) gives the defaults instead of crashing whoever collects.
         .catch { e -> if (e is java.io.IOException) emit(androidx.datastore.preferences.core.emptyPreferences()) else throw e }
-        .map { p ->
+        .map(::toSettings)
+
+    /** The typed settings of the stored preferences [p] (a value of another type throws ClassCastException). */
+    private fun toSettings(p: androidx.datastore.preferences.core.Preferences): Settings =
         Settings(
             autoLockMinutes = p[autoLock] ?: 1,
             deleteOriginalPolicy = DeleteOriginalPolicy.entries
@@ -388,7 +391,6 @@ class SettingsStore @Inject constructor(
             introAutoSkip = p[introAutoKey] ?: false,
             outroAutoSkip = p[outroAutoKey] ?: false,
         )
-    }
 
     suspend fun setAllowScreenshots(enabled: Boolean) {
         context.dataStore.edit { it[allowShotsKey] = enabled }
@@ -476,9 +478,8 @@ class SettingsStore @Inject constructor(
      */
     suspend fun importFromBackup(bytes: ByteArray) {
         val values = BackupSettings.decode(bytes)
-        val before = context.dataStore.data.first()
-        val current = before.asMap().mapKeys { it.key.name }
         context.dataStore.edit { p ->
+            val current = p.asMap().mapKeys { it.key.name }
             for ((k, v) in values) {
                 // A preference this device keeps with another type is left alone: written, every
                 // typed read of it (appearance, tags…) would throw.
@@ -495,12 +496,12 @@ class SettingsStore @Inject constructor(
                     is Set<*> -> p[androidx.datastore.preferences.core.stringSetPreferencesKey(k)] = v as Set<String>
                 }
             }
-        }
-        // One not on this device yet, with a type its reads do not expect: everything goes back as
-        // it was and the archive's settings are refused, rather than an app that cannot read them.
-        if (runCatching { settings.first() }.exceptionOrNull() is ClassCastException) {
-            context.dataStore.edit { p -> p.clear(); p += before }
-            throw IllegalArgumentException(com.cripta.app.str(com.cripta.app.R.string.settings_invalid))
+            // One not on this device yet, with a type its reads do not expect: checked before the
+            // write, which a throw here cancels (written and undone after, the wrong value already
+            // reached whoever reads the settings). The archive's settings are refused, rather than
+            // an app that cannot read them.
+            if (runCatching { toSettings(p) }.exceptionOrNull() is ClassCastException)
+                throw IllegalArgumentException(com.cripta.app.str(com.cripta.app.R.string.settings_invalid))
         }
     }
 

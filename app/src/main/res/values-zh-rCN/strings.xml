@@ -1005,7 +1005,14 @@
     <string name="link_hint">输入或粘贴链接</string>
     <string name="paste_copied_link">粘贴已复制的链接</string>
     <string name="no_preview">此类文件无法预览。</string>
-    <string name="no_preview_hint">如需用其他应用打开：⋮ › 导出到设备。</string>
+    <string name="no_preview_hint">如需用其他应用打开：上滑查看详情 › 导出。</string>
+    <string name="err_backup_too_large">未创建备份：资料库数据超出了恢复可读取的大小。</string>
+    <string name="setting_save_failed">设置未保存：存储空间已满或无法写入。</string>
+    <string name="note_leave_failed_title">笔记未保存</string>
+    <string name="note_leave_failed_text">无法保存更改。请重试，或不保存直接离开：更改将丢失。</string>
+    <string name="note_leave_discard">不保存并离开</string>
+    <string name="pip_play">播放</string>
+    <string name="pip_pause">暂停</string>
     <string name="note_empty">（空笔记）</string>
     <string name="edit">编辑</string>
     <string name="pdf_open_failed">无法打开 PDF，文档可能已损坏或受保护。</string>

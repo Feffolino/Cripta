@@ -1200,7 +1200,14 @@
     <string name="link_hint">اكتب الرابط أو الصقه</string>
     <string name="paste_copied_link">لصق الرابط المنسوخ</string>
     <string name="no_preview">لا معاينة لهذا النوع من الملفات.</string>
-    <string name="no_preview_hint">لفتحه بتطبيق آخر: ⋮ › تصدير إلى الجهاز.</string>
+    <string name="no_preview_hint">لفتحه بتطبيق آخر: اسحب للأعلى للتفاصيل › تصدير.</string>
+    <string name="err_backup_too_large">لم يُنشأ النسخ الاحتياطي: بيانات المكتبة أكبر مما يمكن للاستعادة قراءته.</string>
+    <string name="setting_save_failed">لم يُحفظ الإعداد: التخزين ممتلئ أو غير قابل للكتابة.</string>
+    <string name="note_leave_failed_title">لم تُحفظ الملاحظة</string>
+    <string name="note_leave_failed_text">تعذر حفظ التغييرات. أعد المحاولة، أو اخرج دونها: ستُفقد.</string>
+    <string name="note_leave_discard">الخروج دون حفظ</string>
+    <string name="pip_play">تشغيل</string>
+    <string name="pip_pause">إيقاف مؤقت</string>
     <string name="note_empty">(ملاحظة فارغة)</string>
     <string name="edit">تعديل</string>
     <string name="pdf_open_failed">تعذر فتح PDF: قد يكون المستند تالفاً أو محمياً.</string>

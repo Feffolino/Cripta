@@ -1005,7 +1005,14 @@
     <string name="link_hint">링크 입력 또는 붙여넣기</string>
     <string name="paste_copied_link">복사한 링크 붙여넣기</string>
     <string name="no_preview">이 파일 유형은 미리 볼 수 없습니다.</string>
-    <string name="no_preview_hint">다른 앱에서 열려면 ⋮ › 기기로 내보내기를 선택하세요.</string>
+    <string name="no_preview_hint">다른 앱에서 열려면 위로 밀어 상세 보기에서 내보내기를 선택하세요.</string>
+    <string name="err_backup_too_large">백업을 만들지 못했습니다: 라이브러리 데이터가 복원에서 읽을 수 있는 크기를 넘습니다.</string>
+    <string name="setting_save_failed">설정을 저장하지 못했습니다: 저장 공간이 가득 찼거나 쓸 수 없습니다.</string>
+    <string name="note_leave_failed_title">메모가 저장되지 않음</string>
+    <string name="note_leave_failed_text">변경 내용을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 나가세요. 변경 내용은 사라집니다.</string>
+    <string name="note_leave_discard">저장하지 않고 나가기</string>
+    <string name="pip_play">재생</string>
+    <string name="pip_pause">일시정지</string>
     <string name="note_empty">(빈 메모)</string>
     <string name="edit">편집</string>
     <string name="pdf_open_failed">PDF를 열 수 없습니다. 문서가 손상되었거나 보호되어 있을 수 있습니다.</string>

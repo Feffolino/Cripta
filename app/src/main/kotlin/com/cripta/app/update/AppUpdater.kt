@@ -72,33 +72,12 @@ class AppUpdater @Inject constructor() {
      *  highest build number that has an .apk asset. */
     suspend fun latest(includePrerelease: Boolean = true): Release? = withContext(Dispatchers.IO) {
         runCatching {
-            val json = httpGet("https://api.github.com/repos/$REPO/releases?per_page=20")
-            val arr = JSONArray(json)
-            // Candidates newest build first; the APK is looked up only until one is found.
-            val candidates = (0 until arr.length()).map { arr.getJSONObject(it) }
-                .filter { !it.optBoolean("draft") && (includePrerelease || !it.optBoolean("prerelease")) }
-                .mapNotNull { o ->
-                    val tag = o.optString("tag_name")            // e.g. v0.1.0-b123
-                    tag.substringAfterLast("-b", "").toIntOrNull()?.let { build -> Triple(o, tag, build) }
-                }
-                .sortedByDescending { it.third }
-            for ((obj, tag, build) in candidates) {
-                // The list sometimes comes back with an empty "assets" array even when the APK is
-                // attached, so fall back to the release's own assets endpoint.
-                val embedded = obj.optJSONArray("assets")
-                val assets = if (embedded != null && embedded.length() > 0) embedded
-                    else obj.optString("assets_url").takeIf { it.isNotBlank() }
-                        ?.let { runCatching { JSONArray(httpGet(it)) }.getOrNull() } ?: continue
-                val all = (0 until assets.length()).map { assets.getJSONObject(it) }
-                val apk = all.firstOrNull { it.optString("name").endsWith(".apk") } ?: continue
-                val apkName = apk.optString("name")
-                // Prefer "<apk>.sha256"; accept a lone .sha256 asset as well.
-                val sha = all.firstOrNull { it.optString("name") == "$apkName.sha256" }
-                    ?: all.filter { it.optString("name").endsWith(".sha256") }.singleOrNull()
-                val apkUrl = apk.optString("browser_download_url")
-                val shaUrl = sha?.optString("browser_download_url")?.takeIf { it.isNotBlank() }
-                if (shaUrl != null) checksumFor[apkUrl] = shaUrl
-                return@runCatching Release(tag.removePrefix("v"), build, apkUrl, apk.optLong("size"), shaUrl)
+            // Page by page (newest first) until one has a usable release: the CI publishes a
+            // prerelease per build, so with prereleases off the last stable one can be pages back.
+            for (page in 1..MAX_PAGES) {
+                val arr = JSONArray(httpGet("https://api.github.com/repos/$REPO/releases?per_page=$PAGE_SIZE&page=$page"))
+                pickFrom(arr, includePrerelease)?.let { return@runCatching it }
+                if (arr.length() < PAGE_SIZE) break
             }
             null
         }.getOrElse { e ->
@@ -106,6 +85,37 @@ class AppUpdater @Inject constructor() {
             if (e is java.io.IOException || e is kotlinx.coroutines.CancellationException) throw e
             null
         }
+    }
+
+    /** The newest release of one page of the list that has an APK, or null. */
+    private fun pickFrom(arr: JSONArray, includePrerelease: Boolean): Release? {
+        // Candidates newest build first; the APK is looked up only until one is found.
+        val candidates = (0 until arr.length()).map { arr.getJSONObject(it) }
+            .filter { !it.optBoolean("draft") && (includePrerelease || !it.optBoolean("prerelease")) }
+            .mapNotNull { o ->
+                val tag = o.optString("tag_name")            // e.g. v0.1.0-b123
+                tag.substringAfterLast("-b", "").toIntOrNull()?.let { build -> Triple(o, tag, build) }
+            }
+            .sortedByDescending { it.third }
+        for ((obj, tag, build) in candidates) {
+            // The list sometimes comes back with an empty "assets" array even when the APK is
+            // attached, so fall back to the release's own assets endpoint.
+            val embedded = obj.optJSONArray("assets")
+            val assets = if (embedded != null && embedded.length() > 0) embedded
+                else obj.optString("assets_url").takeIf { it.isNotBlank() }
+                    ?.let { runCatching { JSONArray(httpGet(it)) }.getOrNull() } ?: continue
+            val all = (0 until assets.length()).map { assets.getJSONObject(it) }
+            val apk = all.firstOrNull { it.optString("name").endsWith(".apk") } ?: continue
+            val apkName = apk.optString("name")
+            // Prefer "<apk>.sha256"; accept a lone .sha256 asset as well.
+            val sha = all.firstOrNull { it.optString("name") == "$apkName.sha256" }
+                ?: all.filter { it.optString("name").endsWith(".sha256") }.singleOrNull()
+            val apkUrl = apk.optString("browser_download_url")
+            val shaUrl = sha?.optString("browser_download_url")?.takeIf { it.isNotBlank() }
+            if (shaUrl != null) checksumFor[apkUrl] = shaUrl
+            return Release(tag.removePrefix("v"), build, apkUrl, apk.optLong("size"), shaUrl)
+        }
+        return null
     }
 
     /**
@@ -190,6 +200,10 @@ class AppUpdater @Inject constructor() {
     }
 
     companion object {
+        /** Releases per page of the list, and how many pages are looked through at most. */
+        private const val PAGE_SIZE = 30
+        private const val MAX_PAGES = 5
+
         internal fun refusal(expectedSha: String?, actualSha: String, apkPackage: String?, ownPackage: String): Int? = when {
             expectedSha == null || !expectedSha.matches(Regex("[0-9a-fA-F]{64}")) -> R.string.update_checksum_invalid
             !expectedSha.equals(actualSha, ignoreCase = true) -> R.string.update_checksum_mismatch

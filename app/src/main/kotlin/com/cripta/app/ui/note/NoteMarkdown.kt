@@ -39,14 +39,22 @@ object NoteMarkdown {
             """|(\*\*)(.+?)(\*\*)""" +
             """|(__)(.+?)(__)""" +
             """|(~~)(.+?)(~~)""" +
-            """|(\[)([^\]\n]+)(\]\(([^)\s]+)\))""" +
+            // A link's target may hold one level of brackets ("…/Function_(mathematics)").
+            """|(\[)([^\]\n]+)(\]\(((?:[^()\s]|\([^()\s]*\))+)\))""" +
             """|(?<![*\w])(\*)(?![*\s])(.+?)(?<![\s*])(\*)(?![*\w])""" +
             """|(?<![_\w])(_)(?![_\s])(.+?)(?<![\s_])(_)(?![_\w])""" +
-            """|(https?://[^\s<>()\[\]]*[^\s<>()\[\].,;:!?'"*_~])""",
+            """|($URL_PATTERN)""",
     )
 
+    /**
+     * A bare web address: brackets only in balanced pairs ("…/Function_(mathematics)" whole, the
+     * ")" closing a sentence's own bracket left out), never ending on punctuation.
+     */
+    private const val URL_PATTERN =
+        """https?://(?:[^\s<>()\[\]]|\([^\s<>()\[\]]*\))*(?:[^\s<>()\[\].,;:!?'"*_~]|\([^\s<>()\[\]]*\))"""
+
     /** A web address in the text: what [urlAt] looks for (the inline rule above is the same shape). */
-    private val URL = Regex("""https?://[^\s<>()\[\]]*[^\s<>()\[\].,;:!?'"*_~]""")
+    private val URL = Regex(URL_PATTERN)
 
     /** The web address the cursor is in or touches (a bare one, or the target of a Markdown link), else null. */
     fun urlAt(text: String, cursor: Int): String? =
@@ -56,7 +64,12 @@ object NoteMarkdown {
         val lines = text.split('\n')
         var inFence = false
         var first = true
-        for (line in lines) {
+        for (raw in lines) {
+            // A file written on Windows ends its lines with CR LF: the CR is no part of the line
+            // (none of the rules below matched with it). Kept in the editor's form, which must give
+            // back the text exactly; dropped in the reading form.
+            val cr = raw.endsWith('\r')
+            val line = if (cr) raw.dropLast(1) else raw
             val fence = FENCE.matches(line)
             // Reading form: the ``` lines themselves are not shown.
             if (fence && !keepMarkers) { inFence = !inFence; continue }
@@ -67,6 +80,7 @@ object NoteMarkdown {
                 inFence -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = p.codeBackground)) { append(line) }
                 else -> block(line, p, keepMarkers)
             }
+            if (cr && keepMarkers) append('\r')
         }
     }
 
@@ -230,20 +244,22 @@ object NoteMarkdown {
     /** Line [index] of [text] with its check box flipped ("- [ ]" ↔ "- [x]"); other lines as they are. */
     fun toggleCheck(text: String, index: Int): String {
         val lines = text.split('\n').toMutableList()
-        val m = CHECK.matchEntire(lines.getOrNull(index) ?: return text) ?: return text
+        val raw = lines.getOrNull(index) ?: return text
+        val cr = if (raw.endsWith('\r')) "\r" else ""
+        val m = CHECK.matchEntire(raw.removeSuffix("\r")) ?: return text
         val box = if (m.groupValues[3] == " ") "x" else " "
-        lines[index] = m.groupValues[1] + m.groupValues[2].replaceRange(3, 4, box) + m.groupValues[4]
+        lines[index] = m.groupValues[1] + m.groupValues[2].replaceRange(3, 4, box) + m.groupValues[4] + cr
         return lines.joinToString("\n")
     }
 
     /** Whether [line] is a check-list item, and if it is ticked. Null for any other line. */
-    fun checkState(line: String): Boolean? = CHECK.matchEntire(line)?.let { it.groupValues[3] != " " }
+    fun checkState(line: String): Boolean? = CHECK.matchEntire(line.removeSuffix("\r"))?.let { it.groupValues[3] != " " }
 
     /** The text of a check-list item, without its "- [ ] ". */
-    fun checkText(line: String): String = CHECK.matchEntire(line)?.groupValues?.get(4) ?: line
+    fun checkText(line: String): String = line.removeSuffix("\r").let { l -> CHECK.matchEntire(l)?.groupValues?.get(4) ?: l }
 
     /** Whether [line] opens or closes a ``` code block. */
-    fun isFence(line: String): Boolean = FENCE.matches(line)
+    fun isFence(line: String): Boolean = FENCE.matches(line.removeSuffix("\r"))
 
     private val LINE_PREFIX = Regex("""^(\s*)(#{1,6}\s+|[-*+]\s\[[ xX]\]\s|[-*+]\s|\d+[.)]\s)?""")
 
@@ -255,7 +271,9 @@ object NoteMarkdown {
     fun linePrefix(v: TextFieldValue, prefix: String?): TextFieldValue {
         val t = v.text
         val start = t.lastIndexOf('\n', (v.selection.min - 1).coerceAtLeast(-1)).let { if (v.selection.min == 0) 0 else it + 1 }
-        val endNl = t.indexOf('\n', v.selection.max).let { if (it < 0) t.length else it }
+        // A selection ending right after a line break ends on that line: the next one is not in it.
+        val endAt = if (!v.selection.collapsed && t.getOrNull(v.selection.max - 1) == '\n') v.selection.max - 1 else v.selection.max
+        val endNl = t.indexOf('\n', endAt).let { if (it < 0) t.length else it }
         var numbered = 0
         val changed = t.substring(start, endNl).split('\n').joinToString("\n") { line ->
             val m = LINE_PREFIX.find(line)!!

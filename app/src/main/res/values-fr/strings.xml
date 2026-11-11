@@ -1083,7 +1083,14 @@
     <string name="link_hint">Saisissez ou collez le lien</string>
     <string name="paste_copied_link">Coller le lien copié</string>
     <string name="no_preview">Aucun aperçu pour ce type de fichier.</string>
-    <string name="no_preview_hint">Pour l’ouvrir avec une autre application : ⋮ › Exporter sur l’appareil.</string>
+    <string name="no_preview_hint">Pour l’ouvrir avec une autre application : balayez vers le haut pour les détails › Exporter.</string>
+    <string name="err_backup_too_large">Sauvegarde non créée : les données de la bibliothèque dépassent ce qu’une restauration peut lire.</string>
+    <string name="setting_save_failed">Réglage non enregistré : stockage plein ou impossible à écrire.</string>
+    <string name="note_leave_failed_title">Note non enregistrée</string>
+    <string name="note_leave_failed_text">Les modifications n’ont pas pu être enregistrées. Réessayez, ou quittez sans elles : elles seront perdues.</string>
+    <string name="note_leave_discard">Quitter sans enregistrer</string>
+    <string name="pip_play">Lire</string>
+    <string name="pip_pause">Pause</string>
     <string name="note_empty">(note vide)</string>
     <string name="edit">Modifier</string>
     <string name="pdf_open_failed">Impossible d’ouvrir le PDF : le document est peut-être endommagé ou protégé.</string>

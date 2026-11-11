@@ -255,9 +255,13 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE sizeBytes = :size AND id != :exceptId AND deletedAt IS NULL")
     suspend fun sameSize(size: Long, exceptId: String): List<FileEntity>
 
-    /** Live files whose name matches the LIKE [pattern] (escape char '\'), [exceptId] excluded. */
-    @Query("SELECT * FROM files WHERE originalName LIKE :pattern ESCAPE '\\' AND id != :exceptId AND deletedAt IS NULL")
-    suspend fun nameLike(pattern: String, exceptId: String): List<FileEntity>
+    /**
+     * Id and name of the live files whose name matches the LIKE [pattern] (escape char '\'),
+     * [exceptId] excluded. Names only: a pattern that cannot narrow much (a name with no ASCII
+     * start) lists many rows, and only the few that match are read in full.
+     */
+    @Query("SELECT id, originalName FROM files WHERE originalName LIKE :pattern ESCAPE '\\' AND id != :exceptId AND deletedAt IS NULL")
+    suspend fun namesLike(pattern: String, exceptId: String): List<FileName>
 
     @Transaction
     @Query("SELECT * FROM files WHERE ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId) AND deletedAt IS NULL ORDER BY importedAt DESC")
@@ -886,3 +890,6 @@ interface DupPrintDao {
     @Query("DELETE FROM dup_apart WHERE a NOT IN (SELECT id FROM files) OR b NOT IN (SELECT id FROM files)")
     suspend fun purgeApartOrphans()
 }
+
+/** A file's id and name, without the rest of its row (see [FileDao.namesLike]). */
+data class FileName(val id: String, val originalName: String)

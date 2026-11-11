@@ -167,10 +167,13 @@ internal object BackupMore {
     fun begin(out: DataOutputStream) = out.writeInt(MAGIC)
 
     fun record(out: DataOutputStream, kind: Int, payload: ByteArray) {
+        // Over what [read] accepts, the archive would be made, said done, and never restored.
+        if (payload.size > MAX_RECORD) throw java.io.IOException(str(R.string.err_backup_too_large))
         out.writeInt(kind); out.writeInt(payload.size); out.write(payload)
     }
 
     fun cover(out: DataOutputStream, position: Int, jpeg: ByteArray) {
+        if (4 + jpeg.size > MAX_RECORD) return   // never that big in practice: left out, not a failed backup
         out.writeInt(COVER); out.writeInt(4 + jpeg.size); out.writeInt(position); out.write(jpeg)
     }
 

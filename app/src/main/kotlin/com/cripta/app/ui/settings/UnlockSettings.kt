@@ -62,7 +62,13 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
     /** SYSTEM_AND_PIN: what the system step opened, to check the current PIN against. */
     var systemLayer by remember { mutableStateOf<ByteArray?>(null) }
 
-    fun reset() { target = null; askCurrentPin = false; askNewPin = false; systemLayer?.fill(0); systemLayer = null }
+    /** The current-PIN check under way: "Annulla" stops it, so a late "right" goes nowhere. */
+    var pinCheck by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    fun reset() {
+        pinCheck?.cancel(); pinCheck = null
+        target = null; askCurrentPin = false; askNewPin = false; systemLayer?.fill(0); systemLayer = null
+    }
     fun toast(msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 
     // Last step: the system prompt when either the old or the new mode involves it, then apply.
@@ -141,8 +147,12 @@ internal fun UnlockModeOptions(vm: SettingsViewModel) {
         CurrentPinDialog(
             kind = vm.secretKind,
             onCheck = { pin, onWrong ->
-                scope.launch {
-                    when (val r = vm.verifyCurrentPin(pin, systemLayer)) {
+                pinCheck?.cancel()
+                pinCheck = scope.launch {
+                    val r = vm.verifyCurrentPin(pin, systemLayer)
+                    // Cancelled meanwhile, or the dialog closed: nothing follows.
+                    if (!askCurrentPin || target !== t) return@launch
+                    when (r) {
                         KeyVault.PinResult.Ok -> {
                             askCurrentPin = false; systemLayer?.fill(0); systemLayer = null
                             afterCurrentCheck(t)

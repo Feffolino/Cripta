@@ -146,6 +146,9 @@ internal fun VideoPlayer(
                     .createMediaSource(MediaItem.fromUri("cripta://${file.id}"))
             )
             repeatMode = Player.REPEAT_MODE_ONE   // loop the video (setting applied below)
+            // Silent until "Avvia senza audio" is read below: a slow read let the first moments
+            // play aloud before the mute.
+            volume = 0f
             prepare()
             playWhenReady = true
         }
@@ -158,7 +161,8 @@ internal fun VideoPlayer(
     LaunchedEffect(player) {
         val prefs = vm.playbackPrefs()
         player.repeatMode = if (prefs.loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-        if (prefs.muted) player.volume = 0f
+        // A volume gesture or key may already have brought the sound in meanwhile: kept.
+        if (!prefs.muted) player.volume = 1f
         resumeEnabled = prefs.resume
         // Resume where it was left (skipping a position too close to either end).
         val pos = file.playbackPosMs ?: 0L
@@ -213,6 +217,9 @@ internal fun VideoPlayer(
             }
         }
         player.addListener(l)
+        // Ended while the advance was off (in Picture-in-Picture, say): no further state change
+        // comes, so the end already reached counts now.
+        if (player.playbackState == Player.STATE_ENDED && autoNextOn && !nextCancelled) latestOnNext()
         onDispose { player.removeListener(l) }
     }
     val nextFile by produceState<FileEntity?>(null, nextId) { value = nextId?.let { vm.fileById(it) } }
@@ -389,6 +396,9 @@ internal fun VideoPlayer(
             val interactive = activity?.getSystemService(android.os.PowerManager::class.java)?.isInteractive != false
             if (inPipNow && interactive) player.pause()
             else if (latestPrefs.pauseOnLeave && !inPipNow && activity?.isInMultiWindowMode != true) player.pause()
+            // In the background Android may end the process, and then nothing is disposed: the
+            // resume point is kept now, not only when the player goes away.
+            if (resumeEnabled && resumeSettled) vm.savePosition(file.id, player.currentPosition, player.duration)
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
@@ -409,7 +419,54 @@ internal fun VideoPlayer(
     // Vault locked: always pause, whatever "pause on leave" says, so nothing plays on behind the lock
     // screen (or in the background after a lock).
     LaunchedEffect(player) {
-        vm.vaultLocked.collect { locked -> if (locked) player.pause() }
+        vm.vaultLocked.collect { locked ->
+            if (!locked) return@collect
+            player.pause()
+            // Kept under the lock screen, the player may go only once the database is closed:
+            // saved now (the save waits for the next unlock if it has to).
+            if (resumeEnabled && resumeSettled) vm.savePosition(file.id, player.currentPosition, player.duration)
+        }
+    }
+    // "Avvia senza audio" mutes the player itself, and the volume keys only move the phone's media
+    // volume: a change of it (keys, or the gesture) brings the sound back, as the gesture alone did.
+    DisposableEffect(player) {
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context, i: android.content.Intent) {
+                val stream = i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                val value = i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 0)
+                if (stream == android.media.AudioManager.STREAM_MUSIC && value > 0 && player.volume == 0f) player.volume = 1f
+            }
+        }
+        val registered = runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(ctx, receiver,
+                android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }.isSuccess
+        onDispose { if (registered) runCatching { ctx.unregisterReceiver(receiver) } }
+    }
+    // Picture-in-Picture play / pause: the window's own button (see [PipController.params]).
+    DisposableEffect(player) {
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context, i: android.content.Intent) {
+                when {
+                    player.isPlaying || (player.playWhenReady && player.playbackState != Player.STATE_ENDED) -> player.pause()
+                    player.playbackState == Player.STATE_ENDED -> { player.seekTo(0); player.play() }
+                    else -> player.play()
+                }
+            }
+        }
+        val registered = runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(ctx, receiver,
+                android.content.IntentFilter(com.cripta.app.viewer.PipController.ACTION_PLAY_PAUSE), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }.isSuccess
+        onDispose { if (registered) runCatching { ctx.unregisterReceiver(receiver) } }
+    }
+    // The button shows what a tap does (pause while playing), in the window already open too.
+    LaunchedEffect(paused, inPip, videoAspect) {
+        com.cripta.app.viewer.PipController.playing = !paused
+        val aspect = com.cripta.app.viewer.PipController.armedAspect
+        if (inPip && activity != null && aspect != null) runCatching {
+            activity.setPictureInPictureParams(com.cripta.app.viewer.PipController.params(activity, aspect, !paused))
+        }
     }
     // In PiP only the video shows: no controller.
     LaunchedEffect(inPip, playerViewRef) { playerViewRef?.useController = !inPip }
@@ -666,7 +723,9 @@ internal fun VideoPlayer(
             detectVerticalDragGestures(
                 onDragStart = {
                     level = if (brightness) {
-                        activity?.window?.attributes?.screenBrightness?.takeIf { it >= 0f } ?: 0.5f
+                        // No level of its own yet (-1, "follow the system"): start from the one
+                        // the user is seeing, else a small drag jumped to 50%.
+                        activity?.window?.attributes?.screenBrightness?.takeIf { it >= 0f } ?: systemBrightness(ctx)
                     } else {
                         val max = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 1
                         (audio?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0).toFloat() / max
@@ -877,7 +936,8 @@ internal fun VideoPlayer(
 
         // Aspect toggle on the right edge (drawn above the seek zone), only while controls show.
         AnimatedVisibility(
-            visible = controlsVisible,
+            // Never in Picture-in-Picture: only the video shows there.
+            visible = controlsVisible && !inPip,
             enter = fadeIn(Motion.enter(Motion.MEDIUM)),
             exit = fadeOut(Motion.exit(Motion.MEDIUM)),
             // Landscape: a row under the top chrome (a column would overlap the quick tags above
@@ -961,3 +1021,16 @@ internal fun VideoPlayer(
 
 /** What the gesture overlay shows: an icon, the value, and a 0..1 gauge (brightness / volume only). */
 private data class GestureHud(val icon: ImageVector, val text: String, val level: Float?)
+
+/**
+ * The phone's own screen brightness as a window level 0..1 (what a window with no level of its
+ * own shows). The setting's scale is the system's (255 on most phones, more on some): an unknown
+ * one gives the middle rather than a jump to full.
+ */
+private fun systemBrightness(ctx: android.content.Context): Float = runCatching {
+    val v = android.provider.Settings.System.getInt(ctx.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS)
+    val res = android.content.res.Resources.getSystem()
+    val id = res.getIdentifier("config_screenBrightnessSettingMaximum", "integer", "android")
+    val max = (if (id != 0) res.getInteger(id) else 255).coerceAtLeast(1)
+    if (v in 0..max) v.toFloat() / max else 0.5f
+}.getOrDefault(0.5f)

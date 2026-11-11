@@ -283,7 +283,14 @@ internal fun TagLibraryList(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     // The order just dropped, shown until the saved one comes back (no flash of the old order).
     var pending by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<Long>?>(null) }
-    androidx.compose.runtime.LaunchedEffect(tags) { pending = null }
+    // Kept until the saved order comes back: an earlier drag landing first must not flash the order
+    // between (and a drag made then would start from a list the view model no longer has). A tag
+    // made or deleted meanwhile ends the preview.
+    androidx.compose.runtime.LaunchedEffect(tags) {
+        val ids = tags.map { it.id }
+        val p = pending
+        if (p == null || ids == p || ids.toSet() != p.toSet()) pending = null
+    }
     val shown = pending?.let { ids -> val byId = tags.associateBy { it.id }; ids.mapNotNull { byId[it] } } ?: tags
     val shownNow by androidx.compose.runtime.rememberUpdatedState(shown)
 

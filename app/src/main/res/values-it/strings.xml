@@ -1083,7 +1083,14 @@
     <string name="link_hint">Scrivi o incolla il link</string>
     <string name="paste_copied_link">Incolla il link copiato</string>
     <string name="no_preview">Nessuna anteprima per questo tipo di file.</string>
-    <string name="no_preview_hint">Per aprirlo con un\'altra app: ⋮ › Esporta sul dispositivo.</string>
+    <string name="no_preview_hint">Per aprirlo con un\'altra app: scorri su per i dettagli › Esporta.</string>
+    <string name="err_backup_too_large">Backup non creato: i dati della libreria superano quanto un ripristino può leggere.</string>
+    <string name="setting_save_failed">Impostazione non salvata: spazio esaurito o memoria non scrivibile.</string>
+    <string name="note_leave_failed_title">Nota non salvata</string>
+    <string name="note_leave_failed_text">Non è stato possibile salvare le modifiche. Riprova, oppure esci senza salvarle: andranno perse.</string>
+    <string name="note_leave_discard">Esci senza salvare</string>
+    <string name="pip_play">Riproduci</string>
+    <string name="pip_pause">Pausa</string>
     <string name="note_empty">(nota vuota)</string>
     <string name="edit">Modifica</string>
     <string name="pdf_open_failed">Impossibile aprire il PDF: il documento potrebbe essere danneggiato o protetto.</string>

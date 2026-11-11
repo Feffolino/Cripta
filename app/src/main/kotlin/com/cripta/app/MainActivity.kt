@@ -60,6 +60,8 @@ class MainActivity : FragmentActivity() {
         private const val PREF_NOTIF_ASKED = "notif_permission_asked"
         /** Longest time in a system picker that still doesn't count as "leaving the app". */
         private const val PICKER_GRACE_MS = 5 * 60_000L
+        /** For the whole process: a share being classified outlives the activity that received it. */
+        private val shareScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
     }
 
     private fun handleOpenDuplicates(intent: Intent?) {
@@ -135,26 +137,32 @@ class MainActivity : FragmentActivity() {
         // Consume once before async work: recreation must not import the browser preview twice.
         intent?.action = null
         intent?.removeExtra(Intent.EXTRA_STREAM)
-        lifecycleScope.launch {
+        // Classified outside this activity's life: recreated meanwhile (language, font size), the
+        // new one skips the consumed share, and the work cancelled with the old one lost it.
+        val app = applicationContext
+        val links = sharedLinks
+        val files = sharedFiles
+        val vaultSession = session
+        shareScope.launch {
             val payload = withContext(Dispatchers.IO) {
-                com.cripta.app.data.classifySharedContent(shared, contentResolver)
+                com.cripta.app.data.classifySharedContent(shared, app.contentResolver)
             }
             when (payload) {
                 is com.cripta.app.data.SharedContent.WebLink -> {
-                    sharedLinks.set(payload.url)
-                    if (session.locked.value) Toast.makeText(this@MainActivity,
+                    links.set(payload.url)
+                    if (vaultSession.locked.value) Toast.makeText(app,
                         str(R.string.share_unlock_for_download), Toast.LENGTH_LONG).show()
                 }
                 is com.cripta.app.data.SharedContent.Files -> {
-                    sharedFiles.add(payload.uris)
+                    files.add(payload.uris)
                     val n = payload.uris.size
-                    val message = if (session.locked.value) str(R.string.share_unlock_for_import)
+                    val message = if (vaultSession.locked.value) str(R.string.share_unlock_for_import)
                         else plural(R.plurals.share_importing, n)
-                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(app, message, Toast.LENGTH_SHORT).show()
                 }
                 // Nothing Cripta can take (plain text with no link, no attachment): say so, not silence.
                 com.cripta.app.data.SharedContent.None ->
-                    Toast.makeText(this@MainActivity, str(R.string.share_unsupported), Toast.LENGTH_LONG).show()
+                    Toast.makeText(app, str(R.string.share_unsupported), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -471,7 +479,7 @@ class MainActivity : FragmentActivity() {
         val aspect = com.cripta.app.viewer.PipController.armedAspect ?: return
         runCatching {
             enterPictureInPictureMode(
-                android.app.PictureInPictureParams.Builder().setAspectRatio(aspect).build()
+                com.cripta.app.viewer.PipController.params(this, aspect, com.cripta.app.viewer.PipController.playing)
             )
         }
     }

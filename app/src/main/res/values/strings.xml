@@ -1044,7 +1044,14 @@
     <string name="link_hint">Type or paste the link</string>
     <string name="paste_copied_link">Paste the copied link</string>
     <string name="no_preview">No preview for this kind of file.</string>
-    <string name="no_preview_hint">To open it with another app: ⋮ › Export to the device.</string>
+    <string name="no_preview_hint">To open it with another app: swipe up for the details › Export.</string>
+    <string name="err_backup_too_large">Backup not created: the library\'s data is larger than a restore can read.</string>
+    <string name="setting_save_failed">Setting not saved: storage is full or can\'t be written.</string>
+    <string name="note_leave_failed_title">Note not saved</string>
+    <string name="note_leave_failed_text">Your changes couldn\'t be saved. Try again, or leave without them: they will be lost.</string>
+    <string name="note_leave_discard">Leave without saving</string>
+    <string name="pip_play">Play</string>
+    <string name="pip_pause">Pause</string>
     <string name="note_empty">(empty note)</string>
     <string name="edit">Edit</string>
     <string name="pdf_open_failed">Can\'t open the PDF: the document may be damaged or protected.</string>

@@ -42,6 +42,8 @@ fun Filters.toJson(): String = org.json.JSONObject().apply {
     put("untagged", untaggedOnly)
     put("all", tagMatchAll)
     put("people", org.json.JSONArray(personIds.toList()))
+    put("progress", inProgress)
+    put("whole", wholeVault)
 }.toString()
 
 fun filtersFromJson(json: String): Filters? = runCatching {
@@ -59,5 +61,7 @@ fun filtersFromJson(json: String): Filters? = runCatching {
         untaggedOnly = o.optBoolean("untagged", false),
         tagMatchAll = o.optBoolean("all", true),
         personIds = ids("people"),
+        inProgress = o.optBoolean("progress", false),
+        wholeVault = o.optBoolean("whole", false),
     )
 }.getOrNull()

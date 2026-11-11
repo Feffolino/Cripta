@@ -43,10 +43,16 @@ internal object BackupExtras {
 
     private fun JSONObject.optLongOrNull(k: String): Long? = if (!has(k) || isNull(k)) null else optLong(k)
     private fun JSONObject.optStrOrNull(k: String): String? = if (!has(k) || isNull(k)) null else optString(k)
-    private fun DataOutputStream.blob(b: ByteArray) { writeInt(b.size); write(b) }
+    /** Largest record [read] accepts, so the largest [write] may produce. */
+    private const val MAX_RECORD = 64_000_000
+    private fun DataOutputStream.blob(b: ByteArray) {
+        // Over what a restore reads, the archive would be made, said done, and never restored.
+        if (b.size > MAX_RECORD) throw java.io.IOException(str(R.string.err_backup_too_large))
+        writeInt(b.size); write(b)
+    }
     private fun DataInputStream.blob(): ByteArray {
         val n = readInt()
-        require(n in 0..64_000_000) { str(R.string.file_corrupt) }
+        require(n in 0..MAX_RECORD) { str(R.string.file_corrupt) }
         return ByteArray(n).also { readFully(it) }
     }
 

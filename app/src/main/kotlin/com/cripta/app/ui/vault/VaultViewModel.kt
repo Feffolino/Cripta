@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -369,7 +370,11 @@ class VaultViewModel @Inject constructor(
     suspend fun randomExcludedByAncestor(id: Long): Boolean = repo.randomExcludedByAncestor(id)
 
     /** Current folder, or the whole vault while filtering when allowed by Settings. */
-    private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>, val folder: Long? = null)
+    private data class Scoped(
+        val scope: List<FileWithTags>, val shown: List<FileWithTags>, val folder: Long? = null,
+        /** The filters [shown] went through, and whether [scope] is the whole vault. */
+        val filters: Filters? = null, val wholeVault: Boolean = false,
+    )
 
     /**
      * The files the filters run on: the current folder, or the whole vault while filtering when
@@ -382,7 +387,7 @@ class VaultViewModel @Inject constructor(
         }
             .distinctUntilChanged()
             .flatMapLatest { (folder, wholeVault) ->
-                (if (wholeVault) repo.allFiles() else repo.files(folder)).map { folder to it }
+                (if (wholeVault) repo.allFiles() else repo.files(folder)).map { Triple(folder, wholeVault, it) }
             }
 
     /** A filter with what the face index adds: the media of the people chosen and of the names typed. */
@@ -412,9 +417,9 @@ class VaultViewModel @Inject constructor(
     }
 
     private val scoped =
-        combine(source, lookups, sortFlow) { (folder, list), l, sort ->
+        combine(source, lookups, sortFlow) { (folder, whole, list), l, sort ->
             val shown = l.f.applyTo(list, l.people, l.byName)
-            Scoped(list, applySort(shown, sort.first, sort.second), folder)
+            Scoped(list, applySort(shown, sort.first, sort.second), folder, l.f, whole)
         }
             .flowOn(Dispatchers.Default)
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
@@ -574,8 +579,10 @@ class VaultViewModel @Inject constructor(
                 val gone = known - ids
                 known = ids
                 val f = filters.value
+                // One merged into another becomes that one, as in the saved filters; one deleted goes.
+                fun follow(s: Set<Long>) = s.mapNotNull { id -> if (id in gone) repo.tagMergedInto(id)?.takeIf { it in ids } else id }.toSet()
                 if (gone.isNotEmpty() && (f.tagIds.any { it in gone } || f.excludedTagIds.any { it in gone }))
-                    filters.value = f.copy(tagIds = f.tagIds - gone, excludedTagIds = f.excludedTagIds - gone)
+                    filters.value = f.copy(tagIds = follow(f.tagIds), excludedTagIds = follow(f.excludedTagIds))
             }
         }
         // Cartelle tab tapped again while already on it: back to the root.
@@ -857,10 +864,14 @@ class VaultViewModel @Inject constructor(
      * excluded files when every candidate was excluded.
      */
     fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
+        val scoped = randomScopedToView
         val eligible = repo.randomEligibleIds()
-        val ids = if (randomScopedToView) {
+        val ids = if (scoped) {
             val allowed = eligible.toHashSet()
-            files.value.map { it.file.id }.filter { it in allowed }
+            // What is on screen once it is up to date: just after entering a folder (or while a
+            // search waits for a pause in typing) the list still held the level before.
+            val view = currentView() ?: return@launch
+            view.map { it.file.id }.filter { it in allowed }
         } else eligible
         val order = ids.shuffled()
         if (order.isEmpty()) {
@@ -869,6 +880,21 @@ class VaultViewModel @Inject constructor(
         }
         viewerQueue.set(order)
         open(order.first())
+    }
+
+    /**
+     * The files on screen for the current folder and filters, once the list has caught up with
+     * them (a few seconds at most, else null).
+     */
+    private suspend fun currentView(): List<FileWithTags>? {
+        val localOnly = runCatching { settings.settingsOnce().filterCurrentFolderOnly }.getOrDefault(false)
+        return kotlinx.coroutines.withTimeoutOrNull(5_000) {
+            scoped.first { s: Scoped ->
+                val f = filters.value
+                s.folder == currentFolderId.value && s.filters == f &&
+                    s.wholeVault == searchesWholeVault(f.active, f.wholeVault, localOnly)
+            }.shown
+        }
     }
 }
 

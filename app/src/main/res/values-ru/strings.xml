@@ -1122,7 +1122,14 @@
     <string name="link_hint">Введите или вставьте ссылку</string>
     <string name="paste_copied_link">Вставить скопированную ссылку</string>
     <string name="no_preview">Для этого типа файлов предпросмотра нет.</string>
-    <string name="no_preview_hint">Чтобы открыть в другом приложении: ⋮ › Экспортировать на устройство.</string>
+    <string name="no_preview_hint">Чтобы открыть в другом приложении: смахните вверх для сведений › Экспортировать.</string>
+    <string name="err_backup_too_large">Резервная копия не создана: данные библиотеки больше, чем может прочитать восстановление.</string>
+    <string name="setting_save_failed">Настройка не сохранена: память заполнена или недоступна для записи.</string>
+    <string name="note_leave_failed_title">Заметка не сохранена</string>
+    <string name="note_leave_failed_text">Не удалось сохранить изменения. Попробуйте ещё раз или выйдите без них: они будут потеряны.</string>
+    <string name="note_leave_discard">Выйти без сохранения</string>
+    <string name="pip_play">Воспроизвести</string>
+    <string name="pip_pause">Пауза</string>
     <string name="note_empty">(пустая заметка)</string>
     <string name="edit">Изменить</string>
     <string name="pdf_open_failed">Не удаётся открыть PDF: документ может быть повреждён или защищён.</string>

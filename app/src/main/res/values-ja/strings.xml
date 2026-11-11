@@ -1005,7 +1005,14 @@
     <string name="link_hint">リンクを入力または貼り付け</string>
     <string name="paste_copied_link">コピーしたリンクを貼り付け</string>
     <string name="no_preview">この種類のファイルはプレビューできません。</string>
-    <string name="no_preview_hint">別のアプリで開くには、⋮ › 端末に書き出しを選んでください。</string>
+    <string name="no_preview_hint">別のアプリで開くには、上にスワイプして詳細を表示し、書き出しを選んでください。</string>
+    <string name="err_backup_too_large">バックアップを作成できませんでした：ライブラリのデータが復元で読み込める上限を超えています。</string>
+    <string name="setting_save_failed">設定を保存できませんでした：ストレージがいっぱいか、書き込めません。</string>
+    <string name="note_leave_failed_title">メモは保存されていません</string>
+    <string name="note_leave_failed_text">変更を保存できませんでした。再試行するか、保存せずに閉じてください（変更は失われます）。</string>
+    <string name="note_leave_discard">保存せずに閉じる</string>
+    <string name="pip_play">再生</string>
+    <string name="pip_pause">一時停止</string>
     <string name="note_empty">（空のメモ）</string>
     <string name="edit">編集</string>
     <string name="pdf_open_failed">PDF を開けません。文書が破損、または保護されている可能性があります。</string>

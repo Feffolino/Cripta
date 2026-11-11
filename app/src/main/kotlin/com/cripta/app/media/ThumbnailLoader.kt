@@ -101,6 +101,13 @@ class ThumbnailLoader @Inject constructor(
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default).launch {
             session.locked.collect { locked -> if (locked) { lockEpoch.incrementAndGet(); cache.evictAll(); failed.clear() } }
         }
+        // A restore gave files already here a hand-picked cover: the one drawn before goes, and
+        // every surface showing it loads it again (the new file on disk is kept).
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default).launch {
+            repo.coversReplaced.collect { ids ->
+                ids.forEach { id -> cache.remove(id); failed.remove(id); bumpVersion(id) }
+            }
+        }
     }
 
     /**

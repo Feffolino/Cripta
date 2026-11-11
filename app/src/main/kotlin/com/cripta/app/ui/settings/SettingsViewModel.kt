@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -190,43 +191,43 @@ class SettingsViewModel @Inject constructor(
         refreshSpace()
     }
 
-    fun setAutoLock(minutes: Int) = viewModelScope.launch { store.setAutoLockMinutes(minutes) }
-    fun setDeletePolicy(p: DeleteOriginalPolicy) = viewModelScope.launch { store.setDeleteOriginalPolicy(p) }
-    fun setThemeMode(m: com.cripta.app.data.ThemeMode) = viewModelScope.launch { store.setThemeMode(m) }
-    fun setDynamicColor(b: Boolean) = viewModelScope.launch { store.setDynamicColor(b) }
-    fun setViewMode(m: com.cripta.app.data.ViewMode) = viewModelScope.launch { store.setViewMode(m) }
-    fun setGridColumns(n: Int) = viewModelScope.launch { store.setGridColumns(n) }
-    fun setSort(k: com.cripta.app.data.SortKey, asc: Boolean) = viewModelScope.launch { store.setSort(k, asc) }
-    fun setFilterCurrentFolderOnly(v: Boolean) = viewModelScope.launch { store.setFilterCurrentFolderOnly(v) }
-    fun setAllowScreenshots(b: Boolean) = viewModelScope.launch { store.setAllowScreenshots(b) }
-    fun setShowFileInfo(v: Boolean) = viewModelScope.launch { store.setShowFileInfo(v) }
-    fun setShowTagsOnCover(v: Boolean) = viewModelScope.launch { store.setShowTagsOnCover(v) }
-    fun setShowDateHeaders(v: Boolean) = viewModelScope.launch { store.setShowDateHeaders(v) }
-    fun setShowFolderInfo(v: Boolean) = viewModelScope.launch { store.setShowFolderInfo(v) }
-    fun setFoldersHorizontal(v: Boolean) = viewModelScope.launch { store.setFoldersHorizontal(v) }
-    fun setShowNoteFab(v: Boolean) = viewModelScope.launch { store.setShowNoteFab(v) }
-    fun setShowRandomFab(v: Boolean) = viewModelScope.launch { store.setShowRandomFab(v) }
-    fun setCoverTagRows(v: Int) = viewModelScope.launch { store.setCoverTagRows(v) }
-    fun setCoverTagSize(v: Int) = viewModelScope.launch { store.setCoverTagSize(v) }
-    fun setCoverTagStyle(v: com.cripta.app.data.CoverTagStyle) = viewModelScope.launch { store.setCoverTagStyle(v) }
-    fun setTagColors(v: Boolean) = viewModelScope.launch { store.setTagColors(v) }
-    fun setDefaultTagColor(argb: Int?) = viewModelScope.launch { store.setDefaultTagColor(argb) }
-    fun setShowDurationBadge(v: Boolean) = viewModelScope.launch { store.setShowDurationBadge(v) }
-    fun setCoverPeople(v: Boolean) = viewModelScope.launch { store.setCoverPeople(v) }
-    fun setCoverPeopleSize(v: Int) = viewModelScope.launch { store.setCoverPeopleSize(v) }
-    fun setShowStatsStrip(v: Boolean) = viewModelScope.launch { store.setShowStatsStrip(v) }
+    fun setAutoLock(minutes: Int) = savePref { store.setAutoLockMinutes(minutes) }
+    fun setDeletePolicy(p: DeleteOriginalPolicy) = savePref { store.setDeleteOriginalPolicy(p) }
+    fun setThemeMode(m: com.cripta.app.data.ThemeMode) = savePref { store.setThemeMode(m) }
+    fun setDynamicColor(b: Boolean) = savePref { store.setDynamicColor(b) }
+    fun setViewMode(m: com.cripta.app.data.ViewMode) = savePref { store.setViewMode(m) }
+    fun setGridColumns(n: Int) = savePref { store.setGridColumns(n) }
+    fun setSort(k: com.cripta.app.data.SortKey, asc: Boolean) = savePref { store.setSort(k, asc) }
+    fun setFilterCurrentFolderOnly(v: Boolean) = savePref { store.setFilterCurrentFolderOnly(v) }
+    fun setAllowScreenshots(b: Boolean) = savePref { store.setAllowScreenshots(b) }
+    fun setShowFileInfo(v: Boolean) = savePref { store.setShowFileInfo(v) }
+    fun setShowTagsOnCover(v: Boolean) = savePref { store.setShowTagsOnCover(v) }
+    fun setShowDateHeaders(v: Boolean) = savePref { store.setShowDateHeaders(v) }
+    fun setShowFolderInfo(v: Boolean) = savePref { store.setShowFolderInfo(v) }
+    fun setFoldersHorizontal(v: Boolean) = savePref { store.setFoldersHorizontal(v) }
+    fun setShowNoteFab(v: Boolean) = savePref { store.setShowNoteFab(v) }
+    fun setShowRandomFab(v: Boolean) = savePref { store.setShowRandomFab(v) }
+    fun setCoverTagRows(v: Int) = savePref { store.setCoverTagRows(v) }
+    fun setCoverTagSize(v: Int) = savePref { store.setCoverTagSize(v) }
+    fun setCoverTagStyle(v: com.cripta.app.data.CoverTagStyle) = savePref { store.setCoverTagStyle(v) }
+    fun setTagColors(v: Boolean) = savePref { store.setTagColors(v) }
+    fun setDefaultTagColor(argb: Int?) = savePref { store.setDefaultTagColor(argb) }
+    fun setShowDurationBadge(v: Boolean) = savePref { store.setShowDurationBadge(v) }
+    fun setCoverPeople(v: Boolean) = savePref { store.setCoverPeople(v) }
+    fun setCoverPeopleSize(v: Int) = savePref { store.setCoverPeopleSize(v) }
+    fun setShowStatsStrip(v: Boolean) = savePref { store.setShowStatsStrip(v) }
     /** Page requested from another screen (Home "Strumenti", scan notification). */
     val requestedPage: StateFlow<String?> = nav.page
     fun consumeRequestedPage() = nav.consume()
 
     /** Reset one page's preferences to their defaults (files and tags are never touched). */
-    fun resetPage(page: String) = viewModelScope.launch { store.resetPage(page) }
+    fun resetPage(page: String) = savePref { store.resetPage(page) }
 
-    fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = viewModelScope.launch { store.setConvertAfter(v) }
-    fun setResumePlayback(v: Boolean) = viewModelScope.launch { store.setResumePlayback(v) }
-    fun setTrashEnabled(v: Boolean) = viewModelScope.launch { store.setTrashEnabled(v) }
-    fun setTrashDays(v: Int) = viewModelScope.launch { store.setTrashDays(v) }
-    fun setSimilarOnImport(v: Boolean) = viewModelScope.launch { store.setSimilarOnImport(v) }
+    fun setConvertAfter(v: com.cripta.app.data.ConvertAfter) = savePref { store.setConvertAfter(v) }
+    fun setResumePlayback(v: Boolean) = savePref { store.setResumePlayback(v) }
+    fun setTrashEnabled(v: Boolean) = savePref { store.setTrashEnabled(v) }
+    fun setTrashDays(v: Int) = savePref { store.setTrashDays(v) }
+    fun setSimilarOnImport(v: Boolean) = savePref { store.setSimilarOnImport(v) }
 
     /** (media with a fingerprint, photos and videos in the vault), or null while locked. */
     suspend fun printStats(): Pair<Int, Int>? = scanner.printStats()
@@ -257,6 +258,21 @@ class SettingsViewModel @Inject constructor(
      * [heldToEnd] from the view model scope. A failure (the vault locked before the start: the
      * repository throws "Vault locked") is logged instead of crashing the app.
      */
+    /**
+     * A preference write. Failing (storage full, say), it says so instead of crashing the app: an
+     * error left to the view model scope ended the whole process.
+     */
+    private fun savePref(block: suspend () -> Unit) = viewModelScope.launch {
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logException(android.util.Log.ERROR, "SettingsViewModel", "preference not saved", e)
+            _message.value = str(R.string.setting_save_failed)
+        }
+    }
+
     private fun launchHeld(what: String, block: suspend () -> Unit) = viewModelScope.launch {
         try {
             heldToEnd(block)
@@ -284,18 +300,18 @@ class SettingsViewModel @Inject constructor(
         folders.forEach { id -> repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
         files.forEach { if (repo.secureDelete(it, onlyIfTrashed = true)) thumbs.evict(it) }
     }
-    fun setVideoLoop(v: Boolean) = viewModelScope.launch { store.setVideoLoop(v) }
-    fun setSeekStep(v: Int) = viewModelScope.launch { store.setSeekStep(v) }
-    fun setGestureControls(v: Boolean) = viewModelScope.launch { store.setGestureControls(v) }
-    fun setAutoRotate(v: Boolean) = viewModelScope.launch { store.setAutoRotate(v) }
-    fun setPictureInPicture(v: Boolean) = viewModelScope.launch { store.setPictureInPicture(v) }
-    fun setGestureVolume(v: Boolean) = viewModelScope.launch { store.setGestureVolume(v) }
-    fun setAutoNext(v: Boolean) = viewModelScope.launch { store.setAutoNext(v) }
-    fun setAutoNextSec(v: Int) = viewModelScope.launch { store.setAutoNextSec(v) }
-    fun setIntroAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setIntroAnalyzeNew(v) }
-    fun setIntroQuickScan(v: Boolean) = viewModelScope.launch { store.setIntroQuickScan(v) }
-    fun setIntroAutoSkip(v: Boolean) = viewModelScope.launch { store.setIntroAutoSkip(v) }
-    fun setOutroAutoSkip(v: Boolean) = viewModelScope.launch { store.setOutroAutoSkip(v) }
+    fun setVideoLoop(v: Boolean) = savePref { store.setVideoLoop(v) }
+    fun setSeekStep(v: Int) = savePref { store.setSeekStep(v) }
+    fun setGestureControls(v: Boolean) = savePref { store.setGestureControls(v) }
+    fun setAutoRotate(v: Boolean) = savePref { store.setAutoRotate(v) }
+    fun setPictureInPicture(v: Boolean) = savePref { store.setPictureInPicture(v) }
+    fun setGestureVolume(v: Boolean) = savePref { store.setGestureVolume(v) }
+    fun setAutoNext(v: Boolean) = savePref { store.setAutoNext(v) }
+    fun setAutoNextSec(v: Int) = savePref { store.setAutoNextSec(v) }
+    fun setIntroAnalyzeNew(v: Boolean) = savePref { store.setIntroAnalyzeNew(v) }
+    fun setIntroQuickScan(v: Boolean) = savePref { store.setIntroQuickScan(v) }
+    fun setIntroAutoSkip(v: Boolean) = savePref { store.setIntroAutoSkip(v) }
+    fun setOutroAutoSkip(v: Boolean) = savePref { store.setOutroAutoSkip(v) }
     fun startIntroScan() = com.cripta.app.work.ConversionService.startIntroScan(appContext, manual = true)
     fun restartIntroScan(everything: Boolean) = com.cripta.app.work.ConversionService.restartIntroScan(appContext, everything)
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
@@ -348,10 +364,10 @@ class SettingsViewModel @Inject constructor(
     val faceMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     /** The last change that can be taken back, with what the snackbar says. */
     val faceUndo = kotlinx.coroutines.flow.MutableStateFlow<Pair<String, com.cripta.app.data.face.Undo>?>(null)
-    fun setFacesAnalyzeNew(v: Boolean) = viewModelScope.launch { store.setFacesAnalyzeNew(v) }
-    fun setFaceMoments(v: Boolean) = viewModelScope.launch { store.setFaceMoments(v) }
-    fun setPeopleOnHome(v: String) = viewModelScope.launch { store.setPeopleOnHome(v) }
-    fun setFacesMode(v: String) = viewModelScope.launch { store.setFacesMode(v); groupsVersion.value++ }
+    fun setFacesAnalyzeNew(v: Boolean) = savePref { store.setFacesAnalyzeNew(v) }
+    fun setFaceMoments(v: Boolean) = savePref { store.setFaceMoments(v) }
+    fun setPeopleOnHome(v: String) = savePref { store.setPeopleOnHome(v) }
+    fun setFacesMode(v: String) = savePref { store.setFacesMode(v); groupsVersion.value++ }
     /** Bumped when "Da sistemare" must be grouped again though the unassigned count did not change. */
     val groupsVersion = kotlinx.coroutines.flow.MutableStateFlow(0)
     /** "Dividi il gruppo": [a] and [b] are not one person. */
@@ -439,7 +455,7 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), 0)
     fun forgetIgnoredFaces() = faceAction { faces.forgetIgnored() }
     fun setPersonProfile(personId: Long, notes: String, links: List<String>) = faceAction { faces.setProfile(personId, notes, links) }
-    fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = viewModelScope.launch { store.setPeopleSort(key, ascending) }
+    fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = savePref { store.setPeopleSort(key, ascending) }
     /** "Solo persone note": suggestions only from people with faces in at least two media. */
     suspend fun suggestionsFor(personId: Long) =
         faces.suggestionsFor(personId, minMedia = if (settings.value.facesMode == "known") 2 else 1)
@@ -465,23 +481,23 @@ class SettingsViewModel @Inject constructor(
         viewerQueue.set(ids)
         if (timeMs != null && timeMs > 0) viewerQueue.seekOnOpen(id, maxOf(0L, timeMs - 2_000))
     }
-    fun setSwipeToClose(v: Boolean) = viewModelScope.launch { store.setSwipeToClose(v) }
-    fun setSplitDetails(v: Boolean) = viewModelScope.launch { store.setSplitDetails(v) }
-    fun setHoldForSpeed(v: Boolean) = viewModelScope.launch { store.setHoldForSpeed(v) }
-    fun setHoldSpeed(x10: Int) = viewModelScope.launch { store.setHoldSpeed(x10) }
-    fun setControlsTimeout(sec: Int) = viewModelScope.launch { store.setControlsTimeout(sec) }
-    fun setViewerFilmstrip(v: Boolean) = viewModelScope.launch { store.setViewerFilmstrip(v) }
-    fun setPauseOnLeave(v: Boolean) = viewModelScope.launch { store.setPauseOnLeave(v) }
-    fun setFilmstripShape(v: com.cripta.app.data.StripShape) = viewModelScope.launch { store.setFilmstripShape(v) }
-    fun setFilmstripSpan(v: Int) = viewModelScope.launch { store.setFilmstripSpan(v) }
-    fun setFilmstripSize(v: Int) = viewModelScope.launch { store.setFilmstripSize(v) }
-    fun setFilmstripTrueAspect(v: Boolean) = viewModelScope.launch { store.setFilmstripTrueAspect(v) }
-    fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch {
+    fun setSwipeToClose(v: Boolean) = savePref { store.setSwipeToClose(v) }
+    fun setSplitDetails(v: Boolean) = savePref { store.setSplitDetails(v) }
+    fun setHoldForSpeed(v: Boolean) = savePref { store.setHoldForSpeed(v) }
+    fun setHoldSpeed(x10: Int) = savePref { store.setHoldSpeed(x10) }
+    fun setControlsTimeout(sec: Int) = savePref { store.setControlsTimeout(sec) }
+    fun setViewerFilmstrip(v: Boolean) = savePref { store.setViewerFilmstrip(v) }
+    fun setPauseOnLeave(v: Boolean) = savePref { store.setPauseOnLeave(v) }
+    fun setFilmstripShape(v: com.cripta.app.data.StripShape) = savePref { store.setFilmstripShape(v) }
+    fun setFilmstripSpan(v: Int) = savePref { store.setFilmstripSpan(v) }
+    fun setFilmstripSize(v: Int) = savePref { store.setFilmstripSize(v) }
+    fun setFilmstripTrueAspect(v: Boolean) = savePref { store.setFilmstripTrueAspect(v) }
+    fun setUpdatePrerelease(v: Boolean) = savePref {
         store.setUpdatePrerelease(v)
         // A download under way goes on (and stays on show): only a found or failed check is forgotten.
         if (_update.value !is UpdateState.Downloading) _update.value = UpdateState.Idle
     }
-    fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
+    fun setVideoStartMuted(v: Boolean) = savePref { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
     fun clearMessage() { _message.value = null }
@@ -509,7 +525,7 @@ class SettingsViewModel @Inject constructor(
     val backupRootStat: StateFlow<com.cripta.app.data.FolderStat> =
         repo.files(null).map { l -> com.cripta.app.data.FolderStat(l.size, l.sumOf { it.file.sizeBytes }) }
             .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), com.cripta.app.data.FolderStat(0, 0))
-    fun setBackupScope(v: com.cripta.app.data.BackupScope) = viewModelScope.launch { store.setBackupScope(v) }
+    fun setBackupScope(v: com.cripta.app.data.BackupScope) = savePref { store.setBackupScope(v) }
 
     init {
         // The outcome of a backup / restore run by the service, shown when Settings is open.
@@ -560,10 +576,10 @@ class SettingsViewModel @Inject constructor(
         // One transaction: stopped half way, some tags kept the old colours and some the new.
         repo.setTagColors(colors)
     }
-    fun setShowRecentTags(v: Boolean) = viewModelScope.launch { store.setShowRecentTags(v) }
-    fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }
-    fun setRecentTagsCount(v: Int) = viewModelScope.launch { store.setRecentTagsCount(v) }
-    fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
+    fun setShowRecentTags(v: Boolean) = savePref { store.setShowRecentTags(v) }
+    fun setBackupCompressDocs(v: Boolean) = savePref { store.setBackupCompressDocs(v) }
+    fun setRecentTagsCount(v: Int) = savePref { store.setRecentTagsCount(v) }
+    fun setViewerQuickTags(v: Boolean) = savePref { store.setViewerQuickTags(v) }
     /** Each tag's use (files, folders), for the tag editor's line under its title. */
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -587,26 +603,59 @@ class SettingsViewModel @Inject constructor(
             com.cripta.app.data.TagSave.MISSING -> Unit   // deleted meanwhile: nothing to save into
         }
     }
-    fun setTagSortMode(m: com.cripta.app.data.TagSortMode) = viewModelScope.launch { store.setTagSortMode(m) }
+    fun setTagSortMode(m: com.cripta.app.data.TagSortMode) = savePref { store.setTagSortMode(m) }
 
     /** Move a tag up/down in the custom order by swapping with its neighbor. */
-    fun moveTag(id: Long, up: Boolean) = viewModelScope.launch {
-        val ordered = tags.value.map { it.id }.toMutableList()
+    fun moveTag(id: Long, up: Boolean) {
+        val ordered = tagOrder().toMutableList()
         val i = ordered.indexOf(id)
-        if (i < 0) return@launch
+        if (i < 0) return
         val j = if (up) i - 1 else i + 1
-        if (j < 0 || j >= ordered.size) return@launch
+        if (j < 0 || j >= ordered.size) return
         ordered[i] = ordered[j].also { ordered[j] = ordered[i] }
-        repo.reorderTags(ordered)
+        saveTagOrder(ordered)
     }
 
     /** Puts tag [id] at [index] of the library (a drag in the custom order); the others close up. */
-    fun moveTagTo(id: Long, index: Int) = viewModelScope.launch {
-        val ordered = tags.value.map { it.id }.toMutableList()
+    fun moveTagTo(id: Long, index: Int) {
+        val ordered = tagOrder().toMutableList()
         val i = ordered.indexOf(id)
-        if (i < 0) return@launch
+        if (i < 0) return
         ordered.add(index.coerceIn(0, ordered.size - 1), ordered.removeAt(i))
-        repo.reorderTags(ordered)
+        saveTagOrder(ordered)
+    }
+
+    /**
+     * The order a move starts from: the last one asked for while it is not saved yet. Taken from
+     * [tags] alone, a second drag before the first came back from the database started from the
+     * old order, and saved one the list never showed.
+     */
+    private var pendingTagOrder: List<Long>? = null
+    private val tagOrderWrites = kotlinx.coroutines.sync.Mutex()
+    private fun tagOrder(): List<Long> {
+        val library = tags.value.map { it.id }
+        val pending = pendingTagOrder ?: return library
+        // Back from the database: from now on its order is the one to go on from.
+        if (pending == library) { pendingTagOrder = null; return library }
+        val here = library.toSet()
+        // Tags made or deleted meanwhile: the new ones at the end, the gone ones out.
+        return pending.filter { it in here } + library.filter { it !in pending }
+    }
+    private fun saveTagOrder(order: List<Long>) {
+        pendingTagOrder = order
+        viewModelScope.launch {
+            // One write at a time, in the order the moves were made.
+            tagOrderWrites.withLock {
+                try {
+                    repo.reorderTags(order)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    logException(android.util.Log.ERROR, "SettingsViewModel", "tag order not saved", e)
+                    _message.value = str(R.string.setting_save_failed)
+                }
+            }
+        }
     }
 
     fun lockNow() = session.lock()

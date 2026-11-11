@@ -74,6 +74,8 @@ fun NoteEditorScreen(
     vm: NoteEditorViewModel = hiltViewModel(),
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    /** Leaving failed to save: what to run once the user leaves anyway (null = no question). */
+    var leaveUnsaved by remember { mutableStateOf<(() -> Unit)?>(null) }
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(fileId) { vm.load(fileId) }
@@ -88,7 +90,9 @@ fun NoteEditorScreen(
             // A note that failed to load is read-only: leaving never saves over the original.
             !vm.loaded || vm.loadFailed || !vm.dirty -> { onBack(); after() }
             fileId == null && vm.name.isBlank() && vm.text.isBlank() -> { onBack(); after() }
-            else -> vm.save(fileId, folderId) { onBack(); after() }
+            // The save failing for good (a full disk) left no way out but closing the app: the
+            // user is asked whether to try again or leave without these changes.
+            else -> vm.save(fileId, folderId, onFailed = { leaveUnsaved = after }) { onBack(); after() }
         }
     }
     val leave: () -> Unit = { leaveThen {} }
@@ -251,6 +255,23 @@ fun NoteEditorScreen(
         }
     }
 
+    leaveUnsaved?.let { after ->
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { leaveUnsaved = null },
+            title = { Text(str(R.string.note_leave_failed_title)) },
+            text = { Text(str(R.string.note_leave_failed_text)) },
+            confirmButton = {
+                TextButton(onClick = { leaveUnsaved = null; leaveThen(after) }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.retry))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { leaveUnsaved = null; onBack(); after() }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.note_leave_discard), color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
+    }
     if (confirmDelete && fileId != null) {
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmDelete = false },

@@ -730,7 +730,7 @@ class ConversionService : Service() {
             for ((i, uri) in uris.withIndex()) {
                 if (importCancelled(cancelGen, runStart)) { cancelled = true; break }
                 val (name, size) = info[i]
-                repo.importCurrent(name, size)
+                val token = repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
                 notify(importNote(st.done + 1, st.total, st.fraction, str(R.string.n_encrypting), eta, cancelGen, runStart))
@@ -738,7 +738,7 @@ class ConversionService : Service() {
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
                     imported = repo.import(uri, folderId) { bytes ->
-                        repo.importBytes(bytes)
+                        repo.importBytes(token, bytes)
                         val now = SystemClock.elapsedRealtime()
                         if (now - lastNotify > 500) {
                             lastNotify = now
@@ -749,6 +749,8 @@ class ConversionService : Service() {
                     }
                     true
                 } catch (e: kotlinx.coroutines.CancellationException) {
+                    // Batches still running keep the banner: this file must not stay on it.
+                    repo.importForget(token)
                     throw e
                 } catch (e: Throwable) {
                     // Throwable: an OutOfMemoryError on one odd file must not kill the whole batch.
@@ -795,7 +797,7 @@ class ConversionService : Service() {
                 // would otherwise have the only complete copy deleted).
                 val complete = size <= 0 || (imported?.sizeBytes ?: 0L) >= size
                 if (ok && !complete) android.util.Log.w("ConversionService", "import shorter than reported: original kept")
-                repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size), incomplete = ok && !complete)
+                repo.importItemDone(token, ok, if (ok && complete) uri else null, batchWeight(size), incomplete = ok && !complete)
                 if (ok && complete) done += uri
                 val cur = repo.importState.value
                 if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, str(R.string.n_queued_lower), eta, cancelGen, runStart))

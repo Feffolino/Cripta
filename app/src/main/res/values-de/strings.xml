@@ -1044,7 +1044,14 @@
     <string name="link_hint">Link eingeben oder einfügen</string>
     <string name="paste_copied_link">Kopierten Link einfügen</string>
     <string name="no_preview">Keine Vorschau für diesen Dateityp.</string>
-    <string name="no_preview_hint">Zum Öffnen mit einer anderen App: ⋮ › Auf das Gerät exportieren.</string>
+    <string name="no_preview_hint">Zum Öffnen mit einer anderen App: für Details nach oben wischen › Exportieren.</string>
+    <string name="err_backup_too_large">Backup nicht erstellt: Die Daten der Mediathek sind größer, als eine Wiederherstellung lesen kann.</string>
+    <string name="setting_save_failed">Einstellung nicht gespeichert: Speicher voll oder nicht beschreibbar.</string>
+    <string name="note_leave_failed_title">Notiz nicht gespeichert</string>
+    <string name="note_leave_failed_text">Die Änderungen konnten nicht gespeichert werden. Versuche es erneut oder verlasse die Notiz ohne sie: Sie gehen verloren.</string>
+    <string name="note_leave_discard">Ohne Speichern verlassen</string>
+    <string name="pip_play">Abspielen</string>
+    <string name="pip_pause">Pause</string>
     <string name="note_empty">(leere Notiz)</string>
     <string name="edit">Bearbeiten</string>
     <string name="pdf_open_failed">PDF kann nicht geöffnet werden: Dokument möglicherweise beschädigt oder geschützt.</string>

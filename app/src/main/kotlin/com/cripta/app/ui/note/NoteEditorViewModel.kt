@@ -84,9 +84,9 @@ class NoteEditorViewModel @Inject constructor(
 
     /**
      * Save and then [onDone]. A new note goes into [folderId] (screen parameter) or else the folder
-     * from the route. On failure the editor stays open with the draft intact.
+     * from the route. On failure the editor stays open with the draft intact, and [onFailed] runs.
      */
-    fun save(id: String?, folderId: Long?, onDone: () -> Unit) {
+    fun save(id: String?, folderId: Long?, onFailed: () -> Unit = {}, onDone: () -> Unit) {
         if (saving) return
         // Never write over a note whose content we failed to read (see [loadFailed]).
         if (loadFailed) return
@@ -108,6 +108,7 @@ class NoteEditorViewModel @Inject constructor(
                 throw e
             } catch (_: Exception) {
                 error = str(R.string.note_save_failed)
+                onFailed()
             } finally {
                 saving = false
             }

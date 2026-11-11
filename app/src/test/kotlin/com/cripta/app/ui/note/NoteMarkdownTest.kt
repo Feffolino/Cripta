@@ -58,4 +58,31 @@ class NoteMarkdownTest {
         val link = out.spanStyles.first { it.item.color == Color.Blue && it.item.textDecoration != null }
         assertEquals("https://example.com/x_y", out.text.substring(link.start, link.end))
     }
+
+    @Test fun windowsLineEndingsKeepTheirMeaning() {
+        val t = "# Titolo\r\n- [x] fatto\r\n```\r\n**no**\r\n```\r\nfine"
+        // The editor form gives back the text exactly, CRs included.
+        assertEquals(t, NoteMarkdown.render(t, p, keepMarkers = true).text)
+        assertEquals("Titolo\n☑ fatto\n**no**\nfine", NoteMarkdown.render(t, p, keepMarkers = false).text)
+        assertEquals(true, NoteMarkdown.checkState("- [x] fatto\r"))
+        assertEquals("fatto", NoteMarkdown.checkText("- [x] fatto\r"))
+        assertEquals(true, NoteMarkdown.isFence("```\r"))
+        assertEquals("a\r\n- [ ] b\r\nc", NoteMarkdown.toggleCheck("a\r\n- [x] b\r\nc", 1))
+    }
+
+    @Test fun aSelectionEndingOnALineBreakLeavesTheNextLine() {
+        assertEquals("- uno\ndue", NoteMarkdown.linePrefix(TextFieldValue("uno\ndue", TextRange(0, 4)), "- ").text)
+        assertEquals("- uno\n- due", NoteMarkdown.linePrefix(TextFieldValue("uno\ndue", TextRange(0, 5)), "- ").text)
+    }
+
+    @Test fun addressesWithBracketsAreWhole() {
+        val wiki = "https://example.com/Function_(mathematics)"
+        assertEquals(wiki, NoteMarkdown.urlAt("vedi $wiki ora", 8))
+        assertEquals(wiki, NoteMarkdown.urlAt("vedi [f]($wiki) ora", 12))
+        // A bracket of the sentence around the address is not part of it.
+        assertEquals("https://example.com/a", NoteMarkdown.urlAt("(https://example.com/a)", 5))
+        val out = NoteMarkdown.render("[f]($wiki)", p, keepMarkers = false)
+        val link = out.getLinkAnnotations(0, out.length).single().item as androidx.compose.ui.text.LinkAnnotation.Url
+        assertEquals(wiki, link.url)
+    }
 }

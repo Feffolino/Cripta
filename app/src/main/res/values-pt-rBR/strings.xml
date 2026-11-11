@@ -1083,7 +1083,14 @@
     <string name="link_hint">Digite ou cole o link</string>
     <string name="paste_copied_link">Colar o link copiado</string>
     <string name="no_preview">Sem prévia para este tipo de arquivo.</string>
-    <string name="no_preview_hint">Para abrir com outro aplicativo: ⋮ › Exportar para o dispositivo.</string>
+    <string name="no_preview_hint">Para abrir com outro aplicativo: deslize para cima para ver os detalhes › Exportar.</string>
+    <string name="err_backup_too_large">Backup não criado: os dados da biblioteca excedem o que uma restauração consegue ler.</string>
+    <string name="setting_save_failed">Configuração não salva: armazenamento cheio ou sem permissão de gravação.</string>
+    <string name="note_leave_failed_title">Nota não salva</string>
+    <string name="note_leave_failed_text">Não foi possível salvar as alterações. Tente novamente ou saia sem elas: elas serão perdidas.</string>
+    <string name="note_leave_discard">Sair sem salvar</string>
+    <string name="pip_play">Reproduzir</string>
+    <string name="pip_pause">Pausar</string>
     <string name="note_empty">(nota vazia)</string>
     <string name="edit">Editar</string>
     <string name="pdf_open_failed">Não é possível abrir o PDF: o documento pode estar danificado ou protegido.</string>
