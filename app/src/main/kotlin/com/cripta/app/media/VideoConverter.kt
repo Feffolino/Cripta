@@ -106,9 +106,14 @@ class VideoConverter @Inject constructor(
             Effects.EMPTY
         }
         val edited = EditedMediaItem.Builder(source).setEffects(effects).build()
+        // The deprecated item constructor keeps the tracks of the source as they are (what
+        // Transformer uses for single-asset exports); withAudioAndVideoFrom would add a silent
+        // audio track to a video without sound.
+        @Suppress("DEPRECATION")
+        val sequence = androidx.media3.transformer.EditedMediaItemSequence.Builder(edited).build()
         // HDR (10-bit HLG/PQ) sources: tone-map to SDR. Without this, H.264 SDR output from an HDR
         // phone clip comes out with washed/green/garbled frames.
-        val composition = Composition.Builder(androidx.media3.transformer.EditedMediaItemSequence(edited))
+        val composition = Composition.Builder(sequence)
             .setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
             .build()
 

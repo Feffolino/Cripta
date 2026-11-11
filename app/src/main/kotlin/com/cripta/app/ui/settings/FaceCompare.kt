@@ -119,7 +119,12 @@ internal fun MomentClip(file: FileEntity, card: TrackCard, zoom: Boolean, vm: Se
                     DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true),
                 ).createMediaSource(MediaItem.fromUri("cripta://${file.id}"))
                 val at = card.timeMs
-                setMediaSource(ClippingMediaSource(source, maxOf(0L, at - 1_500) * 1000, (at + 1_500) * 1000))
+                setMediaSource(
+                    ClippingMediaSource.Builder(source)
+                        .setStartPositionMs(maxOf(0L, at - 1_500))
+                        .setEndPositionMs(at + 1_500)
+                        .build(),
+                )
                 volume = 0f
                 repeatMode = Player.REPEAT_MODE_ONE
                 addListener(object : Player.Listener {

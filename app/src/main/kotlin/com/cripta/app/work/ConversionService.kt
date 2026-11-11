@@ -1069,9 +1069,10 @@ class ConversionService : Service() {
      * valid downloaded stream may lack a declared duration; that does not make it invalid. */
     private fun isDownloadedVideo(file: java.io.File): Boolean {
         if (!file.isFile || file.length() == 0L) return false
-        val metadata = androidx.media3.exoplayer.MetadataRetriever.retrieveMetadata(
+        val retriever = androidx.media3.inspector.MetadataRetriever.Builder(
             this, androidx.media3.common.MediaItem.fromUri(Uri.fromFile(file)),
-        )
+        ).build()
+        val metadata = retriever.retrieveTrackGroups()
         return try {
             val tracks = metadata.get(20, java.util.concurrent.TimeUnit.SECONDS)
             (0 until tracks.length).any { tracks[it].type == androidx.media3.common.C.TRACK_TYPE_VIDEO }
@@ -1079,7 +1080,7 @@ class ConversionService : Service() {
             false
         } catch (e: java.util.concurrent.TimeoutException) {
             throw IllegalStateException(str(R.string.dl_err_analyse_downloaded), e)
-        } finally { metadata.cancel(true) }
+        } finally { metadata.cancel(true); retriever.close() }
     }
 
     /**
