@@ -5,6 +5,8 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Put the tags on a cover on one dark frosted tray, stepped to their rows with nothing empty beside a shorter one, so dark emoji read on dark pictures; emoji lose their shadow and "+N" is plain white text on the tray
+- Choose the size of the tags on covers (Impostazioni › Etichette › Sulle copertine › Dimensione): smaller tags fit more to a row, and the preview shows it at once
 - Show a folder's card live while customising it, with its files and empty; keep the icon search in view, with icons that fit the name and common ones
 - Show in the tag editor how many files and folders a tag is on, the pill assigned and not, and a cover with its mark; put name and short label on one line, delete from the editor, and keep a tag off the covers
 - In Impostazioni › Etichette, show each tag's file count and pin, sort by most used, merge two tags and delete the ones on no file
