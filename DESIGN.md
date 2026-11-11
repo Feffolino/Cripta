@@ -147,16 +147,29 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   emoji (`legacy.txt`, `TagIcons.migrationResolver`). Both editors offer icons fitting the tag or folder name in the app language and
   English, common icons, and a searchable list. Folder customisation shows the search and results
   beside its colour controls. On a cover a tag shows only its symbol or its
-  acronym, never the full name, in one of two looks (Impostazioni › Sulle copertine,
+  acronym, never the full name, in one of two looks (Impostazioni › Etichette › Sulle copertine,
   `CoverTagStyle`): **Bollini** (default), slots of one size (22dp, 18dp on small covers): a tag
-  with an emoji (its icon, or an alias that is an emoji) shows the emoji alone, 2dp smaller than
-  the slot, held on any picture by a soft shadow (`cover-emoji-shadow`: a 1px halo at 50% and
-  0 1px 1.5px at 30%; the only place emoji get a shadow); any other shows its alias (two
+  with an emoji (its icon, or an alias that is an emoji) shows the emoji alone, in colour, 20dp in
+  the 22dp slot, with no rim, halo or shadow of its own; any other shows its alias (two
   characters at most), else its initial, black on a round mark in its pastel; **Pillole piene**,
   pills with the icon and alias on the pastel. Pastel marks are opaque, with the thin dark rim and
   the soft shadow (`coverMarkFill`, `coverMarkInk`); with tag colours off they take the blue
-  preset (`#B9D2FF`). The "+N"
-  mark stays on the dark glass, white. Both pack from the bottom edge in up to 3 rows, then "+N".
+  preset (`#B9D2FF`). Marks are 4dp apart, 8dp from the cover's edges, and pack from the bottom
+  edge (full rows below, the short one on top) in up to 3 rows, then a white "+N" (no glass)
+  ends the top row (`packCoverRows`).
+- **Cover tray** (`CoverTray`, geometry in `ui/vault/CoverTray.kt`): every cover's marks sit on
+  one dark frosted tray, which is what holds a dark emoji on a dark picture: `#0A0C10` at 30%
+  (`TrayInk`) over the cover's own picture blurred 8dp (`TrayFrost`; the same image, crop and
+  centre, shifted so it lines up; no picture yet, the dark alone), 3dp padding round every mark,
+  14dp radius, no rim. It is one block for all rows, stepped to their widths (the union of one
+  rectangle per row, each as wide as its marks plus the padding), so nothing empty sits beside a
+  shorter row; outer corners take the 14dp radius and inner (concave) corners are filleted the
+  same, less where a step is too short (`trayRects`, `trayOutline`, `roundedOutline`). It is
+  masked to its outline, not clipped, so the curves stay smooth. Both looks use it, pills too.
+  "Dimensione delle etichette" (Piccola 0.8×, Media 1×, Grande 1.2×, `coverTagScale`) scales emoji, slot, pill,
+  gaps, padding and radius together, never the 8dp margin: smaller marks fit more to a row.
+  The tag editor's sample (`CoverMarkSample`) shows the one mark on the tray of a one-mark row
+  (dark only: its cover is a plain tile), in the covers' look and size.
 - **Covers** (`ThumbBox`, `MediaThumb`, `CoverThumb`): layout unchanged (name and caption under
   the cover, tags along its bottom edge), but only the essentials go on the picture: tags, the
   favourite star and the faces of the people in the media (top left, up to three then "+N", size
@@ -253,7 +266,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   (220 ms), a tick of haptics marks each new place, and on release it settles into its slot;
   TalkBack has "Su" / "Giù" on the row. "Ordine della libreria" right under it (Alfabetico, Più
   usate, Personalizzato; "Più usate" puts the tags on most files first, ties by name), then Sulle
-  copertine, Colori, Assegnazione rapida and, last, "Manutenzione": "Unisci due etichette" (a
+  copertine ("Mostra le etichette", then "Aspetto delle etichette", "Dimensione delle etichette"
+  Piccola / Media / Grande and "Righe di etichette" Auto / 1 / 2 / 3, each shown at once in the
+  preview), Colori, Assegnazione rapida and, last, "Manutenzione": "Unisci due etichette" (a
   tonal button; its dialog asks which tag goes, then which takes its files, and says what will
   happen before "Unisci") and, when some tag is on no file at all (the trash included), their
   names and a `DestructiveButton` "Elimina le non usate (N)" that asks first.

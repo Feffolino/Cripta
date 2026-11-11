@@ -1611,6 +1611,8 @@
     <string name="tag_style_bubble">Kreise</string>
     <string name="tag_style_pill">Volle Etiketten</string>
     <string name="tag_style_desc">Kreise: Symbol oder Anfangsbuchstabe. Volle Etiketten: Kürzel auf der Farbe des Schlagworts.</string>
+    <string name="tag_size">Größe der Schlagwörter</string>
+    <string name="tag_size_desc">Kleinere Schlagwörter passen öfter in eine Zeile.</string>
     <string name="sec_colours">Farben</string>
     <string name="coloured_tags">Farbige Schlagwörter</string>
     <string name="auto_colour_per_name">Automatisch: Eine andere Farbe je Name</string>

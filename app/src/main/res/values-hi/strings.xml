@@ -1611,6 +1611,8 @@
     <string name="tag_style_bubble">गोले</string>
     <string name="tag_style_pill">पूरे लेबल</string>
     <string name="tag_style_desc">गोले: आइकन या पहला अक्षर। पूरे लेबल: टैग के रंग पर उपनाम।</string>
+    <string name="tag_size">टैग का आकार</string>
+    <string name="tag_size_desc">छोटे टैग हों तो एक पंक्ति में ज़्यादा आते हैं।</string>
     <string name="sec_colours">रंग</string>
     <string name="coloured_tags">रंगीन टैग</string>
     <string name="auto_colour_per_name">अपने आप: हर नाम का अलग रंग</string>

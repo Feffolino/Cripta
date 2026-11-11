@@ -1672,6 +1672,8 @@
     <string name="tag_style_bubble">Bollini</string>
     <string name="tag_style_pill">Pillole piene</string>
     <string name="tag_style_desc">Bollini: l\'icona o l\'iniziale. Pillole piene: l\'alias sul colore dell\'etichetta.</string>
+    <string name="tag_size">Dimensione delle etichette</string>
+    <string name="tag_size_desc">Più sono piccole, più ne stanno in una riga.</string>
     <string name="sec_colours">Colori</string>
     <string name="coloured_tags">Etichette colorate</string>
     <string name="auto_colour_per_name">Automatico: un colore diverso per ogni nome</string>

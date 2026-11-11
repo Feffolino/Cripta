@@ -207,6 +207,7 @@ class MainActivity : FragmentActivity() {
                 com.cripta.app.ui.theme.TagColorsEnabled.on = set.display.tagColors
                 com.cripta.app.ui.theme.RecentTagsCount.value = set.display.recentTagsCount
                 com.cripta.app.ui.vault.CoverTagStyleNow.value = set.display.coverTagStyle
+                com.cripta.app.ui.vault.CoverTagStyleNow.size = set.display.coverTagSize
             }
             val invalidated by keyInvalidated.collectAsStateWithLifecycle()
             val auth by authUi.collectAsStateWithLifecycle()

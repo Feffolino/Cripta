@@ -1733,6 +1733,8 @@
     <string name="tag_style_bubble">Кружки</string>
     <string name="tag_style_pill">Полные метки</string>
     <string name="tag_style_desc">Кружки: значок или первая буква. Полные метки: сокращение на цвете метки.</string>
+    <string name="tag_size">Размер меток</string>
+    <string name="tag_size_desc">Чем меньше метки, тем больше их в строке.</string>
     <string name="sec_colours">Цвета</string>
     <string name="coloured_tags">Цветные метки</string>
     <string name="auto_colour_per_name">Автоматически: свой цвет для каждого имени</string>

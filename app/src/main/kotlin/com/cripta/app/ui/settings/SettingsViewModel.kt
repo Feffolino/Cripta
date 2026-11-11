@@ -207,6 +207,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowNoteFab(v: Boolean) = viewModelScope.launch { store.setShowNoteFab(v) }
     fun setShowRandomFab(v: Boolean) = viewModelScope.launch { store.setShowRandomFab(v) }
     fun setCoverTagRows(v: Int) = viewModelScope.launch { store.setCoverTagRows(v) }
+    fun setCoverTagSize(v: Int) = viewModelScope.launch { store.setCoverTagSize(v) }
     fun setCoverTagStyle(v: com.cripta.app.data.CoverTagStyle) = viewModelScope.launch { store.setCoverTagStyle(v) }
     fun setTagColors(v: Boolean) = viewModelScope.launch { store.setTagColors(v) }
     fun setDefaultTagColor(argb: Int?) = viewModelScope.launch { store.setDefaultTagColor(argb) }

@@ -1672,6 +1672,8 @@
     <string name="tag_style_bubble">Círculos</string>
     <string name="tag_style_pill">Etiquetas llenas</string>
     <string name="tag_style_desc">Círculos: el icono o la inicial. Etiquetas llenas: el alias sobre el color de la etiqueta.</string>
+    <string name="tag_size">Tamaño de las etiquetas</string>
+    <string name="tag_size_desc">Cuanto más pequeñas, más caben en una fila.</string>
     <string name="sec_colours">Colores</string>
     <string name="coloured_tags">Etiquetas de colores</string>
     <string name="auto_colour_per_name">Automático: un color distinto por nombre</string>

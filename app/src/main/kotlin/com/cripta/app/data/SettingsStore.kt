@@ -56,6 +56,8 @@ data class DisplayPrefs(
     /** Rows of tag badges on a grid cover: 0 = automatic (by cover size), else 1..3. */
     val coverTagRows: Int = 0,
     val coverTagStyle: CoverTagStyle = CoverTagStyle.BUBBLE,
+    /** Size of the tags on covers: 0 small, 1 medium, 2 large (marks, gaps and tray scale together). */
+    val coverTagSize: Int = 1,
     /** Give each tag its own stable colour (same tag = same colour everywhere). */
     val tagColors: Boolean = true,
     /** Colour (ARGB) of every tag without its own colour; null = automatic, one per name. */
@@ -220,6 +222,7 @@ class SettingsStore @Inject constructor(
     private val tagSortModeKey = intPreferencesKey("tag_sort_mode")
     private val coverTagRowsKey = intPreferencesKey("cover_tag_rows")
     private val coverTagStyleKey = intPreferencesKey("cover_tag_style")
+    private val coverTagSizeKey = intPreferencesKey("cover_tag_size")
     private val tagColorsKey = booleanPreferencesKey("tag_colors")
     private val defaultTagColorKey = intPreferencesKey("default_tag_color")
     private val durationBadgeKey = booleanPreferencesKey("duration_badge")
@@ -315,6 +318,7 @@ class SettingsStore @Inject constructor(
                 showRandomFab = p[showRandomFabKey] ?: true,
                 coverTagRows = (p[coverTagRowsKey] ?: 0).coerceIn(0, 3),
                 coverTagStyle = CoverTagStyle.entries.getOrElse(p[coverTagStyleKey] ?: 0) { CoverTagStyle.BUBBLE },
+                coverTagSize = (p[coverTagSizeKey] ?: 1).coerceIn(0, 2),
                 tagColors = p[tagColorsKey] ?: true,
                 // A preset of an earlier palette reads as its lighter successor.
                 defaultTagColor = p[defaultTagColorKey]?.let { com.cripta.app.ui.theme.currentPresetColor(it) },
@@ -399,6 +403,7 @@ class SettingsStore @Inject constructor(
     suspend fun setShowRandomFab(v: Boolean) { context.dataStore.edit { it[showRandomFabKey] = v } }
     suspend fun setCoverTagRows(v: Int) { context.dataStore.edit { it[coverTagRowsKey] = v.coerceIn(0, 3) } }
     suspend fun setCoverTagStyle(v: CoverTagStyle) { context.dataStore.edit { it[coverTagStyleKey] = v.ordinal } }
+    suspend fun setCoverTagSize(v: Int) { context.dataStore.edit { it[coverTagSizeKey] = v.coerceIn(0, 2) } }
     suspend fun setTagColors(v: Boolean) { context.dataStore.edit { it[tagColorsKey] = v } }
     suspend fun setDefaultTagColor(argb: Int?) {
         context.dataStore.edit { if (argb == null) it.remove(defaultTagColorKey) else it[defaultTagColorKey] = argb }
@@ -579,7 +584,7 @@ class SettingsStore @Inject constructor(
             "ASPETTO" -> listOf(themeKey, dynamicKey, statsStripKey, showDateHeadersKey, showFileInfoKey,
                 showFolderInfoKey, foldersHorizontalKey, showNoteFabKey, showRandomFabKey, filterCurrentFolderOnlyKey, foldersCollapsedKey, durationBadgeKey, qualityBadgeKey,
                 coverPeopleKey, coverPeopleSizeKey)
-            "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, tagColorsKey, defaultTagColorKey,
+            "ETICHETTE" -> listOf(showTagsCoverKey, coverTagRowsKey, coverTagStyleKey, coverTagSizeKey, tagColorsKey, defaultTagColorKey,
                 recentTagsKey, recentTagsCountKey, quickTagsKey, tagSortModeKey)
             "VISUALIZZATORE" -> listOf(resumeKey, videoLoopKey, videoMutedKey,
                 seekStepKey, gestureKey, gestureVolumeKey, autoRotateKey, rotationLockKey, pipKey, filmstripKey, pauseOnLeaveKey, stripShapeKey, stripSpanKey, stripSizeKey, stripAspectKey, autoNextKey, autoNextSecKey,

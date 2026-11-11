@@ -1855,6 +1855,8 @@
     <string name="tag_style_bubble">دوائر</string>
     <string name="tag_style_pill">وسوم كاملة</string>
     <string name="tag_style_desc">دوائر: الأيقونة أو الحرف الأول. وسوم كاملة: الاسم المختصر على لون الوسم.</string>
+    <string name="tag_size">حجم الوسوم</string>
+    <string name="tag_size_desc">كلما صغرت الوسوم اتسع الصف لعدد أكبر منها.</string>
     <string name="sec_colours">الألوان</string>
     <string name="coloured_tags">وسوم ملونة</string>
     <string name="auto_colour_per_name">تلقائي: لون مختلف لكل اسم</string>

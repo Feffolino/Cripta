@@ -1550,6 +1550,8 @@
     <string name="tag_style_bubble">원형</string>
     <string name="tag_style_pill">라벨</string>
     <string name="tag_style_desc">원형: 아이콘 또는 첫 글자. 라벨: 태그 색상 위에 별칭.</string>
+    <string name="tag_size">태그 크기</string>
+    <string name="tag_size_desc">작을수록 한 줄에 더 많이 들어갑니다.</string>
     <string name="sec_colours">색상</string>
     <string name="coloured_tags">색상 태그</string>
     <string name="auto_colour_per_name">자동: 이름마다 다른 색상</string>

@@ -372,6 +372,8 @@ fun SettingsScreen(
                                 ChoiceRow(str(R.string.tag_style), listOf(com.cripta.app.data.CoverTagStyle.BUBBLE to str(R.string.tag_style_bubble),
                                     com.cripta.app.data.CoverTagStyle.PILL to str(R.string.tag_style_pill)), s.display.coverTagStyle,
                                     indent = 0.dp, desc = str(R.string.tag_style_desc)) { vm.setCoverTagStyle(it) }
+                                ChoiceRow(str(R.string.tag_size), listOf(0 to str(R.string.small_f), 1 to str(R.string.medium_f), 2 to str(R.string.large_f)),
+                                    s.display.coverTagSize, indent = 0.dp, desc = str(R.string.tag_size_desc)) { vm.setCoverTagSize(it) }
                                 ChoiceRow(str(R.string.tag_rows), listOf(0 to str(R.string.quality_auto), 1 to "1", 2 to "2", 3 to "3"), s.display.coverTagRows,
                                     indent = 0.dp, desc = str(R.string.tag_rows_desc)) { vm.setCoverTagRows(it) }
                             }

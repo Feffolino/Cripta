@@ -1550,6 +1550,8 @@
     <string name="tag_style_bubble">圆点</string>
     <string name="tag_style_pill">完整标签</string>
     <string name="tag_style_desc">圆点：图标或首字母。完整标签：标签颜色上显示别名。</string>
+    <string name="tag_size">标签大小</string>
+    <string name="tag_size_desc">越小，一行能放下的越多。</string>
     <string name="sec_colours">颜色</string>
     <string name="coloured_tags">彩色标签</string>
     <string name="auto_colour_per_name">自动：不同名称使用不同颜色</string>

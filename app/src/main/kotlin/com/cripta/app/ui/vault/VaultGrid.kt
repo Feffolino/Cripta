@@ -1,6 +1,8 @@
 package com.cripta.app.ui.vault
 
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.graphics.luminance
@@ -254,11 +256,13 @@ internal fun ThumbBox(
             androidx.compose.animation.core.animateFloatAsState(w, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.LONG), label = "watched").value
         }
         if (tags.isNotEmpty()) {
+            // Over the whole cover, so the tray's frosting lines up with the picture under it.
             TagBadges(
                 tagsIn = tags,
                 display = display,
-                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                    .padding(bottom = if (shownWatched != null) 4.dp else 0.dp),
+                modifier = Modifier.matchParentSize(),
+                backdrop = bmp,
+                bottomLift = if (shownWatched != null) 4.dp else 0.dp,
             )
         }
         if (shownWatched != null) {
@@ -311,35 +315,51 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
 }
 
 /**
- * Tags over the bottom of a cover, in the style picked in Impostazioni › Sulle copertine:
- * - [CoverTagStyle.BUBBLE] (default): round 22dp marks of one size, the tag's icon or its initial,
- *   so a row of them reads as a tidy strip and hides little of the picture;
- * - [CoverTagStyle.PILL]: pills with the tag's alias (and icon), no see-through.
- * Both fill with the tag's pastel ([coverMarkFill], a thin dark rim and a soft shadow) and draw in
- * black ([coverMarkInk]); a tag with an emoji shows the emoji alone, never on a disc.
- * Up to 3 rows (automatic: by cover width, or fixed by the user), filled from the bottom; a "+N"
- * mark appears only once every row is full. A tag assigned while the cover is on screen pops in.
+ * Tags over the bottom of a cover, in the style picked in Impostazioni › Etichette › Sulle copertine:
+ * - [CoverTagStyle.BUBBLE] (default): round marks of one size, the tag's emoji alone or its initial
+ *   on its pastel, so a row of them reads as a tidy strip and hides little of the picture;
+ * - [CoverTagStyle.PILL]: pills with the tag's alias (and icon) on its pastel.
+ * Every mark sits on one dark tray ([CoverTray]): the cover's own picture under it, frosted, then
+ * [TrayInk]; it follows the rows as one stepped block, nothing empty beside a shorter row.
+ * Up to 3 rows (automatic: by cover width, or fixed by the user), filled from the bottom; a white
+ * "+N" ends the top row only once every row is full. "Dimensione" scales marks, gaps and tray
+ * together ([coverTagScale]), so smaller marks fit more to a row. A tag assigned while the cover is
+ * on screen pops in.
+ *
+ * [backdrop] is the cover's picture when [modifier] makes this fill the whole cover (the frosting
+ * lines up with it); [bottomLift] raises the marks over the cover's progress bar.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun TagBadges(tagsIn: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier, outerPad: androidx.compose.ui.unit.Dp = 8.dp) {
+internal fun TagBadges(
+    tagsIn: List<TagEntity>,
+    display: DisplayPrefs?,
+    modifier: Modifier,
+    outerPad: androidx.compose.ui.unit.Dp = 8.dp,
+    backdrop: android.graphics.Bitmap? = null,
+    bottomLift: androidx.compose.ui.unit.Dp = 0.dp,
+) {
     // In the library's order (pinned first): when room runs out, the tags put first are the ones kept.
     val order = LocalTagOrder.current
     // Tags kept off the covers (Modifica etichetta › "Sulle copertine") are left out here.
     val tags = remember(tagsIn, order) { libraryOrder(tagsIn.filter { it.onCovers }, order) }
+    if (tags.isEmpty()) return
     val measurer = rememberTextMeasurer()
-    val style = MaterialTheme.typography.labelSmall
     val density = LocalDensity.current
     val bubbles = (display?.coverTagStyle ?: com.cripta.app.data.CoverTagStyle.BUBBLE) == com.cripta.app.data.CoverTagStyle.BUBBLE
+    val scale = coverTagScale(display?.coverTagSize ?: 1)
+    val base = MaterialTheme.typography.labelSmall
+    val style = remember(base, scale) { scaledLabel(base, scale) }
     // Tags the cover had when it appeared: only ones added after that animate in.
     val knownTags = remember { tags.mapTo(mutableSetOf()) { it.id } }
 
     BoxWithConstraints(modifier) {
-        // DS cr-cover__bl: 8dp from the edges, 4dp between marks.
-        val availDp = maxWidth - outerPad * 2
-        val availPx = with(density) { availDp.toPx() }
-        val spacingPx = with(density) { 4.dp.toPx() }
-        val bubbleDp = if (maxWidth < 100.dp) 18.dp else 22.dp
+        val m = remember(maxWidth, scale, density, style, bubbles) {
+            CoverMarkMetrics.of(density, measurer, style, scale, small = maxWidth < 100.dp, bubbles = bubbles)
+        }
+        // DS cr-cover__bl: 8dp from the edges.
+        val outerPx = with(density) { outerPad.roundToPx() }
+        val availPx = (constraints.maxWidth - 2 * outerPx).coerceAtLeast(0).toFloat()
         val rowsWanted = when (val r = display?.coverTagRows ?: 0) {
             0 -> when {
                 maxWidth >= 150.dp -> 3
@@ -349,82 +369,47 @@ internal fun TagBadges(tagsIn: List<TagEntity>, display: DisplayPrefs?, modifier
             else -> r
         }
         val texts = remember(tags, bubbles) { tags.map { if (bubbles) bubbleText(it) else badgeText(it, display) } }
-        // On-screen width of each mark, capped to a full row: a bubble is a fixed circle; a pill is
-        // its measured text plus the icon and 8dp of padding on each side.
-        val hPadPx = with(density) { 16.dp.toPx() }
-        val iconPx = with(density) { 14.dp.toPx() }
-        val iconGapPx = with(density) { 4.dp.toPx() }
-        val bubblePx = with(density) { bubbleDp.toPx() }
-        val widths = remember(texts, availPx, tags, bubbles, bubblePx) {
-            texts.mapIndexed { i, t ->
-                if (bubbles) bubblePx
-                else {
-                    val text = if (t.isEmpty()) 0f else measurer.measure(t, style).size.width.toFloat()
-                    val icon = if (tags[i].icon == null) 0f else iconPx + if (t.isEmpty()) 0f else iconGapPx
-                    minOf(text + icon + hPadPx, availPx)
-                }
-            }
+        val widths = remember(texts, tags, m, availPx) { texts.mapIndexed { i, t -> minOf(m.markWidth(t, tags[i].icon != null), availPx) } }
+        val layout = remember(widths, availPx, rowsWanted, m) {
+            packCoverRows(widths, availPx, m.gap.toFloat(), rowsWanted) { n -> m.overflowWidth(n) }
         }
-
-        // Greedy row packing: returns the tag indices of each row.
-        fun pack(reserveLastPx: Float): List<List<Int>> {
-            val rows = mutableListOf<MutableList<Int>>()
-            var i = 0
-            while (i < widths.size && rows.size < rowsWanted) {
-                val row = mutableListOf<Int>()
-                val last = rows.size == rowsWanted - 1
-                val budget = if (last) availPx - reserveLastPx else availPx
-                var used = 0f
-                while (i < widths.size) {
-                    val add = widths[i] + if (row.isNotEmpty()) spacingPx else 0f
-                    // A row always takes its first mark: on the last row, beside "+N", a pill too wide
-                    // for what is left is narrowed (ellipsized) instead of leaving the cover with no
-                    // row and the "+N" with nowhere to be drawn.
-                    if (used + add <= budget || row.isEmpty()) { row += i; used += add; i++ } else break
-                }
-                if (row.isEmpty()) break
-                rows += row
-            }
-            return rows
+        val rowWidths = remember(layout, m) { layout.rowWidths(m.gap.toFloat()) }
+        val n = layout.rows.size
+        val contentH = n * m.rowHeight + (n - 1).coerceAtLeast(0) * m.gap
+        val tray = remember(rowWidths, m) {
+            trayComposePath(trayPath(rowWidths, m.rowHeight.toFloat(), m.gap.toFloat(), m.pad.toFloat(), m.radius.toFloat()))
         }
+        val trayW = kotlin.math.ceil((rowWidths.maxOrNull() ?: 0f) + 2 * m.pad).toInt()
+        val trayH = contentH + 2 * m.pad
+        val liftPx = with(density) { bottomLift.roundToPx() }
+        // Where the tray sits on the cover, for the frosting to line up with the picture under it.
+        val cover = if (backdrop != null && constraints.hasBoundedHeight)
+            androidx.compose.ui.unit.IntSize(constraints.maxWidth, constraints.maxHeight) else null
+        val at = androidx.compose.ui.unit.IntOffset(outerPx - m.pad, (cover?.height ?: 0) - liftPx - outerPx - contentH - m.pad)
+        val gapDp = with(density) { m.gap.toDp() }
 
-        var rows = pack(0f)
-        var shown = rows.sumOf { it.size }
-        if (shown < tags.size) {
-            val overflowPx = maxOf(measurer.measure("+${tags.size}", style).size.width + hPadPx, if (bubbles) bubblePx else 0f) + spacingPx
-            rows = pack(overflowPx)
-            shown = rows.sumOf { it.size }
-        }
-        val extra = tags.size - shown
-        // The top row shares its width with "+N": its marks are kept to what is left.
-        val topRowMaxDp = if (extra > 0) with(density) {
-            (availPx - maxOf(measurer.measure("+$extra", style).size.width + hPadPx, if (bubbles) bubblePx else 0f) - spacingPx).coerceAtLeast(0f).toDp()
-        } else availDp
-
-        Column(
-            Modifier.padding(outerPad),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // Filled from the bottom: the full rows sit on the cover's edge and the shorter
-            // last row (plus the "+N" mark) goes on top, so it hides less of the image.
-            rows.asReversed().forEachIndexed { r, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    row.forEach { i ->
-                        androidx.compose.runtime.key(tags[i].id) {
-                            val fresh = remember { tags[i].id !in knownTags }
-                            androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
-                            val mod = Modifier.popIn(fresh)
-                            if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), bubbleDp, mod)
-                            else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), if (r == 0) topRowMaxDp else availDp, mod)
+        Box(Modifier.align(Alignment.BottomStart).padding(start = outerPad, bottom = outerPad + bottomLift)) {
+            CoverTray(tray, trayW, trayH, m.pad, if (cover != null) backdrop else null, at, cover)
+            Column(verticalArrangement = Arrangement.spacedBy(gapDp)) {
+                // Filled from the bottom: the full rows sit on the cover's edge and the shorter
+                // last row (plus the "+N") goes on top, so it hides less of the image.
+                layout.rows.indices.reversed().forEach { r ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(gapDp), verticalAlignment = Alignment.CenterVertically) {
+                        layout.rows[r].forEachIndexed { k, i ->
+                            androidx.compose.runtime.key(tags[i].id) {
+                                val fresh = remember { tags[i].id !in knownTags }
+                                androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
+                                val mod = Modifier.popIn(fresh)
+                                if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), with(density) { m.slot.toDp() }, mod)
+                                else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), m, with(density) { layout.widths[r][k].toDp() }, mod)
+                            }
                         }
-                    }
-                    if (r == 0 && extra > 0) {
-                        if (bubbles) Box(
-                            Modifier.heightIn(min = bubbleDp).widthIn(min = bubbleDp).clip(CircleShape)
-                                .background(com.cripta.app.ui.components.OnImageGlass).padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center,
-                        ) { Text("+$extra", style = style, color = Color.White, maxLines = 1) }
-                        else com.cripta.app.ui.components.MoreTagsPill(extra, onImage = true)
+                        if (r == layout.rows.lastIndex && layout.extra > 0) {
+                            Box(Modifier.size(with(density) { layout.overflowWidth.toDp() }, with(density) { m.rowHeight.toDp() }),
+                                contentAlignment = Alignment.Center) {
+                                Text("+${layout.extra}", style = style, color = Color.White, maxLines = 1, softWrap = false)
+                            }
+                        }
                     }
                 }
             }
@@ -432,16 +417,164 @@ internal fun TagBadges(tagsIn: List<TagEntity>, display: DisplayPrefs?, modifier
     }
 }
 
-/** "Bollini" or "Pillole" (Impostazioni › Copertine), for marks drawn away from a cover (the tag editor). */
-object CoverTagStyleNow {
-    var value by mutableStateOf(com.cripta.app.data.CoverTagStyle.BUBBLE)
+/**
+ * Sizes of the cover marks in whole pixels (as the layout rounds them), for one cover width and
+ * "Dimensione" [scale]: 20dp emoji in a 22dp slot (18dp on covers under 100dp), 4dp apart, on a
+ * tray of 3dp padding and 14dp radius; pills 22dp tall with 8dp sides.
+ */
+internal class CoverMarkMetrics private constructor(
+    val slot: Int,
+    val rowHeight: Int,
+    val gap: Int,
+    val pad: Int,
+    val radius: Int,
+    val pillSide: Int,
+    val icon: Int,
+    val iconGap: Int,
+    val bubbles: Boolean,
+    /** Text of pills and of "+N": labelSmall, scaled. */
+    val style: androidx.compose.ui.text.TextStyle,
+    private val measure: (String) -> Int,
+) {
+    /** On-screen width of a mark: a bubble is its slot; a pill its text plus icon and sides. */
+    fun markWidth(text: String, hasIcon: Boolean): Float =
+        if (bubbles) slot.toFloat()
+        else {
+            val t = if (text.isEmpty()) 0 else measure(text)
+            val i = if (!hasIcon) 0 else icon + if (text.isEmpty()) 0 else iconGap
+            (t + i + 2 * pillSide).toFloat()
+        }
+
+    /** Width of the white "+[n]" that ends a full top row: its text with a little room, at least a slot. */
+    fun overflowWidth(n: Int): Float = maxOf(measure("+$n") + 2 * iconGap, rowHeight).toFloat()
+
+    companion object {
+        fun of(
+            density: androidx.compose.ui.unit.Density,
+            measurer: androidx.compose.ui.text.TextMeasurer,
+            style: androidx.compose.ui.text.TextStyle,
+            scale: Float,
+            small: Boolean,
+            bubbles: Boolean,
+        ): CoverMarkMetrics = with(density) {
+            val measure = { s: String -> measurer.measure(s, style, maxLines = 1, softWrap = false).size.width }
+            val slot = ((if (small) 18.dp else 22.dp) * scale).roundToPx()
+            val pillH = maxOf((22.dp * scale).roundToPx(),
+                measurer.measure("Ag", style, maxLines = 1).size.height + (4.dp * scale).roundToPx())
+            CoverMarkMetrics(
+                slot = slot,
+                rowHeight = if (bubbles) slot else pillH,
+                gap = (4.dp * scale).roundToPx(),
+                pad = (3.dp * scale).roundToPx(),
+                radius = (14.dp * scale).roundToPx(),
+                pillSide = if (bubbles) 0 else (8.dp * scale).roundToPx(),
+                icon = (14.dp * scale).roundToPx(),
+                iconGap = (4.dp * scale).roundToPx(),
+                bubbles = bubbles,
+                style = style,
+                measure = measure,
+            )
+        }
+    }
 }
 
-/** The mark [tag] gets on a cover, in the style the covers use: the tag editor's preview. */
+/** [base] (labelSmall) at [scale]: the text of pills and "+N" for the "Dimensione" setting. */
+private fun scaledLabel(base: androidx.compose.ui.text.TextStyle, scale: Float): androidx.compose.ui.text.TextStyle =
+    base.copy(
+        fontSize = if (base.fontSize.isSpecified) base.fontSize * scale else base.fontSize,
+        lineHeight = if (base.lineHeight.isSpecified) base.lineHeight * scale else base.lineHeight,
+    )
+
+/** DS `cover-tray`: the dark of the tray behind the cover marks (#0A0C10 at 30%). */
+internal val TrayInk = Color(0x4D0A0C10)
+
+/** Frosting of the tray: the picture under it, blurred this much. */
+private val TrayFrost = 8.dp
+
+/** [ops] as a Compose path. */
+internal fun trayComposePath(ops: List<TrayPathOp>): androidx.compose.ui.graphics.Path =
+    androidx.compose.ui.graphics.Path().apply {
+        ops.forEach { op ->
+            when (op) {
+                is TrayPathOp.MoveTo -> moveTo(op.x, op.y)
+                is TrayPathOp.LineTo -> lineTo(op.x, op.y)
+                is TrayPathOp.CubicTo -> cubicTo(op.x1, op.y1, op.x2, op.y2, op.x, op.y)
+                TrayPathOp.Close -> close()
+            }
+        }
+    }
+
+/**
+ * The dark tray behind a cover's marks, [w]×[h] px, drawn [pad] up and left of the marks' corner
+ * and taking no room itself. Inside [path]: the cover's [backdrop] (sized to [cover], the tray at
+ * [at] on it) blurred by [TrayFrost], then [TrayInk]; without a picture, the ink alone. Masked
+ * with the path (not clipped), so its curved edges are smooth.
+ */
+@Composable
+private fun CoverTray(
+    path: androidx.compose.ui.graphics.Path,
+    w: Int,
+    h: Int,
+    pad: Int,
+    backdrop: android.graphics.Bitmap?,
+    at: androidx.compose.ui.unit.IntOffset,
+    cover: androidx.compose.ui.unit.IntSize?,
+) {
+    Box(
+        Modifier
+            .layout { measurable, _ ->
+                val p = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
+                layout(0, 0) { p.place(-pad, -pad) }
+            }
+            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawPath(path, TrayInk)
+                drawPath(path, Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+            },
+    ) {
+        if (backdrop != null && cover != null) {
+            val image = remember(backdrop) { backdrop.asImageBitmap() }
+            Box(Modifier.fillMaxSize().blur(TrayFrost, androidx.compose.ui.draw.BlurredEdgeTreatment.Rectangle)) {
+                // The same picture as the cover (same crop and centre), shifted so it lines up.
+                Image(image, null, contentScale = ContentScale.Crop, modifier = Modifier.layout { measurable, _ ->
+                    val p = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(cover.width, cover.height))
+                    layout(w, h) { p.place(-at.x, -at.y) }
+                })
+            }
+        }
+    }
+}
+
+/** "Bollini" or "Pillole" and their "Dimensione" (Impostazioni › Etichette), for marks drawn away from a cover (the tag editor). */
+object CoverTagStyleNow {
+    var value by mutableStateOf(com.cripta.app.data.CoverTagStyle.BUBBLE)
+    var size by mutableStateOf(1)
+}
+
+/**
+ * The mark [tag] gets on a cover, in the style and size the covers use, on its own small tray (the
+ * tray of a one-mark row): the tag editor's preview. Its picture is a plain tile, so the tray has
+ * no frosting there, only its dark.
+ */
 @Composable
 internal fun CoverMarkSample(tag: TagEntity, color: Color) {
-    if (CoverTagStyleNow.value == com.cripta.app.data.CoverTagStyle.BUBBLE) CoverTagBubble(tag, bubbleText(tag), color, 22.dp, Modifier)
-    else CoverTagChip(tag, badgeText(tag, null), color, 160.dp, Modifier)
+    val scale = coverTagScale(CoverTagStyleNow.size)
+    val bubbles = CoverTagStyleNow.value == com.cripta.app.data.CoverTagStyle.BUBBLE
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val base = MaterialTheme.typography.labelSmall
+    val style = remember(base, scale) { scaledLabel(base, scale) }
+    val m = remember(density, style, scale, bubbles) { CoverMarkMetrics.of(density, measurer, style, scale, small = false, bubbles = bubbles) }
+    val pad = with(density) { m.pad.toDp() }
+    Box(Modifier.background(TrayInk, androidx.compose.foundation.shape.RoundedCornerShape(with(density) { m.radius.toDp() })).padding(pad)) {
+        if (bubbles) CoverTagBubble(tag, bubbleText(tag), color, with(density) { m.slot.toDp() }, Modifier)
+        else {
+            val text = badgeText(tag, null)
+            val w = minOf(m.markWidth(text, tag.icon != null), with(density) { 160.dp.toPx() })
+            CoverTagChip(tag, text, color, m, with(density) { w.toDp() }, Modifier)
+        }
+    }
 }
 
 /** Position of each tag id in the library (Impostazioni › Etichette); empty = not known here. */
@@ -488,24 +621,18 @@ private fun Modifier.coverMark(fill: Color, shape: androidx.compose.ui.graphics.
         .clip(shape).background(fill).border(1.5.dp, CoverMarkRim, shape)
 
 /**
- * A tag's emoji alone on a cover, no disc behind it, held on any picture by a soft shadow
- * (DS `cover-emoji-shadow`: a 1px halo at 50% and 0 1px 1.5px at 30%). Only cover marks have it.
+ * A tag's emoji alone on a cover, in colour, no disc, rim or shadow behind it: the tray under the
+ * marks ([TagBadges]) is what holds it on any picture.
  */
 @Composable
 private fun CoverEmoji(vector: ImageVector, size: androidx.compose.ui.unit.Dp) {
-    Box(Modifier.size(size)) {
-        Icon(vector, null, tint = Color(0x4D000000), modifier = Modifier.matchParentSize().offset(y = 1.dp)
-            .blur(1.5.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded))
-        Icon(vector, null, tint = Color(0x80000000), modifier = Modifier.matchParentSize()
-            .blur(1.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded))
-        Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize())
-    }
+    Icon(vector, null, tint = Color.Unspecified, modifier = Modifier.size(size))
 }
 
 /**
- * One cover mark of a tag. With an emoji (its icon, or an acronym that is an emoji) the emoji alone,
- * 2dp smaller than the slot, with [CoverEmoji]'s shadow: never on a disc. Otherwise a round mark in
- * the tag's pastel ([coverMarkFill], rim and shadow), its acronym or initial in [coverMarkInk].
+ * One cover mark of a tag, [size] square. With an emoji (its icon, or an acronym that is an emoji)
+ * the emoji alone, 20/22 of the slot ([CoverEmoji]): never on a disc. Otherwise a round mark in the
+ * tag's pastel ([coverMarkFill], rim and shadow), its acronym or initial in [coverMarkInk].
  */
 @Composable
 private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
@@ -514,20 +641,16 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
     val label = text.ifEmpty { tagAlias(tag) }
     val emojiAlias = icon == null && isEmojiText(label)
     if (icon != null || emojiAlias) {
-        val emoji = size - 2.dp
+        val emoji = size * (20f / 22f)
         Box(modifier.size(size).semantics { contentDescription = tag.name }, contentAlignment = Alignment.Center) {
             when {
                 drawn != null -> CoverEmoji(drawn, emoji)
                 // Its room is kept while the icon loads, so nothing shifts.
                 icon != null -> Unit
                 else -> {
-                    val density = LocalDensity.current
-                    val sp = with(density) { (emoji * 0.82f).toSp() }
-                    Text(label, maxLines = 1, softWrap = false, style = androidx.compose.ui.text.TextStyle(
-                        fontSize = sp, lineHeight = sp,
-                        shadow = androidx.compose.ui.graphics.Shadow(Color(0x80000000),
-                            Offset(0f, with(density) { 1.dp.toPx() }), with(density) { 2.dp.toPx() }),
-                    ))
+                    val sp = with(LocalDensity.current) { (emoji * 0.82f).toSp() }
+                    Text(label, maxLines = 1, softWrap = false,
+                        style = androidx.compose.ui.text.TextStyle(fontSize = sp, lineHeight = sp))
                 }
             }
         }
@@ -539,27 +662,34 @@ private fun CoverTagBubble(tag: TagEntity, text: String, color: Color, size: and
         modifier.size(size).coverMark(bg, CircleShape).semantics { contentDescription = tag.name },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = if (size < 22.dp) 9.sp else 11.sp),
-            color = fg, maxLines = 1)
+        // 11sp in the 22dp slot (half of it, as in the DS), scaled with the slot.
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = (11f * size.value / 22f).sp,
+            lineHeight = (14f * size.value / 22f).sp), color = fg, maxLines = 1, softWrap = false)
     }
 }
 
-/** A pill in the tag's pastel ([coverMarkFill], rim and shadow), its emoji and acronym in [coverMarkInk]. */
+/**
+ * A pill in the tag's pastel ([coverMarkFill], rim and shadow), its emoji and acronym in
+ * [coverMarkInk], exactly [width] wide and [m]'s row tall so the tray behind it fits.
+ */
 @Composable
-private fun CoverTagChip(tag: TagEntity, text: String, color: Color, maxWidth: androidx.compose.ui.unit.Dp, modifier: Modifier) {
+private fun CoverTagChip(tag: TagEntity, text: String, color: Color, m: CoverMarkMetrics, width: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val bg = coverMarkFill(color)
     val fg = coverMarkInk(bg)
     val icon = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tag.icon)
     val drawn = com.cripta.app.ui.tagicons.rememberTagIcon(icon)
     val shownText = if (icon == null) text.ifEmpty { tagAlias(tag) } else text
+    val density = LocalDensity.current
     Row(
-        modifier.widthIn(max = maxWidth).heightIn(min = 22.dp).coverMark(bg, CircleShape)
-            .padding(horizontal = 8.dp, vertical = 2.dp).semantics { contentDescription = tag.name },
+        modifier.width(width).height(with(density) { m.rowHeight.toDp() }).coverMark(bg, CircleShape)
+            .padding(horizontal = with(density) { m.pillSide.toDp() }).semantics { contentDescription = tag.name },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Box(Modifier.size(14.dp)) { if (drawn != null) Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize()) }
-        if (icon != null && text.isNotEmpty()) Spacer(Modifier.width(4.dp))
-        if (shownText.isNotEmpty()) Text(shownText, style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1,
+        if (icon != null) Box(Modifier.size(with(density) { m.icon.toDp() })) {
+            if (drawn != null) Icon(drawn, null, tint = Color.Unspecified, modifier = Modifier.matchParentSize())
+        }
+        if (icon != null && text.isNotEmpty()) Spacer(Modifier.width(with(density) { m.iconGap.toDp() }))
+        if (shownText.isNotEmpty()) Text(shownText, style = m.style, color = fg, maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
