@@ -31,6 +31,13 @@ class FaceApartTest {
     }
 
     @Test
+    fun facesKeptByAnIncompleteReadingKeepTheirPairs() {
+        // A stalled reading found 1 again as 11 and did not reach 2: 2 stays, and so does its pair.
+        val out = FaceApart.remap(listOf(pair(1, 2), pair(2, 3)), mapOf(1L to 11L, 2L to 2L))
+        assertEquals(setOf(pair(2, 11), pair(2, 3)), out.toSet())
+    }
+
+    @Test
     fun twoSidesBecomingOneFaceDropThePair() {
         val out = FaceApart.remap(listOf(pair(1, 2), pair(1, 5), pair(2, 5)), mapOf(1L to 9L, 2L to 9L))
         // (1,2) is now one face; (1,5) and (2,5) both become (5,9), kept once.

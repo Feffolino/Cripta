@@ -287,7 +287,11 @@ class FaceRepository @Inject constructor(
         db.withTransaction {
             // Faces added by hand (no sampled frame) are the user's: a new analysis keeps them.
             val old = dao.trackRowsOf(listOf(file.id)).filter { it.frames != 0L }
-            dao.deleteScannedTracksOf(file.id)
+            // A reading that stalled or failed part way says nothing about the faces it did not
+            // reach: deleted up front, the faces the user confirmed (and their "no", their splits)
+            // went with a media that only timed out. Then only the old faces found again give way.
+            val complete = status == "ok"
+            if (complete) dao.deleteScannedTracksOf(file.id)
             val spans = HashMap<Long, LongRange>()
             val added = tracks.map { t ->
                 val best = t.best.first()
@@ -304,12 +308,14 @@ class FaceRepository @Inject constructor(
             }
             if (old.isNotEmpty()) {
                 val moved = carry(old, added, spans, FramePlan.spacing(file.durationMs ?: 0L))
+                if (!complete) moved.keys.toList().chunked(500).forEach { dao.deleteTracks(it) }
                 // "Dividi il gruppo" follows the faces like the user's other choices: the pairs of
                 // the old faces now name the new ones (those not found again lose theirs).
                 val pairs = old.map { it.id }.chunked(500).flatMap { dao.apartOf(it) }.distinct()
                 if (pairs.isNotEmpty()) {
                     dao.deleteApart(pairs)
-                    dao.addApart(FaceApart.remap(pairs, old.associate { it.id to moved[it.id] }))
+                    // Old faces kept by an incomplete reading keep their pairs as they are.
+                    dao.addApart(FaceApart.remap(pairs, old.associate { it.id to (moved[it.id] ?: if (complete) null else it.id) }))
                 }
             }
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
