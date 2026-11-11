@@ -22,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.currentCoroutineContext
@@ -312,12 +313,23 @@ class VaultRepository @Inject constructor(
     fun tags(): Flow<List<TagEntity>> =
         settings.settings.map { it.tagSortMode }.distinctUntilChanged()
             .flatMapLatest { mode ->
-                live { d -> if (mode == TagSortMode.CUSTOM) d.tagDao().allByOrder() else d.tagDao().all() }.map { list ->
-                    val byName = NameOrder.comparator<TagEntity> { it.name }
-                    if (mode == TagSortMode.CUSTOM) list.sortedWith(compareBy<TagEntity> { it.orderIndex }.then(byName))
-                    else list.sortedWith(byName)
+                val byName = NameOrder.comparator<TagEntity> { it.name }
+                when (mode) {
+                    TagSortMode.CUSTOM -> live { d -> d.tagDao().allByOrder() }
+                        .map { list -> list.sortedWith(compareBy<TagEntity> { it.orderIndex }.then(byName)) }
+                    TagSortMode.ALPHA -> live { d -> d.tagDao().all() }.map { list -> list.sortedWith(byName) }
+                    // Most files first; ties (and unused tags) by name.
+                    TagSortMode.USED -> live { d -> d.tagDao().all().combine(d.tagDao().usage()) { list, use -> list to use } }
+                        .map { (list, use) ->
+                            val n = use.associate { it.tagId to it.files }
+                            list.sortedWith(compareByDescending<TagEntity> { n[it.id] ?: 0 }.then(byName))
+                        }
                 }
             }
+
+    /** Each tag's use (files, folders, links), by tag id. */
+    fun tagUsage(): Flow<Map<Long, com.cripta.app.data.db.TagUsage>> =
+        live { it.tagDao().usage() }.map { list -> list.associateBy { it.tagId } }
 
     private fun foldersInOrder(list: List<FolderEntity>): List<FolderEntity> =
         list.sortedWith(compareBy<FolderEntity> { !it.isFavorite }.then(NameOrder.comparator { it.name }))
@@ -1088,7 +1100,10 @@ class VaultRepository @Inject constructor(
      * Create a tag with its look. A name already in the library, case aside, is not created again
      * and the existing tag is left as it is (its look already shows on its files).
      */
-    suspend fun createTag(name: String, alias: String? = null, icon: String? = null, color: Int? = null, pinned: Boolean = false): TagCreated =
+    suspend fun createTag(
+        name: String, alias: String? = null, icon: String? = null, color: Int? = null, pinned: Boolean = false,
+        onCovers: Boolean = true,
+    ): TagCreated =
         withContext(Dispatchers.IO) {
             val n = name.trim()
             if (n.isEmpty()) return@withContext TagCreated(0, created = false)
@@ -1098,7 +1113,7 @@ class VaultRepository @Inject constructor(
                 nameClash(n, library)?.let { return@withTransaction TagCreated(it.id, created = false) }
                 val order = (library.maxOfOrNull { it.orderIndex } ?: -1) + 1
                 val id = db.tagDao().insert(TagEntity(name = n, alias = alias?.trim()?.ifEmpty { null },
-                    icon = icon?.ifBlank { null }, color = color, pinned = pinned, orderIndex = order))
+                    icon = icon?.ifBlank { null }, color = color, pinned = pinned, orderIndex = order, onCovers = onCovers))
                 TagCreated(id, created = id != -1L)
             }
             if (result.created) notifyChanged()
@@ -1109,7 +1124,7 @@ class VaultRepository @Inject constructor(
      * Save everything the tag editor shows, by id and in one transaction: either all of it is
      * written or nothing is. A name taken by another tag (case aside) is refused before writing.
      */
-    suspend fun saveTag(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?): TagSave =
+    suspend fun saveTag(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?, onCovers: Boolean = true): TagSave =
         withContext(Dispatchers.IO) {
             val n = name.trim()
             if (n.isEmpty()) return@withContext TagSave.NAME_TAKEN
@@ -1118,7 +1133,7 @@ class VaultRepository @Inject constructor(
                     val library = db.tagDao().allNow()
                     if (library.none { it.id == id }) return@withTransaction TagSave.MISSING
                     if (nameClash(n, library, exceptId = id) != null) return@withTransaction TagSave.NAME_TAKEN
-                    db.tagDao().update(id, n, alias?.trim()?.ifEmpty { null }, color, pinned, icon?.ifBlank { null })
+                    db.tagDao().update(id, n, alias?.trim()?.ifEmpty { null }, color, pinned, icon?.ifBlank { null }, onCovers)
                     TagSave.SAVED
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1165,6 +1180,41 @@ class VaultRepository @Inject constructor(
             pruneSavedFilters(setOf(tagId))
         }
         notifyChanged()
+    }
+
+    /**
+     * Merge [fromId] into [intoId]: every file with the first gets the second, then the first is
+     * deleted like [deleteTag]. One transaction. False when either tag is gone or they are the same.
+     */
+    suspend fun mergeTags(fromId: Long, intoId: Long): Boolean = withContext(Dispatchers.IO) {
+        if (fromId == intoId) return@withContext false
+        val done = db.withTransaction {
+            val dao = db.tagDao()
+            if (dao.byId(fromId) == null || dao.byId(intoId) == null) return@withTransaction false
+            dao.copyLinks(fromId, intoId)
+            dao.unlinkAll(fromId)
+            dao.deleteById(fromId)
+            pruneSavedFilters(setOf(fromId))
+            true
+        }
+        if (done) notifyChanged()
+        done
+    }
+
+    /**
+     * Delete those of [ids] that are on no file, the trash included (checked again here: one
+     * assigned meanwhile is kept). Returns how many went.
+     */
+    suspend fun deleteUnusedTags(ids: Collection<Long>): Int = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext 0
+        val gone = db.withTransaction {
+            val unused = ids.distinct().chunked(SQL_CHUNK).flatMap { db.tagDao().unusedAmong(it) }
+            unused.forEach { db.tagDao().deleteById(it) }
+            if (unused.isNotEmpty()) pruneSavedFilters(unused.toSet())
+            unused.size
+        }
+        if (gone > 0) notifyChanged()
+        gone
     }
 
     /**
@@ -1796,7 +1846,7 @@ class VaultRepository @Inject constructor(
                 tags.forEach {
                     put(org.json.JSONObject().put("name", it.name).put("alias", it.alias ?: org.json.JSONObject.NULL)
                         .put("color", it.color ?: org.json.JSONObject.NULL).put("icon", it.icon ?: org.json.JSONObject.NULL)
-                        .put("pinned", it.pinned).put("order", it.orderIndex)
+                        .put("pinned", it.pinned).put("order", it.orderIndex).put("onCovers", it.onCovers)
                         .put("lastUsedAt", it.lastUsedAt ?: org.json.JSONObject.NULL))
                 }
             })
@@ -2055,6 +2105,7 @@ class VaultRepository @Inject constructor(
             // v2: pin and custom order. The archive's positions go after the tags already here:
             // restored into a library in use, they no longer interleave with (and tie) its own.
             if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
+            if (!o.optBoolean("onCovers", true)) db.tagDao().setOnCovers(name, false)
             if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, orderBase + o.optInt("order", 0)) }
             if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
             // Optional (older backups have no colour); an earlier palette's preset moves to today's.

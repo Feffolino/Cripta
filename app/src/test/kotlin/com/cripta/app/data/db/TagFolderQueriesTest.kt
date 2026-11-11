@@ -2,6 +2,7 @@ package com.cripta.app.data.db
 
 import android.app.Application
 import androidx.room.Room
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -47,11 +48,11 @@ class TagFolderQueriesTest {
     @Test
     fun theEditorUpdatesEveryFieldByIdAtOnce() = runBlocking {
         val id = db.tagDao().insert(TagEntity(name = "Mare"))
-        assertEquals(1, db.tagDao().update(id, "Spiaggia", "SP", 0xFF112233.toInt(), true, "water-wave"))
+        assertEquals(1, db.tagDao().update(id, "Spiaggia", "SP", 0xFF112233.toInt(), true, "water-wave", false))
         val t = db.tagDao().byId(id)!!
         assertEquals("Spiaggia", t.name); assertEquals("SP", t.alias); assertEquals(0xFF112233.toInt(), t.color)
-        assertTrue(t.pinned); assertEquals("water-wave", t.icon)
-        assertEquals(0, db.tagDao().update(9999, "X", null, null, false, null))
+        assertTrue(t.pinned); assertEquals("water-wave", t.icon); assertFalse(t.onCovers)
+        assertEquals(0, db.tagDao().update(9999, "X", null, null, false, null, true))
     }
 
     @Test
@@ -126,5 +127,35 @@ class TagFolderQueriesTest {
         assertEquals(listOf("f"), db.fileDao().sameContentIn("h", a))
         assertEquals(listOf("r"), db.fileDao().sameContentIn("h", null))
         assertTrue(db.fileDao().sameContentIn("x", a).isEmpty())
+    }
+
+    @Test
+    fun usageCountsLiveFilesTheirFoldersAndEveryLink() = runBlocking {
+        val a = db.folderDao().insert(FolderEntity(name = "A", parentId = null, createdAt = 0))
+        db.fileDao().insert(file("x", a)); db.fileDao().insert(file("y", a)); db.fileDao().insert(file("r", null))
+        db.fileDao().insert(file("t", a, deletedAt = 5))
+        val sea = db.tagDao().insert(TagEntity(name = "Mare"))
+        val old = db.tagDao().insert(TagEntity(name = "Vecchio"))
+        val none = db.tagDao().insert(TagEntity(name = "Niente"))
+        listOf("x", "y", "r", "t").forEach { db.tagDao().link(FileTagCrossRef(it, sea)) }
+        db.tagDao().link(FileTagCrossRef("t", old))
+        val use = db.tagDao().usage().first().associateBy { it.tagId }
+        assertEquals(TagUsage(sea, files = 3, folders = 2, links = 4), use[sea])
+        // Only in the trash: no file shown, but still linked (not "unused").
+        assertEquals(TagUsage(old, files = 0, folders = 0, links = 1), use[old])
+        assertEquals(TagUsage(none, 0, 0, 0), use[none])
+        assertEquals(listOf(none), db.tagDao().unusedAmong(listOf(sea, old, none)))
+    }
+
+    @Test
+    fun copyLinksGivesTheSecondTagToEveryFileOfTheFirstOnce() = runBlocking {
+        db.fileDao().insert(file("x", null)); db.fileDao().insert(file("y", null))
+        val from = db.tagDao().insert(TagEntity(name = "Mare"))
+        val into = db.tagDao().insert(TagEntity(name = "Spiaggia"))
+        db.tagDao().link(FileTagCrossRef("x", from)); db.tagDao().link(FileTagCrossRef("y", from))
+        db.tagDao().link(FileTagCrossRef("y", into))
+        db.tagDao().copyLinks(from, into)
+        assertEquals(listOf(from, into).sorted(), db.tagDao().tagIdsOf("y").sorted())
+        assertEquals(listOf(from, into).sorted(), db.tagDao().tagIdsOf("x").sorted())
     }
 }

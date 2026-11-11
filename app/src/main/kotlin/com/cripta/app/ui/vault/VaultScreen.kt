@@ -1477,6 +1477,8 @@ fun VaultScreen(
             onCreateTag = { draft -> vm.createTag(draft) },
             onDismiss = { tagTargetId = null },
             showRecents = display.showRecentTags,
+            usage = vm.tagUsage.collectAsStateWithLifecycle().value,
+            onDeleteTag = { t -> vm.deleteTag(t.id) },
         )
     }
 
@@ -1594,9 +1596,10 @@ fun VaultScreen(
 
     folderToStyle?.let { folder ->
         FolderStyleDialog(
-            folderName = folder.name,
-            initialColor = folder.color,
-            initialIcon = folder.icon,
+            folder = folder,
+            stat = folderStats[folder.id],
+            previews = folderPreviews[folder.id].orEmpty(),
+            thumb = { vm.thumb(it) },
             onConfirm = { c, i, picked ->
                 folderToStyle = null
                 vm.setFolderStyle(folder.id, c, i, iconChanged = picked) { ok -> if (!ok) notify(str(R.string.folder_change_failed)) }

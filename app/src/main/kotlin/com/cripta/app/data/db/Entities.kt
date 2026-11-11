@@ -127,6 +127,8 @@ data class TagEntity(
     val lastUsedAt: Long? = null,
     /** Icon shown with the tag (a [com.cripta.app.ui.tagicons.TagIcons] name); null = none. */
     val icon: String? = null,
+    /** Shown on covers; off, the tag stays in the filters and the details only. */
+    @androidx.room.ColumnInfo(defaultValue = "1") val onCovers: Boolean = true,
 )
 
 @Entity(

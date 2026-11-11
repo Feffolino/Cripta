@@ -493,8 +493,14 @@ class ViewerViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.cripta.app.data.DisplayPrefs())
 
     /** Save a tag's editor in one go, by id. */
+    /** Each tag's use (files, folders), for the tag editor's line under its title. */
+    val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
+        repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+
     fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
-        if (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon) == com.cripta.app.data.TagSave.NAME_TAKEN)
+        if (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers) == com.cripta.app.data.TagSave.NAME_TAKEN)
             _message.value = str(R.string.tag_exists, draft.name)
         _refresh.value++
     }
@@ -504,7 +510,7 @@ class ViewerViewModel @Inject constructor(
      * added to, never replaced with a list read before (a change made meanwhile is kept).
      */
     fun createTagOn(fileId: String, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
-        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (r.id > 0) repo.addTagIds(fileId, listOf(r.id))
         _refresh.value++
     }

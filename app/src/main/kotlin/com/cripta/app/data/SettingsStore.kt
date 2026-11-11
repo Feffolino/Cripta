@@ -29,7 +29,8 @@ enum class SortKey { DATE, NAME, SIZE, MANUAL }
 /** Orders of the people page: the app's (starred, then most media), name, media count, newest media, when added. */
 enum class PeopleSort { RELEVANCE, NAME, MEDIA, LATEST, ADDED }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
-enum class TagSortMode { ALPHA, CUSTOM }
+/** Stored by ordinal: new orders go last. */
+enum class TagSortMode { ALPHA, CUSTOM, USED }
 /**
  * What happens to the original after a successful MP4 conversion. REPLACE: the MP4 takes the
  * original's place (same folder, tags, position, cover) and the original goes to the trash, so it

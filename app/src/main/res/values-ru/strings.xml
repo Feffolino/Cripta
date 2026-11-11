@@ -2190,4 +2190,35 @@
     <string name="folder_random_inherited">Исключена из случайного выбора родительской папкой</string>
     <string name="restore_folders_skipped">Папки не восстановлены, нет родительской папки: %1$d (их файлы в корне: %2$d)</string>
     <string name="restore_duplicates_skipped">Уже в хранилище, повторно не добавлено: %1$d</string>
+    <string name="tag_usage_line">На %1$s · в %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="one">%1$s папке</item>
+        <item quantity="few">%1$s папках</item>
+        <item quantity="many">%1$s папках</item>
+        <item quantity="other">%1$s папках</item>
+    </plurals>
+    <string name="tag_states_caption">Назначена · не назначена</string>
+    <string name="tag_alias_short">Краткая подпись</string>
+    <string name="tag_alias_cover_hint">Краткая подпись видна на обложках, когда нет значка.</string>
+    <string name="tag_on_covers_hint">Выключено: метка остаётся в фильтрах и сведениях</string>
+    <string name="tag_off_covers">Не на обложках</string>
+    <string name="icon_search_count">Поиск среди %1$s значков</string>
+    <string name="icon_fit_for">Подходят к «%1$s»</string>
+    <string name="icon_common">Частые</string>
+    <string name="tag_pinned">Закреплена</string>
+    <string name="most_used">Самые используемые</string>
+    <string name="used_order_hint">Сначала метки, которые стоят на большем числе файлов.</string>
+    <string name="alpha_order_hint">От А до Я.</string>
+    <string name="sec_tag_maintenance">Обслуживание</string>
+    <string name="tag_maintenance_hint">Редкие действия с библиотекой.</string>
+    <string name="merge_tags">Объединить две метки</string>
+    <string name="merge_tags_hint">Файлы первой получают вторую, первая исчезает.</string>
+    <string name="merge_pick_from">Какая исчезает</string>
+    <string name="merge_pick_into">В какую объединить</string>
+    <string name="merge_confirm_text">Файлы с «%1$s» получат «%2$s», затем «%1$s» исчезнет.</string>
+    <string name="no_unused_tags">Каждая метка стоит хотя бы на одном файле.</string>
+    <string name="unused_tags_line">Ни на одном файле: %1$s.</string>
+    <string name="delete_unused_n">Удалить неиспользуемые (%1$d)</string>
+    <string name="delete_unused_q">Удалить неиспользуемые метки?</string>
+    <string name="delete_unused_text">%1$s. Их нет ни на одном файле, даже в корзине.</string>
 </resources>

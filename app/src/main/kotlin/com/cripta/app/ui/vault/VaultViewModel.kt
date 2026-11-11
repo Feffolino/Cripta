@@ -790,13 +790,19 @@ class VaultViewModel @Inject constructor(
 
     /** Create a tag with its look; a name already in the library is said so, not overwritten. */
     fun createTag(draft: TagDraft) = viewModelScope.launch {
-        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (!r.created) android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
     }
 
     /** Save a tag's editor in one go, by id. */
+    /** Each tag's use (files, folders), for the tag editor's line under its title. */
+    val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
+        repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+
     fun saveTag(id: Long, draft: TagDraft) = viewModelScope.launch {
-        val r = repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon)
+        val r = repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)
         if (r == com.cripta.app.data.TagSave.NAME_TAKEN)
             android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
     }

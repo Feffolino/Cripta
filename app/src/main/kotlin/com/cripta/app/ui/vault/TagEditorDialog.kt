@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -176,12 +177,16 @@ private fun chipLabel(name: String, alias: String?): String =
     if (!alias.isNullOrBlank()) "$alias $name" else name
 
 /** Everything the tag editor saves, handed over at once (never field by field). */
-data class TagDraft(val name: String, val alias: String?, val color: Int?, val pinned: Boolean, val icon: String?)
+data class TagDraft(
+    val name: String, val alias: String?, val color: Int?, val pinned: Boolean, val icon: String?,
+    val onCovers: Boolean = true,
+)
 
 /**
- * Create/edit a label: its name, an icon and/or a short acronym ("sigla"), shown as a compact badge
- * on thumbnails. Icons replace the old emoji aliases. Nothing is reported before "Salva", and then
- * all of it together in one [TagDraft].
+ * Create/edit a label. Top to bottom: a live preview (the pill assigned and not, and a cover with
+ * its mark), Nome and Sigla on one line, Icona, Colore, the switches; "Elimina" (when given) sits
+ * apart on the left of the buttons and asks first. Nothing is reported before "Salva", and then all
+ * of it together in one [TagDraft].
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -204,11 +209,20 @@ fun LabelEditorDialog(
     initialIcon: String? = null,
     /** The names of the other tags: one of them, case aside, can't be used and is flagged at once. */
     takenNames: Collection<String> = emptyList(),
+    /** A "Sulle copertine" switch is shown (off: the tag stays in filters and details only). */
+    showOnCovers: Boolean = false,
+    initialOnCovers: Boolean = true,
+    /** How much the tag is used, for the line under the title; null = not shown (a new tag). */
+    usage: com.cripta.app.data.db.TagUsage? = null,
+    /** "Elimina" on the left of the buttons, after a confirmation; null = not offered. */
+    onDelete: (() -> Unit)? = null,
 ) {
     // rememberSaveable: the draft survives the activity being recreated, not only a rotation.
     var pinnedState by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialPinned) }
+    var onCovers by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialOnCovers) }
     var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialIcon) }
     var pickingIcon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var name by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialName) }
     var alias by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialAlias) }
     var color by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialColor) }
@@ -222,103 +236,168 @@ fun LabelEditorDialog(
         com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "tagPreviewColour",
     )
 
+    @Composable
+    fun switchRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, hint: String, on: Boolean, set: (Boolean) -> Unit) {
+        // A plain settings row: icon, title, caption, the switch; the whole row toggles.
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                .clip(MaterialTheme.shapes.small)
+                .toggleable(value = on, role = Role.Switch, onValueChange = set)
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 16.dp).size(24.dp))
+            Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(hint, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            }
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
+        }
+    }
+
+    val canSave = name.isNotBlank() && !clash
+    val save = { onConfirm(TagDraft(name.trim(), alias.trim().ifEmpty { null }, color, pinnedState, icon, onCovers)) }
+
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Column {
+                Text(title)
+                usage?.let { u ->
+                    Text(
+                        str(R.string.tag_usage_line,
+                            plural(R.plurals.files_n, u.files, com.cripta.app.ui.components.formatCount(u.files)),
+                            plural(R.plurals.in_folders_n, u.folders, com.cripta.app.ui.components.formatCount(u.folders))),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+        },
         text = {
             // No frames: each part is a heading plus space (more above a heading than under it).
             // The preview stays first, so every change below is seen as it is made.
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                TagEditorPreview(name = name, alias = alias, icon = icon, color = previewColor)
-                if (nameEditable) {
+                TagEditorPreview(name = name, alias = alias, icon = icon, color = previewColor, onCovers = onCovers)
+                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top) {
+                    if (nameEditable) {
+                        com.cripta.app.ui.components.CriptaTextField(
+                            value = name, onValueChange = { name = it },
+                            label = { Text(str(R.string.sort_name)) }, singleLine = true,
+                            isError = clash,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Text(str(R.string.tag_rename_hint), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f).padding(top = 8.dp))
+                    }
                     com.cripta.app.ui.components.CriptaTextField(
-                        value = name, onValueChange = { name = it },
-                        label = { Text(str(R.string.sort_name)) }, singleLine = true,
-                        isError = clash,
-                        supportingText = if (clash) ({ Text(str(R.string.tag_exists, name.trim())) }) else null,
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        // At most 6 visible characters, counted as graphemes.
+                        value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
+                        label = { Text(str(R.string.tag_alias_short)) }, singleLine = true,
+                        modifier = Modifier.width(96.dp),
                     )
-                } else {
-                    Text(str(R.string.tag_rename_hint), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 }
-                com.cripta.app.ui.components.CriptaTextField(
-                    // At most 6 visible characters, counted as graphemes.
-                    value = alias, onValueChange = { alias = takeGraphemes(it, 6) },
-                    label = { Text(str(R.string.tag_alias)) }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    supportingText = { Text(str(R.string.tag_alias_hint)) },
+                Text(
+                    if (clash) str(R.string.tag_exists, name.trim()) else str(R.string.tag_alias_cover_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (clash) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
                 )
                 if (showIcon) {
                     EditorHeading(str(R.string.icon))
-                    com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true },
-                        showLabel = false)
+                    com.cripta.app.ui.tagicons.TagIconRow(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true })
                 }
                 if (showColor) {
                     EditorHeading(str(R.string.colour))
                     TagColorPicker(selected = color, autoColor = auto, autoDescription = str(R.string.default_colour)) { color = it }
                 }
-                if (showPinned) {
-                    // A plain settings row: icon, title, caption, the switch; the whole row toggles.
-                    Row(
-                        Modifier.padding(top = 16.dp).fillMaxWidth().heightIn(min = 60.dp)
-                            .clip(MaterialTheme.shapes.small)
-                            .toggleable(value = pinnedState, role = Role.Switch, onValueChange = { pinnedState = it })
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(CriptaIcons.PushPin, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp).size(24.dp))
-                        Column(Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text(str(R.string.tag_pin_top), style = MaterialTheme.typography.bodyLarge)
-                            Text(str(R.string.tag_pin_top_hint), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                        }
-                        androidx.compose.material3.Switch(checked = pinnedState, onCheckedChange = null, colors = com.cripta.app.ui.components.criptaSwitchColors())
-                    }
-                }
+                if (showPinned || showOnCovers) Box(Modifier.padding(top = 14.dp))
+                if (showPinned) switchRow(CriptaIcons.PushPin, str(R.string.tag_pin_top), str(R.string.tag_pin_top_hint), pinnedState) { pinnedState = it }
+                if (showOnCovers) switchRow(CriptaIcons.Image, str(R.string.sec_on_covers), str(R.string.tag_on_covers_hint), onCovers) { onCovers = it }
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = name.isNotBlank() && !clash,
-                onClick = {
-                    onConfirm(TagDraft(name.trim(), alias.trim().ifEmpty { null }, color, pinnedState, icon))
-                },
-            ) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) }
+            if (onDelete != null) {
+                // "Elimina" apart on the left, in the error colour; Annulla / Salva stay on the right.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { confirmDelete = true }) {
+                        com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    }
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
+                    TextButton(enabled = canSave, onClick = save) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) }
+                }
+            } else {
+                TextButton(enabled = canSave, onClick = save) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) }
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+        dismissButton = if (onDelete != null) null else ({
+            TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
+        }),
     )
     if (pickingIcon) {
         com.cripta.app.ui.tagicons.TagIconPicker(tagName = name, selected = icon,
             onPick = { icon = it; pickingIcon = false }, onDismiss = { pickingIcon = false })
     }
+    if (confirmDelete && onDelete != null) {
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(str(R.string.delete_tag_q)) },
+            text = { Text(str(R.string.delete_tag_text, initialName)) },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete() }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+        )
+    }
 }
 
 /**
- * The editor's live preview: the tag as lists show it (name, alias, icon) and, beside it, the mark
- * a cover gets (the alias, else the icon alone, else the first two letters). One TalkBack item.
+ * The editor's live preview: on the left the pill as lists show it, assigned and not; on the right
+ * a small cover with the mark it gets (as Impostazioni › Etichette sets it), or none when the tag
+ * is kept off the covers. One TalkBack item.
  */
 @Composable
-private fun TagEditorPreview(name: String, alias: String, icon: String?, color: androidx.compose.ui.graphics.Color) {
+private fun TagEditorPreview(name: String, alias: String, icon: String?, color: androidx.compose.ui.graphics.Color, onCovers: Boolean) {
     val shownName = name.trim().ifBlank { str(R.string.new_tag) }
     val a = alias.trim()
+    val text = if (a.isNotEmpty()) "$a $shownName" else shownName
+    val caption = MaterialTheme.typography.bodySmall
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
-        Modifier.fillMaxWidth()
-            .clearAndSetSemantics { contentDescription = str(R.string.preview) + ": " + (if (a.isNotEmpty()) "$a $shownName" else shownName) },
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier.fillMaxWidth().padding(top = 16.dp)
+            .clearAndSetSemantics { contentDescription = str(R.string.preview) + ": " + text },
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f, fill = false)) {
-            com.cripta.app.ui.components.TagPill(
-                if (a.isNotEmpty()) "$a $shownName" else shownName, color,
-                size = com.cripta.app.ui.components.TagPillSize.Medium,
-                base = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tagIcon = icon,
-            )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.cripta.app.ui.components.TagPill(text, color, size = com.cripta.app.ui.components.TagPillSize.Medium,
+                state = com.cripta.app.ui.components.TagPillState.On,
+                base = MaterialTheme.colorScheme.surfaceContainerHigh, tagIcon = icon)
+            com.cripta.app.ui.components.TagPill(text, color, size = com.cripta.app.ui.components.TagPillSize.Medium,
+                state = com.cripta.app.ui.components.TagPillState.Off,
+                base = MaterialTheme.colorScheme.surfaceContainerHigh, tagIcon = icon)
+            Text(str(R.string.tag_states_caption), style = caption, color = muted)
         }
-        // As a cover shows it: a bubble or a pill, per Impostazioni › Copertine.
-        CoverMarkSample(TagEntity(id = -1, name = name.trim().ifBlank { "AB" }, alias = a.ifBlank { null }, icon = icon), color)
+        Column(Modifier.width(112.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                Modifier.size(112.dp, 84.dp).clip(com.cripta.app.ui.theme.CoverShape)
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.surfaceVariant))),
+                contentAlignment = Alignment.BottomStart,
+            ) {
+                if (onCovers) Box(Modifier.padding(6.dp)) {
+                    CoverMarkSample(TagEntity(id = -1, name = name.trim().ifBlank { "AB" }, alias = a.ifBlank { null }, icon = icon), color)
+                }
+            }
+            Text(if (onCovers) str(R.string.sec_on_covers) else str(R.string.tag_off_covers), style = caption, color = muted)
+        }
     }
 }
 
@@ -344,6 +423,10 @@ fun TagEditorDialog(
     onCreateTag: (TagDraft) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
+    /** Each tag's use, by id, for the editor's line under its title. */
+    usage: Map<Long, com.cripta.app.data.db.TagUsage> = emptyMap(),
+    /** Deletes a tag from its editor (after a confirmation); null = not offered. */
+    onDeleteTag: ((TagEntity) -> Unit)? = null,
 ) {
     val selected: SnapshotStateList<String> = remember {
         initialSelected.map { it.trim() }.filter { it.isNotEmpty() }.toMutableStateList()
@@ -395,6 +478,9 @@ fun TagEditorDialog(
             showColor = true, initialColor = t.color,
             showPinned = true, initialPinned = t.pinned,
             showIcon = true, initialIcon = t.icon,
+            showOnCovers = true, initialOnCovers = t.onCovers,
+            usage = usage[t.id],
+            onDelete = onDeleteTag?.let { f -> { selected.remove(t.name); f(t); editTarget = null } },
             nameEditable = false,
         )
     }

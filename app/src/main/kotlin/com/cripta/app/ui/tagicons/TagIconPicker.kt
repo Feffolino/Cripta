@@ -3,6 +3,7 @@ package com.cripta.app.ui.tagicons
 import com.cripta.app.R
 import com.cripta.app.str
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -45,7 +46,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** One icon in a picker: a round cell, ringed in the accent when chosen. */
+/**
+ * One icon in a picker: a round cell. The chosen one gets the accent ring and the secondary
+ * container behind it (never colour alone: the ring is the shape cue).
+ */
 @Composable
 private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -55,7 +59,8 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
     }
     Box(
         Modifier.size(size).clip(CircleShape)
-            .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+            .then(if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .clickable(role = Role.RadioButton, onClick = onClick)
             .semantics { this.selected = selected; contentDescription = title ?: str(R.string.icon_none) },
         contentAlignment = Alignment.Center,
@@ -92,6 +97,100 @@ fun TagIconField(
         }
         TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
             com.cripta.app.ui.components.ButtonText(str(R.string.icon_all))
+        }
+    }
+}
+
+/**
+ * The tag editor's "Icona" row, six cells across the width: none, four that fit the name (the
+ * chosen one first), and "Tutte" (a magnifier) for the full searchable list ([onBrowse]).
+ */
+@Composable
+fun TagIconRow(name: String, icon: String?, onPick: (String?) -> Unit, onBrowse: () -> Unit) {
+    val context = LocalContext.current
+    val resolved = rememberResolvedTagIcon(icon)
+    val suggested by produceState(emptyList<String>(), name) {
+        value = TagIcons.suggest(context, name, 8).ifEmpty { TagIcons.DEFAULTS.take(8) }
+    }
+    val four = (listOfNotNull(resolved) + suggested.filter { it != resolved }).take(4)
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cell = minOf(48.dp, maxWidth / 6)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IconCell(null, resolved == null, cell) { onPick(null) }
+            four.forEach { n -> IconCell(n, n == resolved, cell) { onPick(n) } }
+            repeat(4 - four.size) { Box(Modifier.size(cell)) }
+            Box(
+                Modifier.size(cell).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .clickable(role = Role.Button, onClickLabel = str(R.string.icon_all), onClick = onBrowse)
+                    .semantics { contentDescription = str(R.string.icon_all) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(CriptaIcons.Search, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(cell * 0.46f))
+            }
+        }
+    }
+}
+
+/**
+ * The folder's icon choice: the search field always in view ("Cerca tra 1.480 icone"); without a
+ * query, a row of icons that fit the name (none first) and a grid of 12 common ones; with one,
+ * the results in a grid of their own. Six cells to a row.
+ */
+@Composable
+fun FolderIconChoices(name: String, selected: String?, onPick: (String?) -> Unit) {
+    val context = LocalContext.current
+    val resolved = rememberResolvedTagIcon(selected)
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    val loaded by produceState<List<String>?>(null) { value = TagIcons.names(context) }
+    val forName by produceState(emptyList<String>(), name) { value = TagIcons.suggest(context, name, 5) }
+    val found by key(query) {
+        produceState<List<String>?>(null) { if (query.isNotBlank()) value = TagIcons.search(context, query) }
+    }
+    @Composable
+    fun caption(text: String, top: Dp) = Text(text, style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = top, bottom = 6.dp).semantics { heading() })
+    @Composable
+    fun grid(names: List<String?>) = androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cell = minOf(48.dp, maxWidth / 6)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            names.chunked(6).forEach { line ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    line.forEach { n -> IconCell(n, n == resolved, cell) { onPick(n) } }
+                    repeat(6 - line.size) { Box(Modifier.size(cell)) }
+                }
+            }
+        }
+    }
+    Column {
+        if (loaded?.isEmpty() == true) Text(str(R.string.icon_catalog_unavailable),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 8.dp))
+        val total = loaded?.size ?: 0
+        com.cripta.app.ui.components.CriptaTextField(
+            value = query, onValueChange = { query = it }, singleLine = true,
+            leadingIcon = { Icon(CriptaIcons.Search, null) },
+            trailingIcon = if (query.isNotEmpty()) ({
+                androidx.compose.material3.IconButton(onClick = { query = "" }) { Icon(CriptaIcons.Close, str(R.string.clear_search)) }
+            }) else null,
+            placeholder = { Text(if (total > 0) str(R.string.icon_search_count, com.cripta.app.ui.components.formatCount(total)) else str(R.string.icon_search_hint)) },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (query.isNotBlank()) {
+            val results = found
+            if (results != null && results.isEmpty()) {
+                Text(str(R.string.icon_none_for, query.trim()), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 14.dp))
+            } else if (results != null) {
+                caption(str(R.string.results), 14.dp)
+                // Up to eight rows here; the full list is a search away.
+                grid(results.take(48))
+            }
+        } else {
+            caption(str(R.string.icon_fit_for, name.trim()), 14.dp)
+            grid(listOf<String?>(null) + (listOfNotNull(resolved) + forName.filter { it != resolved }).take(5))
+            caption(str(R.string.icon_common), 12.dp)
+            grid(TagIcons.DEFAULTS.filter { loaded?.contains(it) != false }.take(12))
         }
     }
 }

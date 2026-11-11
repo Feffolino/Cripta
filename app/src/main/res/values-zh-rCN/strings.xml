@@ -1995,4 +1995,32 @@
     <string name="folder_random_inherited">已被上级文件夹排除在随机之外</string>
     <string name="restore_folders_skipped">因缺少上级文件夹而未恢复的文件夹：%1$d（其文件位于根目录：%2$d）</string>
     <string name="restore_duplicates_skipped">已在保险库中，未再次添加：%1$d</string>
+    <string name="tag_usage_line">%1$s · %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="other">%1$s 个文件夹</item>
+    </plurals>
+    <string name="tag_states_caption">已分配 · 未分配</string>
+    <string name="tag_alias_short">简称</string>
+    <string name="tag_alias_cover_hint">没有图标时，简称显示在封面上。</string>
+    <string name="tag_on_covers_hint">关闭后仍保留在筛选和详情中</string>
+    <string name="tag_off_covers">不在封面显示</string>
+    <string name="icon_search_count">在 %1$s 个图标中搜索</string>
+    <string name="icon_fit_for">适合“%1$s”</string>
+    <string name="icon_common">常用</string>
+    <string name="tag_pinned">已置顶</string>
+    <string name="most_used">最常用</string>
+    <string name="used_order_hint">标记文件最多的标签排在前面。</string>
+    <string name="alpha_order_hint">从 A 到 Z。</string>
+    <string name="sec_tag_maintenance">维护</string>
+    <string name="tag_maintenance_hint">库的不常用操作。</string>
+    <string name="merge_tags">合并两个标签</string>
+    <string name="merge_tags_hint">第一个标签的文件改用第二个，第一个随即消失。</string>
+    <string name="merge_pick_from">要移除的标签</string>
+    <string name="merge_pick_into">合并到</string>
+    <string name="merge_confirm_text">带有“%1$s”的文件将获得“%2$s”，然后“%1$s”消失。</string>
+    <string name="no_unused_tags">每个标签至少用在一个文件上。</string>
+    <string name="unused_tags_line">未用于任何文件：%1$s。</string>
+    <string name="delete_unused_n">删除未使用的 (%1$d)</string>
+    <string name="delete_unused_q">删除未使用的标签？</string>
+    <string name="delete_unused_text">%1$s。它们不在任何文件上，回收站中也没有。</string>
 </resources>

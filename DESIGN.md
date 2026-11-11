@@ -242,18 +242,43 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   quiet tones (`tagOffTones`: the pill on `#1E2A3D` dark / `#D6E4FF` light, the accent as text,
   moved towards ink where it would read below 4.5:1), and cover marks take the blue preset, so no
   screen can show tag colours the user turned off.
-- **Etichette** (Impostazioni): the live cover preview pinned on top, then "Libreria etichette"
-  (each tag a plain 56dp row, `TagLibraryList`: the pill as it looks everywhere, a tap edits it,
-  Modifica / Elimina in the row's ⋮, the delete in the error colour; "Mostra tutte" grows the list
-  in place). With the custom order a tag moves by dragging, like files in the grid: the handle at
-  the row's end drags at once, a long press on the row too; the row lifts onto the tonal tier, the
-  others slide out of its way (220 ms), a tick of haptics marks each new place, and on release it
-  settles into its slot; TalkBack has "Su" / "Giù" on the row. "Ordine della libreria" right under it, then
-  Sulle copertine, Colori, Assegnazione rapida. The **tag editor** (`LabelEditorDialog`) opens
-  with a live preview (the pill and the cover mark, the colour cross-fading at 120 ms), then name
-  and alias fields, "Icona" and "Colore" under accent headings, "Fissa in alto" as a plain switch
-  row with the pin icon. "Colore" is one line that scrolls sideways (`ColorChoiceRow`, shared with
-  the folder dialog): first, always in view, "Altro" (a round rainbow; once a custom colour is
+- **Etichette** (Impostazioni): the live cover preview pinned on top, then "Libreria etichette":
+  the search field (a pill, "Cerca etichetta") always above the list, then each tag as a plain
+  56dp row (`TagLibraryList`): the pill as it looks everywhere, the pin icon when pinned, how many
+  files it is on (tabular figures, grouped: "1.204"), the ⋮ (Modifica / Elimina, the delete in the
+  error colour) and, in the custom order, the drag handle; a tap edits it; "Mostra tutte" grows the
+  list in place; "Aggiungi etichetta" stays a full-width tonal button. With the custom order a tag
+  moves by dragging, like files in the grid: the handle at the row's end drags at once, a long
+  press on the row too; the row lifts onto the tonal tier, the others slide out of its way
+  (220 ms), a tick of haptics marks each new place, and on release it settles into its slot;
+  TalkBack has "Su" / "Giù" on the row. "Ordine della libreria" right under it (Alfabetico, Più
+  usate, Personalizzato; "Più usate" puts the tags on most files first, ties by name), then Sulle
+  copertine, Colori, Assegnazione rapida and, last, "Manutenzione": "Unisci due etichette" (a
+  tonal button; its dialog asks which tag goes, then which takes its files, and says what will
+  happen before "Unisci") and, when some tag is on no file at all (the trash included), their
+  names and a `DestructiveButton` "Elimina le non usate (N)" that asks first.
+- **Tag editor** (`LabelEditorDialog`): under the title a small line "Su N file · M cartelle"
+  (an existing tag). Then the live preview: on the left the pill assigned and not assigned
+  (caption "Assegnata · non assegnata"), on the right a 112×84 cover with the mark it gets, in the
+  style the covers use (`CoverMarkSample`; none, captioned "Non sulle copertine", when the tag is
+  kept off them); the colour cross-fades at 120 ms. Then Nome and Sigla on one line (Nome takes
+  the room, Sigla 96dp, six characters at most) with one helper line under both ("La sigla va
+  sulle copertine quando non c'è un'icona.", or the name clash in the error colour). "Icona" is
+  one row of six cells (`TagIconRow`): none, four that fit the name (the chosen one first) and
+  "Tutte", a magnifier that opens the full picker. "Colore" (`ColorChoiceRow` with "A"), then the
+  plain switch rows "Fissa in alto" and "Sulle copertine" (off: the tag stays in filters and
+  details, the covers leave it out). At the bottom "Elimina" sits apart on the left in the error
+  colour and asks first; Annulla / Salva on the right.
+- **Personalizza cartella** (`FolderStyleDialog`): under the title "<nome> · N file". A live
+  preview in two columns, the folder card as the grid draws it (`FolderMosaic`): with its files
+  and empty. Then "Colore" (`ColorChoiceRow`: Altro, Nessuno, the presets) and "Icona" under accent
+  headings (24dp above, 10dp under, as in the tag editor). "Icona" (`FolderIconChoices`) keeps the
+  search field always in view ("Cerca tra 1.480 icone"); without a query a row "Adatte a «nome»"
+  (none and five that fit) and a grid "Comuni" of twelve, six 48dp cells to a row; with one, the
+  results in the same grid. A chosen icon has the accent ring and the secondary container behind
+  it. Annulla / Salva as text buttons.
+- **Colour choice** (`ColorChoiceRow`, the tag editor and the folder dialog): one line that
+  scrolls sideways: first, always in view, "Altro" (a round rainbow; once a custom colour is
   chosen it sits inside the rainbow, ticked, and a tap opens it again), then, scrolling beside it,
   "A" automatic (or none for a folder) and the twelve presets, each swatch in its mark tone with
   the tone's own ink. The chosen swatch is told by a ring and a tick, never by colour alone.

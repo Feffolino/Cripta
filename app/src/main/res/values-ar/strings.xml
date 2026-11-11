@@ -2320,4 +2320,37 @@
     <string name="folder_random_inherited">مستبعد من العشوائي بواسطة مجلد أعلى</string>
     <string name="restore_folders_skipped">مجلدات لم تتم استعادتها لغياب المجلد الأعلى: %1$d (ملفاتها في الجذر: %2$d)</string>
     <string name="restore_duplicates_skipped">موجودة في الخزنة، لم تُضَف مرة أخرى: %1$d</string>
+    <string name="tag_usage_line">على %1$s · %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="zero">%1$s مجلد</item>
+        <item quantity="one">%1$s مجلد</item>
+        <item quantity="two">%1$s مجلدين</item>
+        <item quantity="few">%1$s مجلدات</item>
+        <item quantity="many">%1$s مجلدًا</item>
+        <item quantity="other">%1$s مجلد</item>
+    </plurals>
+    <string name="tag_states_caption">معيّن · غير معيّن</string>
+    <string name="tag_alias_short">اسم مختصر</string>
+    <string name="tag_alias_cover_hint">يظهر الاسم المختصر على الأغلفة عندما لا توجد أيقونة.</string>
+    <string name="tag_on_covers_hint">عند الإيقاف يبقى في الفلاتر والتفاصيل</string>
+    <string name="tag_off_covers">ليس على الأغلفة</string>
+    <string name="icon_search_count">ابحث بين %1$s أيقونة</string>
+    <string name="icon_fit_for">مناسبة لـ «%1$s»</string>
+    <string name="icon_common">شائعة</string>
+    <string name="tag_pinned">مثبّت</string>
+    <string name="most_used">الأكثر استخدامًا</string>
+    <string name="used_order_hint">الأوسام الموجودة على أكثر الملفات أولًا.</string>
+    <string name="alpha_order_hint">من الألف إلى الياء.</string>
+    <string name="sec_tag_maintenance">الصيانة</string>
+    <string name="tag_maintenance_hint">إجراءات نادرة على المكتبة.</string>
+    <string name="merge_tags">دمج وسمين</string>
+    <string name="merge_tags_hint">تنتقل ملفات الأول إلى الثاني ويختفي الأول.</string>
+    <string name="merge_pick_from">الوسم الذي يختفي</string>
+    <string name="merge_pick_into">الوسم الذي يُدمج فيه</string>
+    <string name="merge_confirm_text">تحصل ملفات «%1$s» على «%2$s» ثم يختفي «%1$s».</string>
+    <string name="no_unused_tags">كل وسم موجود على ملف واحد على الأقل.</string>
+    <string name="unused_tags_line">غير موجودة على أي ملف: %1$s.</string>
+    <string name="delete_unused_n">حذف غير المستخدمة (%1$d)</string>
+    <string name="delete_unused_q">حذف الأوسام غير المستخدمة؟</string>
+    <string name="delete_unused_text">%1$s. ليست على أي ملف، ولا في سلة المهملات.</string>
 </resources>

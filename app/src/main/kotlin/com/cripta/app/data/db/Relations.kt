@@ -11,6 +11,17 @@ data class FolderAgg(
     val bytes: Long,
 )
 
+/**
+ * How much a tag is used: [files] and [folders] count the files in the vault (not in the trash),
+ * the root counting as one folder; [links] counts every file it is on, the trash included.
+ */
+data class TagUsage(
+    val tagId: Long,
+    val files: Int,
+    val folders: Int,
+    val links: Int,
+)
+
 /** A file together with its tags, assembled by Room. */
 data class FileWithTags(
     @Embedded val file: FileEntity,

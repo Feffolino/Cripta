@@ -392,6 +392,9 @@ internal fun DetailsSheet(
             showColor = true, initialColor = t.color,
             showPinned = true, initialPinned = t.pinned,
             showIcon = true, initialIcon = t.icon,
+            showOnCovers = true, initialOnCovers = t.onCovers,
+            usage = vm.tagUsage.collectAsStateWithLifecycle().value[t.id],
+            onDelete = { vm.deleteTag(t.id); editTag = null },
         )
     }
     if (creating) {

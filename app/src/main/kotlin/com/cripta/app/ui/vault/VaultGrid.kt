@@ -325,7 +325,8 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
 internal fun TagBadges(tagsIn: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier, outerPad: androidx.compose.ui.unit.Dp = 8.dp) {
     // In the library's order (pinned first): when room runs out, the tags put first are the ones kept.
     val order = LocalTagOrder.current
-    val tags = remember(tagsIn, order) { libraryOrder(tagsIn, order) }
+    // Tags kept off the covers (Modifica etichetta › "Sulle copertine") are left out here.
+    val tags = remember(tagsIn, order) { libraryOrder(tagsIn.filter { it.onCovers }, order) }
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall
     val density = LocalDensity.current

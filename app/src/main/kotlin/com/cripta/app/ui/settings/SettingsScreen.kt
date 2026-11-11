@@ -107,6 +107,8 @@ fun SettingsScreen(
     var deleteTag by remember { mutableStateOf<TagEntity?>(null) }
     var addTag by remember { mutableStateOf(false) }
     var confirmRandomColors by remember { mutableStateOf(false) }
+    var mergingTags by remember { mutableStateOf(false) }
+    var confirmDeleteUnused by remember { mutableStateOf(false) }
 
     val dupMode by vm.dupMode.collectAsStateWithLifecycle()
     val dupScanning by vm.dupScanning.collectAsStateWithLifecycle()
@@ -134,6 +136,7 @@ fun SettingsScreen(
     val trashed by vm.trashed.collectAsStateWithLifecycle()
     val space by vm.space.collectAsStateWithLifecycle()
     val tagCount by vm.tagCount.collectAsStateWithLifecycle()
+    val tagUsage by vm.tagUsage.collectAsStateWithLifecycle()
     val cleanupFiles by vm.allFiles.collectAsStateWithLifecycle()
     var showCleanup by remember { mutableStateOf(false) }
     var confirmEmptyTrash by remember { mutableStateOf(false) }
@@ -303,10 +306,8 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
-                                // A long library gets the pickers' search field (name or acronym).
-                                if (tags.size > com.cripta.app.ui.vault.SEARCH_THRESHOLD) {
-                                    com.cripta.app.ui.vault.TagSearchField(tagQuery, Modifier.padding(bottom = 8.dp)) { tagQuery = it }
-                                }
+                                // The pickers' search field (name or acronym), always above the list.
+                                com.cripta.app.ui.vault.TagSearchField(tagQuery, Modifier.padding(bottom = 8.dp)) { tagQuery = it }
                                 val searching = tagQuery.isNotBlank()
                                 val found = if (searching) tags.filter { com.cripta.app.ui.vault.tagMatches(it, tagQuery) } else tags
                                 // Long libraries are collapsed so the page stays short; opening or
@@ -320,6 +321,7 @@ fun SettingsScreen(
                                     // Moving within search results would renumber the whole library from a part of it.
                                     reorderable = custom && !searching,
                                     colorOf = { tag -> if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary },
+                                    countOf = { tag -> tagUsage[tag.id]?.files },
                                     onEdit = { editTag = it },
                                     onDelete = { deleteTag = it },
                                     onMoveStep = { tag, up -> vm.moveTag(tag.id, up = up) },
@@ -345,15 +347,21 @@ fun SettingsScreen(
                     },
                     // The order sits right under the library it sorts (its drag handles appear there).
                     sec(str(R.string.sec_library_order)) {
-                        Section(str(R.string.sec_library_order), str(R.string.custom_order_hint)) {
-                            val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                        val mode = s.tagSortMode
+                        Section(str(R.string.sec_library_order), when (mode) {
+                            com.cripta.app.data.TagSortMode.CUSTOM -> str(R.string.custom_order_hint)
+                            com.cripta.app.data.TagSortMode.USED -> str(R.string.used_order_hint)
+                            com.cripta.app.data.TagSortMode.ALPHA -> str(R.string.alpha_order_hint)
+                        }) {
                             com.cripta.app.ui.components.ChipFlowRow {
-                                com.cripta.app.ui.components.ChoiceChip(selected = !custom,
-                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.ALPHA) },
-                                    label = { Text(str(R.string.alphabetical)) })
-                                com.cripta.app.ui.components.ChoiceChip(selected = custom,
-                                    onClick = { vm.setTagSortMode(com.cripta.app.data.TagSortMode.CUSTOM) },
-                                    label = { Text(str(R.string.custom)) })
+                                listOf(
+                                    com.cripta.app.data.TagSortMode.ALPHA to str(R.string.alphabetical),
+                                    com.cripta.app.data.TagSortMode.USED to str(R.string.most_used),
+                                    com.cripta.app.data.TagSortMode.CUSTOM to str(R.string.custom),
+                                ).forEach { (m, label) ->
+                                    com.cripta.app.ui.components.ChoiceChip(selected = mode == m,
+                                        onClick = { vm.setTagSortMode(m) }, label = { Text(label) })
+                                }
                             }
                         }
                     },
@@ -421,6 +429,36 @@ fun SettingsScreen(
                                     s.display.showRecentTags -> str(R.string.viewer_tag_bar_recent, s.display.recentTagsCount)
                                     else -> str(R.string.viewer_tag_bar_all)
                                 }) { vm.setViewerQuickTags(it) }
+                        }
+                    },
+                    // Rare actions on the library, last; the destructive ones in the error colour.
+                    sec(str(R.string.sec_tag_maintenance)) {
+                        Section(str(R.string.sec_tag_maintenance), str(R.string.tag_maintenance_hint)) {
+                            com.cripta.app.ui.components.FilledTonalButton(
+                                onClick = { mergingTags = true }, enabled = tags.size >= 2,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                            ) {
+                                Icon(CriptaIcons.Merge, null, Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                com.cripta.app.ui.components.ButtonText(str(R.string.merge_tags))
+                            }
+                            Text(str(R.string.merge_tags_hint), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                            // On no file at all, the trash included (a restored file keeps its tags).
+                            val unused = tags.filter { tagUsage[it.id]?.links == 0 }
+                            Text(
+                                if (unused.isEmpty()) str(R.string.no_unused_tags)
+                                else str(R.string.unused_tags_line, unused.joinToString(", ") { it.name }),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 16.dp),
+                            )
+                            if (unused.isNotEmpty()) {
+                                com.cripta.app.ui.components.DestructiveButton(
+                                    str(R.string.delete_unused_n, unused.size), onClick = { confirmDeleteUnused = true },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp), icon = CriptaIcons.Delete,
+                                )
+                            }
                         }
                     },
                 )
@@ -986,7 +1024,7 @@ fun SettingsScreen(
     if (addTag) {
         LabelEditorDialog(
             title = str(R.string.new_tag),
-            showColor = true, showIcon = true, showPinned = true,
+            showColor = true, showIcon = true, showPinned = true, showOnCovers = true,
             takenNames = tags.map { it.name },
             onConfirm = { draft -> vm.createTag(draft); addTag = false },
             onDismiss = { addTag = false },
@@ -1012,6 +1050,9 @@ fun SettingsScreen(
             showColor = true, initialColor = tag.color,
             showPinned = true, initialPinned = tag.pinned,
             showIcon = true, initialIcon = tag.icon,
+            showOnCovers = true, initialOnCovers = tag.onCovers,
+            usage = tagUsage[tag.id],
+            onDelete = { vm.deleteTag(tag.id); editTag = null },
             takenNames = tags.filter { it.id != tag.id }.map { it.name },
             onConfirm = { draft -> vm.saveTag(tag.id, draft); editTag = null },
             onDismiss = { editTag = null },
@@ -1075,6 +1116,28 @@ fun SettingsScreen(
         )
     }
 
+    if (mergingTags) {
+        MergeTagsDialog(
+            tags = tags,
+            colorOf = { tag -> if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary },
+            onMerge = { from, into -> vm.mergeTags(from.id, into.id); mergingTags = false },
+            onDismiss = { mergingTags = false },
+        )
+    }
+    if (confirmDeleteUnused) {
+        val unused = tags.filter { tagUsage[it.id]?.links == 0 }
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { confirmDeleteUnused = false },
+            title = { Text(str(R.string.delete_unused_q)) },
+            text = { Text(str(R.string.delete_unused_text, unused.joinToString(", ") { it.name })) },
+            confirmButton = {
+                TextButton(enabled = unused.isNotEmpty(), onClick = { vm.deleteUnusedTags(unused.map { it.id }); confirmDeleteUnused = false }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeleteUnused = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+        )
+    }
     deleteTag?.let { tag ->
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { deleteTag = null },

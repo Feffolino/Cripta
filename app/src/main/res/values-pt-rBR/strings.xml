@@ -2125,4 +2125,34 @@
     <string name="folder_random_inherited">Excluída do aleatório por uma pasta superior</string>
     <string name="restore_folders_skipped">Pastas não restauradas, pasta superior ausente: %1$d (seus arquivos estão em Raiz: %2$d)</string>
     <string name="restore_duplicates_skipped">Já no cofre, não adicionados novamente: %1$d</string>
+    <string name="tag_usage_line">Em %1$s · %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="one">%1$s pasta</item>
+        <item quantity="many">%1$s pastas</item>
+        <item quantity="other">%1$s pastas</item>
+    </plurals>
+    <string name="tag_states_caption">Atribuída · não atribuída</string>
+    <string name="tag_alias_short">Nome curto</string>
+    <string name="tag_alias_cover_hint">O nome curto vai nas capas quando não há ícone.</string>
+    <string name="tag_on_covers_hint">Desligada, continua nos filtros e nos detalhes</string>
+    <string name="tag_off_covers">Fora das capas</string>
+    <string name="icon_search_count">Buscar entre %1$s ícones</string>
+    <string name="icon_fit_for">Para “%1$s”</string>
+    <string name="icon_common">Comuns</string>
+    <string name="tag_pinned">Fixada</string>
+    <string name="most_used">Mais usadas</string>
+    <string name="used_order_hint">Primeiro as etiquetas que estão em mais arquivos.</string>
+    <string name="alpha_order_hint">De A a Z.</string>
+    <string name="sec_tag_maintenance">Manutenção</string>
+    <string name="tag_maintenance_hint">Ações raras na biblioteca.</string>
+    <string name="merge_tags">Juntar duas etiquetas</string>
+    <string name="merge_tags_hint">Os arquivos da primeira passam para a segunda; a primeira some.</string>
+    <string name="merge_pick_from">Qual some</string>
+    <string name="merge_pick_into">Em qual se junta</string>
+    <string name="merge_confirm_text">Os arquivos de “%1$s” recebem “%2$s” e depois “%1$s” some.</string>
+    <string name="no_unused_tags">Cada etiqueta está em pelo menos um arquivo.</string>
+    <string name="unused_tags_line">Em nenhum arquivo: %1$s.</string>
+    <string name="delete_unused_n">Excluir as não usadas (%1$d)</string>
+    <string name="delete_unused_q">Excluir as etiquetas não usadas?</string>
+    <string name="delete_unused_text">%1$s. Não estão em nenhum arquivo, nem na lixeira.</string>
 </resources>

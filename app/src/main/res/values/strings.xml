@@ -2060,4 +2060,33 @@
     <string name="folder_random_inherited">Kept out of random by a parent folder</string>
     <string name="restore_folders_skipped">Folders not restored, parent missing: %1$d (their files are in Root: %2$d)</string>
     <string name="restore_duplicates_skipped">Already in the vault, not added again: %1$d</string>
+    <string name="tag_usage_line">On %1$s · %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="one">%1$s folder</item>
+        <item quantity="other">%1$s folders</item>
+    </plurals>
+    <string name="tag_states_caption">Assigned · not assigned</string>
+    <string name="tag_alias_short">Short label</string>
+    <string name="tag_alias_cover_hint">The short label goes on covers when there is no icon.</string>
+    <string name="tag_on_covers_hint">Off, it stays in filters and details</string>
+    <string name="tag_off_covers">Not on covers</string>
+    <string name="icon_search_count">Search %1$s icons</string>
+    <string name="icon_fit_for">Suited to “%1$s”</string>
+    <string name="icon_common">Common</string>
+    <string name="tag_pinned">Pinned</string>
+    <string name="most_used">Most used</string>
+    <string name="used_order_hint">Tags on the most files come first.</string>
+    <string name="alpha_order_hint">From A to Z.</string>
+    <string name="sec_tag_maintenance">Maintenance</string>
+    <string name="tag_maintenance_hint">Rare actions on the library.</string>
+    <string name="merge_tags">Merge two tags</string>
+    <string name="merge_tags_hint">The first one\'s files move to the second; the first disappears.</string>
+    <string name="merge_pick_from">Which one goes</string>
+    <string name="merge_pick_into">Into which one</string>
+    <string name="merge_confirm_text">Files with “%1$s” get “%2$s”, then “%1$s” disappears.</string>
+    <string name="no_unused_tags">Every tag is on at least one file.</string>
+    <string name="unused_tags_line">On no file: %1$s.</string>
+    <string name="delete_unused_n">Delete unused (%1$d)</string>
+    <string name="delete_unused_q">Delete unused tags?</string>
+    <string name="delete_unused_text">%1$s. They are on no file, not even in the trash.</string>
 </resources>

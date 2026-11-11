@@ -5,7 +5,8 @@ import com.cripta.app.str
 import com.cripta.app.plural
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.components.CriptaAlertDialog
-import com.cripta.app.ui.tagicons.TagIconChoices
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -156,36 +157,69 @@ internal fun CoverOptionDialog(
     )
 }
 
+/**
+ * "Personalizza cartella": the folder as the grid will show it, with its files and empty, side by
+ * side and live; then "Colore" and "Icona" (search always in view, icons that fit the name, common
+ * ones). Nothing is saved before "Salva".
+ */
 @Composable
 internal fun FolderStyleDialog(
-    folderName: String,
-    initialColor: Int?,
-    initialIcon: String?,
+    folder: FolderEntity,
+    stat: com.cripta.app.data.FolderStat?,
+    previews: List<com.cripta.app.data.db.FileEntity>,
+    thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     /** Colour, icon, and whether an icon was picked at all (else the icon, or an old emoji, is kept). */
     onConfirm: (Int?, String?, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     // rememberSaveable: the draft survives the activity being recreated (not only a rotation).
-    var color by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialColor) }
-    var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialIcon) }
+    var color by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(folder.color) }
+    var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(folder.icon) }
     var iconPicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    // The card as it will look: the draft's colour and icon (an old emoji goes once an icon is picked).
+    val draft = folder.copy(color = color, icon = icon, emoji = if (iconPicked) null else folder.emoji, isFavorite = false)
+    val count = stat?.count ?: 0
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(str(R.string.customise_folder)) },
+        title = {
+            Column {
+                Text(str(R.string.customise_folder))
+                Text(folder.name + " · " + plural(R.plurals.files_n, count, com.cripta.app.ui.components.formatCount(count)),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp))
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(str(R.string.colour), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // No frames: each part is an accent heading plus space; the preview stays first so every
+            // change below is seen as it is made.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Row(
+                    Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = str(R.string.preview) + ": " + folder.name },
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    FolderMosaic(draft, stat, previews, thumb, Modifier.weight(1f))
+                    FolderMosaic(draft, null, emptyList(), thumb, Modifier.weight(1f))
+                }
+                FolderHeading(str(R.string.colour))
                 com.cripta.app.ui.components.ColorChoiceRow(
                     selected = color, noneFill = MaterialTheme.colorScheme.surfaceContainerHighest,
                     noneDescription = str(R.string.no_colour), onPick = { color = it },
                 )
-                Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TagIconChoices(folderName, icon, 220.dp) { icon = it; iconPicked = true }
+                FolderHeading(str(R.string.icon))
+                com.cripta.app.ui.tagicons.FolderIconChoices(folder.name, icon) { icon = it; iconPicked = true }
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(color, icon, iconPicked) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
+}
+
+/** A part of the folder dialog: accent heading, 24dp above it and 10dp to what it names (as the tag editor's). */
+@Composable
+private fun FolderHeading(text: String) {
+    Text(text, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 24.dp, bottom = 10.dp).semantics { heading() })
 }
 
 @Composable

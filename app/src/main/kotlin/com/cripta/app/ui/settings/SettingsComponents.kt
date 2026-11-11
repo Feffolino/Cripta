@@ -2,6 +2,9 @@ package com.cripta.app.ui.settings
 
 import com.cripta.app.R
 import com.cripta.app.str
+import com.cripta.app.plural
+import com.cripta.app.ui.components.TextButton
+import androidx.compose.foundation.layout.widthIn
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.only
@@ -10,11 +13,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -265,6 +271,8 @@ internal fun TagLibraryList(
     tags: List<com.cripta.app.data.db.TagEntity>,
     reorderable: Boolean,
     colorOf: @Composable (com.cripta.app.data.db.TagEntity) -> Color,
+    /** Files the tag is on (null = not known yet): shown at the row's end. */
+    countOf: (com.cripta.app.data.db.TagEntity) -> Int?,
     onEdit: (com.cripta.app.data.db.TagEntity) -> Unit,
     onDelete: (com.cripta.app.data.db.TagEntity) -> Unit,
     onMoveStep: (com.cripta.app.data.db.TagEntity, up: Boolean) -> Unit,
@@ -377,6 +385,7 @@ internal fun TagLibraryList(
                 TagLibraryRow(
                     tag = tag,
                     color = colorOf(tag),
+                    count = countOf(tag),
                     reorderable = reorderable,
                     canMoveUp = index > 0,
                     canMoveDown = index < shown.size - 1,
@@ -422,11 +431,15 @@ internal fun TagLibraryList(
     }
 }
 
-/** One row of [TagLibraryList]: the pill, the ⋮ (Modifica, Elimina) and, in the custom order, the drag handle. */
+/**
+ * One row of [TagLibraryList]: the pill, a pin when the tag is pinned, how many files it is on
+ * (tabular figures, grouped), the ⋮ (Modifica, Elimina) and, in the custom order, the drag handle.
+ */
 @Composable
 private fun TagLibraryRow(
     tag: com.cripta.app.data.db.TagEntity,
     color: Color,
+    count: Int?,
     reorderable: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
@@ -457,8 +470,17 @@ private fun TagLibraryRow(
                 size = com.cripta.app.ui.components.TagPillSize.Medium,
                 base = MaterialTheme.colorScheme.background,
                 tagIcon = tag.icon,
-                leadingIcon = if (tag.pinned) CriptaIcons.PushPin else null,
             )
+        }
+        if (tag.pinned) {
+            Icon(CriptaIcons.PushPin, str(R.string.tag_pinned), tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 4.dp).size(18.dp))
+        }
+        if (count != null) {
+            val n = com.cripta.app.ui.components.formatCount(count)
+            Text(n, style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.widthIn(min = 40.dp).semantics { contentDescription = plural(R.plurals.files_n, count, n) })
         }
         Box {
             androidx.compose.material3.IconButton(onClick = { menu = true }) {
@@ -486,4 +508,62 @@ private fun TagLibraryRow(
             }
         }
     }
+}
+
+/**
+ * "Unisci due etichette": pick the tag that goes, then the one that takes its files; a last line
+ * says what will happen before "Unisci". The first tag's files get the second, the first is deleted.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun MergeTagsDialog(
+    tags: List<com.cripta.app.data.db.TagEntity>,
+    colorOf: @Composable (com.cripta.app.data.db.TagEntity) -> Color,
+    onMerge: (from: com.cripta.app.data.db.TagEntity, into: com.cripta.app.data.db.TagEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var fromId by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    var intoId by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    val from = tags.firstOrNull { it.id == fromId }
+    val into = tags.firstOrNull { it.id == intoId && it.id != fromId }
+    @Composable
+    fun choices(title: String, chosen: Long?, skip: Long?, pick: (Long) -> Unit) {
+        Text(title, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 10.dp).semantics { heading() })
+        com.cripta.app.ui.components.ChipFlowRow {
+            tags.filter { it.id != skip }.forEach { t ->
+                val on = t.id == chosen
+                com.cripta.app.ui.components.TagPill(
+                    com.cripta.app.ui.components.tagText(t), colorOf(t),
+                    size = com.cripta.app.ui.components.TagPillSize.Medium,
+                    state = if (on) com.cripta.app.ui.components.TagPillState.On else com.cripta.app.ui.components.TagPillState.Off,
+                    base = MaterialTheme.colorScheme.surfaceContainerHigh, tagIcon = t.icon,
+                    onClick = { pick(t.id) }, stateLabel = if (on) str(R.string.chosen) else str(R.string.not_chosen),
+                )
+            }
+        }
+    }
+    com.cripta.app.ui.components.CriptaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(str(R.string.merge_tags)) },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                choices(str(R.string.merge_pick_from), fromId, null) { fromId = it; if (intoId == it) intoId = null }
+                if (from != null) {
+                    Spacer(Modifier.height(24.dp))
+                    choices(str(R.string.merge_pick_into), intoId, from.id) { intoId = it }
+                }
+                if (from != null && into != null) {
+                    Text(str(R.string.merge_confirm_text, from.name, into.name), style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 20.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = from != null && into != null, onClick = { if (from != null && into != null) onMerge(from, into) }) {
+                com.cripta.app.ui.components.ButtonText(str(R.string.merge))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+    )
 }

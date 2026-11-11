@@ -537,7 +537,7 @@ class SettingsViewModel @Inject constructor(
 
     /** A new tag with its whole look, in one write. A name already in the library is said so, not reused. */
     fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
-        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (!r.created) _message.value = str(R.string.tag_exists, draft.name)
     }
 
@@ -559,14 +559,24 @@ class SettingsViewModel @Inject constructor(
     fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }
     fun setRecentTagsCount(v: Int) = viewModelScope.launch { store.setRecentTagsCount(v) }
     fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
+    /** Each tag's use (files, folders), for the tag editor's line under its title. */
+    val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
+        repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+
+    /** Merge [fromId] into [intoId] (Manutenzione): its files get the second, the first goes. */
+    fun mergeTags(fromId: Long, intoId: Long) = viewModelScope.launch { repo.mergeTags(fromId, intoId) }
+
+    /** Delete the tags of [ids] still on no file (Manutenzione). */
+    fun deleteUnusedTags(ids: Collection<Long>) = viewModelScope.launch { repo.deleteUnusedTags(ids) }
 
     /**
      * Save the tag editor: name, alias, colour, pin and icon together, by id, in one transaction.
      * A name taken meanwhile by another tag leaves the tag exactly as it was, and is said so.
      */
     fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
-        when (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon)) {
+        when (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)) {
             com.cripta.app.data.TagSave.SAVED -> Unit
             com.cripta.app.data.TagSave.NAME_TAKEN -> _message.value = str(R.string.tag_exists, draft.name)
             com.cripta.app.data.TagSave.MISSING -> Unit   // deleted meanwhile: nothing to save into

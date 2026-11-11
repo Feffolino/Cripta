@@ -117,8 +117,31 @@ interface TagDao {
     suspend fun allNow(): List<TagEntity>
 
     /** Every editable field of one tag, by id: the editor saves them together. Returns rows changed. */
-    @Query("UPDATE tags SET name = :name, alias = :alias, color = :color, pinned = :pinned, icon = :icon WHERE id = :id")
-    suspend fun update(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?): Int
+    @Query("UPDATE tags SET name = :name, alias = :alias, color = :color, pinned = :pinned, icon = :icon, onCovers = :onCovers WHERE id = :id")
+    suspend fun update(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?, onCovers: Boolean): Int
+
+    @Query("UPDATE tags SET onCovers = :onCovers WHERE name = :name")
+    suspend fun setOnCovers(name: String, onCovers: Boolean)
+
+    /** Every tag's use (see [TagUsage]); a tag on no file has zeros. */
+    @Query("""
+        SELECT t.id AS tagId,
+            (SELECT COUNT(*) FROM file_tags l JOIN files f ON f.id = l.fileId
+                WHERE l.tagId = t.id AND f.deletedAt IS NULL) AS files,
+            (SELECT COUNT(DISTINCT IFNULL(f.folderId, -1)) FROM file_tags l JOIN files f ON f.id = l.fileId
+                WHERE l.tagId = t.id AND f.deletedAt IS NULL) AS folders,
+            (SELECT COUNT(*) FROM file_tags l WHERE l.tagId = t.id) AS links
+        FROM tags t
+    """)
+    fun usage(): Flow<List<TagUsage>>
+
+    /** Of [ids], the tags on no file at all (the trash included). */
+    @Query("SELECT id FROM tags WHERE id IN (:ids) AND id NOT IN (SELECT tagId FROM file_tags)")
+    suspend fun unusedAmong(ids: Collection<Long>): List<Long>
+
+    /** Put [into] on every file that has [from] (files that have both keep one link). */
+    @Query("INSERT OR IGNORE INTO file_tags (fileId, tagId) SELECT fileId, :into FROM file_tags WHERE tagId = :from")
+    suspend fun copyLinks(from: Long, into: Long)
 
     @Query("SELECT id FROM tags WHERE id IN (:ids)")
     suspend fun existingIds(ids: Collection<Long>): List<Long>

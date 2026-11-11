@@ -2060,4 +2060,33 @@
     <string name="folder_random_inherited">Durch einen übergeordneten Ordner von Zufall ausgeschlossen</string>
     <string name="restore_folders_skipped">Nicht wiederhergestellte Ordner, übergeordneter Ordner fehlt: %1$d (ihre Dateien sind im Hauptverzeichnis: %2$d)</string>
     <string name="restore_duplicates_skipped">Bereits im Tresor, nicht erneut hinzugefügt: %1$d</string>
+    <string name="tag_usage_line">Auf %1$s · in %2$s</string>
+    <plurals name="in_folders_n">
+        <item quantity="one">%1$s Ordner</item>
+        <item quantity="other">%1$s Ordnern</item>
+    </plurals>
+    <string name="tag_states_caption">Zugewiesen · nicht zugewiesen</string>
+    <string name="tag_alias_short">Kurzname</string>
+    <string name="tag_alias_cover_hint">Der Kurzname steht auf den Vorschaubildern, wenn es kein Symbol gibt.</string>
+    <string name="tag_on_covers_hint">Aus: bleibt in Filtern und Details</string>
+    <string name="tag_off_covers">Nicht auf Vorschaubildern</string>
+    <string name="icon_search_count">%1$s Symbole durchsuchen</string>
+    <string name="icon_fit_for">Passend zu „%1$s“</string>
+    <string name="icon_common">Häufig</string>
+    <string name="tag_pinned">Angeheftet</string>
+    <string name="most_used">Meistgenutzt</string>
+    <string name="used_order_hint">Schlagwörter auf den meisten Dateien zuerst.</string>
+    <string name="alpha_order_hint">Von A bis Z.</string>
+    <string name="sec_tag_maintenance">Wartung</string>
+    <string name="tag_maintenance_hint">Seltene Aktionen für die Bibliothek.</string>
+    <string name="merge_tags">Zwei Schlagwörter zusammenführen</string>
+    <string name="merge_tags_hint">Die Dateien des ersten gehen zum zweiten, das erste verschwindet.</string>
+    <string name="merge_pick_from">Welches verschwindet</string>
+    <string name="merge_pick_into">In welches</string>
+    <string name="merge_confirm_text">Dateien mit „%1$s“ erhalten „%2$s“, dann verschwindet „%1$s“.</string>
+    <string name="no_unused_tags">Jedes Schlagwort ist auf mindestens einer Datei.</string>
+    <string name="unused_tags_line">Auf keiner Datei: %1$s.</string>
+    <string name="delete_unused_n">Unbenutzte löschen (%1$d)</string>
+    <string name="delete_unused_q">Unbenutzte Schlagwörter löschen?</string>
+    <string name="delete_unused_text">%1$s. Sie sind auf keiner Datei, auch nicht im Papierkorb.</string>
 </resources>

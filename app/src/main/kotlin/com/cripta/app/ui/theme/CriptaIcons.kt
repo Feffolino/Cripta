@@ -48,6 +48,7 @@ object CriptaIcons {
     val CreateNewFolder: ImageVector by lazy { load(R.drawable.tabler_folder_plus) }
     val Delete: ImageVector by lazy { load(R.drawable.tabler_trash) }
     val DeleteSweep: ImageVector by lazy { load(R.drawable.tabler_trash_x) }
+    val Merge: ImageVector by lazy { load(R.drawable.tabler_arrow_merge) }
     val Description: ImageVector by lazy { load(R.drawable.tabler_file_text) }
     val Download: ImageVector by lazy { load(R.drawable.tabler_download) }
     val DownloadFilled: ImageVector by lazy { load(R.drawable.tabler_download_filled) }
