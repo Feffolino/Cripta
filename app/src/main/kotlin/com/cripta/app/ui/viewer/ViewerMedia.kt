@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -157,7 +158,7 @@ internal fun MediaPage(
             is ViewerState.Video -> if (isCurrent) VideoPlayer(s.file, vm, controlsVisible = chromeVisible, onControlsVisibilityChanged = setChrome, onOpenDetails = onOpenDetails, onClose = onClose, nextId = nextId, onNext = onNext, topInset = topInset, bottomInset = bottomInset, onSeekClear = onSeekClear, pageShift = pageShift, controlsTimeoutMs = controlsTimeoutMs, onPausedChanged = onPausedChanged, hideControlsTick = hideControlsTick, selfManagedControls = selfManagedControls, controlsHeld = controlsHeld)
                 else CenteredPage(onTap = onToggleChrome) { DelayedSpinner(color = Color.White) }
             is ViewerState.Note -> NoteView(s.text, onSingleTap = onToggleChrome,
-                onTextChange = { text, revert -> vm.saveNoteText(s.file, text, revert) },
+                onTextChange = { before, text, revert -> vm.saveNoteText(s.file, before, text, revert) },
                 onEdit = { onEditNote(s.file.id) }, editShown = chromeVisible, bottomInset = bottomInset)
             is ViewerState.Pdf -> PdfView(s.bytes, onSingleTap = onToggleChrome)
             is ViewerState.Other -> CenteredPage(onTap = onToggleChrome) {
@@ -220,10 +221,25 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
     var dragEndedAt by remember { mutableLongStateOf(0L) }
     val afterDrag = { android.os.SystemClock.uptimeMillis() - dragEndedAt < 600L }
     var failed by remember(bytes) { mutableStateOf(false) }
+    // The photo's own size: fitted, it may fill only a band of the page.
+    var imageSize by remember(bytes) { mutableStateOf(androidx.compose.ui.geometry.Size.Unspecified) }
+    /**
+     * How far the photo zoomed by [s] may be dragged on a [w] x [h] page: until its edge meets the
+     * page's, measured on the fitted photo (not the page), so a tall or wide one never leaves the view.
+     */
+    fun panLimit(s: Float, w: Float, h: Float): androidx.compose.ui.geometry.Offset {
+        val img = imageSize
+        val fit = if (img.isSpecified && img.width > 0f && img.height > 0f) minOf(w / img.width, h / img.height) else 0f
+        val fw = if (fit > 0f) img.width * fit else w
+        val fh = if (fit > 0f) img.height * fit else h
+        return androidx.compose.ui.geometry.Offset(
+            ((fw * s - w) / 2f).coerceAtLeast(0f), ((fh * s - h) / 2f).coerceAtLeast(0f))
+    }
 
     Box(Modifier.fillMaxSize()) {
     AsyncImage(
         onError = { failed = true },
+        onSuccess = { imageSize = it.painter.intrinsicSize },
         model = ImageRequest.Builder(ctx).data(bytes).diskCachePolicy(CachePolicy.DISABLED).build(),
         contentDescription = name,
         contentScale = ContentScale.Fit,
@@ -250,10 +266,9 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                             // Clamped to the scaled content's bounds (as the video and PDF viewers
                             // do): unclamped, the photo could be dragged fully off-screen. Also
                             // re-clamps while pinching out, when the allowed range shrinks.
-                            val maxX = (newScale - 1f) * size.width / 2f
-                            val maxY = (newScale - 1f) * size.height / 2f
-                            val nx = (offX.value + pan.x).coerceIn(-maxX, maxX)
-                            val ny = (offY.value + pan.y).coerceIn(-maxY, maxY)
+                            val max = panLimit(newScale, size.width.toFloat(), size.height.toFloat())
+                            val nx = (offX.value + pan.x).coerceIn(-max.x, max.x)
+                            val ny = (offY.value + pan.y).coerceIn(-max.y, max.y)
                             scope.launch { offX.snapTo(nx) }
                             scope.launch { offY.snapTo(ny) }
                         } else if (offX.value != 0f || offY.value != 0f) {
@@ -279,9 +294,10 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
                                 val target = 2.5f
                                 val cx = size.width / 2f
                                 val cy = size.height / 2f
+                                val max = panLimit(target, size.width.toFloat(), size.height.toFloat())
                                 launch { scale.animateTo(target) }
-                                launch { offX.animateTo((cx - tap.x) * (target - 1f)) }
-                                launch { offY.animateTo((cy - tap.y) * (target - 1f)) }
+                                launch { offX.animateTo(((cx - tap.x) * (target - 1f)).coerceIn(-max.x, max.x)) }
+                                launch { offY.animateTo(((cy - tap.y) * (target - 1f)).coerceIn(-max.y, max.y)) }
                             }
                         }
                     },
@@ -308,7 +324,8 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
 private fun NoteView(
     text: String,
     onSingleTap: () -> Unit,
-    onTextChange: (String, () -> Unit) -> Unit,
+    /** (text before the tick, text after, back to the stored text when a save fails). */
+    onTextChange: (String, String, (String) -> Unit) -> Unit,
     onEdit: () -> Unit,
     editShown: Boolean,
     bottomInset: androidx.compose.ui.unit.Dp,
@@ -356,7 +373,7 @@ private fun NoteView(
                                     .toggleableRow(done) {
                                         val before = current
                                         current = com.cripta.app.ui.note.NoteMarkdown.toggleCheck(current, index)
-                                        onTextChange(current) { current = before }
+                                        onTextChange(before, current) { stored -> current = stored }
                                     },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

@@ -584,6 +584,13 @@ class FaceRepository @Inject constructor(
         }
         dao.deletePerson(drop)
         if (p?.favorite == true) dao.setFavorite(keep, true)
+        // Saved filters on the merged person look for the one kept: left with its id, they found
+        // nobody ("Senza nome", no media).
+        val filters = db.savedFilterDao()
+        for (sf in filters.allNow()) {
+            val json = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: continue
+            com.cripta.app.data.SavedFilterJson.withPersonMerged(json, drop, keep)?.let { filters.setJson(sf.id, it.toString()) }
+        }
         return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet())
     }
 

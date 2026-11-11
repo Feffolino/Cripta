@@ -2025,4 +2025,8 @@
     <string name="delete_unused_n">미사용 삭제 (%1$d)</string>
     <string name="delete_unused_q">사용하지 않는 태그를 삭제할까요?</string>
     <string name="delete_unused_text">%1$s. 어떤 파일에도, 휴지통에도 없습니다.</string>
+    <string name="err_convert_original_gone">변환 중에 원본이 삭제되었습니다: 사본을 저장하지 않았습니다</string>
+    <string name="restore_settings_failed">설정이 복원되지 않았습니다. 설정에서 다시 지정하세요</string>
+    <string name="face_candidate_n">얼굴 %1$d/%2$d</string>
+    <string name="face_quality_good">좋음</string>
 </resources>

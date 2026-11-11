@@ -183,4 +183,14 @@ class RestoreLimitsTest {
         }
         assertFalse(blobs.blob(uuid).exists())
     }
+
+    @Test
+    fun spaceGivenBackByADroppedBlobCanBeUsedAgain() {
+        val quota = VaultRepository.RestoreQuota(100)
+        quota.take(60)
+        // The same file already in the vault: its blob is dropped and its bytes are free again.
+        quota.giveBack(60)
+        quota.take(60)
+        assertThrows(IOException::class.java) { quota.take(60) }
+    }
 }

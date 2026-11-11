@@ -2025,4 +2025,8 @@
     <string name="delete_unused_n">删除未使用的 (%1$d)</string>
     <string name="delete_unused_q">删除未使用的标签？</string>
     <string name="delete_unused_text">%1$s。它们不在任何文件上，回收站中也没有。</string>
+    <string name="err_convert_original_gone">转换期间原文件已被删除：未保存副本</string>
+    <string name="restore_settings_failed">设置未恢复：请在设置中重新设置</string>
+    <string name="face_candidate_n">第 %1$d 张脸，共 %2$d 张</string>
+    <string name="face_quality_good">良好</string>
 </resources>

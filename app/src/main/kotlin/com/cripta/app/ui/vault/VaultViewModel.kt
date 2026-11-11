@@ -399,6 +399,9 @@ class VaultViewModel @Inject constructor(
             last = f
             if (prev != null && f.query != prev.query && f.copy(query = "") == prev.copy(query = "")) 200L else 0L
         }
+            // Looked up again when the faces change too (a person taken off a media, a scan that
+            // found them): only on the filters, the search kept the media of before.
+            .combine(faces.people()) { f, _ -> f }
             .mapLatest { f ->
                 // People come from the face index, not from the file rows.
                 val people = if (f.personIds.isEmpty()) null else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())

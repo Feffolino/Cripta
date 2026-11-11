@@ -54,6 +54,28 @@ object SavedFilterJson {
     /** Every tag id the filter refers to. */
     fun tagIds(o: org.json.JSONObject): Set<Long> = (ids(o, "tags") + ids(o, "ex")).toSet()
 
+    /**
+     * [o] with tag [from] become [into] (a merge: the files of one now have the other), in what it
+     * requires and what it leaves out; null when it does not name [from]. A copy, [o] is left as it is.
+     */
+    fun withTagMerged(o: org.json.JSONObject, from: Long, into: Long): org.json.JSONObject? {
+        val tags = ids(o, "tags")
+        val ex = ids(o, "ex")
+        if (from !in tags && from !in ex) return null
+        fun swap(l: List<Long>) = l.map { if (it == from) into else it }.distinct()
+        return org.json.JSONObject(o.toString())
+            .put("tags", org.json.JSONArray(swap(tags)))
+            .put("ex", org.json.JSONArray(swap(ex)))
+    }
+
+    /** [o] with person [from] become [into] (merged into them); null when it does not name [from]. */
+    fun withPersonMerged(o: org.json.JSONObject, from: Long, into: Long): org.json.JSONObject? {
+        val people = ids(o, "people")
+        if (from !in people) return null
+        return org.json.JSONObject(o.toString())
+            .put("people", org.json.JSONArray(people.map { if (it == from) into else it }.distinct()))
+    }
+
     /** [o] without the tag ids in [dead]; a copy, [o] is left as it is. */
     fun withoutTags(o: org.json.JSONObject, dead: Set<Long>): Pruned {
         val tags = ids(o, "tags")

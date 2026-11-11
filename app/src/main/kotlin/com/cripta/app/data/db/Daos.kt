@@ -321,6 +321,10 @@ interface FileDao {
 
     @Query("UPDATE files SET sourceUrl = :url WHERE id = :id")
     suspend fun setSourceUrl(id: String, url: String?)
+
+    /** A note rewritten: its name, type and size; its old hash would match the old text. */
+    @Query("UPDATE files SET originalName = :name, mimeType = :mime, sizeBytes = :size, contentHash = NULL WHERE id = :id")
+    suspend fun setNoteContent(id: String, name: String, mime: String, size: Long)
 }
 
 @Dao
@@ -755,8 +759,11 @@ interface FaceDao {
     @Query("DELETE FROM persons WHERE id = :id")
     suspend fun deletePerson(id: Long)
 
-    /** People left with no face and no media: unnamed ones go (a named one stays, the user may add to it). */
-    @Query("DELETE FROM persons WHERE name = '' AND ignored = 0 AND favorite = 0 AND id NOT IN (SELECT personId FROM face_tracks WHERE personId IS NOT NULL AND state != 'suggested') AND id NOT IN (SELECT personId FROM person_media)")
+    /**
+     * People left with no face and no media: unnamed ones go (a named one stays, the user may add
+     * to it), unless they hold notes or links the user wrote on their profile.
+     */
+    @Query("DELETE FROM persons WHERE name = '' AND ignored = 0 AND favorite = 0 AND notes = '' AND links = '' AND id NOT IN (SELECT personId FROM face_tracks WHERE personId IS NOT NULL AND state != 'suggested') AND id NOT IN (SELECT personId FROM person_media)")
     suspend fun deleteEmptyPersons()
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

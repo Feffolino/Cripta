@@ -2157,4 +2157,8 @@
     <string name="delete_unused_n">Eliminar las no usadas (%1$d)</string>
     <string name="delete_unused_q">¿Eliminar las etiquetas no usadas?</string>
     <string name="delete_unused_text">%1$s. No están en ningún archivo, ni siquiera en la papelera.</string>
+    <string name="err_convert_original_gone">El original se eliminó durante la conversión: no se guardó ninguna copia</string>
+    <string name="restore_settings_failed">Ajustes no restaurados: vuelve a configurarlos en Ajustes</string>
+    <string name="face_candidate_n">Cara %1$d de %2$d</string>
+    <string name="face_quality_good">bueno</string>
 </resources>

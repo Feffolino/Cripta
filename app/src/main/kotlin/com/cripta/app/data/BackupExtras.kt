@@ -148,9 +148,13 @@ internal object BackupExtras {
 
     /**
      * Read what [write] stored, after the files: [newIds] are the restored files by archive
-     * position. Returns false when the archive has no such part (older backups).
+     * position; [known] the files of the vault the restore recognised as already there (same
+     * content in the same folder), by the same position. A recognised file keeps its own analysis
+     * (nothing of it is replaced): it only gains the archive's people. Returns false when the
+     * archive has no such part (older backups).
      */
-    suspend fun read(db: CriptaDatabase, newIds: Array<String?>, inp: DataInputStream, contents: Contents? = null): Boolean {
+    suspend fun read(db: CriptaDatabase, newIds: Array<String?>, inp: DataInputStream, contents: Contents? = null,
+                     known: Array<String?> = arrayOfNulls(0)): Boolean {
         val magic = try { inp.readInt() } catch (e: java.io.EOFException) { return false }
         if (magic != MAGIC) return false
         val o = JSONObject(String(inp.blob()))
@@ -158,28 +162,39 @@ internal object BackupExtras {
         val intro = db.introDao()
         fun file(i: Any?): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) }
         fun originOf(v: Any?): String = file(v) ?: (v as? String).orEmpty()
+        /** A restored file, or one already in the vault: for links that only add. */
+        fun anyFile(i: Any?): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) ?: known.getOrNull(it) }
 
-        contents?.people = o.optJSONArray("persons")?.length() ?: 0
         contents?.analysis = listOf("prints", "signatures", "rules", "rejected", "dupPrints", "dupApart")
             .any { (o.optJSONArray(it)?.length() ?: 0) > 0 }
         val personIds = HashMap<Long, Long>()
         val covers = HashMap<Long, Long>()
+        // Named people already in the vault: the archive's person of that name is that one (only
+        // gaining media), as tags and folders are matched by name. Restored twice, an archive no
+        // longer made a second profile of everyone.
+        val byName = faces.persons().filter { it.name.isNotBlank() }.associateBy { it.name }
+        /** Profiles made by this restore, and those that got something of their own (a face, a media). */
+        val created = HashSet<Long>(); val filled = HashSet<Long>()
         o.optJSONArray("persons")?.let { a ->
             for (i in 0 until a.length()) {
                 val p = a.getJSONObject(i)
+                val name = p.optString("name")
+                val same = byName[name]
+                if (same != null) { personIds[p.getLong("id")] = same.id; continue }
                 val id = faces.addPerson(PersonEntity(name = p.optString("name"), ignored = p.optBoolean("ignored"), favorite = p.optBoolean("favorite"),
                     createdAt = p.optLong("createdAt", System.currentTimeMillis()), notes = p.optString("notes"), links = p.optString("links")))
                 personIds[p.getLong("id")] = id
+                created += id
                 p.optLongOrNull("cover")?.let { covers[id] = it }
             }
         }
-        contents?.personIds?.putAll(personIds)
         o.optJSONArray("personMedia")?.let { a ->
             for (i in 0 until a.length()) {
                 val m = a.getJSONObject(i)
                 val pid = personIds[m.getLong("p")] ?: continue
-                val f = file(m.get("f")) ?: continue
+                val f = anyFile(m.get("f")) ?: continue
                 faces.addPersonMedia(PersonMediaEntity(pid, f))
+                if (file(m.get("f")) != null) filled += pid
             }
         }
         o.optJSONArray("scans")?.let { a ->
@@ -203,9 +218,23 @@ internal object BackupExtras {
                     times = t.optString("times"), box = t.optString("box"),
                     sightings = runCatching { java.util.Base64.getDecoder().decode(t.optString("sight")) }.getOrDefault(ByteArray(0))))
                 trackIds[t.getLong("id")] = id
+                t.optLongOrNull("person")?.let { personIds[it] }?.let { filled += it }
             }
         }
         for ((pid, old) in covers) trackIds[old]?.let { faces.setCover(pid, it) }
+        // A new unnamed profile with nothing new (its media were all already here, with the
+        // profile they had): not made again. Its notes or links, or a star, keep it.
+        val now = faces.persons().associateBy { it.id }
+        for (id in created.toList()) if (id !in filled) {
+            val p = now[id] ?: continue
+            if (p.name.isBlank() && p.notes.isBlank() && p.links.isBlank() && !p.favorite && !p.ignored) {
+                faces.deletePersonMedia(id); faces.deletePerson(id)
+                personIds.entries.removeAll { it.value == id }
+                created -= id
+            }
+        }
+        contents?.personIds?.putAll(personIds)
+        contents?.people = created.size
         o.optJSONArray("ignored")?.let { a ->
             for (i in 0 until a.length()) {
                 val g = a.getJSONObject(i)

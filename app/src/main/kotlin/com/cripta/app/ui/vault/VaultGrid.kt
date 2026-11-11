@@ -92,6 +92,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.drawscope.withTransform
 import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -385,7 +386,11 @@ internal fun TagBadges(
         // Where the tray sits on the cover, for the frosting to line up with the picture under it.
         val cover = if (backdrop != null && constraints.hasBoundedHeight)
             androidx.compose.ui.unit.IntSize(constraints.maxWidth, constraints.maxHeight) else null
-        val at = androidx.compose.ui.unit.IntOffset(outerPx - m.pad, (cover?.height ?: 0) - liftPx - outerPx - contentH - m.pad)
+        // Right to left the marks start at the cover's right edge, and the tray with them.
+        val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+        val at = androidx.compose.ui.unit.IntOffset(
+            if (rtl && cover != null) cover.width - outerPx + m.pad - trayW else outerPx - m.pad,
+            (cover?.height ?: 0) - liftPx - outerPx - contentH - m.pad)
         val gapDp = with(density) { m.gap.toDp() }
 
         Box(Modifier.align(Alignment.BottomStart).padding(start = outerPad, bottom = outerPad + bottomLift)) {
@@ -400,7 +405,8 @@ internal fun TagBadges(
                                 val fresh = remember { tags[i].id !in knownTags }
                                 androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
                                 val mod = Modifier.popIn(fresh)
-                                if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), with(density) { m.slot.toDp() }, mod)
+                                // Its packed width, as for pills: beside "+N" the top row's bubbles may be narrowed.
+                                if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), with(density) { layout.widths[r][k].toDp() }, mod)
                                 else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), m, with(density) { layout.widths[r][k].toDp() }, mod)
                             }
                         }
@@ -505,8 +511,8 @@ internal fun trayComposePath(ops: List<TrayPathOp>): androidx.compose.ui.graphic
     }
 
 /**
- * The dark tray behind a cover's marks, [w]×[h] px, drawn [pad] up and left of the marks' corner
- * and taking no room itself. Inside [path]: the cover's [backdrop] (sized to [cover], the tray at
+ * The dark tray behind a cover's marks, [w]×[h] px, drawn [pad] up and out from the marks' start
+ * corner and taking no room itself (right to left: from the right, its outline mirrored). Inside [path]: the cover's [backdrop] (sized to [cover], the tray at
  * [at] on it) blurred by [TrayFrost], then [TrayInk]; without a picture, the ink alone. Masked
  * with the path (not clipped), so its curved edges are smooth.
  */
@@ -524,13 +530,18 @@ private fun CoverTray(
         Modifier
             .layout { measurable, _ ->
                 val p = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
-                layout(0, 0) { p.place(-pad, -pad) }
+                // Relative: right to left the tray reaches back from the marks' right edge.
+                layout(0, 0) { p.placeRelative(-pad, -pad) }
             }
             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
-                drawPath(path, TrayInk)
-                drawPath(path, Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                // The outline is drawn for marks aligned left: right to left they align right.
+                val flip = layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl
+                withTransform({ if (flip) scale(-1f, 1f, pivot = androidx.compose.ui.geometry.Offset(size.width / 2f, 0f)) }) {
+                    drawPath(path, TrayInk)
+                    drawPath(path, Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                }
             },
     ) {
         if (backdrop != null && cover != null) {

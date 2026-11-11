@@ -2091,4 +2091,8 @@
     <string name="delete_unused_n">Unbenutzte löschen (%1$d)</string>
     <string name="delete_unused_q">Unbenutzte Schlagwörter löschen?</string>
     <string name="delete_unused_text">%1$s. Sie sind auf keiner Datei, auch nicht im Papierkorb.</string>
+    <string name="err_convert_original_gone">Das Original wurde während der Umwandlung gelöscht: keine Kopie gespeichert</string>
+    <string name="restore_settings_failed">Einstellungen nicht wiederhergestellt: lege sie in den Einstellungen neu fest</string>
+    <string name="face_candidate_n">Gesicht %1$d von %2$d</string>
+    <string name="face_quality_good">gut</string>
 </resources>

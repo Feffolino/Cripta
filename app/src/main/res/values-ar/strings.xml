@@ -2355,4 +2355,8 @@
     <string name="delete_unused_n">حذف غير المستخدمة (%1$d)</string>
     <string name="delete_unused_q">حذف الأوسام غير المستخدمة؟</string>
     <string name="delete_unused_text">%1$s. ليست على أي ملف، ولا في سلة المهملات.</string>
+    <string name="err_convert_original_gone">حُذف الأصل أثناء التحويل: لم تُحفظ أي نسخة</string>
+    <string name="restore_settings_failed">لم تُستعد الإعدادات: اضبطها مجددًا من الإعدادات</string>
+    <string name="face_candidate_n">الوجه %1$d من %2$d</string>
+    <string name="face_quality_good">جيد</string>
 </resources>

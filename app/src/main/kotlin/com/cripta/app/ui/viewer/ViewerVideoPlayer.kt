@@ -273,7 +273,8 @@ internal fun VideoPlayer(
     LaunchedEffect(skippedChip) {
         if (skippedChip != null) {
             delay(3_000)
-            if (advanceAfterChip) { advanceAfterChip = false; latestOnNext() }
+            // Paused behind the chip: the user stopped here, the next video does not start on its own.
+            if (advanceAfterChip) { advanceAfterChip = false; if (player.playWhenReady) latestOnNext() }
             skippedChip = null
         }
     }

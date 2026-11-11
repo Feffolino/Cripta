@@ -2223,4 +2223,8 @@
     <string name="delete_unused_n">Удалить неиспользуемые (%1$d)</string>
     <string name="delete_unused_q">Удалить неиспользуемые метки?</string>
     <string name="delete_unused_text">%1$s. Их нет ни на одном файле, даже в корзине.</string>
+    <string name="err_convert_original_gone">Оригинал был удалён во время конвертации: копия не сохранена</string>
+    <string name="restore_settings_failed">Настройки не восстановлены: задайте их заново в настройках</string>
+    <string name="face_candidate_n">Лицо %1$d из %2$d</string>
+    <string name="face_quality_good">хорошее</string>
 </resources>

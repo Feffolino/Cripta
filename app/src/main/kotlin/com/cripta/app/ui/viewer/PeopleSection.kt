@@ -7,7 +7,9 @@ import com.cripta.app.plural
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.theme.popOn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
@@ -91,9 +93,17 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     var menu by remember { mutableStateOf(false) }
     val undo by vm.faceUndo.collectAsStateWithLifecycle()
     LaunchedEffect(file.id) { vm.tidyFaces(file.id) }
-    LaunchedEffect(undo) {
+    // As long as the accessibility settings ask for (longer for who needs it), and not counting
+    // while the vault is locked: the chance to undo is not used up behind the lock screen.
+    val a11y = androidx.compose.ui.platform.LocalAccessibilityManager.current
+    val undoMs = remember(a11y) {
+        a11y?.calculateRecommendedTimeoutMillis(8_000L, containsIcons = false, containsText = true, containsControls = true) ?: 8_000L
+    }
+    val locked = com.cripta.app.ui.LocalVaultLocked.current
+    LaunchedEffect(undo, locked, undoMs) {
         val u = undo ?: return@LaunchedEffect
-        delay(8_000)
+        if (locked) return@LaunchedEffect
+        delay(undoMs.coerceAtLeast(8_000L))
         if (vm.faceUndo.value === u) vm.faceUndo.value = null
     }
 
@@ -232,10 +242,11 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
                             // Large, so faces are told apart at a glance: two per row in a portrait dialog.
                             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                list.forEach { f ->
+                                list.forEachIndexed { n, f ->
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { picked = f }) {
-                                        Image(f.picture.asImageBitmap(), null, Modifier.size(128.dp).clip(MaterialTheme.shapes.medium))
-                                        Text(f.why ?: "buono", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Image(f.picture.asImageBitmap(), str(R.string.face_candidate_n, n + 1, list.size),
+                                            Modifier.size(128.dp).clip(MaterialTheme.shapes.medium))
+                                        Text(f.why ?: str(R.string.face_quality_good), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
@@ -335,7 +346,7 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerViewModel) {
-    var off by remember(a) { mutableStateOf(emptySet<Long>()) }
+    val off by a.off.collectAsStateWithLifecycle()
     val picked = a.faces.map { it.card.id }.filter { it !in off }
     CriptaAlertDialog(onDismissRequest = { vm.dismissAlso() },
         title = { Text(str(R.string.also_these_q, name)) },
@@ -343,11 +354,15 @@ private fun AlsoDialog(a: ViewerViewModel.AlsoFaces, name: String, vm: ViewerVie
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(str(R.string.also_these_hint, name), style = MaterialTheme.typography.bodySmall)
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    a.faces.forEach { s ->
+                    a.faces.forEachIndexed { n, s ->
                         val on = s.card.id !in off
-                        Box(Modifier.clip(CircleShape).clickable(onClickLabel = if (on) str(R.string.exclude) else str(R.string.include)) {
-                            off = if (on) off + s.card.id else off - s.card.id
-                        }) {
+                        // Which face it is, not only what a tap does: TalkBack read the same for each.
+                        val which = str(R.string.face_candidate_n, n + 1, a.faces.size)
+                        Box(Modifier.clip(CircleShape)
+                            .semantics { contentDescription = which; selected = on }
+                            .clickable(onClickLabel = if (on) str(R.string.exclude) else str(R.string.include)) {
+                                a.off.value = if (on) off + s.card.id else off - s.card.id
+                            }) {
                             FaceAvatar(s.card.id, { vm.faceCrop(it) }, 88.dp, selected = on)
                         }
                     }

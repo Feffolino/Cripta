@@ -218,7 +218,12 @@ class ViewerViewModel @Inject constructor(
             faceMessage.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
         }
     }
-    fun confirmFace(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
+    /**
+     * [faceAction] for a change of the faces the "Annulla" still on offer would undo blindly: its
+     * snapshot was taken before this change, and taking it back put the old people back over it.
+     */
+    private fun faceChange(block: suspend () -> Unit) = faceAction { faceUndo.value = null; block() }
+    fun confirmFace(trackId: Long, personId: Long) = faceChange { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
     /**
      * A face confirmed in a video: the video is looked at closer in the background, to join its
      * other faces of that person and set aside those that are not faces
@@ -230,21 +235,31 @@ class ViewerViewModel @Inject constructor(
     fun refineFaces(fileId: String) = com.cripta.app.work.ConversionService.startFaceRefine(appContext, listOf(fileId), force = true)
     /** What the closer look did to [fileId], in words (null: it has not looked at it). */
     fun refineNote(fileId: String) = faces.refineNote(fileId)
-    fun rejectFace(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    fun rejectFace(trackId: Long, personId: Long) = faceChange { faces.reject(trackId, personId) }
     fun describeFaces(fileId: String) = faceAction { faceMessage.value = faces.describe(fileId) }
     fun analyseFaces(fileId: String, deep: Boolean = false) =
         com.cripta.app.work.ConversionService.startFaceScan(appContext, manual = true, fileIds = listOf(fileId), deep = deep)
     /** The faces found here that nobody confirmed go (the analysis was on by mistake). */
-    fun clearDetectedFaces(fileId: String) = faceAction { faces.clearDetected(listOf(fileId)) }
+    fun clearDetectedFaces(fileId: String) = faceChange { faces.clearDetected(listOf(fileId)) }
 
     /** The last change to the faces of [fileId], which "Annulla" in its details takes back. */
     class FaceUndo(val fileId: String, val message: String, val undo: com.cripta.app.data.face.Undo)
     val faceUndo = MutableStateFlow<FaceUndo?>(null)
-    fun undoFaceChange() { val u = faceUndo.value ?: return; faceUndo.value = null; faceAction { u.undo() } }
+    fun undoFaceChange() {
+        val u = faceUndo.value ?: return
+        faceUndo.value = null
+        viewModelScope.launch {
+            try { u.undo() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                faceMessage.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
+                // Not undone: "Annulla" stays on offer to try again (unless something newer took its place).
+                if (faceUndo.value == null) faceUndo.value = u
+            }
+        }
+    }
     /** Faces analysed before tracks were joined: those of one person become one when the details open. */
     fun tidyFaces(fileId: String) = faceAction { faces.tidy(fileId) }
     /** "Elimina": faces found by mistake, not found again here; [everywhere] ("Non è un volto"): nowhere. */
-    fun deleteFaces(fileId: String, trackIds: Collection<Long>, everywhere: Boolean = false) = faceAction {
+    fun deleteFaces(fileId: String, trackIds: Collection<Long>, everywhere: Boolean = false) = faceChange {
         val u = faces.deleteFaces(trackIds, everywhere)
         val what = plural(R.plurals.faces_deleted, trackIds.size)
         faceUndo.value = FaceUndo(fileId, if (everywhere) str(R.string.x_everywhere, what) else what, u)
@@ -254,22 +269,25 @@ class ViewerViewModel @Inject constructor(
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, false)
     fun setDetailsAllTags(v: Boolean) = viewModelScope.launch { settingsStore.setDetailsAllTags(v) }
     /** "Togli": [fileId], added to [personId] by hand, is not theirs any more. */
-    fun unlinkPerson(fileId: String, personId: Long) = faceAction {
+    fun unlinkPerson(fileId: String, personId: Long) = faceChange {
         faceUndo.value = FaceUndo(fileId, str(R.string.face_removed_from_person), faces.unlink(personId, fileId))
     }
     /** "Stessa persona": faces of [fileId] that are one person become one. */
-    fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceAction {
+    fun mergeFaces(fileId: String, trackIds: Collection<Long>) = faceChange {
         val u = faces.mergeFaces(trackIds)
         if (u == null) faceMessage.value = str(R.string.faces_different_people)
         else faceUndo.value = FaceUndo(fileId, str(R.string.faces_joined), u)
     }
     /** The face [trackId] (or, with none, the media itself) goes to [personId]. */
-    fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceAction {
+    fun putInPerson(fileId: String, trackId: Long?, personId: Long) = faceChange {
         if (trackId != null) { faces.assign(trackId, personId); offerAlike(fileId, trackId, personId) } else faces.link(personId, fileId)
     }
 
     /** After "Chi è?" on [trackId]: the other faces of its media that look like [personId], for "Anche questi?". */
-    class AlsoFaces(val fileId: String, val trackId: Long, val personId: Long, val faces: List<com.cripta.app.data.face.FaceRepository.Suggestion>)
+    class AlsoFaces(val fileId: String, val trackId: Long, val personId: Long, val faces: List<com.cripta.app.data.face.FaceRepository.Suggestion>) {
+        /** The faces left out with a tap: kept here, a rotation that rebuilt the dialog selected them again. */
+        val off = MutableStateFlow(emptySet<Long>())
+    }
     val alsoFaces = MutableStateFlow<AlsoFaces?>(null)
     /**
      * The closer look at the video starts once "Anche questi?" is answered (or when there is none
@@ -280,7 +298,7 @@ class ViewerViewModel @Inject constructor(
         if (list.isNotEmpty()) alsoFaces.value = AlsoFaces(fileId, trackId, personId, list) else lookCloser(listOf(trackId))
     }
     /** "Anche questi?" › "Unisci": [picked] join the face just named. */
-    fun joinAlso(a: AlsoFaces, picked: Collection<Long>) = faceAction {
+    fun joinAlso(a: AlsoFaces, picked: Collection<Long>) = faceChange {
         alsoFaces.value = null
         if (picked.isNotEmpty()) {
             val u = faces.mergeFaces(listOf(a.trackId) + picked)
@@ -298,7 +316,7 @@ class ViewerViewModel @Inject constructor(
     /** The moments of a face that "Dividi" can move. */
     suspend fun splittable(trackId: Long) = faces.splittable(trackId)
     /** "Dividi": the faces of [trackId] at [moments] are someone else. */
-    fun splitFace(fileId: String, trackId: Long, moments: Set<Long>) = faceAction {
+    fun splitFace(fileId: String, trackId: Long, moments: Set<Long>) = faceChange {
         val u = faces.splitFace(trackId, moments)
         if (u == null) faceMessage.value = str(R.string.faces_pick_some)
         else faceUndo.value = FaceUndo(fileId, str(R.string.face_split), u)
@@ -341,13 +359,13 @@ class ViewerViewModel @Inject constructor(
             list.firstOrNull()?.timeMs?.takeIf { it > at }?.let { seekPlayer(file.id, it) }
         } finally { if (token == findToken) findingFaces.value = false }
     }
-    fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceAction {
+    fun addFoundFace(file: com.cripta.app.data.db.FileEntity, f: com.cripta.app.data.face.FaceRepository.FoundFace, personId: Long?, newName: String) = faceChange {
         faces.addFace(file, f, personId ?: faces.newPerson(newName))
         closeFoundFaces()
         // A face added by hand teaches what the person looks like here: their other faces of the video too.
         if (com.cripta.app.data.VaultRepository.isVideo(file.mimeType)) com.cripta.app.work.ConversionService.startFaceRefine(appContext, listOf(file.id))
     }
-    fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceAction {
+    fun putInNewPerson(fileId: String, trackId: Long?, name: String) = faceChange {
         val id = faces.newPerson(name)
         if (trackId != null) { faces.assign(trackId, id); offerAlike(fileId, trackId, id) } else faces.link(id, fileId)
     }
@@ -360,6 +378,13 @@ class ViewerViewModel @Inject constructor(
             ?.toPlayback() ?: PlaybackPrefs()
 
     fun segments(fileId: String) = intro.segments(fileId)
+
+    /**
+     * Intro / outro starts marked with "Inizio qui" and not ended yet, by video: kept here, the
+     * details panel moving to another place in the layout (a rotation) lost them.
+     */
+    private val introMarks = HashMap<String, androidx.compose.runtime.snapshots.SnapshotStateMap<com.cripta.app.media.intro.SegmentKind, Long>>()
+    fun pendingMarks(fileId: String) = introMarks.getOrPut(fileId) { androidx.compose.runtime.mutableStateMapOf() }
 
     /** A player's place, for the details panel's intro section (which has no player of its own). */
     data class PlayerSpot(val positionMs: Long, val durationMs: Long, val playing: Boolean)
@@ -454,16 +479,43 @@ class ViewerViewModel @Inject constructor(
 
     fun channelFor(file: FileEntity): SeekableByteChannel = repo.seekableChannel(file)
 
-    /** One save of a note at a time: two quick ticks wrote the same temporary file together. */
+    /** One save of a note at a time, in the order of the ticks. */
     private val noteSave = kotlinx.coroutines.sync.Mutex()
 
-    /** A note's text changed in the viewer (a check-list box ticked): saved at once. */
-    fun saveNoteText(file: FileEntity, text: String, onFailed: () -> Unit = {}) = viewModelScope.launch {
-        val saved = noteSave.withLock { runCatching { repo.updateNote(file.id, file.originalName, text) }.isSuccess }
-        if (!saved) {
-            // Not written: the box goes back as it was and the user is told, not left with a tick that is gone later.
-            _message.value = str(R.string.note_save_failed)
-            onFailed()
+    /** A note's saves under way: what is on disk, what the latest tick wants, how many saves wait. */
+    private class NoteSaves(var persisted: String, var wanted: String, var pending: Int = 0)
+    /** By file id; touched on the main thread only (viewModelScope). */
+    private val noteSaves = HashMap<String, NoteSaves>()
+
+    /**
+     * A note's text changed in the viewer (a check-list box ticked from [before] to [text]): saved
+     * at once. Each save writes the latest wanted text, so quick ticks never put back a tick taken
+     * by another; a save that fails brings the note back to what is on disk ([onReverted]) and
+     * drops the ticks still waiting, so what is shown is always what is stored.
+     */
+    fun saveNoteText(file: FileEntity, before: String, text: String, onReverted: (String) -> Unit) {
+        val s = noteSaves.getOrPut(file.id) { NoteSaves(before, before) }
+        s.wanted = text; s.pending++
+        viewModelScope.launch {
+            try {
+                noteSave.withLock {
+                    val t = s.wanted
+                    if (t == s.persisted) return@withLock
+                    val saved = try { repo.updateNote(file.id, file.originalName, t); true }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
+                    if (saved) {
+                        s.persisted = t
+                        // Its cover shows its first lines and their boxes: drawn again from the new text.
+                        thumbs.evict(file.id)
+                    } else {
+                        s.wanted = s.persisted
+                        _message.value = str(R.string.note_save_failed)
+                        onReverted(s.persisted)
+                    }
+                }
+            } finally {
+                if (--s.pending == 0) noteSaves.remove(file.id)
+            }
         }
     }
 

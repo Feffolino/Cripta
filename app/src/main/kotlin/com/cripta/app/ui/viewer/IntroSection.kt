@@ -72,7 +72,7 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
     val segments by remember(file.id) { vm.segments(file.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
     val spot by remember(file.id) { vm.playerSpots.map { it[file.id] } }.collectAsStateWithLifecycle(initialValue = null)
     val status by produceState<String?>(initialValue = "ok", file.id, segments) { value = vm.introStatus(file.id) }
-    val pending = remember(file.id) { mutableStateMapOf<SegmentKind, Long>() }
+    val pending = remember(file.id) { vm.pendingMarks(file.id) }
     // Keyed by the video: the question was opened for this one, and goes away when the viewer moves on.
     var rejecting by remember(file.id) { mutableStateOf<Pair<SegmentKind, MediaSegmentEntity>?>(null) }
     val duration = spot?.durationMs?.takeIf { it > 0 } ?: file.durationMs ?: 0L
@@ -171,6 +171,8 @@ private fun Timeline(
 ) {
     val track = MaterialTheme.colorScheme.surfaceVariant
     val head = MaterialTheme.colorScheme.onSurface
+    // The tap handler lives as long as the duration: two videos of one length kept the first's seek.
+    val seek by androidx.compose.runtime.rememberUpdatedState(onSeek)
     val desc = buildString {
         append(str(R.string.seek_bar_desc, clock(positionMs), clock(durationMs)))
         intro?.let { append(str(R.string.seek_bar_intro, clock(it.startMs), clock(it.endMs))) }
@@ -189,7 +191,7 @@ private fun Timeline(
                     setProgress { value -> seekTimeline(value.toDouble(), durationMs, onSeek) }
                 }
                 .pointerInput(durationMs) {
-                    detectTapGestures { o -> seekTimeline(o.x.toDouble() / size.width * durationMs, durationMs, onSeek) }
+                    detectTapGestures { o -> seekTimeline(o.x.toDouble() / size.width * durationMs, durationMs, seek) }
                 },
             contentAlignment = Alignment.Center,
         ) {

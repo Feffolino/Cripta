@@ -129,6 +129,7 @@ class ConversionService : Service() {
         }
         // Import / export: stop after the file being processed (never half a file).
         if (mode == MODE_CANCEL_BATCH) {
+            importCancelledAt = System.currentTimeMillis()
             importCancels.incrementAndGet()
             stopIfIdle(startId)
             return START_NOT_STICKY
@@ -254,6 +255,15 @@ class ConversionService : Service() {
             }
             return START_NOT_STICKY
         }
+        // One update download at a time: they all write the same update.apk, and a second one
+        // (asked after the channel changed) rewrote or deleted the file the first was checking.
+        if (mode == MODE_UPDATE && updateJob?.isActive == true) {
+            // Started as a foreground service: it must still say so, with the download on show.
+            ensureChannel()
+            startForeground(NOTIF_ID, lastProgress ?: build(str(R.string.n_preparing), 0, indeterminate = true, kind = ResultKind.UPDATE))
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
         ensureChannel()
         val running = synchronized(lock) {
             val wasRunning = active.get() > 0
@@ -282,7 +292,9 @@ class ConversionService : Service() {
             val url = intent.getStringExtra(EX_URL)
             if (url != null) {
                 val job = com.cripta.app.data.DownloadJob(
-                    id = java.util.UUID.randomUUID().toString(),
+                    // A link resumed after the app was killed keeps its saved record's id: that
+                    // record stays until this one replaces it, never a moment without either.
+                    id = intent.getStringExtra(EX_JOB_ID)?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString(),
                     url = url,
                     maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
                     folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
@@ -290,11 +302,9 @@ class ConversionService : Service() {
                 )
                 downloadQueue.enqueueDownload(job)
                 // Persisted so a waiting link survives the app being killed (resumed at next unlock).
-                scope.launch {
-                    repo.putPendingJob(job.id, "download", org.json.JSONObject()
-                        .put("url", job.url).put("height", job.maxHeight ?: 0).put("folder", job.folderId ?: -1L)
-                        .put("tags", org.json.JSONArray(job.tagIds)).toString())
-                }
+                downloadQueue.persist(job, org.json.JSONObject()
+                    .put("url", job.url).put("height", job.maxHeight ?: 0).put("folder", job.folderId ?: -1L)
+                    .put("tags", org.json.JSONArray(job.tagIds)).toString())
             }
             // A worker already running picks the new link up from the queue.
             val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
@@ -308,6 +318,9 @@ class ConversionService : Service() {
         // (auto-lock on leaving the app, "Blocca ora"): the UI locks at once, the keys are wiped
         // as soon as the last job ends. Otherwise every remaining item failed silently.
         val holdsSession = session.beginWork()
+        // Taken when the command arrives, not when the import gets to its first file: a chunk
+        // still reading its files' names took a later value, and an Annulla meanwhile let it run.
+        val importGen = importCancels.get()
 
         val job = scope.launch {
             try {
@@ -316,7 +329,7 @@ class ConversionService : Service() {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
                         val folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null
                         val runStart = intent.getLongExtra(EX_RUN_START, 0L).takeIf { it > 0L }
-                        val imported = importBatch(uris, folderId, runStart)
+                        val imported = importBatch(uris, folderId, runStart, importGen)
                         // Files shared from another app are that app's content, not documents we
                         // may delete: the "delete originals" policy only applies to picked files.
                         if (!intent.getBooleanExtra(EX_FROM_SHARE, false)) applyDeletePolicy(imported)
@@ -633,6 +646,11 @@ class ConversionService : Service() {
      * a cancel when another batch started meanwhile.
      */
     private val importCancels = java.util.concurrent.atomic.AtomicInteger()
+    /** When the last import Annulla came: every chunk of a run started before it stops too. */
+    @Volatile private var importCancelledAt = 0L
+    /** The import run of [runStart], begun at cancel count [gen], was cancelled. */
+    private fun importCancelled(gen: Int, runStart: Long?) =
+        importCancels.get() != gen || (runStart != null && runStart <= importCancelledAt)
     /** Same for exports: an import and an export running together are cancelled one at a time. */
     private val exportCancels = java.util.concurrent.atomic.AtomicInteger()
 
@@ -698,7 +716,7 @@ class ConversionService : Service() {
      * of the current file) to [VaultRepository.importState] for the in-app banner and to the
      * notification, then a final "completed" notification with the outcome.
      */
-    private suspend fun importBatch(uris: List<Uri>, folderId: Long?, runStart: Long? = null): List<Uri> {
+    private suspend fun importBatch(uris: List<Uri>, folderId: Long?, runStart: Long? = null, cancelGen: Int = importCancels.get()): List<Uri> {
         if (uris.isEmpty()) return emptyList()
         val done = mutableListOf<Uri>()
         // Names and sizes up front: the progress (and the time left) goes by the files' size.
@@ -706,17 +724,16 @@ class ConversionService : Service() {
         repo.importBegin(uris.size, info.sumOf { batchWeight(it.second) })
         // Vault files imported from now on belong to this run: never taken as a "previous version".
         val batchStart = runStart ?: System.currentTimeMillis()
-        val cancelGen = importCancels.get()
         var cancelled = false
         val eta = EtaEstimator()
         try {
             for ((i, uri) in uris.withIndex()) {
-                if (importCancels.get() != cancelGen) { cancelled = true; break }
+                if (importCancelled(cancelGen, runStart)) { cancelled = true; break }
                 val (name, size) = info[i]
                 repo.importCurrent(name, size)
                 val st = repo.importState.value
                 // Never a file name in a notification (it shows outside the vault): counts only.
-                notify(importNote(st.done + 1, st.total, st.fraction, str(R.string.n_encrypting), eta, cancelGen))
+                notify(importNote(st.done + 1, st.total, st.fraction, str(R.string.n_encrypting), eta, cancelGen, runStart))
                 var lastNotify = 0L
                 var imported: com.cripta.app.data.db.FileEntity? = null
                 val ok = try {
@@ -727,7 +744,7 @@ class ConversionService : Service() {
                             lastNotify = now
                             val cur = repo.importState.value
                             val filePct = if (size > 0) str(R.string.n_encrypted_pct, (bytes * 100 / size).coerceAtMost(100)) else str(R.string.n_encrypting)
-                            notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta, cancelGen))
+                            notify(importNote(cur.done + 1, cur.total, cur.fraction, filePct, eta, cancelGen, runStart))
                         }
                     }
                     true
@@ -781,7 +798,7 @@ class ConversionService : Service() {
                 repo.importItemDone(ok, if (ok && complete) uri else null, batchWeight(size), incomplete = ok && !complete)
                 if (ok && complete) done += uri
                 val cur = repo.importState.value
-                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, str(R.string.n_queued_lower), eta, cancelGen))
+                if (cur.done < cur.total) notify(importNote(cur.done + 1, cur.total, cur.fraction, str(R.string.n_queued_lower), eta, cancelGen, runStart))
             }
         } finally {
             withContext(NonCancellable) {
@@ -825,10 +842,10 @@ class ConversionService : Service() {
      * After Annulla it says the import stops after this file (a large one can take a while, and
      * the button seemed to do nothing), without the button.
      */
-    private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator, cancelGen: Int): Notification {
+    private fun importNote(n: Int, total: Int, fraction: Float, what: String, eta: EtaEstimator, cancelGen: Int, runStart: Long?): Notification {
         val done = n - 1
         val left = eta.left(fraction)
-        val stopping = importCancels.get() != cancelGen
+        val stopping = importCancelled(cancelGen, runStart)
         return build(str(R.string.n_import), (fraction * 100).toInt(), sub = str(R.string.n_file_of_sep, n, total) + if (stopping) str(R.string.n_cancel_after_file) else what,
             chip = "$done/$total", eta = left.takeUnless { stopping },
             cancelable = !stopping, cancelMode = MODE_CANCEL_BATCH, kind = ResultKind.IMPORT)
@@ -862,7 +879,19 @@ class ConversionService : Service() {
         currentConvertJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
         // Read again now that it is this file's turn: renamed, moved, favourited or played while it
         // waited, the snapshot taken before the queue would bring the old values back.
-        val file = repo.fileById(id)?.takeIf { it.deletedAt == null }
+        // Inside the lock's release: an Annulla during this read left the lock held, and every
+        // later conversion waited for good.
+        val file = try {
+            repo.fileById(id)?.takeIf { it.deletedAt == null }
+        } catch (e: Throwable) {
+            withContext(NonCancellable) {
+                repo.setConverting(id, false)
+                currentConvertJob = null
+                repo.updateConvertStatus { it.copy(currentName = null, pct = 0, waiting = convertWaiting.get()) }
+                convertMutex.unlock()
+            }
+            throw e
+        }
         if (file == null) {
             repo.setConverting(id, false)
             currentConvertJob = null
@@ -1496,7 +1525,8 @@ class ConversionService : Service() {
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
-            val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds)
+            val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds,
+                pendingJobId = job.id)
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             // The title stays inside the app (queue, vault): the notification only says it is done.
             notifyResult(str(R.string.n_download_done), str(R.string.n_video_encrypted), ResultKind.DOWNLOAD)
@@ -1520,7 +1550,7 @@ class ConversionService : Service() {
         } finally {
             ytdlpProcessId = null
             currentDownloadId = null
-            repo.deletePendingJob(job.id)
+            withContext(NonCancellable) { downloadQueue.forget(job.id) }
             withContext(NonCancellable) {
                 produced?.let { repo.shredTempFile(it); it.parentFile?.deleteRecursively() }
             }
@@ -2176,6 +2206,7 @@ class ConversionService : Service() {
         private const val MODE_ORIGINALS_DELETE = "originals_delete"
         private const val MODE_ORIGINALS_KEEP = "originals_keep"
         private const val EX_RETRY = "retry"
+        private const val EX_JOB_ID = "job_id"
         private const val DONE_NOTIF_ID = 4212
         /** The summaries of the two stacks of results ([refreshSummary]). */
         private const val SUMMARY_ANALYSIS_ID = 4240
@@ -2343,8 +2374,11 @@ class ConversionService : Service() {
          * Queue an in-app video download of [url], capped at [maxHeight]px (null = source quality),
          * saved into [folderId] (null = root) with [tagIds]. Links queue up and run one at a time.
          */
-        fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList()) {
-            ContextCompat.startForegroundService(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds))
+        fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList(),
+                             /** A saved job resumed: the link keeps its id (and its record). */
+                             jobId: String? = null) {
+            ContextCompat.startForegroundService(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds)
+                .apply { jobId?.let { putExtra(EX_JOB_ID, it) } })
         }
 
         private fun downloadUrlIntent(ctx: Context, url: String, maxHeight: Int?, folderId: Long?, tagIds: List<Long>) =

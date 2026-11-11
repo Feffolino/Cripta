@@ -2091,4 +2091,8 @@
     <string name="delete_unused_n">Delete unused (%1$d)</string>
     <string name="delete_unused_q">Delete unused tags?</string>
     <string name="delete_unused_text">%1$s. They are on no file, not even in the trash.</string>
+    <string name="err_convert_original_gone">The original was deleted during the conversion: no copy saved</string>
+    <string name="restore_settings_failed">Settings not restored: set them again in Settings</string>
+    <string name="face_candidate_n">Face %1$d of %2$d</string>
+    <string name="face_quality_good">good</string>
 </resources>

@@ -215,6 +215,8 @@ data class RestoreReport(
     val filesToRoot: Int = 0,
     /** Files already in the vault, same content in the same folder: not added again. */
     val duplicates: Int = 0,
+    /** The archive had settings, and they could not be put back (the rest was restored). */
+    val settingsFailed: Boolean = false,
 ) {
     fun describe(): String {
         val parts = buildList {
@@ -228,6 +230,7 @@ data class RestoreReport(
         val notes = buildList {
             if (foldersSkipped > 0) add(str(R.string.restore_folders_skipped, foldersSkipped, filesToRoot))
             if (duplicates > 0) add(str(R.string.restore_duplicates_skipped, duplicates))
+            if (settingsFailed) add(str(R.string.restore_settings_failed))
         }
         return (listOf(str(R.string.restored_list, parts.joinToString(", "))) + notes).joinToString(". ")
     }

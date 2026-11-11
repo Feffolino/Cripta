@@ -56,6 +56,25 @@ class TagOpsTest {
     }
 
     @Test
+    fun aMergedTagIsReplacedInSavedFilters() {
+        val merged = SavedFilterJson.withTagMerged(filter(tags = listOf(1, 2), ex = listOf(1, 5)), from = 1, into = 3)!!
+        assertEquals(listOf(3L, 2L), ids(merged, "tags"))
+        assertEquals(listOf(3L, 5L), ids(merged, "ex"))
+        // Into a tag it already asks for: once, not twice.
+        assertEquals(listOf(2L), ids(SavedFilterJson.withTagMerged(filter(tags = listOf(1, 2)), 1, 2)!!, "tags"))
+        // A filter that does not name it is left alone.
+        assertEquals(null, SavedFilterJson.withTagMerged(filter(tags = listOf(2)), 1, 3))
+    }
+
+    @Test
+    fun aMergedPersonIsReplacedInSavedFilters() {
+        val f = filter().put("people", org.json.JSONArray(listOf(7, 8)))
+        assertEquals(listOf(9L, 8L), ids(SavedFilterJson.withPersonMerged(f, from = 7, into = 9)!!, "people"))
+        assertEquals(listOf(8L), ids(SavedFilterJson.withPersonMerged(f, from = 7, into = 8)!!, "people"))
+        assertEquals(null, SavedFilterJson.withPersonMerged(f, from = 1, into = 9))
+    }
+
+    @Test
     fun aDiffCountsTheFilesItTouched() {
         val d = TagLinkDiff(added = listOf(com.cripta.app.data.db.FileTagCrossRef("a", 1), com.cripta.app.data.db.FileTagCrossRef("a", 2)),
             removed = listOf(com.cripta.app.data.db.FileTagCrossRef("b", 1)))

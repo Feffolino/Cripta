@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,11 +42,33 @@ data class DownloadJob(
 class DownloadQueue @Inject constructor(private val repo: VaultRepository) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * The saved jobs are written and removed one at a time, in this order: a link removed right
+     * after being added had its record deleted before it was written, and came back at the next start.
+     */
+    private val records = Mutex()
+
     private val _downloads = MutableStateFlow<List<DownloadJob>>(emptyList())
     /** The downloader queue, oldest first: running, waiting and recently finished links. */
     val downloads: StateFlow<List<DownloadJob>> = _downloads
 
     fun enqueueDownload(job: DownloadJob) = _downloads.update { it + job }
+
+    /**
+     * Save [job]'s record ([payload]) so a waiting link survives the app being killed. Not written
+     * when the link is no longer waiting or running by then (removed, or already finished).
+     */
+    fun persist(job: DownloadJob, payload: String) {
+        scope.launch {
+            records.withLock {
+                if (_downloads.value.any { it.id == job.id && !it.finished }) repo.putPendingJob(job.id, "download", payload)
+            }
+        }
+    }
+
+    /** Drop [id]'s saved record, after any write of it still waiting. */
+    suspend fun forget(id: String) = records.withLock { repo.deletePendingJob(id) }
+
     fun updateDownload(id: String, f: (DownloadJob) -> DownloadJob) =
         _downloads.update { list -> list.map { if (it.id == id) f(it) else it } }
     /** Claim the next waiting link (marks it PREPARING), or null when the queue is drained. */
@@ -61,7 +85,7 @@ class DownloadQueue @Inject constructor(private val repo: VaultRepository) {
     @Synchronized fun removeDownload(id: String) {
         val removable = _downloads.value.any { it.id == id && !it.active }
         _downloads.update { list -> list.filterNot { it.id == id && !it.active } }
-        if (removable) scope.launch { repo.deletePendingJob(id) }
+        if (removable) scope.launch { forget(id) }
     }
     fun clearFinishedDownloads() = _downloads.update { list -> list.filterNot { it.finished } }
 }

@@ -2157,4 +2157,8 @@
     <string name="delete_unused_n">Supprimer les inutilisées (%1$d)</string>
     <string name="delete_unused_q">Supprimer les étiquettes inutilisées ?</string>
     <string name="delete_unused_text">%1$s. Elles ne sont sur aucun fichier, même dans la corbeille.</string>
+    <string name="err_convert_original_gone">L\'original a été supprimé pendant la conversion : aucune copie enregistrée</string>
+    <string name="restore_settings_failed">Réglages non restaurés : configurez-les à nouveau dans Réglages</string>
+    <string name="face_candidate_n">Visage %1$d sur %2$d</string>
+    <string name="face_quality_good">bon</string>
 </resources>

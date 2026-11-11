@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -755,37 +756,44 @@ class VaultRepository @Inject constructor(
             if (written != mp4.length()) {
                 throw java.io.IOException(str(R.string.err_write_converted))
             }
-            val baseName = original.originalName.substringBeforeLast('.', original.originalName)
             val convertedRes = videoResolutionOf(mp4)
-            val entity = FileEntity(
-                id = uuid,
-                originalName = "$baseName.mp4",
-                mimeType = "video/mp4",
-                sizeBytes = written,
-                // Its folder may have gone to the trash during the conversion: the root then.
-                folderId = liveFolder(original.folderId),
-                isFavorite = original.isFavorite,
-                createdAt = original.createdAt,
-                // Replacing: take the original's place in date and manual order too.
-                importedAt = if (replace) original.importedAt else now(),
-                wrappedKeyset = wrapped,
-                durationMs = original.durationMs,
-                sortWeight = if (replace) original.sortWeight else now(),
-                sourceUrl = original.sourceUrl,
-                width = convertedRes?.first ?: original.width,
-                height = convertedRes?.second ?: original.height,
-                playbackPosMs = if (replace) original.playbackPosMs else null,
-                contentHash = md.digest().toHex(),
-            )
-            db.withTransaction {
+            val hash = md.digest().toHex()
+            val entity = db.withTransaction {
+                // The original as it is now, not as it was when the conversion began: deleted
+                // meanwhile, its copy must not come back; renamed, moved, starred or played, the
+                // copy takes the new values.
+                val cur = db.fileDao().byId(original.id)?.takeIf { it.deletedAt == null }
+                    ?: throw java.io.IOException(str(R.string.err_convert_original_gone))
+                val baseName = cur.originalName.substringBeforeLast('.', cur.originalName)
+                val entity = FileEntity(
+                    id = uuid,
+                    originalName = "$baseName.mp4",
+                    mimeType = "video/mp4",
+                    sizeBytes = written,
+                    // Its folder may have gone to the trash during the conversion: the root then.
+                    folderId = liveFolder(cur.folderId),
+                    isFavorite = cur.isFavorite,
+                    createdAt = cur.createdAt,
+                    // Replacing: take the original's place in date and manual order too.
+                    importedAt = if (replace) cur.importedAt else now(),
+                    wrappedKeyset = wrapped,
+                    durationMs = cur.durationMs,
+                    sortWeight = if (replace) cur.sortWeight else now(),
+                    sourceUrl = cur.sourceUrl,
+                    width = convertedRes?.first ?: cur.width,
+                    height = convertedRes?.second ?: cur.height,
+                    playbackPosMs = if (replace) cur.playbackPosMs else null,
+                    contentHash = hash,
+                )
                 db.fileDao().insert(entity)
                 // Carry over the original's tags.
                 db.fileDao().withTagsById(original.id)?.tags?.forEach {
                     db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it.id))
                 }
-                carryManualSegments(original, entity)
+                carryManualSegments(cur, entity)
                 // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
                 if (replace) db.fileDao().setDeletedAt(original.id, now())
+                entity
             }
             notifyChanged()
             entity
@@ -798,6 +806,8 @@ class VaultRepository @Inject constructor(
     /** Preserve the actual container of a completed download (MP4, WebM, Matroska, ...). */
     suspend fun importDownloadedVideo(
         video: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
+        /** The download's saved job: gone in the same transaction, so a crash never downloads it twice. */
+        pendingJobId: String? = null,
     ): FileEntity =
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
@@ -846,6 +856,7 @@ class VaultRepository @Inject constructor(
                 db.withTransaction {
                     db.fileDao().insert(safeEntity)
                     linkExistingTags(uuid, tagIds)
+                    pendingJobId?.let { db.pendingJobDao().delete(it) }
                 }
             } catch (e: Throwable) {
                 // Not listed (e.g. the vault locked): the blob would stay on disk with no key for good.
@@ -1194,7 +1205,13 @@ class VaultRepository @Inject constructor(
             dao.copyLinks(fromId, intoId)
             dao.unlinkAll(fromId)
             dao.deleteById(fromId)
-            pruneSavedFilters(setOf(fromId))
+            // The saved filters follow the files: what asked for the first tag asks for the
+            // second (pruned as a deletion, a filter on it alone vanished, or widened).
+            val filters = db.savedFilterDao()
+            for (sf in filters.allNow()) {
+                val json = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: continue
+                SavedFilterJson.withTagMerged(json, fromId, intoId)?.let { filters.setJson(sf.id, it.toString()) }
+            }
             true
         }
         if (done) notifyChanged()
@@ -1376,12 +1393,15 @@ class VaultRepository @Inject constructor(
     /**
      * [onlyIfTrashed]: for the trash's own deletes, which work through a list read earlier. A file
      * restored meanwhile (the purge of a big trash takes minutes) is left alone instead of destroyed.
+     * [trashedBefore]: only if it went to the trash before then, so one restored and trashed again
+     * meanwhile (a new retention period) is not destroyed on the strength of its old date.
      * Returns whether the file was destroyed.
      */
-    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false, trashedBefore: Long? = null): Boolean = withContext(Dispatchers.IO) {
         val deleted = db.withTransaction {
             val f = db.fileDao().byId(fileId)
             if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
+            if (trashedBefore != null && (f.deletedAt ?: Long.MAX_VALUE) >= trashedBefore) return@withTransaction false
             db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
             db.folderDao().dropCoverOf(fileId, keepFolderId = null)
@@ -1409,9 +1429,19 @@ class VaultRepository @Inject constructor(
      * Returns the names of the tags that were newly added to the kept file.
      */
     suspend fun mergeDuplicates(keepId: String, removeIds: List<String>): MergeOutcome = withContext(Dispatchers.IO) {
+        dupMerge.withLock { mergeDuplicatesLocked(keepId, removeIds) }
+    }
+
+    /**
+     * One resolution at a time: "Conserva A" and "Conserva B" of one group, run together, each
+     * found its copy live and deleted the other, and no copy was left.
+     */
+    private val dupMerge = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun mergeDuplicatesLocked(keepId: String, removeIds: List<String>): MergeOutcome {
         val keep = db.fileDao().withTagsById(keepId)
         // The copy to keep is gone or in the trash: removing the others would leave no live copy.
-        if (keep == null || keep.file.deletedAt != null) return@withContext MergeOutcome.NOTHING
+        if (keep == null || keep.file.deletedAt != null) return MergeOutcome.NOTHING
         val keepTags = keep.tags.map { it.name }.toSet()
         val moved = LinkedHashSet<String>()
         var favorite = keep.file.isFavorite
@@ -1427,7 +1457,7 @@ class VaultRepository @Inject constructor(
         if (link != keep.file.sourceUrl) db.fileDao().setSourceUrl(keepId, link)
         for (id in removeIds.filter { it != keepId }.distinct()) deleteOrTrash(id)
         notifyChanged()
-        MergeOutcome(true, moved.toList(), keep.file.isFavorite, keep.file.sourceUrl)
+        return MergeOutcome(true, moved.toList(), keep.file.isFavorite, keep.file.sourceUrl)
     }
 
     /**
@@ -1538,7 +1568,9 @@ class VaultRepository @Inject constructor(
 
     /** Empty the whole trash: every trashed file shredded, every trashed folder removed. */
     suspend fun emptyTrash(): List<String> = withContext(Dispatchers.IO) {
-        val ids = db.fileDao().trashedBefore(Long.MAX_VALUE).filter { secureDelete(it, onlyIfTrashed = true) }
+        // What is in the trash now: a file restored and trashed again while it empties stays.
+        val asked = now() + 1
+        val ids = db.fileDao().trashedBefore(asked).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = asked) }
         val folders = db.folderDao().trashedNow().map { it.id }
         removeEmptyTrashedFolders(folders.flatMap { subtreeOf(it) }.distinct().reversed())
         notifyChanged()
@@ -1577,7 +1609,7 @@ class VaultRepository @Inject constructor(
     /** Crypto-shred trashed files older than [days]; returns their ids (for cover eviction). */
     suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
         val cutoff = now() - days * 86_400_000L
-        val ids = db.fileDao().trashedBefore(cutoff).filter { secureDelete(it, onlyIfTrashed = true) }
+        val ids = db.fileDao().trashedBefore(cutoff).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = cutoff) }
         // Expired trashed folders go once empty (their files, trashed at the same time, just went).
         val expired = db.folderDao().trashedNow().filter { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }.map { it.id }
         if (expired.isNotEmpty()) removeEmptyTrashedFolders(expired.flatMap { subtreeOf(it) }.distinct().reversed())
@@ -1904,28 +1936,39 @@ class VaultRepository @Inject constructor(
                 onProgress(0f)
                 for ((idx, fwt) in files.withIndex()) {
                     currentCoroutineContext().ensureActive()
-                    val len = lens[idx]
-                    // v3: a document may be stored deflated (lossless). Marked by a NEGATIVE length
-                    // (-(compressed size) - 1), so an older app stops with "File corrotto" instead of
-                    // importing compressed bytes as the file. Kept raw when it saves under 5%.
-                    if (compressDocs && compressibleInBackup(fwt.file.mimeType, len)) {
-                        val plain = java.io.ByteArrayOutputStream(len.toInt())
-                        val got = decryptingStream(fwt.file).use { copyAtMost(it, plain, len) }
-                        if (got != len) throw java.io.IOException(str(R.string.err_read_incomplete, fwt.file.originalName))
-                        val raw = plain.toByteArray()
-                        val zipped = java.io.ByteArrayOutputStream().also { bos ->
-                            java.util.zip.DeflaterOutputStream(bos, java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION)).use { it.write(raw) }
-                        }.toByteArray()
-                        if (zipped.size < raw.size * 0.95) { out.writeLong(-zipped.size.toLong() - 1); out.write(zipped) }
-                        else { out.writeLong(len); out.write(raw) }
-                        written += len; onProgress(written.toFloat() / total)
-                        continue
+                    // A note can be saved again while the backup runs (the other files never change):
+                    // its length is taken again right before it is read, with its saves held off, and
+                    // a file longer than its length prefix fails the backup instead of being cut short.
+                    stableBlob(fwt.file) {
+                        val len = if (isNote(fwt.file.mimeType)) {
+                            runCatching { seekableChannel(fwt.file).use { it.size() } }.getOrNull() ?: lens[idx]
+                        } else lens[idx]
+                        val incomplete = { java.io.IOException(str(R.string.err_read_incomplete, fwt.file.originalName)) }
+                        // v3: a document may be stored deflated (lossless). Marked by a NEGATIVE length
+                        // (-(compressed size) - 1), so an older app stops with "File corrotto" instead of
+                        // importing compressed bytes as the file. Kept raw when it saves under 5%.
+                        if (compressDocs && compressibleInBackup(fwt.file.mimeType, len)) {
+                            val plain = java.io.ByteArrayOutputStream(len.toInt())
+                            val got = decryptingStream(fwt.file).use {
+                                copyAtMost(it, plain, len).also { _ -> if (it.read() != -1) throw incomplete() }
+                            }
+                            if (got != len) throw incomplete()
+                            val raw = plain.toByteArray()
+                            val zipped = java.io.ByteArrayOutputStream().also { bos ->
+                                java.util.zip.DeflaterOutputStream(bos, java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION)).use { it.write(raw) }
+                            }.toByteArray()
+                            if (zipped.size < raw.size * 0.95) { out.writeLong(-zipped.size.toLong() - 1); out.write(zipped) }
+                            else { out.writeLong(len); out.write(raw) }
+                            written += len; onProgress((written.toFloat() / total).coerceAtMost(1f))
+                        } else {
+                            out.writeLong(len)
+                            val copied = decryptingStream(fwt.file).use {
+                                copyAtMost(it, out, len) { n -> written += n; onProgress((written.toFloat() / total).coerceAtMost(1f)) }
+                                    .also { _ -> if (it.read() != -1) throw incomplete() }
+                            }
+                            if (copied != len) throw incomplete()
+                        }
                     }
-                    out.writeLong(len)
-                    val copied = decryptingStream(fwt.file).use {
-                        copyAtMost(it, out, len) { n -> written += n; onProgress(written.toFloat() / total) }
-                    }
-                    if (copied != len) throw java.io.IOException(str(R.string.err_read_incomplete, fwt.file.originalName))
                 }
                 // People, faces and intro/outro analysis (an older app stops before this part).
                 BackupExtras.write(db, fileIndex, out, people = scope.people, analysis = scope.analysis)
@@ -2027,7 +2070,8 @@ class VaultRepository @Inject constructor(
                         .onFailure { logException(android.util.Log.WARN, "VaultRepository", "backup settings not restored", it) }.isSuccess
                 } ?: false
                 notifyChanged()
-                restored.copy(settings = settingsOk)
+                // Failed, said so: left out of the list alone, it read as an archive without settings.
+                restored.copy(settings = settingsOk, settingsFailed = settingsBytes != null && !settingsOk)
             }
         }
     }
@@ -2118,6 +2162,9 @@ class VaultRepository @Inject constructor(
         // Files: order matches the blob stream order.
         val fileArr = manifest.getJSONArray("files")
         val newIds = arrayOfNulls<String>(fileArr.length())
+        // Files of the archive found already here (see below), by position: they gain its people,
+        // tags and cover where they have none, and nothing of theirs is replaced.
+        val known = arrayOfNulls<String>(fileArr.length())
         for (i in 0 until fileArr.length()) {
             val o = fileArr.getJSONObject(i)
             currentCoroutineContext().ensureActive()
@@ -2133,10 +2180,21 @@ class VaultRepository @Inject constructor(
             // second copy. Its blob was read off the stream (it has to be) and is dropped.
             // Only files that were here before: two equal files inside one archive both come back.
             val hash = o.optStr("contentHash")
-            if (hash != null && db.fileDao().sameContentIn(hash, folderOld?.let { idMap[it] }).any { it !in written }) {
+            val already = hash?.let { h -> db.fileDao().sameContentIn(h, folderOld?.let { idMap[it] }).firstOrNull { it !in written } }
+            if (already != null) {
                 runCatching { blobs.blob(uuid).delete() }
                 written.remove(uuid)
+                // Its bytes are free again: counted against the space left, the next files ran
+                // out of a room that was there.
+                quota.giveBack(len)
                 duplicates++
+                known[i] = already
+                // Its tags from the archive join the ones it has (links only add).
+                val tagNames = o.getJSONArray("tags")
+                for (n in (0 until tagNames.length()).map { tagNames.getString(it) }.distinct()) {
+                    val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
+                    db.tagDao().link(FileTagCrossRef(fileId = already, tagId = tid))
+                }
                 continue
             }
             val entity = FileEntity(
@@ -2176,11 +2234,13 @@ class VaultRepository @Inject constructor(
         }
         // People, faces and intro/outro analysis, when the archive has them.
         val extras = BackupExtras.Contents()
-        val hasExtras = BackupExtras.read(db, newIds, inp, extras)
+        val hasExtras = BackupExtras.read(db, newIds, inp, extras, known)
         // Then settings and hand-picked covers (newer archives). Covers go to the restored files'
         // new ids; removed again by the caller if the restore fails.
         if (hasExtras) BackupMore.read(inp, onSettings = onSettings, onCover = cover@{ pos, jpeg ->
-            val id = newIds.getOrNull(pos) ?: return@cover
+            // A file already here gets the archive's cover only when it has none of its own.
+            val id = newIds.getOrNull(pos)
+                ?: known.getOrNull(pos)?.takeIf { !java.io.File(customCoverDir, it).exists() } ?: return@cover
             val f = java.io.File(customCoverDir.apply { mkdirs() }, id)
             coverFiles += f
             f.writeBytes(sealThumb(jpeg))
@@ -2193,6 +2253,8 @@ class VaultRepository @Inject constructor(
             val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
             val folder = idMap[o.getLong("id")] ?: continue
             val file = newIds.getOrNull(idx) ?: continue
+            // A folder that was already here keeps the cover it has (nothing there is replaced).
+            if (db.folderDao().byId(folder)?.coverFileId != null) continue
             if (isCoverOf(db.fileDao().byId(file), folder)) db.folderDao().setCover(folder, file)
         }
         // v2: saved filters, tag names mapped back to the restored tag ids.
@@ -2274,13 +2336,28 @@ class VaultRepository @Inject constructor(
         e
     }
 
+    /**
+     * One note write at a time, whoever asks: the viewer (a ticked box) and the editor have their
+     * own view models, and two writers of one note interleaved their temporary files and renames.
+     */
+    private val noteWrite = kotlinx.coroutines.sync.Mutex()
+
+    /** [block] reading [file]'s blob, with no note save replacing it meanwhile. */
+    private suspend fun <T> stableBlob(file: FileEntity, block: suspend () -> T): T =
+        if (isNote(file.mimeType)) noteWrite.withLock { block() } else block()
+
     suspend fun updateNote(fileId: String, name: String, text: String) = withContext(Dispatchers.IO) {
-        val f = db.fileDao().byId(fileId) ?: return@withContext
+        noteWrite.withLock { writeNote(fileId, name, text) }
+    }
+
+    private suspend fun writeNote(fileId: String, name: String, text: String) {
+        val f = db.fileDao().byId(fileId) ?: return
         val bytes = text.toByteArray()
         // Into a new file, then renamed over the old one: written in place, a crash, a lock or a
-        // full disk halfway left the note's only copy truncated.
+        // full disk halfway left the note's only copy truncated. Its own name per write: never
+        // shared with another writer (the leftovers of a crash are swept as any ".tmp").
         val blob = blobs.blob(fileId)
-        val tmp = java.io.File(blob.parentFile, "$fileId.tmp")
+        val tmp = java.io.File(blob.parentFile, "$fileId.${UUID.randomUUID()}.tmp")
         try {
             // Synced before the rename: renamed unsynced, a power cut could leave the note empty.
             blobs.durableOutput(tmp).use { out ->
@@ -2293,8 +2370,9 @@ class VaultRepository @Inject constructor(
         // The content changed: its old hash would make a file matching the old text look like a
         // copy of this note ("già presente").
         // Saved as Markdown from now on (a note from before keeps its text: plain text is Markdown).
-        db.fileDao().update(f.copy(originalName = name.ifBlank { f.originalName }, mimeType = MIME_MARKDOWN,
-            sizeBytes = bytes.size.toLong(), contentHash = null))
+        // Only the note's own columns: the whole row read before the write would put back a star,
+        // a folder or a trashing changed while it was being written.
+        db.fileDao().setNoteContent(fileId, name.ifBlank { f.originalName }, MIME_MARKDOWN, bytes.size.toLong())
         notifyChanged()
     }
 
@@ -2306,6 +2384,8 @@ class VaultRepository @Inject constructor(
             if (n > left) throw java.io.IOException("ENOSPC: restore larger than the free space")
             left -= n
         }
+        /** [n] bytes taken earlier are free again (a blob written then dropped). */
+        fun giveBack(n: Long) { if (n > 0) left += n }
     }
 
     companion object {

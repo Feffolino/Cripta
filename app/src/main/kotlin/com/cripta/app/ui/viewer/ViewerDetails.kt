@@ -89,11 +89,13 @@ private fun InfoLine(label: String, value: String) {
  * it is removed.
  */
 @Composable
-private fun LinkInfoLine(value: String?, onSet: (String?) -> Unit) {
+private fun LinkInfoLine(fileId: String, value: String?, onSet: (String?) -> Unit) {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val ctx = LocalContext.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
-    var text by remember(value) { mutableStateOf(value.orEmpty()) }
+    // Keyed by the file too: two media with the same link (none, say) kept the draft typed for the
+    // first, and saved it on the next one when the player moved on.
+    var text by remember(fileId, value) { mutableStateOf(value.orEmpty()) }
     fun save() { val t = text.trim(); if (t != value.orEmpty()) onSet(t.ifBlank { null }) }
     // DS: on the sheet the field is a well (surface-well), its end action in accent.
     androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.components.LocalFieldContainer provides MaterialTheme.colorScheme.surface) {
@@ -306,7 +308,7 @@ internal fun DetailsSheet(
     val info: @Composable () -> Unit = {
         Column {
             // DS: the link right under the figures, no heading of its own.
-            LinkInfoLine(value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
+            LinkInfoLine(fileId = file.id, value = file.sourceUrl?.takeIf { it.isNotBlank() }, onSet = { vm.setSourceUrl(file.id, it) })
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Column {
                     InfoLine(str(R.string.type), file.mimeType)

@@ -104,17 +104,16 @@ class HomeViewModel @Inject constructor(
                     // Blank, or an older record of a link queued again meanwhile.
                     if (url.isBlank() || url in queuedUrls) { repo.deletePendingJob(job.id); continue }
                     val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
-                    // Start first, delete after: if the start throws (e.g. the app is in the
-                    // background and a foreground service can't be started) the saved link stays
-                    // for the next launch instead of being lost.
+                    // Resumed under its own id: the service keeps this record (and replaces it),
+                    // so there is no moment with no record of the link. If the start throws (e.g.
+                    // the app is in the background) the record stays for the next launch.
                     val started = runCatching {
                         com.cripta.app.work.ConversionService.startDownloadUrl(
                             appContext, url, o.optInt("height", 0).takeIf { it > 0 },
-                            o.optLong("folder", -1L).takeIf { it >= 0 }, tags,
+                            o.optLong("folder", -1L).takeIf { it >= 0 }, tags, jobId = job.id,
                         )
                     }.isSuccess
-                    if (started) repo.deletePendingJob(job.id)   // the service stores it again under a new id
-                    else complete = false
+                    if (!started) complete = false
                 }
                 "convert" -> {
                     val id = o.optString("id")

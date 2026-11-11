@@ -476,7 +476,11 @@ class SettingsViewModel @Inject constructor(
     fun setFilmstripSpan(v: Int) = viewModelScope.launch { store.setFilmstripSpan(v) }
     fun setFilmstripSize(v: Int) = viewModelScope.launch { store.setFilmstripSize(v) }
     fun setFilmstripTrueAspect(v: Boolean) = viewModelScope.launch { store.setFilmstripTrueAspect(v) }
-    fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch { store.setUpdatePrerelease(v); _update.value = UpdateState.Idle }
+    fun setUpdatePrerelease(v: Boolean) = viewModelScope.launch {
+        store.setUpdatePrerelease(v)
+        // A download under way goes on (and stays on show): only a found or failed check is forgotten.
+        if (_update.value !is UpdateState.Downloading) _update.value = UpdateState.Idle
+    }
     fun setVideoStartMuted(v: Boolean) = viewModelScope.launch { store.setVideoStartMuted(v) }
     private val _message = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
@@ -979,6 +983,9 @@ class SettingsViewModel @Inject constructor(
         }
         val trash = trashOn()
         if (!trash) thumbs.evict(fileId)
+        // This deletion adds nothing to the groups' total: its "Annulla" must not take back the
+        // space of the resolution before it.
+        lastFreed = DupFreed()
         _dupUndo.value = if (trash) listOf(fileId) else emptyList()
         beforeResolution = if (trash) snapshotResults() else null
         dropFromResults(setOf(fileId))
