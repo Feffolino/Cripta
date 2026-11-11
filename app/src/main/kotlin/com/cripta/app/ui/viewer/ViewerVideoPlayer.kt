@@ -302,7 +302,7 @@ internal fun VideoPlayer(
         }
     }
     val rotationLocked by vm.rotationLocked.collectAsStateWithLifecycle()
-    val activity = LocalContext.current as? android.app.Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     val vLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val sideCut = com.cripta.app.ui.LocalSideCutout.current
