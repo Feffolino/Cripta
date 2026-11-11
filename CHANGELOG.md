@@ -5,6 +5,23 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Delete an imported original only while it is the very file that was imported and its copy is still in the vault: one edited after the import is kept
+- Keep a video's resume point when Android closes Cripta in the background or the vault locks with the video open
+- Saved filters keep "Continua a guardare"; a tag merged while it is in the active filter becomes the merged tag there too
+- Two new versions of one file in a batch both take its place, tags and star; a new version never goes into a folder deleted meanwhile, and versions are found for names in any script ("ФОТО.jpg", "ÉTÉ.jpg")
+- A file shared to Cripta is never lost when the screen is recreated while it is being read
+- "Casuale" in a folder just opened (or during a search) picks from what that folder shows, not from the one before
+- The first brightness swipe starts from the screen's own level; the volume keys bring back the sound of a video started muted, and nothing plays aloud before the mute
+- Picture-in-Picture gets a play / pause button, shows no player buttons, and moves on to the next video after one that ended in the window
+- Show each running import's own name and progress, never one file's bytes under another's name
+- A note that cannot be saved on leaving the editor asks to try again or leave without the changes
+- Notes with Windows line endings keep their headings, check lists and code blocks; formatting a selection that ends on a line break leaves the next line alone; links with brackets open whole
+- With prereleases off, updates find the last stable release even behind many prereleases
+- Keep the tag order of two quick drags as shown; a setting that cannot be saved says so instead of closing the app; "Annulla" during the PIN check stops the change
+- Export a note to the device as a .md file; a backup's restored covers show at once on files already here; a backup a restore could not read is never made
+- Restored files get the hash of their own content, so a note edited during its backup is never dropped as a copy; an archive's settings with a wrong type are refused before anything is written
+- The hint for files with no preview points to Esporta in the details panel
+
 - Save a note from the viewer and the editor one at a time, without putting back a star, folder or trashing changed meanwhile; quick ticks that fail bring the note back to what is stored, and its cover shows the new ticks
 - Back up a note saved during the backup whole, never cut to its old length
 - Keep downloads exact across restarts: a removed link never comes back, a resumed one is never lost, and one already imported is not downloaded twice
