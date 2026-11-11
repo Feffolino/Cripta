@@ -5,6 +5,9 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Show a folder's card live while customising it, with its files and empty; keep the icon search in view, with icons that fit the name and common ones
+- Show in the tag editor how many files and folders a tag is on, the pill assigned and not, and a cover with its mark; put name and short label on one line, delete from the editor, and keep a tag off the covers
+- In Impostazioni › Etichette, show each tag's file count and pin, sort by most used, merge two tags and delete the ones on no file
 - Save a tag's name, acronym, colour, pin and icon together, or not at all; a name already used by another tag (case aside) is flagged in the editor
 - Keep tags whose names differ only in case apart everywhere, and never overwrite a tag's look when its name is typed again as a new tag
 - Remove a deleted tag from saved and active filters too; a saved filter left with nothing to filter goes
