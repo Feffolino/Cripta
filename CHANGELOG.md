@@ -5,6 +5,17 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Save a tag's name, acronym, colour, pin and icon together, or not at all; a name already used by another tag (case aside) is flagged in the editor
+- Keep tags whose names differ only in case apart everywhere, and never overwrite a tag's look when its name is typed again as a new tag
+- Remove a deleted tag from saved and active filters too; a saved filter left with nothing to filter goes
+- Make tag changes on many files exact: "Annulla" undoes only what changed, and the message counts the files really changed
+- Keep a folder's chosen cover only while the file is still in it, and keep an older folder's emoji when only its colour changes
+- Say when a folder change did not happen (the folder or file was gone), and when a parent folder keeps one out of random
+- List older files in the cover picker, redraw a folder's cover when it is regenerated, and show the file type when there is no picture
+- Sort tags and folders alphabetically as the app's language does; new tags go last in your own order
+- Search tags by name or acronym in Impostazioni, the details panel and the download tags; a pasted emoji finds its icon
+- Show the "+N" mark on covers whatever the width, draw cover tags in the library's order, and follow the cover settings on Home's carousel
+- Back up from one consistent snapshot; on restore, report folders without a parent, skip files and saved filters already in the vault, and move earlier palette colours to today's
 - Draw tag and folder colours in tones of their hue: a quiet tonal ground with its own text on pages, a stronger mark for dots and swatches, the pastel only on covers (with a thin rim and a soft shadow)
 - Show tag and folder emoji alone, never on a circle: in the pill, on cover marks (with a soft shadow) and on folders
 - Veil the pictures behind a folder's cover with its tone, and ground an empty folder in it
