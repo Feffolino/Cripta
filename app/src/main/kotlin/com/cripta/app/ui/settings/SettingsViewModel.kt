@@ -51,6 +51,8 @@ class SettingsViewModel @Inject constructor(
         /** Last tag count and space reading, kept across the screen's view models (see [tagCount]). */
         @Volatile var lastTagCount = 0
         @Volatile var lastSpace: com.cripta.app.data.SpaceReport? = null
+        /** Short writes that must outlive the page asking them (its view model goes with it). */
+        val detached = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
     }
 
 
@@ -405,8 +407,9 @@ class SettingsViewModel @Inject constructor(
     fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
     suspend fun faceStats() = faces.stats()
-    private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
+    private fun faceAction(onFailed: () -> Unit = {}, block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            onFailed()
             faceMessage.value = str(R.string.operation_failed_prefix) + com.cripta.app.work.UserErrors.of(e)
         }
     }
@@ -455,6 +458,13 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), 0)
     fun forgetIgnoredFaces() = faceAction { faces.forgetIgnored() }
     fun setPersonProfile(personId: Long, notes: String, links: List<String>) = faceAction { faces.setProfile(personId, notes, links) }
+    /**
+     * The notes as they are when the profile goes away (Back, a media opened): saved even though
+     * this view model is cleared right after, which cancelled the save still waiting to be typed.
+     */
+    fun flushPersonProfile(personId: Long, notes: String, links: List<String>) {
+        detached.launch { runCatching { faces.setProfile(personId, notes, links) } }
+    }
     fun setPeopleSort(key: com.cripta.app.data.PeopleSort, ascending: Boolean) = savePref { store.setPeopleSort(key, ascending) }
     /** "Solo persone note": suggestions only from people with faces in at least two media. */
     suspend fun suggestionsFor(personId: Long) =
@@ -465,8 +475,10 @@ class SettingsViewModel @Inject constructor(
     var lastKnown: List<com.cripta.app.data.face.FaceRepository.PersonSuggestion>? = null
     suspend fun frameOf(card: com.cripta.app.data.db.TrackCard) = faces.frameOf(card)
     /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
-    fun acceptSuggestion(trackId: Long, personId: Long) = faceAction { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
-    fun refuseSuggestion(trackId: Long, personId: Long) = faceAction { faces.reject(trackId, personId) }
+    /** [onFailed]: the answer was not saved, so the page takes it back. */
+    fun acceptSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) =
+        faceAction(onFailed) { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
+    fun refuseSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) = faceAction(onFailed) { faces.reject(trackId, personId) }
     suspend fun detectedSince(since: Long) = faces.detectedSince(since)
     fun clearDetected(fileIds: Collection<String>) = faceAction {
         val n = faces.clearDetected(fileIds)

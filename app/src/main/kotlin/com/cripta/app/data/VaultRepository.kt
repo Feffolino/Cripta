@@ -425,6 +425,21 @@ class VaultRepository @Inject constructor(
         ok
     }
 
+    /**
+     * A move taken back: [fileId] is [folderId]'s cover again, as before the move took it away, only
+     * if it is back there and the folder has not been given another cover meanwhile.
+     */
+    suspend fun restoreFolderCover(folderId: Long, fileId: String): Boolean = withContext(Dispatchers.IO) {
+        val ok = db.withTransaction {
+            val folder = db.folderDao().byId(folderId)?.takeIf { it.deletedAt == null && it.coverFileId == null }
+                ?: return@withTransaction false
+            if (!isCoverOf(db.fileDao().byId(fileId), folder.id)) return@withTransaction false
+            db.folderDao().setCover(folderId, fileId) > 0
+        }
+        if (ok) notifyChanged()
+        ok
+    }
+
     /** Whether [file] can be [folderId]'s cover: live, and still in that folder. */
     private fun isCoverOf(file: FileEntity?, folderId: Long): Boolean =
         file != null && file.deletedAt == null && file.folderId == folderId
@@ -785,7 +800,11 @@ class VaultRepository @Inject constructor(
      * folder, favorite and tags. The original is left untouched (the caller decides whether to
      * delete it). Returns the new file entity.
      */
-    suspend fun importConvertedMp4(original: FileEntity, mp4: File, replace: Boolean = false): FileEntity = withContext(Dispatchers.IO) {
+    suspend fun importConvertedMp4(
+        original: FileEntity, mp4: File, replace: Boolean = false,
+        /** The conversion's saved job: gone in the same transaction, so a crash never converts it twice. */
+        pendingJobId: String? = null,
+    ): FileEntity = withContext(Dispatchers.IO) {
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
         val md = java.security.MessageDigest.getInstance("SHA-256")
@@ -838,6 +857,7 @@ class VaultRepository @Inject constructor(
                 carryManualSegments(cur, entity)
                 // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
                 if (replace) db.fileDao().setDeletedAt(original.id, now())
+                pendingJobId?.let { db.pendingJobDao().delete(it) }
                 entity
             }
             notifyChanged()
@@ -2131,7 +2151,37 @@ class VaultRepository @Inject constructor(
      * [passphrase] is wiped when this returns.
      */
     suspend fun importBackup(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit = {}): RestoreReport = withContext(Dispatchers.IO) {
-        try { importBackupInner(src, passphrase, onProgress) } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+        try {
+            restoreLock.withLock {
+                // A restore killed before its end left blobs no row lists: gone before this one
+                // writes more (trying again after a crash filled the disk twice over).
+                runCatching { reconcileRestoreLocked() }
+                    .onFailure { logException(android.util.Log.WARN, "VaultRepository", "restore leftovers not checked", it) }
+                importBackupInner(src, passphrase, onProgress)
+            }
+        } finally { java.util.Arrays.fill(passphrase, '\u0000') }
+    }
+
+    /** One restore at a time, and never under the check of what an earlier one left behind. */
+    private val restoreLock = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * The blobs of a restore the process was killed in (its transaction undone, its own cleanup
+     * never run) are deleted: no row shows them, so nothing in the app could free that space. Those
+     * whose row is there (killed after the commit) stay. Skipped while a restore is running.
+     */
+    suspend fun reconcileInterruptedRestore() = withContext(Dispatchers.IO) {
+        if (!restoreLock.tryLock()) return@withContext
+        try { reconcileRestoreLocked() } finally { restoreLock.unlock() }
+    }
+
+    private suspend fun reconcileRestoreLocked() {
+        val ids = blobs.restoreJournal().filter { RESTORED_ID.matches(it) }.distinct()
+        if (ids.isNotEmpty()) {
+            val listed = ids.chunked(500).flatMap { db.fileDao().existingIds(it) }.toSet()
+            ids.filter { it !in listed }.forEach { runCatching { blobs.shred(it) } }
+        }
+        blobs.clearRestoreJournal()
     }
 
     private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): RestoreReport {
@@ -2200,9 +2250,13 @@ class VaultRepository @Inject constructor(
                     withContext(kotlinx.coroutines.NonCancellable) {
                         written.forEach { runCatching { blobs.shred(it) } }
                         covers.forEach { runCatching { it.delete() } }
+                        // Kept for the next start while a blob would not go.
+                        if (written.none { blobs.blob(it).exists() }) blobs.clearRestoreJournal()
                     }
                     throw e
                 }
+                // In: its blobs are the rows' now, nothing to check after a later crash.
+                blobs.clearRestoreJournal()
                 // Settings only once the vault part is in: a failed restore changes nothing.
                 val settingsOk = settingsBytes?.let { b ->
                     runCatching { settings.importFromBackup(b) }
@@ -2314,6 +2368,8 @@ class VaultRepository @Inject constructor(
             val stored = inp.readLong()
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
+            // Written down before the blob: killed before the commit, the next start finds it.
+            blobs.journalRestored(uuid)
             written += uuid
             // Hashed as restored: a manifest's hash may not be this content's (a note saved while
             // its backup ran), and a wrong one would drop a new note as a copy of an old one.
@@ -2538,6 +2594,8 @@ class VaultRepository @Inject constructor(
 
     companion object {
         private val BACKUP_MAGIC = "CRIPTABK".toByteArray()
+        /** A blob name as the vault makes them (a random UUID): nothing else is ever deleted from the journal. */
+        private val RESTORED_ID = Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
         /** Largest document compressed in a backup (it is deflated in memory). */
         internal const val MAX_COMPRESSED_DOC = 32L * 1024 * 1024
         /** Largest backup manifest a restore reads (and so the largest an export writes). */

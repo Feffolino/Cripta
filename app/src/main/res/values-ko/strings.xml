@@ -342,6 +342,10 @@
     <string name="n_intros_in">" · 동영상 %1$s개에 오프닝 또는 엔딩 있음"</string>
     <string name="n_analysing_link">링크 분석 중…</string>
     <string name="dl_err_player_format">플레이어에서 읽을 수 없는 동영상 형식입니다</string>
+    <string name="player_err_decode">이 기기에서 이 동영상을 디코딩할 수 없습니다. MP4로 변환하면 도움이 될 수 있습니다.</string>
+    <string name="player_err_damaged">동영상 파일이 손상되었거나 플레이어에서 읽을 수 없는 형식입니다.</string>
+    <string name="player_err_read">동영상 파일을 읽을 수 없습니다.</string>
+    <string name="player_err_generic">이 동영상을 재생할 수 없습니다.</string>
     <string name="n_download_cancelled">다운로드 취소됨</string>
     <string name="conv_format_unsupported">기기에서 지원하지 않는 동영상 형식</string>
     <string name="conv_codec_unavailable">기기 코덱 이용 불가</string>

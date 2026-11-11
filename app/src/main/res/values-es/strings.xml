@@ -374,6 +374,10 @@
     <string name="n_intros_in">" · intros o finales en %1$s vídeos"</string>
     <string name="n_analysing_link">Analizando el enlace…</string>
     <string name="dl_err_player_format">Formato de vídeo ilegible para el reproductor</string>
+    <string name="player_err_decode">Este dispositivo no puede decodificar este vídeo. Convertirlo a MP4 puede ayudar.</string>
+    <string name="player_err_damaged">El archivo de vídeo está dañado o en un formato que el reproductor no puede leer.</string>
+    <string name="player_err_read">No se pudo leer el archivo de vídeo.</string>
+    <string name="player_err_generic">No se puede reproducir este vídeo.</string>
     <string name="n_download_cancelled">Descarga cancelada</string>
     <string name="conv_format_unsupported">formato de vídeo no compatible con el dispositivo</string>
     <string name="conv_codec_unavailable">códec del dispositivo no disponible</string>

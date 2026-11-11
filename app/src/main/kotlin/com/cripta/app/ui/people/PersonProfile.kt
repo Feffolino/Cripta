@@ -77,7 +77,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -187,8 +189,12 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                                 if (confirmedVideos.isNotEmpty()) DropdownMenuItem(text = { Text(str(R.string.analyse_their_videos)) },
                                     onClick = { menu = false; vm.refineVideos(confirmedVideos) })
                                 if (p.entity.ignored) DropdownMenuItem(text = { Text(str(R.string.restore)) }, onClick = { menu = false; vm.restorePerson(p.id) })
-                                else if (p.media.isEmpty()) DropdownMenuItem(text = { Text(str(R.string.delete_person)) }, onClick = { menu = false; vm.deleteEmptyPerson(p.id); onBack() })
-                                else DropdownMenuItem(text = { Text(str(R.string.not_a_person)) }, onClick = { menu = false; vm.ignorePerson(p.id); onBack() })
+                                // The page goes once the person is gone (see `seen` above), so the
+                                // work is never cut short with it.
+                                else if (p.media.isEmpty()) DropdownMenuItem(text = { Text(str(R.string.delete_person)) }, onClick = { menu = false; vm.deleteEmptyPerson(p.id) })
+                                // Hidden, the person keeps their profile (marked hidden, "Ripristina" in
+                                // this menu): the page stays, with its "Annulla". Leaving at once lost it.
+                                else DropdownMenuItem(text = { Text(str(R.string.not_a_person)) }, onClick = { menu = false; vm.ignorePerson(p.id) })
                             }
                         }
                     }
@@ -244,7 +250,11 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
             items(media, key = { it.id }) { f ->
                 val face = faceOf[f.id]
                 val on = f.id in selected
-                Box(Modifier.animateItem().combinedClickable(onClickLabel = if (selected.isEmpty()) str(R.string.open) else str(R.string.select), onLongClickLabel = str(R.string.select),
+                // TalkBack: the file's name and whether it is selected (the picture says neither).
+                Box(Modifier.animateItem().semantics {
+                    contentDescription = f.originalName
+                    this.selected = on
+                }.combinedClickable(onClickLabel = if (selected.isEmpty()) str(R.string.open) else str(R.string.select), onLongClickLabel = str(R.string.select),
                     onClick = { if (selected.isEmpty()) open(f.id, face?.timeMs) else selected = if (on) selected - f.id else selected + f.id },
                     onLongClick = { selected = selected + f.id })) {
                     MediaThumb(f, { vm.thumbOf(it) }, Modifier.fillMaxWidth().aspectRatio(1f), showFavoriteBadge = false, selected = on,
@@ -365,6 +375,17 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
     LaunchedEffect(notes) {
         kotlinx.coroutines.delay(700)
         if (notes != p.entity.notes) save()
+    }
+    // Back or a media opened within the pause above: the last characters typed were never saved
+    // (the wait was cancelled with the page). Whatever differs from what is stored goes now.
+    val latestNotes by androidx.compose.runtime.rememberUpdatedState(notes)
+    val stored by androidx.compose.runtime.rememberUpdatedState(p.entity)
+    androidx.compose.runtime.DisposableEffect(p.id) {
+        onDispose {
+            val l = links.toList()
+            if (latestNotes != stored.notes || l != stored.links.lines().filter { it.isNotBlank() })
+                vm.flushPersonProfile(p.id, latestNotes, l)
+        }
     }
     // DS Profilo: the notes as one slab field right under the name (no heading: the placeholder
     // says what it is); the links follow as plain rows.
@@ -506,7 +527,12 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
     }
     /** Answer the face on [page], then glide to the next one. */
     fun answer(page: Int, s: FaceRepository.Suggestion, yes: Boolean) {
-        if (yes) vm.acceptSuggestion(s.card.id, p.id) else vm.refuseSuggestion(s.card.id, p.id)
+        // Not saved (the message says so): the face is asked again, not left marked as answered.
+        val undo = {
+            answers = answers - s.card.id
+            vm.lastAnswers = answers
+        }
+        if (yes) vm.acceptSuggestion(s.card.id, p.id, undo) else vm.refuseSuggestion(s.card.id, p.id, undo)
         answers = answers + (s.card.id to yes)
         vm.lastAnswers = answers
         scope.launch {

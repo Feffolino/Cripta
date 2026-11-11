@@ -422,6 +422,10 @@
     <string name="n_intros_in">" · مقدمات أو نهايات في %1$s فيديو"</string>
     <string name="n_analysing_link">جارٍ تحليل الرابط…</string>
     <string name="dl_err_player_format">المشغل لا يقرأ تنسيق الفيديو</string>
+    <string name="player_err_decode">لا يستطيع هذا الجهاز فك ترميز هذا الفيديو. قد يفيد تحويله إلى MP4.</string>
+    <string name="player_err_damaged">ملف الفيديو تالف أو بتنسيق لا يقرؤه المشغل.</string>
+    <string name="player_err_read">تعذّرت قراءة ملف الفيديو.</string>
+    <string name="player_err_generic">لا يمكن تشغيل هذا الفيديو.</string>
     <string name="n_download_cancelled">أُلغي التنزيل</string>
     <string name="conv_format_unsupported">الجهاز لا يدعم تنسيق الفيديو</string>
     <string name="conv_codec_unavailable">مرمز الجهاز غير متاح</string>

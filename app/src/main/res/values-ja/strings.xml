@@ -342,6 +342,10 @@
     <string name="n_intros_in">" · %1$s 件の動画にオープニングまたはエンディング"</string>
     <string name="n_analysing_link">リンクを解析中…</string>
     <string name="dl_err_player_format">プレーヤーで読み取れない動画形式です</string>
+    <string name="player_err_decode">このデバイスではこの動画をデコードできません。MP4 に変換すると再生できる場合があります。</string>
+    <string name="player_err_damaged">動画ファイルが破損しているか、プレーヤーで読み取れない形式です。</string>
+    <string name="player_err_read">動画ファイルを読み込めませんでした。</string>
+    <string name="player_err_generic">この動画は再生できません。</string>
     <string name="n_download_cancelled">ダウンロードを中止しました</string>
     <string name="conv_format_unsupported">端末が対応していない動画形式です</string>
     <string name="conv_codec_unavailable">端末のコーデックを利用できません</string>

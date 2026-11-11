@@ -22,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -70,6 +71,8 @@ class HomeViewModel @Inject constructor(
             runCatching { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
             // Links and saved filters still naming tags deleted by older versions.
             runCatching { repo.repairTagReferences() }
+            // Blobs of a restore the process was killed in: space no file in the app holds.
+            runCatching { repo.reconcileInterruptedRestore() }
             // Resume downloads/conversions that were waiting when Android killed the app.
             if (repo.claimJobRestore()) {
                 val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
@@ -159,7 +162,13 @@ class HomeViewModel @Inject constructor(
 
     /** Saved filters with how many files each one currently matches. */
     val savedFilters: StateFlow<List<Pair<SavedFilterEntity, Int>>> =
-        combine(repo.changes.flatMapLatest { repo.savedFilters() }, all) { saved, files -> saved to files }
+        // The face index too: a person given or taken a media changes their filter's count, and
+        // neither the filters nor the files say so (the shortcut kept the count of before).
+        // Only who is in which media (and their names, for a typed name): not every rebuild of the
+        // people during a scan.
+        combine(repo.changes.flatMapLatest { repo.savedFilters() }, all,
+            faces.people().map { o -> o.people.map { Triple(it.id, it.entity.name to it.entity.ignored, it.media.mapTo(HashSet()) { f -> f.id }) } }
+                .distinctUntilChanged()) { saved, files, _ -> saved to files }
             .mapLatest { (saved, files) ->
                 saved.map { sf ->
                     val f = filtersFromJson(sf.json)

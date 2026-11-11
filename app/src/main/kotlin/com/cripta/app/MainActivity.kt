@@ -292,8 +292,12 @@ class MainActivity : FragmentActivity() {
         val prefs = getSharedPreferences(UI_PREFS, MODE_PRIVATE)
         if (!needsNotificationPermission() || prefs.getBoolean(PREF_NOTIF_ASKED, false)) return
         lifecycleScope.launch {
-            combine(repo.importState, downloadQueue.downloads, repo.convertStatus) { imp, dl, conv ->
-                imp.active || conv.active || dl.any { !it.finished }
+            // Any job of the service counts (a backup, an export, a scan, an update as the first
+            // one too): watching only imports, downloads and conversions, an export could run with
+            // no permission asked, its Annulla in a notification never shown.
+            combine(repo.importState, downloadQueue.downloads, repo.convertStatus,
+                com.cripta.app.work.ConversionService.working) { imp, dl, conv, service ->
+                service || imp.active || conv.active || dl.any { !it.finished }
             }.distinctUntilChanged().collect { busy ->
                 if (busy && needsNotificationPermission() && !prefs.getBoolean(PREF_NOTIF_ASKED, false)) {
                     askNotifications.value = true

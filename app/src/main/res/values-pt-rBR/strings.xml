@@ -374,6 +374,10 @@
     <string name="n_intros_in">" · aberturas ou encerramentos em %1$s vídeos"</string>
     <string name="n_analysing_link">Analisando o link…</string>
     <string name="dl_err_player_format">O reprodutor não consegue ler o formato do vídeo</string>
+    <string name="player_err_decode">Este dispositivo não consegue decodificar este vídeo. Convertê-lo para MP4 pode ajudar.</string>
+    <string name="player_err_damaged">O arquivo de vídeo está danificado ou em um formato que o reprodutor não consegue ler.</string>
+    <string name="player_err_read">Não foi possível ler o arquivo de vídeo.</string>
+    <string name="player_err_generic">Não é possível reproduzir este vídeo.</string>
     <string name="n_download_cancelled">Download cancelado</string>
     <string name="conv_format_unsupported">formato de vídeo não aceito pelo dispositivo</string>
     <string name="conv_codec_unavailable">codec do dispositivo indisponível</string>

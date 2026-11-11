@@ -335,6 +335,10 @@ internal fun VideoPlayer(
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reportPaused()
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            // Shown on the video by the PlayerView (see its error message provider); logged here.
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.w("ViewerVideoPlayer", "playback error ${error.errorCodeName}")
+            }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width <= 0 || videoSize.height <= 0) return
                 val w = videoSize.width * videoSize.pixelWidthHeightRatio
@@ -463,8 +467,10 @@ internal fun VideoPlayer(
     // The button shows what a tap does (pause while playing), in the window already open too.
     LaunchedEffect(paused, inPip, videoAspect) {
         com.cripta.app.viewer.PipController.playing = !paused
-        val aspect = com.cripta.app.viewer.PipController.armedAspect
-        if (inPip && activity != null && aspect != null) runCatching {
+        // Entered by the viewer's button with the automatic PiP off, nothing is armed: the window's
+        // button kept saying "Pausa" after a pause. The video's own shape then.
+        val aspect = com.cripta.app.viewer.PipController.armedAspect ?: videoAspect ?: android.util.Rational(16, 9)
+        if (inPip && activity != null) runCatching {
             activity.setPictureInPictureParams(com.cripta.app.viewer.PipController.params(activity, aspect, !paused))
         }
     }
@@ -627,6 +633,11 @@ internal fun VideoPlayer(
                     clipChildren = false
                     setShowNextButton(false)
                     setShowPreviousButton(false)
+                    // A video that cannot be played says why on the video: without a provider this
+                    // Media3 shows no text at all, and the page stayed black with no explanation.
+                    setErrorMessageProvider(androidx.media3.common.ErrorMessageProvider<androidx.media3.common.PlaybackException> { e ->
+                        android.util.Pair.create(0, playbackErrorText(e))
+                    })
                     // keepScreenOn follows actual playback (see update below), not always on.
                     // The viewer owns the timer; only split view uses Media3's timer (see update).
                     // Mirror the ExoPlayer controller's visibility onto the app chrome
@@ -1034,3 +1045,21 @@ private fun systemBrightness(ctx: android.content.Context): Float = runCatching 
     val max = (if (id != 0) res.getInteger(id) else 255).coerceAtLeast(1)
     if (v in 0..max) v.toFloat() / max else 0.5f
 }.getOrDefault(0.5f)
+
+/** What the user is told on a video that cannot be played: the cause, in plain words. */
+private fun playbackErrorText(e: androidx.media3.common.PlaybackException): String = when (e.errorCode) {
+    androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FAILED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+    androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
+    -> str(R.string.player_err_decode)
+    androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+    androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+    -> str(R.string.player_err_damaged)
+    in 2000..2999 -> str(R.string.player_err_read)   // input / output: the file could not be read
+    else -> str(R.string.player_err_generic)
+}

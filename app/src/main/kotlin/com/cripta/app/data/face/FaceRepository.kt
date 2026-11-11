@@ -287,6 +287,7 @@ class FaceRepository @Inject constructor(
             // Faces added by hand (no sampled frame) are the user's: a new analysis keeps them.
             val old = dao.trackRowsOf(listOf(file.id)).filter { it.frames != 0L }
             dao.deleteScannedTracksOf(file.id)
+            val spans = HashMap<Long, LongRange>()
             val added = tracks.map { t ->
                 val best = t.best.first()
                 val face = best.payload as FaceEngine.Face
@@ -298,8 +299,9 @@ class FaceRepository @Inject constructor(
                     width = face.det.w.toInt(), quality = t.quality, embeddings = EmbeddingCodec.encode(t.embeddings),
                     crop = jpeg(face.preview!!), times = t.times.joinToString(","), box = boxText(face.box),
                     sightings = FaceCodec.encode(stored))), file.id, t.frames, t.embeddings, t.quality)
+                    .also { info -> t.times.takeIf { it.isNotEmpty() }?.let { spans[info.id] = it.first()..it.last() } }
             }
-            if (old.isNotEmpty()) carry(old, added)
+            if (old.isNotEmpty()) carry(old, added, spans, FramePlan.spacing(file.durationMs ?: 0L))
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
                 rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, VERSION, System.currentTimeMillis(),
                 ms = android.os.SystemClock.elapsedRealtime() - started, stats = FaceStats.encode(sharp, duplicates, extra)))
@@ -308,16 +310,27 @@ class FaceRepository @Inject constructor(
 
     /**
      * The user's choices about [old] (the faces a media had before it was analysed again) move to
-     * the new faces they match: same frames and alike. A confirmed face comes back "carried" and is
+     * the new faces they match: same moments and alike. A confirmed face comes back "carried" and is
      * checked against its person when placed ([settle]).
+     *
+     * Same moments, not same frame bits: "Cerca più a fondo" samples other moments than the usual
+     * plan, so the same face seen at the same time had no bit in common and lost the user's
+     * confirmation, their "no" and the person's cover. [spans]: each new face's first and last
+     * moment; [slack]: how far apart two plans' frames can be ([FramePlan.spacing]).
      */
-    private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>) {
+    private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>, spans: Map<Long, LongRange>, slack: Long) {
         val rejections = dao.rejections().groupBy { it.trackId }
         // Two faces the user gave to different people may now be one track: the first keeps it.
         val placed = HashMap<Long, Long>()
         for (o in old) {
             val before = info(o)
-            val match = added.filter { it.frames and o.frames != 0L }.map { it to maxPair(it, before) }
+            val was = o.times.split(',').mapNotNull { it.trim().toLongOrNull() }.takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }
+            fun sameMoments(a: TrackInfo): Boolean {
+                if (a.frames and o.frames != 0L) return true
+                val now = spans[a.id] ?: return false
+                return was != null && now.first <= was.last + slack && was.first <= now.last + slack
+            }
+            val match = added.filter { sameMoments(it) }.map { it to maxPair(it, before) }
                 .filter { it.second >= CARRY }.maxByOrNull { it.second }?.first ?: continue
             if (o.state == "manual" && o.personId != null && placed.getOrPut(match.id) { o.personId } == o.personId)
                 dao.place(match.id, o.personId, "carried", o.similarity)

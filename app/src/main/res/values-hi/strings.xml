@@ -358,6 +358,10 @@
     <string name="n_intros_in">" · %1$s वीडियो में इंट्रो या अंत"</string>
     <string name="n_analysing_link">लिंक का विश्लेषण हो रहा है…</string>
     <string name="dl_err_player_format">प्लेयर वीडियो फ़ॉर्मैट नहीं पढ़ सकता</string>
+    <string name="player_err_decode">यह डिवाइस इस वीडियो को डिकोड नहीं कर सकता। इसे MP4 में बदलने से मदद मिल सकती है।</string>
+    <string name="player_err_damaged">वीडियो फ़ाइल खराब है या ऐसे फ़ॉर्मैट में है जिसे प्लेयर नहीं पढ़ सकता।</string>
+    <string name="player_err_read">वीडियो फ़ाइल पढ़ी नहीं जा सकी।</string>
+    <string name="player_err_generic">यह वीडियो चलाया नहीं जा सकता।</string>
     <string name="n_download_cancelled">डाउनलोड रद्द</string>
     <string name="conv_format_unsupported">डिवाइस वीडियो फ़ॉर्मैट का समर्थन नहीं करता</string>
     <string name="conv_codec_unavailable">डिवाइस कोडेक उपलब्ध नहीं</string>

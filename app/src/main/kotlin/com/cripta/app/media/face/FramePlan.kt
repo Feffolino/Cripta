@@ -18,4 +18,14 @@ object FramePlan {
         val m = minOf(MAX, 2 * n)
         return if (m > n) List(m) { i -> durationMs * (2 * i + 1) / (2L * m) } else List(n) { i -> durationMs * (i + 1) / (n + 1L) }
     }
+
+    /**
+     * The time between two frames of the usual plan: how far apart the same face can be found by
+     * two analyses of the same video (the usual and the deep plan sample different moments, so the
+     * frame numbers of one say nothing about the other).
+     */
+    fun spacing(durationMs: Long): Long {
+        if (durationMs <= 0) return STEP_MS
+        return durationMs / (durationMs / STEP_MS).toInt().coerceIn(MIN, MAX)
+    }
 }

@@ -828,10 +828,15 @@ class VaultViewModel @Inject constructor(
     }
 
     // --- Undo support (snackbar "Annulla") ---
-    /** Put files back into the folders they were in before a move. */
-    fun restoreFolders(previous: Map<String, Long?>) = launchBulk("restoreFolders") {
+    /**
+     * Put files back into the folders they were in before a move. [covers]: the files that were
+     * their folder's chosen cover (file → folder), which the move took away: given back too.
+     */
+    fun restoreFolders(previous: Map<String, Long?>, covers: Map<String, Long> = emptyMap()) = launchBulk("restoreFolders") {
         // A folder gone since: the file stays where it is (live, reachable) rather than under it.
-        previous.forEach { (id, folder) -> repo.moveFile(id, folder) }
+        previous.forEach { (id, folder) ->
+            if (repo.moveFile(id, folder) && folder != null && covers[id] == folder) repo.restoreFolderCover(folder, id)
+        }
     }
 
     /** Restore each file's previous favorite flag. */

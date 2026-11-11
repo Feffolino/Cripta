@@ -309,6 +309,9 @@ fun VaultScreen(
     }
     fun countLabel(n: Int) = plural(R.plurals.items_n, n)
     fun folderLabel(id: Long?) = if (id == null) str(R.string.root) else "\"${allFolders.firstOrNull { it.id == id }?.name ?: str(R.string.folder_lc)}\""
+    /** Which of [ids] are a folder's chosen cover (file → folder). */
+    fun folderCoversOf(ids: Set<String>): Map<String, Long> =
+        allFolders.mapNotNull { f -> f.coverFileId?.takeIf { it in ids }?.let { it to f.id } }.toMap()
     fun moveWithUndo(requested: List<String>, target: Long?) {
         // Only files still on screen: the undo snapshot below is taken from them, so a hidden id
         // would be moved without any way back.
@@ -316,13 +319,15 @@ fun VaultScreen(
         if (ids.isEmpty()) return
         val set = ids.toSet()
         val prev = files.filter { it.file.id in set }.associate { it.file.id to it.file.folderId }
+        // Covers chosen among them: the move drops them, the undo gives them back.
+        val covers = folderCoversOf(set)
         vm.moveFiles(ids, target) { moved ->
             // After the work: the number really moved, and an undo only when something moved.
             if (moved == 0) notify(str(R.string.bulk_partial, moved, ids.size))
             else notify(
                 if (moved < ids.size) str(R.string.bulk_partial, moved, ids.size)
                 else str(R.string.moved_to, plural(R.plurals.moved_items, moved), folderLabel(target)),
-            ) { vm.restoreFolders(prev) }
+            ) { vm.restoreFolders(prev, covers) }
         }
     }
     /** Drop of a move drag. The drag may have changed folder, so the files can be off screen:
@@ -330,12 +335,13 @@ fun VaultScreen(
     fun moveCarried(ids: List<String>, from: Map<String, Long?>, target: Long?) {
         val moving = ids.filter { from.containsKey(it) && from[it] != target }
         if (moving.isEmpty()) return
+        val covers = folderCoversOf(moving.toSet())
         vm.moveFiles(moving, target) { moved ->
             if (moved == 0) notify(str(R.string.bulk_partial, moved, moving.size))
             else notify(
                 if (moved < moving.size) str(R.string.bulk_partial, moved, moving.size)
                 else str(R.string.moved_to, plural(R.plurals.moved_items, moved), folderLabel(target)),
-            ) { vm.restoreFolders(moving.associateWith { from[it] }) }
+            ) { vm.restoreFolders(moving.associateWith { from[it] }, covers) }
         }
     }
     fun favoriteWithUndo(requested: List<String>, fav: Boolean) {

@@ -452,6 +452,9 @@ interface IntroDao {
     @Query("DELETE FROM segment_rules")
     suspend fun deleteAllRules()
 
+    @Query("DELETE FROM segment_rules WHERE id = :id")
+    suspend fun deleteRule(id: Long)
+
     /** Oldest first: a video whose sound two signatures know belongs to the older one. */
     @Query("SELECT * FROM signatures WHERE kind = :kind ORDER BY createdAt")
     suspend fun signaturesOfKind(kind: String): List<SignatureEntity>
@@ -510,6 +513,8 @@ interface IntroDao {
 data class TrackRow(
     val id: Long, val fileId: String, val frames: Long, val quality: Float, val embeddings: ByteArray,
     val personId: Long?, val state: String, val similarity: Float, val width: Int = 0,
+    /** The moments (ms) of its faces, comma separated: frame bits differ between sampling plans, these do not. */
+    val times: String = "",
 )
 
 /** A track without its embeddings and picture, to score it against cached embeddings. */
@@ -655,13 +660,13 @@ interface FaceDao {
     @Query("SELECT COALESCE(SUM(length(crop) + length(embeddings) + 208), 0) FROM face_tracks")
     fun observeBackupBytes(): Flow<Long>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks")
     suspend fun allTrackRows(): List<TrackRow>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks WHERE fileId IN (:ids)")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks WHERE fileId IN (:ids)")
     suspend fun trackRowsOf(ids: List<String>): List<TrackRow>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width FROM face_tracks WHERE id = :id")
+    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks WHERE id = :id")
     suspend fun trackRow(id: Long): TrackRow?
 
     @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks")
@@ -834,12 +839,16 @@ interface FaceDao {
     @Query("DELETE FROM face_tracks")
     suspend fun deleteAllTracks()
 
-    /** Every face the user has not confirmed or added: what an analysis found and nobody took. */
-    @Query("DELETE FROM face_tracks WHERE personId IS NULL OR state NOT IN ('manual', 'carried')")
+    /**
+     * Every face the user has not confirmed or added: what an analysis found and nobody took. Faces
+     * the user said are not someone stay too: the next analysis carries that "no" to the face it
+     * finds again (deleted here, the "no" went with them and the face was suggested again).
+     */
+    @Query("DELETE FROM face_tracks WHERE (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections)")
     suspend fun deleteUnconfirmedTracks()
 
     /** [deleteUnconfirmedTracks] for one media. */
-    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND (personId IS NULL OR state NOT IN ('manual', 'carried'))")
+    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections)")
     suspend fun deleteUnconfirmedTracksOf(fileId: String)
 
     @Query("DELETE FROM persons")

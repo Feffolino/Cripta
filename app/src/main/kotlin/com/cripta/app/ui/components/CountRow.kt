@@ -47,13 +47,17 @@ fun CountRow(
     progress: Float? = null,
 ) {
     Column(modifier.semantics(mergeDescendants = true) { }.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp).size(24.dp))
+        // DS cr-count: the label in `body`, the figure beside it; under it when both do not fit
+        // (large fonts, a narrow window, a long figure). In a Row the figure was measured first and
+        // could take the whole width, leaving the label none at all.
+        LabelAndValue(gap = 16.dp, label = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 16.dp).size(24.dp))
+                }
+                Text(label, style = MaterialTheme.typography.bodyMedium)
             }
-            // DS cr-count: the label in `body`, the figure beside it.
-            Text(label, style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).padding(end = 16.dp))
+        }) {
             // DS cr-count__value: the figure bold in ink, " di <total>" muted.
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
@@ -74,6 +78,42 @@ fun CountRow(
                 drawStopIndicator = {},
                 gapSize = 0.dp,
             )
+        }
+    }
+}
+
+/**
+ * [label] and [value] on one line, the value at the end, when the value fits beside a fair share of
+ * the label (its whole text, or two fifths of the width); else the value on a line of its own under
+ * the label, at the end. Neither is ever squeezed to nothing.
+ */
+@Composable
+private fun LabelAndValue(gap: androidx.compose.ui.unit.Dp, label: @Composable () -> Unit, value: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content = { label(); value() }, modifier = Modifier.fillMaxWidth()) { measurables, c ->
+        val l = measurables[0]
+        val v = measurables[1]
+        val inf = androidx.compose.ui.unit.Constraints.Infinity
+        val space = gap.roundToPx()
+        val valueWide = v.maxIntrinsicWidth(inf)
+        val labelWide = l.maxIntrinsicWidth(inf)
+        val width = if (c.hasBoundedWidth) c.maxWidth else labelWide + space + valueWide
+        val labelNeed = minOf(labelWide, width * 2 / 5)
+        if (valueWide + space + labelNeed <= width) {
+            val vp = v.measure(androidx.compose.ui.unit.Constraints(maxWidth = valueWide))
+            val lp = l.measure(androidx.compose.ui.unit.Constraints(maxWidth = (width - vp.width - space).coerceAtLeast(0)))
+            val h = maxOf(lp.height, vp.height)
+            layout(width, h) {
+                lp.placeRelative(0, (h - lp.height) / 2)
+                vp.placeRelative(width - vp.width, (h - vp.height) / 2)
+            }
+        } else {
+            val lp = l.measure(androidx.compose.ui.unit.Constraints(maxWidth = width))
+            val vp = v.measure(androidx.compose.ui.unit.Constraints(maxWidth = width))
+            val between = 4.dp.roundToPx()
+            layout(width, lp.height + between + vp.height) {
+                lp.placeRelative(0, 0)
+                vp.placeRelative(width - vp.width, lp.height + between)
+            }
         }
     }
 }

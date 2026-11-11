@@ -342,6 +342,10 @@
     <string name="n_intros_in">" · 在 %1$s 个视频中找到片头或片尾"</string>
     <string name="n_analysing_link">正在分析链接…</string>
     <string name="dl_err_player_format">播放器无法读取该视频格式</string>
+    <string name="player_err_decode">此设备无法解码该视频。转换为 MP4 可能会有帮助。</string>
+    <string name="player_err_damaged">视频文件已损坏，或格式无法被播放器读取。</string>
+    <string name="player_err_read">无法读取视频文件。</string>
+    <string name="player_err_generic">无法播放此视频。</string>
     <string name="n_download_cancelled">下载已取消</string>
     <string name="conv_format_unsupported">设备不支持该视频格式</string>
     <string name="conv_codec_unavailable">设备编解码器不可用</string>

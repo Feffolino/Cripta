@@ -150,16 +150,54 @@ class DownloadViewModel @Inject constructor(
     fun prepareOpen(fileId: String) = viewerQueue.set(listOf(fileId))
 }
 
-/** The first http(s) link inside shared/pasted text (apps often share "Title https://..."), else the text. */
-fun extractUrl(text: String): String =
-    Regex("https?://[^\\s<>\"\']+", RegexOption.IGNORE_CASE).find(text)?.value?.trimEnd('.', ',', ')', ']', '"', '\'') ?: text.trim()
+/**
+ * The first http(s) link inside shared/pasted text (apps often share "Title https://..."), else the
+ * text. Punctuation after the link goes; a closing bracket only when nothing in the link opened it,
+ * so ".../video_(final)" keeps its ")". An apostrophe inside the path stays.
+ */
+fun extractUrl(text: String): String {
+    var url = Regex("https?://[^\\s<>\"]+", RegexOption.IGNORE_CASE).find(text)?.value ?: return text.trim()
+    while (url.isNotEmpty()) {
+        val last = url.last()
+        url = when {
+            last in ".,;:!?\"'" -> url.dropLast(1)
+            last == ')' && url.count { it == ')' } > url.count { it == '(' } -> url.dropLast(1)
+            last == ']' && url.count { it == ']' } > url.count { it == '[' } -> url.dropLast(1)
+            else -> break
+        }
+    }
+    return url
+}
 
-/** True for something that looks like a web link (what yt-dlp can fetch). */
+/**
+ * True for something that looks like a web link (what yt-dlp can fetch). A domain in its Unicode
+ * form ("https://例子.中国/…") counts as its ASCII (IDN) form does: java.net.URI gives it no host.
+ */
 fun looksLikeUrl(text: String): Boolean {
     val t = text.trim()
     if (t.isEmpty() || t.any { it.isWhitespace() }) return false
-    val uri = runCatching { java.net.URI(t) }.getOrNull() ?: return false
-    return (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) && !uri.host.isNullOrBlank()
+    fun ok(s: String): Boolean {
+        val uri = runCatching { java.net.URI(s) }.getOrNull() ?: return false
+        return (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) && !uri.host.isNullOrBlank()
+    }
+    if (ok(t)) return true
+    return asciiHost(t)?.let { it != t && ok(it) } == true
+}
+
+/** [url] with its host in the ASCII (IDN) form, or null when it has none to convert. */
+internal fun asciiHost(url: String): String? {
+    val m = Regex("^(https?://)([^/?#]*)(.*)$", RegexOption.IGNORE_CASE).find(url) ?: return null
+    val (scheme, authority, rest) = m.destructured
+    val at = authority.lastIndexOf('@')
+    val user = if (at >= 0) authority.substring(0, at + 1) else ""
+    val hostPort = authority.substring(at + 1)
+    if (hostPort.startsWith("[")) return null   // an IPv6 literal: nothing to convert
+    val colon = hostPort.lastIndexOf(':')
+    val host = if (colon >= 0) hostPort.substring(0, colon) else hostPort
+    val port = if (colon >= 0) hostPort.substring(colon) else ""
+    if (host.isEmpty() || host.all { it.code < 128 }) return null
+    val ascii = runCatching { java.net.IDN.toASCII(host, java.net.IDN.ALLOW_UNASSIGNED) }.getOrNull() ?: return null
+    return scheme + user + ascii + port + rest
 }
 
 /**

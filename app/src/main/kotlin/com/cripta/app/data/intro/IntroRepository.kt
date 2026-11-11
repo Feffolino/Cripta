@@ -280,9 +280,11 @@ class IntroRepository @Inject constructor(
         }
         name?.trim()?.takeIf { it.isNotEmpty() }?.let { dao.renameSignature(targetId, it) }
         val deltas = dao.signaturesOfKind(target.kind.id).first { it.id == targetId }
-        if (deltas.startDeltaMs != 0L || deltas.endDeltaMs != 0L) {
-            for (s in sigs) applyDeltas(s, deltas.startDeltaMs, deltas.endDeltaMs)
-        }
+        // The target's duration for every video now in it. Also when that duration is the natural
+        // one: the videos of a signature that was extended kept its extra seconds, while the merged
+        // signature (and every new match) said none.
+        val timed = deltas.startDeltaMs != 0L || deltas.endDeltaMs != 0L
+        for (s in sigs) if (timed || s.startDeltaMs != 0L || s.endDeltaMs != 0L) applyDeltas(s, deltas.startDeltaMs, deltas.endDeltaMs)
     }
 
     /**
@@ -310,10 +312,19 @@ class IntroRepository @Inject constructor(
         sig.id?.let { dao.deleteSignatureSounds(it); dao.deleteSignature(it) }
     }
 
-    /** "Durata della sigla": move every detected segment of the signature by these deltas from its sound. */
-    suspend fun setSignatureDuration(sig: Signature, startDelta: Long, endDelta: Long) {
+    /**
+     * "Durata della sigla": move every detected segment of the signature by these deltas from its
+     * sound. All or nothing: stopped halfway, the signature had its new duration and only its first
+     * videos did. An older "Applica a tutti" for the same sound gives way to this newer choice (else
+     * it went on moving the signature's next videos once this was set back to the natural length).
+     */
+    suspend fun setSignatureDuration(sig: Signature, startDelta: Long, endDelta: Long) = db.withTransaction {
         val id = persist(sig)
         dao.setSignatureDeltas(id, startDelta, endDelta)
+        for (rule in dao.rulesOfKind(sig.kind.id)) {
+            val sample = PrintCodec.decode(rule.hashes)
+            if (sig.cores.any { IntroDetector.isRejected(it, listOf(sample)) }) dao.deleteRule(rule.id)
+        }
         applyDeltas(sig, startDelta, endDelta)
     }
 
@@ -446,17 +457,24 @@ class IntroRepository @Inject constructor(
         val sample = printOf(file.id, kind)?.slice(coreStart, coreEnd)?.takeIf { it.size >= kind.minHashes } ?: return@withContext null
         val ds = seg.startMs - coreStart
         val de = seg.endMs - coreEnd
-        dao.addRule(SegmentRuleEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
-            hashes = PrintCodec.encode(sample), startDeltaMs = ds, endDeltaMs = de, createdAt = System.currentTimeMillis()))
         val durations = repo.allFilesSnapshot().associate { it.id to it.durationMs }
-        var changed = 0
-        for (f in IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == file.id })) {
-            val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
-            if (existing != null && existing.source != "auto") continue   // the user's own marks stay
-            dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, durations[f.fileId]))
-            changed++
+        val found = IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == file.id })
+        // The saved signature of this sound takes the same duration: kept apart, its older one won
+        // over this rule for every video analysed later ([store] asks the signature first).
+        val sig = if (dao.signaturesOfKind(kind.id).isEmpty()) null else savedSignatureOf(kind, sample)
+        db.withTransaction {
+            dao.addRule(SegmentRuleEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
+                hashes = PrintCodec.encode(sample), startDeltaMs = ds, endDeltaMs = de, createdAt = System.currentTimeMillis()))
+            sig?.let { dao.setSignatureDeltas(it.id, ds, de) }
+            var changed = 0
+            for (f in found) {
+                val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
+                if (existing != null && existing.source != "auto") continue   // the user's own marks stay
+                dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, durations[f.fileId]))
+                changed++
+            }
+            changed
         }
-        changed
     }
 
     /** "Rimuovi" or "Non è un'intro · Solo qui": no segment of [kind] here, kept across scans. */
@@ -485,17 +503,27 @@ class IntroRepository @Inject constructor(
         removed
     }
 
-    /** Delete a rejected sample and put back at once the segments it was blocking. */
+    /**
+     * Delete a rejected sample and put back at once the segments it was blocking. Not those another
+     * rejected sample still blocks: removing one of two samples of the same sound brought back
+     * intros the other one, still listed, forbids.
+     */
     suspend fun restoreRejected(id: Long): Int = withContext(Dispatchers.Default) {
         val r = dao.rejectedById(id) ?: return@withContext 0
         dao.deleteRejected(id)
         val kind = SegmentKind.of(r.kind)
+        val still = dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }
+        suspend fun allowed(f: Found): Boolean = still.isEmpty() ||
+            printOf(f.fileId, kind)?.slice(f.startMs, f.endMs)?.let { !IntroDetector.isRejected(it, still) } != false
         var restored = 0
         val origin = repo.fileById(r.originFileId)
-        if (origin != null && origin.deletedAt == null && store(kind, Found(origin.id, r.startMs, r.endMs))) restored++
+        if (origin != null && origin.deletedAt == null) {
+            val f = Found(origin.id, r.startMs, r.endMs)
+            if (allowed(f) && store(kind, f)) restored++
+        }
         val sample = PrintCodec.decode(r.hashes)
         restored + IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == r.originFileId })
-            .count { store(kind, it) }
+            .count { allowed(it) && store(kind, it) }
     }
 
     private suspend fun store(kind: SegmentKind, f: Found): Boolean {

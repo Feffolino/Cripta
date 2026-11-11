@@ -390,6 +390,10 @@
     <string name="n_intros_in">" · заставки или финалы в %1$s видео"</string>
     <string name="n_analysing_link">Анализ ссылки…</string>
     <string name="dl_err_player_format">Проигрыватель не читает формат видео</string>
+    <string name="player_err_decode">Это устройство не может декодировать видео. Может помочь преобразование в MP4.</string>
+    <string name="player_err_damaged">Видеофайл повреждён или в формате, который проигрыватель не читает.</string>
+    <string name="player_err_read">Не удалось прочитать видеофайл.</string>
+    <string name="player_err_generic">Это видео невозможно воспроизвести.</string>
     <string name="n_download_cancelled">Скачивание отменено</string>
     <string name="conv_format_unsupported">устройство не поддерживает формат видео</string>
     <string name="conv_codec_unavailable">кодек устройства недоступен</string>

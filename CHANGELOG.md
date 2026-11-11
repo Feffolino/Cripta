@@ -5,6 +5,17 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Notes typed on a person's profile are saved even when Back comes right after; "Non è una persona" stays on the profile with its "Annulla"; a suggestion answer that could not be saved is asked again; TalkBack reads each media's name and selection
+- "Cerca più a fondo" and "Analizza di nuovo" keep the user's confirmations, "no" answers and the person's face: the same face is recognised by its moment, not by the frame number of the sampling
+- A signature's duration and "Applica a tutti" follow the latest choice for videos analysed later; merging into a signature of natural length gives every video that length; a duration change is applied to all videos or none; removing one rejected sample leaves out what another one still rejects
+- A new intro analysis asked while one is being cancelled runs after it instead of being lost
+- A restore killed halfway leaves no hidden files taking up space; a conversion finished just before the app was closed is not done again
+- A saved filter's count on Home follows changes to the people in it; "Annulla" after moving a folder's cover puts the cover back
+- Ask for the notification permission on the first background job of any kind; a scan never takes the notification of a slow download
+- Links ending with a bracket of their own or with an apostrophe in the path are downloaded as pasted; domains in their own script (例子.中国) are accepted
+- A video that cannot be played says why; the play / pause button of a Picture-in-Picture window opened by hand shows the right action
+- Counts with large fonts put the figure under the label instead of hiding the label
+
 - Delete an imported original only while it is the very file that was imported and its copy is still in the vault: one edited after the import is kept
 - Keep a video's resume point when Android closes Cripta in the background or the vault locks with the video open
 - Saved filters keep "Continua a guardare"; a tag merged while it is in the active filter becomes the merged tag there too

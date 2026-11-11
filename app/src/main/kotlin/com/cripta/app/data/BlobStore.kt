@@ -37,6 +37,26 @@ class BlobStore @Inject constructor(
         }
     }
 
+    /**
+     * The blobs a restore is writing, one id a line, each written down before its blob: a process
+     * killed before the restore's transaction ended left them in the vault with no row, taking up
+     * space no screen could free. Kept beside the vault folder (never mistaken for a blob).
+     */
+    private val restoreJournal = File(context.filesDir, "restore-journal")
+
+    /** Note [uuid] as about to be written by a restore (forced to storage before the blob is). */
+    fun journalRestored(uuid: String) {
+        FileOutputStream(restoreJournal, true).use { it.write("$uuid\n".toByteArray()); it.fd.sync() }
+    }
+
+    /** The ids a restore wrote down and did not clear (it was killed), oldest first. */
+    fun restoreJournal(): List<String> =
+        runCatching { if (restoreJournal.exists()) restoreJournal.readLines().map { it.trim() }.filter { it.isNotEmpty() } else emptyList() }
+            .getOrDefault(emptyList())
+
+    /** The restore ended (kept or undone): nothing of it is left to check. */
+    fun clearRestoreJournal() { runCatching { restoreJournal.delete() } }
+
     /** Remove leftovers of a note save interrupted before its rename (see VaultRepository.updateNote). */
     fun sweepTemp() {
         dir.listFiles { f -> f.name.endsWith(".tmp") }?.forEach { runCatching { it.delete() } }

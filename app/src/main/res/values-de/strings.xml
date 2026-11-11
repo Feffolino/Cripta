@@ -358,6 +358,10 @@
     <string name="n_intros_in">" · Intros oder Abspann in %1$s Videos"</string>
     <string name="n_analysing_link">Link wird analysiert…</string>
     <string name="dl_err_player_format">Videoformat vom Player nicht lesbar</string>
+    <string name="player_err_decode">Dieses Gerät kann das Video nicht dekodieren. Eine Umwandlung in MP4 kann helfen.</string>
+    <string name="player_err_damaged">Die Videodatei ist beschädigt oder in einem Format, das der Player nicht lesen kann.</string>
+    <string name="player_err_read">Die Videodatei konnte nicht gelesen werden.</string>
+    <string name="player_err_generic">Dieses Video kann nicht abgespielt werden.</string>
     <string name="n_download_cancelled">Download abgebrochen</string>
     <string name="conv_format_unsupported">Videoformat vom Gerät nicht unterstützt</string>
     <string name="conv_codec_unavailable">Gerätecodec nicht verfügbar</string>

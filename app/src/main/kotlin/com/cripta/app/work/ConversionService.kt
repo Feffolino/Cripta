@@ -95,6 +95,7 @@ class ConversionService : Service() {
         // yt-dlp process is native and blocking: cancelling its coroutine doesn't stop it.
         ytdlpProcessId?.let { ytdlp.cancel(it) }
         scope.cancel()
+        working.value = false
         super.onDestroy()
     }
 
@@ -123,7 +124,13 @@ class ConversionService : Service() {
             return START_NOT_STICKY
         }
         if (mode == MODE_CANCEL_INTRO) {
-            introJob?.cancel()
+            // As for faces: what was asked before the cancel is dropped, and a request arriving
+            // while the scan stops waits for it instead of being folded into it (and lost with it).
+            introScanAll = false; introAsked.clear(); introRerun = false
+            introJob?.let { job ->
+                introStopping = true
+                job.cancel()
+            }
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
@@ -322,8 +329,11 @@ class ConversionService : Service() {
         // still reading its files' names took a later value, and an Annulla meanwhile let it run.
         val importGen = importCancels.get()
 
+        // Not a scan: while it runs, the scans leave the shared notification to it (see [notifyScan]).
+        val counted = mode != MODE_FACE_SCAN && mode != MODE_INTRO_SCAN
         val job = scope.launch {
             try {
+                if (counted) otherJobs.incrementAndGet()
                 when (mode) {
                     MODE_IMPORT -> {
                         val uris = intent.getParcelableArrayListExtraCompat(EX_URIS)
@@ -398,6 +408,7 @@ class ConversionService : Service() {
                     if (s?.facesAnalyzeNew == true) runCatching { startFaceScan(this@ConversionService, manual = false) }
                         .onFailure { logException(android.util.Log.WARN, "ConversionService", "face scan not started", it) }
                 }
+                if (counted) otherJobs.decrementAndGet()
                 if (holdsSession) session.endWork()
                 if (active.decrementAndGet() == 0) stopWhenIdle()
             }
@@ -621,12 +632,14 @@ class ConversionService : Service() {
         synchronized(lock) {
             active.incrementAndGet()
             lastStartId = maxOf(lastStartId, startId)
+            working.value = true
         }
     }
 
     /** The last job ended: out of the foreground and stop, unless an outcome is still in the island. */
     private fun stopWhenIdle() {
         synchronized(lock) {
+            if (active.get() == 0) working.value = false
             if (active.get() != 0 || hold != null) return
             main.removeCallbacks(flushProgress); pendingProgress = null; lastProgress = null
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -936,7 +949,9 @@ class ConversionService : Service() {
             val mode = afterOverride
                 ?: runCatching { settings.settingsOnce().convertAfter }.getOrDefault(com.cripta.app.data.ConvertAfter.REPLACE)
             val replace = mode == com.cripta.app.data.ConvertAfter.REPLACE
-            val newFile = repo.importConvertedMp4(file, out!!, replace = replace)
+            // Its saved job goes with the import: killed while the temporary files below were still
+            // being shredded, the conversion was resumed at the next unlock and made one more MP4.
+            val newFile = repo.importConvertedMp4(file, out!!, replace = replace, pendingJobId = "conv-$id")
             thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
             when (mode) {
                 com.cripta.app.data.ConvertAfter.ASK -> {
@@ -1125,6 +1140,8 @@ class ConversionService : Service() {
     /** Videos asked for by the user (selection bar): analysed again, ahead of the rest. */
     private val introAsked = java.util.concurrent.ConcurrentLinkedQueue<String>()
     @Volatile private var introScanAll = false
+    /** Annulla was pressed: the running intro scan is stopping. */
+    @Volatile private var introStopping = false
 
     /**
      * Fingerprint every video not analysed yet ([onlyIds]: just those, again), then match them
@@ -1137,11 +1154,26 @@ class ConversionService : Service() {
         introManual = introManual || manual
         // A request landing after the running scan's last look at [introRerun] but before it let go
         // of the lock found it taken and was dropped: the scan that ends looks again once unlocked.
-        while (introMutex.tryLock()) {
-            try { runIntroScan() } finally { introMutex.unlock() }
+        while (true) {
+            if (!introMutex.tryLock()) {
+                // The running scan takes this request in. One being cancelled ends by an exception,
+                // never back in its loop: the request waits for it to end and runs next (folded
+                // into it, it stayed queued with nothing to run it).
+                if (!introStopping) { introRerun = true; return }
+                introMutex.lock()
+            }
+            try {
+                if (!introScanAll && introAsked.isEmpty()) return
+                runIntroScan()
+            } finally {
+                // Cleared only once unlocked: a request between the end of the scan and the unlock
+                // still waits for the lock rather than being left to a scan that is gone.
+                val wasStopping = introStopping
+                introMutex.unlock()
+                if (wasStopping) introStopping = false
+            }
             if (!introScanAll && introAsked.isEmpty()) return
         }
-        introRerun = true
     }
 
     private suspend fun runIntroScan() {
@@ -1847,6 +1879,12 @@ class ConversionService : Service() {
      */
     /** When another operation (import, download, conversion…) last posted its progress. */
     private var otherAt = 0L
+    /**
+     * Jobs other than the scans running now. The time of their last post alone was not enough: a
+     * download preparing, checking or encrypting for more than 10 s without a post lost the shared
+     * notification (progress and Annulla) to a scan while it went on.
+     */
+    private val otherJobs = java.util.concurrent.atomic.AtomicInteger(0)
     private val scans = ScanNotices<ResultKind> { if (it == ResultKind.INTRO) "Intro" else it.label }
     /** Each running scan's notification, given the line about the other scans. */
     private val scanMakers = HashMap<ResultKind, (String?) -> Notification>()
@@ -1858,7 +1896,7 @@ class ConversionService : Service() {
     private fun notifyScan(kind: ResultKind, pct: Int, make: (others: String?) -> Notification) {
         synchronized(lock) {
             scanMakers[kind] = make
-            val otherBusy = otherAt > 0 && SystemClock.elapsedRealtime() - otherAt < 10_000
+            val otherBusy = otherJobs.get() > 0 || otherAt > 0 && SystemClock.elapsedRealtime() - otherAt < 10_000
             val shown = scans.update(kind, pct, otherBusy) ?: return
             scanMakers[shown]?.let { notify(it(scans.others(shown)), scan = true) }
         }
@@ -2302,6 +2340,12 @@ class ConversionService : Service() {
          * Analyse the videos not analysed yet for intros and outros ([manual]: asked by the user), or
          * only [fileIds], again even if analysed before.
          */
+        /**
+         * True while the service runs any job (backup, export, scan, update… not only imports,
+         * downloads and conversions): when the notification permission is worth asking for.
+         */
+        val working = kotlinx.coroutines.flow.MutableStateFlow(false)
+
         fun startIntroScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null) {
             ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
