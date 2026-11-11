@@ -2119,4 +2119,10 @@
     <string name="destroyed_next_open">sera détruit à la prochaine ouverture de Cripta</string>
     <string name="trash_original_folder">Son dossier d\'origine</string>
     <string name="cover_picker_limit">Seuls les %1$d fichiers les plus récents sont listés.</string>
+    <string name="icon_catalog_unavailable">Impossible de charger les icônes. Réessayez plus tard.</string>
+    <string name="tag_filter_clear">Retirer du filtre</string>
+    <string name="folder_change_failed">Aucune modification : le dossier ou le fichier n\'existe plus</string>
+    <string name="folder_random_inherited">Exclu de l\'aléatoire par un dossier parent</string>
+    <string name="restore_folders_skipped">Dossiers non restaurés, parent manquant : %1$d (leurs fichiers sont dans Racine : %2$d)</string>
+    <string name="restore_duplicates_skipped">Déjà dans le coffre, non ajoutés à nouveau : %1$d</string>
 </resources>

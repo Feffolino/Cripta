@@ -30,6 +30,10 @@ interface FolderDao {
     @Query("SELECT * FROM folders WHERE deletedAt IS NOT NULL")
     suspend fun trashedNow(): List<FolderEntity>
 
+    /** One-shot read of the live folders (a backup's snapshot, inside its transaction). */
+    @Query("SELECT * FROM folders WHERE deletedAt IS NULL")
+    suspend fun liveNow(): List<FolderEntity>
+
     @Query("UPDATE folders SET deletedAt = :at WHERE id IN (:ids)")
     suspend fun setDeletedAt(ids: List<Long>, at: Long?)
 
@@ -42,9 +46,16 @@ interface FolderDao {
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: Long): FolderEntity?
 
-    /** Colour and icon; an emoji left from older vaults is dropped with it. */
+    @Query("SELECT * FROM folders WHERE id IN (:ids)")
+    suspend fun byIds(ids: Collection<Long>): List<FolderEntity>
+
+    /** Colour and icon; an emoji left from older vaults is dropped with it. Returns rows changed. */
     @Query("UPDATE folders SET color = :color, icon = :icon, emoji = NULL WHERE id = :id")
-    suspend fun setStyle(id: Long, color: Int?, icon: String?)
+    suspend fun setStyle(id: Long, color: Int?, icon: String?): Int
+
+    /** Colour only (the icon untouched, an older vault's emoji kept). Returns rows changed. */
+    @Query("UPDATE folders SET color = :color WHERE id = :id")
+    suspend fun setColor(id: Long, color: Int?): Int
 
     /** A backup of an older vault: its emoji, turned into an icon after the restore. */
     @Query("UPDATE folders SET emoji = :emoji WHERE id = :id")
@@ -54,13 +65,28 @@ interface FolderDao {
     suspend fun withEmoji(): List<FolderEntity>
 
     @Query("UPDATE folders SET coverFileId = :fileId WHERE id = :id")
-    suspend fun setCover(id: Long, fileId: String?)
+    suspend fun setCover(id: Long, fileId: String?): Int
+
+    /** A file that left its folder (moved, or destroyed) is no longer the cover of any other folder. */
+    @Query("UPDATE folders SET coverFileId = NULL WHERE coverFileId = :fileId AND (:keepFolderId IS NULL OR id != :keepFolderId)")
+    suspend fun dropCoverOf(fileId: String, keepFolderId: Long?)
 
     @Query("UPDATE folders SET isFavorite = :favorite WHERE id = :id")
     suspend fun setFavorite(id: Long, favorite: Boolean)
 
-    @Query("UPDATE folders SET excludedFromRandom = :excluded WHERE id = :id")
-    suspend fun setRandomExcluded(id: Long, excluded: Boolean)
+    @Query("UPDATE folders SET excludedFromRandom = :excluded WHERE id = :id AND deletedAt IS NULL")
+    suspend fun setRandomExcluded(id: Long, excluded: Boolean): Int
+
+    /** Whether the folder or one of its ancestors is kept out of "Casuale" (as [FileDao.randomEligibleIds] counts it). */
+    @Query("""
+        WITH RECURSIVE up(id, parentId, excludedFromRandom) AS (
+            SELECT id, parentId, excludedFromRandom FROM folders WHERE id = :id
+            UNION
+            SELECT f.id, f.parentId, f.excludedFromRandom FROM folders f JOIN up u ON f.id = u.parentId
+        )
+        SELECT EXISTS(SELECT 1 FROM up WHERE excludedFromRandom = 1 AND id != :id)
+    """)
+    suspend fun ancestorExcludedFromRandom(id: Long): Boolean
 
     @Query("UPDATE folders SET sortKey = :key, sortAscending = :ascending WHERE id = :id")
     suspend fun setSort(id: Long, key: String, ascending: Boolean)
@@ -83,6 +109,26 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
     suspend fun byName(name: String): TagEntity?
 
+    @Query("SELECT * FROM tags WHERE id = :id")
+    suspend fun byId(id: Long): TagEntity?
+
+    /** One-shot read of the whole library (name resolution inside a transaction). */
+    @Query("SELECT * FROM tags")
+    suspend fun allNow(): List<TagEntity>
+
+    /** Every editable field of one tag, by id: the editor saves them together. Returns rows changed. */
+    @Query("UPDATE tags SET name = :name, alias = :alias, color = :color, pinned = :pinned, icon = :icon WHERE id = :id")
+    suspend fun update(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?): Int
+
+    @Query("SELECT id FROM tags WHERE id IN (:ids)")
+    suspend fun existingIds(ids: Collection<Long>): List<Long>
+
+    @Query("SELECT tagId FROM file_tags WHERE fileId = :fileId")
+    suspend fun tagIdsOf(fileId: String): List<Long>
+
+    @Query("SELECT * FROM file_tags WHERE fileId IN (:fileIds) AND tagId IN (:tagIds)")
+    suspend fun linksAmong(fileIds: Collection<String>, tagIds: Collection<Long>): List<FileTagCrossRef>
+
     @Query("UPDATE tags SET alias = :alias WHERE name = :name")
     suspend fun setAlias(name: String, alias: String?)
 
@@ -96,7 +142,7 @@ interface TagDao {
     suspend fun touch(id: Long, at: Long)
 
     @Query("DELETE FROM file_tags WHERE fileId = :fileId AND tagId = :tagId")
-    suspend fun unlink(fileId: String, tagId: Long)
+    suspend fun unlink(fileId: String, tagId: Long): Int
 
     @Query("UPDATE tags SET color = :color WHERE id = :id")
     suspend fun setColor(id: Long, color: Int?)
@@ -113,11 +159,15 @@ interface TagDao {
     @Query("DELETE FROM file_tags WHERE tagId = :id")
     suspend fun unlinkAll(id: Long)
 
+    @Query("DELETE FROM file_tags WHERE tagId NOT IN (SELECT id FROM tags) OR fileId NOT IN (SELECT id FROM files)")
+    suspend fun deleteOrphanLinks(): Int
+
     @Query("DELETE FROM file_tags WHERE fileId = :fileId")
     suspend fun clearTagsOf(fileId: String)
 
+    /** -1 when the file already had the tag. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun link(ref: FileTagCrossRef)
+    suspend fun link(ref: FileTagCrossRef): Long
 }
 
 @Dao
@@ -129,6 +179,9 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE id = :id")
     suspend fun byId(id: String): FileEntity?
 
+    @Query("SELECT id FROM files WHERE id IN (:ids)")
+    suspend fun existingIds(ids: Collection<String>): List<String>
+
     @Transaction
     @Query("SELECT * FROM files WHERE id = :id")
     suspend fun withTagsById(id: String): FileWithTags?
@@ -136,6 +189,15 @@ interface FileDao {
     @Transaction
     @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")
     fun allWithTags(): Flow<List<FileWithTags>>
+
+    /** One-shot [allWithTags] (a backup's snapshot, inside its transaction). */
+    @Transaction
+    @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")
+    suspend fun allWithTagsNow(): List<FileWithTags>
+
+    /** A live file of [folderId] (null = the root) with this content: the same file restored twice. */
+    @Query("SELECT id FROM files WHERE contentHash = :hash AND deletedAt IS NULL AND ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId)")
+    suspend fun sameContentIn(hash: String, folderId: Long?): List<String>
 
     @Transaction
     @Query("SELECT * FROM files WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
@@ -156,6 +218,9 @@ interface FileDao {
 
     @Query("UPDATE files SET contentHash = :hash WHERE id = :id")
     suspend fun setContentHash(id: String, hash: String)
+
+    @Query("SELECT * FROM files WHERE id IN (:ids)")
+    suspend fun byIds(ids: Collection<String>): List<FileEntity>
 
     /** Newest covers of a folder (for its 2x2 mosaic). */
     @Query("SELECT * FROM files WHERE folderId = :folderId AND deletedAt IS NULL ORDER BY importedAt DESC LIMIT :limit")
@@ -223,7 +288,7 @@ interface FileDao {
     suspend fun rename(id: String, name: String)
 
     @Query("UPDATE files SET folderId = :folderId WHERE id = :id")
-    suspend fun move(id: String, folderId: Long?)
+    suspend fun move(id: String, folderId: Long?): Int
 
     @Query("UPDATE files SET sortWeight = :weight WHERE id = :id")
     suspend fun setWeight(id: String, weight: Long)
@@ -240,10 +305,16 @@ interface SavedFilterDao {
     @Query("SELECT * FROM saved_filters ORDER BY name COLLATE NOCASE")
     fun all(): Flow<List<SavedFilterEntity>>
 
+    @Query("SELECT * FROM saved_filters")
+    suspend fun allNow(): List<SavedFilterEntity>
+
     @Insert suspend fun insert(f: SavedFilterEntity): Long
 
     @Query("DELETE FROM saved_filters WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("UPDATE saved_filters SET json = :json WHERE id = :id")
+    suspend fun setJson(id: Long, json: String)
 }
 
 @Dao

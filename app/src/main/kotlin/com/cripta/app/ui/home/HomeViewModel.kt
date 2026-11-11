@@ -68,6 +68,8 @@ class HomeViewModel @Inject constructor(
             }
             // Emojis of folders and tags (older vaults, restored backups) become icons.
             runCatching { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
+            // Links and saved filters still naming tags deleted by older versions.
+            runCatching { repo.repairTagReferences() }
             // Resume downloads/conversions that were waiting when Android killed the app.
             if (repo.claimJobRestore()) {
                 val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
@@ -220,6 +222,11 @@ class HomeViewModel @Inject constructor(
 
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
 
+    /** Position of each tag in the library: covers draw their tags in that order. */
+    val tagOrder: StateFlow<Map<Long, Int>> =
+        repo.changes.flatMapLatest { repo.tags() }.map { list -> list.withIndex().associate { (i, t) -> t.id to i } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     /** Faces on the covers of Home's shelves; none when "Persone in Home" is off. */
     val coverPeople: StateFlow<Map<String, List<Long>>> =
         combine(faces.coverFaces, settings.settings.map { it.peopleOnHome }) { m, mode -> if (mode == "off") emptyMap() else m }
@@ -235,7 +242,7 @@ class HomeViewModel @Inject constructor(
 
     /** Open Cartelle filtered to one type (from the summary card). */
     /** The Home search pill: the query opens in Cartelle, over the whole vault. */
-    fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query))
+    fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query, wholeVault = true))
 
     /** The videos of "Continua a guardare" (started, not finished), wherever they are. */
     fun showContinueWatching() =

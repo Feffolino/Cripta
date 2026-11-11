@@ -535,12 +535,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun createTag(name: String, alias: String? = null, color: Int? = null, icon: String? = null) = viewModelScope.launch {
-        repo.createTag(name, alias, icon)
-        if (color != null) repo.setTagColorByName(name, color)
+    /** A new tag with its whole look, in one write. A name already in the library is said so, not reused. */
+    fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        if (!r.created) _message.value = str(R.string.tag_exists, draft.name)
     }
-    fun setTagColor(id: Long, color: Int?) = viewModelScope.launch { repo.setTagColor(id, color) }
-    fun setTagIcon(name: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(name, icon) }
 
     /**
      * Gives every tag a colour from the sober palette, at random but spread out (no two tags share
@@ -548,46 +547,30 @@ class SettingsViewModel @Inject constructor(
      */
     fun randomizeTagColors() = viewModelScope.launch {
         var pool = emptyList<androidx.compose.ui.graphics.Color>()
-        tags.value.forEach { t ->
+        val colors = tags.value.associate { t ->
             if (pool.isEmpty()) pool = com.cripta.app.ui.theme.TagPalette.shuffled()
             val c = pool.first(); pool = pool.drop(1)
-            repo.setTagColor(t.id, c.toArgb())
+            t.id to c.toArgb()
         }
+        // One transaction: stopped half way, some tags kept the old colours and some the new.
+        repo.setTagColors(colors)
     }
-    fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
     fun setShowRecentTags(v: Boolean) = viewModelScope.launch { store.setShowRecentTags(v) }
     fun setBackupCompressDocs(v: Boolean) = viewModelScope.launch { store.setBackupCompressDocs(v) }
     fun setRecentTagsCount(v: Int) = viewModelScope.launch { store.setRecentTagsCount(v) }
     fun setViewerQuickTags(v: Boolean) = viewModelScope.launch { store.setViewerQuickTags(v) }
-    fun renameTag(id: Long, name: String) = editTagName(id, name)
-
-    private fun editTagName(id: Long, name: String) = viewModelScope.launch {
-        try {
-            repo.renameTag(id, name)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            _message.value = str(R.string.tag_exists, name.trim())
-        }
-    }
     fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
-    fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
 
-    /** Edit a label's name and alias together (used by the merged edit dialog). */
-    fun editTag(id: Long, newName: String, alias: String?) = viewModelScope.launch {
-        val n = newName.trim()
-        if (n.isEmpty()) return@launch
-        // Tag names are unique: renaming onto an existing one threw out of the coroutine (crash).
-        try {
-            repo.renameTag(id, n)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // SQLCipher's own constraint exception, not android.database.sqlite's: caught broadly.
-            _message.value = str(R.string.tag_exists, n)
-            return@launch
+    /**
+     * Save the tag editor: name, alias, colour, pin and icon together, by id, in one transaction.
+     * A name taken meanwhile by another tag leaves the tag exactly as it was, and is said so.
+     */
+    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+        when (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon)) {
+            com.cripta.app.data.TagSave.SAVED -> Unit
+            com.cripta.app.data.TagSave.NAME_TAKEN -> _message.value = str(R.string.tag_exists, draft.name)
+            com.cripta.app.data.TagSave.MISSING -> Unit   // deleted meanwhile: nothing to save into
         }
-        repo.setTagAlias(n, alias)
     }
     fun setTagSortMode(m: com.cripta.app.data.TagSortMode) = viewModelScope.launch { store.setTagSortMode(m) }
 

@@ -2184,4 +2184,10 @@
     <string name="destroyed_next_open">будет уничтожен при следующем открытии Cripta</string>
     <string name="trash_original_folder">Исходная папка</string>
     <string name="cover_picker_limit">Показаны только %1$d самых новых файлов.</string>
+    <string name="icon_catalog_unavailable">Не удалось загрузить значки. Повторите попытку позже.</string>
+    <string name="tag_filter_clear">Убрать из фильтра</string>
+    <string name="folder_change_failed">Ничего не изменено: папки или файла больше нет</string>
+    <string name="folder_random_inherited">Исключена из случайного выбора родительской папкой</string>
+    <string name="restore_folders_skipped">Папки не восстановлены, нет родительской папки: %1$d (их файлы в корне: %2$d)</string>
+    <string name="restore_duplicates_skipped">Уже в хранилище, повторно не добавлено: %1$d</string>
 </resources>

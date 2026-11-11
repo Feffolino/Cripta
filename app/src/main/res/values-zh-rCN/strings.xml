@@ -1989,4 +1989,10 @@
     <string name="destroyed_next_open">将在下次打开 Cripta 时销毁</string>
     <string name="trash_original_folder">原文件夹</string>
     <string name="cover_picker_limit">仅列出最新的 %1$d 个文件。</string>
+    <string name="icon_catalog_unavailable">无法加载图标。请稍后重试。</string>
+    <string name="tag_filter_clear">从筛选中移除</string>
+    <string name="folder_change_failed">未作更改：文件夹或文件已不存在</string>
+    <string name="folder_random_inherited">已被上级文件夹排除在随机之外</string>
+    <string name="restore_folders_skipped">因缺少上级文件夹而未恢复的文件夹：%1$d（其文件位于根目录：%2$d）</string>
+    <string name="restore_duplicates_skipped">已在保险库中，未再次添加：%1$d</string>
 </resources>

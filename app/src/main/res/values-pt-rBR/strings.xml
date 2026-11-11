@@ -2119,4 +2119,10 @@
     <string name="destroyed_next_open">será destruído na próxima abertura do Cripta</string>
     <string name="trash_original_folder">Sua pasta original</string>
     <string name="cover_picker_limit">Apenas os %1$d arquivos mais recentes são listados.</string>
+    <string name="icon_catalog_unavailable">Não foi possível carregar os ícones. Tente novamente mais tarde.</string>
+    <string name="tag_filter_clear">Remover do filtro</string>
+    <string name="folder_change_failed">Nada mudou: a pasta ou o arquivo não existe mais</string>
+    <string name="folder_random_inherited">Excluída do aleatório por uma pasta superior</string>
+    <string name="restore_folders_skipped">Pastas não restauradas, pasta superior ausente: %1$d (seus arquivos estão em Raiz: %2$d)</string>
+    <string name="restore_duplicates_skipped">Já no cofre, não adicionados novamente: %1$d</string>
 </resources>

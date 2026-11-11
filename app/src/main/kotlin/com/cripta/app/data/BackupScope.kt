@@ -209,6 +209,12 @@ data class RestoreReport(
     val analysis: Boolean = false,
     val settings: Boolean = false,
     val covers: Int = 0,
+    /** Folders whose parent was missing from the archive (or looped): not restored. */
+    val foldersSkipped: Int = 0,
+    /** Files of those folders, put at the root instead. */
+    val filesToRoot: Int = 0,
+    /** Files already in the vault, same content in the same folder: not added again. */
+    val duplicates: Int = 0,
 ) {
     fun describe(): String {
         val parts = buildList {
@@ -219,6 +225,10 @@ data class RestoreReport(
             if (covers > 0) add(plural(R.plurals.restored_covers, covers))
             if (settings) add(str(R.string.restored_settings))
         }
-        return str(R.string.restored_list, parts.joinToString(", "))
+        val notes = buildList {
+            if (foldersSkipped > 0) add(str(R.string.restore_folders_skipped, foldersSkipped, filesToRoot))
+            if (duplicates > 0) add(str(R.string.restore_duplicates_skipped, duplicates))
+        }
+        return (listOf(str(R.string.restored_list, parts.joinToString(", "))) + notes).joinToString(". ")
     }
 }

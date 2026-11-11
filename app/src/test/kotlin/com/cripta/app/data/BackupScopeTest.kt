@@ -99,4 +99,11 @@ class BackupScopeTest {
         assertEquals("Ripristinati: 3 file, 2 etichette, 1 persona, analisi, 4 copertine, impostazioni",
             RestoreReport(3, tags = 2, people = 1, analysis = true, settings = true, covers = 4).describe())
     }
+
+    @Test
+    fun restoreReportSaysWhatWasLeftOut() {
+        assertEquals("Ripristinati: 2 file. Cartelle non ripristinate, genitore mancante: 1 (i loro file sono in Radice: 3). " +
+            "Già nella cassaforte, non aggiunti di nuovo: 4",
+            RestoreReport(2, foldersSkipped = 1, filesToRoot = 3, duplicates = 4).describe())
+    }
 }

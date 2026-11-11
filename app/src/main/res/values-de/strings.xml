@@ -2054,4 +2054,10 @@
     <string name="destroyed_next_open">wird beim nächsten Öffnen von Cripta vernichtet</string>
     <string name="trash_original_folder">Der ursprüngliche Ordner</string>
     <string name="cover_picker_limit">Es werden nur die %1$d neuesten Dateien aufgelistet.</string>
+    <string name="icon_catalog_unavailable">Die Symbole konnten nicht geladen werden. Versuche es später erneut.</string>
+    <string name="tag_filter_clear">Aus dem Filter entfernen</string>
+    <string name="folder_change_failed">Nichts geändert: Der Ordner oder die Datei existiert nicht mehr</string>
+    <string name="folder_random_inherited">Durch einen übergeordneten Ordner von Zufall ausgeschlossen</string>
+    <string name="restore_folders_skipped">Nicht wiederhergestellte Ordner, übergeordneter Ordner fehlt: %1$d (ihre Dateien sind im Hauptverzeichnis: %2$d)</string>
+    <string name="restore_duplicates_skipped">Bereits im Tresor, nicht erneut hinzugefügt: %1$d</string>
 </resources>

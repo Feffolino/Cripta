@@ -113,7 +113,9 @@ internal fun TagIconChoices(name: String, selected: String?, gridHeight: Dp, onP
     val context = LocalContext.current
     val resolved = rememberResolvedTagIcon(selected)
     var query by remember { mutableStateOf("") }
-    val all by produceState(emptyList<String>()) { value = TagIcons.names(context) }
+    // null while the catalog loads; empty when it could not be read (then said so, not a blank grid).
+    val loaded by produceState<List<String>?>(null) { value = TagIcons.names(context) }
+    val all = loaded.orEmpty()
     val common = remember(all) { TagIcons.DEFAULTS.filter { it in all } }
     val forName by produceState(emptyList<String>(), name) { value = TagIcons.suggest(context, name, 18) }
     val found by key(query) {
@@ -122,6 +124,8 @@ internal fun TagIconChoices(name: String, selected: String?, gridHeight: Dp, onP
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (loaded?.isEmpty() == true) Text(str(R.string.icon_catalog_unavailable),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         com.cripta.app.ui.components.CriptaTextField(
             value = query, onValueChange = { query = it }, singleLine = true,
             leadingIcon = { Icon(CriptaIcons.Search, null) },

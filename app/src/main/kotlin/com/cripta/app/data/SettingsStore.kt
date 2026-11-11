@@ -470,8 +470,14 @@ class SettingsStore @Inject constructor(
      */
     suspend fun importFromBackup(bytes: ByteArray) {
         val values = BackupSettings.decode(bytes)
+        val before = context.dataStore.data.first()
+        val current = before.asMap().mapKeys { it.key.name }
         context.dataStore.edit { p ->
             for ((k, v) in values) {
+                // A preference this device keeps with another type is left alone: written, every
+                // typed read of it (appearance, tags…) would throw.
+                val here = current[k]
+                if (here != null && !sameKind(here, v)) continue
                 @Suppress("UNCHECKED_CAST")
                 when (v) {
                     is Boolean -> p[booleanPreferencesKey(k)] = v
@@ -484,6 +490,17 @@ class SettingsStore @Inject constructor(
                 }
             }
         }
+        // One not on this device yet, with a type its reads do not expect: everything goes back as
+        // it was and the archive's settings are refused, rather than an app that cannot read them.
+        if (runCatching { settings.first() }.exceptionOrNull() is ClassCastException) {
+            context.dataStore.edit { p -> p.clear(); p += before }
+            throw IllegalArgumentException(com.cripta.app.str(com.cripta.app.R.string.settings_invalid))
+        }
+    }
+
+    private fun sameKind(a: Any, b: Any): Boolean = when (a) {
+        is Set<*> -> b is Set<*>
+        else -> a::class == b::class
     }
 
     suspend fun setRecentTagsCount(v: Int) { context.dataStore.edit { it[recentTagsCountKey] = v.coerceIn(1, 20) } }

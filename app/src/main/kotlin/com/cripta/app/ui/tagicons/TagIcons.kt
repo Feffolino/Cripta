@@ -251,7 +251,9 @@ object TagIcons {
             val lang = language(context)
             val query = withoutGlue(words(text, lang))
             val englishQuery = withoutGlue(words(text, "en"))
-            if (query.isEmpty()) return@withContext DEFAULTS.filter { it in names }.take(limit)
+            // An emoji pasted in the field is found as itself (the defaults were shown instead).
+            val pasted = text.trim().takeIf { it.isNotEmpty() }?.let { forEmoji(context, it) }
+            if (query.isEmpty()) return@withContext listOfNotNull(pasted)
             val english = terms(context, "en")
             val local = if (lang == "en") english else terms(context, lang)
             val subjects = if (lang == "it") query.flatMap { italianSubjects[it].orEmpty() }.distinct() else emptyList()
@@ -266,7 +268,7 @@ object TagIcons {
                 )
                 if (score == 0) null else name to score
             }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.length }.thenBy { it.first })
-                .take(limit).map { it.first }
+                .take(limit).map { it.first }.let { found -> if (pasted == null) found else listOf(pasted) + (found - pasted) }
         }
 
     private fun score(terms: Terms?, query: List<String>, substring: Boolean): Int =

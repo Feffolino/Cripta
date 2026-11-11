@@ -140,7 +140,10 @@ internal fun DetailsSheet(
     splitPanel: com.cripta.app.ui.components.SplitPanelState? = null,
     onSheetTop: (Float) -> Unit = {},
 ) {
-    val onFile by produceState(initialValue = emptyList<String>(), file.id, refresh) { value = vm.tagNamesOf(file.id) }
+    // Keyed by the file it was read for: on a swipe to the next media the previous one's tags are
+    // not shown (nor edited) while the new ones load.
+    val onFileFor by produceState(initialValue = "" to emptyList<String>(), file.id, refresh) { value = file.id to vm.tagNamesOf(file.id) }
+    val onFile = if (onFileFor.first == file.id) onFileFor.second else emptyList()
     val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
     val videoDiag by produceState(initialValue = "", file.id, isVid) { value = if (isVid) vm.videoInfo(file) else "" }
     var editTag by remember { mutableStateOf<String?>(null) }
@@ -275,19 +278,25 @@ internal fun DetailsSheet(
                 }
             }
             // Short form unless there is nothing quick to show (no tags on the file, pinned or recent).
-            val hasQuick = onFile.isNotEmpty() || allTags.any { it.pinned } || (showRecents && allTags.any { it.lastUsedAt != null })
+            // Recent = used and not pinned (a pinned one is in its own row): what the short form really shows.
+            val hasQuick = onFile.isNotEmpty() || allTags.any { it.pinned } || (showRecents && allTags.any { !it.pinned && it.lastUsedAt != null })
+            val libraryShown = allTagsOpen || !hasQuick
+            var tagQuery by remember { mutableStateOf("") }
+            if (libraryShown && allTags.size > com.cripta.app.ui.vault.SEARCH_THRESHOLD) {
+                com.cripta.app.ui.vault.TagSearchField(tagQuery) { tagQuery = it }
+            }
             com.cripta.app.ui.vault.TagSections(
-                showLibrary = allTagsOpen || !hasQuick,
+                query = if (libraryShown) tagQuery else "",
+                showLibrary = libraryShown,
                 allTags = allTags,
                 extraNames = onFile,
                 showRecents = showRecents,
-                isSelected = { n -> onFile.any { it.equals(n, ignoreCase = true) } },
+                isSelected = { n -> n in onFile },
                 onToggle = { n ->
                     val t = byName[n]
-                    if (t != null) vm.toggleTag(file.id, t.id)
-                    else vm.setTags(file.id, onFile + n)
+                    if (t != null) vm.toggleTag(file.id, t.id) else vm.addTag(file.id, n)
                 },
-                onLongPress = { editTag = it },
+                onLongPress = { n -> if (byName[n] != null) editTag = n },
             )
             if (hasQuick && allTags.isNotEmpty()) TextButton(onClick = { vm.setDetailsAllTags(!allTagsOpen) }) {
                 com.cripta.app.ui.components.ButtonText(if (allTagsOpen) str(R.string.show_less) else str(R.string.show_all_n, allTags.size))
@@ -372,32 +381,25 @@ internal fun DetailsSheet(
         }
     }
     editTag?.let { name ->
-        val t = byName[name]
+        val t = byName[name] ?: return@let
         com.cripta.app.ui.vault.LabelEditorDialog(
             title = str(R.string.tag_edit_title, name),
             initialName = name,
             nameEditable = false,
-            initialAlias = t?.alias ?: "",
-            onConfirm = { _, alias -> vm.setTagAlias(name, alias); editTag = null },
+            initialAlias = t.alias ?: "",
+            onConfirm = { draft -> vm.saveTag(t.id, draft.copy(name = t.name)); editTag = null },
             onDismiss = { editTag = null },
-            onColor = if (t != null) ({ c -> vm.setTagColor(name, c) }) else null,
-            initialColor = t?.color,
-            onPinned = if (t != null) ({ p -> vm.setTagPinned(name, p) }) else null,
-            initialPinned = t?.pinned == true,
-            initialIcon = t?.icon,
-            onIcon = if (t != null) ({ i -> vm.setTagIcon(name, i) }) else null,
+            showColor = true, initialColor = t.color,
+            showPinned = true, initialPinned = t.pinned,
+            showIcon = true, initialIcon = t.icon,
         )
     }
     if (creating) {
-        var newIcon by remember { mutableStateOf<String?>(null) }
         com.cripta.app.ui.vault.LabelEditorDialog(
             title = str(R.string.new_tag),
-            onIcon = { newIcon = it },
-            onConfirm = { name, alias ->
-                vm.createTag(name, alias, newIcon)
-                vm.setTags(file.id, (onFile + name).distinct())
-                creating = false
-            },
+            showIcon = true,
+            takenNames = allTags.map { it.name },
+            onConfirm = { draft -> vm.createTagOn(file.id, draft); creating = false },
             onDismiss = { creating = false },
         )
     }

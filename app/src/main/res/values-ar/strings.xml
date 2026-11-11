@@ -2314,4 +2314,10 @@
     <string name="destroyed_next_open">سيُتلف عند فتح Cripta في المرة القادمة</string>
     <string name="trash_original_folder">مجلدها الأصلي</string>
     <string name="cover_picker_limit">تُعرض أحدث %1$d ملف فقط.</string>
+    <string name="icon_catalog_unavailable">تعذّر تحميل الأيقونات. حاول مرة أخرى لاحقًا.</string>
+    <string name="tag_filter_clear">إزالة من عامل التصفية</string>
+    <string name="folder_change_failed">لم يتغيّر شيء: المجلد أو الملف لم يعد موجودًا</string>
+    <string name="folder_random_inherited">مستبعد من العشوائي بواسطة مجلد أعلى</string>
+    <string name="restore_folders_skipped">مجلدات لم تتم استعادتها لغياب المجلد الأعلى: %1$d (ملفاتها في الجذر: %2$d)</string>
+    <string name="restore_duplicates_skipped">موجودة في الخزنة، لم تُضَف مرة أخرى: %1$d</string>
 </resources>

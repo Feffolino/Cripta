@@ -2119,4 +2119,10 @@
     <string name="destroyed_next_open">se destruirá en la próxima apertura de Cripta</string>
     <string name="trash_original_folder">Su carpeta original</string>
     <string name="cover_picker_limit">Solo se muestran los %1$d archivos más recientes.</string>
+    <string name="icon_catalog_unavailable">No se pudieron cargar los iconos. Inténtalo más tarde.</string>
+    <string name="tag_filter_clear">Quitar del filtro</string>
+    <string name="folder_change_failed">Sin cambios: la carpeta o el archivo ya no existe</string>
+    <string name="folder_random_inherited">Excluida del modo aleatorio por una carpeta superior</string>
+    <string name="restore_folders_skipped">Carpetas no restauradas, falta la carpeta superior: %1$d (sus archivos están en Raíz: %2$d)</string>
+    <string name="restore_duplicates_skipped">Ya en la bóveda, no se añadieron de nuevo: %1$d</string>
 </resources>

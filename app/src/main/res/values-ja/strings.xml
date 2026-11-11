@@ -1989,4 +1989,10 @@
     <string name="destroyed_next_open">次に Cripta を開いたときに完全に削除されます</string>
     <string name="trash_original_folder">元のフォルダ</string>
     <string name="cover_picker_limit">最新の%1$d件のファイルだけを表示しています。</string>
+    <string name="icon_catalog_unavailable">アイコンを読み込めませんでした。後でもう一度お試しください。</string>
+    <string name="tag_filter_clear">フィルタから外す</string>
+    <string name="folder_change_failed">変更なし：フォルダまたはファイルがもうありません</string>
+    <string name="folder_random_inherited">上位フォルダによりランダムから除外されています</string>
+    <string name="restore_folders_skipped">親フォルダがないため復元されなかったフォルダ：%1$d（そのファイルはルートにあります：%2$d）</string>
+    <string name="restore_duplicates_skipped">すでに保管庫にあるため追加しなかったもの：%1$d</string>
 </resources>

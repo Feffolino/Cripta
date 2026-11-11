@@ -191,10 +191,17 @@ private fun TagFilterChip(label: String, state: TagFilterState, color: Color, ic
         },
         base = MaterialTheme.colorScheme.surfaceContainerLow,
         onClick = onClick,
+        triState = true,
         stateLabel = when (state) {
             TagFilterState.INCLUDE -> str(R.string.included_f)
             TagFilterState.EXCLUDE -> str(R.string.tag_state_excluded)
             TagFilterState.NEUTRAL -> str(R.string.not_filtered)
+        },
+        // What a tap does next, not only what it is now: neither -> include -> exclude -> neither.
+        onClickLabel = when (state) {
+            TagFilterState.NEUTRAL -> str(R.string.include)
+            TagFilterState.INCLUDE -> str(R.string.exclude)
+            TagFilterState.EXCLUDE -> str(R.string.tag_filter_clear)
         },
     )
 }

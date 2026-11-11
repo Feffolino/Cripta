@@ -182,8 +182,9 @@ internal const val FOLDERS_KEY = "folders"
 /** One entry of the speed-dial FAB. */
 internal class FabAction(val label: String, val icon: ImageVector, val caption: String? = null, val onClick: () -> Unit)
 
+/** A tag's acronym, else its first two letters, counted as characters seen (an accent or emoji is never split). */
 fun tagAlias(tag: TagEntity): String =
-    tag.alias?.takeIf { it.isNotBlank() } ?: tag.name.take(2).uppercase(com.cripta.app.Strings.locale)
+    tag.alias?.takeIf { it.isNotBlank() } ?: takeGraphemes(tag.name.trim(), 2).uppercase(com.cripta.app.Strings.locale)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -349,11 +350,6 @@ fun VaultScreen(
             if (fav) plural(R.plurals.favorited_n, n) else plural(R.plurals.unfavorited_n, n),
         ) { vm.restoreFavorites(prev) }
     }
-    fun tagsOf(ids: Collection<String>): Map<String, List<String>> {
-        val set = ids.toSet()
-        return files.filter { it.file.id in set }.associate { fwt -> fwt.file.id to fwt.tags.map { it.name } }
-    }
-
     // A selection belongs to the folder it was made in.
     LaunchedEffect(path) { selection = emptySet() }
     // ...and to what is on screen: when a filter, search or stats chip hides selected files they
@@ -441,7 +437,8 @@ fun VaultScreen(
 
     val coverPeopleMap by vm.coverPeople.collectAsStateWithLifecycle()
     val coverPeople = remember(coverPeopleMap) { CoverPeople(coverPeopleMap) { vm.faceCrop(it) } }
-    androidx.compose.runtime.CompositionLocalProvider(LocalCoverPeople provides coverPeople) {
+    val tagOrder = remember(tags) { tags.withIndex().associate { (i, t) -> t.id to i } }
+    androidx.compose.runtime.CompositionLocalProvider(LocalCoverPeople provides coverPeople, LocalTagOrder provides tagOrder) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         // The snackbar is placed by the screen itself (below), above whatever sits on the bottom edge.
@@ -1041,6 +1038,7 @@ fun VaultScreen(
                                 previews = folderPreviews[folder.id].orEmpty(),
                                 thumb = { vm.thumb(it) },
                                 showInfo = display.showFolderInfo,
+                                coverVersions = coverVersions,
                                 highlighted = hoverFolder == folder.id,
                                 bump = if (landFolder == folder.id) landBump else 0,
                                 countAtLeast = if (landFolder == folder.id) landCount else null,
@@ -1058,6 +1056,21 @@ fun VaultScreen(
                                             CustomAccessibilityAction(str(R.string.rename)) { folderToRename = folder; true },
                                             CustomAccessibilityAction(str(R.string.customise)) { folderToStyle = folder; true },
                                             CustomAccessibilityAction(str(R.string.choose_cover)) { folderToCover = folder; true },
+                                            // The long-press menu's other two, so TalkBack reaches them directly too.
+                                            CustomAccessibilityAction(if (folder.isFavorite) str(R.string.unfavorite) else str(R.string.favorite_add)) {
+                                                vm.setFolderFavorite(folder.id, !folder.isFavorite); true
+                                            },
+                                            CustomAccessibilityAction(if (folder.excludedFromRandom) str(R.string.include_in_random) else str(R.string.exclude_from_random)) {
+                                                val was = folder.excludedFromRandom
+                                                vm.setFolderRandomExcluded(folder.id, !was) { ok ->
+                                                    notify(when {
+                                                        !ok -> str(R.string.folder_change_failed)
+                                                        was -> str(R.string.folder_included_random)
+                                                        else -> str(R.string.folder_excluded_random)
+                                                    })
+                                                }
+                                                true
+                                            },
                                             CustomAccessibilityAction(str(R.string.delete)) { folderToDelete = folder; true },
                                         )
                                     },
@@ -1456,17 +1469,14 @@ fun VaultScreen(
             allTags = tags,
             initialSelected = target?.tags?.map { it.name } ?: emptyList(),
             onConfirm = { names ->
-                val before = tagsOf(listOf(id))
-                vm.setTags(id, names); tagTargetId = null; selection = emptySet()
-                if (before[id].orEmpty().toSet() != names.toSet()) notify(str(R.string.tags_updated)) { vm.restoreTags(before) }
+                tagTargetId = null; selection = emptySet()
+                // Announced once written, with an undo of exactly what changed.
+                vm.setTags(id, names) { diff -> if (!diff.isEmpty) notify(str(R.string.tags_updated)) { vm.revertTagLinks(diff) } }
             },
-            onSetAlias = { name, alias -> vm.setTagAlias(name, alias) },
-            onCreateTag = { name, alias, icon -> vm.createTag(name, alias, icon) },
-            onSetIcon = { name, icon -> vm.setTagIcon(name, icon) },
+            onSaveTag = { t, draft -> vm.saveTag(t.id, draft) },
+            onCreateTag = { draft -> vm.createTag(draft) },
             onDismiss = { tagTargetId = null },
             showRecents = display.showRecentTags,
-            onSetColor = { name, c -> vm.setTagColor(name, c) },
-            onSetPinned = { name, p -> vm.setTagPinned(name, p) },
         )
     }
 
@@ -1475,19 +1485,28 @@ fun VaultScreen(
             count = selection.size,
             allTags = tags,
             onConfirm = { names ->
-                // Shown files only (the undo snapshot from tagsOf covers exactly those).
+                // Shown files only. Announced after the write: the files that really gained a tag,
+                // and "Annulla" takes off just those links.
                 val ids = selection.filter { it in visibleIds }
-                val before = tagsOf(ids)
-                vm.addTagsToFiles(ids, names); batchTag = false; selection = emptySet()
-                notify(str(R.string.tags_added_to, countLabel(ids.size))) { vm.restoreTags(before) }
+                batchTag = false; selection = emptySet()
+                vm.addTagsToFiles(ids, names) { diff ->
+                    val undo: (() -> Unit)? = if (diff.isEmpty) null else ({ vm.revertTagLinks(diff) })
+                    // Files that already had (or lacked) the tags are left as they were: said so.
+                    notify(if (diff.files < ids.size) str(R.string.bulk_partial, diff.files, ids.size)
+                        else str(R.string.tags_added_to, countLabel(diff.files)), undo)
+                }
             },
-            onRemove = { names ->
+            onRemove = { chosen ->
                 val ids = selection.filter { it in visibleIds }
-                val before = tagsOf(ids)
-                vm.removeTagsFromFiles(ids, names); batchTag = false; selection = emptySet()
-                notify(str(R.string.tags_removed_from, countLabel(ids.size))) { vm.restoreTags(before) }
+                batchTag = false; selection = emptySet()
+                vm.removeTagsFromFiles(ids, chosen) { diff ->
+                    val undo: (() -> Unit)? = if (diff.isEmpty) null else ({ vm.revertTagLinks(diff) })
+                    // Files that already had (or lacked) the tags are left as they were: said so.
+                    notify(if (diff.files < ids.size) str(R.string.bulk_partial, diff.files, ids.size)
+                        else str(R.string.tags_removed_from, countLabel(diff.files)), undo)
+                }
             },
-            onCreateTag = { name, alias, icon -> vm.createTag(name, alias, icon) },
+            onCreateTag = { draft -> vm.createTag(draft) },
             onDismiss = { batchTag = false },
             showRecents = display.showRecentTags,
         )
@@ -1519,10 +1538,24 @@ fun VaultScreen(
                     if (folder.isFavorite) str(R.string.unfavorite) else str(R.string.favorite_add)) {
                     vm.setFolderFavorite(folder.id, !folder.isFavorite); folderMenu = null
                 }
-                SheetAction(CriptaIcons.Casino,
+                // A parent folder kept out of "Casuale" keeps this one out too: said so, not a switch that does nothing.
+                val inherited by androidx.compose.runtime.produceState(false, folder.id, folder.excludedFromRandom) {
+                    value = !folder.excludedFromRandom && vm.randomExcludedByAncestor(folder.id)
+                }
+                if (inherited) SheetAction(CriptaIcons.Casino, str(R.string.folder_random_inherited)) {
+                    folderMenu = null; notify(str(R.string.folder_random_inherited))
+                } else SheetAction(CriptaIcons.Casino,
                     if (folder.excludedFromRandom) str(R.string.include_in_random) else str(R.string.exclude_from_random)) {
-                    vm.setFolderRandomExcluded(folder.id, !folder.excludedFromRandom); folderMenu = null
-                    notify(if (folder.excludedFromRandom) str(R.string.folder_included_random) else str(R.string.folder_excluded_random))
+                    val wasExcluded = folder.excludedFromRandom
+                    folderMenu = null
+                    // Said once written: a folder gone meanwhile gets no "done".
+                    vm.setFolderRandomExcluded(folder.id, !wasExcluded) { ok ->
+                        notify(when {
+                            !ok -> str(R.string.folder_change_failed)
+                            wasExcluded -> str(R.string.folder_included_random)
+                            else -> str(R.string.folder_excluded_random)
+                        })
+                    }
                 }
                 SheetAction(CriptaIcons.Palette, str(R.string.customise_colour_icon)) { folderToStyle = folder; folderMenu = null }
                 SheetAction(CriptaIcons.Image, str(R.string.choose_cover)) { folderToCover = folder; folderMenu = null }
@@ -1543,11 +1576,17 @@ fun VaultScreen(
     folderToCover?.let { folder ->
         FolderCoverSheet(
             folder = folder,
-            load = { vm.filesInFolder(folder.id) },
+            load = { limit -> vm.filesInFolder(folder.id, limit) },
             thumb = { vm.thumb(it) },
             onPick = { id ->
-                vm.setFolderCover(folder.id, id); folderToCover = null
-                notify(if (id == null) str(R.string.cover_automatic) else str(R.string.cover_changed))
+                folderToCover = null
+                vm.setFolderCover(folder.id, id) { ok ->
+                    notify(when {
+                        !ok -> str(R.string.folder_change_failed)
+                        id == null -> str(R.string.cover_automatic)
+                        else -> str(R.string.cover_changed)
+                    })
+                }
             },
             onDismiss = { folderToCover = null },
         )
@@ -1558,7 +1597,10 @@ fun VaultScreen(
             folderName = folder.name,
             initialColor = folder.color,
             initialIcon = folder.icon,
-            onConfirm = { c, i -> vm.setFolderStyle(folder.id, c, i); folderToStyle = null },
+            onConfirm = { c, i, picked ->
+                folderToStyle = null
+                vm.setFolderStyle(folder.id, c, i, iconChanged = picked) { ok -> if (!ok) notify(str(R.string.folder_change_failed)) }
+            },
             onDismiss = { folderToStyle = null },
         )
     }

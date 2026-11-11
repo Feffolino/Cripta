@@ -255,7 +255,7 @@ internal fun ThumbBox(
         }
         if (tags.isNotEmpty()) {
             TagBadges(
-                tags = tags,
+                tagsIn = tags,
                 display = display,
                 modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()
                     .padding(bottom = if (shownWatched != null) 4.dp else 0.dp),
@@ -322,7 +322,10 @@ private fun TagChip(tag: TagEntity, display: DisplayPrefs) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier) {
+internal fun TagBadges(tagsIn: List<TagEntity>, display: DisplayPrefs?, modifier: Modifier, outerPad: androidx.compose.ui.unit.Dp = 8.dp) {
+    // In the library's order (pinned first): when room runs out, the tags put first are the ones kept.
+    val order = LocalTagOrder.current
+    val tags = remember(tagsIn, order) { libraryOrder(tagsIn, order) }
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall
     val density = LocalDensity.current
@@ -332,7 +335,6 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
 
     BoxWithConstraints(modifier) {
         // DS cr-cover__bl: 8dp from the edges, 4dp between marks.
-        val outerPad = 8.dp
         val availDp = maxWidth - outerPad * 2
         val availPx = with(density) { availDp.toPx() }
         val spacingPx = with(density) { 4.dp.toPx() }
@@ -374,7 +376,10 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
                 var used = 0f
                 while (i < widths.size) {
                     val add = widths[i] + if (row.isNotEmpty()) spacingPx else 0f
-                    if (used + add <= budget || row.isEmpty() && budget >= widths[i]) { row += i; used += add; i++ } else break
+                    // A row always takes its first mark: on the last row, beside "+N", a pill too wide
+                    // for what is left is narrowed (ellipsized) instead of leaving the cover with no
+                    // row and the "+N" with nowhere to be drawn.
+                    if (used + add <= budget || row.isEmpty()) { row += i; used += add; i++ } else break
                 }
                 if (row.isEmpty()) break
                 rows += row
@@ -390,6 +395,10 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
             shown = rows.sumOf { it.size }
         }
         val extra = tags.size - shown
+        // The top row shares its width with "+N": its marks are kept to what is left.
+        val topRowMaxDp = if (extra > 0) with(density) {
+            (availPx - maxOf(measurer.measure("+$extra", style).size.width + hPadPx, if (bubbles) bubblePx else 0f) - spacingPx).coerceAtLeast(0f).toDp()
+        } else availDp
 
         Column(
             Modifier.padding(outerPad),
@@ -405,7 +414,7 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
                             androidx.compose.runtime.SideEffect { knownTags += tags[i].id }
                             val mod = Modifier.popIn(fresh)
                             if (bubbles) CoverTagBubble(tags[i], texts[i], tagHue(tags[i], display), bubbleDp, mod)
-                            else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), availDp, mod)
+                            else CoverTagChip(tags[i], texts[i], tagHue(tags[i], display), if (r == 0) topRowMaxDp else availDp, mod)
                         }
                     }
                     if (r == 0 && extra > 0) {
@@ -422,9 +431,29 @@ private fun TagBadges(tags: List<TagEntity>, display: DisplayPrefs?, modifier: M
     }
 }
 
+/** "Bollini" or "Pillole" (Impostazioni › Copertine), for marks drawn away from a cover (the tag editor). */
+object CoverTagStyleNow {
+    var value by mutableStateOf(com.cripta.app.data.CoverTagStyle.BUBBLE)
+}
+
+/** The mark [tag] gets on a cover, in the style the covers use: the tag editor's preview. */
+@Composable
+internal fun CoverMarkSample(tag: TagEntity, color: Color) {
+    if (CoverTagStyleNow.value == com.cripta.app.data.CoverTagStyle.BUBBLE) CoverTagBubble(tag, bubbleText(tag), color, 22.dp, Modifier)
+    else CoverTagChip(tag, badgeText(tag, null), color, 160.dp, Modifier)
+}
+
+/** Position of each tag id in the library (Impostazioni › Etichette); empty = not known here. */
+internal val LocalTagOrder = androidx.compose.runtime.compositionLocalOf<Map<Long, Int>> { emptyMap() }
+
+/** [tags] pinned first, then in the library's order ([order]: id to position). */
+internal fun libraryOrder(tags: List<TagEntity>, order: Map<Long, Int>): List<TagEntity> =
+    tags.sortedWith(compareBy<TagEntity>({ !it.pinned }, { order[it.id] ?: Int.MAX_VALUE }))
+
 /** A bubble's content when the tag has no icon: its alias (two characters at most), else its initial. */
 private fun bubbleText(tag: TagEntity): String =
-    tag.alias?.takeIf { it.isNotBlank() }?.take(2) ?: tag.name.take(1).uppercase(com.cripta.app.Strings.locale)
+    tag.alias?.takeIf { it.isNotBlank() }?.let { takeGraphemes(it.trim(), 2) }
+        ?: takeGraphemes(tag.name.trim(), 1).uppercase(com.cripta.app.Strings.locale)
 
 /** A cover mark's fill: the tag's pastel ([com.cripta.app.ui.theme.tagPastel]), opaque: covers are the one place it is drawn. */
 internal fun coverMarkFill(color: Color): Color = com.cripta.app.ui.theme.tagPastel(color.copy(alpha = 1f))

@@ -161,11 +161,14 @@ internal fun FolderStyleDialog(
     folderName: String,
     initialColor: Int?,
     initialIcon: String?,
-    onConfirm: (Int?, String?) -> Unit,
+    /** Colour, icon, and whether an icon was picked at all (else the icon, or an old emoji, is kept). */
+    onConfirm: (Int?, String?, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var color by remember { mutableStateOf(initialColor) }
-    var icon by remember { mutableStateOf(initialIcon) }
+    // rememberSaveable: the draft survives the activity being recreated (not only a rotation).
+    var color by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialColor) }
+    var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialIcon) }
+    var iconPicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     com.cripta.app.ui.components.CriptaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(str(R.string.customise_folder)) },
@@ -177,10 +180,10 @@ internal fun FolderStyleDialog(
                     noneDescription = str(R.string.no_colour), onPick = { color = it },
                 )
                 Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TagIconChoices(folderName, icon, 220.dp) { icon = it }
+                TagIconChoices(folderName, icon, 220.dp) { icon = it; iconPicked = true }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(color, icon) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },
+        confirmButton = { TextButton(onClick = { onConfirm(color, icon, iconPicked) }) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 }

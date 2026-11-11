@@ -2054,4 +2054,10 @@
     <string name="destroyed_next_open">Cripta अगली बार खुलने पर नष्ट हो जाएगा</string>
     <string name="trash_original_folder">इसका मूल फ़ोल्डर</string>
     <string name="cover_picker_limit">केवल %1$d सबसे नई फ़ाइलें सूचीबद्ध हैं।</string>
+    <string name="icon_catalog_unavailable">आइकन लोड नहीं हो सके। बाद में फिर कोशिश करें।</string>
+    <string name="tag_filter_clear">फ़िल्टर से हटाएँ</string>
+    <string name="folder_change_failed">कुछ नहीं बदला: फ़ोल्डर या फ़ाइल अब मौजूद नहीं है</string>
+    <string name="folder_random_inherited">ऊपर के फ़ोल्डर ने इसे रैंडम से बाहर रखा है</string>
+    <string name="restore_folders_skipped">बहाल नहीं हुए फ़ोल्डर, ऊपर का फ़ोल्डर नहीं मिला: %1$d (उनकी फ़ाइलें मूल में हैं: %2$d)</string>
+    <string name="restore_duplicates_skipped">पहले से वॉल्ट में, दोबारा नहीं जोड़े गए: %1$d</string>
 </resources>

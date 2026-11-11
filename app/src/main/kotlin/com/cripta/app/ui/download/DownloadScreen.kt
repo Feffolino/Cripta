@@ -538,7 +538,7 @@ private fun folderLabel(f: FolderEntity, all: List<FolderEntity>): String {
     val names = ArrayDeque<String>()
     var cur: FolderEntity? = f
     var guard = 0
-    while (cur != null && guard++ < 20) { names.addFirst(cur.name); cur = cur.parentId?.let { byId[it] } }
+    while (cur != null && guard++ < com.cripta.app.data.MAX_FOLDER_DEPTH) { names.addFirst(cur.name); cur = cur.parentId?.let { byId[it] } }
     return names.joinToString(" › ")
 }
 
@@ -581,7 +581,7 @@ private fun FolderPickerSheet(
                 val out = ArrayDeque<FolderEntity>()
                 var cur = at?.let { byId[it] }
                 var guard = 0
-                while (cur != null && guard++ < 50) { out.addFirst(cur); cur = cur.parentId?.let { byId[it] } }
+                while (cur != null && guard++ < com.cripta.app.data.MAX_FOLDER_DEPTH) { out.addFirst(cur); cur = cur.parentId?.let { byId[it] } }
                 out.toList()
             }
             Row(
@@ -597,7 +597,7 @@ private fun FolderPickerSheet(
             }
             // The level on screen slides in as a page (shared X axis, 320 ms ease-out), keyed by the
             // folder it shows; every page scrolls on its own inside the fixed-height sheet.
-            fun depthOf(id: Long?): Int { var d = 0; var c = id?.let { byId[it] }; while (c != null && d < 50) { d++; c = c.parentId?.let { byId[it] } }; return d }
+            fun depthOf(id: Long?): Int { var d = 0; var c = id?.let { byId[it] }; while (c != null && d < com.cripta.app.data.MAX_FOLDER_DEPTH) { d++; c = c.parentId?.let { byId[it] } }; return d }
             AnimatedContent(
                 targetState = at,
                 modifier = Modifier.weight(1f),
@@ -686,8 +686,16 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
             }
             Text(str(R.string.dl_tags_hint), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp))
+            // A long library gets the search field the other tag pickers have.
+            var query by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+            if (tags.size > com.cripta.app.ui.vault.SEARCH_THRESHOLD) {
+                com.cripta.app.ui.vault.TagSearchField(query, Modifier.padding(bottom = 12.dp)) { query = it }
+            }
+            val shown = tags.filter { com.cripta.app.ui.vault.tagMatches(it, query) }
+            if (shown.isEmpty()) Text(str(R.string.tag_no_match, query.trim()), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             com.cripta.app.ui.components.ChipFlowRow {
-                tags.forEach { t ->
+                shown.forEach { t ->
                     val sel = t.id in chosen
                     TagPill(
                         tagText(t), tagColor(t), tagIcon = t.icon,

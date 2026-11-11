@@ -303,20 +303,29 @@ class VaultRepository @Inject constructor(
     private fun <T> live(query: (com.cripta.app.data.db.CriptaDatabase) -> Flow<T>): Flow<T> =
         session.database.flatMapLatest { d -> if (d == null) emptyFlow() else query(d) }
 
-    fun folders(parentId: Long?): Flow<List<FolderEntity>> = live { it.folderDao().childrenOf(parentId) }
-    fun allFolders(): Flow<List<FolderEntity>> = live { it.folderDao().all() }
+    // Names in the language's alphabetical order (SQLite's NOCASE put "Èrica" after "Zoo").
+    fun folders(parentId: Long?): Flow<List<FolderEntity>> = live { it.folderDao().childrenOf(parentId) }.map { foldersInOrder(it) }
+    fun allFolders(): Flow<List<FolderEntity>> = live { it.folderDao().all() }.map { foldersInOrder(it) }
     fun files(folderId: Long?): Flow<List<FileWithTags>> = live { it.fileDao().inFolderWithTags(folderId) }
     fun allFiles(): Flow<List<FileWithTags>> = live { it.fileDao().allWithTags() }
     @OptIn(ExperimentalCoroutinesApi::class)
     fun tags(): Flow<List<TagEntity>> =
         settings.settings.map { it.tagSortMode }.distinctUntilChanged()
             .flatMapLatest { mode ->
-                live { d -> if (mode == TagSortMode.CUSTOM) d.tagDao().allByOrder() else d.tagDao().all() }
+                live { d -> if (mode == TagSortMode.CUSTOM) d.tagDao().allByOrder() else d.tagDao().all() }.map { list ->
+                    val byName = NameOrder.comparator<TagEntity> { it.name }
+                    if (mode == TagSortMode.CUSTOM) list.sortedWith(compareBy<TagEntity> { it.orderIndex }.then(byName))
+                    else list.sortedWith(byName)
+                }
             }
+
+    private fun foldersInOrder(list: List<FolderEntity>): List<FolderEntity> =
+        list.sortedWith(compareBy<FolderEntity> { !it.isFavorite }.then(NameOrder.comparator { it.name }))
 
     /** Persist a custom tag order (position = index in [orderedIds]). */
     suspend fun reorderTags(orderedIds: List<Long>) = withContext(Dispatchers.IO) {
-        orderedIds.forEachIndexed { i, id -> db.tagDao().setOrder(id, i) }
+        // All or nothing: stopped half way, two tags could end up sharing a position.
+        db.withTransaction { orderedIds.forEachIndexed { i, id -> db.tagDao().setOrder(id, i) } }
         notifyChanged()
     }
     fun folderAggregates(): Flow<List<com.cripta.app.data.db.FolderAgg>> = live { it.fileDao().folderAggregates() }
@@ -333,8 +342,17 @@ class VaultRepository @Inject constructor(
         db.folderDao().rename(folder.id, newName.trim()); notifyChanged()
     }
 
-    suspend fun setFolderStyle(id: Long, color: Int?, icon: String?) = withContext(Dispatchers.IO) {
-        db.folderDao().setStyle(id, color, icon?.trim()?.ifEmpty { null }); notifyChanged()
+    /**
+     * Colour and icon of a folder. [iconChanged] false (only the colour was touched): the icon is
+     * left alone, and so is an older vault's emoji the catalog could not turn into an icon, which
+     * the dialog does not show and which a colour change wiped out for good. False when no folder
+     * was changed (gone meanwhile).
+     */
+    suspend fun setFolderStyle(id: Long, color: Int?, icon: String?, iconChanged: Boolean = true): Boolean = withContext(Dispatchers.IO) {
+        val rows = if (iconChanged) db.folderDao().setStyle(id, color, icon?.trim()?.ifEmpty { null })
+            else db.folderDao().setColor(id, color)
+        if (rows > 0) notifyChanged()
+        rows > 0
     }
 
     /**
@@ -357,39 +375,80 @@ class VaultRepository @Inject constructor(
         if (changed) notifyChanged()
     }
 
-    /** The file shown in front of the folder's stack; null = the newest one. */
-    suspend fun setFolderCover(id: Long, fileId: String?) = withContext(Dispatchers.IO) {
-        db.folderDao().setCover(id, fileId); notifyChanged()
+    /**
+     * The file shown in front of the folder's stack; null = the newest one. Only a live file of
+     * that very folder is accepted. False when nothing was set (folder or file gone, file moved).
+     */
+    suspend fun setFolderCover(id: Long, fileId: String?): Boolean = withContext(Dispatchers.IO) {
+        val ok = db.withTransaction {
+            val folder = db.folderDao().byId(id)?.takeIf { it.deletedAt == null } ?: return@withTransaction false
+            if (fileId != null && !isCoverOf(db.fileDao().byId(fileId), folder.id)) return@withTransaction false
+            db.folderDao().setCover(id, fileId) > 0
+        }
+        if (ok) notifyChanged()
+        ok
     }
 
-    /** A folder's own files, newest first (the cover picker). */
-    suspend fun filesInFolder(folderId: Long, limit: Int = 500): List<FileEntity> = withContext(Dispatchers.IO) {
-        val newest = db.fileDao().latestInFolder(folderId, limit)
+    /** Whether [file] can be [folderId]'s cover: live, and still in that folder. */
+    private fun isCoverOf(file: FileEntity?, folderId: Long): Boolean =
+        file != null && file.deletedAt == null && file.folderId == folderId
+
+    /** The cover picker's files: the newest [limit], and whether the folder has more. */
+    data class CoverChoices(val files: List<FileEntity>, val more: Boolean)
+
+    /** A folder's own files, newest first (the cover picker), [limit] at a time. */
+    suspend fun filesInFolder(folderId: Long, limit: Int = 500): CoverChoices = withContext(Dispatchers.IO) {
+        // One more than shown: tells "there are more" apart from "exactly [limit]".
+        val read = db.fileDao().latestInFolder(folderId, limit + 1)
+        val newest = read.take(limit)
         // The cover in use stays in the list however old it is: it carries the selection mark.
         val coverId = db.folderDao().byId(folderId)?.coverFileId
-        if (coverId == null || newest.any { it.id == coverId }) newest
-        else listOfNotNull(db.fileDao().byId(coverId)?.takeIf { it.deletedAt == null && it.folderId == folderId }) + newest
+        val files = if (coverId == null || newest.any { it.id == coverId }) newest
+        else listOfNotNull(db.fileDao().byId(coverId)?.takeIf { isCoverOf(it, folderId) }) + newest
+        CoverChoices(files, more = read.size > limit)
     }
 
     suspend fun setFolderFavorite(id: Long, favorite: Boolean) = withContext(Dispatchers.IO) {
         db.folderDao().setFavorite(id, favorite); notifyChanged()
     }
 
-    suspend fun setFolderRandomExcluded(id: Long, excluded: Boolean) = withContext(Dispatchers.IO) {
-        db.folderDao().setRandomExcluded(id, excluded); notifyChanged()
+    /** False when no folder was changed (deleted or trashed meanwhile). */
+    suspend fun setFolderRandomExcluded(id: Long, excluded: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val ok = db.folderDao().setRandomExcluded(id, excluded) > 0
+        if (ok) notifyChanged()
+        ok
+    }
+
+    /** Whether a folder above [id] keeps it out of "Casuale", whatever its own switch says. */
+    suspend fun randomExcludedByAncestor(id: Long): Boolean = withContext(Dispatchers.IO) {
+        readOrDefault(false) { it.folderDao().ancestorExcludedFromRandom(id) }
     }
 
     suspend fun setFolderSort(id: Long, key: SortKey, ascending: Boolean) = withContext(Dispatchers.IO) {
         db.folderDao().setSort(id, key.name, ascending); notifyChanged()
     }
 
-    suspend fun moveFile(fileId: String, folderId: Long?) = withContext(Dispatchers.IO) {
-        db.fileDao().move(fileId, folderId); notifyChanged()
+    /**
+     * Move a file to [folderId] (null = the root). The destination is checked in the same
+     * transaction: one deleted or sent to the trash since it was chosen would hold a live file no
+     * screen can reach, so nothing moves then (false). A folder the file leaves no longer uses it
+     * as its cover.
+     */
+    suspend fun moveFile(fileId: String, folderId: Long?): Boolean = withContext(Dispatchers.IO) {
+        val moved = db.withTransaction {
+            if (folderId != null && liveFolder(folderId) == null) return@withTransaction false
+            if (db.fileDao().move(fileId, folderId) == 0) return@withTransaction false
+            db.folderDao().dropCoverOf(fileId, keepFolderId = folderId)
+            true
+        }
+        if (moved) notifyChanged()
+        moved
     }
 
     /** Persist a manual order: assign ascending weights matching the given id order. */
     suspend fun setSortWeights(orderedIds: List<String>) = withContext(Dispatchers.IO) {
-        orderedIds.forEachIndexed { index, id -> db.fileDao().setWeight(id, index.toLong()) }
+        // One transaction: interrupted half way, the old and the new order were mixed.
+        db.withTransaction { orderedIds.forEachIndexed { index, id -> db.fileDao().setWeight(id, index.toLong()) } }
         notifyChanged()
     }
 
@@ -774,7 +833,7 @@ class VaultRepository @Inject constructor(
             try {
                 db.withTransaction {
                     db.fileDao().insert(safeEntity)
-                    tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = it)) }
+                    linkExistingTags(uuid, tagIds)
                 }
             } catch (e: Throwable) {
                 // Not listed (e.g. the vault locked): the blob would stay on disk with no key for good.
@@ -847,25 +906,52 @@ class VaultRepository @Inject constructor(
     }
 
     // --- Tags ---
-    suspend fun setTags(fileId: String, tagNames: List<String>) = withContext(Dispatchers.IO) {
+    /**
+     * Give a file exactly [tagNames] (unknown names become new tags). Returns what changed, so an
+     * "Annulla" can undo just that and not the edits made since. One transaction: a lock in the
+     * middle left the file with no tags.
+     */
+    suspend fun setTags(fileId: String, tagNames: List<String>): TagLinkDiff = withContext(Dispatchers.IO) {
         val dao = db.tagDao()
-        val before = db.fileDao().withTagsById(fileId)?.tags?.map { it.id }?.toSet().orEmpty()
-        // One transaction: cleared then re-linked, a lock in between left the file with no tags.
-        db.withTransaction {
-            dao.clearTagsOf(fileId)
-            for (raw in tagNames.map { it.trim() }.filter { it.isNotEmpty() }.distinct()) {
-                val existing = dao.byName(raw)
-                val tagId = existing?.id ?: dao.insert(TagEntity(name = raw)).let {
-                    if (it == -1L) dao.byName(raw)!!.id else it
-                }
-                dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
-                if (tagId !in before) dao.touch(tagId, now())   // newly assigned -> "Recenti"
-            }
+        val diff = db.withTransaction {
+            val before = dao.tagIdsOf(fileId).toSet()
+            val library = dao.allNow().toMutableList()
+            val wanted = cleanNames(tagNames).map { tagIdFor(it, library) }.toSet()
+            val added = (wanted - before).map { FileTagCrossRef(fileId, it) }
+            val removed = (before - wanted).map { FileTagCrossRef(fileId, it) }
+            removed.forEach { dao.unlink(it.fileId, it.tagId) }
+            val at = now()
+            added.forEach { dao.link(it); dao.touch(it.tagId, at) }   // newly assigned -> "Recenti"
+            TagLinkDiff(added, removed)
         }
         // Tags are a reusable library: keep unlinked ones available for other files. They are
         // removed only when the user explicitly deletes them (see deleteTag).
-        notifyChanged()
+        if (!diff.isEmpty) notifyChanged()
+        diff
     }
+
+    /** Names as typed: trimmed, blank ones out, each once. */
+    private fun cleanNames(names: List<String>): List<String> =
+        names.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+    /**
+     * The tag a typed [name] means: the exact name, else the one that differs only in case (the
+     * oldest, when an older vault has several), else a new tag placed last in the custom order.
+     * [library] is the transaction's view of the tags, kept up to date with what is created here.
+     */
+    private suspend fun tagIdFor(name: String, library: MutableList<TagEntity>): Long {
+        library.firstOrNull { it.name == name }?.let { return it.id }
+        library.filter { it.name.equals(name, ignoreCase = true) }.minByOrNull { it.id }?.let { return it.id }
+        val order = (library.maxOfOrNull { it.orderIndex } ?: -1) + 1
+        val inserted = db.tagDao().insert(TagEntity(name = name, orderIndex = order))
+        val tag = if (inserted == -1L) db.tagDao().byName(name)!! else TagEntity(id = inserted, name = name, orderIndex = order)
+        library += tag
+        return tag.id
+    }
+
+    /** The tag another one would clash with: same name, case aside ([exceptId] = the tag being renamed). */
+    private fun nameClash(name: String, library: List<TagEntity>, exceptId: Long = 0): TagEntity? =
+        library.firstOrNull { it.id != exceptId && it.name.equals(name, ignoreCase = true) }
 
     suspend fun toggleFavorite(fileId: String, fav: Boolean) = withContext(Dispatchers.IO) {
         db.fileDao().setFavorite(fileId, fav); notifyChanged()
@@ -901,18 +987,82 @@ class VaultRepository @Inject constructor(
         db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null }); notifyChanged()
     }
 
-    /** Add [tagNames] to a file without clearing its existing tags (used for batch tagging). */
-    suspend fun addTags(fileId: String, tagNames: List<String>) = withContext(Dispatchers.IO) {
+    /** Add [tagNames] to a file without clearing its existing tags. */
+    suspend fun addTags(fileId: String, tagNames: List<String>) { addTagsToFiles(listOf(fileId), tagNames) }
+
+    /**
+     * Add [tagNames] to every file of [fileIds] (other tags kept), in one transaction. Returns the
+     * links really added: a file that already had a tag is not counted, nor undone by "Annulla".
+     * Only tags that gained a file count as just used.
+     */
+    suspend fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>): List<FileTagCrossRef> = withContext(Dispatchers.IO) {
+        val names = cleanNames(tagNames)
+        if (names.isEmpty() || fileIds.isEmpty()) return@withContext emptyList()
         val dao = db.tagDao()
-        for (raw in tagNames.map { it.trim() }.filter { it.isNotEmpty() }.distinct()) {
-            val existing = dao.byName(raw)
-            val tagId = existing?.id ?: dao.insert(TagEntity(name = raw)).let {
-                if (it == -1L) dao.byName(raw)!!.id else it
+        val added = db.withTransaction {
+            val library = dao.allNow().toMutableList()
+            val tagIds = names.map { tagIdFor(it, library) }.distinct()
+            val files = existingFiles(fileIds)
+            val out = ArrayList<FileTagCrossRef>()
+            for (f in files) for (t in tagIds) {
+                val ref = FileTagCrossRef(f, t)
+                if (dao.link(ref) != -1L) out += ref
             }
-            dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId))
-            dao.touch(tagId, now())
+            val at = now()
+            out.map { it.tagId }.distinct().forEach { dao.touch(it, at) }
+            out
         }
         notifyChanged()
+        added
+    }
+
+    /** Take the tags [tagIds] off every file of [fileIds]; returns the links really removed. */
+    suspend fun removeTagsFromFiles(fileIds: List<String>, tagIds: Collection<Long>): List<FileTagCrossRef> = withContext(Dispatchers.IO) {
+        if (fileIds.isEmpty() || tagIds.isEmpty()) return@withContext emptyList()
+        val dao = db.tagDao()
+        val removed = db.withTransaction {
+            val links = fileIds.distinct().chunked(SQL_CHUNK).flatMap { dao.linksAmong(it, tagIds) }
+            links.filter { dao.unlink(it.fileId, it.tagId) > 0 }
+        }
+        if (removed.isNotEmpty()) notifyChanged()
+        removed
+    }
+
+    /**
+     * "Annulla" of a tag change: the links added are taken off again and the ones removed put back,
+     * nothing else. A tag deleted (or a file gone) since is not brought back.
+     */
+    suspend fun revertTagLinks(diff: TagLinkDiff) = withContext(Dispatchers.IO) {
+        if (diff.isEmpty) return@withContext
+        val dao = db.tagDao()
+        db.withTransaction {
+            diff.added.forEach { dao.unlink(it.fileId, it.tagId) }
+            val tags = diff.removed.map { it.tagId }.distinct().chunked(SQL_CHUNK).flatMap { dao.existingIds(it) }.toSet()
+            val files = existingFiles(diff.removed.map { it.fileId }).toSet()
+            diff.removed.filter { it.tagId in tags && it.fileId in files }.forEach { dao.link(it) }
+        }
+        notifyChanged()
+    }
+
+    /**
+     * Link the tags [tagIds] still in the library to [fileId] and mark them just used. Ids kept by
+     * a job that waited (a download) may belong to tags deleted since: those are skipped, else
+     * file_tags (no foreign keys) kept a link to nothing. Call inside a transaction.
+     */
+    private suspend fun linkExistingTags(fileId: String, tagIds: Collection<Long>) {
+        if (tagIds.isEmpty()) return
+        val dao = db.tagDao()
+        val at = now()
+        tagIds.distinct().chunked(SQL_CHUNK).flatMap { dao.existingIds(it) }.forEach { id ->
+            if (dao.link(FileTagCrossRef(fileId = fileId, tagId = id)) != -1L) dao.touch(id, at)
+        }
+    }
+
+    /** Which of [fileIds] are still in the vault (live or in the trash). */
+    private suspend fun existingFiles(fileIds: Collection<String>): List<String> {
+        val ids = fileIds.distinct()
+        val present = ids.chunked(SQL_CHUNK).flatMap { db.fileDao().existingIds(it) }.toHashSet()
+        return ids.filter { it in present }
     }
 
     /** Pin/unpin a tag (pinned tags come first in every picker). */
@@ -922,46 +1072,125 @@ class VaultRepository @Inject constructor(
 
     /** Toggle one tag on one file (viewer quick-tag bar). Returns true when it is now assigned. */
     suspend fun toggleFileTag(fileId: String, tagId: Long): Boolean = withContext(Dispatchers.IO) {
-        val has = db.fileDao().withTagsById(fileId)?.tags?.any { it.id == tagId } == true
-        if (has) db.tagDao().unlink(fileId, tagId)
-        else { db.tagDao().link(FileTagCrossRef(fileId = fileId, tagId = tagId)); db.tagDao().touch(tagId, now()) }
+        val dao = db.tagDao()
+        // Read and write in one transaction: two quick taps no longer both read "not assigned".
+        val now = db.withTransaction {
+            if (dao.unlink(fileId, tagId) > 0) return@withTransaction false
+            if (dao.byId(tagId) == null || db.fileDao().byId(fileId) == null) return@withTransaction null
+            dao.link(FileTagCrossRef(fileId = fileId, tagId = tagId)); dao.touch(tagId, now())
+            true
+        }
         notifyChanged()
-        !has
+        now == true
     }
 
-    suspend fun createTag(name: String, alias: String? = null, icon: String? = null) = withContext(Dispatchers.IO) {
-        val n = name.trim()
-        if (n.isEmpty()) return@withContext
-        val a = alias?.trim()?.ifEmpty { null }
-        val i = icon?.ifBlank { null }
-        val id = db.tagDao().insert(TagEntity(name = n, alias = a, icon = i))
-        // Tag already existed (insert ignored): just refresh its alias / icon if one was provided.
-        if (id == -1L && a != null) db.tagDao().setAlias(n, a)
-        if (id == -1L && i != null) db.tagDao().setIcon(n, i)
-        notifyChanged()
-    }
+    /**
+     * Create a tag with its look. A name already in the library, case aside, is not created again
+     * and the existing tag is left as it is (its look already shows on its files).
+     */
+    suspend fun createTag(name: String, alias: String? = null, icon: String? = null, color: Int? = null, pinned: Boolean = false): TagCreated =
+        withContext(Dispatchers.IO) {
+            val n = name.trim()
+            if (n.isEmpty()) return@withContext TagCreated(0, created = false)
+            val result = db.withTransaction {
+                val library = db.tagDao().allNow()
+                library.firstOrNull { it.name == n }?.let { return@withTransaction TagCreated(it.id, created = false) }
+                nameClash(n, library)?.let { return@withTransaction TagCreated(it.id, created = false) }
+                val order = (library.maxOfOrNull { it.orderIndex } ?: -1) + 1
+                val id = db.tagDao().insert(TagEntity(name = n, alias = alias?.trim()?.ifEmpty { null },
+                    icon = icon?.ifBlank { null }, color = color, pinned = pinned, orderIndex = order))
+                TagCreated(id, created = id != -1L)
+            }
+            if (result.created) notifyChanged()
+            result
+        }
 
-    /** Set a tag's colour (null = automatic). */
+    /**
+     * Save everything the tag editor shows, by id and in one transaction: either all of it is
+     * written or nothing is. A name taken by another tag (case aside) is refused before writing.
+     */
+    suspend fun saveTag(id: Long, name: String, alias: String?, color: Int?, pinned: Boolean, icon: String?): TagSave =
+        withContext(Dispatchers.IO) {
+            val n = name.trim()
+            if (n.isEmpty()) return@withContext TagSave.NAME_TAKEN
+            val result = try {
+                db.withTransaction {
+                    val library = db.tagDao().allNow()
+                    if (library.none { it.id == id }) return@withTransaction TagSave.MISSING
+                    if (nameClash(n, library, exceptId = id) != null) return@withTransaction TagSave.NAME_TAKEN
+                    db.tagDao().update(id, n, alias?.trim()?.ifEmpty { null }, color, pinned, icon?.ifBlank { null })
+                    TagSave.SAVED
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Unique index on the name (SQLCipher's own constraint exception: caught broadly).
+                logException(android.util.Log.WARN, "VaultRepository", "tag not saved", e)
+                TagSave.NAME_TAKEN
+            }
+            if (result == TagSave.SAVED) notifyChanged()
+            result
+        }
+
+    /** Set a tag's icon (null = none). */
     suspend fun setTagIcon(tagName: String, icon: String?) = withContext(Dispatchers.IO) {
         db.tagDao().setIcon(tagName, icon?.ifBlank { null }); notifyChanged()
     }
 
+    /** Set a tag's colour (null = automatic). */
     suspend fun setTagColor(tagId: Long, color: Int?) = withContext(Dispatchers.IO) {
         db.tagDao().setColor(tagId, color); notifyChanged()
+    }
+
+    /** Colours of many tags at once (Impostazioni › "Colori casuali"): one transaction, one refresh. */
+    suspend fun setTagColors(colors: Map<Long, Int?>) = withContext(Dispatchers.IO) {
+        if (colors.isEmpty()) return@withContext
+        db.withTransaction { colors.forEach { (id, c) -> db.tagDao().setColor(id, c) } }
+        notifyChanged()
     }
 
     suspend fun setTagColorByName(name: String, color: Int?) = withContext(Dispatchers.IO) {
         db.tagDao().setColorByName(name.trim(), color); notifyChanged()
     }
 
-    suspend fun renameTag(tagId: Long, newName: String) = withContext(Dispatchers.IO) {
-        db.tagDao().rename(tagId, newName.trim()); notifyChanged()
+    /**
+     * Delete a tag: its links, the tag, and its id in the saved filters, all in one transaction.
+     * A saved filter left with no criterion at all, or that required only deleted tags, is
+     * deleted too: it would show the whole vault, not what it was saved for.
+     */
+    suspend fun deleteTag(tagId: Long) = withContext(Dispatchers.IO) {
+        db.withTransaction {
+            db.tagDao().unlinkAll(tagId)
+            db.tagDao().deleteById(tagId)
+            pruneSavedFilters(setOf(tagId))
+        }
+        notifyChanged()
     }
 
-    suspend fun deleteTag(tagId: Long) = withContext(Dispatchers.IO) {
-        db.tagDao().unlinkAll(tagId)
-        db.tagDao().deleteById(tagId)
-        notifyChanged()
+    /**
+     * References to tags no longer in the library, left by older versions (a delete that stopped
+     * half way, a download that waited): links to nothing and ids in saved filters. Cheap; run at unlock.
+     */
+    suspend fun repairTagReferences() = withContext(Dispatchers.IO) {
+        db.withTransaction {
+            db.tagDao().deleteOrphanLinks()
+            pruneSavedFilters(null)
+        }
+    }
+
+    /** Drop [deadTagIds] from every saved filter (see [deleteTag]); null = every id not in the library. */
+    private suspend fun pruneSavedFilters(deadTagIds: Set<Long>?) {
+        val dao = db.savedFilterDao()
+        val library = if (deadTagIds == null) db.tagDao().allNow().mapTo(HashSet()) { it.id } else null
+        for (sf in dao.allNow()) {
+            val json = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: continue
+            val dead = deadTagIds ?: SavedFilterJson.tagIds(json).filterTo(HashSet()) { it !in library!! }
+            when (val pruned = SavedFilterJson.withoutTags(json, dead)) {
+                SavedFilterJson.Pruned.Unchanged -> Unit
+                SavedFilterJson.Pruned.Empty -> dao.delete(sf.id)
+                is SavedFilterJson.Pruned.Changed -> dao.setJson(sf.id, pruned.json.toString())
+            }
+        }
     }
 
     // --- Read / open ---
@@ -1105,6 +1334,7 @@ class VaultRepository @Inject constructor(
             if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
             db.fileDao().delete(f)      // destroys the wrapped keyset -> ciphertext unrecoverable
             db.tagDao().clearTagsOf(fileId)   // its links only (no foreign keys cascade them)
+            db.folderDao().dropCoverOf(fileId, keepFolderId = null)
             db.introDao().clearPrints(fileId)
             db.introDao().clearSegments(fileId)
             db.dupPrintDao().forget(fileId)
@@ -1205,7 +1435,7 @@ class VaultRepository @Inject constructor(
     // --- Trash (optional; see Settings.trashEnabled) ---
 
     fun trashed(): Flow<List<FileWithTags>> = live { it.fileDao().trashedWithTags() }
-    fun trashedFolders(): Flow<List<FolderEntity>> = live { it.folderDao().trashed() }
+    fun trashedFolders(): Flow<List<FolderEntity>> = live { it.folderDao().trashed() }.map { it.sortedWith(NameOrder.comparator { f -> f.name }) }
 
     /**
      * Make [folderId] and its ancestors live again (only those rows: their other content stays in
@@ -1353,11 +1583,21 @@ class VaultRepository @Inject constructor(
         // the vault locked (their folder list keeps its last value): no covers then, not a crash.
         val d = session.database.value ?: return@withContext emptyMap()
         try {
+            // One short query per folder (its newest files, LIMIT [limit]) and two for the whole
+            // level: the folders' chosen covers, then the cover files not among the newest. It
+            // was two or three per folder.
+            val ids = folderIds.distinct()
+            val latestBy = ids.associateWith { d.fileDao().latestInFolder(it, limit) }
+            val coverIdBy = ids.chunked(SQL_CHUNK).flatMap { d.folderDao().byIds(it) }
+                .mapNotNull { f -> f.coverFileId?.let { f.id to it } }.toMap()
+            val missing = coverIdBy.filter { (folder, file) -> latestBy[folder].orEmpty().none { it.id == file } }.values
+            val coverFiles = missing.chunked(SQL_CHUNK).flatMap { d.fileDao().byIds(it) }.associateBy { it.id }
             folderIds.associateWith { root ->
-                val latest = d.fileDao().latestInFolder(root, limit)
-                // The chosen cover goes in front (if it still exists and isn't in the trash).
-                val cover = d.folderDao().byId(root)?.coverFileId
-                    ?.let { id -> latest.firstOrNull { it.id == id } ?: d.fileDao().byId(id)?.takeIf { it.deletedAt == null } }
+                val latest = latestBy[root].orEmpty()
+                // The chosen cover goes in front while it is a live file of this folder (moved out,
+                // trashed or destroyed: the newest one, as the cover picker shows "Automatica").
+                val cover = coverIdBy[root]
+                    ?.let { id -> latest.firstOrNull { it.id == id } ?: coverFiles[id]?.takeIf { isCoverOf(it, root) } }
                 if (cover == null) latest else (listOf(cover) + latest.filter { it.id != cover.id }).take(limit)
             }
         } catch (e: IllegalStateException) {
@@ -1401,7 +1641,7 @@ class VaultRepository @Inject constructor(
         val chain = ArrayDeque<FolderEntity>()
         var cur = db.folderDao().byId(folderId)
         var guard = 0
-        while (cur != null && guard++ < 64) {
+        while (cur != null && guard++ < MAX_FOLDER_DEPTH) {
             chain.addFirst(cur)
             cur = cur.parentId?.let { db.folderDao().byId(it) }
         }
@@ -1410,8 +1650,9 @@ class VaultRepository @Inject constructor(
 
     /** Link existing tags (by id) to a file, keeping its other tags. */
     suspend fun addTagIds(fileId: String, tagIds: Collection<Long>) = withContext(Dispatchers.IO) {
-        tagIds.forEach { db.tagDao().link(FileTagCrossRef(fileId = fileId, tagId = it)) }
-        if (tagIds.isNotEmpty()) notifyChanged()
+        if (tagIds.isEmpty()) return@withContext
+        db.withTransaction { linkExistingTags(fileId, tagIds) }
+        notifyChanged()
     }
 
     /**
@@ -1506,13 +1747,24 @@ class VaultRepository @Inject constructor(
         }.flowOn(Dispatchers.IO)
 
     private suspend fun exportBackupInner(dest: Uri, passphrase: CharArray, compressDocs: Boolean, scope: BackupScope, onProgress: (Float) -> Unit): Int {
-        val allFolders = db.folderDao().all().first()
+        // One read transaction for folders, tags, files and saved filters: read one after the
+        // other, a folder created or a tag renamed in between gave an archive whose parts disagree
+        // (a file in a folder it does not hold, a link to a tag name it does not list).
+        val snapshot = db.withTransaction {
+            BackupSnapshot(
+                folders = db.folderDao().liveNow(),
+                tags = if (scope.tags) db.tagDao().allNow() else emptyList(),
+                files = db.fileDao().allWithTagsNow(),
+                savedFilters = if (scope.tags) db.savedFilterDao().allNow() else emptyList(),
+            )
+        }
+        val allFolders = snapshot.folders
         val parents = allFolders.associate { it.id to it.parentId }
         // Only the chosen folders and the files in them (a whole top-level folder at a time, so a
         // chosen folder's parent is always in the archive too).
         val folders = allFolders.filter { scope.includesFolder(it.id, parents) }
-        val tags = if (scope.tags) db.tagDao().all().first() else emptyList()
-        val files = db.fileDao().allWithTags().first().filter { scope.includesFile(it.file.folderId, parents) }
+        val tags = snapshot.tags
+        val files = snapshot.files.filter { scope.includesFile(it.file.folderId, parents) }
 
         // Format v4 (BackupCrypto): authenticated 1 MB segments instead of one GCM message.
         val header = BackupCrypto.newHeader()
@@ -1535,7 +1787,9 @@ class VaultRepository @Inject constructor(
                         .put("emoji", it.emoji ?: org.json.JSONObject.NULL).put("icon", it.icon ?: org.json.JSONObject.NULL)
                         .put("favorite", it.isFavorite).put("excludedFromRandom", it.excludedFromRandom)
                         .put("sortKey", it.sortKey ?: org.json.JSONObject.NULL).put("sortAscending", it.sortAscending)
-                        .put("coverIdx", it.coverFileId?.let { id -> fileIndex[id] } ?: org.json.JSONObject.NULL))
+                        // A folder's chosen cover is a hand-picked cover too: it goes with "Copertine
+                        // scelte a mano", like the files' own pictures (it travelled regardless).
+                        .put("coverIdx", it.coverFileId?.takeIf { scope.covers }?.let { id -> fileIndex[id] } ?: org.json.JSONObject.NULL))
                 }
             })
             put("tags", org.json.JSONArray().apply {
@@ -1572,7 +1826,7 @@ class VaultRepository @Inject constructor(
             // Saved filters reference tags by id, which change on restore: store names instead.
             val tagNameById = tags.associate { it.id to it.name }
             put("savedFilters", org.json.JSONArray().apply {
-                if (scope.tags) db.savedFilterDao().all().first().forEach { sf ->
+                snapshot.savedFilters.forEach { sf ->
                     val f = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: return@forEach
                     fun names(key: String) = org.json.JSONArray().apply {
                         f.optJSONArray(key)?.let { a -> for (i in 0 until a.length()) tagNameById[a.getLong(i)]?.let { put(it) } }
@@ -1759,15 +2013,21 @@ class VaultRepository @Inject constructor(
                 val parentOld = if (o.isNull("parentId")) null else o.getLong("parentId")
                 val newParent = if (parentOld == null) null else idMap[parentOld]
                 if (parentOld != null && newParent == null) continue // parent not yet inserted
+                // The same folder already here (same name, same place: the archive restored again):
+                // its files join it instead of a second folder with the same name and look.
+                val name = o.getString("name")
+                val existing = db.folderDao().liveNow().firstOrNull { f -> f.parentId == newParent && f.name == name }
+                if (existing != null) { idMap[oldId] = existing.id; it.remove(); progressed = true; continue }
                 val newId = db.folderDao().insert(FolderEntity(
-                    name = o.getString("name"), parentId = newParent, createdAt = o.optLong("createdAt", now()),
+                    name = name, parentId = newParent, createdAt = o.optLong("createdAt", now()),
                     isFavorite = o.optBoolean("favorite", false),
                     excludedFromRandom = o.optBoolean("excludedFromRandom", false),
                     sortKey = if (o.isNull("sortKey")) null else o.optString("sortKey").takeIf { key -> SortKey.entries.any { it.name == key } },
                     sortAscending = o.optBoolean("sortAscending", false),
                 ))
                 // v2: folder colour / emoji (older backups; turned into an icon at the next unlock); then an icon.
-                val color = if (o.has("color") && !o.isNull("color")) o.getInt("color") else null
+                // A preset of an earlier palette moves to today's, as the database update does.
+                val color = if (o.has("color") && !o.isNull("color")) com.cripta.app.ui.theme.currentPresetColor(o.getInt("color")) else null
                 val emoji = if (o.has("emoji") && !o.isNull("emoji")) o.getString("emoji") else null
                 val icon = if (o.has("icon") && !o.isNull("icon")) restoredIcon(o.getString("icon")) else null
                 if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
@@ -1776,10 +2036,15 @@ class VaultRepository @Inject constructor(
             }
             if (!progressed) break
         }
+        // Left over: a parent missing from the archive, or a loop. Counted, and said in the report.
+        val foldersSkipped = pending.size
+        var filesToRoot = 0
+        var duplicates = 0
 
         // Tags with alias.
         val tArr = manifest.getJSONArray("tags")
         var tagsAdded = 0
+        val orderBase = (db.tagDao().allNow().maxOfOrNull { it.orderIndex } ?: -1) + 1
         for (i in 0 until tArr.length()) {
             val o = tArr.getJSONObject(i)
             val name = o.getString("name")
@@ -1787,12 +2052,13 @@ class VaultRepository @Inject constructor(
             // restore only adds ("nothing that is there is replaced"). Files still get linked to it.
             if (db.tagDao().insert(TagEntity(name = name)) == -1L) continue
             tagsAdded++
-            // v2: pin and custom order.
+            // v2: pin and custom order. The archive's positions go after the tags already here:
+            // restored into a library in use, they no longer interleave with (and tie) its own.
             if (o.optBoolean("pinned", false)) db.tagDao().setPinned(name, true)
-            if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, o.optInt("order", 0)) }
+            if (o.has("order")) db.tagDao().byName(name)?.let { t -> db.tagDao().setOrder(t.id, orderBase + o.optInt("order", 0)) }
             if (!o.isNull("alias")) db.tagDao().setAlias(name, o.getString("alias"))
-            // Optional (older backups have no colour).
-            if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, o.getInt("color"))
+            // Optional (older backups have no colour); an earlier palette's preset moves to today's.
+            if (o.has("color") && !o.isNull("color")) db.tagDao().setColorByName(name, com.cripta.app.ui.theme.currentPresetColor(o.getInt("color")))
             if (o.has("icon") && !o.isNull("icon")) db.tagDao().setIcon(name, restoredIcon(o.getString("icon")))
             // Keeps the "Recenti" row as it was.
             o.optLongOrNull("lastUsedAt")?.let { at -> db.tagDao().byName(name)?.let { t -> db.tagDao().touch(t.id, at) } }
@@ -1810,6 +2076,18 @@ class VaultRepository @Inject constructor(
             written += uuid
             val len = restoreBlob(blobs, uuid, wrapped, dek, inp, stored, quota)
             val folderOld = if (o.isNull("folderId")) null else o.getLong("folderId")
+            // Its folder was not restored (see foldersSkipped): the file goes to the root, counted.
+            if (folderOld != null && idMap[folderOld] == null) filesToRoot++
+            // The very same content already in that folder (the archive restored again): not a
+            // second copy. Its blob was read off the stream (it has to be) and is dropped.
+            // Only files that were here before: two equal files inside one archive both come back.
+            val hash = o.optStr("contentHash")
+            if (hash != null && db.fileDao().sameContentIn(hash, folderOld?.let { idMap[it] }).any { it !in written }) {
+                runCatching { blobs.blob(uuid).delete() }
+                written.remove(uuid)
+                duplicates++
+                continue
+            }
             val entity = FileEntity(
                 id = uuid, originalName = o.getString("name"), mimeType = o.getString("mime"),
                 sizeBytes = len, folderId = folderOld?.let { idMap[it] },
@@ -1856,12 +2134,15 @@ class VaultRepository @Inject constructor(
             coverFiles += f
             f.writeBytes(sealThumb(jpeg))
         })
-        // Folder covers chosen by the user (by the file's position in the archive).
+        // Folder covers chosen by the user (by the file's position in the archive). Only a file
+        // restored into that very folder: an archive made after the cover file was moved elsewhere
+        // still names it, and the folder showed a file it does not hold.
         for (k in 0 until fArr.length()) {
             val o = fArr.getJSONObject(k)
             val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
             val folder = idMap[o.getLong("id")] ?: continue
-            newIds.getOrNull(idx)?.let { db.folderDao().setCover(folder, it) }
+            val file = newIds.getOrNull(idx) ?: continue
+            if (isCoverOf(db.fileDao().byId(file), folder)) db.folderDao().setCover(folder, file)
         }
         // v2: saved filters, tag names mapped back to the restored tag ids.
         manifest.optJSONArray("savedFilters")?.let { arr ->
@@ -1871,8 +2152,15 @@ class VaultRepository @Inject constructor(
                 suspend fun ids(key: String) = org.json.JSONArray().apply {
                     f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
                 }
-                f.put("tags", ids("tagNames")).put("ex", ids("exNames"))
+                val wanted = f.optJSONArray("tagNames")?.length() ?: 0
+                val tagIds = ids("tagNames")
+                // Same rule as a tag deleted in the vault: a filter whose required tags are all
+                // missing is not restored as a wider one (it would show everything).
+                if (wanted > 0 && tagIds.length() == 0) continue
+                f.put("tags", tagIds).put("ex", ids("exNames"))
                 f.remove("tagNames"); f.remove("exNames")
+                if (!SavedFilterJson.hasCriteria(f)) continue
+                val filterName = o.optString("name", str(R.string.default_filter_name))
                 // People get new ids on restore too: the old ones would match nobody, or somebody else.
                 val oldPeople = f.optJSONArray("people")
                 if (oldPeople != null && oldPeople.length() > 0) {
@@ -1882,12 +2170,15 @@ class VaultRepository @Inject constructor(
                     if (mapped.length() == 0) continue
                     f.put("people", mapped)
                 }
-                db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = o.optString("name", str(R.string.default_filter_name)), json = f.toString()))
+                // The same filter already saved (the archive restored again): not a second copy.
+                if (db.savedFilterDao().allNow().any { it.name == filterName && it.json == f.toString() }) continue
+                db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = filterName, json = f.toString()))
             }
         }
         val segments = (0 until fileArr.length()).any { (fileArr.getJSONObject(it).optJSONArray("segments")?.length() ?: 0) > 0 }
-        return RestoreReport(files = fileArr.length(), tags = tagsAdded, people = extras.people,
-            analysis = extras.analysis || segments, covers = coverFiles.size)
+        return RestoreReport(files = fileArr.length() - duplicates, tags = tagsAdded, people = extras.people,
+            analysis = extras.analysis || segments, covers = coverFiles.size,
+            foldersSkipped = foldersSkipped, filesToRoot = filesToRoot, duplicates = duplicates)
     }
 
     /** The backup could not be opened: wrong passphrase, or not a Cripta backup. */

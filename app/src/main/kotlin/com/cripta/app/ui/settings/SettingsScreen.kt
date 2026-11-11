@@ -128,6 +128,8 @@ fun SettingsScreen(
     val backupRootStat by vm.backupRootStat.collectAsStateWithLifecycle()
 
     var showAllTags by remember { mutableStateOf(false) }
+
+    var tagQuery by remember { mutableStateOf("") }
     var showTrash by remember { mutableStateOf(false) }
     val trashed by vm.trashed.collectAsStateWithLifecycle()
     val space by vm.space.collectAsStateWithLifecycle()
@@ -229,8 +231,10 @@ fun SettingsScreen(
                 com.cripta.app.ui.components.LiftedHeader(topLift.lifted) {
                     Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 96.dp else 132.dp))
-                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp))
+                        // Sizes on both sides of the automatic rows' steps (100 and 150 dp): 3 + 1 rows
+                        // upright, 2 + 1 sideways, as covers of those sizes get them.
+                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 104.dp else 152.dp), tags)
+                        com.cripta.app.ui.vault.CoverPreview(s.display, Modifier.size(if (landscape) 72.dp else 92.dp), tags)
                         Text(str(R.string.live_preview), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -299,12 +303,22 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 val custom = s.tagSortMode == com.cripta.app.data.TagSortMode.CUSTOM
+                                // A long library gets the pickers' search field (name or acronym).
+                                if (tags.size > com.cripta.app.ui.vault.SEARCH_THRESHOLD) {
+                                    com.cripta.app.ui.vault.TagSearchField(tagQuery, Modifier.padding(bottom = 8.dp)) { tagQuery = it }
+                                }
+                                val searching = tagQuery.isNotBlank()
+                                val found = if (searching) tags.filter { com.cripta.app.ui.vault.tagMatches(it, tagQuery) } else tags
                                 // Long libraries are collapsed so the page stays short; opening or
                                 // closing the rest grows the list in place (ease-out, no bounce).
-                                val visible = if (showAllTags || tags.size <= 8) tags else tags.take(8)
+                                // Not in the custom order: a row could not be dragged past the last one shown.
+                                val visible = if (showAllTags || custom || searching || found.size <= 8) found else found.take(8)
+                                if (searching && found.isEmpty()) Text(str(R.string.tag_no_match, tagQuery.trim()),
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 TagLibraryList(
                                     tags = visible,
-                                    reorderable = custom,
+                                    // Moving within search results would renumber the whole library from a part of it.
+                                    reorderable = custom && !searching,
                                     colorOf = { tag -> if (s.display.tagColors) com.cripta.app.ui.theme.tagColor(tag) else MaterialTheme.colorScheme.primary },
                                     onEdit = { editTag = it },
                                     onDelete = { deleteTag = it },
@@ -312,7 +326,7 @@ fun SettingsScreen(
                                     onMoveTo = { tag, index -> vm.moveTagTo(tag.id, index) },
                                     modifier = Modifier.animateContentSize(Motion.enter(Motion.MEDIUM)),
                                 )
-                                if (tags.size > 8) {
+                                if (tags.size > 8 && !custom && !searching) {
                                     TextButton(onClick = { showAllTags = !showAllTags }) {
                                         com.cripta.app.ui.components.ButtonText(if (showAllTags) str(R.string.show_less) else str(R.string.show_all_n, tags.size))
                                     }
@@ -970,13 +984,11 @@ fun SettingsScreen(
         )
     }
     if (addTag) {
-        var newColor by remember { mutableStateOf<Int?>(null) }
-        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = str(R.string.new_tag),
-            onColor = { newColor = it },
-            onIcon = { newIcon = it },
-            onConfirm = { name, alias -> vm.createTag(name, alias, newColor, newIcon); addTag = false },
+            showColor = true, showIcon = true, showPinned = true,
+            takenNames = tags.map { it.name },
+            onConfirm = { draft -> vm.createTag(draft); addTag = false },
             onDismiss = { addTag = false },
         )
     }
@@ -997,13 +1009,11 @@ fun SettingsScreen(
             title = str(R.string.edit_tag),
             initialName = tag.name,
             initialAlias = tag.alias ?: "",
-            initialColor = tag.color,
-            onColor = { vm.setTagColor(tag.id, it) },
-            initialPinned = tag.pinned,
-            onPinned = { vm.setTagPinned(tag.name, it) },
-            initialIcon = tag.icon,
-            onIcon = { vm.setTagIcon(tag.name, it) },
-            onConfirm = { name, alias -> vm.editTag(tag.id, name, alias); editTag = null },
+            showColor = true, initialColor = tag.color,
+            showPinned = true, initialPinned = tag.pinned,
+            showIcon = true, initialIcon = tag.icon,
+            takenNames = tags.filter { it.id != tag.id }.map { it.name },
+            onConfirm = { draft -> vm.saveTag(tag.id, draft); editTag = null },
             onDismiss = { editTag = null },
         )
     }

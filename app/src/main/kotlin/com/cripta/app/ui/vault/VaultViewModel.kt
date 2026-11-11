@@ -78,7 +78,8 @@ fun Filters.matches(fwt: FileWithTags): Boolean {
     val f = this
     val nameOk = f.query.isBlank() ||
         fwt.file.originalName.contains(f.query, ignoreCase = true) ||
-        fwt.tags.any { it.name.contains(f.query, ignoreCase = true) }
+        // A tag is found by its acronym too, as in the tag pickers and the filter's tag search.
+        fwt.tags.any { it.name.contains(f.query, ignoreCase = true) || it.alias?.contains(f.query, ignoreCase = true) == true }
     val tagsOk = f.tagIds.isEmpty() ||
         if (f.tagMatchAll) fwt.tags.map { it.id }.containsAll(f.tagIds) else fwt.tags.any { it.id in f.tagIds }
     val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
@@ -202,6 +203,24 @@ class VaultViewModel @Inject constructor(
             }
         }
         onDone(count.done)
+    }
+
+    /** Like [launchBulkCounted] for a tag change: [onDone] gets what was really changed (empty if nothing). */
+    private fun launchTagChange(what: String, onDone: (com.cripta.app.data.TagLinkDiff) -> Unit,
+                                block: suspend () -> com.cripta.app.data.TagLinkDiff) = viewModelScope.launch {
+        var diff = com.cripta.app.data.TagLinkDiff()
+        if (session.beginWork()) {
+            try {
+                diff = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { block() }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logException(android.util.Log.ERROR, "VaultViewModel", "$what failed", e)
+            } finally {
+                session.endWork()
+            }
+        }
+        onDone(diff)
     }
 
     suspend fun thumb(file: FileEntity): Bitmap? = thumbs.load(file)
@@ -341,7 +360,13 @@ class VaultViewModel @Inject constructor(
     fun setInProgress(b: Boolean) { filters.value = filters.value.copy(inProgress = b) }
 
     fun setFolderFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { repo.setFolderFavorite(id, favorite) }
-    fun setFolderRandomExcluded(id: Long, excluded: Boolean) = viewModelScope.launch { repo.setFolderRandomExcluded(id, excluded) }
+    /** [onDone] gets whether the folder really changed (it may have gone meanwhile). */
+    fun setFolderRandomExcluded(id: Long, excluded: Boolean, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        onDone(runCatching { repo.setFolderRandomExcluded(id, excluded) }.getOrDefault(false))
+    }
+
+    /** Whether a parent folder keeps [id] out of "Casuale" (the menu says so instead of a switch that does nothing). */
+    suspend fun randomExcludedByAncestor(id: Long): Boolean = repo.randomExcludedByAncestor(id)
 
     /** Current folder, or the whole vault while filtering when allowed by Settings. */
     private data class Scoped(val scope: List<FileWithTags>, val shown: List<FileWithTags>, val folder: Long? = null)
@@ -537,6 +562,19 @@ class VaultViewModel @Inject constructor(
         viewModelScope.launch {
             navigator.pendingFilters.collect { f -> if (f != null) { filters.value = f; navigator.consumeFilters() } }
         }
+        // A tag deleted while it is in the active filters leaves them (the saved ones are pruned by
+        // the repository): an id of nothing would keep an AND filter at zero results.
+        viewModelScope.launch {
+            var known = emptySet<Long>()
+            repo.tags().collect { list ->
+                val ids = list.mapTo(HashSet()) { it.id }
+                val gone = known - ids
+                known = ids
+                val f = filters.value
+                if (gone.isNotEmpty() && (f.tagIds.any { it in gone } || f.excludedTagIds.any { it in gone }))
+                    filters.value = f.copy(tagIds = f.tagIds - gone, excludedTagIds = f.excludedTagIds - gone)
+            }
+        }
         // Cartelle tab tapped again while already on it: back to the root.
         viewModelScope.launch {
             VaultTabReselect.events.collect { goToDepth(0) }
@@ -579,10 +617,12 @@ class VaultViewModel @Inject constructor(
     /** Toggle a tag in the *exclude* set: files with it are hidden. Mutually exclusive with include. */
     fun toggleExcludedTag(id: Long) {
         val cur = filters.value.excludedTagIds
+        val removing = id in cur
         filters.value = filters.value.copy(
-            excludedTagIds = if (id in cur) cur - id else cur + id,
+            excludedTagIds = if (removing) cur - id else cur + id,
             tagIds = filters.value.tagIds - id,
-            untaggedOnly = false,
+            // Taking an exclusion away only does that: "Senza etichette" stays as it was.
+            untaggedOnly = if (removing) filters.value.untaggedOnly else false,
         )
     }
     fun setType(t: TypeFilter) { filters.value = filters.value.copy(type = t) }
@@ -634,13 +674,16 @@ class VaultViewModel @Inject constructor(
     fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
         repo.renameFolder(folder, name)    }
 
-    fun setFolderStyle(folderId: Long, color: Int?, icon: String?) = viewModelScope.launch {
-        repo.setFolderStyle(folderId, color, icon)
+    fun setFolderStyle(folderId: Long, color: Int?, icon: String?, iconChanged: Boolean, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        onDone(runCatching { repo.setFolderStyle(folderId, color, icon, iconChanged) }.getOrDefault(false))
     }
 
-    fun setFolderCover(folderId: Long, fileId: String?) = viewModelScope.launch { repo.setFolderCover(folderId, fileId) }
+    /** [onDone] gets whether the cover was really set (a file moved or deleted meanwhile is refused). */
+    fun setFolderCover(folderId: Long, fileId: String?, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        onDone(runCatching { repo.setFolderCover(folderId, fileId) }.getOrDefault(false))
+    }
 
-    suspend fun filesInFolder(folderId: Long): List<FileEntity> = repo.filesInFolder(folderId)
+    suspend fun filesInFolder(folderId: Long, limit: Int): com.cripta.app.data.VaultRepository.CoverChoices = repo.filesInFolder(folderId, limit)
 
     fun importUris(uris: List<android.net.Uri>) {
         com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
@@ -728,36 +771,50 @@ class VaultViewModel @Inject constructor(
         onNotDeleted(kept)
     }
 
-    fun setTags(fileId: String, tagNames: List<String>) = viewModelScope.launch {
-        repo.setTags(fileId, tagNames)    }
+    /** [onDone] gets what really changed, after the write (an "Annulla" reverts exactly that). */
+    fun setTags(fileId: String, tagNames: List<String>, onDone: (com.cripta.app.data.TagLinkDiff) -> Unit = {}) =
+        launchTagChange("setTags", onDone) { repo.setTags(fileId, tagNames) }
 
     /** Add the given tags to every selected file without touching their other tags. */
-    fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>) = launchBulk("addTagsToFiles") {
-        fileIds.forEach { repo.addTags(it, tagNames) }    }
+    fun addTagsToFiles(fileIds: List<String>, tagNames: List<String>, onDone: (com.cripta.app.data.TagLinkDiff) -> Unit = {}) =
+        launchTagChange("addTagsToFiles", onDone) { com.cripta.app.data.TagLinkDiff(added = repo.addTagsToFiles(fileIds, tagNames)) }
 
-    /** Create a tag (optionally with an emoji/acronym alias) up front. */
-    fun createTag(name: String, alias: String?, icon: String? = null) = viewModelScope.launch {
-        repo.createTag(name, alias, icon)    }
+    /** Take [tags] off every file in [fileIds] (other tags kept), by id. */
+    fun removeTagsFromFiles(fileIds: List<String>, tags: List<com.cripta.app.data.db.TagEntity>, onDone: (com.cripta.app.data.TagLinkDiff) -> Unit = {}) =
+        launchTagChange("removeTagsFromFiles", onDone) {
+            com.cripta.app.data.TagLinkDiff(removed = repo.removeTagsFromFiles(fileIds, tags.map { it.id }))
+        }
 
-    fun setTagIcon(tagName: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(tagName, icon) }
+    /** "Annulla" of a tag change: only the links it touched. */
+    fun revertTagLinks(diff: com.cripta.app.data.TagLinkDiff) = launchBulk("revertTagLinks") { repo.revertTagLinks(diff) }
+
+    /** Create a tag with its look; a name already in the library is said so, not overwritten. */
+    fun createTag(draft: TagDraft) = viewModelScope.launch {
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        if (!r.created) android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    /** Save a tag's editor in one go, by id. */
+    fun saveTag(id: Long, draft: TagDraft) = viewModelScope.launch {
+        val r = repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon)
+        if (r == com.cripta.app.data.TagSave.NAME_TAKEN)
+            android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
+    }
 
     fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
         repo.renameFile(fileId, newName)    }
 
-    fun setTagColor(tagName: String, color: Int?) = viewModelScope.launch { repo.setTagColorByName(tagName, color) }
-    fun setTagPinned(tagName: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(tagName, pinned) }
-
-    fun setTagAlias(tagName: String, alias: String?) = viewModelScope.launch {
-        repo.setTagAlias(tagName, alias)    }
 
     /** [onDone] gets how many files were really moved. */
     fun moveFiles(fileIds: List<String>, folderId: Long?, onDone: (Int) -> Unit = {}) = launchBulkCounted("moveFiles", onDone) { c ->
-        fileIds.forEach { repo.moveFile(it, folderId); c.done++ }
+        // A destination gone (deleted, in the trash) since it was picked moves nothing: counted as not done.
+        fileIds.forEach { if (repo.moveFile(it, folderId)) c.done++ }
     }
 
     // --- Undo support (snackbar "Annulla") ---
     /** Put files back into the folders they were in before a move. */
     fun restoreFolders(previous: Map<String, Long?>) = launchBulk("restoreFolders") {
+        // A folder gone since: the file stays where it is (live, reachable) rather than under it.
         previous.forEach { (id, folder) -> repo.moveFile(id, folder) }
     }
 
@@ -766,19 +823,6 @@ class VaultViewModel @Inject constructor(
         previous.forEach { (id, fav) -> repo.toggleFavorite(id, fav) }
     }
 
-    /** Restore each file's previous tag names. */
-    fun restoreTags(previous: Map<String, List<String>>) = launchBulk("restoreTags") {
-        previous.forEach { (id, names) -> repo.setTags(id, names) }
-    }
-
-    /** Take [tagNames] off every file in [fileIds] (other tags kept). Files must be in the current view. */
-    fun removeTagsFromFiles(fileIds: List<String>, tagNames: List<String>) = launchBulk("removeTagsFromFiles") {
-        val ids = fileIds.toSet()
-        files.value.filter { it.file.id in ids }.forEach { fwt ->
-            val kept = fwt.tags.map { it.name }.filterNot { n -> tagNames.any { it.equals(n, ignoreCase = true) } }
-            if (kept.size != fwt.tags.size) repo.setTags(fwt.file.id, kept)
-        }
-    }
 
     /** [onDone] gets how many files were really deleted (or trashed). */
     fun deleteFiles(fileIds: List<String>, onDone: (Int) -> Unit = {}) = launchBulkCounted("deleteFiles", onDone) { c ->

@@ -112,13 +112,11 @@ internal fun TagSections(
         allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }
             .take(recentCount).map { it.id }
     }
-    val recents = remember(allTags, frozenRecents) {
-        val byId = allTags.associateBy { it.id }
-        frozenRecents.mapNotNull { byId[it] }.filter { !it.pinned }
-    }
+    val recents = remember(allTags, frozenRecents, recentCount) { stableRecents(allTags, frozenRecents, recentCount) }
     // Library order as given (respects the user's tag order); names typed but not yet saved go last.
     val library = remember(allTags, extraNames) {
-        allTags.map { it.name } + extraNames.filter { n -> allTags.none { it.name.equals(n, ignoreCase = true) } }
+        // Exact names: two tags that differ only in case (older vaults) are two different chips.
+        allTags.map { it.name } + extraNames.filter { n -> allTags.none { it.name == n } }
     }
     @Composable
     fun row(title: String, names: List<String>) {
@@ -159,12 +157,31 @@ internal fun TagSections(
     if (showLibrary && library.isNotEmpty()) row(if (pinned.isEmpty() && (!showRecents || recents.isEmpty())) str(R.string.tags) else str(R.string.icon_all_short), library)
 }
 
+/**
+ * The "Recenti" row from the order taken when it appeared ([frozen]): those still there keep
+ * their places; a slot freed by a tag deleted or pinned meanwhile is filled at the end with the
+ * next most recent one, so the row never shows fewer tags than it should.
+ */
+internal fun stableRecents(allTags: List<TagEntity>, frozen: List<Long>, count: Int): List<TagEntity> {
+    val byId = allTags.associateBy { it.id }
+    val kept = frozen.mapNotNull { byId[it] }.filter { !it.pinned }.take(count)
+    if (kept.size >= count) return kept
+    val keptIds = kept.mapTo(HashSet()) { it.id }
+    val fill = allTags.filter { !it.pinned && it.lastUsedAt != null && it.id !in keptIds && it.id !in frozen }
+        .sortedByDescending { it.lastUsedAt }.take(count - kept.size)
+    return kept + fill
+}
+
 private fun chipLabel(name: String, alias: String?): String =
     if (!alias.isNullOrBlank()) "$alias $name" else name
 
+/** Everything the tag editor saves, handed over at once (never field by field). */
+data class TagDraft(val name: String, val alias: String?, val color: Int?, val pinned: Boolean, val icon: String?)
+
 /**
  * Create/edit a label: its name, an icon and/or a short acronym ("sigla"), shown as a compact badge
- * on thumbnails. Icons replace the old emoji aliases.
+ * on thumbnails. Icons replace the old emoji aliases. Nothing is reported before "Salva", and then
+ * all of it together in one [TagDraft].
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -172,26 +189,30 @@ fun LabelEditorDialog(
     title: String,
     initialName: String = "",
     initialAlias: String = "",
-    onConfirm: (name: String, alias: String?) -> Unit,
+    onConfirm: (TagDraft) -> Unit,
     onDismiss: () -> Unit,
-    /** When set, a colour picker is shown and the choice (null = automatic) is reported here. */
-    onColor: ((Int?) -> Unit)? = null,
+    /** A colour picker is shown (null = automatic). */
+    showColor: Boolean = false,
     initialColor: Int? = null,
-    /** When set, a "Fissa in alto" switch is shown. */
-    onPinned: ((Boolean) -> Unit)? = null,
+    /** A "Fissa in alto" switch is shown. */
+    showPinned: Boolean = false,
     initialPinned: Boolean = false,
     /** False when the name can't be changed from here: it is shown as text instead of a field. */
     nameEditable: Boolean = true,
-    /** When set, an icon can be chosen (null = none) and the choice is reported here. */
-    onIcon: ((String?) -> Unit)? = null,
+    /** An icon can be chosen (null = none). */
+    showIcon: Boolean = false,
     initialIcon: String? = null,
+    /** The names of the other tags: one of them, case aside, can't be used and is flagged at once. */
+    takenNames: Collection<String> = emptyList(),
 ) {
-    var pinnedState by remember { mutableStateOf(initialPinned) }
-    var icon by remember { mutableStateOf(initialIcon) }
-    var pickingIcon by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf(initialName) }
-    var alias by remember { mutableStateOf(initialAlias) }
-    var color by remember { mutableStateOf(initialColor) }
+    // rememberSaveable: the draft survives the activity being recreated, not only a rotation.
+    var pinnedState by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialPinned) }
+    var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialIcon) }
+    var pickingIcon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var name by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialName) }
+    var alias by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialAlias) }
+    var color by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialColor) }
+    val clash = nameEditable && name.trim().let { n -> n.isNotEmpty() && takenNames.any { it.equals(n, ignoreCase = true) } }
 
     // "A" = the colour every uncoloured tag gets (Settings › Etichette, else one colour per name).
     val auto = com.cripta.app.ui.theme.tagColor(name.ifBlank { "?" })
@@ -213,6 +234,8 @@ fun LabelEditorDialog(
                     com.cripta.app.ui.components.CriptaTextField(
                         value = name, onValueChange = { name = it },
                         label = { Text(str(R.string.sort_name)) }, singleLine = true,
+                        isError = clash,
+                        supportingText = if (clash) ({ Text(str(R.string.tag_exists, name.trim())) }) else null,
                         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     )
                 } else {
@@ -226,16 +249,16 @@ fun LabelEditorDialog(
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                     supportingText = { Text(str(R.string.tag_alias_hint)) },
                 )
-                if (onIcon != null) {
+                if (showIcon) {
                     EditorHeading(str(R.string.icon))
                     com.cripta.app.ui.tagicons.TagIconField(name = name, icon = icon, onPick = { icon = it }, onBrowse = { pickingIcon = true },
                         showLabel = false)
                 }
-                if (onColor != null) {
+                if (showColor) {
                     EditorHeading(str(R.string.colour))
                     TagColorPicker(selected = color, autoColor = auto, autoDescription = str(R.string.default_colour)) { color = it }
                 }
-                if (onPinned != null) {
+                if (showPinned) {
                     // A plain settings row: icon, title, caption, the switch; the whole row toggles.
                     Row(
                         Modifier.padding(top = 16.dp).fillMaxWidth().heightIn(min = 60.dp)
@@ -258,12 +281,9 @@ fun LabelEditorDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && !clash,
                 onClick = {
-                    onColor?.invoke(color)
-                    onPinned?.invoke(pinnedState)
-                    onIcon?.invoke(icon)
-                    onConfirm(name.trim(), alias.trim().ifEmpty { null })
+                    onConfirm(TagDraft(name.trim(), alias.trim().ifEmpty { null }, color, pinnedState, icon))
                 },
             ) { com.cripta.app.ui.components.ButtonText(str(R.string.save)) }
         },
@@ -297,10 +317,8 @@ private fun TagEditorPreview(name: String, alias: String, icon: String?, color: 
                 tagIcon = icon,
             )
         }
-        com.cripta.app.ui.components.TagPill(
-            a.ifBlank { if (icon != null) "" else name.trim().take(2).uppercase().ifBlank { "AB" } },
-            color, tagIcon = icon,
-        )
+        // As a cover shows it: a bubble or a pill, per Impostazioni › Copertine.
+        CoverMarkSample(TagEntity(id = -1, name = name.trim().ifBlank { "AB" }, alias = a.ifBlank { null }, icon = icon), color)
     }
 }
 
@@ -321,13 +339,11 @@ fun TagEditorDialog(
     allTags: List<TagEntity>,
     initialSelected: List<String>,
     onConfirm: (List<String>) -> Unit,
-    onSetAlias: (String, String?) -> Unit,
-    onCreateTag: (name: String, alias: String?, icon: String?) -> Unit,
+    /** Long-press edit of a tag: everything saved at once, by id. */
+    onSaveTag: (TagEntity, TagDraft) -> Unit,
+    onCreateTag: (TagDraft) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
-    onSetColor: ((name: String, color: Int?) -> Unit)? = null,
-    onSetPinned: ((name: String, pinned: Boolean) -> Unit)? = null,
-    onSetIcon: ((name: String, icon: String?) -> Unit)? = null,
 ) {
     val selected: SnapshotStateList<String> = remember {
         initialSelected.map { it.trim() }.filter { it.isNotEmpty() }.toMutableStateList()
@@ -353,12 +369,9 @@ fun TagEditorDialog(
                     allTags = allTags,
                     extraNames = selected.toList(),
                     showRecents = showRecents,
-                    isSelected = { n -> selected.any { it.equals(n, ignoreCase = true) } },
-                    onToggle = { n ->
-                        if (selected.any { it.equals(n, ignoreCase = true) }) selected.removeAll { it.equals(n, ignoreCase = true) }
-                        else selected.add(n)
-                    },
-                    onLongPress = { editTarget = it },
+                    isSelected = { n -> n in selected },
+                    onToggle = { n -> if (n in selected) selected.remove(n) else selected.add(n) },
+                    onLongPress = { n -> if (byName[n] != null) editTarget = n },
                 )
                 TextButton(onClick = { creating = true }) {
                     Icon(CriptaIcons.Add, null, modifier = Modifier.padding(end = 4.dp))
@@ -371,35 +384,29 @@ fun TagEditorDialog(
     )
 
     editTarget?.let { name ->
-        val t = byName[name]
+        val t = byName[name] ?: return@let
+        // Name edits on an existing tag are out of scope here (Impostazioni › Etichette): the rest is saved.
         LabelEditorDialog(
             title = str(R.string.tag_edit_title, name),
             initialName = name,
-            initialAlias = t?.alias ?: "",
-            onConfirm = { _, alias ->
-                // Name edits on an existing tag are out of scope here; keep the name, set the alias.
-                onSetAlias(name, alias)
-                editTarget = null
-            },
+            initialAlias = t.alias ?: "",
+            onConfirm = { draft -> onSaveTag(t, draft.copy(name = t.name)); editTarget = null },
             onDismiss = { editTarget = null },
-            onColor = if (t != null && onSetColor != null) ({ c -> onSetColor(name, c) }) else null,
-            initialColor = t?.color,
-            onPinned = if (t != null && onSetPinned != null) ({ p -> onSetPinned(name, p) }) else null,
-            initialPinned = t?.pinned == true,
-            initialIcon = t?.icon,
-            onIcon = if (t != null && onSetIcon != null) ({ i -> onSetIcon(name, i) }) else null,
+            showColor = true, initialColor = t.color,
+            showPinned = true, initialPinned = t.pinned,
+            showIcon = true, initialIcon = t.icon,
             nameEditable = false,
         )
     }
 
     if (creating) {
-        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = str(R.string.new_tag),
-            onIcon = { newIcon = it },
-            onConfirm = { name, alias ->
-                onCreateTag(name, alias, newIcon)
-                if (selected.none { it.equals(name, ignoreCase = true) }) selected.add(name)
+            showIcon = true,
+            takenNames = allTags.map { it.name } + selected,
+            onConfirm = { draft ->
+                onCreateTag(draft)
+                if (draft.name !in selected) selected.add(draft.name)
                 creating = false
             },
             onDismiss = { creating = false },
@@ -417,11 +424,11 @@ fun BatchTagDialog(
     count: Int,
     allTags: List<TagEntity>,
     onConfirm: (List<String>) -> Unit,
-    onCreateTag: (name: String, alias: String?, icon: String?) -> Unit,
+    onCreateTag: (TagDraft) -> Unit,
     onDismiss: () -> Unit,
     showRecents: Boolean = true,
-    /** When set, a "Rimuovi" mode is offered and its choice is reported here. */
-    onRemove: ((List<String>) -> Unit)? = null,
+    /** When set, a "Rimuovi" mode is offered and the chosen tags are reported here. */
+    onRemove: ((List<TagEntity>) -> Unit)? = null,
 ) {
     val chosen: SnapshotStateList<String> = remember { mutableStateListOf() }
     var creating by remember { mutableStateOf(false) }
@@ -464,11 +471,8 @@ fun BatchTagDialog(
                     allTags = allTags,
                     extraNames = if (removing) emptyList() else chosen.toList(),
                     showRecents = showRecents,
-                    isSelected = { n -> chosen.any { it.equals(n, ignoreCase = true) } },
-                    onToggle = { n ->
-                        if (chosen.any { it.equals(n, ignoreCase = true) }) chosen.removeAll { it.equals(n, ignoreCase = true) }
-                        else chosen.add(n)
-                    },
+                    isSelected = { n -> n in chosen },
+                    onToggle = { n -> if (n in chosen) chosen.remove(n) else chosen.add(n) },
                     onLongPress = null,
                 )
                 if (!removing) {
@@ -481,20 +485,22 @@ fun BatchTagDialog(
         },
         confirmButton = {
             TextButton(enabled = chosen.isNotEmpty(), onClick = {
-                if (removing) onRemove?.invoke(chosen.toList()) else onConfirm(chosen.toList())
+                // Removal goes by the tags themselves (ids), not by names that may change meanwhile.
+                if (removing) onRemove?.invoke(chosen.mapNotNull { n -> allTags.firstOrNull { it.name == n } })
+                else onConfirm(chosen.toList())
             }) { Text(if (removing) str(R.string.remove) else str(R.string.add)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )
 
     if (creating) {
-        var newIcon by remember { mutableStateOf<String?>(null) }
         LabelEditorDialog(
             title = str(R.string.new_tag),
-            onIcon = { newIcon = it },
-            onConfirm = { name, alias ->
-                onCreateTag(name, alias, newIcon)
-                if (chosen.none { it.equals(name, ignoreCase = true) }) chosen.add(name)
+            showIcon = true,
+            takenNames = allTags.map { it.name } + chosen,
+            onConfirm = { draft ->
+                onCreateTag(draft)
+                if (draft.name !in chosen) chosen.add(draft.name)
                 creating = false
             },
             onDismiss = { creating = false },
@@ -503,10 +509,16 @@ fun BatchTagDialog(
 }
 
 /** Above this many tags the pickers show a search field. */
-private const val SEARCH_THRESHOLD = 12
+internal const val SEARCH_THRESHOLD = 12
+
+/** Whether [tag] is found by [query]: its name or its acronym, case aside (the same rule everywhere). */
+internal fun tagMatches(tag: TagEntity, query: String): Boolean {
+    val q = query.trim()
+    return q.isEmpty() || tag.name.contains(q, ignoreCase = true) || tag.alias?.contains(q, ignoreCase = true) == true
+}
 
 @Composable
-private fun TagSearchField(query: String, onChange: (String) -> Unit) {
+internal fun TagSearchField(query: String, modifier: Modifier = Modifier, onChange: (String) -> Unit) {
     com.cripta.app.ui.components.CriptaTextField(
         value = query,
         onValueChange = onChange,
@@ -517,7 +529,7 @@ private fun TagSearchField(query: String, onChange: (String) -> Unit) {
         }) else null,
         singleLine = true,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 

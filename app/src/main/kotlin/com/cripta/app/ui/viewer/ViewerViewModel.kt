@@ -472,8 +472,9 @@ class ViewerViewModel @Inject constructor(
         _refresh.value++
     }
 
-    fun setTags(fileId: String, names: List<String>) = viewModelScope.launch {
-        repo.setTags(fileId, names); _refresh.value++
+    /** Add one tag by name (new names become tags) without touching the file's other tags. */
+    fun addTag(fileId: String, name: String) = viewModelScope.launch {
+        repo.addTags(fileId, listOf(name)); _refresh.value++
     }
 
     /** Store [url] as the file's source link (blank clears it). */
@@ -481,8 +482,6 @@ class ViewerViewModel @Inject constructor(
         repo.setSourceUrl(fileId, url); _refresh.value++
     }
 
-    fun setTagColor(name: String, color: Int?) = viewModelScope.launch { repo.setTagColorByName(name, color) }
-    fun setTagPinned(name: String, pinned: Boolean) = viewModelScope.launch { repo.setTagPinned(name, pinned) }
 
     /** Quick-tag bar: toggle one tag on the current file. */
     fun toggleTag(fileId: String, tagId: Long) = viewModelScope.launch {
@@ -493,10 +492,22 @@ class ViewerViewModel @Inject constructor(
         settingsStore.settings.map { it.display }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.cripta.app.data.DisplayPrefs())
 
-    fun setTagAlias(name: String, alias: String?) = viewModelScope.launch { repo.setTagAlias(name, alias) }
+    /** Save a tag's editor in one go, by id. */
+    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+        if (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon) == com.cripta.app.data.TagSave.NAME_TAKEN)
+            _message.value = str(R.string.tag_exists, draft.name)
+        _refresh.value++
+    }
 
-    fun createTag(name: String, alias: String?, icon: String? = null) = viewModelScope.launch { repo.createTag(name, alias, icon); _refresh.value++ }
-    fun setTagIcon(name: String, icon: String?) = viewModelScope.launch { repo.setTagIcon(name, icon); _refresh.value++ }
+    /**
+     * Create a tag and put it on the file, one after the other in one coroutine: the file's tags are
+     * added to, never replaced with a list read before (a change made meanwhile is kept).
+     */
+    fun createTagOn(fileId: String, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+        val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned)
+        if (r.id > 0) repo.addTagIds(fileId, listOf(r.id))
+        _refresh.value++
+    }
 
     fun download(file: FileEntity) {
         // Run decryption in the foreground service so it survives backgrounding and shows progress.

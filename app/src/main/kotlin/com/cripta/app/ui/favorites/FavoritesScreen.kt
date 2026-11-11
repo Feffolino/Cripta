@@ -141,7 +141,7 @@ fun FavoritesScreen(
                             FolderMosaic(
                                 folder = folder, stat = null,
                                 previews = folderPreviews[folder.id].orEmpty(), thumb = vm::thumb,
-                                showInfo = false,
+                                showInfo = false, coverVersions = coverVersions,
                                 modifier = Modifier.fillMaxWidth().clickable {
                                     vm.openFolder(folder.id); onOpenFolders()
                                 },

@@ -282,6 +282,17 @@ internal fun TagLibraryList(
     var dragId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
     var dragDy by androidx.compose.runtime.remember { mutableFloatStateOf(0f) }
     var rowH by androidx.compose.runtime.remember { mutableIntStateOf(0) }
+    // Each row's own height: with large text a pill can wrap and make its row taller than the others.
+    val heights = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateMapOf<Long, Int>() }
+    fun heightOf(id: Long): Int = heights[id] ?: rowH
+    /** Where a row dragged by [dy] from [fromIdx] lands: past a neighbour once over half of it. */
+    fun targetOf(list: List<com.cripta.app.data.db.TagEntity>, fromIdx: Int, dy: Float): Int {
+        if (fromIdx < 0 || rowH == 0) return fromIdx
+        var t = fromIdx; var rest = dy
+        if (dy > 0) while (t < list.size - 1) { val h = heightOf(list[t + 1].id); if (rest < h / 2f) break; rest -= h; t++ }
+        else while (t > 0) { val h = heightOf(list[t - 1].id); if (-rest < h / 2f) break; rest += h; t-- }
+        return t
+    }
     // The dropped row glides from where the finger left it into its slot.
     var settleId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
     val settle = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
@@ -290,8 +301,8 @@ internal fun TagLibraryList(
     var swallowTap by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val from = dragId?.let { id -> shown.indexOfFirst { it.id == id } } ?: -1
-    val target = if (from < 0 || rowH == 0) from
-        else (from + kotlin.math.round(dragDy / rowH).toInt()).coerceIn(0, shown.size - 1)
+    val target = targetOf(shown, from, dragDy)
+    val draggedH = dragId?.let { heightOf(it) } ?: rowH
     var lastTarget by androidx.compose.runtime.remember { mutableIntStateOf(-1) }
     androidx.compose.runtime.LaunchedEffect(target) {
         if (from >= 0 && lastTarget >= 0 && target != lastTarget) {
@@ -310,14 +321,33 @@ internal fun TagLibraryList(
         val id = dragId ?: return
         val list = shownNow
         val f = list.indexOfFirst { it.id == id }
-        val t = if (f < 0 || rowH == 0) f else (f + kotlin.math.round(dragDy / rowH).toInt()).coerceIn(0, list.size - 1)
-        val residual = dragDy - (t - f) * rowH
+        val t = targetOf(list, f, dragDy)
+        val passed = when {
+            f < 0 || t == f -> 0
+            t > f -> (f + 1..t).sumOf { heightOf(list[it].id) }
+            else -> -(t until f).sumOf { heightOf(list[it].id) }
+        }
+        val residual = dragDy - passed
         if (f >= 0 && t != f) {
             val ids = list.map { it.id }.toMutableList()
             ids.add(t, ids.removeAt(f))
             pending = ids
             onMoveTo(list[f], t)
         }
+        settleId = id
+        scope.launch { kotlinx.coroutines.delay(300); swallowTap = false }
+        dragId = null; dragDy = 0f
+        scope.launch {
+            settle.snapTo(residual)
+            settle.animateTo(0f, com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.MEDIUM))
+            settleId = null
+        }
+    }
+
+    /** A gesture taken over by the system (or another touch): the row goes back, nothing is saved. */
+    fun cancel() {
+        val id = dragId ?: return
+        val residual = dragDy
         settleId = id
         scope.launch { kotlinx.coroutines.delay(300); swallowTap = false }
         dragId = null; dragDy = 0f
@@ -335,8 +365,8 @@ internal fun TagLibraryList(
                 // The others make room: rows between the start and the target slide by one row.
                 val shift = when {
                     from < 0 || dragging -> 0f
-                    index in (from + 1)..target -> -rowH.toFloat()
-                    index in target until from -> rowH.toFloat()
+                    index in (from + 1)..target -> -draggedH.toFloat()
+                    index in target until from -> draggedH.toFloat()
                     else -> 0f
                 }
                 val slide by androidx.compose.animation.core.animateFloatAsState(
@@ -357,11 +387,11 @@ internal fun TagLibraryList(
                         detectDragGestures(
                             onDragStart = { start(tag.id) },
                             onDrag = { change, d -> change.consume(); dragDy += d.y },
-                            onDragEnd = { drop() }, onDragCancel = { drop() },
+                            onDragEnd = { drop() }, onDragCancel = { cancel() },
                         )
                     },
                     modifier = Modifier
-                        .onSizeChanged { if (it.height > 0) rowH = it.height }
+                        .onSizeChanged { if (it.height > 0) { rowH = it.height; heights[tag.id] = it.height } }
                         .zIndex(if (dragging || settleId == tag.id) 1f else 0f)
                         .graphicsLayer {
                             // Read the drag state here (not through an effect) so a drop never
@@ -383,7 +413,7 @@ internal fun TagLibraryList(
                             detectDragGesturesAfterLongPress(
                                 onDragStart = { start(tag.id) },
                                 onDrag = { change, d -> change.consume(); dragDy += d.y },
-                                onDragEnd = { drop() }, onDragCancel = { drop() },
+                                onDragEnd = { drop() }, onDragCancel = { cancel() },
                             )
                         } else Modifier),
                 )

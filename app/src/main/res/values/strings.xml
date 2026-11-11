@@ -2054,4 +2054,10 @@
     <string name="destroyed_next_open">to be destroyed when Cripta next opens</string>
     <string name="trash_original_folder">Its original folder</string>
     <string name="cover_picker_limit">Only the %1$d newest files are listed.</string>
+    <string name="icon_catalog_unavailable">The icons could not be loaded. Try again later.</string>
+    <string name="tag_filter_clear">Remove from filter</string>
+    <string name="folder_change_failed">Nothing changed: the folder or the file is no longer there</string>
+    <string name="folder_random_inherited">Kept out of random by a parent folder</string>
+    <string name="restore_folders_skipped">Folders not restored, parent missing: %1$d (their files are in Root: %2$d)</string>
+    <string name="restore_duplicates_skipped">Already in the vault, not added again: %1$d</string>
 </resources>

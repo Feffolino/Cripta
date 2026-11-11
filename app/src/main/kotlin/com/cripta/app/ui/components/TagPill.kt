@@ -109,6 +109,11 @@ fun TagPill(
     stateLabel: String? = null,
     /** The tag's own icon ([com.cripta.app.ui.tagicons.TagIcons] name), before the text. */
     tagIcon: String? = null,
+    /**
+     * A pill with three states (the filter's include / exclude / neither): always a button, so its
+     * role does not change with the state; the state and the next step are said in words.
+     */
+    triState: Boolean = false,
 ) {
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(tagIcon)
     // The tones of the tag's hue for this theme; with tag colours off (Settings › Etichette) the
@@ -154,7 +159,7 @@ fun TagPill(
 
     var m = modifier
     if (onClick != null) {
-        val toggle = state == TagPillState.On || state == TagPillState.Off
+        val toggle = !triState && (state == TagPillState.On || state == TagPillState.Off)
         m = m.minimumInteractiveComponentSize().clip(CircleShape)
             .combinedClickable(
                 role = if (toggle) Role.Checkbox else Role.Button,

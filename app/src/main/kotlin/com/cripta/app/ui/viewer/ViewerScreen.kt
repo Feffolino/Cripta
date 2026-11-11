@@ -557,14 +557,15 @@ fun ViewerScreen(
                     allTags.filter { !it.pinned && it.lastUsedAt != null }.sortedByDescending { it.lastUsedAt }
                         .take(recentN).map { it.id }
                 }
-                val quick = remember(allTags, recentIds, withRecents) {
-                    val byId = allTags.associateBy { it.id }
+                val quick = remember(allTags, recentIds, withRecents, recentN) {
                     val pinned = allTags.filter { it.pinned }
-                    val rest = if (withRecents) recentIds.mapNotNull { byId[it] }.filter { !it.pinned }
+                    val rest = if (withRecents) com.cripta.app.ui.vault.stableRecents(allTags, recentIds, recentN)
                     else allTags.filter { !it.pinned }
                     (pinned + rest).distinctBy { it.id }
                 }
-                val onFile by produceState(initialValue = emptyList<String>(), qf.id, refresh) { value = vm.tagNamesOf(qf.id) }
+                // Keyed by the file read: the previous media's tags are not lit on the next one while it loads.
+                val onFileFor by produceState(initialValue = "" to emptyList<String>(), qf.id, refresh) { value = qf.id to vm.tagNamesOf(qf.id) }
+                val onFile = if (onFileFor.first == qf.id) onFileFor.second else emptyList()
                 if (quick.isNotEmpty()) {
                     // The bar scrolls sideways only when its tags overflow, and never during a
                     // vertical swipe: otherwise it took every swipe starting on a tag (changing

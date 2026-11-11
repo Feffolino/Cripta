@@ -151,7 +151,9 @@ fun HomeScreen(
     val coverPeople = remember(coverPeopleMap, peopleBlurred, peopleRevealed) {
         com.cripta.app.ui.vault.CoverPeople(coverPeopleMap, peopleBlurred && !peopleRevealed) { vm.faceCrop(it) }
     }
-    androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.vault.LocalCoverPeople provides coverPeople) {
+    val tagOrder by vm.tagOrder.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(com.cripta.app.ui.vault.LocalCoverPeople provides coverPeople,
+        com.cripta.app.ui.vault.LocalTagOrder provides tagOrder) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -299,6 +301,9 @@ fun HomeScreen(
                                 stat = folderStats[folder.id],
                                 previews = folderPreviews[folder.id].orEmpty(),
                                 thumb = vm::thumb,
+                                // Impostazioni › "Numero di elementi sotto le cartelle", as in Cartelle.
+                                showInfo = display.showFolderInfo,
+                                coverVersions = coverVersions,
                                 modifier = Modifier.width(128.dp).pressScale(source)
                                     .clickable(source, LocalIndication.current, role = Role.Button,
                                         onClickLabel = str(R.string.open_folder)) { vm.openFolder(folder.id); onOpenFolders() },
@@ -502,15 +507,10 @@ private fun HeroCarousel(
                             Text(" · $it", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, maxLines = 1)
                         }
                     }
-                    if (fwt.tags.isNotEmpty()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            fwt.tags.take(3).forEach { t ->
-                                com.cripta.app.ui.components.TagPill(com.cripta.app.ui.vault.badgeText(t, display),
-                                    if (display.tagColors) com.cripta.app.ui.theme.tagColor(t) else MaterialTheme.colorScheme.primary,
-                                    onImage = true, tagIcon = t.icon)
-                            }
-                            if (fwt.tags.size > 3) com.cripta.app.ui.components.MoreTagsPill(fwt.tags.size - 3, onImage = true)
-                        }
+                    // The same marks as the vault's covers: shown or not, bubbles or pills, rows (Impostazioni › Copertine).
+                    if (fwt.tags.isNotEmpty() && display.showTagsOnCover) {
+                        com.cripta.app.ui.vault.TagBadges(fwt.tags, display,
+                            Modifier.fillMaxWidth(), outerPad = 0.dp)
                     }
                 }
             }

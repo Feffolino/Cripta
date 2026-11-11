@@ -128,12 +128,14 @@ fun CoverThumb(
  * option (tag rows, style, colours, duration/quality badges) can be judged before leaving.
  */
 @Composable
-fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier) {
-    val sample = remember {
+fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier, tags: List<TagEntity> = emptyList()) {
+    val fallback = remember {
         listOf("Mare" to "🌊", "Famiglia" to "FA", "Estate" to "ES", "Viaggi" to "✈️", "Amici" to "AM",
             "Festa" to "🎉", "Montagna" to "MO", "2024" to "24", "Preferiti" to "PR", "Cane" to "🐶")
             .mapIndexed { i, (n, a) -> TagEntity(id = -1L - i, name = n, alias = a) }
     }
+    // The user's own tags (acronyms, icons, colours) when there are some: the sample only stands in.
+    val sample = remember(tags) { tags.take(10).ifEmpty { fallback } }
     val file = remember {
         com.cripta.app.data.db.FileEntity(
             id = "preview", originalName = "Esempio.mp4", mimeType = "video/mp4", sizeBytes = 48_000_000,
@@ -170,7 +172,19 @@ fun FolderMosaic(
     countAtLeast: Int? = null,
     /** The count in the accent colour (files just landed). */
     countFlash: Boolean = false,
+    /** Per-file cover version: a cover regenerated while the card is on screen is redrawn. */
+    coverVersions: Map<String, Int> = emptyMap(),
 ) {
+    /**
+     * A picture of the stack, null until loaded. Keyed by the file and its cover version, and only
+     * shown for the file it was loaded for: on a change of file the old picture is not left showing.
+     */
+    @Composable
+    fun picture(f: com.cripta.app.data.db.FileEntity): Pair<Boolean, android.graphics.Bitmap?> {
+        val loaded by produceState<Pair<String, android.graphics.Bitmap?>?>(null, f.id, coverVersions[f.id] ?: 0) { value = f.id to thumb(f) }
+        val mine = loaded?.takeIf { it.first == f.id }
+        return (mine != null) to mine?.second
+    }
     // The tones of the folder's colour (the accent's quiet tones without one): the container
     // grounds the empty cover and veils the pictures behind, the mark is its dot.
     val tones = com.cripta.app.ui.theme.rememberTagTones(folder.color?.let { Color(it) }, colored = true)
@@ -194,7 +208,7 @@ fun FolderMosaic(
     @Composable
     fun sheetPicture(f: com.cripta.app.data.db.FileEntity?, veil: Float) {
         if (f == null) return
-        val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
+        val bmp = picture(f).second
         bmp?.let {
             Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(container.copy(alpha = veil)))
@@ -222,8 +236,10 @@ fun FolderMosaic(
                     // An empty folder: its container with the emoji (or the folder symbol) alone, 48dp.
                     com.cripta.app.ui.components.FolderGlyph(folder.color, folder.icon, folder.emoji, 48.dp, open = highlighted)
                 } else {
-                    val bmp by produceState<android.graphics.Bitmap?>(null, f.id) { value = thumb(f) }
-                    bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                    val (done, bmp) = picture(f)
+                    if (bmp != null) Image(bmp.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    // No picture to show (none made, or unreadable): the file's type, as the cover picker shows it.
+                    else if (done) com.cripta.app.ui.components.CoverPlaceholder(com.cripta.app.ui.components.typeIconFor(f.mimeType), 32.dp)
                 }
                 if (hl > 0f) Box(Modifier.matchParentSize().background(primary.copy(alpha = 0.18f * hl)))
                 // Over a cover, the open folder says "drop here" (the glyph of an empty card opens itself).
@@ -279,12 +295,17 @@ fun FolderMosaic(
 @Composable
 internal fun FolderCoverSheet(
     folder: FolderEntity,
-    load: suspend () -> List<com.cripta.app.data.db.FileEntity>,
+    /** The newest files up to a limit, and whether there are more ("Altro" raises the limit). */
+    load: suspend (Int) -> com.cripta.app.data.VaultRepository.CoverChoices,
     thumb: suspend (com.cripta.app.data.db.FileEntity) -> android.graphics.Bitmap?,
     onPick: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val files by produceState<List<com.cripta.app.data.db.FileEntity>?>(null, folder.id) { value = load() }
+    var limit by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(COVER_PAGE) }
+    // The previous page stays while the next one loads (no flash of the skeleton).
+    var choices by remember { androidx.compose.runtime.mutableStateOf<com.cripta.app.data.VaultRepository.CoverChoices?>(null) }
+    LaunchedEffect(folder.id, limit) { choices = load(limit) }
+    val files = choices?.files
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
@@ -292,15 +313,20 @@ internal fun FolderCoverSheet(
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
             Text(str(R.string.cover_tap_hint), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            // A cover no longer valid (moved, deleted) is not in the list: then "Automatica" is what shows.
+            val coverInUse = folder.coverFileId?.takeIf { id -> files?.any { it.id == id } != false }
             com.cripta.app.ui.components.ChoiceChip(
-                selected = folder.coverFileId == null,
+                selected = coverInUse == null,
                 onClick = { afterSheet { onPick(null) } },
                 label = { Text(str(R.string.cover_auto_latest)) },
             )
             val list = files
-            // The picker lists the newest files only: said, instead of older ones missing without a word.
-            if (list != null && list.size >= 500) Text(str(R.string.cover_picker_limit, 500), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+            // The picker lists the newest files first: said, with a way to list older ones too.
+            if (choices?.more == true) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(str(R.string.cover_picker_limit, limit), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                com.cripta.app.ui.components.TextButton(onClick = { limit += COVER_PAGE }) { com.cripta.app.ui.components.ButtonText(str(R.string.more)) }
+            }
             when {
                 list == null -> androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                     columns = GridCells.Adaptive(96.dp), userScrollEnabled = false,
@@ -322,7 +348,7 @@ internal fun FolderCoverSheet(
                 ) {
                     items(list.size, key = { list[it].id }) { i ->
                         val f = list[i]
-                        val chosen = f.id == folder.coverFileId
+                        val chosen = f.id == coverInUse
                         com.cripta.app.ui.components.MediaThumb(
                             f, thumb,
                             Modifier.fillMaxWidth().aspectRatio(1f).clip(com.cripta.app.ui.theme.CoverShape)
@@ -337,3 +363,6 @@ internal fun FolderCoverSheet(
         }
     }
 }
+
+/** Files the cover picker lists at a time. */
+private const val COVER_PAGE = 500
