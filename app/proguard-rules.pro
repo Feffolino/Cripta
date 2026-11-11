@@ -14,10 +14,7 @@
 -keep class com.cripta.crypto.** { *; }
 
 # --- SQLCipher (JNI: native code calls back into these classes by name) ------------------------
--keep class net.sqlcipher.** { *; }
--keep class net.sqlcipher.database.** { *; }
 -keep class net.zetetic.** { *; }
--dontwarn net.sqlcipher.**
 -dontwarn net.zetetic.**
 
 # --- Tink + protobuf-lite (key managers registered and parsed reflectively) --------------------

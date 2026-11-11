@@ -7,8 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.cripta.app.ui.tagicons.TagIcons
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
     entities = [FolderEntity::class, FileEntity::class, TagEntity::class, FileTagCrossRef::class, SavedFilterEntity::class, PendingJobEntity::class,
@@ -402,16 +401,31 @@ abstract class CriptaDatabase : RoomDatabase() {
             return deleted || !context.getDatabasePath(NAME).exists()
         }
 
+        @Volatile private var sqlCipherLoaded = false
+
+        /** sqlcipher-android needs its native library loaded once before the first open. */
+        private fun loadSqlCipher() {
+            if (sqlCipherLoaded) return
+            synchronized(this) {
+                if (!sqlCipherLoaded) {
+                    System.loadLibrary("sqlcipher")
+                    sqlCipherLoaded = true
+                }
+            }
+        }
+
         /** Open the encrypted DB with the given raw passphrase (SQLCipher). */
         fun open(context: Context, passphrase: ByteArray): CriptaDatabase {
-            SQLiteDatabase.loadLibs(context)
-            // clearPassphrase = false: SQLCipher's default zeroes the key right after the first
-            // open, and Room reopens the helper when a query Flow is cancelled around a close
-            // (InvalidationTracker.removeObserver): with a zeroed key that reopen failed with "file is
-            // not a database" on Room's thread and crashed the app when it came back from the lock.
+            loadSqlCipher()
+            // The factory keeps a reference to the key and never zeroes it: Room reopens the helper
+            // when a query Flow is cancelled around a close (InvalidationTracker.removeObserver), and
+            // a zeroed key made that reopen fail with "file is not a database" on Room's thread.
             // The key is wiped by SessionManager after the (delayed) close instead.
+            // The raw bytes reach sqlite3_key(db, key, len) unchanged, exactly as the old
+            // android-database-sqlcipher SupportFactory did, so vaults created before keep opening
+            // (same SQLCipher 4 defaults, no cipher_migrate needed).
             val key = passphrase.copyOf()
-            val factory = SupportFactory(key, null, false)
+            val factory = SupportOpenHelperFactory(key, null, false)
             return Room.databaseBuilder(context, CriptaDatabase::class.java, NAME)
                 .openHelperFactory(factory)
                 .addMigrations(fluentIconsMigration(context, 33), fluentIconsMigration(context, 34), MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38)
