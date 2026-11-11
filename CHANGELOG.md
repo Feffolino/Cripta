@@ -5,6 +5,20 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- Save a note from the viewer and the editor one at a time, without putting back a star, folder or trashing changed meanwhile; quick ticks that fail bring the note back to what is stored, and its cover shows the new ticks
+- Back up a note saved during the backup whole, never cut to its old length
+- Keep downloads exact across restarts: a removed link never comes back, a resumed one is never lost, and one already imported is not downloaded twice
+- Let "Annulla" on a conversion free the queue, stop every part of a large import, and never bring back an original deleted while it was converting (its newest name, folder and star are used)
+- Resolve duplicate groups one at a time, so two "Conserva" never delete every copy; "Annulla" on a single copy no longer subtracts the previous resolution
+- Never shred a file restored and trashed again while the trash empties or expires
+- On restore, give files already in the vault the archive's tags, people and cover (where they have none), keep existing folder covers, reuse people of the same name, free the space of skipped copies, and say when settings could not be restored
+- Saved filters follow a tag or person merge instead of losing it; a person with notes or links is never removed as empty
+- Take the faces' "Annulla" away once another face change is made, keep it when undoing fails, give it the accessible time and pause it behind the lock
+- Keep the faces left out in "Anche questi?" and an intro mark across a rotation, name each face for TalkBack, and seek the right video from the intro timeline
+- Pause behind the skipped-ending chip stays on this video; a link typed for one video is never saved on the next
+- Keep a zoomed photo in view when dragged, draw the cover tag tray inside the cover in right-to-left languages, and narrow a big bubble beside "+N"
+- Run one update download at a time; changing the channel no longer hides the one under way
+
 - Put the tags on a cover on one dark frosted tray, stepped to their rows with nothing empty beside a shorter one, so dark emoji read on dark pictures; emoji lose their shadow and "+N" is plain white text on the tray
 - Choose the size of the tags on covers (Impostazioni › Etichette › Sulle copertine › Dimensione): smaller tags fit more to a row, and the preview shows it at once
 - Show a folder's card live while customising it, with its files and empty; keep the icon search in view, with icons that fit the name and common ones
