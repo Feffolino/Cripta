@@ -18,6 +18,7 @@ import com.cripta.app.data.db.RejectedPrintEntity
 import com.cripta.app.data.db.SegmentRuleEntity
 import com.cripta.app.data.db.SignatureEntity
 import com.cripta.app.data.db.SignatureSoundEntity
+import androidx.room.withTransaction
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.DataInputStream
@@ -40,6 +41,11 @@ internal object BackupExtras {
         var people = 0; var analysis = false
         /** Old person id -> restored id, for what refers to people (saved filters). */
         val personIds = HashMap<Long, Long>()
+        /**
+         * The people of the manifest's saved filters (by position) as they were when the people
+         * were written: those to map with [personIds], in place of the manifest's own.
+         */
+        val filterPeople = HashMap<Int, JSONArray>()
     }
 
     private fun JSONObject.optLongOrNull(k: String): Long? = if (!has(k) || isNull(k)) null else optLong(k)
@@ -57,11 +63,35 @@ internal object BackupExtras {
         return ByteArray(n).also { readFully(it) }
     }
 
+    /** What [write] read in one transaction: the JSON index and the rows whose binary parts follow it. */
+    private class Parts(
+        val index: ByteArray, val tracks: List<FaceTrackEntity>, val prints: List<AudioPrintEntity>,
+        val sounds: List<SignatureSoundEntity>, val rules: List<SegmentRuleEntity>, val rejected: List<RejectedPrintEntity>,
+    )
+
     /**
      * [people]: persons, faces and their choices; [analysis]: intro/outro and similar-media
      * fingerprints. A group left out is written as empty lists (same layout, older apps read it).
+     * [savedFilters]: the ids of the saved filters the manifest holds, in its order.
      */
-    suspend fun write(db: CriptaDatabase, fileIndex: Map<String, Int>, out: DataOutputStream, people: Boolean = true, analysis: Boolean = true) {
+    suspend fun write(
+        db: CriptaDatabase, fileIndex: Map<String, Int>, out: DataOutputStream, people: Boolean = true, analysis: Boolean = true,
+        savedFilters: List<Long> = emptyList(),
+    ) {
+        // One read transaction: read one after the other, a face moved to someone else or two
+        // people merged in between gave an archive whose parts disagree (a face of a person it
+        // does not list). Everything is held in memory before writing anyway.
+        val parts = db.withTransaction { gather(db, fileIndex, people, analysis, savedFilters) }
+        out.writeInt(MAGIC)
+        out.blob(parts.index)
+        parts.tracks.forEach { out.blob(it.embeddings); out.blob(it.crop) }
+        parts.prints.forEach { out.blob(it.hashes) }
+        parts.sounds.forEach { out.blob(it.hashes) }
+        parts.rules.forEach { out.blob(it.hashes) }
+        parts.rejected.forEach { out.blob(it.hashes) }
+    }
+
+    private suspend fun gather(db: CriptaDatabase, fileIndex: Map<String, Int>, people: Boolean, analysis: Boolean, savedFilters: List<Long>): Parts {
         val faces = db.faceDao()
         val intro = db.introDao()
         val persons = if (people) faces.persons() else emptyList()
@@ -148,15 +178,20 @@ internal object BackupExtras {
             .put("dupApart", JSONArray().apply {
                 dupApart.forEach { put(JSONObject().put("a", fileIndex[it.a]).put("b", fileIndex[it.b])) }
             })
+            // The manifest's saved filters were read before the files, minutes ago: a person merged
+            // into another since then was still named by a filter but no longer among the people
+            // above, and the restore dropped the filter. Their people as of now, by position.
+            .put("filterPeople", JSONArray().apply {
+                if (people && savedFilters.isNotEmpty()) {
+                    val now = db.savedFilterDao().allNow().associateBy { it.id }
+                    savedFilters.forEachIndexed { i, id ->
+                        val f = now[id]?.let { runCatching { JSONObject(it.json) }.getOrNull() } ?: return@forEachIndexed
+                        put(JSONObject().put("i", i).put("people", f.optJSONArray("people") ?: JSONArray()))
+                    }
+                }
+            })
             .toString().toByteArray()
-
-        out.writeInt(MAGIC)
-        out.blob(index)
-        tracks.forEach { out.blob(it.embeddings); out.blob(it.crop) }
-        prints.forEach { out.blob(it.hashes) }
-        sounds.forEach { out.blob(it.hashes) }
-        rules.forEach { out.blob(it.hashes) }
-        rejected.forEach { out.blob(it.hashes) }
+        return Parts(index, tracks, prints, sounds, rules, rejected)
     }
 
     /**
@@ -277,6 +312,12 @@ internal object BackupExtras {
                 FaceApartEntity(minOf(x, y), maxOf(x, y))
             }
             if (pairs.isNotEmpty()) faces.addApart(pairs)
+        }
+        o.optJSONArray("filterPeople")?.let { a ->
+            for (i in 0 until a.length()) {
+                val d = a.optJSONObject(i) ?: continue
+                contents?.filterPeople?.put(d.optInt("i", -1).takeIf { it >= 0 } ?: continue, d.optJSONArray("people") ?: JSONArray())
+            }
         }
         o.optJSONArray("prints")?.let { a ->
             for (i in 0 until a.length()) {

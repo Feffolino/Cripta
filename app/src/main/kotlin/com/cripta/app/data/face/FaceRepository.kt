@@ -153,7 +153,8 @@ class FaceRepository @Inject constructor(
     /** Faces and links of media deleted for good (media in the trash keep theirs). */
     suspend fun purgeDeleted(): Int = mutex.withLock {
         db.withTransaction {
-            dao.purgeScans() + dao.purgeTracks() + dao.purgeLinks().also { dao.deleteEmptyPersons() } + dao.purgeRejections() + dao.purgeIgnored()
+            dao.purgeScans() + dao.purgeTracks() + dao.purgeLinks().also { dao.deleteEmptyPersons() } + dao.purgeRejections() + dao.purgeIgnored() +
+                dao.purgeApartOrphans()
         }
     }
 
@@ -301,7 +302,16 @@ class FaceRepository @Inject constructor(
                     sightings = FaceCodec.encode(stored))), file.id, t.frames, t.embeddings, t.quality)
                     .also { info -> t.times.takeIf { it.isNotEmpty() }?.let { spans[info.id] = it.first()..it.last() } }
             }
-            if (old.isNotEmpty()) carry(old, added, spans, FramePlan.spacing(file.durationMs ?: 0L))
+            if (old.isNotEmpty()) {
+                val moved = carry(old, added, spans, FramePlan.spacing(file.durationMs ?: 0L))
+                // "Dividi il gruppo" follows the faces like the user's other choices: the pairs of
+                // the old faces now name the new ones (those not found again lose theirs).
+                val pairs = old.map { it.id }.chunked(500).flatMap { dao.apartOf(it) }.distinct()
+                if (pairs.isNotEmpty()) {
+                    dao.deleteApart(pairs)
+                    dao.addApart(FaceApart.remap(pairs, old.associate { it.id to moved[it.id] }))
+                }
+            }
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
                 rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, VERSION, System.currentTimeMillis(),
                 ms = android.os.SystemClock.elapsedRealtime() - started, stats = FaceStats.encode(sharp, duplicates, extra)))
@@ -316,10 +326,12 @@ class FaceRepository @Inject constructor(
      * Same moments, not same frame bits: "Cerca più a fondo" samples other moments than the usual
      * plan, so the same face seen at the same time had no bit in common and lost the user's
      * confirmation, their "no" and the person's cover. [spans]: each new face's first and last
-     * moment; [slack]: how far apart two plans' frames can be ([FramePlan.spacing]).
+     * moment; [slack]: how far apart two plans' frames can be ([FramePlan.spacing]). Returns the
+     * new face each old one became (the old faces not found again are left out).
      */
-    private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>, spans: Map<Long, LongRange>, slack: Long) {
+    private suspend fun carry(old: List<TrackRow>, added: List<TrackInfo>, spans: Map<Long, LongRange>, slack: Long): Map<Long, Long> {
         val rejections = dao.rejections().groupBy { it.trackId }
+        val moved = HashMap<Long, Long>()
         // Two faces the user gave to different people may now be one track: the first keeps it.
         val placed = HashMap<Long, Long>()
         for (o in old) {
@@ -332,11 +344,13 @@ class FaceRepository @Inject constructor(
             }
             val match = added.filter { sameMoments(it) }.map { it to maxPair(it, before) }
                 .filter { it.second >= CARRY }.maxByOrNull { it.second }?.first ?: continue
+            moved[o.id] = match.id
             if (o.state == "manual" && o.personId != null && placed.getOrPut(match.id) { o.personId } == o.personId)
                 dao.place(match.id, o.personId, "carried", o.similarity)
             for (r in rejections[o.id].orEmpty()) { dao.deleteRejection(o.id, r.personId); dao.addRejection(r.copy(trackId = match.id)) }
             dao.moveCover(o.id, match.id)
         }
+        return moved
     }
 
     private class FrameRun(val read: Int, val failed: Int, val duplicates: Int, val extra: Int, val why: String?)
@@ -1503,21 +1517,24 @@ class FaceRepository @Inject constructor(
 
     /**
      * "Ricomincia da capo": every media is analysed anew. Without [everything] the faces the user
-     * confirmed or added stay; with it, people, faces and every choice of the user go too.
+     * confirmed or added stay (and the faces the user said no about or split from others, so that
+     * the new analysis carries those choices too); with it, people, faces and every choice go.
      */
     suspend fun resetAll(everything: Boolean) = change {
         dao.deleteAllScans()
         if (everything) {
             dao.deleteAllTracks(); dao.deleteAllMerges()
             dao.deleteAllPersons(); dao.deleteAllPersonMedia(); dao.deleteAllRejections(); dao.deleteAllIgnored()
+            dao.deleteAllApart()
         } else {
             // "Ricomincia" without "Cancella anche nomi… e correzioni": the faces the user confirmed
             // or added stay, and the new analysis carries them to the faces it finds ([carry]).
             // Deleting every face here left the named people empty, every confirmation lost.
             dao.deleteUnconfirmedTracks()
             dao.purgeRejections()
+            // "Dividi il gruppo" stays: deleted here, faces the user split came back as one group.
+            dao.purgeApartOrphans()
         }
-        dao.deleteAllApart()
         embeddingCache.clear()
     }
 

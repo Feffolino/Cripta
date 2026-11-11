@@ -69,4 +69,26 @@ class BackupExtrasDupPrintsTest {
         assertEquals(false, contents.analysis)
         from.close(); to.close()
     }
+
+    @Test
+    fun savedFiltersNameThePeopleAsWrittenNotAsInTheManifest() = runBlocking {
+        val from = db()
+        val kept = from.faceDao().addPerson(com.cripta.app.data.db.PersonEntity(name = "B", createdAt = 1L))
+        // The manifest read this filter on A; A was merged into B before the people were written.
+        val filter = from.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = "f", json = "{\"people\":[$kept]}"))
+        val gone = from.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = "g", json = "{}"))
+        from.savedFilterDao().delete(gone)
+        val bytes = ByteArrayOutputStream()
+        DataOutputStream(bytes).use { BackupExtras.write(from, emptyMap(), it, savedFilters = listOf(gone, filter)) }
+
+        val to = db()
+        val contents = BackupExtras.Contents()
+        DataInputStream(ByteArrayInputStream(bytes.toByteArray())).use { BackupExtras.read(to, arrayOf(), it, contents) }
+        // By manifest position, old ids (mapped by personIds like the manifest's); a filter
+        // deleted meanwhile keeps the manifest's people.
+        assertEquals(setOf(1), contents.filterPeople.keys)
+        assertEquals(kept, contents.filterPeople.getValue(1).getLong(0))
+        assertEquals(setOf(kept), contents.personIds.keys)
+        from.close(); to.close()
+    }
 }

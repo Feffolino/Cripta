@@ -2044,6 +2044,8 @@ class VaultRepository @Inject constructor(
         val header = BackupCrypto.newHeader()
         // File ids change on restore: a folder's cover is stored as its file's position in the archive.
         val fileIndex = BackupScope.positions(files.map { it.file.id })
+        // The saved filters the manifest holds, in its order ([BackupExtras.write] adds their people).
+        val filterIds = ArrayList<Long>()
 
         val manifest = org.json.JSONObject().apply {
             // v2 adds optional keys (older apps ignore them; this app reads v1 backups too).
@@ -2104,6 +2106,7 @@ class VaultRepository @Inject constructor(
             put("savedFilters", org.json.JSONArray().apply {
                 snapshot.savedFilters.forEach { sf ->
                     val f = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: return@forEach
+                    filterIds += sf.id
                     fun names(key: String) = org.json.JSONArray().apply {
                         f.optJSONArray(key)?.let { a -> for (i in 0 until a.length()) tagNameById[a.getLong(i)]?.let { put(it) } }
                     }
@@ -2167,7 +2170,7 @@ class VaultRepository @Inject constructor(
                     }
                 }
                 // People, faces and intro/outro analysis (an older app stops before this part).
-                BackupExtras.write(db, fileIndex, out, people = scope.people, analysis = scope.analysis)
+                BackupExtras.write(db, fileIndex, out, people = scope.people, analysis = scope.analysis, savedFilters = filterIds)
                 // Settings and hand-picked covers, by archive position (an app older than this part
                 // stops before it).
                 BackupMore.begin(out)
@@ -2524,6 +2527,9 @@ class VaultRepository @Inject constructor(
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 val f = o.optJSONObject("filter") ?: continue
+                // Its people as they were when the people were written (a merge during the backup
+                // renamed them): the manifest's own named someone the archive no longer had.
+                extras.filterPeople[i]?.let { if (it.length() > 0) f.put("people", it) else f.remove("people") }
                 suspend fun ids(key: String) = org.json.JSONArray().apply {
                     f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
                 }

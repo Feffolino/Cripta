@@ -625,6 +625,14 @@ interface FaceDao {
     @Query("DELETE FROM face_apart")
     suspend fun deleteAllApart()
 
+    /** The "Dividi il gruppo" pairs [ids] are part of. */
+    @Query("SELECT * FROM face_apart WHERE a IN (:ids) OR b IN (:ids)")
+    suspend fun apartOf(ids: List<Long>): List<FaceApartEntity>
+
+    /** Pairs left by faces that are gone (deleted, or not found again by a new analysis). */
+    @Query("DELETE FROM face_apart WHERE a NOT IN (SELECT id FROM face_tracks) OR b NOT IN (SELECT id FROM face_tracks)")
+    suspend fun purgeApartOrphans(): Int
+
     /** Faces deleted from media deleted for good ("Non è un volto" ones stay). */
     @Query("DELETE FROM face_ignored WHERE fileId IS NOT NULL AND fileId NOT IN (SELECT id FROM files)")
     suspend fun purgeIgnored(): Int
@@ -842,13 +850,16 @@ interface FaceDao {
     /**
      * Every face the user has not confirmed or added: what an analysis found and nobody took. Faces
      * the user said are not someone stay too: the next analysis carries that "no" to the face it
-     * finds again (deleted here, the "no" went with them and the face was suggested again).
+     * finds again (deleted here, the "no" went with them and the face was suggested again). So do
+     * faces split from others ("Dividi il gruppo"), for the same reason: the split moves with them.
      */
-    @Query("DELETE FROM face_tracks WHERE (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections)")
+    @Query("DELETE FROM face_tracks WHERE (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections) " +
+        "AND id NOT IN (SELECT a FROM face_apart) AND id NOT IN (SELECT b FROM face_apart)")
     suspend fun deleteUnconfirmedTracks()
 
     /** [deleteUnconfirmedTracks] for one media. */
-    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections)")
+    @Query("DELETE FROM face_tracks WHERE fileId = :fileId AND (personId IS NULL OR state NOT IN ('manual', 'carried')) AND id NOT IN (SELECT trackId FROM face_rejections) " +
+        "AND id NOT IN (SELECT a FROM face_apart) AND id NOT IN (SELECT b FROM face_apart)")
     suspend fun deleteUnconfirmedTracksOf(fileId: String)
 
     @Query("DELETE FROM persons")

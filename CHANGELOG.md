@@ -5,6 +5,8 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- "Dividi il gruppo" outlives "Ricomincia" (keeping corrections) and "Analizza di nuovo": the split follows the faces found again, so split faces never come back as one group
+- A backup made while people are merged restores every saved filter on them; people and faces are written as one consistent picture
 - A restore keeps two people with the same name, and two sibling folders with the same name, apart; it brings back "Dividi il gruppo", a folder's chosen cover and the source video of rules and rejected sounds even for files already in the vault; a restore killed halfway leaves no cover on files it never changed
 - An old "Installa" notification never opens an update still being downloaded
 - Merging people from a profile keeps the merged notes and links on leaving; "Annulla" on a merge puts its saved filters back; a closer look never gives a face to someone the user said it is not
