@@ -1,5 +1,6 @@
 package com.cripta.app.ui.favorites
 
+import com.cripta.app.ui.safeScope
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,7 +55,7 @@ class FavoritesViewModel @Inject constructor(
 
     val sort: StateFlow<Pair<SortKey, Boolean>> = settings.screenSort("favorites")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortKey.DATE to false)
-    fun setSort(key: SortKey, ascending: Boolean) = viewModelScope.launch { settings.setScreenSort("favorites", key, ascending) }
+    fun setSort(key: SortKey, ascending: Boolean) = safeScope.launch { settings.setScreenSort("favorites", key, ascending) }
 
     /** The folders follow the screen's order too: by name or by creation (a folder has no size to sort on). */
     val folders: StateFlow<List<FolderEntity>?> = combine(
@@ -73,10 +74,10 @@ class FavoritesViewModel @Inject constructor(
         .mapLatest { repo.folderPreviews(it.orEmpty().map { f -> f.id }) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
     fun openFolder(id: Long) = navigator.openFolder(id)
-    fun setFolderFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { repo.setFolderFavorite(id, favorite) }
+    fun setFolderFavorite(id: Long, favorite: Boolean) = safeScope.launch { repo.setFolderFavorite(id, favorite) }
 
     /** Remove from / put back into the favorites (the grid's star button and its "Annulla"). */
-    fun setFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
+    fun setFavorite(fileId: String, fav: Boolean) = safeScope.launch {
         runCatching { repo.toggleFavorite(fileId, fav) }
     }
 

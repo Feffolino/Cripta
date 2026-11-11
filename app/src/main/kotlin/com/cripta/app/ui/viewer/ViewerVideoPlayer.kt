@@ -250,14 +250,27 @@ internal fun VideoPlayer(
         val view = playerViewRef ?: return@LaunchedEffect
         vm.moments(file.id).collect { m -> view.setExtraAdGroupMarkers(m, BooleanArray(m.size)) }
     }
+    val latestSegments by androidx.compose.runtime.rememberUpdatedState(skipSegments)
     LaunchedEffect(file.id) {
         vm.seekRequests.collect { r ->
             if (r.fileId != file.id) return@collect
+            skipper.seekedTo(r.positionMs, latestSegments)
             player.seekTo(r.positionMs)
             if (r.play) player.play()
         }
     }
     var advanceAfterChip by remember(file.id) { mutableStateOf(false) }
+    // A seek while the advance waits behind the chip: the user chose a spot of this video, which
+    // went on to the next one three seconds later all the same.
+    DisposableEffect(player, file.id) {
+        val l = object : Player.Listener {
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                if (reason == Player.DISCONTINUITY_REASON_SEEK) advanceAfterChip = false
+            }
+        }
+        player.addListener(l)
+        onDispose { player.removeListener(l) }
+    }
     fun skipSegment(s: SegmentSkipper.Segment) {
         if (s.kind == SegmentSkipper.Kind.OUTRO && nextId != null && !prefs.loop) latestOnNext()
         else player.seekTo(if (s.kind == SegmentSkipper.Kind.OUTRO && player.duration > 0) player.duration else s.endMs)
@@ -265,7 +278,10 @@ internal fun VideoPlayer(
     LaunchedEffect(file.id, skipSegments, prefs.introAutoSkip, prefs.outroAutoSkip, inPip) {
         while (true) {
             val a = if (inPip) SegmentSkipper.Action.None
-                else skipper.at(player.currentPosition, skipSegments, scrubbing, prefs.introAutoSkip, prefs.outroAutoSkip)
+                // Paused: nothing is skipped by itself (a spot looked at while paused stays put).
+                else player.playWhenReady.let { on ->
+                    skipper.at(player.currentPosition, skipSegments, scrubbing, on && prefs.introAutoSkip, on && prefs.outroAutoSkip)
+                }
             if (a is SegmentSkipper.Action.AutoSkip) {
                 // Moving on to the next video closes this player, and the chip with it: the advance
                 // waits a few seconds behind the chip, so "Annulla" can still be tapped.

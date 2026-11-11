@@ -347,7 +347,8 @@ internal fun FaceAvatar(face: com.cripta.app.data.db.TrackCard?, load: suspend (
 internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics.Bitmap?, size: Dp, modifier: Modifier = Modifier,
                         /** Changes when the face's picture does (a face split keeps its id). */
                         key: Any? = null, selected: Boolean = false) {
-    val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { load(it) } }
+    // Locked while it was read ("Vault locked"): no picture, not a crash of the app.
+    val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { runCatching { load(it) }.getOrNull() } }
     Box(modifier.size(size).then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(5.dp) else Modifier)
         .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         val b = bmp
@@ -536,7 +537,8 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         // "Da sistemare": grouped again whenever the unassigned faces change.
         val groupsVersion by vm.groupsVersion.collectAsStateWithLifecycle()
         val groups by produceState(if (filter == PeopleFilter.TODO) vm.lastGroups else null, filter, o.unassigned, groupsVersion) {
-            value = if (filter == PeopleFilter.TODO) vm.unsortedGroups().also { vm.lastGroups = it } else null
+            // Locked while grouping ("Vault locked"): the last groups stay, the app does not crash.
+            value = if (filter == PeopleFilter.TODO) runCatching { vm.unsortedGroups() }.getOrNull()?.also { vm.lastGroups = it } ?: value else null
         }
         // "Solo persone note": "Da sistemare" becomes "Da confermare", the faces like someone known.
         val known = st.facesMode == "known"

@@ -5,6 +5,18 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-11
 
+- A restore keeps two people with the same name, and two sibling folders with the same name, apart; it brings back "Dividi il gruppo", a folder's chosen cover and the source video of rules and rejected sounds even for files already in the vault; a restore killed halfway leaves no cover on files it never changed
+- An old "Installa" notification never opens an update still being downloaded
+- Merging people from a profile keeps the merged notes and links on leaving; "Annulla" on a merge puts its saved filters back; a closer look never gives a face to someone the user said it is not
+- "Chiedi" after a conversion is never lost when the app is closed right after; "Applica a tutti" reaches every video of a merged signature, and merging signatures drops rules that would extend new videos again
+- Locking the vault while faces, groups or cover choices load, or during a single action (star, rename, new folder or tag), no longer closes the app; exporting thousands of files at once no longer closes it either
+- After a vault reset the app starts over in a fresh process, so nothing of the old vault (a running job, an open folder, remembered folders and tags) reaches the new one
+- "Annulla" stops a download while it is being encrypted; a failed gallery export leaves no hidden file behind; a new note that cannot be saved leaves no hidden file either
+- After Android closes Cripta in the background, the viewer comes back on the media shown, with its list
+- A folder deleted for good never leaves a file moved into it meanwhile without a folder; files go to the root when their folder is gone
+- The automatic intro skip leaves a spot chosen while paused or from the details alone; a seek during "Salta finale" stays on this video; "Nuova etichetta" tags the media it was opened on
+- A download resumed after a restart is kept when the same link was queued again with another quality, folder or tags
+
 - Notes typed on a person's profile are saved even when Back comes right after; "Non è una persona" stays on the profile with its "Annulla"; a suggestion answer that could not be saved is asked again; TalkBack reads each media's name and selection
 - "Cerca più a fondo" and "Analizza di nuovo" keep the user's confirmations, "no" answers and the person's face: the same face is recognised by its moment, not by the frame number of the sampling
 - A signature's duration and "Applica a tutti" follow the latest choice for videos analysed later; merging into a signature of natural length gives every video that length; a duration change is applied to all videos or none; removing one rejected sample leaves out what another one still rejects

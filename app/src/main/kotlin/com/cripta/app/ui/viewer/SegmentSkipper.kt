@@ -31,6 +31,14 @@ class SegmentSkipper {
         return if (s.kind in dismissed) Action.None else Action.Show(s)
     }
 
+    /**
+     * The user went to [positionMs] on purpose (the details' intro section): a segment there is not
+     * skipped by itself any more this viewing, or it took them away from the spot they chose.
+     */
+    fun seekedTo(positionMs: Long, segments: List<Segment>) {
+        segments.firstOrNull { positionMs >= it.startMs && positionMs < it.endMs }?.let { autoDone += it.kind }
+    }
+
     fun dismiss(kind: Kind) { dismissed += kind }
     fun undo(kind: Kind) { undone += kind }
 

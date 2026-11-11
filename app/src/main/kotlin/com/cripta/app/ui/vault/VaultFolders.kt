@@ -304,7 +304,8 @@ internal fun FolderCoverSheet(
     var limit by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(COVER_PAGE) }
     // The previous page stays while the next one loads (no flash of the skeleton).
     var choices by remember { androidx.compose.runtime.mutableStateOf<com.cripta.app.data.VaultRepository.CoverChoices?>(null) }
-    LaunchedEffect(folder.id, limit) { choices = load(limit) }
+    // Locked while it was read ("Vault locked"): the list stays as it was, the app does not crash.
+    LaunchedEffect(folder.id, limit) { runCatching { load(limit) }.getOrNull()?.let { choices = it } }
     val files = choices?.files
     com.cripta.app.ui.components.CriptaSheet(onDismissRequest = onDismiss) {
         val afterSheet = com.cripta.app.ui.components.rememberSheetAction()

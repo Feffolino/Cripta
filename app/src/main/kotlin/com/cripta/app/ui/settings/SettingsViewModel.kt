@@ -1,5 +1,6 @@
 package com.cripta.app.ui.settings
 
+import com.cripta.app.ui.safeScope
 import com.cripta.app.logException
 import com.cripta.app.R
 import com.cripta.app.str
@@ -70,7 +71,7 @@ class SettingsViewModel @Inject constructor(
     private val _update = kotlinx.coroutines.flow.MutableStateFlow<UpdateState>(UpdateState.Idle)
     val update: StateFlow<UpdateState> = _update
 
-    fun checkUpdate(ctx: android.content.Context) = viewModelScope.launch {
+    fun checkUpdate(ctx: android.content.Context) = safeScope.launch {
         _update.value = UpdateState.Checking
         val pre = store.settingsOnce().updatePrerelease
         val rel = try {
@@ -109,7 +110,7 @@ class SettingsViewModel @Inject constructor(
     fun setSettingsForeground(b: Boolean) { settingsInForeground = b }
 
     init {
-        viewModelScope.launch {
+        safeScope.launch {
             updater.downloadState.collect { d ->
                 when (d) {
                     com.cripta.app.update.AppUpdater.Download.Idle -> Unit
@@ -172,7 +173,7 @@ class SettingsViewModel @Inject constructor(
     /** Space used (Impostazioni list and Spazio page): the last reading at once, then a fresh one. */
     private val _space = kotlinx.coroutines.flow.MutableStateFlow(lastSpace)
     val space: StateFlow<com.cripta.app.data.SpaceReport?> = _space
-    fun refreshSpace() = viewModelScope.launch {
+    fun refreshSpace() = safeScope.launch {
         runCatching { repo.spaceReport() }.getOrNull()?.let { lastSpace = it; _space.value = it }
     }
 
@@ -264,7 +265,7 @@ class SettingsViewModel @Inject constructor(
      * A preference write. Failing (storage full, say), it says so instead of crashing the app: an
      * error left to the view model scope ended the whole process.
      */
-    private fun savePref(block: suspend () -> Unit) = viewModelScope.launch {
+    private fun savePref(block: suspend () -> Unit) = safeScope.launch {
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -275,7 +276,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun launchHeld(what: String, block: suspend () -> Unit) = viewModelScope.launch {
+    private fun launchHeld(what: String, block: suspend () -> Unit) = safeScope.launch {
         try {
             heldToEnd(block)
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -318,10 +319,10 @@ class SettingsViewModel @Inject constructor(
     fun restartIntroScan(everything: Boolean) = com.cripta.app.work.ConversionService.restartIntroScan(appContext, everything)
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
         intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun restoreRejected(id: Long) = viewModelScope.launch { intro.restoreRejected(id) }
+    fun restoreRejected(id: Long) = safeScope.launch { intro.restoreRejected(id) }
     /** The analysis so far (status card and results page); null until first loaded. */
     val introOverview = kotlinx.coroutines.flow.MutableStateFlow<com.cripta.app.data.intro.IntroRepository.Overview?>(null)
-    fun refreshIntro() = viewModelScope.launch { runCatching { intro.overview() }.getOrNull()?.let { introOverview.value = it } }
+    fun refreshIntro() = safeScope.launch { runCatching { intro.overview() }.getOrNull()?.let { introOverview.value = it } }
     /** A running scan, for the live status card. */
     val introProgress = com.cripta.app.work.ConversionService.introProgress
     fun cancelIntroScan() = com.cripta.app.work.ConversionService.cancelIntroScan(appContext)
@@ -330,7 +331,7 @@ class SettingsViewModel @Inject constructor(
     /** "Firme": the signatures of one kind, null while loading. */
     val introGroups = kotlinx.coroutines.flow.MutableStateFlow<Pair<com.cripta.app.media.intro.SegmentKind,
         List<com.cripta.app.data.intro.IntroRepository.Signature>>?>(null)
-    fun loadIntroGroups(kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
+    fun loadIntroGroups(kind: com.cripta.app.media.intro.SegmentKind) = safeScope.launch {
         if (introGroups.value?.first != kind) introGroups.value = null
         runCatching { intro.signatures(kind) }.getOrNull()?.let { introGroups.value = kind to it }
     }
@@ -340,7 +341,7 @@ class SettingsViewModel @Inject constructor(
 
     /** Runs a signature change, then reloads the signatures and the counts. */
     private fun signatureAction(kind: com.cripta.app.media.intro.SegmentKind, done: String, block: suspend () -> Unit) =
-        viewModelScope.launch {
+        safeScope.launch {
             val ok = runCatching { block() }.isSuccess
             introMessage.value = if (ok) done else str(R.string.operation_failed_short)
             runCatching { intro.signatures(kind) }.getOrNull()?.let { introGroups.value = kind to it }
@@ -373,7 +374,7 @@ class SettingsViewModel @Inject constructor(
     /** Bumped when "Da sistemare" must be grouped again though the unassigned count did not change. */
     val groupsVersion = kotlinx.coroutines.flow.MutableStateFlow(0)
     /** "Dividi il gruppo": [a] and [b] are not one person. */
-    fun keepFacesApart(a: Collection<Long>, b: Collection<Long>) = viewModelScope.launch {
+    fun keepFacesApart(a: Collection<Long>, b: Collection<Long>) = safeScope.launch {
         try {
             val u = faces.keepFacesApart(a, b)
             groupsVersion.value++
@@ -407,7 +408,7 @@ class SettingsViewModel @Inject constructor(
     fun cancelFaceScan() = com.cripta.app.work.ConversionService.cancelFaceScan(appContext)
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
     suspend fun faceStats() = faces.stats()
-    private fun faceAction(onFailed: () -> Unit = {}, block: suspend () -> Unit) = viewModelScope.launch {
+    private fun faceAction(onFailed: () -> Unit = {}, block: suspend () -> Unit) = safeScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             onFailed()
             faceMessage.value = str(R.string.operation_failed_prefix) + com.cripta.app.work.UserErrors.of(e)
@@ -541,7 +542,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         // The outcome of a backup / restore run by the service, shown when Settings is open.
-        viewModelScope.launch {
+        safeScope.launch {
             backups.result.collect { r -> if (r != null) { _message.value = r; backups.consumeResult() } }
         }
     }
@@ -550,7 +551,7 @@ class SettingsViewModel @Inject constructor(
      * Backup and restore run in the background service, in the foreground: here, with the app in
      * the background, the process could be killed halfway (a truncated archive, a half restore).
      */
-    fun exportBackup(uri: android.net.Uri, passphrase: String) = viewModelScope.launch {
+    fun exportBackup(uri: android.net.Uri, passphrase: String) = safeScope.launch {
         val s = runCatching { store.settingsOnce() }.getOrNull()
         startBackup(com.cripta.app.data.BackupJobs.Request(restore = false, uri = uri, passphrase = passphrase.toCharArray(),
             compressDocs = s?.backupCompressDocs ?: false, scope = s?.backupScope ?: com.cripta.app.data.BackupScope()))
@@ -569,7 +570,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** A new tag with its whole look, in one write. A name already in the library is said so, not reused. */
-    fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+    fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
         val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (!r.created) _message.value = str(R.string.tag_exists, draft.name)
     }
@@ -578,7 +579,7 @@ class SettingsViewModel @Inject constructor(
      * Gives every tag a colour from the sober palette, at random but spread out (no two tags share
      * one until the palette runs out). Replaces the colours chosen so far.
      */
-    fun randomizeTagColors() = viewModelScope.launch {
+    fun randomizeTagColors() = safeScope.launch {
         var pool = emptyList<androidx.compose.ui.graphics.Color>()
         val colors = tags.value.associate { t ->
             if (pool.isEmpty()) pool = com.cripta.app.ui.theme.TagPalette.shuffled()
@@ -596,19 +597,19 @@ class SettingsViewModel @Inject constructor(
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+    fun deleteTag(id: Long) = safeScope.launch { repo.deleteTag(id) }
 
     /** Merge [fromId] into [intoId] (Manutenzione): its files get the second, the first goes. */
-    fun mergeTags(fromId: Long, intoId: Long) = viewModelScope.launch { repo.mergeTags(fromId, intoId) }
+    fun mergeTags(fromId: Long, intoId: Long) = safeScope.launch { repo.mergeTags(fromId, intoId) }
 
     /** Delete the tags of [ids] still on no file (Manutenzione). */
-    fun deleteUnusedTags(ids: Collection<Long>) = viewModelScope.launch { repo.deleteUnusedTags(ids) }
+    fun deleteUnusedTags(ids: Collection<Long>) = safeScope.launch { repo.deleteUnusedTags(ids) }
 
     /**
      * Save the tag editor: name, alias, colour, pin and icon together, by id, in one transaction.
      * A name taken meanwhile by another tag leaves the tag exactly as it was, and is said so.
      */
-    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
         when (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)) {
             com.cripta.app.data.TagSave.SAVED -> Unit
             com.cripta.app.data.TagSave.NAME_TAKEN -> _message.value = str(R.string.tag_exists, draft.name)
@@ -655,7 +656,7 @@ class SettingsViewModel @Inject constructor(
     }
     private fun saveTagOrder(order: List<Long>) {
         pendingTagOrder = order
-        viewModelScope.launch {
+        safeScope.launch {
             // One write at a time, in the order the moves were made.
             tagOrderWrites.withLock {
                 try {
@@ -712,7 +713,7 @@ class SettingsViewModel @Inject constructor(
         kind: com.cripta.app.security.SecretKind,
         cipher: javax.crypto.Cipher?,
     ) =
-        viewModelScope.launch {
+        safeScope.launch {
             val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 try { runCatching { keyVault.changeMode(mode, pin, kind, cipher) } } finally { pin?.fill('0') }
             }
@@ -857,7 +858,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Open the stored scan result in the comparison screen. */
-    fun openScanResult() = viewModelScope.launch {
+    fun openScanResult() = safeScope.launch {
         val r = dupStore.state.value.result ?: return@launch
         val exact = r.mode == com.cripta.app.data.dedup.DupScanStore.Mode.EXACT
         _exactGroups.value = if (exact) r.groups.map { DuplicateScanner.ExactGroup(it.first().sizeBytes, it) } else emptyList()
@@ -874,7 +875,7 @@ class SettingsViewModel @Inject constructor(
     init {
         // Results produced by the background scan: open them if this screen asked for the scan,
         // or when the user tapped the "scan finished" notification.
-        viewModelScope.launch {
+        safeScope.launch {
             dupStore.state.collect { st ->
                 val r = st.result
                 if (r != null && !r.seen && openWhenDone && st.running == null) { openWhenDone = false; openScanResult() }
@@ -885,7 +886,7 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
-        viewModelScope.launch {
+        safeScope.launch {
             dupStore.openRequested.collect { req ->
                 if (req) {
                     dupStore.consumeOpen()

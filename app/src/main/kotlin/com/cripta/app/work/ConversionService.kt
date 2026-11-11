@@ -345,7 +345,8 @@ class ConversionService : Service() {
                         if (!intent.getBooleanExtra(EX_FROM_SHARE, false)) applyDeletePolicy(imported)
                     }
                     MODE_DOWNLOAD -> {
-                        val ids = intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
+                        val ids = intent.getStringExtra(EX_IDS_KEY)?.let { exportHandoff.remove(it) }
+                            ?: intent.getStringArrayListExtra(EX_IDS) ?: arrayListOf()
                         exportBatch(ids, intent.getStringExtra(EX_TREE)?.let(Uri::parse))
                     }
                     MODE_CONVERT -> {
@@ -951,7 +952,8 @@ class ConversionService : Service() {
             val replace = mode == com.cripta.app.data.ConvertAfter.REPLACE
             // Its saved job goes with the import: killed while the temporary files below were still
             // being shredded, the conversion was resumed at the next unlock and made one more MP4.
-            val newFile = repo.importConvertedMp4(file, out!!, replace = replace, pendingJobId = "conv-$id")
+            val newFile = repo.importConvertedMp4(file, out!!, replace = replace, pendingJobId = "conv-$id",
+                askOriginal = mode == com.cripta.app.data.ConvertAfter.ASK)
             thumbs.copyCustomCover(file.id, newFile.id)   // keep a cover the user picked
             when (mode) {
                 com.cripta.app.data.ConvertAfter.ASK -> {
@@ -1560,7 +1562,7 @@ class ConversionService : Service() {
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
             val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds,
-                pendingJobId = job.id)
+                pendingJobId = job.id, cancelled = { cancelRequested })
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
             // The title stays inside the app (queue, vault): the notification only says it is done.
             notifyResult(str(R.string.n_download_done), str(R.string.n_video_encrypted), ResultKind.DOWNLOAD)
@@ -2300,13 +2302,23 @@ class ConversionService : Service() {
 
         /** Decrypt [ids] to the gallery, or into [tree] (a folder picked with ACTION_OPEN_DOCUMENT_TREE). */
         fun startDownload(ctx: Context, ids: List<String>, tree: Uri? = null) {
+            // The ids stay in this process, the intent only names them: thousands of them in the
+            // intent outgrew the binder buffer (TransactionTooLargeException), and the app closed.
+            val key = java.util.UUID.randomUUID().toString()
+            exportHandoff[key] = ArrayList(ids)
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DOWNLOAD)
-                putStringArrayListExtra(EX_IDS, ArrayList(ids))
+                putExtra(EX_IDS_KEY, key)
                 tree?.let { putExtra(EX_TREE, it.toString()) }
             }
-            ContextCompat.startForegroundService(ctx, i)
+            try { ContextCompat.startForegroundService(ctx, i) } catch (e: Exception) {
+                exportHandoff.remove(key)
+                logException(android.util.Log.ERROR, "ConversionService", "export not started", e)
+            }
         }
+        /** Ids of an export handed to the service in this process (see [startDownload]). */
+        private val exportHandoff = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
+        private const val EX_IDS_KEY = "ids_key"
 
         /** Answer "delete or keep the original?" of an ASK conversion (same as its notification). */
         fun resolveOriginal(ctx: Context, originalId: String, delete: Boolean) {

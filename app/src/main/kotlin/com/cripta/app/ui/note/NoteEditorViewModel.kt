@@ -1,5 +1,6 @@
 package com.cripta.app.ui.note
 
+import com.cripta.app.ui.safeScope
 import com.cripta.app.R
 import com.cripta.app.str
 
@@ -91,7 +92,7 @@ class NoteEditorViewModel @Inject constructor(
         // Never write over a note whose content we failed to read (see [loadFailed]).
         if (loadFailed) return
         saving = true
-        viewModelScope.launch {
+        safeScope.launch {
             try {
                 // What is written is what "saved" means: anything typed meanwhile is not saved yet.
                 val writtenName = name; val writtenText = text
@@ -116,7 +117,7 @@ class NoteEditorViewModel @Inject constructor(
     }
 
     /** Delete an existing note honouring the trash setting; [onDone] gets true when trashed. */
-    fun delete(id: String, onDone: (trashed: Boolean) -> Unit) = viewModelScope.launch {
+    fun delete(id: String, onDone: (trashed: Boolean) -> Unit) = safeScope.launch {
         try {
             val trashed = repo.deleteOrTrash(id)
             if (!trashed) thumbs.evict(id)

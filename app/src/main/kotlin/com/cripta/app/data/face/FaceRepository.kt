@@ -570,7 +570,9 @@ class FaceRepository @Inject constructor(
      * What "Annulla" needs of a merge beyond the log row: both people as they were (profile, cover,
      * star) and the media both had linked, which the merge folded into one link.
      */
-    private class MergeRecord(val logId: Long, val dropped: PersonEntity?, val keptBefore: PersonEntity?, val sharedLinks: Set<String>)
+    private class MergeRecord(val logId: Long, val dropped: PersonEntity?, val keptBefore: PersonEntity?, val sharedLinks: Set<String>,
+                              /** Saved filters the merge rewrote: id -> (before, after). */
+                              val filters: Map<Long, Pair<String, String>> = emptyMap())
 
     /** Move everything of [drop] into [keep], remembering it for "Annulla". */
     private suspend fun mergeRows(keep: Long, drop: Long, score: Float, auto: Boolean): MergeRecord {
@@ -600,11 +602,14 @@ class FaceRepository @Inject constructor(
         // Saved filters on the merged person look for the one kept: left with its id, they found
         // nobody ("Senza nome", no media).
         val filters = db.savedFilterDao()
+        val rewritten = HashMap<Long, Pair<String, String>>()
         for (sf in filters.allNow()) {
             val json = runCatching { org.json.JSONObject(sf.json) }.getOrNull() ?: continue
-            com.cripta.app.data.SavedFilterJson.withPersonMerged(json, drop, keep)?.let { filters.setJson(sf.id, it.toString()) }
+            com.cripta.app.data.SavedFilterJson.withPersonMerged(json, drop, keep)?.toString()?.let {
+                filters.setJson(sf.id, it); rewritten[sf.id] = sf.json to it
+            }
         }
-        return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet())
+        return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet(), rewritten)
     }
 
     // ---- What the screens show -------------------------------------------------------------
@@ -751,6 +756,12 @@ class FaceRepository @Inject constructor(
         // The kept person gives back the notes, links and star the merge added to them.
         rec.keptBefore?.let { dao.setProfile(it.id, it.notes, it.links); dao.setFavorite(it.id, it.favorite) }
         for (t in tracks) dao.addRejection(FaceRejectionEntity(t, m.keptId, m.similarity))
+        // Saved filters name the merged person again, as before: left pointing at the kept one,
+        // a filter for the merged person went on showing the other's media. Not one changed since.
+        if (rec.filters.isNotEmpty()) {
+            val filters = db.savedFilterDao()
+            for (sf in filters.allNow()) rec.filters[sf.id]?.let { (before, after) -> if (sf.json == after) filters.setJson(sf.id, before) }
+        }
         dao.deleteMerge(rec.logId)
     }
 
@@ -1208,6 +1219,9 @@ class FaceRepository @Inject constructor(
             val now = dao.scanOf(file.id)
             if (now == null || now.scannedAt != scan.scannedAt) return@change null
             var joined = 0; var aside = 0
+            // A face the user said is not that person ("Non è lui/lei") is never joined to them,
+            // whatever the closer look thinks.
+            val refused = verdicts.keys.chunked(500).flatMap { dao.rejectionsOfTracks(it) }.map { it.trackId to it.personId }.toSet()
             for (p in people) {
                 // Faces added by hand (no frame) are not joined into: a new analysis keeps them as they are.
                 val mine = dao.tracksOfFile(file.id).filter { it.personId == p.personId && it.state == "manual" && it.frames != 0L &&
@@ -1216,7 +1230,7 @@ class FaceRepository @Inject constructor(
                 // The same person confirmed twice in this video, never in one frame: one face.
                 for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = dao.tracks(listOf(joinRows(listOf(target, o)))).first()
                 for ((id, v) in verdicts) {
-                    if (v != FaceFollower.Verdict.Join(p.personId)) continue
+                    if (v != FaceFollower.Verdict.Join(p.personId) || (id to p.personId) in refused) continue
                     // Changed meanwhile (given to someone, deleted, joined): left alone. Never two faces of one frame.
                     val row = dao.tracks(listOf(id)).firstOrNull() ?: continue
                     if (!loose(row.personId, row.state, row.frames) || row.frames and target.frames != 0L) continue

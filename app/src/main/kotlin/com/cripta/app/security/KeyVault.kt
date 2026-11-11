@@ -320,6 +320,7 @@ class KeyVault @Inject constructor(
         val files = runCatching { blobs.wipeAll() }.getOrDefault(false)
         // Covers sealed with the lost key (picked ones and the cache): unreadable, only taking space.
         runCatching { java.io.File(context.filesDir, "covers").deleteRecursively() }
+        runCatching { java.io.File(context.filesDir, "covers-restore").deleteRecursively() }
         runCatching { java.io.File(context.cacheDir, "thumbs").deleteRecursively() }
         if (!database || !files) {
             android.util.Log.w("KeyVault", "vault reset incomplete: database=$database blobs=$files")
@@ -330,7 +331,8 @@ class KeyVault @Inject constructor(
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }
         runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2).deleteKey() }
         runCatching { PinCrypto.deletePepper() }
-        prefs.edit().clear().apply()
+        // Written now: the app restarts its process right after a reset.
+        prefs.edit().clear().commit()
         return true
     }
 

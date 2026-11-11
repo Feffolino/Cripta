@@ -249,9 +249,13 @@ class MainActivity : FragmentActivity() {
                                     android.widget.Toast.makeText(this@MainActivity, str(R.string.reset_failed), android.widget.Toast.LENGTH_LONG).show()
                                     return@launch
                                 }
-                                keyInvalidated.value = false
-                                authUi.value = authUi.value.copy(firstRun = !keyVault.isInitialized, error = null)
-                                authenticate() // key gone -> this now runs first-time setup
+                                runCatching { settings.forgetVaultIds() }
+                                // A fresh process for the new vault: a job of the old one still
+                                // running (an import holding its keys) wrote its row into the new
+                                // database, and the screens kept the old vault's folder, path and
+                                // queues. The restarted app runs the first-time setup (key gone).
+                                startActivity(Intent.makeRestartActivityTask(componentName))
+                                Runtime.getRuntime().exit(0)
                             }
                         },
                         onDismiss = { keyInvalidated.value = false },

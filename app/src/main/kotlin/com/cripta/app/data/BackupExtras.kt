@@ -7,6 +7,7 @@ import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
 import com.cripta.app.data.db.DupApartEntity
 import com.cripta.app.data.db.DupPrintEntity
+import com.cripta.app.data.db.FaceApartEntity
 import com.cripta.app.data.db.FaceRejectionEntity
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
@@ -116,6 +117,12 @@ internal object BackupExtras {
                     put(JSONObject().put("t", it.trackId).put("p", it.personId).put("sim", it.similarity.toDouble()))
                 }
             })
+            // "Dividi il gruppo": without them, faces the user split came back as one group.
+            .put("faceApart", JSONArray().apply {
+                if (people) faces.apart().filter { it.a in trackIds && it.b in trackIds }.forEach {
+                    put(JSONObject().put("a", it.a).put("b", it.b))
+                }
+            })
             .put("prints", JSONArray().apply {
                 prints.forEach { put(JSONObject().put("f", fileIndex[it.fileId]).put("part", it.part).put("start", it.startMs)
                     .put("status", it.status).put("matched", it.matched)) }
@@ -167,25 +174,30 @@ internal object BackupExtras {
         val faces = db.faceDao()
         val intro = db.introDao()
         fun file(i: Any?): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) }
-        fun originOf(v: Any?): String = file(v) ?: (v as? String).orEmpty()
         /** A restored file, or one already in the vault: for links that only add. */
         fun anyFile(i: Any?): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) ?: known.getOrNull(it) }
+        // The source video of a rule or a discarded sound may be one the vault already had: by
+        // newIds alone its origin became "", and the entry opened nothing.
+        fun originOf(v: Any?): String = anyFile(v) ?: (v as? String).orEmpty()
 
         contents?.analysis = listOf("prints", "signatures", "rules", "rejected", "dupPrints", "dupApart")
             .any { (o.optJSONArray(it)?.length() ?: 0) > 0 }
         val personIds = HashMap<Long, Long>()
         val covers = HashMap<Long, Long>()
-        // Named people already in the vault: the archive's person of that name is that one (only
-        // gaining media), as tags and folders are matched by name. Restored twice, an archive no
-        // longer made a second profile of everyone.
-        val byName = faces.persons().filter { it.name.isNotBlank() }.associateBy { it.name }
+        // A person already in the vault: the archive's person is that one (only gaining media), so
+        // an archive restored twice no longer made a second profile of everyone. Known by name and
+        // the moment the profile was made: two people may share a name (another "Marco" was given
+        // this one's faces), and each profile here stands for one of the archive's at most.
+        val existing = faces.persons().filter { it.name.isNotBlank() }
+            .groupBy { it.name to it.createdAt }.mapValues { it.value.toMutableList() }.toMutableMap()
         /** Profiles made by this restore, and those that got something of their own (a face, a media). */
         val created = HashSet<Long>(); val filled = HashSet<Long>()
         o.optJSONArray("persons")?.let { a ->
             for (i in 0 until a.length()) {
                 val p = a.getJSONObject(i)
                 val name = p.optString("name")
-                val same = byName[name]
+                val same = if (name.isBlank() || !p.has("createdAt")) null
+                    else existing[name to p.optLong("createdAt")]?.removeFirstOrNull()
                 if (same != null) { personIds[p.getLong("id")] = same.id; continue }
                 val id = faces.addPerson(PersonEntity(name = p.optString("name"), ignored = p.optBoolean("ignored"), favorite = p.optBoolean("favorite"),
                     createdAt = p.optLong("createdAt", System.currentTimeMillis()), notes = p.optString("notes"), links = p.optString("links")))
@@ -256,6 +268,15 @@ internal object BackupExtras {
                 val p = personIds[r.getLong("p")] ?: continue
                 faces.addRejection(FaceRejectionEntity(t, p, r.optDouble("sim", 0.0).toFloat()))
             }
+        }
+        o.optJSONArray("faceApart")?.let { a ->
+            val pairs = (0 until a.length()).mapNotNull { i ->
+                val d = a.getJSONObject(i)
+                val x = trackIds[d.getLong("a")] ?: return@mapNotNull null
+                val y = trackIds[d.getLong("b")] ?: return@mapNotNull null
+                FaceApartEntity(minOf(x, y), maxOf(x, y))
+            }
+            if (pairs.isNotEmpty()) faces.addApart(pairs)
         }
         o.optJSONArray("prints")?.let { a ->
             for (i in 0 until a.length()) {

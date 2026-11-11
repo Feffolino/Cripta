@@ -1,5 +1,6 @@
 package com.cripta.app.ui.vault
 
+import com.cripta.app.ui.safeScope
 import com.cripta.app.logException
 import com.cripta.app.R
 import com.cripta.app.str
@@ -166,7 +167,7 @@ class VaultViewModel @Inject constructor(
      * Back during a slow shred used to stop it after a few files, leaving the rest in the vault.
      * [toEnd] = false for read-only work (covers), which may as well stop with the screen.
      */
-    private fun launchBulk(what: String, toEnd: Boolean = true, block: suspend () -> Unit) = viewModelScope.launch {
+    private fun launchBulk(what: String, toEnd: Boolean = true, block: suspend () -> Unit) = safeScope.launch {
         val held = session.beginWork()
         // Already locked: nothing can be read or written, don't even start.
         if (!held) return@launch
@@ -189,7 +190,7 @@ class VaultViewModel @Inject constructor(
      * many items were really done (0 when the vault was locked or the first one failed), so the
      * announcement states the real result and never the number asked for.
      */
-    private fun launchBulkCounted(what: String, onDone: (Int) -> Unit, block: suspend (BulkCount) -> Unit) = viewModelScope.launch {
+    private fun launchBulkCounted(what: String, onDone: (Int) -> Unit, block: suspend (BulkCount) -> Unit) = safeScope.launch {
         val count = BulkCount()
         val held = session.beginWork()
         if (held) {
@@ -208,7 +209,7 @@ class VaultViewModel @Inject constructor(
 
     /** Like [launchBulkCounted] for a tag change: [onDone] gets what was really changed (empty if nothing). */
     private fun launchTagChange(what: String, onDone: (com.cripta.app.data.TagLinkDiff) -> Unit,
-                                block: suspend () -> com.cripta.app.data.TagLinkDiff) = viewModelScope.launch {
+                                block: suspend () -> com.cripta.app.data.TagLinkDiff) = safeScope.launch {
         var diff = com.cripta.app.data.TagLinkDiff()
         if (session.beginWork()) {
             try {
@@ -319,10 +320,10 @@ class VaultViewModel @Inject constructor(
     val foldersCollapsed: StateFlow<Boolean> =
         settings.settings.map { it.foldersCollapsed }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    fun setFoldersCollapsed(collapsed: Boolean) = viewModelScope.launch { settings.setFoldersCollapsed(collapsed) }
+    fun setFoldersCollapsed(collapsed: Boolean) = safeScope.launch { settings.setFoldersCollapsed(collapsed) }
 
-    fun setViewMode(mode: ViewMode) = viewModelScope.launch { settings.setViewMode(mode) }
-    fun setGridColumns(cols: Int, landscape: Boolean = false) = viewModelScope.launch { settings.setGridColumns(cols, landscape) }
+    fun setViewMode(mode: ViewMode) = safeScope.launch { settings.setViewMode(mode) }
+    fun setGridColumns(cols: Int, landscape: Boolean = false) = safeScope.launch { settings.setGridColumns(cols, landscape) }
 
     val allFolders: StateFlow<List<FolderEntity>> =
         repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -352,7 +353,7 @@ class VaultViewModel @Inject constructor(
 
     fun setSort(key: com.cripta.app.data.SortKey, ascending: Boolean) {
         val folderId = currentFolderId.value
-        viewModelScope.launch {
+        safeScope.launch {
             if (folderId == null) settings.setSort(key, ascending)
             else repo.setFolderSort(folderId, key, ascending)
         }
@@ -360,9 +361,9 @@ class VaultViewModel @Inject constructor(
 
     fun setInProgress(b: Boolean) { filters.value = filters.value.copy(inProgress = b) }
 
-    fun setFolderFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { repo.setFolderFavorite(id, favorite) }
+    fun setFolderFavorite(id: Long, favorite: Boolean) = safeScope.launch { repo.setFolderFavorite(id, favorite) }
     /** [onDone] gets whether the folder really changed (it may have gone meanwhile). */
-    fun setFolderRandomExcluded(id: Long, excluded: Boolean, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun setFolderRandomExcluded(id: Long, excluded: Boolean, onDone: (Boolean) -> Unit = {}) = safeScope.launch {
         onDone(runCatching { repo.setFolderRandomExcluded(id, excluded) }.getOrDefault(false))
     }
 
@@ -464,7 +465,7 @@ class VaultViewModel @Inject constructor(
     /** Batch conversion with the first-conversion choice (optionally remembered); [fileIds]
      *  already narrowed by [convertibleIds]. */
     fun convertToMp4(fileIds: List<String>, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
-        if (rememberChoice) viewModelScope.launch { settings.setConvertAfter(after) }
+        if (rememberChoice) safeScope.launch { settings.setConvertAfter(after) }
         val ids = fileIds.toSet()
         files.value.map { it.file }
             .filter { it.id in ids && VaultRepository.isVideo(it.mimeType) }
@@ -488,7 +489,7 @@ class VaultViewModel @Inject constructor(
 
     /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
     /** "Confronta audio": what the starts of two analysed videos share, for [onResult]. */
-    fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = viewModelScope.launch {
+    fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = safeScope.launch {
         onResult(runCatching { intro.compare(idA, idB) }.getOrElse { str(R.string.compare_failed) })
     }
 
@@ -553,7 +554,7 @@ class VaultViewModel @Inject constructor(
     }
 
     /** Open [folderId] directly (e.g. from Home), rebuilding its breadcrumb. */
-    private fun openFolderById(folderId: Long) = viewModelScope.launch {
+    private fun openFolderById(folderId: Long) = safeScope.launch {
         val chain = repo.folderPath(folderId)
         if (chain.isEmpty()) return@launch
         filters.value = Filters()
@@ -564,15 +565,15 @@ class VaultViewModel @Inject constructor(
 
     init {
         // Requests from other screens (Home folder card, saved-filter shortcut).
-        viewModelScope.launch {
+        safeScope.launch {
             navigator.pendingFolder.collect { id -> if (id != null) { openFolderById(id); navigator.consumeFolder() } }
         }
-        viewModelScope.launch {
+        safeScope.launch {
             navigator.pendingFilters.collect { f -> if (f != null) { filters.value = f; navigator.consumeFilters() } }
         }
         // A tag deleted while it is in the active filters leaves them (the saved ones are pruned by
         // the repository): an id of nothing would keep an AND filter at zero results.
-        viewModelScope.launch {
+        safeScope.launch {
             var known = emptySet<Long>()
             repo.tags().collect { list ->
                 val ids = list.mapTo(HashSet()) { it.id }
@@ -586,7 +587,7 @@ class VaultViewModel @Inject constructor(
             }
         }
         // Cartelle tab tapped again while already on it: back to the root.
-        viewModelScope.launch {
+        safeScope.launch {
             VaultTabReselect.events.collect { goToDepth(0) }
         }
     }
@@ -595,11 +596,11 @@ class VaultViewModel @Inject constructor(
     val savedFilters: StateFlow<List<com.cripta.app.data.db.SavedFilterEntity>> =
         refresh.flatMapLatest { repo.savedFilters() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun saveCurrentFilter(name: String) = viewModelScope.launch {
+    fun saveCurrentFilter(name: String) = safeScope.launch {
         if (name.isNotBlank() && filters.value.active) repo.saveFilter(name, filters.value.toJson())
     }
     fun applySavedFilter(json: String) { filtersFromJson(json)?.let { filters.value = it } }
-    fun deleteSavedFilter(id: Long) = viewModelScope.launch { repo.deleteSavedFilter(id) }
+    fun deleteSavedFilter(id: Long) = safeScope.launch { repo.deleteSavedFilter(id) }
 
     /** Whether deleting moves to the trash (for the confirmation wording). */
     /** Settings › "Filtri solo nella cartella corrente": the empty state names the scope actually searched. */
@@ -672,7 +673,7 @@ class VaultViewModel @Inject constructor(
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
 
     // --- Actions ---
-    fun createFolder(name: String) = viewModelScope.launch {
+    fun createFolder(name: String) = safeScope.launch {
         repo.createFolder(name, currentFolderId.value)    }
 
     /** [onDone] gets 1 when the folder was deleted, 0 when it was not. */
@@ -681,15 +682,15 @@ class VaultViewModel @Inject constructor(
         c.done = 1
     }
 
-    fun renameFolder(folder: FolderEntity, name: String) = viewModelScope.launch {
+    fun renameFolder(folder: FolderEntity, name: String) = safeScope.launch {
         repo.renameFolder(folder, name)    }
 
-    fun setFolderStyle(folderId: Long, color: Int?, icon: String?, iconChanged: Boolean, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun setFolderStyle(folderId: Long, color: Int?, icon: String?, iconChanged: Boolean, onDone: (Boolean) -> Unit = {}) = safeScope.launch {
         onDone(runCatching { repo.setFolderStyle(folderId, color, icon, iconChanged) }.getOrDefault(false))
     }
 
     /** [onDone] gets whether the cover was really set (a file moved or deleted meanwhile is refused). */
-    fun setFolderCover(folderId: Long, fileId: String?, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+    fun setFolderCover(folderId: Long, fileId: String?, onDone: (Boolean) -> Unit = {}) = safeScope.launch {
         onDone(runCatching { repo.setFolderCover(folderId, fileId) }.getOrDefault(false))
     }
 
@@ -699,7 +700,7 @@ class VaultViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
     }
 
-    fun toggleFavorite(fileId: String, fav: Boolean) = viewModelScope.launch {
+    fun toggleFavorite(fileId: String, fav: Boolean) = safeScope.launch {
         repo.toggleFavorite(fileId, fav)    }
 
     fun setFavorite(fileIds: List<String>, fav: Boolean) = launchBulk("setFavorite") {
@@ -774,7 +775,7 @@ class VaultViewModel @Inject constructor(
     }
 
     /** [onNotDeleted] gets how many originals the provider kept (0 = all gone). */
-    fun deleteOriginals(uris: List<android.net.Uri>, onNotDeleted: (Int) -> Unit = {}) = viewModelScope.launch {
+    fun deleteOriginals(uris: List<android.net.Uri>, onNotDeleted: (Int) -> Unit = {}) = safeScope.launch {
         com.cripta.app.work.ConversionService.dismissImportOriginalsChoice(appContext)
         val kept = runCatching { repo.deleteOriginals(uris) }.getOrDefault(uris.size)
         repo.clearPendingOriginals()
@@ -799,7 +800,7 @@ class VaultViewModel @Inject constructor(
     fun revertTagLinks(diff: com.cripta.app.data.TagLinkDiff) = launchBulk("revertTagLinks") { repo.revertTagLinks(diff) }
 
     /** Create a tag with its look; a name already in the library is said so, not overwritten. */
-    fun createTag(draft: TagDraft) = viewModelScope.launch {
+    fun createTag(draft: TagDraft) = safeScope.launch {
         val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (!r.created) android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
     }
@@ -809,15 +810,15 @@ class VaultViewModel @Inject constructor(
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+    fun deleteTag(id: Long) = safeScope.launch { repo.deleteTag(id) }
 
-    fun saveTag(id: Long, draft: TagDraft) = viewModelScope.launch {
+    fun saveTag(id: Long, draft: TagDraft) = safeScope.launch {
         val r = repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)
         if (r == com.cripta.app.data.TagSave.NAME_TAKEN)
             android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    fun renameFile(fileId: String, newName: String) = viewModelScope.launch {
+    fun renameFile(fileId: String, newName: String) = safeScope.launch {
         repo.renameFile(fileId, newName)    }
 
 
@@ -868,7 +869,7 @@ class VaultViewModel @Inject constructor(
      * Exclusions always apply, including when the folder itself is open. Never fall back to
      * excluded files when every candidate was excluded.
      */
-    fun randomShuffleOpen(open: (String) -> Unit) = viewModelScope.launch {
+    fun randomShuffleOpen(open: (String) -> Unit) = safeScope.launch {
         val scoped = randomScopedToView
         val eligible = repo.randomEligibleIds()
         val ids = if (scoped) {

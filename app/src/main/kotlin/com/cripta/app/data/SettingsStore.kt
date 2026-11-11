@@ -517,6 +517,16 @@ class SettingsStore @Inject constructor(
     suspend fun setTrashEnabled(v: Boolean) { context.dataStore.edit { it[trashKey] = v } }
     suspend fun setSimilarOnImport(v: Boolean) { context.dataStore.edit { it[similarOnImportKey] = v } }
     suspend fun setTrashDays(v: Int) { context.dataStore.edit { it[trashDaysKey] = v.coerceIn(1, 90) } }
+    /**
+     * The vault was wiped (reset): what named its folders and tags by id goes with it. Kept, a new
+     * folder or tag given the same id inherited the old one's exclusion from backups, or became
+     * the downloads' destination, without the user choosing it.
+     */
+    suspend fun forgetVaultIds() {
+        context.dataStore.edit {
+            it.remove(dlFolderKey); it.remove(dlTagsKey); it.remove(bkExcludedFoldersKey)
+        }
+    }
     suspend fun setDownloadDefaults(d: DownloadDefaults) {
         context.dataStore.edit {
             it[dlFolderKey] = d.folderId ?: -1L

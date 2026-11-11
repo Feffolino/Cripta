@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.safeScope
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -71,8 +72,20 @@ class ViewerViewModel @Inject constructor(
      * instead of the viewer landing on the first file of that old queue.
      */
     val ids: List<String> = savedState.get<String>("fileId").let { id ->
-        if (id.isNullOrEmpty() || id in queue.ids) queue.ids else listOf(id)
-    }
+        // The browse order lives in memory only: after Android killed the process in the
+        // background, the restored viewer had the opened file alone. Kept in the saved state too
+        // (within a size the saved state can carry).
+        val q = queue.ids.ifEmpty { savedState.get<ArrayList<String>>(SAVED_QUEUE).orEmpty() }
+        if (id.isNullOrEmpty() || id in q) q else listOf(id)
+    }.also { if (it.size <= MAX_SAVED_QUEUE) savedState[SAVED_QUEUE] = ArrayList(it) }
+
+    /**
+     * The page to start on: the file shown when the process was killed (swiped to after the
+     * opened one), else the opened one. The route keeps naming the file first opened.
+     */
+    val startId: String? = savedState.get<String>(SAVED_CURRENT) ?: savedState.get<String>("fileId")
+    private val saved = savedState
+    fun setCurrent(id: String) { saved[SAVED_CURRENT] = id }
 
     /**
      * The pages the viewer shows: the browse order, minus files deleted from the viewer (so a delete
@@ -168,7 +181,7 @@ class ViewerViewModel @Inject constructor(
         private set
 
     init {
-        viewModelScope.launch {
+        safeScope.launch {
             settingsStore.settings.collect { s ->
                 _playback.value = s.toPlayback()
                 if (!settingsRead.value) {
@@ -185,7 +198,7 @@ class ViewerViewModel @Inject constructor(
     fun setRotationLock(orientation: Int?) {
         if (orientation != null) lockedOrientation = orientation
         rotationLocked.value = orientation != null
-        viewModelScope.launch { settingsStore.setViewerRotationLock(orientation ?: -1) }
+        safeScope.launch { settingsStore.setViewerRotationLock(orientation ?: -1) }
     }
 
     /** Cover of any file of the browse list (filmstrip). */
@@ -213,7 +226,7 @@ class ViewerViewModel @Inject constructor(
                 .distinct().sorted().toLongArray()
         }
     suspend fun faceCrop(trackId: Long) = faces.crop(trackId)
-    private fun faceAction(block: suspend () -> Unit) = viewModelScope.launch {
+    private fun faceAction(block: suspend () -> Unit) = safeScope.launch {
         try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             faceMessage.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
         }
@@ -248,7 +261,7 @@ class ViewerViewModel @Inject constructor(
     fun undoFaceChange() {
         val u = faceUndo.value ?: return
         faceUndo.value = null
-        viewModelScope.launch {
+        safeScope.launch {
             try { u.undo() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
                 faceMessage.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
                 // Not undone: "Annulla" stays on offer to try again (unless something newer took its place).
@@ -267,7 +280,7 @@ class ViewerViewModel @Inject constructor(
     /** "Mostra tutte" in the details' tags: kept for every media until "Mostra meno". */
     val detailsAllTags: StateFlow<Boolean> = settingsStore.settings.map { it.detailsAllTags }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, false)
-    fun setDetailsAllTags(v: Boolean) = viewModelScope.launch { settingsStore.setDetailsAllTags(v) }
+    fun setDetailsAllTags(v: Boolean) = safeScope.launch { settingsStore.setDetailsAllTags(v) }
     /** "Togli": [fileId], added to [personId] by hand, is not theirs any more. */
     fun unlinkPerson(fileId: String, personId: Long) = faceChange {
         faceUndo.value = FaceUndo(fileId, str(R.string.face_removed_from_person), faces.unlink(personId, fileId))
@@ -407,7 +420,7 @@ class ViewerViewModel @Inject constructor(
     suspend fun introStatus(fileId: String): String? = runCatching { intro.printStatus(fileId) }.getOrNull()
 
     /** "Applica a tutti i video con la stessa sigla". */
-    fun applySegmentToAll(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) = viewModelScope.launch {
+    fun applySegmentToAll(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) = safeScope.launch {
         val n = runCatching { intro.applyToAll(file, kind) }.getOrNull()
         _message.value = when {
             n == null -> str(R.string.segment_no_sound)
@@ -429,21 +442,21 @@ class ViewerViewModel @Inject constructor(
         val start = (seg.startMs + startDelta).coerceIn(0L, max)
         val end = (seg.endMs + endDelta).coerceIn(0L, max)
         if (end < start + MIN_MARK_MS) return
-        viewModelScope.launch { intro.setManual(file.id, kind, start, end) }
+        safeScope.launch { intro.setManual(file.id, kind, start, end) }
     }
 
     /** "Fine qui". False when the end would not come after the start. */
     fun markEnd(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, startMs: Long, posMs: Long): Boolean {
         if (posMs < startMs + MIN_MARK_MS) { _message.value = str(R.string.end_after_start); return false }
-        viewModelScope.launch { intro.setManual(file.id, kind, startMs, posMs) }
+        safeScope.launch { intro.setManual(file.id, kind, startMs, posMs) }
         return true
     }
 
     fun removeSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind) =
-        viewModelScope.launch { intro.setNone(file.id, kind) }
+        safeScope.launch { intro.setNone(file.id, kind) }
 
     fun searchSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, seg: com.cripta.app.data.db.MediaSegmentEntity) =
-        viewModelScope.launch {
+        safeScope.launch {
             val n = intro.searchOthers(file.id, kind, seg.startMs, seg.endMs)
             _message.value = when {
                 n == null -> str(R.string.stretch_too_short)
@@ -454,7 +467,7 @@ class ViewerViewModel @Inject constructor(
 
     fun rejectSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind,
                       seg: com.cripta.app.data.db.MediaSegmentEntity, everywhere: Boolean) =
-        viewModelScope.launch {
+        safeScope.launch {
             if (!everywhere) { intro.setNone(file.id, kind); return@launch }
             val n = intro.rejectEverywhere(file, kind, seg.startMs, seg.endMs)
             _message.value = if (n > 0) str(R.string.discarded_here_and_n, n) else str(R.string.discarded_everywhere)
@@ -496,7 +509,7 @@ class ViewerViewModel @Inject constructor(
     fun saveNoteText(file: FileEntity, before: String, text: String, onReverted: (String) -> Unit) {
         val s = noteSaves.getOrPut(file.id) { NoteSaves(before, before) }
         s.wanted = text; s.pending++
-        viewModelScope.launch {
+        safeScope.launch {
             try {
                 noteSave.withLock {
                     val t = s.wanted
@@ -519,24 +532,24 @@ class ViewerViewModel @Inject constructor(
         }
     }
 
-    fun toggleFavorite(file: FileEntity) = viewModelScope.launch {
+    fun toggleFavorite(file: FileEntity) = safeScope.launch {
         repo.toggleFavorite(file.id, !file.isFavorite)
         _refresh.value++
     }
 
     /** Add one tag by name (new names become tags) without touching the file's other tags. */
-    fun addTag(fileId: String, name: String) = viewModelScope.launch {
+    fun addTag(fileId: String, name: String) = safeScope.launch {
         repo.addTags(fileId, listOf(name)); _refresh.value++
     }
 
     /** Store [url] as the file's source link (blank clears it). */
-    fun setSourceUrl(fileId: String, url: String?) = viewModelScope.launch {
+    fun setSourceUrl(fileId: String, url: String?) = safeScope.launch {
         repo.setSourceUrl(fileId, url); _refresh.value++
     }
 
 
     /** Quick-tag bar: toggle one tag on the current file. */
-    fun toggleTag(fileId: String, tagId: Long) = viewModelScope.launch {
+    fun toggleTag(fileId: String, tagId: Long) = safeScope.launch {
         repo.toggleFileTag(fileId, tagId); _refresh.value++
     }
 
@@ -549,9 +562,9 @@ class ViewerViewModel @Inject constructor(
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun deleteTag(id: Long) = viewModelScope.launch { repo.deleteTag(id) }
+    fun deleteTag(id: Long) = safeScope.launch { repo.deleteTag(id) }
 
-    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
         if (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers) == com.cripta.app.data.TagSave.NAME_TAKEN)
             _message.value = str(R.string.tag_exists, draft.name)
         _refresh.value++
@@ -561,7 +574,7 @@ class ViewerViewModel @Inject constructor(
      * Create a tag and put it on the file, one after the other in one coroutine: the file's tags are
      * added to, never replaced with a list read before (a change made meanwhile is kept).
      */
-    fun createTagOn(fileId: String, draft: com.cripta.app.ui.vault.TagDraft) = viewModelScope.launch {
+    fun createTagOn(fileId: String, draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
         val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (r.id > 0) repo.addTagIds(fileId, listOf(r.id))
         _refresh.value++
@@ -573,7 +586,7 @@ class ViewerViewModel @Inject constructor(
         _message.value = str(R.string.export_started_in, exportFolder(file.mimeType))
     }
 
-    fun delete(fileId: String, onDone: () -> Unit) = viewModelScope.launch {
+    fun delete(fileId: String, onDone: () -> Unit) = safeScope.launch {
         // To the trash when enabled (cover kept for a restore), otherwise shredded at once.
         try {
             val trashed = repo.deleteOrTrash(fileId)
@@ -588,6 +601,10 @@ class ViewerViewModel @Inject constructor(
     }
 
     companion object {
+        private const val SAVED_QUEUE = "viewer_queue"
+        private const val SAVED_CURRENT = "viewer_current"
+        /** Ids the saved state carries (about 40 bytes each, well under what a saved state may hold). */
+        private const val MAX_SAVED_QUEUE = 3000
         /** Shortest intro/outro a mark can make. */
         private const val MIN_MARK_MS = 1_000L
 
@@ -642,7 +659,7 @@ class ViewerViewModel @Inject constructor(
 
     init {
         // Surface completions from the service (which may outlive a single viewer instance).
-        viewModelScope.launch {
+        safeScope.launch {
             repo.convertEvents.collect { event ->
                 if (event.ask) {
                     _convertedId.value = event.newId
@@ -673,7 +690,7 @@ class ViewerViewModel @Inject constructor(
 
     /** Convert with the choice made in the first-conversion dialog, optionally remembering it. */
     fun convertToMp4(file: FileEntity, after: com.cripta.app.data.ConvertAfter, rememberChoice: Boolean) {
-        if (rememberChoice) viewModelScope.launch { settingsStore.setConvertAfter(after) }
+        if (rememberChoice) safeScope.launch { settingsStore.setConvertAfter(after) }
         com.cripta.app.work.ConversionService.startConvert(appContext, file.id, after)
         _message.value = str(R.string.conversion_started)
     }

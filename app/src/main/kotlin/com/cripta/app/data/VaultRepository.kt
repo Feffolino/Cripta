@@ -98,8 +98,11 @@ class VaultRepository @Inject constructor(
     fun updateConvertStatus(f: (ConvertStatus) -> ConvertStatus) = _convertStatus.update(f)
     fun dismissConvertResult() = _convertStatus.update { it.copy(lastResult = null) }
 
+    private fun originalQuestion(id: String, name: String, copyId: String) = com.cripta.app.data.db.PendingJobEntity(
+        "original-$id", "conversion_original", org.json.JSONObject().put("id", id).put("name", name).put("copyId", copyId).toString(), now())
+
     suspend fun awaitConvertedOriginal(id: String, name: String, copyId: String) {
-        putPendingJob("original-$id", "conversion_original", org.json.JSONObject().put("id", id).put("name", name).put("copyId", copyId).toString())
+        withContext(Dispatchers.IO) { runCatching { db.pendingJobDao().put(originalQuestion(id, name, copyId)) } }
         _convertStatus.update { it.awaiting(ConvertedOriginal(id, name, copyId)) }
     }
 
@@ -526,12 +529,19 @@ class VaultRepository @Inject constructor(
             return@withContext emptyList()
         }
         val deletedIds = mutableListOf<String>()
+        // First closed to anything new: a file moved (or imported) into the folder while its files
+        // were being shredded was not among them, and stayed live in a folder deleted after it.
+        val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }
+        db.folderDao().setDeletedAt(live, now())
         // Files already in the trash stay restorable: they leave the folder (to the root) instead of
         // being destroyed along with it. Only the live ones are shredded.
         db.fileDao().detachTrashedFromFolders(subtree)
         for (fid in subtree) {
             db.fileDao().liveIdsInFolder(fid).forEach { if (secureDelete(it)) deletedIds.add(it) }
         }
+        // One that still got in (its folder checked just before it closed): not what was deleted,
+        // so kept, at the root.
+        for (fid in subtree) db.fileDao().liveIdsInFolder(fid).forEach { db.fileDao().move(it, null) }
         // delete deepest first
         for (fid in subtree.reversed()) {
             db.folderDao().byId(fid)?.let { db.folderDao().delete(it) }
@@ -628,7 +638,7 @@ class VaultRepository @Inject constructor(
                 originalName = name,
                 mimeType = mime,
                 sizeBytes = written,
-                folderId = liveFolder(folderId),
+                folderId = folderId,
                 createdAt = now(),
                 importedAt = now(),
                 wrappedKeyset = wrappedKeyset,
@@ -637,8 +647,11 @@ class VaultRepository @Inject constructor(
                 width = res?.first,
                 height = res?.second,
                 contentHash = md.digest().toHex(),
-            )
-            db.fileDao().insert(entity)
+            ).let { draft ->
+                // Its folder looked at with the insert: deleted for good meanwhile, the file
+                // stayed live in a folder that no longer existed (the root then).
+                db.withTransaction { draft.copy(folderId = liveFolder(folderId)).also { db.fileDao().insert(it) } }
+            }
             notifyChanged()
             stampBefore?.let { originalPrints[uri] = OriginalPrint(uuid, entity.contentHash, written, it) }
             entity
@@ -804,6 +817,11 @@ class VaultRepository @Inject constructor(
         original: FileEntity, mp4: File, replace: Boolean = false,
         /** The conversion's saved job: gone in the same transaction, so a crash never converts it twice. */
         pendingJobId: String? = null,
+        /**
+         * "Chiedi": the question about the original is saved in that same transaction. Saved after
+         * it, a process killed in between left neither the conversion nor the question.
+         */
+        askOriginal: Boolean = false,
     ): FileEntity = withContext(Dispatchers.IO) {
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
@@ -858,6 +876,7 @@ class VaultRepository @Inject constructor(
                 // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
                 if (replace) db.fileDao().setDeletedAt(original.id, now())
                 pendingJobId?.let { db.pendingJobDao().delete(it) }
+                if (askOriginal) db.pendingJobDao().put(originalQuestion(original.id, original.originalName, uuid))
                 entity
             }
             notifyChanged()
@@ -873,6 +892,11 @@ class VaultRepository @Inject constructor(
         video: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
         /** The download's saved job: gone in the same transaction, so a crash never downloads it twice. */
         pendingJobId: String? = null,
+        /**
+         * "Annulla" pressed: looked at while the video is encrypted and once more before it is
+         * listed. Encrypting a large video takes a while, and an Annulla in that time was ignored.
+         */
+        cancelled: () -> Boolean = { false },
     ): FileEntity =
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
@@ -881,7 +905,15 @@ class VaultRepository @Inject constructor(
             val written = try {
                 java.security.DigestInputStream(video.inputStream(), md).use { input ->
                     blobs.durableOutput(blobs.blob(uuid)).use { out ->
-                        FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { input.copyTo(it) }
+                        FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
+                            val buf = ByteArray(256 * 1024); var total = 0L
+                            while (true) {
+                                if (cancelled()) throw java.io.InterruptedIOException("cancelled")
+                                val n = input.read(buf); if (n < 0) break
+                                enc.write(buf, 0, n); total += n
+                            }
+                            total
+                        }
                     }
                 }
             } catch (e: Throwable) {
@@ -916,9 +948,12 @@ class VaultRepository @Inject constructor(
                 contentHash = md.digest().toHex(),
             )
             // The chosen folder may have been deleted (or trashed) while downloading: the root then.
-            val safeEntity = entity.copy(folderId = liveFolder(folderId))
+            // Looked at with the insert, so it cannot go in between.
+            var safeEntity = entity
             try {
                 db.withTransaction {
+                    if (cancelled()) throw java.io.InterruptedIOException("cancelled")
+                    safeEntity = entity.copy(folderId = liveFolder(folderId))
                     db.fileDao().insert(safeEntity)
                     linkExistingTags(uuid, tagIds)
                     pendingJobId?.let { db.pendingJobDao().delete(it) }
@@ -1428,17 +1463,18 @@ class VaultRepository @Inject constructor(
                     it.copyTo(out)
                 }
             }
-        } catch (e: Exception) {
-            // Don't leave a half-written pending entry behind in the gallery.
-            runCatching { resolver.delete(uri, null, null) }
+            values.clear()
+            values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
+            // No row updated: the entry stays pending (invisible in the gallery), so it is not a saved file.
+            if (resolver.update(uri, values, null, null) <= 0) {
+                runCatching { resolver.delete(uri, null, null) }
+                return@withContext null
+            }
+        } catch (e: Throwable) {
+            // Don't leave a pending entry behind in the gallery: half-written, or written whole and
+            // never published (the provider failed on the update, which was outside this cleanup).
+            withContext(kotlinx.coroutines.NonCancellable) { runCatching { resolver.delete(uri, null, null) } }
             throw e
-        }
-        values.clear()
-        values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
-        // No row updated: the entry stays pending (invisible in the gallery), so it is not a saved file.
-        if (resolver.update(uri, values, null, null) <= 0) {
-            runCatching { resolver.delete(uri, null, null) }
-            return@withContext null
         }
         uri
     }
@@ -1948,6 +1984,8 @@ class VaultRepository @Inject constructor(
 
     /** Covers picked by hand ([com.cripta.app.media.ThumbnailLoader]), sealed with the DEK. */
     private val customCoverDir get() = java.io.File(context.filesDir, "covers")
+    /** Covers a restore brings to files already in the vault, until it is committed. */
+    private val restoreCoverStage get() = java.io.File(context.filesDir, "covers-restore")
 
     /**
      * Size a backup with the chosen scope would take right now: (file count, bytes). The archive is
@@ -2176,6 +2214,7 @@ class VaultRepository @Inject constructor(
     }
 
     private suspend fun reconcileRestoreLocked() {
+        restoreCoverStage.deleteRecursively()
         val ids = blobs.restoreJournal().filter { RESTORED_ID.matches(it) }.distinct()
         if (ids.isNotEmpty()) {
             val listed = ids.chunked(500).flatMap { db.fileDao().existingIds(it) }.toSet()
@@ -2243,6 +2282,8 @@ class VaultRepository @Inject constructor(
                 val written = ArrayList<String>()
                 val covers = ArrayList<java.io.File>()
                 val knownCovers = ArrayList<String>()
+                // What an earlier restore killed halfway left there.
+                restoreCoverStage.deleteRecursively()
                 var settingsBytes: ByteArray? = null
                 val restored = try {
                     db.withTransaction { restoreArchive(manifest, inp, written, covers, knownCovers) { settingsBytes = it } }
@@ -2257,6 +2298,16 @@ class VaultRepository @Inject constructor(
                 }
                 // In: its blobs are the rows' now, nothing to check after a later crash.
                 blobs.clearRestoreJournal()
+                // Covers of files that were already here, held aside until now: written in place
+                // before the commit, a restore killed halfway left them on files it never changed.
+                knownCovers.removeAll { id ->
+                    val staged = java.io.File(restoreCoverStage, id)
+                    val target = java.io.File(customCoverDir.apply { mkdirs() }, id)
+                    val moved = !target.exists() && staged.renameTo(target)
+                    if (!moved) staged.delete()
+                    !moved
+                }
+                restoreCoverStage.deleteRecursively()
                 // Settings only once the vault part is in: a failed restore changes nothing.
                 val settingsOk = settingsBytes?.let { b ->
                     runCatching { settings.importFromBackup(b) }
@@ -2293,6 +2344,10 @@ class VaultRepository @Inject constructor(
         val fArr = manifest.getJSONArray("folders")
         val pending = (0 until fArr.length()).map { fArr.getJSONObject(it) }.toMutableList()
         val idMap = HashMap<Long, Long>()
+        // Folders of the vault already standing for one of the archive's, and those this restore
+        // made: two sibling folders of the same name are allowed, and the second one found the
+        // first (or one just restored) as "the same folder" and was merged into it.
+        val claimed = HashSet<Long>()
         var guard = 0
         while (pending.isNotEmpty() && guard < 10000) {
             guard++
@@ -2307,8 +2362,8 @@ class VaultRepository @Inject constructor(
                 // The same folder already here (same name, same place: the archive restored again):
                 // its files join it instead of a second folder with the same name and look.
                 val name = o.getString("name")
-                val existing = db.folderDao().liveNow().firstOrNull { f -> f.parentId == newParent && f.name == name }
-                if (existing != null) { idMap[oldId] = existing.id; it.remove(); progressed = true; continue }
+                val existing = db.folderDao().liveNow().firstOrNull { f -> f.parentId == newParent && f.name == name && f.id !in claimed }
+                if (existing != null) { idMap[oldId] = existing.id; claimed += existing.id; it.remove(); progressed = true; continue }
                 val newId = db.folderDao().insert(FolderEntity(
                     name = name, parentId = newParent, createdAt = o.optLong("createdAt", now()),
                     isFavorite = o.optBoolean("favorite", false),
@@ -2323,7 +2378,7 @@ class VaultRepository @Inject constructor(
                 val icon = if (o.has("icon") && !o.isNull("icon")) restoredIcon(o.getString("icon")) else null
                 if (color != null || icon != null) db.folderDao().setStyle(newId, color, icon)
                 if (emoji != null && icon == null) db.folderDao().setEmoji(newId, emoji)
-                idMap[oldId] = newId; it.remove(); progressed = true
+                idMap[oldId] = newId; claimed += newId; it.remove(); progressed = true
             }
             if (!progressed) break
         }
@@ -2444,7 +2499,8 @@ class VaultRepository @Inject constructor(
             val fresh = newIds.getOrNull(pos)
             val id = fresh
                 ?: known.getOrNull(pos)?.takeIf { !java.io.File(customCoverDir, it).exists() } ?: return@cover
-            val f = java.io.File(customCoverDir.apply { mkdirs() }, id)
+            // A file already here: staged, moved in place once the restore is committed.
+            val f = java.io.File((if (fresh == null) restoreCoverStage else customCoverDir).apply { mkdirs() }, id)
             coverFiles += f
             if (fresh == null) knownCovers += id
             f.writeBytes(sealThumb(jpeg))
@@ -2456,7 +2512,9 @@ class VaultRepository @Inject constructor(
             val o = fArr.getJSONObject(k)
             val idx = o.optLongOrNull("coverIdx")?.toInt() ?: continue
             val folder = idMap[o.getLong("id")] ?: continue
-            val file = newIds.getOrNull(idx) ?: continue
+            // Also a file the vault already had (its copy here dropped): skipped, the folder lost
+            // the cover the archive chose although it had none.
+            val file = newIds.getOrNull(idx) ?: known.getOrNull(idx) ?: continue
             // A folder that was already here keeps the cover it has (nothing there is replaced).
             if (db.folderDao().byId(folder)?.coverFileId != null) continue
             if (isCoverOf(db.fileDao().byId(file), folder)) db.folderDao().setCover(folder, file)
@@ -2530,12 +2588,26 @@ class VaultRepository @Inject constructor(
             runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
             throw e
         }
-        val e = FileEntity(
-            id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
-            sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
-            createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
-        )
-        db.fileDao().insert(e)
+        // Not saved after all (the vault locked once the text was written, a refused insert): its
+        // blob goes too. Left there, no row named it and nothing could ever delete it.
+        var reached = false
+        val e = try {
+            db.withTransaction {
+                reached = true
+                FileEntity(
+                    id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
+                    sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
+                    createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
+                ).also { db.fileDao().insert(it) }
+            }
+        } catch (t: Throwable) {
+            // Never reached the database (locked): surely not listed. Else only when it reads so.
+            withContext(kotlinx.coroutines.NonCancellable) {
+                val unlisted = !reached || runCatching { db.fileDao().byId(uuid) == null }.getOrDefault(false)
+                if (unlisted) runCatching { blobs.blob(uuid).delete() }
+            }
+            throw t
+        }
         notifyChanged()
         e
     }

@@ -131,7 +131,7 @@ fun ViewerScreen(
     // the note editor.
     val fallbackIds = remember { listOf(fileId) }
     val ids: List<String> = vm.liveIds.ifEmpty { fallbackIds }
-    val startIndex = remember { ids.indexOf(fileId).coerceAtLeast(0) }
+    val startIndex = remember { ids.indexOf(vm.startId ?: fileId).takeIf { it >= 0 } ?: ids.indexOf(fileId).coerceAtLeast(0) }
     val pagerState = rememberPagerState(initialPage = startIndex) { ids.size }
     val playback by vm.playback.collectAsStateWithLifecycle()
 
@@ -154,6 +154,7 @@ fun ViewerScreen(
 
     var chromeVisible by remember { mutableStateOf(true) }
     val currentId = ids.getOrElse(pagerState.currentPage) { fileId }
+    LaunchedEffect(currentId) { vm.setCurrent(currentId) }
     val currentFile by produceState<FileEntity?>(initialValue = null, currentId, refresh) {
         value = vm.fileById(currentId)
     }

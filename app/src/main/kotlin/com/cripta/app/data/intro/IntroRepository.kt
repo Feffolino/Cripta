@@ -279,6 +279,13 @@ class IntroRepository @Inject constructor(
             else s.cores.take(MAX_SIGNATURE_SOUNDS).forEach { dao.addSignatureSound(SignatureSoundEntity(signatureId = targetId, hashes = PrintCodec.encode(it))) }
         }
         name?.trim()?.takeIf { it.isNotEmpty() }?.let { dao.renameSignature(targetId, it) }
+        // An "Applica a tutti" of one of the merged sounds gives way to the merged signature's
+        // duration, as with "Durata della sigla": left there, a natural (zero) duration let that
+        // rule extend the sound's next videos again.
+        for (rule in dao.rulesOfKind(target.kind.id)) {
+            val sample = PrintCodec.decode(rule.hashes)
+            if (sigs.any { s -> s.cores.any { IntroDetector.isRejected(it, listOf(sample)) } }) dao.deleteRule(rule.id)
+        }
         val deltas = dao.signaturesOfKind(target.kind.id).first { it.id == targetId }
         // The target's duration for every video now in it. Also when that duration is the natural
         // one: the videos of a signature that was extended kept its extra seconds, while the merged
@@ -462,15 +469,28 @@ class IntroRepository @Inject constructor(
         // The saved signature of this sound takes the same duration: kept apart, its older one won
         // over this rule for every video analysed later ([store] asks the signature first).
         val sig = if (dao.signaturesOfKind(kind.id).isEmpty()) null else savedSignatureOf(kind, sample)
+        // Its videos as well: a signature that merged other sounds has videos this sample does not
+        // find, and they kept the old bounds while every later one got the new.
+        val members = sig?.let { s -> signatures(kind).firstOrNull { it.id == s.id } }?.entries.orEmpty()
         db.withTransaction {
             dao.addRule(SegmentRuleEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
                 hashes = PrintCodec.encode(sample), startDeltaMs = ds, endDeltaMs = de, createdAt = System.currentTimeMillis()))
             sig?.let { dao.setSignatureDeltas(it.id, ds, de) }
             var changed = 0
+            val seen = HashSet<String>()
             for (f in found) {
+                seen += f.fileId
                 val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
                 if (existing != null && existing.source != "auto") continue   // the user's own marks stay
                 dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, durations[f.fileId]))
+                changed++
+            }
+            for ((member, _) in members) {
+                if (member.id == file.id || !seen.add(member.id)) continue
+                val now = dao.segmentsOf(member.id).firstOrNull { it.kind == kind.id } ?: continue
+                if (now.source != "auto") continue
+                val core = Found(member.id, now.autoStartMs ?: now.startMs, now.autoEndMs ?: now.endMs)
+                dao.putSegment(IntroDetector.segmentFor(kind, core, ds, de, durations[member.id]))
                 changed++
             }
             changed

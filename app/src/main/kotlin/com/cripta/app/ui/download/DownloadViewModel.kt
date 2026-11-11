@@ -1,5 +1,6 @@
 package com.cripta.app.ui.download
 
+import com.cripta.app.ui.safeScope
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -86,11 +87,11 @@ class DownloadViewModel @Inject constructor(
         // Tracked, so a lookup still running when the field is cleared or submitted can't bring
         // "Già nel vault" back for an empty field.
         existingJob?.cancel()
-        existingJob = viewModelScope.launch { _existing.value = repo.fileBySourceUrl(u) }
+        existingJob = safeScope.launch { _existing.value = repo.fileBySourceUrl(u) }
         if (u == estimatedUrl && _estimate.value is Estimate.Ready) return
         estimatedUrl = u
         estimateJob?.cancel()
-        estimateJob = viewModelScope.launch {
+        estimateJob = safeScope.launch {
             _estimate.value = Estimate.Loading
             val result = runInterruptible(Dispatchers.IO) {
                 runCatching {
@@ -132,7 +133,7 @@ class DownloadViewModel @Inject constructor(
     /** Queue [url] with its destination, and remember that destination for next time. */
     fun enqueue(ctx: Context, url: String, height: Int?, folderId: Long?, tagIds: List<Long>) {
         ConversionService.startDownloadUrl(ctx, url.trim(), height, folderId, tagIds)
-        viewModelScope.launch { settings.setDownloadDefaults(DownloadDefaults(folderId, tagIds, height)) }
+        safeScope.launch { settings.setDownloadDefaults(DownloadDefaults(folderId, tagIds, height)) }
     }
 
     /** Cancel the link being downloaded now (the rest of the queue continues). */

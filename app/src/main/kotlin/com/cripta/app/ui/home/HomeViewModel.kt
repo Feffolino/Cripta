@@ -1,5 +1,6 @@
 package com.cripta.app.ui.home
 
+import com.cripta.app.ui.safeScope
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -62,7 +63,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         // Shred trash entries past their retention (only when the trash is in use).
-        viewModelScope.launch {
+        safeScope.launch {
             runCatching {
                 val s = settings.settingsOnce()
                 repo.purgeExpiredTrash(s.trashDays).forEach { thumbs.evict(it) }
@@ -86,7 +87,6 @@ class HomeViewModel @Inject constructor(
     private suspend fun restorePendingJobs(): Boolean {
         var complete = true
         val queued = downloadQueue.downloads.value.filter { !it.finished }
-        val queuedUrls = queued.map { it.url }.toSet()
         val queuedIds = queued.map { it.id }.toSet()
         val converting = repo.convertingIds.value
         for (job in repo.pendingJobs()) {
@@ -104,16 +104,21 @@ class HomeViewModel @Inject constructor(
                     // A link queued in this process: this row is its own record (it survives the
                     // process being killed) and stays; deleting it lost the waiting link.
                     if (job.id in queuedIds) continue
-                    // Blank, or an older record of a link queued again meanwhile.
-                    if (url.isBlank() || url in queuedUrls) { repo.deletePendingJob(job.id); continue }
                     val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
+                    val height = o.optInt("height", 0).takeIf { it > 0 }
+                    val folder = o.optLong("folder", -1L).takeIf { it >= 0 }
+                    // Blank, or an older record of the same link queued again meanwhile with the same
+                    // quality, folder and tags. Queued again otherwise, it is another request: the
+                    // record was dropped, and its own choices with it.
+                    if (url.isBlank() || queued.any { it.url == url && it.maxHeight == height && it.folderId == folder && it.tagIds.toSet() == tags.toSet() }) {
+                        repo.deletePendingJob(job.id); continue
+                    }
                     // Resumed under its own id: the service keeps this record (and replaces it),
                     // so there is no moment with no record of the link. If the start throws (e.g.
                     // the app is in the background) the record stays for the next launch.
                     val started = runCatching {
                         com.cripta.app.work.ConversionService.startDownloadUrl(
-                            appContext, url, o.optInt("height", 0).takeIf { it > 0 },
-                            o.optLong("folder", -1L).takeIf { it >= 0 }, tags, jobId = job.id,
+                            appContext, url, height, folder, tags, jobId = job.id,
                         )
                     }.isSuccess
                     if (!started) complete = false
@@ -224,7 +229,7 @@ class HomeViewModel @Inject constructor(
     val peopleBlurred: StateFlow<Boolean> = settings.settings.map { it.peopleOnHome == "blur" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    fun setPersonFavorite(id: Long, favorite: Boolean) = viewModelScope.launch { runCatching { faces.setFavorite(id, favorite) } }
+    fun setPersonFavorite(id: Long, favorite: Boolean) = safeScope.launch { runCatching { faces.setFavorite(id, favorite) } }
 
     fun openPeople() = com.cripta.app.ui.people.PeopleNav.request()
 

@@ -371,20 +371,32 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
     var notes by remember(p.id) { mutableStateOf(p.entity.notes) }
     val links = remember(p.id) { mutableStateListOf<String>().apply { addAll(p.entity.links.lines().filter { it.isNotBlank() }) } }
     var newLink by remember(p.id) { mutableStateOf("") }
+    fun linkList(s: String) = s.lines().filter { it.isNotBlank() }
+    // What the fields were last in step with: what is stored, as this page last saw it.
+    var base by remember(p.id) { mutableStateOf(p.entity.notes to p.entity.links) }
+    // Changed elsewhere (another profile merged into this one brings its notes and links): taken
+    // in where nothing typed here is waiting. Kept as it was, the draft overwrote them on leaving.
+    LaunchedEffect(p.entity.notes, p.entity.links) {
+        val (bn, bl) = base
+        if (p.entity.notes == bn && p.entity.links == bl) return@LaunchedEffect
+        if (notes == bn) notes = p.entity.notes
+        if (links.toList() == linkList(bl)) { links.clear(); links.addAll(linkList(p.entity.links)) }
+        base = p.entity.notes to p.entity.links
+    }
     fun save() = vm.setPersonProfile(p.id, notes, links.toList())
     LaunchedEffect(notes) {
         kotlinx.coroutines.delay(700)
         if (notes != p.entity.notes) save()
     }
     // Back or a media opened within the pause above: the last characters typed were never saved
-    // (the wait was cancelled with the page). Whatever differs from what is stored goes now.
+    // (the wait was cancelled with the page). Only what was typed here and not stored yet goes now.
     val latestNotes by androidx.compose.runtime.rememberUpdatedState(notes)
-    val stored by androidx.compose.runtime.rememberUpdatedState(p.entity)
+    val latestBase by androidx.compose.runtime.rememberUpdatedState(base)
     androidx.compose.runtime.DisposableEffect(p.id) {
         onDispose {
             val l = links.toList()
-            if (latestNotes != stored.notes || l != stored.links.lines().filter { it.isNotBlank() })
-                vm.flushPersonProfile(p.id, latestNotes, l)
+            val (bn, bl) = latestBase
+            if (latestNotes != bn || l != linkList(bl)) vm.flushPersonProfile(p.id, latestNotes, l)
         }
     }
     // DS Profilo: the notes as one slab field right under the name (no heading: the placeholder

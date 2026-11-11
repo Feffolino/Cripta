@@ -132,7 +132,11 @@ class AppUpdater @Inject constructor() {
     ): File = withContext(Dispatchers.IO) {
         val checksumUrl = (sha256Url ?: checksumFor[url])?.takeIf { it.isNotBlank() }
             ?: throw Rejected(str(R.string.update_checksum_required))
-        val out = apkFile(ctx).apply { parentFile?.mkdirs(); if (exists()) delete() }
+        // Written beside update.apk and moved over it only once verified: an earlier "Installa"
+        // (its notification still there) opened the file this download was rewriting, and the
+        // installer got half an APK.
+        val target = apkFile(ctx)
+        val out = File(target.parentFile, PART_NAME).apply { parentFile?.mkdirs(); if (exists()) delete() }
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = true; connectTimeout = 20000; readTimeout = 20000
@@ -178,7 +182,8 @@ class AppUpdater @Inject constructor() {
         } catch (e: Throwable) {
             out.delete(); throw e
         }
-        out
+        if (!out.renameTo(target)) { out.delete(); throw java.io.IOException(str(R.string.update_missing)) }
+        target
     }
 
     /** Hand the downloaded APK to the system installer. */
@@ -220,6 +225,8 @@ class AppUpdater @Inject constructor() {
         /** Where the update is downloaded: its own cache folder, the only one the FileProvider shares. */
         fun apkFile(ctx: Context): File = File(File(ctx.cacheDir, UPDATES_DIR), APK_NAME)
         private const val UPDATES_DIR = "updates"
+        /** The download in progress, until verified (see [download]). */
+        private const val PART_NAME = "update.part.apk"
 
         /** The system installer for [apk] (see also [InstallUpdateActivity], the notification's way to it). */
         fun installerIntent(ctx: Context, apk: File): Intent {

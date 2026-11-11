@@ -149,7 +149,9 @@ internal fun DetailsSheet(
     val isVid = com.cripta.app.data.VaultRepository.isVideo(file.mimeType)
     val videoDiag by produceState(initialValue = "", file.id, isVid) { value = if (isVid) vm.videoInfo(file) else "" }
     var editTag by remember { mutableStateOf<String?>(null) }
-    var creating by remember { mutableStateOf(false) }
+    // The media the dialog was opened for: the player may move on to the next video while it is
+    // open, and the tag went to that one.
+    var creatingFor by remember { mutableStateOf<String?>(null) }
     var showTech by remember { mutableStateOf(false) }
     /** The whole tag library, opened from "Mostra tutte" and remembered for the next media. */
     val allTagsOpen by vm.detailsAllTags.collectAsStateWithLifecycle()
@@ -274,7 +276,7 @@ internal fun DetailsSheet(
     val tags: @Composable () -> Unit = {
         Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
             PanelHeading(str(R.string.tags), str(R.string.tags_panel_hint)) {
-                TextButton(onClick = { creating = true }) {
+                TextButton(onClick = { creatingFor = file.id }) {
                     Icon(CriptaIcons.Add, null, Modifier.size(18.dp))
                     com.cripta.app.ui.components.ButtonText(str(R.string.new_short), modifier = Modifier.padding(start = 6.dp))
                 }
@@ -399,13 +401,13 @@ internal fun DetailsSheet(
             onDelete = { vm.deleteTag(t.id); editTag = null },
         )
     }
-    if (creating) {
+    creatingFor?.let { target ->
         com.cripta.app.ui.vault.LabelEditorDialog(
             title = str(R.string.new_tag),
             showIcon = true,
             takenNames = allTags.map { it.name },
-            onConfirm = { draft -> vm.createTagOn(file.id, draft); creating = false },
-            onDismiss = { creating = false },
+            onConfirm = { draft -> vm.createTagOn(target, draft); creatingFor = null },
+            onDismiss = { creatingFor = null },
         )
     }
 }
