@@ -1277,7 +1277,12 @@ class FaceRepository @Inject constructor(
      * aside ([ASIDE]: among "poco chiari", still in "Da sistemare"). [force]: look again though
      * nothing was confirmed since the last look. Null when there was nothing to look at.
      */
-    suspend fun refine(file: FileEntity, force: Boolean = false, onProgress: ((Float) -> Unit)? = null): Refined? {
+    suspend fun refine(file: FileEntity, force: Boolean = false, onProgress: ((Float) -> Unit)? = null): Refined? =
+        refine(file, force) { free, anchors -> readCloser(file, free, anchors, onProgress) }
+
+    /** [refine] with the closer reading of the video given ([readCloser] in the app). */
+    internal suspend fun refine(file: FileEntity, force: Boolean,
+                                read: suspend (List<LooseFace>, List<FaceTrackEntity>) -> List<SeenFrame>): Refined? {
         if (!VaultRepository.isVideo(file.mimeType)) return null
         val scan = dao.scanOf(file.id)?.takeIf { it.status == "ok" } ?: return null
         val rows = dao.tracksOfFile(file.id)
@@ -1292,7 +1297,7 @@ class FaceRepository @Inject constructor(
         // Faces analysed before they were kept one by one cannot be checked moment by moment: left as they are.
         val free = rows.filter { loose(it.personId, it.state, it.frames) }
             .map { LooseFace(it.id, it.frames, FaceCodec.decode(it.sightings)) }.filter { it.faces.isNotEmpty() }
-        val seen = if (free.isEmpty()) emptyList() else readCloser(file, free, anchors, onProgress)
+        val seen = if (free.isEmpty()) emptyList() else read(free, anchors)
         val labels = FaceFollower.label(seen, people)
         val verdicts = free.associate { it.id to FaceFollower.judge(it, seen, labels, people) }
         return change {
@@ -1300,8 +1305,9 @@ class FaceRepository @Inject constructor(
             val now = dao.scanOf(file.id)
             if (now == null || now.scannedAt != scan.scannedAt) return@change null
             var joined = 0; var aside = 0
-            // Faces whose assignment can still be taken back are not joined yet: this look is then
-            // not recorded as done, and the next one joins them.
+            // Faces whose assignment can still be taken back are not joined into another face yet:
+            // this look is then not recorded as done, and the next one joins them. Other faces are
+            // still joined into them: a face given to someone keeps its id, "Annulla" still finds it.
             var heldBack = false
             // A face the user said is not that person ("Non è lui/lei") is never joined to them,
             // whatever the closer look thinks.
@@ -1311,8 +1317,8 @@ class FaceRepository @Inject constructor(
                 val all = dao.tracksOfFile(file.id).filter { it.personId == p.personId && it.state == "manual" && it.frames != 0L &&
                     FaceCodec.decode(it.sightings).isNotEmpty() }.sortedByDescending { it.faceCount }
                 val mine = all.filterNot { held(it.id) }
-                if (mine.size < all.size) heldBack = true
-                var target = mine.firstOrNull() ?: continue
+                var target = mine.firstOrNull() ?: all.firstOrNull() ?: continue
+                if (all.any { it.id != target.id && held(it.id) }) heldBack = true
                 // The same person confirmed twice in this video, never in one frame: one face.
                 for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = dao.tracks(listOf(joinRows(listOf(target, o)))).first()
                 for ((id, v) in verdicts) {

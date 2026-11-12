@@ -13,6 +13,9 @@ import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.media.face.EmbeddingCodec
 import com.cripta.app.media.face.FaceCodec
+import com.cripta.app.media.face.FaceStats
+import com.cripta.app.media.face.SeenFace
+import com.cripta.app.media.face.SeenFrame
 import com.cripta.app.media.face.StoredFace
 import com.cripta.app.security.SessionManager
 import com.cripta.crypto.DekManager
@@ -199,5 +202,59 @@ class PersonEditsTest {
         val back = dao.tracks(listOf(b)).single()
         assertNull(back.personId)
         assertEquals(p, dao.tracks(listOf(a)).single().personId)
+    }
+
+    private val box = floatArrayOf(0.2f, 0.2f, 0.2f, 0.2f)
+
+    private suspend fun video() {
+        db.fileDao().insert(FileEntity(id = "v", originalName = "v.mp4", mimeType = "video/mp4", sizeBytes = 1, createdAt = 0,
+            importedAt = 0, wrappedKeyset = ByteArray(0), durationMs = 60_000))
+        dao.putScan(FaceScanEntity("v", "ok", 10, 0, 2, "", 1, 1))
+    }
+
+    /** A face of the analysis in the video at [t], alone on its sampled frame [frame] (bit mask). */
+    private suspend fun videoFace(frame: Long, t: Long, personId: Long? = null) = dao.addTrack(FaceTrackEntity(
+        fileId = "v", frames = frame, timeMs = t, faceCount = 1, width = 100, quality = 1f,
+        embeddings = EmbeddingCodec.encode(listOf(look)), crop = ByteArray(0), personId = personId,
+        state = if (personId != null) "manual" else "auto", times = "$t",
+        sightings = FaceCodec.encode(listOf(StoredFace(frame.countTrailingZeroBits(), t, 1f, 100, box, look)))))
+
+    /** The closer reading of the video: the same face, at its place, at every moment asked. */
+    private suspend fun lookCloser() = faces.refine(db.fileDao().byId("v")!!, false) { free, anchors ->
+        (free.flatMap { f -> f.faces.map { it.timeMs } } + anchors.flatMap { a -> FaceCodec.decode(a.sightings).map { it.timeMs } })
+            .distinct().map { t -> SeenFrame(t, t, listOf(SeenFace(box, look, true))) }
+    }
+
+    @Test
+    fun aCloserLookRightAfterAnAssignmentJoinsTheOtherFacesOfThatPerson() = runBlocking {
+        video()
+        val p = faces.newPerson("P")
+        // Nothing else is confirmed for P in this video: the face just given is the only one to join into.
+        val a = videoFace(1, 1_000)
+        val b = videoFace(2, 9_000)
+        faces.assign(a, p)
+        val r = lookCloser()
+        assertEquals(1, r!!.joined)
+        assertEquals(listOf(a), dao.tracksOfFile("v").map { it.id })
+        assertEquals(p, dao.tracks(listOf(a)).single().personId)
+        assertNull(dao.tracks(listOf(b)).singleOrNull())
+        assertNotNull(FaceStats.refineOf(dao.scanOf("v")!!.stats))
+    }
+
+    @Test
+    fun aCloserLookNeverJoinsAFaceWhoseAssignmentCanStillBeUndone() = runBlocking {
+        video()
+        val p = faces.newPerson("P")
+        // C: confirmed before; A: just given to P, its "Annulla" still on offer; B: free, P again.
+        val c = videoFace(1, 1_000, p)
+        val a = videoFace(2, 5_000)
+        val b = videoFace(4, 9_000)
+        val undo = faces.assign(a, p)
+        lookCloser()
+        assertEquals(p, dao.tracks(listOf(a)).single().personId)
+        assertNull(dao.tracks(listOf(b)).singleOrNull())
+        undo()
+        assertNull(dao.tracks(listOf(a)).single().personId)
+        assertEquals(p, dao.tracks(listOf(c)).single().personId)
     }
 }

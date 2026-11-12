@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-13
+
+- The closer look at a video that starts right after giving a face to someone joins the other faces of that person into it again: since yesterday it joined nothing until the next look, when the person had no other face confirmed in that video
+
 ## 2026-11-12
 
 - A drag in the manual order stopped by the system shows the saved order again, so a later drag no longer saves the move that was cancelled; files added or removed during a drag are shown once it ends
