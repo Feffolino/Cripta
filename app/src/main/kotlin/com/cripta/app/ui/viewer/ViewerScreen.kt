@@ -131,8 +131,12 @@ fun ViewerScreen(
     // the note editor.
     val fallbackIds = remember { listOf(fileId) }
     val ids: List<String> = vm.liveIds.ifEmpty { fallbackIds }
-    val startIndex = remember { ids.indexOf(vm.startId ?: fileId).takeIf { it >= 0 } ?: ids.indexOf(fileId).coerceAtLeast(0) }
+    val startIndex = remember { ViewerViewModel.startPage(ids, vm.startId, fileId) }
     val pagerState = rememberPagerState(initialPage = startIndex) { ids.size }
+    // Back after Android killed the process: the pager's saved page counts in the whole browse
+    // order, the restored order is only the part around the file shown, so it opened another
+    // file. It goes to that file. Not on a rotation: the pager's saved page is right then.
+    LaunchedEffect(Unit) { if (vm.takeRestoredFromSavedQueue()) pagerState.scrollToPage(startIndex) }
     val playback by vm.playback.collectAsStateWithLifecycle()
 
     // TalkBack: never auto-hide the chrome/controls while touch exploration is on (the user could

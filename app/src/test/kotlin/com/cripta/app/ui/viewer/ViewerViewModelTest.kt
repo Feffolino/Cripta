@@ -85,6 +85,40 @@ class ViewerViewModelTest {
         assertEquals(2500 - max / 2, mid.first)
     }
 
+    /**
+     * After the process is killed, the restored order is the saved part around the file shown: the
+     * page to show is that file's place in the part, which differs from its place in the whole order
+     * (what the pager saved) as soon as the part does not start at the first file.
+     */
+    @Test
+    fun aRestoredViewerStartsOnTheFileShownWhateverTheQueueLength() {
+        val max = ViewerViewModel.MAX_SAVED_QUEUE
+        for (size in listOf(1, 300, 301, 1500)) {
+            val all = (0 until size).map { "id$it" }
+            for (at in setOf(0, size / 2, size - 1)) {
+                val window = ViewerViewModel.queueWindow(size, at, max)
+                val saved = all.subList(window.first, window.last + 1)
+                val page = ViewerViewModel.startPage(saved, all[at], "id0")
+                assertEquals("size $size, at $at", all[at], saved[page])
+                assertEquals("size $size, at $at", at - window.first, page)
+                assertTrue("size $size, at $at", saved.size <= max)
+            }
+        }
+        // The pager's own page (the place in the whole order) is another file once the part is cut.
+        val window = ViewerViewModel.queueWindow(1500, 1499, max)
+        assertTrue(1499 != ViewerViewModel.startPage((0 until 1500).map { "id$it" }.slice(window), "id1499", "id0"))
+    }
+
+    @Test
+    fun aViewerStartsOnTheOpenedFileWithoutASavedPage() {
+        val ids = listOf("a", "b", "c")
+        assertEquals(1, ViewerViewModel.startPage(ids, null, "b"))
+        assertEquals(2, ViewerViewModel.startPage(ids, "c", "b"))
+        // The file shown last is no longer in the order: the opened one.
+        assertEquals(1, ViewerViewModel.startPage(ids, "gone", "b"))
+        assertEquals(0, ViewerViewModel.startPage(ids, "gone", "gone too"))
+    }
+
     @Test
     fun aLongQueueIsSavedAroundThePageShownAndRestoredFromIt() = runTest {
         val app = RuntimeEnvironment.getApplication()
@@ -122,8 +156,18 @@ class ViewerViewModelTest {
                 assertEquals(ViewerViewModel.MAX_SAVED_QUEUE, restored.ids.size)
                 assertEquals("id4200", restored.startId)
                 assertEquals(ViewerViewModel.MAX_SAVED_QUEUE / 2, restored.ids.indexOf("id4200"))
+                // The screen goes to that file once; a rotation afterwards keeps the pager's own page.
+                assertTrue(restored.takeRestoredFromSavedQueue())
+                assertFalse(restored.takeRestoredFromSavedQueue())
             } finally {
                 restored.viewModelScope.cancel()
+            }
+            // A viewer opened from the gallery is not a restore.
+            val fresh = vm(ViewerQueue().apply { set(all) }, SavedStateHandle(mapOf("fileId" to "id10")))
+            try {
+                assertFalse(fresh.takeRestoredFromSavedQueue())
+            } finally {
+                fresh.viewModelScope.cancel()
             }
         } finally {
             Dispatchers.resetMain()

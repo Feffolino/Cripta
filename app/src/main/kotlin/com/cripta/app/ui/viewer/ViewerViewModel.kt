@@ -67,6 +67,15 @@ class ViewerViewModel @Inject constructor(
     val vaultLocked: StateFlow<Boolean> = session.locked
 
     /**
+     * The viewer comes back after Android killed the process: [ids] is then the part of the order
+     * kept in the saved state, while the pager's own saved page counts in the whole order.
+     */
+    private var restoredFromSavedQueue = savedState.contains(SAVED_QUEUE)
+
+    /** True once, for the screen first shown after a restore ([restoredFromSavedQueue]): it then goes to [startId]. */
+    fun takeRestoredFromSavedQueue(): Boolean = restoredFromSavedQueue.also { restoredFromSavedQueue = false }
+
+    /**
      * Snapshot of the browse order taken when the viewer opened. A file opened without a queue of
      * its own (a face's media from Persone) is not in the last one left behind: it is shown alone,
      * instead of the viewer landing on the first file of that old queue.
@@ -649,6 +658,10 @@ class ViewerViewModel @Inject constructor(
             val from = (at.coerceIn(0, size - 1) - max / 2).coerceIn(0, size - max)
             return from until from + max
         }
+
+        /** The page of [ids] to start on: [startId], else the opened [fileId], else the first. */
+        internal fun startPage(ids: List<String>, startId: String?, fileId: String): Int =
+            ids.indexOf(startId ?: fileId).takeIf { it >= 0 } ?: ids.indexOf(fileId).coerceAtLeast(0)
         /** Shortest intro/outro a mark can make. */
         private const val MIN_MARK_MS = 1_000L
 
