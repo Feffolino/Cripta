@@ -89,7 +89,7 @@ fun NoteEditorScreen(
             vm.saving -> Unit
             // A note that failed to load is read-only: leaving never saves over the original.
             !vm.loaded || vm.loadFailed || !vm.dirty -> { onBack(); after() }
-            fileId == null && vm.name.isBlank() && vm.text.isBlank() -> { onBack(); after() }
+            fileId == null && vm.emptyNew -> { onBack(); after() }
             // The save failing for good (a full disk) left no way out but closing the app: the
             // user is asked whether to try again or leave without these changes.
             else -> vm.save(fileId, folderId, onFailed = { leaveUnsaved = after }) { onBack(); after() }
@@ -97,6 +97,19 @@ fun NoteEditorScreen(
     }
     val leave: () -> Unit = { leaveThen {} }
     val context = androidx.compose.ui.platform.LocalContext.current
+    // Cripta goes to the background: the draft is written to the vault (never to the saved-state
+    // Bundle), since Android may close the app there. A rotation stops the screen too: not saved;
+    // nor when the lock stops it (the vault is closed by then: the draft waits for the unlock).
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val unlocked by androidx.compose.runtime.rememberUpdatedState(com.cripta.app.ui.components.vaultUnlocked())
+    androidx.compose.runtime.DisposableEffect(lifecycle, fileId, folderId) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && unlocked &&
+                (context as? android.app.Activity)?.isChangingConfigurations != true) vm.saveInBackground(fileId, folderId)
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     BackHandler(onBack = leave)
 
     Scaffold(

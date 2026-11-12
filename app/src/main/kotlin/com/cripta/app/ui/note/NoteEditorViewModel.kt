@@ -48,6 +48,8 @@ class NoteEditorViewModel @Inject constructor(
     private var savedName = ""
     private var savedText = ""
     private var loadedFor: String? = null
+    /** A new note already written by [saveInBackground]: later saves update it, never create another. */
+    private var createdId: String? = null
 
     /** True when the draft differs from what is stored (new note: anything typed). */
     val dirty: Boolean get() = name != savedName || text != savedText
@@ -97,11 +99,12 @@ class NoteEditorViewModel @Inject constructor(
                 // What is written is what "saved" means: anything typed meanwhile is not saved yet.
                 val writtenName = name; val writtenText = text
                 val n = writtenName.ifBlank { str(R.string.default_note_name) }
-                if (id == null) repo.createNote(folderId ?: routeFolderId, n, writtenText)
+                val target = id ?: createdId
+                if (target == null) createdId = repo.createNote(folderId ?: routeFolderId, n, writtenText).id
                 else {
-                    repo.updateNote(id, n, writtenText)
+                    repo.updateNote(target, n, writtenText)
                     // Its cover shows its first lines: drawn again from the new text.
-                    thumbs.evict(id)
+                    thumbs.evict(target)
                 }
                 savedName = writtenName; savedText = writtenText
                 onDone()
@@ -115,6 +118,20 @@ class NoteEditorViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * The app goes to the background with the editor open: the changed draft is written to the
+     * vault, the editor stays open. Android may close Cripta there, and the draft only lives here.
+     * Nothing is written for a note that could not be read, an unchanged draft or an empty new note.
+     */
+    fun saveInBackground(id: String?, folderId: Long?) {
+        if (!loaded || loadFailed || saving || !dirty) return
+        if (id == null && emptyNew) return
+        save(id, folderId) {}
+    }
+
+    /** A new note with nothing typed and not written yet: leaving it writes nothing. */
+    val emptyNew: Boolean get() = createdId == null && name.isBlank() && text.isBlank()
 
     /** Delete an existing note honouring the trash setting; [onDone] gets true when trashed. */
     fun delete(id: String, onDone: (trashed: Boolean) -> Unit) = safeScope.launch {
