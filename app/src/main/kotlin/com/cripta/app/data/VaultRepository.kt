@@ -2624,12 +2624,25 @@ class VaultRepository @Inject constructor(
         val tArr = manifest.getJSONArray("tags")
         var tagsAdded = 0
         val orderBase = (db.tagDao().allNow().maxOfOrNull { it.orderIndex } ?: -1) + 1
+        // The archive's tag names resolved as the app does when a tag is typed: the same name, else
+        // the same name case aside ("vacanze" from another phone is this vault's "Vacanze", not a
+        // second tag its filters do not see). Not for names the archive itself tells apart only by
+        // case (an older vault had both): each stays its own tag.
+        val variants = (0 until tArr.length()).map { tArr.getJSONObject(it).getString("name").lowercase() }.groupingBy { it }.eachCount()
+        val resolved = HashMap<String, Long>()
+        suspend fun tagHere(name: String): TagEntity? = db.tagDao().byName(name)
+            ?: if ((variants[name.lowercase()] ?: 0) > 1) null
+            else db.tagDao().allNow().filter { it.name.equals(name, ignoreCase = true) }.minByOrNull { it.id }
+        suspend fun tagId(name: String): Long = resolved.getOrPut(name) { tagHere(name)?.id ?: db.tagDao().insert(TagEntity(name = name)) }
         for (i in 0 until tArr.length()) {
             val o = tArr.getJSONObject(i)
             val name = o.getString("name")
             // A tag already in the vault keeps its own alias, colour, icon, pin and place: the
             // restore only adds ("nothing that is there is replaced"). Files still get linked to it.
-            if (db.tagDao().insert(TagEntity(name = name)) == -1L) continue
+            tagHere(name)?.let { resolved[name] = it.id; continue }
+            val added = db.tagDao().insert(TagEntity(name = name))
+            if (added == -1L) continue
+            resolved[name] = added
             tagsAdded++
             // v2: pin and custom order. The archive's positions go after the tags already here:
             // restored into a library in use, they no longer interleave with (and tie) its own.
@@ -2684,7 +2697,7 @@ class VaultRepository @Inject constructor(
                 // Its tags from the archive join the ones it has (links only add).
                 val tagNames = o.getJSONArray("tags")
                 for (n in (0 until tagNames.length()).map { tagNames.getString(it) }.distinct()) {
-                    val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
+                    val tid = tagId(n)
                     db.tagDao().link(FileTagCrossRef(fileId = already, tagId = tid))
                 }
                 // Its intro and outro from the archive where it has none: skipped, a phone that had
@@ -2715,7 +2728,7 @@ class VaultRepository @Inject constructor(
             val names = (0 until tagNames.length()).map { tagNames.getString(it) }
             // Link directly (setTags would mark every tag as "recently used").
             for (n in names.distinct()) {
-                val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
+                val tid = tagId(n)
                 db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
             }
             restoreSegments(uuid, o)
@@ -2759,7 +2772,7 @@ class VaultRepository @Inject constructor(
                 // renamed them): the manifest's own named someone the archive no longer had.
                 extras.filterPeople[i]?.let { if (it.length() > 0) f.put("people", it) else f.remove("people") }
                 suspend fun ids(key: String) = org.json.JSONArray().apply {
-                    f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) db.tagDao().byName(a.getString(j))?.let { put(it.id) } }
+                    f.optJSONArray(key)?.let { a -> for (j in 0 until a.length()) a.getString(j).let { n -> (resolved[n] ?: tagHere(n)?.id)?.let { put(it) } } }
                 }
                 val wanted = f.optJSONArray("tagNames")?.length() ?: 0
                 val tagIds = ids("tagNames")

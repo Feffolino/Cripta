@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- A backup whose tag differs from one in the vault only in capitals ("vacanze" and "Vacanze") puts its files under the tag already here, as typing it would, so saved filters find them; two tags an older backup told apart only by capitals stay two
 - A restore gives files already in the vault the intro and outro, the faces and the sound analysis they lack from the backup; what they already have stays as it is. Restoring the same backup again no longer adds its signatures, rules and rejected sounds once more
 - An import, a download, a conversion or a new note stopped because Android closed Cripta while it was being written no longer leaves a hidden file taking up space: it is removed at the next start
 - "Durata della sigla" and "Non è una sigla" on a page opened earlier leave the marks made by hand (or removed) since then, and the new duration reaches videos found since; a rejected intro put back gets its duration once, not twice

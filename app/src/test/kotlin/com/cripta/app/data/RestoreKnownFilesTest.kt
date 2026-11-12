@@ -9,12 +9,14 @@ import com.cripta.app.data.db.CriptaDatabase
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
+import com.cripta.app.data.db.FileTagCrossRef
 import com.cripta.app.data.db.MediaSegmentEntity
 import com.cripta.app.data.db.PersonEntity
 import com.cripta.app.data.db.RejectedPrintEntity
 import com.cripta.app.data.db.SegmentRuleEntity
 import com.cripta.app.data.db.SignatureEntity
 import com.cripta.app.data.db.SignatureSoundEntity
+import com.cripta.app.data.db.TagEntity
 import com.cripta.app.security.SessionManager
 import com.cripta.crypto.DekManager
 import kotlinx.coroutines.runBlocking
@@ -153,5 +155,42 @@ class RestoreKnownFilesTest {
         assertEquals(1, intro.backupSignatureSounds().size)
         assertEquals(1, intro.backupRules().size)
         assertEquals(1, intro.backupRejected().size)
+    }
+
+    private suspend fun tag(fileId: String, name: String): Long {
+        val id = db.tagDao().byName(name)?.id ?: db.tagDao().insert(TagEntity(name = name))
+        db.tagDao().link(FileTagCrossRef(fileId = fileId, tagId = id))
+        return id
+    }
+
+    private suspend fun tagNames(fileId: String) = db.fileDao().withTagsById(fileId)!!.tags.map { it.name }.toSet()
+
+    @Test
+    fun aTagDifferingOnlyInCaseJoinsTheOneHere() = runBlocking {
+        val a = video()
+        val t = tag(a.id, "vacanze")
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // Here the tag is written "Vacanze" (another phone's archive writes it "vacanze").
+        db.tagDao().rename(t, "Vacanze")
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        assertEquals(listOf("Vacanze"), db.tagDao().allNow().map { it.name })
+        assertEquals(setOf("Vacanze"), tagNames(a.id))
+    }
+
+    @Test
+    fun twoTagsOfAnArchiveDifferingOnlyInCaseStayTwo() = runBlocking {
+        val a = video(); val b = video()
+        tag(a.id, "Ab"); tag(b.id, "ab")
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // Here they became one tag, "AB".
+        db.tagDao().byName("ab")!!.let { db.tagDao().unlinkAll(it.id); db.tagDao().deleteById(it.id) }
+        db.tagDao().rename(db.tagDao().byName("Ab")!!.id, "AB")
+        tag(b.id, "AB")
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // The archive told them apart: its two tags are not both made "AB".
+        assertEquals(1, (tagNames(a.id) intersect tagNames(b.id)).size)
+        assertEquals(setOf("AB", "Ab", "ab"), db.tagDao().allNow().map { it.name }.toSet())
     }
 }
