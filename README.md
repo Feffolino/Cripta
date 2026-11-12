@@ -105,11 +105,13 @@ CI (GitHub Actions, `.github/workflows/build-apk.yml`) builds the APK on every p
 publishes it as a release. Locally:
 
 ```bash
-gradle :app:assembleDebug :app:testDebugUnitTest
+./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
 
-You need JDK 17 and Android SDK 34. Without `keystore.properties` the APK is signed with Android's
-debug key and won't update a Cripta installed from CI.
+The Gradle wrapper fetches the Gradle version the project uses. You need JDK 17 and the Android SDK
+with platform `android-37.0` (`compileSdk = 37`) and build tools 36, as CI installs them. Without
+`keystore.properties` the APK is signed with Android's debug key and won't update a Cripta
+installed from CI.
 
 ## Stack
 
