@@ -174,7 +174,7 @@ class HomeViewModel @Inject constructor(
         // Only who is in which media (and their names, for a typed name): not every rebuild of the
         // people during a scan.
         combine(repo.changes.flatMapLatest { repo.savedFilters() }, all,
-            faces.people().map { o -> o.people.map { Triple(it.id, it.entity.name to it.entity.ignored, it.media.mapTo(HashSet()) { f -> f.id }) } }
+            faces.people().map { it.lookupKey }
                 .distinctUntilChanged()) { saved, files, _ -> saved to files }
             .mapLatest { (saved, files) ->
                 saved.map { sf ->

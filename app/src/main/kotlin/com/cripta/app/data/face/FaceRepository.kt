@@ -184,6 +184,8 @@ class FaceRepository @Inject constructor(
         val rejects = HashMap<FaceReject, Int>()
         val sharp = IntArray(FaceStats.SHARP_BANDS.size + 1)
         var faces = 0; var read = 0; var failed = 0; var duplicates = 0; var extra = 0
+        // The latest moment read (ms), -1 before the first frame: how far a reading that stopped got.
+        var readUpTo = -1L
         // When the reading last moved on (a frame read or analysed): what the watchdog looks at.
         val beat = java.util.concurrent.atomic.AtomicLong(started)
         val reader = readers.async {
@@ -192,6 +194,7 @@ class FaceRepository @Inject constructor(
                 /** Analyse one frame; true when it shows a face (usable or not). */
                 fun take(frame: Int, timeMs: Long, img: FaceImage): Boolean {
                     read++
+                    if (timeMs > readUpTo) readUpTo = timeMs
                     val found = engine.analyze(img, deep = deep)
                     beat.set(android.os.SystemClock.elapsedRealtime())
                     for (f in found) {
@@ -249,8 +252,8 @@ class FaceRepository @Inject constructor(
         // faces while it was being read is not overwritten with what was read before it. A reading
         // left behind may still add to its lists: none of it is kept.
         mutex.withLock {
-            if (stalled) store(file, status, emptyList(), HashMap(), 0, 0, 0, IntArray(sharp.size), 0, 0, started)
-            else store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started)
+            if (stalled) store(file, status, emptyList(), HashMap(), 0, 0, 0, IntArray(sharp.size), 0, 0, started, null)
+            else store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started, readUpTo.takeIf { it >= 0 })
         }
         return when {
             status == "ok" -> Outcome.OK
@@ -271,6 +274,8 @@ class FaceRepository @Inject constructor(
     private suspend fun store(
         file: FileEntity, status: String, sightings: List<Sighting>, rejects: HashMap<FaceReject, Int>,
         read: Int, failed: Int, faces: Int, sharp: IntArray, duplicates: Int, extra: Int, started: Long,
+        /** How far the reading got (ms), null when nothing of it is kept. */
+        readUpTo: Long?,
     ) {
         // Faces the user deleted from this media, or said are not a face, are not found again. Unless
         // the face is more like one the user kept here: deleting a second copy of someone's face
@@ -308,7 +313,13 @@ class FaceRepository @Inject constructor(
             }
             if (old.isNotEmpty()) {
                 val moved = carry(old, added, spans, FramePlan.spacing(file.durationMs ?: 0L))
-                if (!complete) moved.keys.toList().chunked(500).forEach { dao.deleteTracks(it) }
+                if (!complete) {
+                    // The old faces of the part read but not found again were left beside the new
+                    // ones: each new try on a media that times out added doubles.
+                    val users = dao.rejections().mapTo(HashSet()) { it.trackId }
+                        .apply { old.map { it.id }.chunked(500).flatMap { dao.apartOf(it) }.forEach { add(it.a); add(it.b) } }
+                    replacedByPartialRead(old, moved.keys, readUpTo, users).chunked(500).forEach { dao.deleteTracks(it) }
+                }
                 // "Dividi il gruppo" follows the faces like the user's other choices: the pairs of
                 // the old faces now name the new ones (those not found again lose theirs).
                 val pairs = old.map { it.id }.chunked(500).flatMap { dao.apartOf(it) }.distinct()
@@ -644,7 +655,15 @@ class FaceRepository @Inject constructor(
 
     /** [unassigned]: faces nobody was given yet (the "Da sistemare" count). */
     class Overview(val scans: List<FaceScanEntity>, val media: Int, val people: List<Person>, val files: Map<String, FileEntity>,
-                   val unassigned: Int = 0)
+                   val unassigned: Int = 0) {
+        /**
+         * What the filters and searches by person read: who, named how (or "Non è una persona"),
+         * on which media. Equal across the rebuilds of a face analysis that change none of it
+         * (covers, faces, scans), so a distinctUntilChanged on it skips them.
+         */
+        val lookupKey: List<Triple<Long, Pair<String, Boolean>, Set<String>>>
+            get() = people.map { Triple(it.id, it.entity.name to it.entity.ignored, it.media.mapTo(HashSet()) { f -> f.id }) }
+    }
 
     private fun <T> live(block: (com.cripta.app.data.db.FaceDao) -> Flow<T>): Flow<T> =
         session.database.flatMapLatest { d -> if (d == null) emptyFlow() else block(d.faceDao()) }
@@ -1617,6 +1636,26 @@ class FaceRepository @Inject constructor(
     }
 
     companion object {
+        /**
+         * The old faces a reading that stopped part way replaces: those it found again ([found]),
+         * and those of the part it read (every moment up to [readUpTo]) it did not find again.
+         * Kept: the faces beyond what was read, those without known moments, and the user's
+         * (confirmed or added to someone, or in [userIds]: a "no" or a split). Nothing was read
+         * ([readUpTo] null): only the faces found again.
+         */
+        internal fun replacedByPartialRead(old: List<TrackRow>, found: Set<Long>, readUpTo: Long?, userIds: Set<Long>): List<Long> {
+            if (readUpTo == null) return old.map { it.id }.filter { it in found }
+            return old.filter { o ->
+                if (o.id in found) return@filter true
+                if (o.id in userIds || (o.personId != null && o.state in USER_STATES)) return@filter false
+                val times = o.times.split(',').mapNotNull { it.trim().toLongOrNull() }
+                times.isNotEmpty() && times.max() <= readUpTo
+            }.map { it.id }
+        }
+
+        /** States of a face the user gave to someone (by hand, or carried from an earlier analysis). */
+        private val USER_STATES = setOf("manual", "carried")
+
         /** What an unnamed person is called on screen: faces found get no name, the user gives one. */
         val UNNAMED: String get() = str(R.string.unnamed)
         /** Status of a media whose faces the user cleared (analysed, nothing kept). */

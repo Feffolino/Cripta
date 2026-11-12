@@ -927,7 +927,8 @@ class VaultRepository @Inject constructor(
                 // The original always goes to the trash (never shredded here), so a bad conversion can be undone.
                 if (replace) db.fileDao().setDeletedAt(original.id, now())
                 pendingJobId?.let { db.pendingJobDao().delete(it) }
-                if (askOriginal) db.pendingJobDao().put(originalQuestion(original.id, original.originalName, uuid))
+                // Named as it is now (renamed during the conversion: the new name).
+                if (askOriginal) db.pendingJobDao().put(originalQuestion(original.id, cur.originalName, uuid))
                 entity
             }
             notifyChanged()

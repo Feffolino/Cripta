@@ -406,8 +406,13 @@ class VaultViewModel @Inject constructor(
             if (prev != null && f.query != prev.query && f.copy(query = "") == prev.copy(query = "")) 200L else 0L
         }
             // Looked up again when the faces change too (a person taken off a media, a scan that
-            // found them): only on the filters, the search kept the media of before.
-            .combine(faces.people()) { f, _ -> f }
+            // found them): only on the filters, the search kept the media of before. Only on what
+            // the lookups read (who, named how, on which media): the people are rebuilt often
+            // during a face analysis, and each rebuild filtered and sorted the whole vault again.
+            .combine(
+                faces.people().map { it.lookupKey }
+                    .distinctUntilChanged(),
+            ) { f, _ -> f }
             .mapLatest { f ->
                 // People come from the face index, not from the file rows.
                 val people = if (f.personIds.isEmpty()) null else runCatching { faces.mediaWithAll(f.personIds) }.getOrDefault(emptySet())

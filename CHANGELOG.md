@@ -8,6 +8,10 @@ Entries marked **stable** went out as a stable release.
 - A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
 - Browsing thousands of files in the viewer no longer risks closing the app when it goes to the background; after Android closes it, the viewer comes back with the media around the one shown
 - Each new version of the vault's database is recorded, so future updates can be checked to bring an existing vault forward without losing anything
+- Cartelle stays smooth while a face analysis runs: the list is sorted again only when people, their names or their media change
+- "Chiedi" after a conversion names the original as it is now, also when it was renamed while being converted
+- A face analysis that stops part way on a video (it takes too long) no longer leaves double faces each time it is tried again; faces confirmed, rejected or split by hand always stay
+- Opening the vault from two places at once can no longer start before the encryption is ready
 
 ## 2026-11-11
 
