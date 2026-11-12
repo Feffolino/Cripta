@@ -264,7 +264,9 @@ class ConversionService : Service() {
         }
         // One update download at a time: they all write the same update.apk, and a second one
         // (asked after the channel changed) rewrote or deleted the file the first was checking.
-        if (mode == MODE_UPDATE && updateJob?.isActive == true) {
+        // One duplicate scan at a time too: two shared one result and its progress, and the first
+        // one ending took the second out of reach of "Annulla".
+        if (alreadyRunning(mode, scanJob, updateJob)) {
             // Started as a foreground service: it must still say so, with the download on show.
             ensureChannel()
             startForeground(NOTIF_ID, lastProgress ?: build(str(R.string.n_preparing), 0, indeterminate = true, kind = ResultKind.UPDATE))
@@ -1131,7 +1133,7 @@ class ConversionService : Service() {
             dupStore.fail(msg)
             notifyResult(str(R.string.n_x_failed, label), msg, ResultKind.SCAN, state = ResultState.FAILED)
         } finally {
-            scanJob = null
+            if (scanJob === kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]) scanJob = null
         }
     }
 
@@ -2211,6 +2213,10 @@ class ConversionService : Service() {
         private const val MODE_CANCEL = "cancel"
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
         private const val MODE_DUP_SCAN = "dup_scan"
+
+        /** [mode] asks for a duplicate scan or an update download while one runs ([scan], [update]). */
+        internal fun alreadyRunning(mode: String, scan: kotlinx.coroutines.Job?, update: kotlinx.coroutines.Job?): Boolean =
+            (mode == MODE_DUP_SCAN && scan?.isActive == true) || (mode == MODE_UPDATE && update?.isActive == true)
         private const val MODE_CANCEL_SCAN = "cancel_scan"
         private const val MODE_INTRO_SCAN = "intro_scan"
         private const val MODE_CANCEL_INTRO = "cancel_intro"
