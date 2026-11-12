@@ -55,6 +55,9 @@ class AppUpdater @Inject constructor() {
     /** The system installer for [apk], as an intent. */
     fun installIntent(ctx: Context, apk: File): Intent = installerIntent(ctx, apk)
 
+    /** Reads a GitHub API url (tests stand in for GitHub). */
+    internal var get: (String) -> String = { httpGet(it) }
+
     /** Checksum asset per APK url, remembered from [latest] so [download] can verify it. */
     private val checksumFor = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -72,10 +75,20 @@ class AppUpdater @Inject constructor() {
      *  highest build number that has an .apk asset. */
     suspend fun latest(includePrerelease: Boolean = true): Release? = withContext(Dispatchers.IO) {
         runCatching {
-            // Page by page (newest first) until one has a usable release: the CI publishes a
-            // prerelease per build, so with prereleases off the last stable one can be pages back.
+            // Prereleases off: GitHub's own latest stable release first. The CI publishes a
+            // prerelease per build, and behind more of them than the pages below look through the
+            // last stable release was never found. None (404): the list decides.
+            if (!includePrerelease) {
+                val stable = try {
+                    org.json.JSONObject(get("https://api.github.com/repos/$REPO/releases/latest"))
+                } catch (e: java.io.FileNotFoundException) {
+                    null
+                }
+                stable?.let { pickFrom(JSONArray().put(it), includePrerelease = false) }?.let { return@runCatching it }
+            }
+            // Page by page (newest first) until one has a usable release.
             for (page in 1..MAX_PAGES) {
-                val arr = JSONArray(httpGet("https://api.github.com/repos/$REPO/releases?per_page=$PAGE_SIZE&page=$page"))
+                val arr = JSONArray(get("https://api.github.com/repos/$REPO/releases?per_page=$PAGE_SIZE&page=$page"))
                 pickFrom(arr, includePrerelease)?.let { return@runCatching it }
                 if (arr.length() < PAGE_SIZE) break
             }
@@ -103,7 +116,7 @@ class AppUpdater @Inject constructor() {
             val embedded = obj.optJSONArray("assets")
             val assets = if (embedded != null && embedded.length() > 0) embedded
                 else obj.optString("assets_url").takeIf { it.isNotBlank() }
-                    ?.let { runCatching { JSONArray(httpGet(it)) }.getOrNull() } ?: continue
+                    ?.let { runCatching { JSONArray(get(it)) }.getOrNull() } ?: continue
             val all = (0 until assets.length()).map { assets.getJSONObject(it) }
             val apk = all.firstOrNull { it.optString("name").endsWith(".apk") } ?: continue
             val apkName = apk.optString("name")

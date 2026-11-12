@@ -81,4 +81,37 @@ class AppUpdaterTest {
         }
         assertEquals(str(R.string.update_checksum_required), error.message)
     }
+
+    /** A release as the GitHub list gives it, with its APK. */
+    private fun release(build: Int, prerelease: Boolean) = org.json.JSONObject()
+        .put("tag_name", "v0.1.0-b$build").put("prerelease", prerelease).put("draft", false)
+        .put("assets", org.json.JSONArray().put(org.json.JSONObject()
+            .put("name", "cripta.apk").put("browser_download_url", "https://example.invalid/b$build.apk").put("size", 1)))
+
+    /** GitHub with [stable] (null: none) behind 200 newer prereleases, 30 a page. */
+    private fun github(stable: Int?, latestEndpoint: Boolean = true): (String) -> String {
+        val all = (300 downTo 101).map { release(it, prerelease = true) } + listOfNotNull(stable?.let { release(it, false) })
+        return { url ->
+            when {
+                url.endsWith("/releases/latest") ->
+                    if (stable != null && latestEndpoint) release(stable, false).toString() else throw java.io.FileNotFoundException(url)
+                else -> {
+                    val page = Regex("page=(\\d+)$").find(url)!!.groupValues[1].toInt()
+                    org.json.JSONArray(all.drop((page - 1) * 30).take(30)).toString()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun theLastStableReleaseIsFoundBehindManyPrereleases() = runBlocking {
+        val updater = AppUpdater().apply { get = github(stable = 90) }
+        assertEquals(90, updater.latest(includePrerelease = false)?.buildNumber)
+        assertEquals(300, updater.latest(includePrerelease = true)?.buildNumber)
+    }
+
+    @Test
+    fun noStableReleaseIsNoUpdateNotAnError() = runBlocking {
+        assertNull(AppUpdater().apply { get = github(stable = null) }.latest(includePrerelease = false))
+    }
 }
