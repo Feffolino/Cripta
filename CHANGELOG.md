@@ -6,6 +6,7 @@ Entries marked **stable** went out as a stable release.
 ## 2026-11-12
 
 - A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
+- Browsing thousands of files in the viewer no longer risks closing the app when it goes to the background; after Android closes it, the viewer comes back with the media around the one shown
 
 ## 2026-11-11
 

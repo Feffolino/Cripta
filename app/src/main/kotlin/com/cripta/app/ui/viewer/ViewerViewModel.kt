@@ -71,13 +71,15 @@ class ViewerViewModel @Inject constructor(
      * its own (a face's media from Persone) is not in the last one left behind: it is shown alone,
      * instead of the viewer landing on the first file of that old queue.
      */
-    val ids: List<String> = savedState.get<String>("fileId").let { id ->
+    val ids: List<String> =
         // The browse order lives in memory only: after Android killed the process in the
-        // background, the restored viewer had the opened file alone. Kept in the saved state too
-        // (within a size the saved state can carry).
-        val q = queue.ids.ifEmpty { savedState.get<ArrayList<String>>(SAVED_QUEUE).orEmpty() }
-        if (id.isNullOrEmpty() || id in q) q else listOf(id)
-    }.also { if (it.size <= MAX_SAVED_QUEUE) savedState[SAVED_QUEUE] = ArrayList(it) }
+        // background, the restored viewer had the opened file alone. Part of it is kept in the
+        // saved state too (see [saveQueueAround]); a viewer restored from it shows that part.
+        savedState.get<ArrayList<String>>(SAVED_QUEUE)?.toList()
+            ?: savedState.get<String>("fileId").let { id ->
+                val q = queue.ids
+                if (id.isNullOrEmpty() || id in q) q else listOf(id)
+            }
 
     /**
      * The page to start on: the file shown when the process was killed (swiped to after the
@@ -85,7 +87,34 @@ class ViewerViewModel @Inject constructor(
      */
     val startId: String? = savedState.get<String>(SAVED_CURRENT) ?: savedState.get<String>("fileId")
     private val saved = savedState
-    fun setCurrent(id: String) { saved[SAVED_CURRENT] = id }
+
+    /** Where the part of [ids] in the saved state starts, -1 before it is saved. */
+    private var savedFrom = -1
+
+    /**
+     * Keep in the saved state the part of the browse order around [current], [MAX_SAVED_QUEUE] ids
+     * at most: the whole order (thousands of ids) made the saved state too big to hand to Android
+     * when the app went to the background, two viewers in the back stack above all.
+     */
+    private fun saveQueueAround(current: String?) {
+        // A short order is saved whole, once.
+        if (savedFrom >= 0 && ids.size <= MAX_SAVED_QUEUE) return
+        val at = current?.let { ids.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        // Saved again only once [current] leaves the middle half of what is saved.
+        if (savedFrom >= 0 && at - savedFrom in MAX_SAVED_QUEUE / 4 until MAX_SAVED_QUEUE * 3 / 4) return
+        val window = queueWindow(ids.size, at, MAX_SAVED_QUEUE)
+        if (window.isEmpty()) { savedFrom = 0; saved[SAVED_QUEUE] = ArrayList<String>(); return }
+        if (window.first == savedFrom) return
+        savedFrom = window.first
+        saved[SAVED_QUEUE] = ArrayList(ids.subList(window.first, window.last + 1))
+    }
+
+    init { saveQueueAround(startId) }
+
+    fun setCurrent(id: String) {
+        saved[SAVED_CURRENT] = id
+        saveQueueAround(id)
+    }
 
     /**
      * The pages the viewer shows: the browse order, minus files deleted from the viewer (so a delete
@@ -603,8 +632,23 @@ class ViewerViewModel @Inject constructor(
     companion object {
         private const val SAVED_QUEUE = "viewer_queue"
         private const val SAVED_CURRENT = "viewer_current"
-        /** Ids the saved state carries (about 40 bytes each, well under what a saved state may hold). */
-        private const val MAX_SAVED_QUEUE = 3000
+        /**
+         * Ids of the browse order the saved state carries. A Parcel writes strings in UTF-16: about
+         * 84 bytes a UUID, so about 25 KB, well under the 1 MB Android can hand over for all the
+         * saved states of the app together.
+         */
+        internal const val MAX_SAVED_QUEUE = 300
+
+        /**
+         * The part of a list of [size] items to save, at most [max] long, with [at] in its middle
+         * (pushed to the start or the end near them). Empty for an empty list.
+         */
+        internal fun queueWindow(size: Int, at: Int, max: Int): IntRange {
+            if (size <= 0) return IntRange.EMPTY
+            if (size <= max) return 0 until size
+            val from = (at.coerceIn(0, size - 1) - max / 2).coerceIn(0, size - max)
+            return from until from + max
+        }
         /** Shortest intro/outro a mark can make. */
         private const val MIN_MARK_MS = 1_000L
 
