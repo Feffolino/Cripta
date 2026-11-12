@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- "Annulla" right after giving faces to someone always takes them back: the closer look at the video that starts at once could join them into another face of that person, and the undo then found nothing to put back
 - Downloads and conversions waiting from before Android closed Cripta are resumed at the next unlock when the first try could not read them (the vault locked meanwhile), without having to restart the app
 - A duplicate search asked twice in a row runs once: two at once mixed their results and progress, and "Annulla" could no longer stop the second
 - With prereleases off, updates find the last stable release however many prereleases came after it

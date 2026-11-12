@@ -912,8 +912,22 @@ class FaceRepository @Inject constructor(
         val before = dao.card(trackId)
         val previous = personSnapshot(before?.personId)
         change { dao.confirm(trackId, personId); dao.deleteEmptyPersons() }
-        return { change { revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() } }
+        hold(listOf(trackId))
+        return {
+            change { revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() }
+            release(listOf(trackId))
+        }
     }
+
+    /**
+     * Faces just given to someone, whose "Annulla" is still on offer, until when: the closer look
+     * the assignment starts ([refine]) does not join them into another face meanwhile. Joined, the
+     * face was gone and "Annulla" put nothing back, leaving it confirmed inside the other one.
+     */
+    private val undoHeld = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+    private fun hold(ids: Collection<Long>) { val until = android.os.SystemClock.elapsedRealtime() + UNDO_HOLD_MS; ids.forEach { undoHeld[it] = until } }
+    private fun release(ids: Collection<Long>) { ids.forEach { undoHeld.remove(it) } }
+    private fun held(id: Long): Boolean = (undoHeld[id] ?: return false) > android.os.SystemClock.elapsedRealtime()
 
     /** A face the user can add by hand: shown even when the analysis would set it aside ([why]). */
     class FoundFace(val face: FaceEngine.Face, val picture: Bitmap, val timeMs: Long) {
@@ -1137,7 +1151,11 @@ class FaceRepository @Inject constructor(
         val before = trackIds.mapNotNull { dao.card(it) }
         val previous = before.mapNotNull { it.personId }.distinct().mapNotNull { personSnapshot(it) }
         change { for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons() }
-        return { change { revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() } }
+        hold(before.map { it.id })
+        return {
+            change { revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() }
+            release(before.map { it.id })
+        }
     }
 
     // ---- Embeddings in memory ---------------------------------------------------------------
@@ -1282,13 +1300,18 @@ class FaceRepository @Inject constructor(
             val now = dao.scanOf(file.id)
             if (now == null || now.scannedAt != scan.scannedAt) return@change null
             var joined = 0; var aside = 0
+            // Faces whose assignment can still be taken back are not joined yet: this look is then
+            // not recorded as done, and the next one joins them.
+            var heldBack = false
             // A face the user said is not that person ("Non è lui/lei") is never joined to them,
             // whatever the closer look thinks.
             val refused = verdicts.keys.chunked(500).flatMap { dao.rejectionsOfTracks(it) }.map { it.trackId to it.personId }.toSet()
             for (p in people) {
                 // Faces added by hand (no frame) are not joined into: a new analysis keeps them as they are.
-                val mine = dao.tracksOfFile(file.id).filter { it.personId == p.personId && it.state == "manual" && it.frames != 0L &&
+                val all = dao.tracksOfFile(file.id).filter { it.personId == p.personId && it.state == "manual" && it.frames != 0L &&
                     FaceCodec.decode(it.sightings).isNotEmpty() }.sortedByDescending { it.faceCount }
+                val mine = all.filterNot { held(it.id) }
+                if (mine.size < all.size) heldBack = true
                 var target = mine.firstOrNull() ?: continue
                 // The same person confirmed twice in this video, never in one frame: one face.
                 for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = dao.tracks(listOf(joinRows(listOf(target, o)))).first()
@@ -1309,7 +1332,7 @@ class FaceRepository @Inject constructor(
                 aside++
             }
             val after = signature(meta(dao.tracksOfFile(file.id)))
-            dao.setScanStats(file.id, FaceStats.withRefine(now.stats, FaceStats.Refine(after, joined, aside, seen.size)))
+            if (!heldBack) dao.setScanStats(file.id, FaceStats.withRefine(now.stats, FaceStats.Refine(after, joined, aside, seen.size)))
             Refined(joined, aside, seen.size)
         }
     }
@@ -1714,6 +1737,8 @@ class FaceRepository @Inject constructor(
         private const val NOT_A_FACE = 0.6f
         /** Unassigned faces of different media this alike (to a group's mean) are offered together in "Da sistemare". */
         const val GROUP = 0.45f
+        /** How long an assignment's "Annulla" keeps its faces out of [refine]'s joins (the snackbar's time, and more). */
+        private const val UNDO_HOLD_MS = 60_000L
         /** Where "Aggiungi un volto" looks when the paused frame has no face: half a second apart, then wider. */
         private val AHEAD_MS = longArrayOf(0, 500, 1_000, 1_500, 2_000, 3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000)
         /**

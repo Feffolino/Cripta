@@ -8,6 +8,7 @@ import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.CriptaDatabase
 import com.cripta.app.data.db.FaceApartEntity
 import com.cripta.app.data.db.FaceRejectionEntity
+import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.media.face.EmbeddingCodec
@@ -174,5 +175,29 @@ class PersonEditsTest {
         faces.setFavorite(p, true)
         faces.deleteEmpty(p)
         assertNull(person(p))
+    }
+
+    // ---- "Annulla" on faces given to a person ----
+
+    @Test
+    fun aCloserLookRightAfterAnAssignmentLeavesItsUndoWorking() = runBlocking {
+        db.fileDao().insert(FileEntity(id = "v", originalName = "v.mp4", mimeType = "video/mp4", sizeBytes = 1, createdAt = 0,
+            importedAt = 0, wrappedKeyset = ByteArray(0), durationMs = 60_000))
+        dao.putScan(FaceScanEntity("v", "ok", 10, 0, 2, "", 1, 1))
+        val p = faces.newPerson("P")
+        // A: confirmed before, in moments of its own; B: the same person elsewhere in the video.
+        val a = dao.addTrack(FaceTrackEntity(fileId = "v", frames = 1, timeMs = 1_000, faceCount = 2, width = 100, quality = 1f,
+            embeddings = EmbeddingCodec.encode(listOf(look)), crop = ByteArray(0), personId = p, state = "manual", times = "1000",
+            sightings = FaceCodec.encode(listOf(StoredFace(0, 1_000, 1f, 100, FloatArray(4), look)))))
+        val b = dao.addTrack(FaceTrackEntity(fileId = "v", frames = 2, timeMs = 9_000, faceCount = 1, width = 100, quality = 1f,
+            embeddings = EmbeddingCodec.encode(listOf(look)), crop = ByteArray(0), times = "9000",
+            sightings = FaceCodec.encode(listOf(StoredFace(1, 9_000, 1f, 100, FloatArray(4), look)))))
+        val undo = faces.assignAll(listOf(b), p)
+        // The closer look the assignment starts runs before the user taps "Annulla".
+        faces.refine(db.fileDao().byId("v")!!, force = true)
+        undo()
+        val back = dao.tracks(listOf(b)).single()
+        assertNull(back.personId)
+        assertEquals(p, dao.tracks(listOf(a)).single().personId)
     }
 }
