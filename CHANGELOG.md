@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- A backup restored into the vault it came from no longer adds a second copy of a note already there, also one written by an earlier version
 - A folder created inside one being deleted goes with it (to the trash too), and one created in a folder deleted meanwhile goes to the root: before, it could stay where no screen reached it
 - Emptying old folders from the trash never deletes one restored meanwhile: a note written in it right after stayed in a folder that no longer existed
 - Deleting duplicates from a search opened again later never deletes a note edited since, whether it is the copy kept or one of those deleted; the copy kept is read to its end first, so a damaged copy is never the only one left; notes now record the fingerprint of their text when written

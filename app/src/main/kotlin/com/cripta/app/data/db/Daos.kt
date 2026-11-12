@@ -235,6 +235,10 @@ interface FileDao {
     @Query("SELECT id FROM files WHERE contentHash = :hash AND deletedAt IS NULL AND ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId)")
     suspend fun sameContentIn(hash: String, folderId: Long?): List<String>
 
+    /** Live files of [folderId] (null = the root) of [size] bytes whose content was never hashed. */
+    @Query("SELECT * FROM files WHERE contentHash IS NULL AND sizeBytes = :size AND deletedAt IS NULL AND ((:folderId IS NULL AND folderId IS NULL) OR folderId = :folderId)")
+    suspend fun unhashedOfSizeIn(size: Long, folderId: Long?): List<FileEntity>
+
     @Transaction
     @Query("SELECT * FROM files WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
     fun trashedWithTags(): Flow<List<FileWithTags>>

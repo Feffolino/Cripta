@@ -2488,6 +2488,26 @@ class VaultRepository @Inject constructor(
         }
     }
 
+    /**
+     * A live file of [folderId] with [size] bytes and the content [hash], among those never hashed
+     * (notes written by earlier versions): each one read is hashed for good. Without this, a
+     * backup restored into its own vault added such a note again, as a second identical one.
+     */
+    private suspend fun unhashedCopyIn(folderId: Long?, size: Long, hash: String): String? {
+        for (f in db.fileDao().unhashedOfSizeIn(size, folderId)) {
+            val h = try {
+                fullHashOf(f)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                continue   // unreadable: not a copy of anything
+            }
+            db.fileDao().setContentHash(f.id, h)
+            if (h == hash) return f.id
+        }
+        return null
+    }
+
     /** The manifest's content and the files after it, into the vault (see [importBackupInner]). */
     // Budget only currently usable space so restore never relies on clearing caches.
     @android.annotation.SuppressLint("UsableSpace")
@@ -2602,7 +2622,9 @@ class VaultRepository @Inject constructor(
             // second copy. Its blob was read off the stream (it has to be) and is dropped.
             // Only files that were here before: two equal files inside one archive both come back.
             val hash = md.digest().toHex()
-            val already = db.fileDao().sameContentIn(hash, folderOld?.let { idMap[it] }).firstOrNull { it !in written }
+            val folderNew = folderOld?.let { idMap[it] }
+            val already = db.fileDao().sameContentIn(hash, folderNew).firstOrNull { it !in written }
+                ?: unhashedCopyIn(folderNew, len, hash)
             if (already != null) {
                 runCatching { blobs.blob(uuid).delete() }
                 written.remove(uuid)
