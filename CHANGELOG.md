@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- Face analysis no longer sends usage statistics to Microsoft: the new version of the face engine added today had them on by default (phone model, Android version, Cripta's version, timings and errors, never photos, faces or anything in the vault); now it never connects to the internet
 - A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
 - Browsing thousands of files in the viewer no longer risks closing the app when it goes to the background; after Android closes it, the viewer comes back with the media around the one shown
 - Each new version of the vault's database is recorded, so future updates can be checked to bring an existing vault forward without losing anything

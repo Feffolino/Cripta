@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Required for the in-app video downloader (link / HLS). -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -68,6 +69,13 @@
             android:name=".work.ConversionService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- ONNX Runtime's library starts Microsoft's usage telemetry from this provider when the app
+             starts; removed so its HTTP client never exists (see media/face/OrtTelemetry.kt). -->
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:node="remove" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

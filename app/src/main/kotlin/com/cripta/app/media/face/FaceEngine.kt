@@ -26,7 +26,7 @@ enum class FaceReject(@androidx.annotation.StringRes private val labelRes: Int) 
  * The ONNX sessions are thread-safe: one engine serves every worker.
  */
 class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads: Int = 2) : AutoCloseable {
-    private val env = OrtEnvironment.getEnvironment()
+    private val env: OrtEnvironment = OrtTelemetry.environment()
     private fun options() = OrtSession.SessionOptions().apply {
         setIntraOpNumThreads(threads)
         setSessionLogLevel(ai.onnxruntime.OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR)
