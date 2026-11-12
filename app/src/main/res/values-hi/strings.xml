@@ -160,6 +160,7 @@
     <string name="eta_short">%1$s बाकी</string>
     <string name="eta_almost_done">लगभग पूरा</string>
     <string name="backup_restoring">बैकअप बहाल हो रहा है…</string>
+    <string name="restore_saves_wait">इस दौरान किए गए बदलाव बहाली पूरी होने पर सहेजे जाएँगे</string>
     <string name="backup_creating">बैकअप बन रहा है…</string>
     <string name="update_checksum_missing">अपडेट की जाँच संभव नहीं: चेकसम डाउनलोड नहीं होता</string>
     <string name="update_checksum_invalid">अपडेट की जाँच संभव नहीं: अमान्य चेकसम</string>
@@ -171,6 +172,7 @@
     <string name="diag_rotation">"घुमाव: "</string>
     <string name="diag_probe_failed">"जाँच एक्सट्रैक्टर विफल: "</string>
     <string name="err_out_of_memory">प्रक्रिया पूरी करने के लिए मेमोरी नहीं</string>
+    <string name="err_old_backup_too_large">Cripta के पुराने संस्करण का बैकअप, इस फ़ोन की मेमोरी के लिए बहुत बड़ा है</string>
     <string name="err_no_space">स्टोरेज भरा है</string>
     <string name="err_vault_locked_during">प्रक्रिया के दौरान वॉल्ट लॉक हो गया</string>
     <string name="err_file_not_found">फ़ाइल नहीं मिली या अब उपलब्ध नहीं</string>

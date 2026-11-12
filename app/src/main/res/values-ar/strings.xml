@@ -196,6 +196,7 @@
     <string name="eta_short">المتبقي %1$s</string>
     <string name="eta_almost_done">أوشك على الاكتمال</string>
     <string name="backup_restoring">جارٍ استعادة النسخة الاحتياطية…</string>
+    <string name="restore_saves_wait">تُحفظ التغييرات التي تجريها في هذه الأثناء عند انتهاء الاستعادة</string>
     <string name="backup_creating">جارٍ إنشاء النسخة الاحتياطية…</string>
     <string name="update_checksum_missing">تعذر التحقق من التحديث: لا يمكن تنزيل المجموع الاختباري</string>
     <string name="update_checksum_invalid">تعذر التحقق من التحديث: مجموع اختباري غير صالح</string>
@@ -207,6 +208,7 @@
     <string name="diag_rotation">"التدوير: "</string>
     <string name="diag_probe_failed">"فشل مستخرج الفحص: "</string>
     <string name="err_out_of_memory">لا ذاكرة كافية لإكمال العملية</string>
+    <string name="err_old_backup_too_large">نسخة احتياطية من إصدار أقدم من Cripta، كبيرة جدًا على ذاكرة هذا الهاتف</string>
     <string name="err_no_space">التخزين ممتلئ</string>
     <string name="err_vault_locked_during">قُفلت الخزنة أثناء العملية</string>
     <string name="err_file_not_found">الملف غير موجود أو لم يعد متاحاً</string>

@@ -151,6 +151,7 @@
     <string name="eta_short">残り %1$s</string>
     <string name="eta_almost_done">まもなく完了</string>
     <string name="backup_restoring">バックアップを復元中…</string>
+    <string name="restore_saves_wait">この間に行った変更は、復元が終わると保存されます</string>
     <string name="backup_creating">バックアップを作成中…</string>
     <string name="update_checksum_missing">更新を検証できません。チェックサムをダウンロードできません</string>
     <string name="update_checksum_invalid">更新を検証できません。無効なチェックサムです</string>
@@ -162,6 +163,7 @@
     <string name="diag_rotation">"回転： "</string>
     <string name="diag_probe_failed">"情報取得用エクストラクターの失敗： "</string>
     <string name="err_out_of_memory">操作を完了するためのメモリが足りません</string>
+    <string name="err_old_backup_too_large">以前のバージョンの Cripta で作成されたバックアップで、この端末のメモリでは復元できない大きさです</string>
     <string name="err_no_space">ストレージがいっぱいです</string>
     <string name="err_vault_locked_during">操作中に保管庫がロックされました</string>
     <string name="err_file_not_found">ファイルが見つからないか、アクセスできなくなりました</string>

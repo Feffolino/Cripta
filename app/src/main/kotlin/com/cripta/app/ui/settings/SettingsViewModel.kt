@@ -519,6 +519,10 @@ class SettingsViewModel @Inject constructor(
     val backupBusy: StateFlow<String?> = backups.running.map { it?.label }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.label)
     /** 0..1 while a backup / restore streams, null when idle or the size is unknown. */
+    /** A restore is running: the vault's other changes wait for its end (one transaction). */
+    val restoring: StateFlow<Boolean> = backups.running.map { it?.restore == true }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.restore == true)
+
     val backupProgress: StateFlow<Float?> = backups.running.map { it?.progress }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.progress)
     /** What a backup made now would contain: (files, bytes). Live, always shown in its section. */

@@ -169,6 +169,7 @@
     <string name="eta_short">faltam %1$s</string>
     <string name="eta_almost_done">quase pronto</string>
     <string name="backup_restoring">Restaurando o backup…</string>
+    <string name="restore_saves_wait">As alterações feitas enquanto isso são salvas quando a restauração terminar</string>
     <string name="backup_creating">Criando o backup…</string>
     <string name="update_checksum_missing">Não é possível verificar a atualização: não foi possível baixar a soma de verificação</string>
     <string name="update_checksum_invalid">Não é possível verificar a atualização: soma de verificação inválida</string>
@@ -180,6 +181,7 @@
     <string name="diag_rotation">"Rotação: "</string>
     <string name="diag_probe_failed">"Falha no extrator de diagnóstico: "</string>
     <string name="err_out_of_memory">Memória insuficiente para concluir a operação</string>
+    <string name="err_old_backup_too_large">Backup criado por uma versão anterior do Cripta, grande demais para a memória deste telefone</string>
     <string name="err_no_space">Armazenamento cheio</string>
     <string name="err_vault_locked_during">O cofre foi bloqueado durante a operação</string>
     <string name="err_file_not_found">Arquivo não encontrado ou não está mais acessível</string>

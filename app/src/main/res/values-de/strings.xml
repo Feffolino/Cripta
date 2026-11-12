@@ -160,6 +160,7 @@
     <string name="eta_short">noch %1$s</string>
     <string name="eta_almost_done">fast fertig</string>
     <string name="backup_restoring">Sicherung wird wiederhergestellt…</string>
+    <string name="restore_saves_wait">Änderungen, die du währenddessen machst, werden nach der Wiederherstellung gespeichert</string>
     <string name="backup_creating">Sicherung wird erstellt…</string>
     <string name="update_checksum_missing">Update kann nicht geprüft werden: Prüfsumme nicht herunterladbar</string>
     <string name="update_checksum_invalid">Update kann nicht geprüft werden: ungültige Prüfsumme</string>
@@ -171,6 +172,7 @@
     <string name="diag_rotation">"Drehung: "</string>
     <string name="diag_probe_failed">"Diagnose-Extraktor fehlgeschlagen: "</string>
     <string name="err_out_of_memory">Nicht genug Arbeitsspeicher für den Vorgang</string>
+    <string name="err_old_backup_too_large">Sicherung einer älteren Cripta-Version, zu groß für den Arbeitsspeicher dieses Telefons</string>
     <string name="err_no_space">Speicher voll</string>
     <string name="err_vault_locked_during">Der Tresor wurde während des Vorgangs gesperrt</string>
     <string name="err_file_not_found">Datei nicht gefunden oder nicht mehr zugänglich</string>

@@ -160,6 +160,7 @@
     <string name="eta_short">%1$s to go</string>
     <string name="eta_almost_done">almost done</string>
     <string name="backup_restoring">Restoring the backup…</string>
+    <string name="restore_saves_wait">Changes you make meanwhile are saved when the restore ends</string>
     <string name="backup_creating">Creating the backup…</string>
     <string name="update_checksum_missing">Cannot verify the update: the checksum can\'t be downloaded</string>
     <string name="update_checksum_invalid">Cannot verify the update: invalid checksum</string>
@@ -171,6 +172,7 @@
     <string name="diag_rotation">"Rotation: "</string>
     <string name="diag_probe_failed">"Probe extractor failed: "</string>
     <string name="err_out_of_memory">Not enough memory to finish the operation</string>
+    <string name="err_old_backup_too_large">Backup made by an older version of Cripta, too large to restore with this phone\'s memory</string>
     <string name="err_no_space">Storage is full</string>
     <string name="err_vault_locked_during">The vault was locked during the operation</string>
     <string name="err_file_not_found">File not found or no longer accessible</string>

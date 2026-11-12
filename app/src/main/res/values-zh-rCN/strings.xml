@@ -151,6 +151,7 @@
     <string name="eta_short">还需 %1$s</string>
     <string name="eta_almost_done">即将完成</string>
     <string name="backup_restoring">正在恢复备份…</string>
+    <string name="restore_saves_wait">在此期间所做的更改将在恢复完成后保存</string>
     <string name="backup_creating">正在创建备份…</string>
     <string name="update_checksum_missing">无法验证更新：无法下载校验和</string>
     <string name="update_checksum_invalid">无法验证更新：校验和无效</string>
@@ -162,6 +163,7 @@
     <string name="diag_rotation">"旋转： "</string>
     <string name="diag_probe_failed">"探测提取器失败： "</string>
     <string name="err_out_of_memory">内存不足，无法完成操作</string>
+    <string name="err_old_backup_too_large">此备份由旧版 Cripta 创建，过大，无法用本手机的内存恢复</string>
     <string name="err_no_space">存储空间已满</string>
     <string name="err_vault_locked_during">操作期间保险库已锁定</string>
     <string name="err_file_not_found">找不到文件或已无法访问</string>

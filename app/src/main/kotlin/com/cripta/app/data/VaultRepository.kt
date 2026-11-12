@@ -2279,6 +2279,20 @@ class VaultRepository @Inject constructor(
     }
 
     private suspend fun importBackupInner(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit): RestoreReport {
+        var legacy = false
+        try {
+            return importBackupFrom(src, passphrase, onProgress) { legacy = true }
+        } catch (e: OutOfMemoryError) {
+            // A v1-v3 archive is one AES-GCM message: it is decrypted whole, in memory, before a
+            // byte comes out, and a large one cannot be. Said so, rather than "not enough memory".
+            if (!legacy) throw e
+            logException(android.util.Log.WARN, "VaultRepository", "old backup too large for memory", e)
+            throw java.io.IOException(str(R.string.err_old_backup_too_large))
+        }
+    }
+
+    /** [importBackupInner]; [onLegacy] is called when the archive is of the v1-v3 format. */
+    private suspend fun importBackupFrom(src: Uri, passphrase: CharArray, onProgress: (Float) -> Unit, onLegacy: () -> Unit): RestoreReport {
         val opened = context.contentResolver.openInputStream(src)
             ?: throw java.io.IOException(str(R.string.err_open_backup))
         // Progress = bytes of the archive read so far (its size from the provider, when known).
@@ -2304,6 +2318,7 @@ class VaultRepository @Inject constructor(
                     magic.contentEquals(BackupCrypto.MAGIC) -> BackupCrypto.decryptingStream(raw, passphrase)
                     // v1-v3: one AES-GCM message (still readable).
                     magic.contentEquals(BACKUP_MAGIC) -> {
+                        onLegacy()
                         val salt = ByteArray(16).also { header.readFully(it) }
                         val iv = ByteArray(12).also { header.readFully(it) }
                         val key = deriveBackupKey(passphrase, salt)

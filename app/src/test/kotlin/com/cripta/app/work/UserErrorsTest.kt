@@ -69,6 +69,9 @@ class UserErrorsTest {
     fun translatedOwnMessagesSurviveButUnrecognisedCauseTextDoesNotLeak() {
         val own = str(R.string.err_read_incomplete, "example.pdf")
         assertEquals(own, UserErrors.of(IOException(own)))
+        // An old-format backup too large for memory: its own message, not "error reading the file".
+        val oldBackup = str(R.string.err_old_backup_too_large)
+        assertEquals(oldBackup, UserErrors.of(IOException(oldBackup)))
         val result = UserErrors.of(IllegalStateException("wrapper",
             IOException("/private/customer-document.pdf: unexpected errno 17")))
         assertEquals(str(R.string.err_io), result)

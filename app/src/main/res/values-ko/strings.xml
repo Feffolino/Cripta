@@ -151,6 +151,7 @@
     <string name="eta_short">%1$s 남음</string>
     <string name="eta_almost_done">거의 완료됨</string>
     <string name="backup_restoring">백업 복원 중…</string>
+    <string name="restore_saves_wait">그동안 변경한 내용은 복원이 끝나면 저장됩니다</string>
     <string name="backup_creating">백업 생성 중…</string>
     <string name="update_checksum_missing">업데이트를 검증할 수 없습니다. 체크섬을 다운로드할 수 없습니다</string>
     <string name="update_checksum_invalid">업데이트를 검증할 수 없습니다. 유효하지 않은 체크섬입니다</string>
@@ -162,6 +163,7 @@
     <string name="diag_rotation">"회전: "</string>
     <string name="diag_probe_failed">"정보 확인용 추출기 실패: "</string>
     <string name="err_out_of_memory">작업을 완료할 메모리가 부족합니다</string>
+    <string name="err_old_backup_too_large">이전 버전의 Cripta로 만든 백업이며, 이 휴대전화의 메모리로 복원하기에는 너무 큽니다</string>
     <string name="err_no_space">저장 공간이 가득 찼습니다</string>
     <string name="err_vault_locked_during">작업 중 보관함이 잠겼습니다</string>
     <string name="err_file_not_found">파일이 없거나 더 이상 접근할 수 없습니다</string>

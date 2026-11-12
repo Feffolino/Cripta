@@ -12,6 +12,8 @@ Entries marked **stable** went out as a stable release.
 - "Chiedi" after a conversion names the original as it is now, also when it was renamed while being converted
 - A face analysis that stops part way on a video (it takes too long) no longer leaves double faces each time it is tried again; faces confirmed, rejected or split by hand always stay
 - Opening the vault from two places at once can no longer start before the encryption is ready
+- A very large backup made by an older version of Cripta says it is too large for the phone's memory, instead of a generic error
+- While a backup is being restored, the Backup page says that changes made meanwhile are saved when the restore ends
 
 ## 2026-11-11
 

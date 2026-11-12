@@ -30,8 +30,8 @@ class BackupJobs @Inject constructor() {
         val scope: BackupScope = BackupScope(),
     )
 
-    /** What runs now: its label and progress (0..1, null while unknown). */
-    data class Running(val label: String, val progress: Float?)
+    /** What runs now: its label and progress (0..1, null while unknown), and whether it is a restore. */
+    data class Running(val label: String, val progress: Float?, val restore: Boolean = false)
 
     private val _pending = MutableStateFlow<Request?>(null)
     private val _running = MutableStateFlow<Running?>(null)
@@ -47,7 +47,7 @@ class BackupJobs @Inject constructor() {
             return false
         }
         _pending.value = request
-        _running.value = Running(if (request.restore) str(R.string.backup_restoring) else str(R.string.backup_creating), null)
+        _running.value = Running(if (request.restore) str(R.string.backup_restoring) else str(R.string.backup_creating), null, request.restore)
         return true
     }
 

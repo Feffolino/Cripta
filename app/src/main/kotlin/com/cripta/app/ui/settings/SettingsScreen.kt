@@ -123,6 +123,7 @@ fun SettingsScreen(
     val dupApart by vm.dupApart.collectAsStateWithLifecycle()
     val dupUndo by vm.dupUndo.collectAsStateWithLifecycle()
     val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
+    val restoring by vm.restoring.collectAsStateWithLifecycle()
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
     val backupEstimate by vm.backupEstimate.collectAsStateWithLifecycle()
     val backupFolders by vm.backupFolders.collectAsStateWithLifecycle()
@@ -704,6 +705,10 @@ fun SettingsScreen(
                                         }
                                         Text(eta?.replaceFirstChar { it.uppercase() }?.let { str(R.string.eta_keep_open, it) }
                                                 ?: str(R.string.may_take_minutes),
+                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        // A restore is written as one whole: what the user changes meanwhile
+                                        // (a star, a rename, a move) is saved once it ends.
+                                        if (restoring) Text(str(R.string.restore_saves_wait),
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 } else {

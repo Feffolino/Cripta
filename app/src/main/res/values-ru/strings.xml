@@ -178,6 +178,7 @@
     <string name="eta_short">осталось %1$s</string>
     <string name="eta_almost_done">почти готово</string>
     <string name="backup_restoring">Восстановление резервной копии…</string>
+    <string name="restore_saves_wait">Изменения, сделанные за это время, сохранятся после завершения восстановления</string>
     <string name="backup_creating">Создание резервной копии…</string>
     <string name="update_checksum_missing">Не удаётся проверить обновление: контрольная сумма не скачивается</string>
     <string name="update_checksum_invalid">Не удаётся проверить обновление: неверная контрольная сумма</string>
@@ -189,6 +190,7 @@
     <string name="diag_rotation">"Поворот: "</string>
     <string name="diag_probe_failed">"Ошибка проверочного экстрактора: "</string>
     <string name="err_out_of_memory">Недостаточно памяти для завершения операции</string>
+    <string name="err_old_backup_too_large">Резервная копия из старой версии Cripta слишком велика для памяти этого телефона</string>
     <string name="err_no_space">Память устройства заполнена</string>
     <string name="err_vault_locked_during">Во время операции хранилище было заблокировано</string>
     <string name="err_file_not_found">Файл не найден или больше недоступен</string>
