@@ -692,6 +692,7 @@ class VaultRepository @Inject constructor(
             ?: throw java.io.IOException(str(R.string.err_open_import))
         // Failing halfway (a provider error, the vault locked before the insert) left the partial
         // ciphertext behind, taking space for good: removed on every failure.
+        blobs.beginWrite(uuid)
         try {
             val written = java.security.DigestInputStream(source, md).use { input ->
                 blobs.durableOutput(blob).use { out ->
@@ -741,6 +742,33 @@ class VaultRepository @Inject constructor(
             // A cancellation can land after the insert committed: never strip a listed file of its blob.
             if (!isListed(uuid)) runCatching { blob.delete() }
             throw e
+        } finally {
+            settleWrite(uuid)
+        }
+    }
+
+    /**
+     * The write of [uuid]'s blob ended (see [BlobStore.beginWrite]): listed, or its blob gone. A blob
+     * that could not be deleted keeps its note, for [reconcileInterruptedWrites].
+     */
+    private suspend fun settleWrite(uuid: String) = withContext(kotlinx.coroutines.NonCancellable) {
+        val settled = isListed(uuid) || !blobs.blob(uuid).exists()
+        blobs.endWrite(uuid, keepNote = !settled)
+    }
+
+    /**
+     * Blobs of an import, a download, a conversion or a new note the process was killed in before
+     * their row was committed: deleted, as no screen shows them and nothing else could free that
+     * space. Those with their row (killed after the commit) stay. Writes running now are not looked at.
+     */
+    suspend fun reconcileInterruptedWrites() = withContext(Dispatchers.IO) {
+        val ids = blobs.unfinishedWrites()
+        if (ids.isEmpty()) return@withContext
+        val valid = ids.filter { RESTORED_ID.matches(it) }
+        val listed = valid.chunked(500).flatMap { db.fileDao().existingIds(it) }.toSet()
+        for (id in ids) {
+            if (id in valid && id !in listed) runCatching { blobs.shred(id) }
+            if (id !in valid || id in listed || !blobs.blob(id).exists()) blobs.forgetWrite(id)
         }
     }
 
@@ -910,6 +938,7 @@ class VaultRepository @Inject constructor(
         val md = java.security.MessageDigest.getInstance("SHA-256")
         // A full disk (likely: the conversion keeps the source and the output in cache) left the
         // partial ciphertext behind for good: removed on every failure, as in [import].
+        blobs.beginWrite(uuid)
         try {
             val written = java.security.DigestInputStream(mp4.inputStream(), md).use { input ->
                 blobs.durableOutput(blobs.blob(uuid)).use { out ->
@@ -967,6 +996,8 @@ class VaultRepository @Inject constructor(
         } catch (e: Throwable) {
             if (!isListed(uuid)) runCatching { blobs.blob(uuid).delete() }
             throw e
+        } finally {
+            settleWrite(uuid)
         }
     }
 
@@ -985,69 +1016,74 @@ class VaultRepository @Inject constructor(
             val uuid = UUID.randomUUID().toString()
             val wrapped = FileCrypto.createWrappedFileKeyset(dek)
             val md = java.security.MessageDigest.getInstance("SHA-256")
-            val written = try {
-                java.security.DigestInputStream(video.inputStream(), md).use { input ->
-                    blobs.durableOutput(blobs.blob(uuid)).use { out ->
-                        FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
-                            val buf = ByteArray(256 * 1024); var total = 0L
-                            while (true) {
-                                if (cancelled()) throw java.io.InterruptedIOException("cancelled")
-                                val n = input.read(buf); if (n < 0) break
-                                enc.write(buf, 0, n); total += n
+            blobs.beginWrite(uuid)
+            try {
+                val written = try {
+                    java.security.DigestInputStream(video.inputStream(), md).use { input ->
+                        blobs.durableOutput(blobs.blob(uuid)).use { out ->
+                            FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { enc ->
+                                val buf = ByteArray(256 * 1024); var total = 0L
+                                while (true) {
+                                    if (cancelled()) throw java.io.InterruptedIOException("cancelled")
+                                    val n = input.read(buf); if (n < 0) break
+                                    enc.write(buf, 0, n); total += n
+                                }
+                                total
                             }
-                            total
                         }
                     }
+                } catch (e: Throwable) {
+                    runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
+                    throw e
                 }
-            } catch (e: Throwable) {
-                runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
-                throw e
-            }
-            val duration = runCatching {
-                val r = android.media.MediaMetadataRetriever()
+                val duration = runCatching {
+                    val r = android.media.MediaMetadataRetriever()
+                    try {
+                        r.setDataSource(video.absolutePath)
+                        r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            ?.toLongOrNull()?.takeIf { it > 0 }
+                    } finally { runCatching { r.release() } }
+                }.getOrNull()
+                val downloadedRes = videoResolutionOf(video)
+                val extension = video.extension.lowercase()
+                val name = displayName.ifBlank { "download" } + "." + extension
+                val entity = FileEntity(
+                    id = uuid,
+                    originalName = name,
+                    mimeType = com.cripta.app.media.downloadedVideoMime(video),
+                    sizeBytes = written,
+                    folderId = folderId,
+                    createdAt = now(),
+                    importedAt = now(),
+                    wrappedKeyset = wrapped,
+                    durationMs = duration,
+                    sortWeight = now(),
+                    sourceUrl = sourceUrl,
+                    width = downloadedRes?.first,
+                    height = downloadedRes?.second,
+                    contentHash = md.digest().toHex(),
+                )
+                // The chosen folder may have been deleted (or trashed) while downloading: the root then.
+                // Looked at with the insert, so it cannot go in between.
+                var safeEntity = entity
                 try {
-                    r.setDataSource(video.absolutePath)
-                    r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        ?.toLongOrNull()?.takeIf { it > 0 }
-                } finally { runCatching { r.release() } }
-            }.getOrNull()
-            val downloadedRes = videoResolutionOf(video)
-            val extension = video.extension.lowercase()
-            val name = displayName.ifBlank { "download" } + "." + extension
-            val entity = FileEntity(
-                id = uuid,
-                originalName = name,
-                mimeType = com.cripta.app.media.downloadedVideoMime(video),
-                sizeBytes = written,
-                folderId = folderId,
-                createdAt = now(),
-                importedAt = now(),
-                wrappedKeyset = wrapped,
-                durationMs = duration,
-                sortWeight = now(),
-                sourceUrl = sourceUrl,
-                width = downloadedRes?.first,
-                height = downloadedRes?.second,
-                contentHash = md.digest().toHex(),
-            )
-            // The chosen folder may have been deleted (or trashed) while downloading: the root then.
-            // Looked at with the insert, so it cannot go in between.
-            var safeEntity = entity
-            try {
-                db.withTransaction {
-                    if (cancelled()) throw java.io.InterruptedIOException("cancelled")
-                    safeEntity = entity.copy(folderId = liveFolder(folderId))
-                    db.fileDao().insert(safeEntity)
-                    linkExistingTags(uuid, tagIds)
-                    pendingJobId?.let { db.pendingJobDao().delete(it) }
+                    db.withTransaction {
+                        if (cancelled()) throw java.io.InterruptedIOException("cancelled")
+                        safeEntity = entity.copy(folderId = liveFolder(folderId))
+                        db.fileDao().insert(safeEntity)
+                        linkExistingTags(uuid, tagIds)
+                        pendingJobId?.let { db.pendingJobDao().delete(it) }
+                    }
+                } catch (e: Throwable) {
+                    // Not listed (e.g. the vault locked): the blob would stay on disk with no key for good.
+                    if (!isListed(uuid)) runCatching { blobs.blob(uuid).delete() }
+                    throw e
                 }
-            } catch (e: Throwable) {
-                // Not listed (e.g. the vault locked): the blob would stay on disk with no key for good.
-                if (!isListed(uuid)) runCatching { blobs.blob(uuid).delete() }
-                throw e
+                notifyChanged()
+                safeEntity
+            } finally {
+                settleWrite(uuid)
             }
-            notifyChanged()
-            safeEntity
         }
 
     /** Display resolution (rotation applied) of a plaintext video file; null on failure. */
@@ -2770,39 +2806,44 @@ class VaultRepository @Inject constructor(
         val uuid = UUID.randomUUID().toString()
         val wrapped = FileCrypto.createWrappedFileKeyset(dek)
         val bytes = text.toByteArray()
+        blobs.beginWrite(uuid)
         try {
-            blobs.durableOutput(blobs.blob(uuid)).use { out ->
-                FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
+            try {
+                blobs.durableOutput(blobs.blob(uuid)).use { out ->
+                    FileCrypto.encryptingStream(wrapped, dek, uuid, out).use { it.write(bytes) }
+                }
+            } catch (e: Throwable) {
+                runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
+                throw e
             }
-        } catch (e: Throwable) {
-            runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
-            throw e
+            // Not saved after all (the vault locked once the text was written, a refused insert): its
+            // blob goes too. Left there, no row named it and nothing could ever delete it.
+            var reached = false
+            val e = try {
+                db.withTransaction {
+                    reached = true
+                    // Hashed from the start, as an import: a restore or a duplicate scan finds the note
+                    // by its content (one without a hash was restored again as a second note).
+                    FileEntity(
+                        id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
+                        sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
+                        createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
+                        contentHash = sha256Hex(bytes),
+                    ).also { db.fileDao().insert(it) }
+                }
+            } catch (t: Throwable) {
+                // Never reached the database (locked): surely not listed. Else only when it reads so.
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    val unlisted = !reached || runCatching { db.fileDao().byId(uuid) == null }.getOrDefault(false)
+                    if (unlisted) runCatching { blobs.blob(uuid).delete() }
+                }
+                throw t
+            }
+            notifyChanged()
+            e
+        } finally {
+            settleWrite(uuid)
         }
-        // Not saved after all (the vault locked once the text was written, a refused insert): its
-        // blob goes too. Left there, no row named it and nothing could ever delete it.
-        var reached = false
-        val e = try {
-            db.withTransaction {
-                reached = true
-                // Hashed from the start, as an import: a restore or a duplicate scan finds the note
-                // by its content (one without a hash was restored again as a second note).
-                FileEntity(
-                    id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
-                    sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
-                    createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
-                    contentHash = sha256Hex(bytes),
-                ).also { db.fileDao().insert(it) }
-            }
-        } catch (t: Throwable) {
-            // Never reached the database (locked): surely not listed. Else only when it reads so.
-            withContext(kotlinx.coroutines.NonCancellable) {
-                val unlisted = !reached || runCatching { db.fileDao().byId(uuid) == null }.getOrDefault(false)
-                if (unlisted) runCatching { blobs.blob(uuid).delete() }
-            }
-            throw t
-        }
-        notifyChanged()
-        e
     }
 
     /**

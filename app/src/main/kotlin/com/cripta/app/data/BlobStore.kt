@@ -83,6 +83,36 @@ class BlobStore @Inject constructor(
     /** The folder deletion ended (done, or its folders reopened). */
     fun clearFolderDeleteJournal() { runCatching { folderDeleteJournal.delete() } }
 
+    /**
+     * Blobs being written for a row not committed yet (an import, a download, a conversion, a new
+     * note), one empty file each, named by the id. A process killed in between left the blob with
+     * no row, taking up space no screen could free; a note left by an earlier process tells.
+     */
+    private val writesDir = File(context.filesDir, "blob-writes")
+
+    /** The writes of this process: never taken for one a killed process left. */
+    private val writing: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** [uuid]'s blob is about to be written: noted first, forced to storage. */
+    fun beginWrite(uuid: String) {
+        writing += uuid
+        writesDir.mkdirs()
+        FileOutputStream(File(writesDir, uuid)).use { it.fd.sync() }
+    }
+
+    /** [uuid]'s row is committed, or its blob removed: nothing left to check ([keepNote]: a blob failed to go, left for the next start). */
+    fun endWrite(uuid: String, keepNote: Boolean = false) {
+        if (!keepNote) runCatching { File(writesDir, uuid).delete() }
+        writing -= uuid
+    }
+
+    /** Writes noted and never ended, other than this process's own. */
+    fun unfinishedWrites(): List<String> =
+        runCatching { writesDir.list()?.filter { it !in writing }.orEmpty() }.getOrDefault(emptyList())
+
+    /** The note of a write that [unfinishedWrites] listed, once settled. */
+    fun forgetWrite(uuid: String) { runCatching { File(writesDir, uuid).delete() } }
+
     /** Remove leftovers of a note save interrupted before its rename (see VaultRepository.updateNote). */
     fun sweepTemp() {
         dir.listFiles { f -> f.name.endsWith(".tmp") }?.forEach { runCatching { it.delete() } }
