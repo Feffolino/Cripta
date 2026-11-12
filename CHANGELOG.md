@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- Downloads and conversions waiting from before Android closed Cripta are resumed at the next unlock when the first try could not read them (the vault locked meanwhile), without having to restart the app
 - A duplicate search asked twice in a row runs once: two at once mixed their results and progress, and "Annulla" could no longer stop the second
 - With prereleases off, updates find the last stable release however many prereleases came after it
 - A backup whose tag differs from one in the vault only in capitals ("vacanze" and "Vacanze") puts its files under the tag already here, as typing it would, so saved filters find them; two tags an older backup told apart only by capitals stay two

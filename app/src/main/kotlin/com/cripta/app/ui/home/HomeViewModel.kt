@@ -79,12 +79,17 @@ class HomeViewModel @Inject constructor(
             // Folders of a deletion without the trash the process was killed in: open again.
             runCatching { repo.repairInterruptedFolderDeletes() }
             // Resume downloads/conversions that were waiting when Android killed the app.
-            if (repo.claimJobRestore()) {
-                val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
-                // Not everything was resumed: the next time Home opens tries again.
-                if (!complete) repo.releaseJobRestore()
-            }
+            resumeJobs()
         }
+        // Not everything was resumed: tried again each time the vault opens after a lock.
+        safeScope.launch { repo.jobRestoreRetries.collect { resumeJobs() } }
+    }
+
+    /** [restorePendingJobs] once per process; again when it did not get through. */
+    private suspend fun resumeJobs() {
+        if (!repo.claimJobRestore()) return
+        val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
+        if (!complete) repo.releaseJobRestore()
     }
 
     /** Resume what was waiting; false when something could not be (unreadable list, start refused). */

@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -2032,6 +2034,13 @@ class VaultRepository @Inject constructor(
     fun claimJobRestore(): Boolean = jobsRestored.compareAndSet(false, true)
     /** The restore did not get through (the list was unreadable, Android refused a start): allow another try. */
     fun releaseJobRestore() { jobsRestored.set(false) }
+    /**
+     * Each time the vault opens again while the waiting jobs were not all resumed ([releaseJobRestore]):
+     * Home tries at its start only, and stays alive across a lock, so a try that failed (the vault
+     * locked as the list was read, Android refused a start) was not made again in this process.
+     */
+    val jobRestoreRetries: Flow<Unit> = session.database.map { it != null }.distinctUntilChanged()
+        .drop(1).filter { open -> open && !jobsRestored.get() }.map { }
     /**
      * Awaited, and not cancellable: fire-and-forget, it could run after the job released the keys
      * and fail silently, and the finished download or conversion was resumed at the next unlock.
