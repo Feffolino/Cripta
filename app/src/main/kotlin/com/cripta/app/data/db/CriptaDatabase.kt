@@ -16,7 +16,8 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         FaceScanEntity::class, FaceTrackEntity::class, PersonEntity::class, PersonMediaEntity::class, FaceRejectionEntity::class, FaceMergeEntity::class,
         IgnoredFaceEntity::class, FaceApartEntity::class, DupPrintEntity::class, DupApartEntity::class],
     version = 38,
-    exportSchema = false,
+    // The schema of each version is written to app/schemas (see the room block in app/build.gradle.kts).
+    exportSchema = true,
 )
 abstract class CriptaDatabase : RoomDatabase() {
     /** The SQLCipher key given to the open helper; wiped by [wipeKey] once the database is closed. */

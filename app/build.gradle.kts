@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.androidx.room)
 }
 
 // Signing secrets come from the environment (CI secrets) or a git-ignored keystore.properties
@@ -16,6 +17,12 @@ val keystoreProps = Properties().apply {
 fun signingSecret(name: String): String? = System.getenv(name) ?: keystoreProps.getProperty(name)
 val keystoreFile = file(signingSecret("KEYSTORE_FILE") ?: "cripta-release.keystore")
 val hasSigning = keystoreFile.exists() && signingSecret("KEYSTORE_PASSWORD") != null
+
+// Room writes the database schema of each version here (committed): a later migration can be
+// checked against the schema it starts from.
+room {
+    schemaDirectory("$projectDir/schemas")
+}
 
 android {
     namespace = "com.cripta.app"

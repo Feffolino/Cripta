@@ -7,6 +7,7 @@ Entries marked **stable** went out as a stable release.
 
 - A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
 - Browsing thousands of files in the viewer no longer risks closing the app when it goes to the background; after Android closes it, the viewer comes back with the media around the one shown
+- Each new version of the vault's database is recorded, so future updates can be checked to bring an existing vault forward without losing anything
 
 ## 2026-11-11
 
