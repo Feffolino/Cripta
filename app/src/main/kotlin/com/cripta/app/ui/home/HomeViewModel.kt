@@ -74,6 +74,8 @@ class HomeViewModel @Inject constructor(
             runCatching { repo.repairTagReferences() }
             // Blobs of a restore the process was killed in: space no file in the app holds.
             runCatching { repo.reconcileInterruptedRestore() }
+            // Folders of a deletion without the trash the process was killed in: open again.
+            runCatching { repo.repairInterruptedFolderDeletes() }
             // Resume downloads/conversions that were waiting when Android killed the app.
             if (repo.claimJobRestore()) {
                 val complete = runCatching { restorePendingJobs() }.getOrDefault(false)

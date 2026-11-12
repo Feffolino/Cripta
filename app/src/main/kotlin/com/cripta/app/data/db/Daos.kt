@@ -37,6 +37,10 @@ interface FolderDao {
     @Query("UPDATE folders SET deletedAt = :at WHERE id IN (:ids)")
     suspend fun setDeletedAt(ids: List<Long>, at: Long?)
 
+    /** Reopen the folders [ids] still closed with the time [at] (left alone when trashed since). */
+    @Query("UPDATE folders SET deletedAt = NULL WHERE id IN (:ids) AND deletedAt = :at")
+    suspend fun reopen(ids: List<Long>, at: Long): Int
+
     @Query("UPDATE folders SET parentId = :parentId WHERE id = :id")
     suspend fun setParent(id: Long, parentId: Long?)
 

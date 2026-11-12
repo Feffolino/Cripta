@@ -515,7 +515,10 @@ class VaultRepository @Inject constructor(
      * files) goes to the trash with ONE timestamp, so it is browsable there and restorable as a unit
      * or file by file; returns nothing to evict. Otherwise everything is crypto-shredded now.
      */
-    suspend fun deleteFolderRecursive(folderId: Long): List<String> = withContext(Dispatchers.IO) {
+    suspend fun deleteFolderRecursive(folderId: Long): List<String> = deleteFolderRecursive(folderId) { secureDelete(it) }
+
+    /** [deleteFolderRecursive] with the way each file is destroyed given (tests make it fail). */
+    internal suspend fun deleteFolderRecursive(folderId: Long, shred: suspend (String) -> Boolean): List<String> = withContext(Dispatchers.IO) {
         val subtree = subtreeOf(folderId)
         if (runCatching { settings.settingsOnce().trashEnabled }.getOrDefault(true)) {
             val at = now()
@@ -528,26 +531,74 @@ class VaultRepository @Inject constructor(
             notifyChanged()
             return@withContext emptyList()
         }
+        folderShredLock.withLock { shredFolderTree(subtree, shred) }
+    }
+
+    /**
+     * One deletion without the trash at a time, and [repairInterruptedFolderDeletes] never while
+     * one runs (it would reopen the folders under it).
+     */
+    private val folderShredLock = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun shredFolderTree(subtree: List<Long>, shred: suspend (String) -> Boolean): List<String> {
         val deletedIds = mutableListOf<String>()
         // First closed to anything new: a file moved (or imported) into the folder while its files
         // were being shredded was not among them, and stayed live in a folder deleted after it.
+        val at = now()
         val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }
-        db.folderDao().setDeletedAt(live, now())
-        // Files already in the trash stay restorable: they leave the folder (to the root) instead of
-        // being destroyed along with it. Only the live ones are shredded.
-        db.fileDao().detachTrashedFromFolders(subtree)
-        for (fid in subtree) {
-            db.fileDao().liveIdsInFolder(fid).forEach { if (secureDelete(it)) deletedIds.add(it) }
+        // Closed folders look trashed. Stopped half way (an error, or the process killed: nothing
+        // keeps it alive) they stayed so with the trash off, their files not yet destroyed hidden
+        // in folders no screen opens. Written down first, they are reopened on the error below or
+        // at the next start.
+        blobs.journalFolderDelete(live, at)
+        try {
+            db.folderDao().setDeletedAt(live, at)
+            // Files already in the trash stay restorable: they leave the folder (to the root)
+            // instead of being destroyed along with it. Only the live ones are shredded.
+            db.fileDao().detachTrashedFromFolders(subtree)
+            for (fid in subtree) {
+                db.fileDao().liveIdsInFolder(fid).forEach { if (shred(it)) deletedIds.add(it) }
+            }
+            // One that still got in (its folder checked just before it closed): not what was
+            // deleted, so kept, at the root.
+            for (fid in subtree) db.fileDao().liveIdsInFolder(fid).forEach { db.fileDao().move(it, null) }
+            // delete deepest first
+            for (fid in subtree.reversed()) {
+                db.folderDao().byId(fid)?.let { db.folderDao().delete(it) }
+            }
+        } catch (e: Throwable) {
+            // The folders left (with what was not destroyed yet) open again. Without the database
+            // (the vault locked meanwhile) the journal stays, for the next start.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                if (runCatching { reopenFolders(live, at) }.isSuccess) blobs.clearFolderDeleteJournal()
+                notifyChanged()
+            }
+            throw e
         }
-        // One that still got in (its folder checked just before it closed): not what was deleted,
-        // so kept, at the root.
-        for (fid in subtree) db.fileDao().liveIdsInFolder(fid).forEach { db.fileDao().move(it, null) }
-        // delete deepest first
-        for (fid in subtree.reversed()) {
-            db.folderDao().byId(fid)?.let { db.folderDao().delete(it) }
-        }
+        blobs.clearFolderDeleteJournal()
         notifyChanged()
-        deletedIds
+        return deletedIds
+    }
+
+    private suspend fun reopenFolders(ids: List<Long>, at: Long) {
+        db.withTransaction { ids.chunked(SQL_CHUNK).forEach { db.folderDao().reopen(it, at) } }
+    }
+
+    /**
+     * A deletion without the trash the process was killed in: its folders still there (with the
+     * files not destroyed yet) are reopened, instead of staying in the trash with the trash off.
+     * Skipped while a deletion runs.
+     */
+    suspend fun repairInterruptedFolderDeletes() = withContext(Dispatchers.IO) {
+        if (!folderShredLock.tryLock()) return@withContext
+        try {
+            val (at, ids) = blobs.folderDeleteJournal() ?: return@withContext
+            reopenFolders(ids, at)
+            blobs.clearFolderDeleteJournal()
+            notifyChanged()
+        } finally {
+            folderShredLock.unlock()
+        }
     }
 
     /** [root] and every folder below it (live or trashed), parents before children. */

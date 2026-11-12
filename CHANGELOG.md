@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-12
+
+- A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
+
 ## 2026-11-11
 
 - "Dividi il gruppo" outlives "Ricomincia" (keeping corrections) and "Analizza di nuovo": the split follows the faces found again, so split faces never come back as one group

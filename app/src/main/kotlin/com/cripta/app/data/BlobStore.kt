@@ -57,6 +57,32 @@ class BlobStore @Inject constructor(
     /** The restore ended (kept or undone): nothing of it is left to check. */
     fun clearRestoreJournal() { runCatching { restoreJournal.delete() } }
 
+    /**
+     * The folders a deletion without the trash is destroying: the time they were closed with, then
+     * their ids, one a line. Written (and forced to storage) before they close, cleared when the
+     * deletion ends; one left behind means the process was killed half way.
+     */
+    private val folderDeleteJournal = File(context.filesDir, "folder-delete-journal")
+
+    /** A folder deletion is about to close [ids] with the time [at]. */
+    fun journalFolderDelete(ids: List<Long>, at: Long) {
+        FileOutputStream(folderDeleteJournal).use { out ->
+            out.write(buildString { append(at).append('\n'); ids.forEach { append(it).append('\n') } }.toByteArray())
+            out.fd.sync()
+        }
+    }
+
+    /** The time and folders of a deletion that did not end, or null (none, or unreadable). */
+    fun folderDeleteJournal(): Pair<Long, List<Long>>? = runCatching {
+        if (!folderDeleteJournal.exists()) return@runCatching null
+        val lines = folderDeleteJournal.readLines().map { it.trim() }.filter { it.isNotEmpty() }
+        val at = lines.firstOrNull()?.toLongOrNull() ?: return@runCatching null
+        at to lines.drop(1).mapNotNull { it.toLongOrNull() }
+    }.getOrNull()
+
+    /** The folder deletion ended (done, or its folders reopened). */
+    fun clearFolderDeleteJournal() { runCatching { folderDeleteJournal.delete() } }
+
     /** Remove leftovers of a note save interrupted before its rename (see VaultRepository.updateNote). */
     fun sweepTemp() {
         dir.listFiles { f -> f.name.endsWith(".tmp") }?.forEach { runCatching { it.delete() } }
