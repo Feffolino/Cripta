@@ -410,6 +410,12 @@ abstract class CriptaDatabase : RoomDatabase() {
             synchronized(this) {
                 if (!sqlCipherLoaded) {
                     System.loadLibrary("sqlcipher")
+                    // In WAL mode the pool opens one connection per concurrent reader (default
+                    // up to 10), and every connection derives the key again (PBKDF2-SHA512,
+                    // 256000 iterations) with its own cold page cache. The DB is closed on each
+                    // lock, so that cost came back at every unlock and slowed the first screens.
+                    // Two connections still let a reader run beside a writer, for one extra KDF.
+                    net.zetetic.database.sqlcipher.SQLiteGlobal.setWALConnectionPoolSize(2)
                     sqlCipherLoaded = true
                 }
             }
