@@ -799,6 +799,7 @@
     <string name="dup_reason_first">पहले आयात हुआ</string>
     <string name="scan_failed">स्कैन विफल। फिर कोशिश करें; समस्या बनी रहे तो ऐप रीस्टार्ट करें।</string>
     <string name="dup_keep_gone">रखने वाली कॉपी अब वॉल्ट में नहीं: कोई कॉपी नहीं हटाई गई</string>
+    <string name="dup_changed">खोज के बाद एक कॉपी बदल गई: कोई कॉपी नहीं हटाई गई। फिर से खोजें</string>
     <string name="dup_kept_n">"%1$s कॉपियाँ रखीं, "</string>
     <string name="dup_kept_name">"\"%1$s\" रखी, "</string>
     <plurals name="dup_deleted">

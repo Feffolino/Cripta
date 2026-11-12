@@ -827,6 +827,7 @@
     <string name="dup_reason_first">importé en premier</string>
     <string name="scan_failed">Échec de la recherche. Réessayez ; si le problème persiste, redémarrez l’application.</string>
     <string name="dup_keep_gone">La copie à conserver n’est plus dans le coffre : aucune copie supprimée</string>
+    <string name="dup_changed">Une copie a changé depuis la recherche : aucune copie supprimée. Relancez la recherche</string>
     <string name="dup_kept_n">"%1$s copies conservées, "</string>
     <string name="dup_kept_name">"\"%1$s\" conservé, "</string>
     <plurals name="dup_deleted">

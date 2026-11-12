@@ -827,6 +827,7 @@
     <string name="dup_reason_first">importato per primo</string>
     <string name="scan_failed">Scansione non riuscita. Riprova; se il problema continua, riavvia l\'app.</string>
     <string name="dup_keep_gone">La copia da tenere non è più nel vault: nessuna copia eliminata</string>
+    <string name="dup_changed">Una copia è cambiata dopo la ricerca: nessuna copia eliminata. Cerca di nuovo</string>
     <string name="dup_kept_n">"Tenute %1$s copie, "</string>
     <string name="dup_kept_name">"Tenuto \"%1$s\", "</string>
     <plurals name="dup_deleted">

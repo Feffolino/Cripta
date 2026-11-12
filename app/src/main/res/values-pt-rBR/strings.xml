@@ -827,6 +827,7 @@
     <string name="dup_reason_first">foi importado primeiro</string>
     <string name="scan_failed">Falha na busca. Tente novamente; se continuar acontecendo, reinicie o aplicativo.</string>
     <string name="dup_keep_gone">A cópia a manter não está mais no cofre: nenhuma cópia excluída</string>
+    <string name="dup_changed">Uma cópia mudou depois da busca: nenhuma cópia excluída. Busque de novo</string>
     <string name="dup_kept_n">"%1$s cópias mantidas, "</string>
     <string name="dup_kept_name">"\"%1$s\" mantido, "</string>
     <plurals name="dup_deleted">

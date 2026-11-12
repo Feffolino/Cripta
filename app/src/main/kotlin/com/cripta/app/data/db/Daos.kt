@@ -330,9 +330,9 @@ interface FileDao {
     @Query("UPDATE files SET sourceUrl = :url WHERE id = :id")
     suspend fun setSourceUrl(id: String, url: String?)
 
-    /** A note rewritten: its name, type and size; its old hash would match the old text. */
-    @Query("UPDATE files SET originalName = :name, mimeType = :mime, sizeBytes = :size, contentHash = NULL WHERE id = :id")
-    suspend fun setNoteContent(id: String, name: String, mime: String, size: Long)
+    /** A note rewritten: its name, type, size and the hash of its new text. */
+    @Query("UPDATE files SET originalName = :name, mimeType = :mime, sizeBytes = :size, contentHash = :hash WHERE id = :id")
+    suspend fun setNoteContent(id: String, name: String, mime: String, size: Long, hash: String)
 }
 
 @Dao

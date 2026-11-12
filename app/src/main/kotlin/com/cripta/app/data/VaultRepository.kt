@@ -1600,8 +1600,25 @@ class VaultRepository @Inject constructor(
      * favorite mark carries over, and their source link is copied when the kept file has none.
      * Returns the names of the tags that were newly added to the kept file.
      */
-    suspend fun mergeDuplicates(keepId: String, removeIds: List<String>): MergeOutcome = withContext(Dispatchers.IO) {
-        dupMerge.withLock { mergeDuplicatesLocked(keepId, removeIds) }
+    /**
+     * [exact]: the copies were proved byte-identical by a scan ([provedHash], the content it saw;
+     * null takes the kept copy's). Nothing is deleted unless the kept copy still reads to its end
+     * and, for an exact group, every copy still holds that content: a note edited since the scan,
+     * kept or deleted, was the only copy of its new text. The ids that fail come back in
+     * [MergeOutcome.stale].
+     */
+    suspend fun mergeDuplicates(
+        keepId: String,
+        removeIds: List<String>,
+        exact: Boolean = false,
+        provedHash: String? = null,
+    ): MergeOutcome = withContext(Dispatchers.IO) {
+        dupMerge.withLock {
+            val notes = (removeIds + keepId).distinct().any { id -> db.fileDao().byId(id)?.let { isNote(it.mimeType) } == true }
+            // No note saved between the check and the deletion: that edit would go as a copy.
+            if (notes) noteWrite.withLock { mergeDuplicatesLocked(keepId, removeIds, exact, provedHash) }
+            else mergeDuplicatesLocked(keepId, removeIds, exact, provedHash)
+        }
     }
 
     /**
@@ -1610,10 +1627,12 @@ class VaultRepository @Inject constructor(
      */
     private val dupMerge = kotlinx.coroutines.sync.Mutex()
 
-    private suspend fun mergeDuplicatesLocked(keepId: String, removeIds: List<String>): MergeOutcome {
+    private suspend fun mergeDuplicatesLocked(keepId: String, removeIds: List<String>, exact: Boolean, provedHash: String?): MergeOutcome {
         val keep = db.fileDao().withTagsById(keepId)
         // The copy to keep is gone or in the trash: removing the others would leave no live copy.
         if (keep == null || keep.file.deletedAt != null) return MergeOutcome.NOTHING
+        val stale = staleCopies(keep.file, removeIds, exact, provedHash)
+        if (stale.isNotEmpty()) return MergeOutcome(false, stale = stale)
         val keepTags = keep.tags.map { it.name }.toSet()
         val moved = LinkedHashSet<String>()
         var favorite = keep.file.isFavorite
@@ -1633,6 +1652,47 @@ class VaultRepository @Inject constructor(
     }
 
     /**
+     * The copies of a resolution that are no longer what the scan proved (see [mergeDuplicates]).
+     * The kept copy is read whole: a scan of files hashed at import reads only their head and
+     * tail, and a blob damaged in between would have been the only copy left.
+     */
+    private suspend fun staleCopies(keep: FileEntity, removeIds: List<String>, exact: Boolean, provedHash: String?): Set<String> {
+        val keepHash = try {
+            fullHashOf(keep)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return setOf(keep.id)
+        }
+        if (!exact) return emptySet()
+        val expected = provedHash ?: keepHash
+        val stale = LinkedHashSet<String>()
+        if (keepHash != expected) stale += keep.id
+        for (id in removeIds.filter { it != keep.id }.distinct()) {
+            val f = db.fileDao().byId(id) ?: continue
+            // Every write of a content records its hash: one still unhashed is read.
+            val h = f.contentHash ?: runCatching { fullHashOf(f) }.getOrNull()
+            if (h != expected) stale += id
+        }
+        return stale
+    }
+
+    /** SHA-256 of [f]'s whole plaintext, streamed (throws when the blob cannot be read to its end). */
+    private suspend fun fullHashOf(f: FileEntity): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        decryptingStream(f).use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val n = input.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().toHex()
+    }
+
+    /**
      * Give the kept copy back what [mergeDuplicates] added to it (the tags it did not have, a
      * favorite mark, a source link), so undoing a resolution leaves both copies as they were.
      */
@@ -1647,13 +1707,15 @@ class VaultRepository @Inject constructor(
 
     /**
      * What [mergeDuplicates] did: [merged] is false when nothing was deleted (the copy to keep is
-     * missing or trashed). [tagsMoved], [previousFavorite] and [previousSourceUrl] describe the kept copy.
+     * missing or trashed, or [stale] names copies changed or damaged since the scan). [tagsMoved],
+     * [previousFavorite] and [previousSourceUrl] describe the kept copy.
      */
     data class MergeOutcome(
         val merged: Boolean,
         val tagsMoved: List<String> = emptyList(),
         val previousFavorite: Boolean = false,
         val previousSourceUrl: String? = null,
+        val stale: Set<String> = emptySet(),
     ) {
         companion object { val NOTHING = MergeOutcome(false) }
     }
@@ -2667,10 +2729,13 @@ class VaultRepository @Inject constructor(
         val e = try {
             db.withTransaction {
                 reached = true
+                // Hashed from the start, as an import: a restore or a duplicate scan finds the note
+                // by its content (one without a hash was restored again as a second note).
                 FileEntity(
                     id = uuid, originalName = name.ifBlank { str(R.string.default_note_name) }, mimeType = MIME_MARKDOWN,
                     sizeBytes = bytes.size.toLong(), folderId = liveFolder(folderId),
                     createdAt = now(), importedAt = now(), wrappedKeyset = wrapped, sortWeight = now(),
+                    contentHash = sha256Hex(bytes),
                 ).also { db.fileDao().insert(it) }
             }
         } catch (t: Throwable) {
@@ -2712,16 +2777,21 @@ class VaultRepository @Inject constructor(
             blobs.durableOutput(tmp).use { out ->
                 FileCrypto.encryptingStream(f.wrappedKeyset, dek, fileId, out).use { it.write(bytes) }
             }
-            if (!tmp.renameTo(blob)) throw java.io.IOException(str(R.string.err_note_save))
+            try {
+                java.nio.file.Files.move(tmp.toPath(), blob.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (e: Exception) {
+                throw java.io.IOException(str(R.string.err_note_save), e)
+            }
         } finally {
             if (tmp.exists()) tmp.delete()
         }
-        // The content changed: its old hash would make a file matching the old text look like a
-        // copy of this note ("già presente").
+        // The content changed: the hash follows it. Cleared instead, a duplicate scan that had seen
+        // the old text took a same-size edit for the copy it had proved, and deleted it as one.
         // Saved as Markdown from now on (a note from before keeps its text: plain text is Markdown).
         // Only the note's own columns: the whole row read before the write would put back a star,
         // a folder or a trashing changed while it was being written.
-        db.fileDao().setNoteContent(fileId, name.ifBlank { f.originalName }, MIME_MARKDOWN, bytes.size.toLong())
+        db.fileDao().setNoteContent(fileId, name.ifBlank { f.originalName }, MIME_MARKDOWN, bytes.size.toLong(), sha256Hex(bytes))
         notifyChanged()
     }
 
@@ -2826,6 +2896,9 @@ private fun org.json.JSONObject.optLongOrNull(key: String): Long? =
     if (has(key) && !isNull(key)) optLong(key) else null
 
 private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+
+/** The SHA-256 of [bytes] as the vault records content hashes (lowercase hex). */
+private fun sha256Hex(bytes: ByteArray): String = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
 
 /** Convenience for reading a file entity's blob file directly (used by the media source). */
 fun BlobStore.fileFor(entity: FileEntity): File = blob(entity.id)

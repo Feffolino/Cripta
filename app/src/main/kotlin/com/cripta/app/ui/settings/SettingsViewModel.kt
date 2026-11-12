@@ -15,6 +15,7 @@ import com.cripta.app.data.DeleteOriginalPolicy
 import com.cripta.app.data.Settings
 import com.cripta.app.data.SettingsStore
 import com.cripta.app.data.VaultRepository
+import com.cripta.app.data.dedup.DupIdentity
 import com.cripta.app.data.dedup.DuplicateScanner
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.security.SessionManager
@@ -778,6 +779,8 @@ class SettingsViewModel @Inject constructor(
         val exact: Boolean,
     ) {
         val best: DupCandidate get() = candidates.first { it.file.id == bestId }
+        /** The content an exact group was proved to share (its copies' hash as the scan saw it). */
+        val provedHash: String? get() = if (exact) candidates.firstNotNullOfOrNull { it.file.contentHash } else null
         /** Tags present on other copies but missing on the suggested one (moved when resolving). */
         val tagsToMove: List<String> get() =
             candidates.filter { it.file.id != bestId }.flatMap { it.tags }.distinct().filterNot { it in best.tags }
@@ -914,18 +917,23 @@ class SettingsViewModel @Inject constructor(
     fun keepCopies(keepIds: Set<String>) = launchHeld("keepCopies") {
         val group = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id in keepIds } } ?: return@launchHeld
         val keepId = group.candidates.first { it.file.id in keepIds }.file.id
-        // The kept copy deleted or trashed since the scan: removing the others too would leave
-        // no live copy at all (and the trash is purged after a while).
+        // The kept copy deleted, trashed or edited since the scan: removing the others would leave
+        // no live copy at all (the trash is purged after a while), or none of the content they hold.
         val kept = repo.fileById(keepId)
-        if (kept == null || kept.deletedAt != null) {
+        if (unchangedSinceScan(group.candidates.filter { it.file.id == keepId }).isEmpty()) {
             dropFromResults(setOf(keepId))
-            _dupNotice.value = str(R.string.dup_keep_gone)
+            _dupNotice.value = str(if (kept == null || kept.deletedAt != null) R.string.dup_keep_gone else R.string.dup_changed)
             return@launchHeld
         }
         val remove = unchangedSinceScan(group.candidates.filter { it.file.id !in keepIds })
         if (remove.isEmpty()) return@launchHeld
         val freedNow = group.candidates.filter { it.file.id in remove }.sumOf { it.file.sizeBytes }
-        val outcome = repo.mergeDuplicates(keepId, remove)
+        val outcome = repo.mergeDuplicates(keepId, remove, group.exact, group.provedHash)
+        if (outcome.stale.isNotEmpty()) {
+            dropFromResults(outcome.stale)
+            _dupNotice.value = str(R.string.dup_changed)
+            return@launchHeld
+        }
         if (!outcome.merged) {
             // The kept copy went away between the check and the merge: nothing was deleted.
             dropFromResults(setOf(keepId))
@@ -1025,17 +1033,23 @@ class SettingsViewModel @Inject constructor(
         }
         var moved = emptyList<String>()
         if (group != null) {
-            // The heir must still be live: a copy trashed or deleted since the scan cannot take the
-            // tags, and deleting this one would then leave no live copy at all.
+            // The heir must still be the copy the scan saw: one trashed, deleted or edited since
+            // cannot take the tags, and deleting this one would then leave no live copy of it.
             val others = group.candidates.filter { it.file.id != fileId }
-            val live = others.filter { c -> repo.fileById(c.file.id)?.let { it.deletedAt == null } == true }
+            val stillThere = unchangedSinceScan(others).toSet()
+            val live = others.filter { it.file.id in stillThere }
             val heir = (live.firstOrNull { it.file.id == group.bestId } ?: rank(live).firstOrNull())?.file?.id
             if (heir == null) {
                 dropFromResults(others.map { it.file.id }.toSet())
                 _dupNotice.value = str(R.string.dup_no_other_copy)
                 return@launchHeld
             }
-            val outcome = repo.mergeDuplicates(heir, listOf(fileId))
+            val outcome = repo.mergeDuplicates(heir, listOf(fileId), group.exact, group.provedHash)
+            if (outcome.stale.isNotEmpty()) {
+                dropFromResults(outcome.stale)
+                _dupNotice.value = str(R.string.dup_changed)
+                return@launchHeld
+            }
             if (!outcome.merged) {
                 dropFromResults(setOf(heir))
                 _dupNotice.value = str(R.string.dup_keep_gone)
@@ -1067,13 +1081,8 @@ class SettingsViewModel @Inject constructor(
      * then is no longer a proven copy and is not deleted as one.
      */
     private suspend fun unchangedSinceScan(candidates: List<DupCandidate>): List<String> = candidates.mapNotNull { c ->
-        val now = runCatching { repo.fileById(c.file.id) }.getOrNull() ?: return@mapNotNull null
-        // A hash gained since is fine (hashes are computed lazily); one lost means the content
-        // was rewritten (a note saved again clears it).
-        c.file.id.takeIf {
-            now.deletedAt == null && now.sizeBytes == c.file.sizeBytes &&
-                (c.file.contentHash == null || now.contentHash == c.file.contentHash)
-        }
+        val now = runCatching { repo.fileById(c.file.id) }.getOrNull()
+        c.file.id.takeIf { DupIdentity.stillScanned(c.file, now) != null }
     }
 
     // Unreadable settings count as "trash on" (see VaultRepository.deleteOrTrash).
@@ -1088,10 +1097,12 @@ class SettingsViewModel @Inject constructor(
         _similarGroups.value = _similarGroups.value
             .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
             .filter { it.files.size > 1 }
-        // Re-read the survivors (tags/favorite may have changed by the merge) and re-rank.
+        // Re-read the survivors (tags/favorite may have changed by the merge) and re-rank. Each
+        // keeps the size and hash its scan proved, and one changed since leaves its group: its new
+        // state is no proof that it is still a copy.
         val remaining = _dupGroups.value.map { g -> g.candidates.map { it.file }.filterNot { it.id in ids } }
             .filter { it.size > 1 }
-            .map { files -> files.mapNotNull { repo.fileById(it.id) } }
+            .map { files -> files.mapNotNull { DupIdentity.stillScanned(it, repo.fileById(it.id)) } }
         val old = _dupGroups.value.flatMap { it.candidates }.associateBy { it.file.id }
         val tags = repo.tagNamesOf(remaining.flatten().map { it.id })
         _dupGroups.value = remaining.filter { it.size > 1 }.map { files ->

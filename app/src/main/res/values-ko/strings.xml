@@ -771,6 +771,7 @@
     <string name="dup_reason_first">먼저 가져옴</string>
     <string name="scan_failed">스캔하지 못했습니다. 다시 시도하고, 문제가 계속되면 앱을 다시 시작하세요.</string>
     <string name="dup_keep_gone">유지할 사본이 보관함에 없어 아무 사본도 삭제하지 않았습니다</string>
+    <string name="dup_changed">검색 후 사본이 변경되어 아무 사본도 삭제하지 않았습니다. 다시 검색하세요</string>
     <string name="dup_kept_n">"사본 %1$s개 유지, "</string>
     <string name="dup_kept_name">"\"%1$s\" 유지, "</string>
     <plurals name="dup_deleted">

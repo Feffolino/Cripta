@@ -799,6 +799,7 @@
     <string name="dup_reason_first">wurde zuerst importiert</string>
     <string name="scan_failed">Suche fehlgeschlagen. Versuche es erneut; starte bei weiteren Problemen die App neu.</string>
     <string name="dup_keep_gone">Die zu behaltende Kopie ist nicht mehr im Tresor: Keine Kopie gelöscht</string>
+    <string name="dup_changed">Eine Kopie hat sich seit der Suche geändert: Keine Kopie gelöscht. Erneut suchen</string>
     <string name="dup_kept_n">"%1$s Kopien behalten, "</string>
     <string name="dup_kept_name">"\"%1$s\" behalten, "</string>
     <plurals name="dup_deleted">

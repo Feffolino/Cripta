@@ -855,6 +855,7 @@
     <string name="dup_reason_first">импортировано раньше</string>
     <string name="scan_failed">Сканирование не удалось. Попробуйте ещё раз; если ошибка повторяется, перезапустите приложение.</string>
     <string name="dup_keep_gone">Сохраняемой копии больше нет в хранилище: ни одна копия не удалена</string>
+    <string name="dup_changed">Копия изменилась после поиска: ни одна копия не удалена. Выполните поиск снова</string>
     <string name="dup_kept_n">"Сохранено копий: %1$s, "</string>
     <string name="dup_kept_name">"Сохранено \"%1$s\", "</string>
     <plurals name="dup_deleted">

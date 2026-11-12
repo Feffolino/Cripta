@@ -112,7 +112,9 @@ class DuplicateScanner @Inject constructor(
                         coroutineContext.ensureActive()
                         // The hash recorded at import: no need to decrypt the whole file again.
                         val h = f.contentHash ?: runCatching { fullHash(f) }.getOrNull()?.also { repo.setContentHash(f.id, it) }
-                        if (h != null) byFull.getOrPut(h) { mutableListOf() }.add(f)
+                        // The group carries the hash it was proved with: without it, a copy edited
+                        // later to the same size still passed for the copy the scan had seen.
+                        if (h != null) byFull.getOrPut(h) { mutableListOf() }.add(if (f.contentHash == null) f.copy(contentHash = h) else f)
                     }
                     byFull.values.filter { it.size > 1 }.forEach { dupes ->
                         confirmed += ExactGroup(size, dupes.sortedBy { it.importedAt })

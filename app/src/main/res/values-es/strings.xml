@@ -827,6 +827,7 @@
     <string name="dup_reason_first">se importó primero</string>
     <string name="scan_failed">Error de búsqueda. Reinténtalo; si sigue ocurriendo, reinicia la app.</string>
     <string name="dup_keep_gone">La copia que se iba a conservar ya no está en la caja fuerte: no se eliminó ninguna copia</string>
+    <string name="dup_changed">Una copia cambió después de la búsqueda: no se eliminó ninguna copia. Vuelve a buscar</string>
     <string name="dup_kept_n">"Se conservaron %1$s copias, "</string>
     <string name="dup_kept_name">"Se conservó \"%1$s\", "</string>
     <plurals name="dup_deleted">

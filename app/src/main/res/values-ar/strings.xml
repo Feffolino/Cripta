@@ -911,6 +911,7 @@
     <string name="dup_reason_first">استُورد أولاً</string>
     <string name="scan_failed">فشل الفحص. أعد المحاولة؛ إن استمرت المشكلة، أعد تشغيل التطبيق.</string>
     <string name="dup_keep_gone">النسخة المراد إبقاؤها لم تعد في الخزنة: لم تُحذف أي نسخة</string>
+    <string name="dup_changed">تغيّرت نسخة منذ البحث: لم تُحذف أي نسخة. ابحث مجددًا</string>
     <string name="dup_kept_n">"أُبقيت %1$s نسخة، "</string>
     <string name="dup_kept_name">"أُبقيت \"%1$s\"، "</string>
     <plurals name="dup_deleted">
