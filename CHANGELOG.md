@@ -5,6 +5,9 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- "Annulla" on a merge of people keeps the notes, links and star given to the person afterwards, and gives the merged person back the faces they had said "no" to
+- Faces kept apart stay apart when one of them is joined with another face ("Stessa persona"), and the two parts of a face split with "Dividi" are never grouped together again
+- "Elimina persona" deletes the person's notes and links too: before, they stayed hidden in the vault and went on into backups
 - A backup restored into the vault it came from no longer adds a second copy of a note already there, also one written by an earlier version
 - A folder created inside one being deleted goes with it (to the trash too), and one created in a folder deleted meanwhile goes to the root: before, it could stay where no screen reached it
 - Emptying old folders from the trash never deletes one restored meanwhile: a note written in it right after stayed in a folder that no longer existed

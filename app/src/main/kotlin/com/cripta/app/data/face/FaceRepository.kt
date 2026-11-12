@@ -603,7 +603,12 @@ class FaceRepository @Inject constructor(
      */
     private class MergeRecord(val logId: Long, val dropped: PersonEntity?, val keptBefore: PersonEntity?, val sharedLinks: Set<String>,
                               /** Saved filters the merge rewrote: id -> (before, after). */
-                              val filters: Map<Long, Pair<String, String>> = emptyMap())
+                              val filters: Map<Long, Pair<String, String>> = emptyMap(),
+                              /** The kept person as the merge left them: a profile or star changed since stays. */
+                              val keptAfter: PersonEntity? = null,
+                              /** The merged person's "no" answers, and the faces that only went to the kept one with the merge. */
+                              val droppedRejections: List<FaceRejectionEntity> = emptyList(),
+                              val movedRejections: List<Long> = emptyList())
 
     /** Move everything of [drop] into [keep], remembering it for "Annulla". */
     private suspend fun mergeRows(keep: Long, drop: Long, score: Float, auto: Boolean): MergeRecord {
@@ -612,6 +617,11 @@ class FaceRepository @Inject constructor(
         val tracks = dao.cardsOfPerson(drop).map { it.id }
         val links = dao.linksOfPerson(drop)
         val keptLinks = dao.linksOfPerson(keep).toSet()
+        // Its "no" answers move to the one kept: "Annulla" gives them back (and takes back from the
+        // kept one those it did not have), or the merged person was offered faces it had refused.
+        val droppedRejections = dao.rejectionsOfPerson(drop)
+        val keptRejected = dao.rejectionsOfPerson(keep).map { it.trackId }.toSet()
+        val movedRejections = droppedRejections.map { it.trackId }.filter { it !in keptRejected }
         val logId = dao.addMerge(FaceMergeEntity(keptId = keep, mergedId = drop, mergedName = p?.name.orEmpty(),
             mergedFavorite = p?.favorite == true, trackIds = tracks.joinToString(","), fileIds = links.joinToString(","),
             similarity = score, auto = auto, createdAt = System.currentTimeMillis()))
@@ -640,7 +650,8 @@ class FaceRepository @Inject constructor(
                 filters.setJson(sf.id, it); rewritten[sf.id] = sf.json to it
             }
         }
-        return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet(), rewritten)
+        return MergeRecord(logId, p, keptBefore, links.filter { it in keptLinks }.toSet(), rewritten,
+            keptAfter = dao.persons().firstOrNull { it.id == keep }, droppedRejections = droppedRejections, movedRejections = movedRejections)
     }
 
     // ---- What the screens show -------------------------------------------------------------
@@ -766,9 +777,13 @@ class FaceRepository @Inject constructor(
 
     suspend fun setFavorite(personId: Long, favorite: Boolean) = change { dao.setFavorite(personId, favorite) }
 
-    /** A person left with no media: clearing its name and star lets the usual cleanup remove it. */
+    /**
+     * "Elimina persona" for a person left with no media: its name, star, notes and links go, so
+     * the usual cleanup removes it. The cleanup keeps people with a profile (it runs by itself);
+     * kept so, the deleted profile stayed hidden in the database and went on into backups.
+     */
     suspend fun deleteEmpty(personId: Long) = change {
-        dao.rename(personId, ""); dao.setFavorite(personId, false); dao.deleteEmptyPersons()
+        dao.rename(personId, ""); dao.setFavorite(personId, false); dao.setProfile(personId, "", ""); dao.deleteEmptyPersons()
     }
 
     /** "Unisci": everything goes to [into]; each merge can be undone. */
@@ -792,8 +807,17 @@ class FaceRepository @Inject constructor(
             if (f !in rec.sharedLinks) dao.removePersonMedia(m.keptId, f)
             dao.addPersonMedia(PersonMediaEntity(m.mergedId, f))
         }
-        // The kept person gives back the notes, links and star the merge added to them.
-        rec.keptBefore?.let { dao.setProfile(it.id, it.notes, it.links); dao.setFavorite(it.id, it.favorite) }
+        // The kept person gives back the notes, links and star the merge added to them, only while
+        // they are as the merge left them: a note, a link or a star given since is the user's, and
+        // put back to before the merge it was lost (the merged person's own came back anyway).
+        rec.keptBefore?.let { before ->
+            val now = dao.persons().firstOrNull { it.id == before.id }
+            val after = rec.keptAfter
+            if (now != null && (after == null || now.notes == after.notes && now.links == after.links)) dao.setProfile(before.id, before.notes, before.links)
+            if (now != null && (after == null || now.favorite == after.favorite)) dao.setFavorite(before.id, before.favorite)
+        }
+        for (r in rec.droppedRejections) dao.addRejection(r)
+        for (t in rec.movedRejections) dao.deleteRejection(t, m.keptId)
         for (t in tracks) dao.addRejection(FaceRejectionEntity(t, m.keptId, m.similarity))
         // Saved filters name the merged person again, as before: left pointing at the kept one,
         // a filter for the merged person went on showing the other's media. Not one changed since.
@@ -1349,6 +1373,13 @@ class FaceRepository @Inject constructor(
         dao.moveTrackRejections(drop, keep.id)
         dao.deleteRejectionsOfTracks(drop)
         for (d in drop) dao.moveCover(d, keep.id)
+        // Faces the joined ones were kept apart from ("Dividi il gruppo"): kept apart from the face
+        // that stays. Left on the deleted ids, the next grouping put them together again.
+        val apart = dao.apartOf(drop)
+        if (apart.isNotEmpty()) {
+            dao.deleteApart(apart)
+            dao.addApart(FaceApart.remap(apart, drop.associateWith { keep.id }))
+        }
         dao.deleteTracks(drop)
         return keep.id
     }
@@ -1406,11 +1437,14 @@ class FaceRepository @Inject constructor(
         val ids = before.map { it.id }
         val rejections = dao.rejectionsOfTracks(ids)
         val covers = dao.persons().filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
-        val keep = change { joinRows(before) }
+        val apart = dao.apartOf(ids)
+        val (keep, joinedApart) = change { joinRows(before).let { k -> k to dao.apartOf(listOf(k)).filter { it !in apart } } }
         return {
             change {
                 dao.deleteRejectionsOfTracks(listOf(keep))
+                dao.deleteApart(joinedApart)
                 before.forEach { dao.putTrack(it) }
+                dao.addApart(apart)
                 rejections.forEach { dao.addRejection(it) }
                 covers.forEach { (p, t) -> dao.setCover(p, t) }
             }
@@ -1484,10 +1518,16 @@ class FaceRepository @Inject constructor(
             dao.addTrack(FaceTrackEntity(fileId = row.fileId, frames = out.frames, timeMs = outBest.timeMs, faceCount = out.sightings.size,
                 width = outPic?.width ?: outBest.width, quality = out.quality, embeddings = EmbeddingCodec.encode(out.embeddings),
                 crop = outPic?.crop ?: row.crop, times = out.times.joinToString(","), box = outPic?.box ?: boxText(outBest.box),
-                sightings = FaceCodec.encode(moving)))
+                sightings = FaceCodec.encode(moving))).also { id ->
+                // Someone else, the user says: the two parts are never grouped as one again.
+                dao.addApart(listOf(FaceApartEntity(minOf(trackId, id), maxOf(trackId, id))))
+            }
         }
         stale(listOf(trackId))
-        return { change { dao.deleteTracks(listOf(newId)); dao.putTrack(row) }; stale(listOf(trackId)) }
+        return {
+            change { dao.deleteApart(dao.apartOf(listOf(newId))); dao.deleteTracks(listOf(newId)); dao.putTrack(row) }
+            stale(listOf(trackId))
+        }
     }
 
     private fun draft(faces: List<StoredFace>) = TrackDraft(faces.map { Sighting(it.frame, it.timeMs, it.embedding, it.quality, it) })

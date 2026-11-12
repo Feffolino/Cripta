@@ -834,6 +834,9 @@ interface FaceDao {
     @Query("SELECT * FROM face_rejections WHERE trackId IN (:ids)")
     suspend fun rejectionsOfTracks(ids: List<Long>): List<FaceRejectionEntity>
 
+    @Query("SELECT * FROM face_rejections WHERE personId = :personId")
+    suspend fun rejectionsOfPerson(personId: Long): List<FaceRejectionEntity>
+
     @Query("UPDATE OR IGNORE face_rejections SET trackId = :to WHERE trackId IN (:from)")
     suspend fun moveTrackRejections(from: List<Long>, to: Long)
 
