@@ -291,15 +291,23 @@ class IntroRepository @Inject constructor(
         // one: the videos of a signature that was extended kept its extra seconds, while the merged
         // signature (and every new match) said none.
         val timed = deltas.startDeltaMs != 0L || deltas.endDeltaMs != 0L
-        for (s in sigs) if (timed || s.startDeltaMs != 0L || s.endDeltaMs != 0L) applyDeltas(s, deltas.startDeltaMs, deltas.endDeltaMs)
+        for (s in sigs) if (timed || s.startDeltaMs != 0L || s.endDeltaMs != 0L) applyDeltas(s.kind, s.entries.map { it.first }, deltas.startDeltaMs, deltas.endDeltaMs)
     }
 
     /**
      * "Non è una sigla": the signature's videos lose that segment (the user's own marks stay) and its
      * sounds become rejected samples, so they are never detected again (undo in "Segmenti scartati").
      */
-    suspend fun deleteSignature(sig: Signature) = db.withTransaction {
-        for ((_, seg) in sig.entries) if (seg.source == "auto") dao.deleteSegment(seg.fileId, sig.kind.id)
+    suspend fun deleteSignature(sig: Signature) {
+        val members = sig.id?.let { currentMembers(sig.kind, it) }.orEmpty()
+        db.withTransaction { deleteSignatureNow(sig, members) }
+    }
+
+    private suspend fun deleteSignatureNow(sig: Signature, members: List<FileEntity>) {
+        // Each video's segment as it is now, not as the page read it: one marked by hand since stays.
+        for (file in (sig.entries.map { it.first } + members).distinctBy { it.id }) {
+            if (dao.segmentsOf(file.id).firstOrNull { it.kind == sig.kind.id }?.source == "auto") dao.deleteSegment(file.id, sig.kind.id)
+        }
         // Each sample keeps the video and the stretch it really came from: one origin for all of them
         // rebuilt wrong intervals when a sample was taken out of the rejected list. A saved
         // signature's own sounds have no origin recorded: none is invented (restoring one then
@@ -325,21 +333,33 @@ class IntroRepository @Inject constructor(
      * videos did. An older "Applica a tutti" for the same sound gives way to this newer choice (else
      * it went on moving the signature's next videos once this was set back to the natural length).
      */
-    suspend fun setSignatureDuration(sig: Signature, startDelta: Long, endDelta: Long) = db.withTransaction {
-        val id = persist(sig)
-        dao.setSignatureDeltas(id, startDelta, endDelta)
-        for (rule in dao.rulesOfKind(sig.kind.id)) {
-            val sample = PrintCodec.decode(rule.hashes)
-            if (sig.cores.any { IntroDetector.isRejected(it, listOf(sample)) }) dao.deleteRule(rule.id)
+    suspend fun setSignatureDuration(sig: Signature, startDelta: Long, endDelta: Long) {
+        // Saved first, so its videos are read as they are now: one found since the page was loaded
+        // belongs to it as well, and kept its old bounds while the rest moved.
+        val id = db.withTransaction { persist(sig) }
+        val members = currentMembers(sig.kind, id)
+        db.withTransaction {
+            dao.setSignatureDeltas(id, startDelta, endDelta)
+            for (rule in dao.rulesOfKind(sig.kind.id)) {
+                val sample = PrintCodec.decode(rule.hashes)
+                if (sig.cores.any { IntroDetector.isRejected(it, listOf(sample)) }) dao.deleteRule(rule.id)
+            }
+            applyDeltas(sig.kind, (sig.entries.map { it.first } + members).distinctBy { it.id }, startDelta, endDelta)
         }
-        applyDeltas(sig, startDelta, endDelta)
     }
 
-    private suspend fun applyDeltas(sig: Signature, startDelta: Long, endDelta: Long) {
-        for ((file, seg) in sig.entries) {
+    /** The videos of the saved signature [id] as they are now. */
+    private suspend fun currentMembers(kind: SegmentKind, id: Long): List<FileEntity> =
+        signatures(kind).firstOrNull { it.id == id }?.entries?.map { it.first }.orEmpty()
+
+    private suspend fun applyDeltas(kind: SegmentKind, files: List<FileEntity>, startDelta: Long, endDelta: Long) {
+        for (file in files) {
+            // The segment as it is now, not as the page read it: a mark, a trim or a "none" made since
+            // is the user's, and a page loaded before it put an automatic segment back over it.
+            val seg = dao.segmentsOf(file.id).firstOrNull { it.kind == kind.id } ?: continue
             if (seg.source != "auto") continue   // the user's own marks stay
             val core = Found(file.id, seg.autoStartMs ?: seg.startMs, seg.autoEndMs ?: seg.endMs)
-            dao.putSegment(IntroDetector.segmentFor(sig.kind, core, startDelta, endDelta, file.durationMs))
+            dao.putSegment(IntroDetector.segmentFor(kind, core, startDelta, endDelta, file.durationMs))
         }
     }
 
@@ -509,7 +529,13 @@ class IntroRepository @Inject constructor(
     }
 
     /** "Non è un'intro · In tutti i video". Returns how many other videos lost the segment. */
-    suspend fun rejectEverywhere(file: FileEntity, kind: SegmentKind, startMs: Long, endMs: Long): Int = withContext(Dispatchers.Default) {
+    suspend fun rejectEverywhere(file: FileEntity, kind: SegmentKind, start: Long, end: Long): Int = withContext(Dispatchers.Default) {
+        // The segment moved by a duration: its sound is what is rejected, and what a restore finds
+        // again. Kept with the moved bounds, the restore moved them a second time.
+        val shown = dao.segmentsOf(file.id).firstOrNull { it.kind == kind.id }
+        val core = shown?.takeIf { it.startMs == start && it.endMs == end && it.autoStartMs != null && it.autoEndMs != null }
+        val startMs = core?.autoStartMs ?: start
+        val endMs = core?.autoEndMs ?: end
         dao.deleteSegment(file.id, kind.id)
         val sample = printOf(file.id, kind)?.slice(startMs, endMs)?.takeIf { it.isNotEmpty() } ?: return@withContext 0
         dao.addRejected(RejectedPrintEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
