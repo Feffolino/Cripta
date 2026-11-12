@@ -19,7 +19,7 @@ val hasSigning = keystoreFile.exists() && signingSecret("KEYSTORE_PASSWORD") != 
 
 android {
     namespace = "com.cripta.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.cripta.app"
@@ -100,7 +100,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

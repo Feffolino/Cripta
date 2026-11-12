@@ -84,7 +84,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.cripta.app.data.VaultRepository
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.TrackCard

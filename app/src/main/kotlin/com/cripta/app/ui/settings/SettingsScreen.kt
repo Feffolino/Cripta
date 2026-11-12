@@ -59,7 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.cripta.app.data.DeleteOriginalPolicy
 import com.cripta.app.data.db.TagEntity
 import com.cripta.app.ui.vault.LabelEditorDialog
