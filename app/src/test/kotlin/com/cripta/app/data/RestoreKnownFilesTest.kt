@@ -4,12 +4,23 @@ import android.app.Application
 import android.net.Uri
 import androidx.room.Room
 import com.cripta.app.Strings
+import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
+import com.cripta.app.data.db.FaceScanEntity
+import com.cripta.app.data.db.FaceTrackEntity
+import com.cripta.app.data.db.FileEntity
+import com.cripta.app.data.db.MediaSegmentEntity
+import com.cripta.app.data.db.PersonEntity
+import com.cripta.app.data.db.RejectedPrintEntity
+import com.cripta.app.data.db.SegmentRuleEntity
+import com.cripta.app.data.db.SignatureEntity
+import com.cripta.app.data.db.SignatureSoundEntity
 import com.cripta.app.security.SessionManager
 import com.cripta.crypto.DekManager
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,5 +74,84 @@ class RestoreKnownFilesTest {
         val report = roundTrip()
         assertEquals(1, liveNotes().size)
         assertEquals(1, report.duplicates)
+    }
+
+    private var made = 0
+
+    /** A video of its own content (each one another). */
+    private suspend fun video(): FileEntity {
+        val seed = ++made
+        val src = File.createTempFile("clip", ".mp4", app.cacheDir).apply { writeBytes(ByteArray(4096) { (it * 7 + seed).toByte() }) }
+        return repo.import(Uri.fromFile(src), null)
+    }
+
+    private fun sql(q: String) = db.openHelper.writableDatabase.execSQL(q)
+
+    @Test
+    fun aFileAlreadyHereGetsTheIntroItLacksAndKeepsItsOwn() = runBlocking {
+        val a = video()
+        val b = video().let { db.fileDao().byId(it.id)!! }
+        db.introDao().putSegment(MediaSegmentEntity(a.id, "intro", 1_000, 5_000, "manual"))
+        db.introDao().putSegment(MediaSegmentEntity(b.id, "intro", 1_000, 5_000, "manual"))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // Here: a lost its intro, b was marked otherwise since.
+        db.introDao().deleteSegment(a.id, "intro")
+        db.introDao().putSegment(MediaSegmentEntity(b.id, "intro", 2_000, 3_000, "manual"))
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        assertEquals(2, liveNotes().size)
+        val sa = db.introDao().segmentsOf(a.id).single()
+        assertEquals(1_000L to 5_000L, sa.startMs to sa.endMs)
+        val sb = db.introDao().segmentsOf(b.id).single()
+        assertEquals(2_000L to 3_000L, sb.startMs to sb.endMs)
+    }
+
+    @Test
+    fun aFileAlreadyHereGetsTheFaceAnalysisItLacks() = runBlocking {
+        val a = video()
+        val anna = db.faceDao().addPerson(PersonEntity(name = "Anna", createdAt = 42))
+        db.faceDao().putScan(FaceScanEntity(a.id, "ok", 5, 0, 1, "", 1, 0))
+        db.faceDao().addTrack(FaceTrackEntity(fileId = a.id, frames = 1, timeMs = 0, faceCount = 1, width = 10, quality = 1f,
+            embeddings = ByteArray(0), crop = ByteArray(0), personId = anna, state = "manual"))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        sql("DELETE FROM face_tracks"); sql("DELETE FROM face_scans")
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        assertNotNull(db.faceDao().scanOf(a.id))
+        val tracks = db.faceDao().trackRowsOf(listOf(a.id))
+        assertEquals(1, tracks.size)
+        assertEquals(anna, tracks.single().personId)
+        assertEquals(1, db.faceDao().persons().size)
+    }
+
+    @Test
+    fun aFileAlreadyAnalysedKeepsItsOwnFaces() = runBlocking {
+        val a = video()
+        db.faceDao().putScan(FaceScanEntity(a.id, "ok", 5, 0, 1, "", 1, 0))
+        db.faceDao().addTrack(FaceTrackEntity(fileId = a.id, frames = 1, timeMs = 0, faceCount = 1, width = 10, quality = 1f,
+            embeddings = ByteArray(0), crop = ByteArray(0)))
+        roundTrip()
+        assertEquals(1, db.faceDao().trackRowsOf(listOf(a.id)).size)
+    }
+
+    @Test
+    fun restoringTheSameBackupAgainAddsNoAnalysisTwice() = runBlocking {
+        val a = video()
+        val hashes = ByteArray(64) { it.toByte() }
+        db.introDao().putPrint(AudioPrintEntity(a.id, "head", 0, hashes, "ok"))
+        val sig = db.introDao().addSignature(SignatureEntity(kind = "intro", name = "Sigla", createdAt = 1))
+        db.introDao().addSignatureSound(SignatureSoundEntity(signatureId = sig, hashes = hashes))
+        db.introDao().addRule(SegmentRuleEntity(kind = "intro", originFileId = a.id, originName = "clip", hashes = hashes,
+            startDeltaMs = -1_000, endDeltaMs = 1_000, createdAt = 1))
+        db.introDao().addRejected(RejectedPrintEntity(kind = "outro", originFileId = a.id, originName = "clip",
+            startMs = 0, endMs = 4_000, hashes = hashes, createdAt = 1))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        repeat(2) { repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray()) }
+        val intro = db.introDao()
+        assertEquals(1, intro.backupSignatures().size)
+        assertEquals(1, intro.backupSignatureSounds().size)
+        assertEquals(1, intro.backupRules().size)
+        assertEquals(1, intro.backupRejected().size)
     }
 }

@@ -2544,6 +2544,18 @@ class VaultRepository @Inject constructor(
         return null
     }
 
+    /** v3: the intro/outro segments of the archive's file [o] (absent in older backups), on [fileId]; those of a [kind] [wanted]. */
+    private suspend fun restoreSegments(fileId: String, o: org.json.JSONObject, wanted: (String) -> Boolean = { true }) {
+        val arr = o.optJSONArray("segments") ?: return
+        for (k in 0 until arr.length()) {
+            val s = arr.getJSONObject(k)
+            if (!wanted(s.getString("kind"))) continue
+            db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
+                fileId, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source"),
+                s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
+        }
+    }
+
     /** The manifest's content and the files after it, into the vault (see [importBackupInner]). */
     // Budget only currently usable space so restore never relies on clearing caches.
     @android.annotation.SuppressLint("UsableSpace")
@@ -2675,6 +2687,10 @@ class VaultRepository @Inject constructor(
                     val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
                     db.tagDao().link(FileTagCrossRef(fileId = already, tagId = tid))
                 }
+                // Its intro and outro from the archive where it has none: skipped, a phone that had
+                // the video without them never got them back. Its own marks stay as they are.
+                val own = db.introDao().segmentsOf(already).map { it.kind }.toSet()
+                restoreSegments(already, o) { it !in own }
                 continue
             }
             val entity = FileEntity(
@@ -2702,15 +2718,7 @@ class VaultRepository @Inject constructor(
                 val tid = db.tagDao().byName(n)?.id ?: db.tagDao().insert(TagEntity(name = n))
                 db.tagDao().link(FileTagCrossRef(fileId = uuid, tagId = tid))
             }
-            // v3: intro/outro segments (absent in older backups).
-            o.optJSONArray("segments")?.let { arr ->
-                for (k in 0 until arr.length()) {
-                    val s = arr.getJSONObject(k)
-                    db.introDao().putSegment(com.cripta.app.data.db.MediaSegmentEntity(
-                        uuid, s.getString("kind"), s.getLong("start"), s.getLong("end"), s.getString("source"),
-                        s.optLongOrNull("autoStart"), s.optLongOrNull("autoEnd")))
-                }
-            }
+            restoreSegments(uuid, o)
         }
         // People, faces and intro/outro analysis, when the archive has them.
         val extras = BackupExtras.Contents()

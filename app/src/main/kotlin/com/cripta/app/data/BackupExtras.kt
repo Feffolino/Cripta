@@ -214,6 +214,18 @@ internal object BackupExtras {
         // The source video of a rule or a discarded sound may be one the vault already had: by
         // newIds alone its origin became "", and the entry opened nothing.
         fun originOf(v: Any?): String = anyFile(v) ?: (v as? String).orEmpty()
+        // A file already here with no analysis of its own gets the archive's (one archive position
+        // per file: two equal files of the archive are one here). One analysed here keeps its own.
+        suspend fun lacking(has: suspend (String) -> Boolean): Set<Int> {
+            val first = HashMap<String, Int>()
+            known.forEachIndexed { i, id -> if (id != null && id !in first && !has(id)) first[id] = i }
+            return first.values.toSet()
+        }
+        val noFaces = lacking { id -> faces.scanOf(id) != null || faces.trackRowsOf(listOf(id)).isNotEmpty() }
+        val noPrints = lacking { id -> intro.printsOf(id).isNotEmpty() }
+        val noDupPrint = db.dupPrintDao().all().mapTo(HashSet()) { it.fileId }.let { have -> lacking { it in have } }
+        /** A restored file, or one already here lacking that analysis ([missing]). */
+        fun fileOr(i: Any?, missing: Set<Int>): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) ?: known.getOrNull(it)?.takeIf { _ -> it in missing } }
 
         contents?.analysis = listOf("prints", "signatures", "rules", "rejected", "dupPrints", "dupApart")
             .any { (o.optJSONArray(it)?.length() ?: 0) > 0 }
@@ -253,7 +265,7 @@ internal object BackupExtras {
         o.optJSONArray("scans")?.let { a ->
             for (i in 0 until a.length()) {
                 val s = a.getJSONObject(i)
-                val f = file(s.get("f")) ?: continue
+                val f = fileOr(s.get("f"), noFaces) ?: continue
                 faces.putScan(FaceScanEntity(f, s.optString("status"), s.optInt("read"), s.optInt("failed"), s.optInt("faces"),
                     s.optString("rejects"), s.optInt("version"), s.optLong("at"), s.optBoolean("clustered"), s.optLong("ms"), s.optString("stats")))
             }
@@ -263,7 +275,7 @@ internal object BackupExtras {
             for (i in 0 until a.length()) {
                 val t = a.getJSONObject(i)
                 val emb = inp.blob(); val crop = inp.blob()
-                val f = file(t.opt("f")) ?: continue
+                val f = fileOr(t.opt("f"), noFaces) ?: continue
                 val id = faces.addTrack(FaceTrackEntity(fileId = f, frames = t.optLong("frames"), timeMs = t.optLong("time"),
                     faceCount = t.optInt("count"), width = t.optInt("width"), quality = t.optDouble("quality").toFloat(),
                     embeddings = emb, crop = crop, personId = t.optLongOrNull("person")?.let { personIds[it] },
@@ -323,38 +335,52 @@ internal object BackupExtras {
             for (i in 0 until a.length()) {
                 val p = a.getJSONObject(i)
                 val hashes = inp.blob()
-                val f = file(p.opt("f")) ?: continue
-                intro.putPrint(AudioPrintEntity(f, p.optString("part"), p.optLong("start"), hashes, p.optString("status"), p.optBoolean("matched")))
+                val f = fileOr(p.opt("f"), noPrints) ?: continue
+                // A file already here is compared with this vault's videos at the next analysis.
+                val restored = file(p.opt("f")) != null
+                intro.putPrint(AudioPrintEntity(f, p.optString("part"), p.optLong("start"), hashes, p.optString("status"), restored && p.optBoolean("matched")))
             }
         }
-        val signatureIds = HashMap<Long, Long>()
+        // Signatures, rules and rejected sounds the vault has already (the same archive restored
+        // again) are not added a second time: each restore added them all again, and the extra
+        // sounds were loaded and searched on every analysis.
+        val sounds = ArrayList<Pair<Long, ByteArray>>()
+        o.optJSONArray("sounds")?.let { a -> for (i in 0 until a.length()) sounds += a.getJSONObject(i).getLong("s") to inp.blob() }
+        val soundsOf = sounds.groupBy({ it.first }, { it.second })
         o.optJSONArray("signatures")?.let { a ->
             for (i in 0 until a.length()) {
                 val s = a.getJSONObject(i)
-                signatureIds[s.getLong("id")] = intro.addSignature(SignatureEntity(kind = s.optString("kind"), name = s.optString("name"),
-                    startDeltaMs = s.optLong("sd"), endDeltaMs = s.optLong("ed"), createdAt = s.optLong("at")))
-            }
-        }
-        o.optJSONArray("sounds")?.let { a ->
-            for (i in 0 until a.length()) {
-                val hashes = inp.blob()
-                val sid = signatureIds[a.getJSONObject(i).getLong("s")] ?: continue
-                intro.addSignatureSound(SignatureSoundEntity(signatureId = sid, hashes = hashes))
+                val kind = s.optString("kind")
+                val mine = soundsOf[s.getLong("id")].orEmpty()
+                val here = intro.signatureSoundsOfKind(kind)
+                // The same signature here: one of its sounds is one of this one's. It keeps its name and duration.
+                val sid = here.firstOrNull { e -> mine.any { it.contentEquals(e.hashes) } }?.signatureId
+                    ?: intro.addSignature(SignatureEntity(kind = kind, name = s.optString("name"),
+                        startDeltaMs = s.optLong("sd"), endDeltaMs = s.optLong("ed"), createdAt = s.optLong("at")))
+                val have = here.filter { it.signatureId == sid }.mapTo(ArrayList()) { it.hashes }
+                for (h in mine) if (have.none { it.contentEquals(h) }) { intro.addSignatureSound(SignatureSoundEntity(signatureId = sid, hashes = h)); have += h }
             }
         }
         o.optJSONArray("rules")?.let { a ->
             for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
-                intro.addRule(SegmentRuleEntity(kind = r.optString("kind"), originFileId = originOf(r.opt("origin")), originName = r.optString("originName"),
-                    hashes = inp.blob(), startDeltaMs = r.optLong("sd"), endDeltaMs = r.optLong("ed"), createdAt = r.optLong("at")))
+                val hashes = inp.blob()
+                val kind = r.optString("kind")
+                val sd = r.optLong("sd"); val ed = r.optLong("ed")
+                if (intro.rulesOfKind(kind).any { it.hashes.contentEquals(hashes) && it.startDeltaMs == sd && it.endDeltaMs == ed }) continue
+                intro.addRule(SegmentRuleEntity(kind = kind, originFileId = originOf(r.opt("origin")), originName = r.optString("originName"),
+                    hashes = hashes, startDeltaMs = sd, endDeltaMs = ed, createdAt = r.optLong("at")))
             }
         }
         o.optJSONArray("rejected")?.let { a ->
             for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
-                intro.addRejected(RejectedPrintEntity(kind = r.optString("kind"), originFileId = originOf(r.opt("origin")),
+                val hashes = inp.blob()
+                val kind = r.optString("kind")
+                if (intro.rejectedOfKind(kind).any { it.hashes.contentEquals(hashes) }) continue
+                intro.addRejected(RejectedPrintEntity(kind = kind, originFileId = originOf(r.opt("origin")),
                     originName = r.optString("originName"), startMs = r.optLong("start"), endMs = r.optLong("end"),
-                    hashes = inp.blob(), createdAt = r.optLong("at")))
+                    hashes = hashes, createdAt = r.optLong("at")))
             }
         }
         // Checked like any stored fingerprint when used (size and version), so a stale one is made again.
@@ -362,7 +388,7 @@ internal object BackupExtras {
             val dup = db.dupPrintDao()
             for (i in 0 until a.length()) {
                 val d = a.getJSONObject(i)
-                val f = file(d.opt("f")) ?: continue
+                val f = fileOr(d.opt("f"), noDupPrint) ?: continue
                 val hashes = runCatching { java.util.Base64.getDecoder().decode(d.optString("h")) }.getOrNull() ?: continue
                 dup.put(DupPrintEntity(f, d.optLong("size"), d.optInt("v"), hashes))
             }
