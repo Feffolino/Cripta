@@ -371,7 +371,11 @@ class VaultRepository @Inject constructor(
 
     // --- Folders ---
     suspend fun createFolder(name: String, parentId: Long?): Long = withContext(Dispatchers.IO) {
-        val id = db.folderDao().insert(FolderEntity(name = name.trim(), parentId = parentId, createdAt = now()))
+        // The parent checked in the same transaction, as a file's destination: one deleted or sent
+        // to the trash meanwhile left the new folder where no screen could reach it. Then: the root.
+        val id = db.withTransaction {
+            db.folderDao().insert(FolderEntity(name = name.trim(), parentId = liveFolder(parentId), createdAt = now()))
+        }
         notifyChanged(); id
     }
 
@@ -522,16 +526,32 @@ class VaultRepository @Inject constructor(
         val subtree = subtreeOf(folderId)
         if (runCatching { settings.settingsOnce().trashEnabled }.getOrDefault(true)) {
             val at = now()
-            // Subfolders already in the trash keep their own date.
-            val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }
-            db.withTransaction {
-                db.fileDao().trashInFolders(subtree, at)
-                db.folderDao().setDeletedAt(live, at)
+            var trashed = subtree
+            var next = subtree
+            while (next.isNotEmpty()) {
+                // Subfolders already in the trash keep their own date.
+                val live = next.filter { db.folderDao().byId(it)?.deletedAt == null }
+                db.withTransaction {
+                    db.fileDao().trashInFolders(next, at)
+                    db.folderDao().setDeletedAt(live, at)
+                }
+                // A folder created in it just before it closed was not listed: it goes too.
+                next = createdMeanwhile(folderId, trashed)
+                trashed = trashed + next
             }
             notifyChanged()
             return@withContext emptyList()
         }
-        folderShredLock.withLock { shredFolderTree(subtree, shred) }
+        folderShredLock.withLock { shredFolderTree(folderId, subtree, shred) }
+    }
+
+    /**
+     * Folders under [root] that are not in [listed]: created in it after it was listed, before it
+     * closed (a closed folder takes no new ones, see [createFolder]). Parents before children.
+     */
+    private suspend fun createdMeanwhile(root: Long, listed: List<Long>): List<Long> {
+        val known = listed.toHashSet()
+        return subtreeOf(root).filterNot { it in known }
     }
 
     /**
@@ -540,12 +560,13 @@ class VaultRepository @Inject constructor(
      */
     private val folderShredLock = kotlinx.coroutines.sync.Mutex()
 
-    private suspend fun shredFolderTree(subtree: List<Long>, shred: suspend (String) -> Boolean): List<String> {
+    private suspend fun shredFolderTree(root: Long, listed: List<Long>, shred: suspend (String) -> Boolean): List<String> {
         val deletedIds = mutableListOf<String>()
         // First closed to anything new: a file moved (or imported) into the folder while its files
         // were being shredded was not among them, and stayed live in a folder deleted after it.
         val at = now()
-        val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }
+        var subtree = listed
+        val live = subtree.filter { db.folderDao().byId(it)?.deletedAt == null }.toMutableList()
         // Closed folders look trashed. Stopped half way (an error, or the process killed: nothing
         // keeps it alive) they stayed so with the trash off, their files not yet destroyed hidden
         // in folders no screen opens. Written down first, they are reopened on the error below or
@@ -553,6 +574,16 @@ class VaultRepository @Inject constructor(
         blobs.journalFolderDelete(live, at)
         try {
             db.folderDao().setDeletedAt(live, at)
+            // A folder created in it just before it closed was not listed: deleted with it, it is
+            // not left under a folder that no longer exists.
+            while (true) {
+                val extra = createdMeanwhile(root, subtree)
+                if (extra.isEmpty()) break
+                live += extra
+                blobs.journalFolderDelete(live, at)
+                db.folderDao().setDeletedAt(extra, at)
+                subtree = subtree + extra
+            }
             // Files already in the trash stay restorable: they leave the folder (to the root)
             // instead of being destroyed along with it. Only the live ones are shredded.
             db.fileDao().detachTrashedFromFolders(subtree)
@@ -1796,7 +1827,9 @@ class VaultRepository @Inject constructor(
         for (id in deepestFirst) {
             val f = db.folderDao().byId(id) ?: continue
             if (f.deletedAt == null) continue
-            if (db.fileDao().idsInFolder(id).isEmpty() && db.folderDao().childCount(id) == 0) db.folderDao().delete(f)
+            // Deleted only if still so when deleted: restored and given a note meanwhile, the folder
+            // went and the note was left in a folder that no longer existed.
+            if (db.fileDao().idsInFolder(id).isEmpty() && db.folderDao().childCount(id) == 0) db.folderDao().deleteIfEmptyTrashed(id)
         }
     }
 

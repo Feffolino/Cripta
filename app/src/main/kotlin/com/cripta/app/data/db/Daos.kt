@@ -47,6 +47,15 @@ interface FolderDao {
     @Query("SELECT COUNT(*) FROM folders WHERE parentId = :id")
     suspend fun childCount(id: Long): Int
 
+    /**
+     * Delete [id] only while it is still in the trash and holds no file and no folder, checked in
+     * the same statement: one restored and filled since it was found empty stays. Returns rows deleted.
+     */
+    @Query("DELETE FROM folders WHERE id = :id AND deletedAt IS NOT NULL " +
+        "AND NOT EXISTS (SELECT 1 FROM files WHERE folderId = :id) " +
+        "AND NOT EXISTS (SELECT 1 FROM folders AS c WHERE c.parentId = :id)")
+    suspend fun deleteIfEmptyTrashed(id: Long): Int
+
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun byId(id: Long): FolderEntity?
 

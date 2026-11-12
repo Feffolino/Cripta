@@ -5,6 +5,8 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- A folder created inside one being deleted goes with it (to the trash too), and one created in a folder deleted meanwhile goes to the root: before, it could stay where no screen reached it
+- Emptying old folders from the trash never deletes one restored meanwhile: a note written in it right after stayed in a folder that no longer existed
 - Deleting duplicates from a search opened again later never deletes a note edited since, whether it is the copy kept or one of those deleted; the copy kept is read to its end first, so a damaged copy is never the only one left; notes now record the fingerprint of their text when written
 - Face analysis no longer sends usage statistics to Microsoft: the new version of the face engine added today had them on by default (phone model, Android version, Cripta's version, timings and errors, never photos, faces or anything in the vault); now it never connects to the internet
 - A folder deleted for good (trash off) that stops half way, because of an error or because the app was closed meanwhile, opens again with whatever was not destroyed yet, instead of staying hidden in the trash
