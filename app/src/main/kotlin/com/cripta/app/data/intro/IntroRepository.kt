@@ -160,12 +160,14 @@ class IntroRepository @Inject constructor(
         val (o, m) = best
         val secs = m.length * Fingerprint.HOP_MS / 1000
         val other = repo.fileById(o.fileId)?.originalName ?: str(R.string.another_video)
+        // The texts formatted twice (name, then numbers): a "%" in the name must stay a "%".
+        val named = other.replace("%", "%%")
         return when {
-            m.length < kind.minHashes -> str(R.string.intro_shared_short, other).format(com.cripta.app.Strings.locale, secs)
-            IntroDetector.isCut(kind, p, o, m) -> str(R.string.intro_shared_cut, other).format(com.cripta.app.Strings.locale, secs)
+            m.length < kind.minHashes -> str(R.string.intro_shared_short, named).format(com.cripta.app.Strings.locale, secs)
+            IntroDetector.isCut(kind, p, o, m) -> str(R.string.intro_shared_cut, named).format(com.cripta.app.Strings.locale, secs)
             IntroDetector.isRejected(p.hashes.copyOfRange(m.aStart, m.aEnd), dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }) ->
                 str(R.string.intro_shared_rejected, other)
-            else -> str(R.string.intro_shared_unsaved, other).format(com.cripta.app.Strings.locale, secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
+            else -> str(R.string.intro_shared_unsaved, named).format(com.cripta.app.Strings.locale, secs, clock(p.timeOf(m.aStart)), clock(p.timeOf(m.aEnd)))
         }
     }
 
