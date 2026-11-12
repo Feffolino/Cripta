@@ -673,6 +673,13 @@ private fun SlideCompare(
     }
 }
 
+/**
+ * A photo of the side-by-side preview, at most 4095 pixels on its longest side: decoded whole, a
+ * photo of tens of megapixels took hundreds of megabytes and was too large to draw. Null when
+ * [bytes] are not a picture.
+ */
+internal fun previewBitmap(bytes: ByteArray): android.graphics.Bitmap? = decodeFitted(bytes, 2048)
+
 /** [bytes] decoded with the longest side at most about [side] (power-of-two subsampling, in memory). */
 private fun decodeFitted(bytes: ByteArray, side: Int): android.graphics.Bitmap? {
     val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -950,15 +957,14 @@ private fun PreviewDialog(
                             PreviewVideo(f, channelFor, positionMs) { positionMs = it }
                         }
                         VaultRepository.isImage(f.mimeType) -> {
-                            val bmp by produceState<android.graphics.Bitmap?>(null, f.id) {
-                                value = runCatching {
-                                    val bytes = imageBytes(f)
-                                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                }.getOrNull()
+                            // (read, picture): a picture that cannot be read says so instead of loading forever.
+                            val bmp by produceState<Pair<Boolean, android.graphics.Bitmap?>>(false to null, f.id) {
+                                value = true to runCatching { previewBitmap(imageBytes(f)) }.getOrNull()
                             }
-                            val b = bmp
+                            val (read, b) = bmp
                             if (b != null) Image(b.asImageBitmap(), f.originalName, contentScale = ContentScale.Fit,
                                 modifier = Modifier.fillMaxSize())
+                            else if (read) Text(str(R.string.preview_unavailable), color = Color.White)
                             else androidx.compose.material3.CircularProgressIndicator(color = Color.White)
                         }
                         else -> Text(str(R.string.preview_unavailable), color = Color.White)
