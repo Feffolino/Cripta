@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-12
 
+- A drag in the manual order stopped by the system shows the saved order again, so a later drag no longer saves the move that was cancelled; files added or removed during a drag are shown once it ends
 - "Annulla" right after giving faces to someone always takes them back: the closer look at the video that starts at once could join them into another face of that person, and the undo then found nothing to put back
 - Downloads and conversions waiting from before Android closed Cripta are resumed at the next unlock when the first try could not read them (the vault locked meanwhile), without having to restart the app
 - A duplicate search asked twice in a row runs once: two at once mixed their results and progress, and "Annulla" could no longer stop the second

@@ -57,3 +57,17 @@ internal fun moveDropTarget(hover: Long?, here: Long?, origin: Long?): DropTarge
     here != origin -> DropTarget.Into(here)
     else -> DropTarget.Stay
 }
+
+/**
+ * The grid's order once a drag is dropped: [dragged] (the list as the user arranged it) over
+ * [latest] (the vault now: an update that came during the drag was held back). Files still there
+ * keep the user's order, as the vault's copy; files added meanwhile go where the vault has them;
+ * files gone are left out.
+ */
+internal fun <T : Any> afterDrop(dragged: List<T>, latest: List<T>, key: (T) -> String): List<T> {
+    val now = latest.associateBy(key)
+    val out = dragged.mapNotNull { now[key(it)] }.toMutableList()
+    val kept = out.mapTo(HashSet(), key)
+    latest.forEachIndexed { i, t -> if (key(t) !in kept) out.add(minOf(i, out.size), t) }
+    return out
+}
