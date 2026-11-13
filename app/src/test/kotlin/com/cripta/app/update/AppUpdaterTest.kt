@@ -4,6 +4,7 @@ import android.app.Application
 import com.cripta.app.R
 import com.cripta.app.Strings
 import com.cripta.app.str
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -134,5 +135,96 @@ class AppUpdaterTest {
     @Test
     fun noStableReleaseIsNoUpdateNotAnError() = runBlocking {
         assertNull(AppUpdater().apply { get = github(stable = null) }.latest(includePrerelease = false))
+    }
+
+    // --- download(): the bytes, their checksum and the package, before anything is handed to the installer ---
+
+    private val app: Application get() = RuntimeEnvironment.getApplication()
+    private val apkBytes = ByteArray(200_000) { (it % 97).toByte() }
+    private val apkSha = java.security.MessageDigest.getInstance("SHA-256").digest(apkBytes)
+        .joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    private val part get() = java.io.File(AppUpdater.apkFile(app).parentFile, "update.part.apk")
+
+    private fun updater(checksum: () -> String = { "$apkSha  cripta.apk" }, apkPackage: String? = app.packageName,
+                        input: () -> java.io.InputStream = { apkBytes.inputStream() }) = AppUpdater().apply {
+        open = { AppUpdater.Body(input(), apkBytes.size.toLong()) {} }
+        getChecksum = { checksum() }
+        archivePackage = { _, _ -> apkPackage }
+    }
+
+    @org.junit.After
+    fun noDownloadLeft() {
+        AppUpdater.apkFile(app).delete(); part.delete()
+    }
+
+    @Test
+    fun aVerifiedDownloadBecomesUpdateApk() = runBlocking {
+        val progress = mutableListOf<Int>()
+        val apk = updater().download(app, "https://example.invalid/x.apk", "https://example.invalid/x.sha256") { progress += it }
+        assertEquals(AppUpdater.apkFile(app), apk)
+        org.junit.Assert.assertArrayEquals(apkBytes, apk.readBytes())
+        assertFalse(part.exists())
+        assertEquals(100, progress.last())
+        // Only when the percentage moves.
+        assertEquals(progress.distinct(), progress)
+    }
+
+    private fun assertRefused(updater: AppUpdater, error: Class<out Throwable>, message: String) {
+        // An earlier verified APK stays until a new one is verified: its notification may still open it.
+        AppUpdater.apkFile(app).apply { parentFile?.mkdirs(); writeText("earlier") }
+        val thrown = assertThrows(error) {
+            runBlocking { updater.download(app, "https://example.invalid/x.apk", "https://example.invalid/x.sha256") {} }
+        }
+        assertEquals(message, thrown.message)
+        assertFalse("the unverified download is removed", part.exists())
+        assertEquals("earlier", AppUpdater.apkFile(app).readText())
+    }
+
+    @Test
+    fun aDifferentChecksumIsRefusedAndLeavesNothing() =
+        assertRefused(updater(checksum = { "cd".repeat(32) }), AppUpdater.Rejected::class.java, str(R.string.update_checksum_mismatch))
+
+    @Test
+    fun anApkOfAnotherAppIsRefused() =
+        assertRefused(updater(apkPackage = "other.app"), AppUpdater.Rejected::class.java, str(R.string.update_wrong_package))
+
+    @Test
+    fun anUnreadableChecksumFileSaysSo() =
+        assertRefused(updater(checksum = { throw java.io.FileNotFoundException("x.sha256") }),
+            java.io.IOException::class.java, str(R.string.update_checksum_missing))
+
+    @Test
+    fun aChecksumFileWithoutAChecksumIsRefused() =
+        assertRefused(updater(checksum = { "<html>not found</html>" }), AppUpdater.Rejected::class.java, str(R.string.update_checksum_invalid))
+
+    @Test
+    fun aDownloadCutOffMidwayLeavesNothing() {
+        val failing = object : java.io.InputStream() {
+            var left = 100_000
+            override fun read(): Int = throw UnsupportedOperationException()
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                if (left <= 0) throw java.net.SocketTimeoutException("read timed out")
+                return minOf(len, left).also { left -= it }
+            }
+        }
+        assertRefused(updater(input = { failing }), java.net.SocketTimeoutException::class.java, "read timed out")
+    }
+
+    @Test
+    fun cancellingStopsTheDownloadAndLeavesNothing() = runBlocking {
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
+        val reading = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val endless = object : java.io.InputStream() {
+            override fun read(): Int = 0
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                reading.complete(Unit); Thread.sleep(1); return len
+            }
+        }
+        val job = scope.async { updater(input = { endless }).download(app, "https://example.invalid/x.apk", "https://example.invalid/x.sha256") {} }
+        reading.await()
+        job.cancel()
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) { runBlocking { job.await() } }
+        assertFalse(part.exists())
+        assertFalse(AppUpdater.apkFile(app).exists())
     }
 }

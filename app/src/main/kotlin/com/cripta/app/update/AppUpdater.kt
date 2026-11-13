@@ -58,6 +58,26 @@ class AppUpdater @Inject constructor() {
     /** Reads a GitHub API url (tests stand in for GitHub). */
     internal var get: (String) -> String = { httpGet(it) }
 
+    /** A download's bytes, with its length when the server gives it; [close] ends the connection. */
+    internal class Body(val input: java.io.InputStream, val length: Long?, val close: () -> Unit)
+
+    /** The APK download, the checksum file and the package of a downloaded APK. Replaced by tests. */
+    internal var open: (String) -> Body = { url ->
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = true; connectTimeout = 20000; readTimeout = 20000
+        }
+        try {
+            Body(conn.inputStream, conn.contentLengthLong.takeIf { it > 0 }) { conn.disconnect() }
+        } catch (e: Throwable) {
+            conn.disconnect(); throw e
+        }
+    }
+    internal var getChecksum: (String) -> String = { httpGet(it, accept = null) }
+    internal var archivePackage: (Context, File) -> String? = { ctx, apk ->
+        @Suppress("DEPRECATION")
+        ctx.packageManager.getPackageArchiveInfo(apk.path, 0)?.packageName
+    }
+
     /** Checksum asset per APK url, remembered from [latest] so [download] can verify it. */
     private val checksumFor = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -152,12 +172,10 @@ class AppUpdater @Inject constructor() {
         val target = apkFile(ctx)
         val out = File(target.parentFile, PART_NAME).apply { parentFile?.mkdirs(); if (exists()) delete() }
         val md = java.security.MessageDigest.getInstance("SHA-256")
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = true; connectTimeout = 20000; readTimeout = 20000
-        }
+        val body = open(url)
         try {
-            conn.inputStream.use { input ->
-                val total = conn.contentLengthLong.takeIf { it > 0 }
+            body.input.use { input ->
+                val total = body.length
                 out.outputStream().use { output ->
                     val buf = ByteArray(64 * 1024); var read: Int; var done = 0L; var lastPct = -1
                     while (input.read(buf).also { read = it } >= 0) {
@@ -178,20 +196,19 @@ class AppUpdater @Inject constructor() {
         } catch (e: Throwable) {
             out.delete(); throw e
         } finally {
-            conn.disconnect()
+            body.close()
         }
         try {
             val expected = try {
                 // "sha256sum" format: "<64 hex>  <file name>"; take the first hex token.
-                Regex("\\b[0-9a-fA-F]{64}\\b").find(httpGet(checksumUrl, accept = null))?.value
+                Regex("\\b[0-9a-fA-F]{64}\\b").find(getChecksum(checksumUrl))?.value
             } catch (e: java.io.IOException) {
                 throw java.io.IOException(str(R.string.update_checksum_missing), e)
             }
             val actual = md.digest().joinToString("") { "%02x".format(it.toInt() and 0xFF) }
             // Verify integrity before asking Android to parse the downloaded APK.
             refusal(expected, actual, ctx.packageName, ctx.packageName)?.let { throw Rejected(str(it)) }
-            @Suppress("DEPRECATION")
-            val apkPackage = ctx.packageManager.getPackageArchiveInfo(out.path, 0)?.packageName
+            val apkPackage = archivePackage(ctx, out)
             refusal(expected, actual, apkPackage, ctx.packageName)?.let { throw Rejected(str(it)) }
         } catch (e: Throwable) {
             out.delete(); throw e
