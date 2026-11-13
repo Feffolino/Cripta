@@ -168,7 +168,10 @@ data class PendingJobEntity(
 @Entity(tableName = "audio_prints", primaryKeys = ["fileId", "part"])
 data class AudioPrintEntity(
     val fileId: String,
-    /** "head" or "tail". A video that cannot be analysed has one "head" row with status "skip". */
+    /**
+     * "head" or "tail". A video that cannot be analysed has one "head" row with status "skip"; one
+     * whose end could not be decoded has its "head" alone.
+     */
     val part: String,
     /** Time of the first hash in the video (ms). */
     val startMs: Long,

@@ -66,7 +66,7 @@ class IntroRepository @Inject constructor(
             if (s.status == "skip") return@filter true
             if (quick || s.status != "ok") return@filter false
             val covered = s.bytes / 4 * Fingerprint.HOP_MS
-            coverageIsShort(f.durationMs, covered.toLong(), HEAD_MS)
+            coverageIsShort(f.durationMs, covered.toLong(), HEAD_MS, QUICK_MS)
         }
     }
 
@@ -257,9 +257,14 @@ class IntroRepository @Inject constructor(
         (named + unnamed).sortedWith(compareBy<Signature>({ it.name != null }, { it.entries.size }))
     }
 
-    /** Save an unsaved signature (its longest sounds become its reference sounds); returns its id. */
+    /**
+     * Save an unsaved signature (its longest sounds become its reference sounds); returns its id. One
+     * saved meanwhile with these sounds is that same signature: a second action on the page before
+     * it reloaded saved it twice, and the copy (no videos, the older one wins them) stayed hidden.
+     */
     private suspend fun persist(sig: Signature, name: String = ""): Long {
         sig.id?.let { return it }
+        sig.cores.take(MAX_SIGNATURE_SOUNDS).firstNotNullOfOrNull { savedSignatureOf(sig.kind, it) }?.let { return it.id }
         val id = dao.addSignature(SignatureEntity(kind = sig.kind.id, name = name, createdAt = System.currentTimeMillis()))
         sig.cores.take(MAX_SIGNATURE_SOUNDS).forEach { dao.addSignatureSound(SignatureSoundEntity(signatureId = id, hashes = PrintCodec.encode(it))) }
         return id
@@ -397,7 +402,10 @@ class IntroRepository @Inject constructor(
 
     /**
      * Fingerprint [file]'s head and tail ([quick]: only its first and last minute); a video that
-     * cannot be analysed gets a "skip" row. True when analysed.
+     * cannot be analysed gets a "skip" row. A tail that cannot be decoded leaves the head (where the
+     * intro is) analysed on its own. A read that failed for a passing reason (the decoder busy or
+     * stuck, the file's channel closed by a lock) writes nothing: the next scan tries again, where a
+     * "skip" row would have kept the video out for good. True when analysed.
      */
     suspend fun fingerprint(file: FileEntity, quick: Boolean): Boolean {
         val dur = file.durationMs?.takeIf { it > 0 } ?: decoder.durationMs(file) ?: 0L
@@ -410,16 +418,27 @@ class IntroRepository @Inject constructor(
             // ensureActive inside the hashing: "Annulla" stops it within a few frames, not at the end of the stretch.
             return pcm.startMs to withContext(Dispatchers.Default) { Fingerprint.hashes(pcm.samples, pcm.size) { ensureActive() } }
         }
+        /** A part, null when it has no audio; [Passing] when the read failed for a passing reason. */
+        suspend fun read(fromMs: Long, toMs: Long): Pair<Long, IntArray>? = try {
+            part(fromMs, toMs)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AudioDecoder.Undecodable) {
+            throw e
+        } catch (e: java.io.IOException) {
+            throw Passing(e)
+        } catch (e: IllegalStateException) {
+            throw Passing(e)   // MediaCodec.CodecException among them
+        }
         var reason = "audio non decodificabile"
-        val parts = when {
+        val head = when {
             dur <= 0 -> { reason = "durata non leggibile"; null }
             dur < MIN_DURATION_MS -> { reason = "video più corto di 20 secondi"; null }
             else -> try {
-                val head = part(0, minOf(dur, headMs))
-                val tail = head?.let { part(maxOf(0L, dur - tailMs), dur) }
-                if (head == null || tail == null) null else head to tail
-            } catch (e: CancellationException) {
-                throw e
+                read(0, minOf(dur, headMs))
+            } catch (e: Passing) {
+                android.util.Log.w("IntroRepository", "audio not read, retried later (${e.cause?.javaClass?.simpleName})")
+                return false
             } catch (e: AudioDecoder.Undecodable) {
                 reason = e.message ?: reason; null
             } catch (e: Exception) {
@@ -427,14 +446,22 @@ class IntroRepository @Inject constructor(
                 reason = "errore di lettura (${e.javaClass.simpleName})"; null
             }
         }
-        if (parts == null) {
+        if (head == null) {
             dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, 0, ByteArray(0), "skip:$reason"))
             return false
         }
-        val (head, tail) = parts
+        val tail = try {
+            read(maxOf(0L, dur - tailMs), dur)
+        } catch (e: Passing) {
+            android.util.Log.w("IntroRepository", "audio not read, retried later (${e.cause?.javaClass?.simpleName})")
+            return false
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
         db.withTransaction {
             dao.putPrint(AudioPrintEntity(file.id, SegmentKind.INTRO.part, head.first, PrintCodec.encode(head.second), "ok"))
-            dao.putPrint(AudioPrintEntity(file.id, SegmentKind.OUTRO.part, tail.first, PrintCodec.encode(tail.second), "ok"))
+            tail?.let { dao.putPrint(AudioPrintEntity(file.id, SegmentKind.OUTRO.part, it.first, PrintCodec.encode(it.second), "ok")) }
         }
         android.util.Log.i("IntroRepository", "fingerprint ${android.os.SystemClock.elapsedRealtime() - started} ms (${dur / 1000} s video)")
         return true
@@ -473,6 +500,23 @@ class IntroRepository @Inject constructor(
         val coreEnd = old?.autoEndMs ?: old?.takeIf { it.source == "auto" }?.endMs
         dao.putSegment(MediaSegmentEntity(fileId, kind.id, startMs, endMs, "manual", coreStart, coreEnd))
     }
+
+    /**
+     * Ritocco: move the segment's bounds by [startDelta] / [endDelta] ms from where they are now, kept
+     * inside the video ([durationMs] 0: unknown) and at least [minMs] apart. Read and written in one
+     * transaction: computed from the page's copy, a second tap before the page caught up put the
+     * other bound back. False when there is no segment or the bounds would come too close.
+     */
+    suspend fun nudge(fileId: String, kind: SegmentKind, startDelta: Long, endDelta: Long, durationMs: Long, minMs: Long): Boolean =
+        db.withTransaction {
+            val seg = activeSegment(dao.segmentsOf(fileId), kind.id) ?: return@withTransaction false
+            val max = if (durationMs > 0) durationMs else Long.MAX_VALUE
+            val start = (seg.startMs + startDelta).coerceIn(0L, max)
+            val end = (seg.endMs + endDelta).coerceIn(0L, max)
+            if (end < start + minMs) return@withTransaction false
+            setManual(fileId, kind, start, end)
+            true
+        }
 
     /**
      * "Applica a tutti i video con la stessa sigla": the user moved this segment's bounds away from the
@@ -523,9 +567,15 @@ class IntroRepository @Inject constructor(
     suspend fun setNone(fileId: String, kind: SegmentKind) =
         dao.putSegment(MediaSegmentEntity(fileId, kind.id, 0, 0, "none"))
 
-    /** Search [fileId]'s stretch in every other video; null when too short or the video has no fingerprint. */
+    /**
+     * Search [fileId]'s stretch in every other video; null when too short or the video has no
+     * fingerprint. A detected segment moved by a duration is searched by its sound: the moved
+     * stretch has seconds the others do not share, and they matched no more. A stretch the user
+     * chose is searched as it is.
+     */
     suspend fun searchOthers(fileId: String, kind: SegmentKind, startMs: Long, endMs: Long): Int? = withContext(Dispatchers.Default) {
-        val sample = printOf(fileId, kind)?.slice(startMs, endMs) ?: return@withContext null
+        val (from, to) = soundOf(fileId, kind, startMs, endMs)
+        val sample = printOf(fileId, kind)?.slice(from, to) ?: return@withContext null
         if (sample.size < SegmentKind.OUTRO.minHashes) return@withContext null
         IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == fileId }).count { store(kind, it) }
     }
@@ -534,21 +584,37 @@ class IntroRepository @Inject constructor(
     suspend fun rejectEverywhere(file: FileEntity, kind: SegmentKind, start: Long, end: Long): Int = withContext(Dispatchers.Default) {
         // The segment moved by a duration: its sound is what is rejected, and what a restore finds
         // again. Kept with the moved bounds, the restore moved them a second time.
-        val shown = dao.segmentsOf(file.id).firstOrNull { it.kind == kind.id }
-        val core = shown?.takeIf { it.startMs == start && it.endMs == end && it.autoStartMs != null && it.autoEndMs != null }
-        val startMs = core?.autoStartMs ?: start
-        val endMs = core?.autoEndMs ?: end
-        dao.deleteSegment(file.id, kind.id)
-        val sample = printOf(file.id, kind)?.slice(startMs, endMs)?.takeIf { it.isNotEmpty() } ?: return@withContext 0
-        dao.addRejected(RejectedPrintEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
-            startMs = startMs, endMs = endMs, hashes = PrintCodec.encode(sample), createdAt = System.currentTimeMillis()))
-        var removed = 0
-        for (seg in dao.segmentsOfKind(kind.id)) {
-            if (seg.source != "auto" || seg.fileId == file.id) continue
-            val stretch = printOf(seg.fileId, kind)?.slice(seg.startMs, seg.endMs) ?: continue
-            if (IntroDetector.isRejected(stretch, listOf(sample))) { dao.deleteSegment(seg.fileId, kind.id); removed++ }
+        val (startMs, endMs) = soundOf(file.id, kind, start, end)
+        val sample = printOf(file.id, kind)?.slice(startMs, endMs)?.takeIf { it.isNotEmpty() }
+        // The other videos with that sound, each compared by its own sound too: moved by a longer
+        // duration, the stretch shown was mostly other audio and kept its segment.
+        val others = if (sample == null) emptyList() else dao.segmentsOfKind(kind.id).filter { seg ->
+            seg.source == "auto" && seg.fileId != file.id &&
+                printOf(seg.fileId, kind)?.slice(seg.autoStartMs ?: seg.startMs, seg.autoEndMs ?: seg.endMs)
+                    ?.let { IntroDetector.isRejected(it, listOf(sample)) } == true
         }
-        removed
+        // All at once: stopped halfway, the segment was gone and its sound not rejected.
+        db.withTransaction {
+            dao.deleteSegment(file.id, kind.id)
+            if (sample == null) return@withTransaction 0
+            dao.addRejected(RejectedPrintEntity(kind = kind.id, originFileId = file.id, originName = file.originalName,
+                startMs = startMs, endMs = endMs, hashes = PrintCodec.encode(sample), createdAt = System.currentTimeMillis()))
+            others.count { seg ->
+                // Still the segment compared: one marked or found anew since stays.
+                val now = dao.segmentsOf(seg.fileId).firstOrNull { it.kind == kind.id }
+                (now == seg).also { if (it) dao.deleteSegment(seg.fileId, kind.id) }
+            }
+        }
+    }
+
+    /**
+     * The sound a segment shown as [start]..[end] was found on: its core when it is the saved
+     * automatic segment moved by a duration, else the stretch itself.
+     */
+    private suspend fun soundOf(fileId: String, kind: SegmentKind, start: Long, end: Long): Pair<Long, Long> {
+        val shown = dao.segmentsOf(fileId).firstOrNull { it.kind == kind.id }
+        val core = shown?.takeIf { it.source == "auto" && it.startMs == start && it.endMs == end }
+        return (core?.autoStartMs ?: start) to (core?.autoEndMs ?: end)
     }
 
     /**
@@ -558,25 +624,26 @@ class IntroRepository @Inject constructor(
      */
     suspend fun restoreRejected(id: Long): Int = withContext(Dispatchers.Default) {
         val r = dao.rejectedById(id) ?: return@withContext 0
-        dao.deleteRejected(id)
         val kind = SegmentKind.of(r.kind)
-        val still = dao.rejectedOfKind(kind.id).map { PrintCodec.decode(it.hashes) }
+        val still = dao.rejectedOfKind(kind.id).filter { it.id != id }.map { PrintCodec.decode(it.hashes) }
         suspend fun allowed(f: Found): Boolean = still.isEmpty() ||
             printOf(f.fileId, kind)?.slice(f.startMs, f.endMs)?.let { !IntroDetector.isRejected(it, still) } != false
-        var restored = 0
+        // The search (every video's print: seconds) before anything changes; the sample's removal
+        // and the segments it gives back then go together. Removed first, a search stopped halfway
+        // left the sample gone and its segments not back.
+        val back = ArrayList<Found>()
         val origin = repo.fileById(r.originFileId)
-        if (origin != null && origin.deletedAt == null) {
-            val f = Found(origin.id, r.startMs, r.endMs)
-            if (allowed(f) && store(kind, f)) restored++
-        }
+        if (origin != null && origin.deletedAt == null) Found(origin.id, r.startMs, r.endMs).let { if (allowed(it)) back += it }
         val sample = PrintCodec.decode(r.hashes)
-        restored + IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == r.originFileId })
-            .count { allowed(it) && store(kind, it) }
+        IntroDetector.searchAt(sample, candidatesFor(indexFor(kind), sample, kind) { it == r.originFileId }).filterTo(back) { allowed(it) }
+        db.withTransaction {
+            dao.deleteRejected(id)
+            back.count { store(kind, it) }
+        }
     }
 
     private suspend fun store(kind: SegmentKind, f: Found): Boolean {
-        val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
-        if (!IntroDetector.shouldStore(existing, f)) return false
+        if (!IntroDetector.shouldStore(dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }, f)) return false
         // A sound with a duration of its own (its signature's, or "Applica a tutti") gets the same move here.
         val rules = dao.rulesOfKind(kind.id)
         val timed = dao.signaturesOfKind(kind.id).any { it.startDeltaMs != 0L || it.endDeltaMs != 0L }
@@ -590,8 +657,11 @@ class IntroRepository @Inject constructor(
             }
         }
         val duration = if (ds == 0L && de == 0L) null else repo.fileById(f.fileId)?.durationMs
-        dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, duration))
-        return true
+        // Checked again where it is written: a mark made while the duration was worked out stays.
+        return db.withTransaction {
+            val existing = dao.segmentsOf(f.fileId).firstOrNull { it.kind == kind.id }
+            IntroDetector.shouldStore(existing, f).also { if (it) dao.putSegment(IntroDetector.segmentFor(kind, f, ds, de, duration)) }
+        }
     }
 
     private suspend fun printOf(fileId: String, kind: SegmentKind): Print? =
@@ -618,6 +688,9 @@ class IntroRepository @Inject constructor(
                                       skip: (String) -> Boolean): List<Pair<Print, List<Int>>> =
         index.candidates(hashes).mapNotNull { (id, offsets) -> if (skip(id)) null else printOf(id, kind)?.let { it to offsets } }
 
+    /** A read that failed for a passing reason: nothing is written, the next scan tries again. */
+    private class Passing(cause: Exception) : Exception(cause)
+
     private companion object {
         /** Just over the shortest intro (15 s). */
         const val MIN_DURATION_MS = 20_000L
@@ -633,9 +706,12 @@ class IntroRepository @Inject constructor(
 /**
  * Whether a quick scan's print is too short to count in the complete mode: it covers less than the
  * head that scan reads. An unknown [durationMs] is not "nothing to cover" (0 made every such video
- * look done): the video is taken as long, and its coverage compared with the head.
+ * look done): the video is taken as long, and its coverage compared with the head. A print longer
+ * than a quick scan's [quickMs] came from a complete scan, which read all the audio there was: a
+ * video whose audio stops early was decoded again at every complete scan, never getting further.
  */
-internal fun coverageIsShort(durationMs: Long?, coveredMs: Long, headMs: Long): Boolean {
+internal fun coverageIsShort(durationMs: Long?, coveredMs: Long, headMs: Long, quickMs: Long): Boolean {
+    if (coveredMs > quickMs + 30_000) return false
     val reach = if (durationMs == null || durationMs <= 0L) headMs else minOf(durationMs, headMs)
     return coveredMs < reach - 30_000
 }

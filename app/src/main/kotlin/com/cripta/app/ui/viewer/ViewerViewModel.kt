@@ -473,14 +473,12 @@ class ViewerViewModel @Inject constructor(
         _message.value = str(R.string.analysis_started)
     }
 
-    /** Ritocco: move a segment's bounds by [startDelta] / [endDelta] ms, kept inside the video and apart. */
-    fun nudgeSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind,
-                     seg: com.cripta.app.data.db.MediaSegmentEntity, startDelta: Long, endDelta: Long, durationMs: Long) {
-        val max = if (durationMs > 0) durationMs else Long.MAX_VALUE
-        val start = (seg.startMs + startDelta).coerceIn(0L, max)
-        val end = (seg.endMs + endDelta).coerceIn(0L, max)
-        if (end < start + MIN_MARK_MS) return
-        safeScope.launch { intro.setManual(file.id, kind, start, end) }
+    /**
+     * Ritocco: move a segment's bounds by [startDelta] / [endDelta] ms, kept inside the video and
+     * apart. From the bounds saved, not the page's: two quick taps both count.
+     */
+    fun nudgeSegment(file: FileEntity, kind: com.cripta.app.media.intro.SegmentKind, startDelta: Long, endDelta: Long, durationMs: Long) {
+        safeScope.launch { intro.nudge(file.id, kind, startDelta, endDelta, durationMs, MIN_MARK_MS) }
     }
 
     /** "Fine qui". False when the end would not come after the start. */

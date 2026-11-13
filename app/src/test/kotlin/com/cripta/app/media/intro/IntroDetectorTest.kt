@@ -94,6 +94,33 @@ class IntroDetectorTest {
         assertEquals(null, IntroDetector.segmentFor(SegmentKind.INTRO, Found("x", 1_000, 4_000), 0, 0, 60_000).autoStartMs)
     }
 
+    private fun hashes(n: Int, seed: Long) = java.util.Random(seed).let { r -> IntArray(n) { r.nextInt() or 1 } }
+
+    /** [h] with digital silence (hash 0) over [from] until [to]. */
+    private fun silenced(h: IntArray, from: Int, to: Int) = h.copyOf().also { it.fill(0, from, to) }
+
+    @Test
+    fun twoCopiesWithDigitalSilenceInsideAreNoIntro() {
+        // The same video twice, a few seconds of digital silence 6 minutes in: the shared stretch
+        // stops before the window's edge, but the same alignment goes on to it after the silence.
+        val head = silenced(hashes(9_000, 1), 5_700, 5_760)
+        val a = Print("a", 0, head)
+        val copy = Print("copy", 0, head.copyOf())
+        assertTrue(IntroDetector.detect(SegmentKind.INTRO, a, listOf(copy), emptyList()).isEmpty())
+        val tail = silenced(hashes(4_000, 2), 1_000, 1_060)
+        assertTrue(IntroDetector.detect(SegmentKind.OUTRO, Print("a", 0, tail), listOf(Print("copy", 0, tail.copyOf())), emptyList()).isEmpty())
+    }
+
+    @Test
+    fun anIntroWithSilenceInsideIsStillFound() {
+        // An intro with a silent beat in it, then each video's own audio: not a copy.
+        val intro = silenced(hashes(400, 3), 200, 230)
+        val a = Print("a", 0, hashes(100, 4) + intro + hashes(2_000, 5))
+        val b = Print("b", 0, hashes(150, 6) + intro + hashes(2_000, 7))
+        val found = IntroDetector.detect(SegmentKind.INTRO, a, listOf(b), emptyList())
+        assertEquals(setOf("a", "b"), found.map { it.fileId }.toSet())
+    }
+
     @Test
     fun manualMarksFollowANewVersionOnlyWithTheSameLength() {
         assertTrue(IntroDetector.carriesManual(1_200_000, 1_201_500))

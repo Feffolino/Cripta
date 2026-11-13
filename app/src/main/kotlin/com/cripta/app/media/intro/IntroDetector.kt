@@ -67,11 +67,32 @@ object IntroDetector {
      * Whether a shared stretch runs into the open side of the analysed window: the end of the start
      * minutes (intro) or the beginning of the last ones (outro). That is two copies of the same video
      * (an original and its MP4 copy, a file imported twice), not an intro: as the longest match it won,
-     * and skipping to the window's edge jumped a whole minute.
+     * and skipping to the window's edge jumped a whole minute. Also when the stretch stops short of
+     * the edge but the same alignment goes on to it after a break (a few seconds of digital silence
+     * in both copies): with no limit on its length, minutes of the video became its "intro".
      */
-    fun isCut(kind: SegmentKind, a: Print, b: Print, m: Match): Boolean = when (kind) {
-        SegmentKind.INTRO -> m.aEnd >= a.hashes.size - EDGE || m.bEnd >= b.hashes.size - EDGE
-        SegmentKind.OUTRO -> m.aStart <= EDGE || m.bStart <= EDGE
+    fun isCut(kind: SegmentKind, a: Print, b: Print, m: Match): Boolean {
+        val offset = m.bStart - m.aStart
+        when (kind) {
+            SegmentKind.INTRO -> {
+                var r = m
+                while (true) {
+                    if (r.aEnd >= a.hashes.size - EDGE || r.bEnd >= b.hashes.size - EDGE) return true
+                    // The longest stretch after this one at the same alignment: one reaching the edge
+                    // is that one or comes after it.
+                    val from = r.aEnd
+                    r = SegmentMatcher.at(a.hashes.copyOfRange(from, a.hashes.size), b.hashes, offset + from, kind.minHashes)
+                        ?.let { Match(it.aStart + from, it.aEnd + from, it.bStart, it.bEnd) } ?: return false
+                }
+            }
+            SegmentKind.OUTRO -> {
+                var r = m
+                while (true) {
+                    if (r.aStart <= EDGE || r.bStart <= EDGE) return true
+                    r = SegmentMatcher.at(a.hashes.copyOfRange(0, r.aStart), b.hashes, offset, kind.minHashes) ?: return false
+                }
+            }
+        }
     }
 
     /** Where a stretch the user marked ([sample]) appears in each of [others]. */

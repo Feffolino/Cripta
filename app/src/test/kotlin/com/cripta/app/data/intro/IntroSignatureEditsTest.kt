@@ -19,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,13 +60,13 @@ class IntroSignatureEditsTest {
     fun close() = db.close()
 
     /** A video whose head has the shared sound, detected (an automatic segment on it). */
-    private suspend fun video(id: String, seed: Long) {
+    private suspend fun video(id: String, seed: Long, detected: Boolean = true) {
         db.fileDao().insert(FileEntity(id = id, originalName = "$id.mp4", mimeType = "video/mp4", sizeBytes = 1,
             createdAt = 0, importedAt = 0, wrappedKeyset = ByteArray(0), durationMs = 600_000))
         val own = java.util.Random(seed)
         val head = IntArray(BEFORE) { own.nextInt() or 1 } + sound + IntArray(AFTER) { own.nextInt() or 1 }
         dao.putPrint(AudioPrintEntity(id, kind.part, 0, PrintCodec.encode(head), "ok"))
-        dao.putSegment(MediaSegmentEntity(id, kind.id, soundStart, soundEnd, "auto"))
+        if (detected) dao.putSegment(MediaSegmentEntity(id, kind.id, soundStart, soundEnd, "auto"))
     }
 
     private suspend fun seg(id: String) = dao.segmentsOf(id).firstOrNull { it.kind == kind.id }
@@ -126,6 +127,53 @@ class IntroSignatureEditsTest {
         assertNotNull(after)
         assertEquals(before.startMs, after!!.startMs)
         assertEquals(before.endMs, after.endMs)
+    }
+
+    @Test
+    fun twoActionsOnASignatureNotYetReloadedSaveItOnce() = runBlocking {
+        video("a", 1); video("b", 2)
+        val sig = page()
+        intro.renameSignature(sig, "Uno")
+        // The page still shows the signature unsaved: a second action on it before the reload.
+        intro.renameSignature(sig, "Due")
+        intro.setSignatureDuration(sig, -1_000, 1_000)
+        val saved = dao.signaturesOfKind(kind.id).single()
+        assertEquals("Due", saved.name)
+        assertEquals(-1_000L, saved.startDeltaMs)
+    }
+
+    @Test
+    fun twoQuickNudgesBothCount() = runBlocking {
+        video("a", 1)
+        intro.nudge("a", kind, 1_000, 0, 600_000, 1_000)
+        intro.nudge("a", kind, 0, 1_000, 600_000, 1_000)
+        val a = seg("a")!!
+        assertEquals("manual", a.source)
+        assertEquals(soundStart + 1_000, a.startMs)
+        assertEquals(soundEnd + 1_000, a.endMs)
+        assertEquals(soundStart, a.autoStartMs)
+    }
+
+    @Test
+    fun rejectedEverywhereReachesSegmentsExtendedPastTheirSound() = runBlocking {
+        video("a", 1); video("b", 2); video("c", 3)
+        // Extended by more than the sound itself on every video.
+        intro.setSignatureDuration(page(), -soundStart, 10_000)
+        val shown = seg("a")!!
+        val n = intro.rejectEverywhere(db.fileDao().byId("a")!!, kind, shown.startMs, shown.endMs)
+        assertEquals(2, n)
+        assertNull(seg("b"))
+        assertNull(seg("c"))
+    }
+
+    @Test
+    fun searchingAnExtendedSegmentSearchesItsSound() = runBlocking {
+        video("a", 1); video("b", 2)
+        intro.setSignatureDuration(page(), -soundStart, 10_000)
+        video("c", 3, detected = false)
+        val shown = seg("a")!!
+        assertEquals(1, intro.searchOthers("a", kind, shown.startMs, shown.endMs))
+        assertNotNull(seg("c"))
     }
 
     private companion object {

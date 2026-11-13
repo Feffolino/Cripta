@@ -118,7 +118,7 @@ internal fun IntroSection(file: FileEntity, vm: ViewerViewModel) {
                 onMarkStart = { pending[kind] = position },
                 onMarkEnd = { start -> if (vm.markEnd(file, kind, start, position)) pending.remove(kind) },
                 onCancelMark = { pending.remove(kind) },
-                onNudge = { seg, ds, de -> vm.nudgeSegment(file, kind, seg, ds, de, duration) },
+                onNudge = { ds, de -> vm.nudgeSegment(file, kind, ds, de, duration) },
                 onTry = { seg -> vm.seekPlayer(file.id, maxOf(seg.startMs, seg.endMs - TRY_LEAD_MS), play = true) },
                 onSearch = { seg -> vm.searchSegment(file, kind, seg) },
                 onApplyToAll = { vm.applySegmentToAll(file, kind) },
@@ -226,7 +226,7 @@ private fun Timeline(
 private fun SegmentBlock(
     kind: SegmentKind, signature: String?, seg: MediaSegmentEntity?, pendingStart: Long?, positionMs: Long, color: Color,
     onMarkStart: () -> Unit, onMarkEnd: (Long) -> Unit, onCancelMark: () -> Unit,
-    onNudge: (MediaSegmentEntity, Long, Long) -> Unit, onTry: (MediaSegmentEntity) -> Unit,
+    onNudge: (Long, Long) -> Unit, onTry: (MediaSegmentEntity) -> Unit,
     onSearch: (MediaSegmentEntity) -> Unit, onApplyToAll: () -> Unit,
     onReject: (MediaSegmentEntity) -> Unit, onRemove: () -> Unit,
 ) {
@@ -312,8 +312,8 @@ private fun SegmentBlock(
                 exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
                     androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(120))) {
                 if (active != null) Column {
-                    Trim(str(R.string.start), active.startMs) { d -> onNudge(active, d, 0) }
-                    Trim(str(R.string.end), active.endMs) { d -> onNudge(active, 0, d) }
+                    Trim(str(R.string.start), active.startMs) { d -> onNudge(d, 0) }
+                    Trim(str(R.string.end), active.endMs) { d -> onNudge(0, d) }
                 }
             }
         }

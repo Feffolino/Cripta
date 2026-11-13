@@ -25,6 +25,9 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
     /** Why a video's audio cannot be fingerprinted, in Italian for the user. */
     class Undecodable(reason: String) : Exception(reason)
 
+    /** The decoder stopped giving audio without ending the stream: a passing failure, tried again later. */
+    class Stalled : java.io.IOException("audio decoder stalled")
+
     /** The video's length from its container (for files whose length was never recorded). */
     suspend fun durationMs(file: FileEntity): Long? = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
@@ -78,6 +81,9 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
             // Sized for the whole stretch up front: growing it by doubling meant copies of minutes of audio.
             val capacity = ((toMs - fromMs) / 1000.0 * MonoResampler.OUT_RATE).toInt() + MonoResampler.OUT_RATE
             var outputDone = false
+            // A decoder that stops moving without ending the stream kept a worker (and the whole scan)
+            // waiting until "Annulla": given up after STALL_MS without input or output.
+            var lastMoved = android.os.SystemClock.elapsedRealtime()
             // Feed every free input buffer and drain every ready output without waiting; block (briefly)
             // only when neither side moved. Waiting 10 ms for each output frame, one frame at a time,
             // made the decoding of 15 minutes of audio take minutes.
@@ -130,6 +136,8 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
                     c.releaseOutputBuffer(o, false)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) { outputDone = true; break }
                 }
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (moved) lastMoved = now else if (now - lastMoved > STALL_MS) throw Stalled()
             }
             val r = resampler
             if (r == null || startUs < 0 || r.size == 0) null else Pcm(startUs / 1000, r.buffer(), r.size)
@@ -144,5 +152,7 @@ class AudioDecoder @Inject constructor(private val repo: VaultRepository) {
     private companion object {
         /** Wait for the codec only when nothing moved, and briefly. */
         const val WAIT_US = 2_000L
+        /** No input taken and no output given for this long: the decoder is stuck. */
+        const val STALL_MS = 10_000L
     }
 }
