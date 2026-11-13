@@ -225,6 +225,10 @@ class FaceRepository @Inject constructor(
         // search, slow but moving, is never cut; and media asked for by hand never are.
         val stallMs = if (deep) STALL_DEEP_MS else STALL_MS
         var stalled = false
+        // Memory or I/O failing for a moment (three workers decode at once): recorded as unreadable,
+        // but as by no analyser ([TRANSIENT]), so the next scan tries the media again. Recorded with
+        // [VERSION] it was never read again until the user asked for it.
+        var transient = false
         val status = try {
             var outcome: String? = null
             while (outcome == null) {
@@ -239,7 +243,12 @@ class FaceRepository @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: OutOfMemoryError) {
+            transient = true
             "skip:troppo grande per la memoria"
+        } catch (e: java.io.IOException) {
+            transient = true
+            android.util.Log.w("FaceRepository", "not readable now (${e.javaClass.simpleName})")
+            "skip:errore di lettura (${e.javaClass.simpleName})"
         } catch (e: Exception) {
             android.util.Log.w("FaceRepository", "not readable (${e.javaClass.simpleName})")
             "skip:errore di lettura (${e.javaClass.simpleName})"
@@ -253,7 +262,8 @@ class FaceRepository @Inject constructor(
         // left behind may still add to its lists: none of it is kept.
         mutex.withLock {
             if (stalled) store(file, status, emptyList(), HashMap(), 0, 0, 0, IntArray(sharp.size), 0, 0, started, null)
-            else store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started, readUpTo.takeIf { it >= 0 })
+            else store(file, status, sightings, rejects, read, failed, faces, sharp, duplicates, extra, started, readUpTo.takeIf { it >= 0 },
+                version = if (transient) TRANSIENT else VERSION)
         }
         return when {
             status == "ok" -> Outcome.OK
@@ -276,6 +286,8 @@ class FaceRepository @Inject constructor(
         read: Int, failed: Int, faces: Int, sharp: IntArray, duplicates: Int, extra: Int, started: Long,
         /** How far the reading got (ms), null when nothing of it is kept. */
         readUpTo: Long?,
+        /** The analyser recorded: [TRANSIENT] for a failure worth another try at the next scan. */
+        version: Int = VERSION,
     ) {
         // Faces the user deleted from this media, or said are not a face, are not found again. Unless
         // the face is more like one the user kept here: deleting a second copy of someone's face
@@ -330,7 +342,7 @@ class FaceRepository @Inject constructor(
                 }
             }
             dao.putScan(FaceScanEntity(file.id, status, read, failed, faces,
-                rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, VERSION, System.currentTimeMillis(),
+                rejects.entries.joinToString(",") { "${it.key.name}=${it.value}" }, version, System.currentTimeMillis(),
                 ms = android.os.SystemClock.elapsedRealtime() - started, stats = FaceStats.encode(sharp, duplicates, extra)))
         }
     }
@@ -610,7 +622,12 @@ class FaceRepository @Inject constructor(
                               val droppedRejections: List<FaceRejectionEntity> = emptyList(),
                               val movedRejections: List<Long> = emptyList())
 
-    /** Move everything of [drop] into [keep], remembering it for "Annulla". */
+    /**
+     * Move everything of [drop] into [keep], remembering it for "Annulla". [keep] decides whether
+     * the one left is hidden ("Non è una persona"): merged into a hidden person, [drop]'s faces
+     * leave the lists with it; a hidden [drop] merged into a visible one shows its faces again.
+     * "Annulla" puts [drop] back as it was, hidden or not ([MergeRecord.dropped]).
+     */
     private suspend fun mergeRows(keep: Long, drop: Long, score: Float, auto: Boolean): MergeRecord {
         val p = dao.persons().firstOrNull { it.id == drop }
         val keptBefore = dao.persons().firstOrNull { it.id == keep }
@@ -711,7 +728,11 @@ class FaceRepository @Inject constructor(
             }
             Person(p, mediaIds.mapNotNull { byId[it] }, placed.firstOrNull { it.id == p.coverTrackId } ?: placed.maxByOrNull { it.width },
                 placed)
-        }.filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.entity.favorite }
+        }
+            // A nameless person with notes or links and no media is kept by the cleanup: listed, or
+            // what the user wrote about them stayed in the database with no way to see or delete it.
+            .filter { it.media.isNotEmpty() || it.entity.name.isNotBlank() || it.entity.favorite ||
+            it.entity.notes.isNotBlank() || it.entity.links.isNotBlank() }
             .sortedWith(compareBy<Person>({ it.entity.ignored }, { !it.entity.favorite }, { !it.main }, { -it.media.size }, { it.title.lowercase() }))
         val media = i.files.count { VaultRepository.isVideo(it.mimeType) || VaultRepository.isImage(it.mimeType) }
         return Overview(i.scans.filter { it.fileId in byId }, media, people, byId, faces[null].orEmpty().size)
@@ -766,8 +787,17 @@ class FaceRepository @Inject constructor(
     // ---- The user's changes ----------------------------------------------------------------
 
     private suspend fun <T> change(block: suspend () -> T): T = mutex.withLock {
-        db.withTransaction { block() }
+        try {
+            db.withTransaction { block() }
+        } finally {
+            // Out of the cache again once committed: a reader outside the lock ([embeddings]) that
+            // read the rows before the commit put the old embeddings back after the first [stale].
+            if (staleOnCommit.isNotEmpty()) { stale(staleOnCommit); staleOnCommit.clear() }
+        }
     }
+
+    /** Faces whose embeddings a [change] rewrote, dropped from the cache again after its commit (only under [mutex]). */
+    private val staleOnCommit = HashSet<Long>()
 
     /**
      * A name does not confirm the faces: a wrong one would stay with the person for good. Only the
@@ -809,7 +839,9 @@ class FaceRepository @Inject constructor(
         }
         // The kept person gives back the notes, links and star the merge added to them, only while
         // they are as the merge left them: a note, a link or a star given since is the user's, and
-        // put back to before the merge it was lost (the merged person's own came back anyway).
+        // put back to before the merge it was lost (the merged person's own came back anyway). The
+        // notes and links are one choice: edited since, they stay whole, the merged person's text
+        // still in them (and back with that person too); the user removes it if they wish.
         rec.keptBefore?.let { before ->
             val now = dao.persons().firstOrNull { it.id == before.id }
             val after = rec.keptAfter
@@ -853,10 +885,14 @@ class FaceRepository @Inject constructor(
     suspend fun reject(trackId: Long, personId: Long): Undo {
         val before = dao.card(trackId)
         val person = personSnapshot(personId)
-        change {
-            dao.addRejection(FaceRejectionEntity(trackId, personId, before?.similarity ?: 0f))
-            dao.place(trackId, null, "auto", 0f)
-        }
+        // Left free, the face is kept out of the closer look's joins while "Annulla" is on offer.
+        val until = hold(listOf(trackId))
+        try {
+            change {
+                dao.addRejection(FaceRejectionEntity(trackId, personId, before?.similarity ?: 0f))
+                dao.place(trackId, null, "auto", 0f)
+            }
+        } catch (e: Throwable) { release(listOf(trackId), until); throw e }
         replace(listOf(trackId))
         return {
             change {
@@ -865,6 +901,7 @@ class FaceRepository @Inject constructor(
                 if (before != null) dao.place(trackId, before.personId, before.state, before.similarity)
                 dao.deleteEmptyPersons()
             }
+            release(listOf(trackId), until)
         }
     }
 
@@ -873,10 +910,14 @@ class FaceRepository @Inject constructor(
         val before = fileIds.flatMap { f -> dao.cardsOf(f).filter { it.personId == personId } }
         val links = dao.linksOfPerson(personId).filter { it in fileIds }
         val person = personSnapshot(personId)
-        change {
-            for (f in links) dao.removePersonMedia(personId, f)
-            for (t in before) { dao.addRejection(FaceRejectionEntity(t.id, personId, t.similarity)); dao.place(t.id, null, "auto", 0f) }
-        }
+        // Left free, the faces are kept out of the closer look's joins while "Annulla" is on offer.
+        val until = hold(before.map { it.id })
+        try {
+            change {
+                for (f in links) dao.removePersonMedia(personId, f)
+                for (t in before) { dao.addRejection(FaceRejectionEntity(t.id, personId, t.similarity)); dao.place(t.id, null, "auto", 0f) }
+            }
+        } catch (e: Throwable) { release(before.map { it.id }, until); throw e }
         replace(before.map { it.id })
         change { dao.deleteEmptyPersons() }
         return {
@@ -887,6 +928,7 @@ class FaceRepository @Inject constructor(
                 for (f in links) dao.addPersonMedia(PersonMediaEntity(personId, f))
                 dao.deleteEmptyPersons()
             }
+            release(before.map { it.id }, until)
         }
     }
 
@@ -899,6 +941,8 @@ class FaceRepository @Inject constructor(
         for (f in fileIds) {
             for (t in dao.cardsOf(f).filter { it.personId == from }) {
                 dao.addRejection(FaceRejectionEntity(t.id, from, t.similarity))
+                // A "no" said to the person they go to is taken back by this move.
+                dao.deleteRejection(t.id, target)
                 dao.confirm(t.id, target)
             }
             if (f in dao.linksOfPerson(from)) { dao.removePersonMedia(from, f); dao.addPersonMedia(PersonMediaEntity(target, f)) }
@@ -909,32 +953,47 @@ class FaceRepository @Inject constructor(
 
     /** "È lui/lei": the face goes to [personId] for good (a confirmed suggestion, or picked by hand). */
     suspend fun assign(trackId: Long, personId: Long): Undo {
-        val before = dao.card(trackId)
-        val previous = personSnapshot(before?.personId)
-        change { dao.confirm(trackId, personId); dao.deleteEmptyPersons() }
-        hold(listOf(trackId))
+        val ids = listOf(trackId)
+        // Held before the change: a closer look waiting for the lock joined the face in between.
+        val until = hold(ids)
+        val (before, previous, refusals) = try {
+            change {
+                val before = dao.card(trackId)
+                val previous = personSnapshot(before?.personId)
+                // A "no" said to this very person is taken back by giving them the face.
+                val refusals = dao.rejectionsOfTracks(ids).filter { it.personId == personId }
+                refusals.forEach { dao.deleteRejection(it.trackId, it.personId) }
+                dao.confirm(trackId, personId); dao.deleteEmptyPersons()
+                Triple(before, previous, refusals)
+            }
+        } catch (e: Throwable) { release(ids, until); throw e }
         return {
             change {
-                unjoinHeld(listOf(trackId))
+                unjoinHeld(ids)
                 revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons()
+                refusals.forEach { dao.addRejection(it) }
             }
-            release(listOf(trackId))
+            release(ids, until)
         }
     }
 
     /**
-     * Faces just given to someone, whose "Annulla" is still on offer, until when: the closer look
-     * the assignment starts ([refine]) does not join them into another face meanwhile. Joined, the
-     * face was gone and "Annulla" put nothing back, leaving it confirmed inside the other one.
+     * Faces just given to someone (or taken from them), whose "Annulla" is still on offer, until
+     * when: the closer look the assignment starts ([refine]) does not join them into another face
+     * meanwhile. Joined, the face was gone and "Annulla" put nothing back, leaving it confirmed
+     * inside the other one. Returns the hold's end, which [release] needs: a later hold of the same
+     * face (given again) stays when the first "Annulla" goes.
      */
     private val undoHeld = java.util.concurrent.ConcurrentHashMap<Long, Long>()
-    private fun hold(ids: Collection<Long>) {
+    private fun hold(ids: Collection<Long>): Long {
         val now = android.os.SystemClock.elapsedRealtime()
         // What "Annulla" can no longer be asked for leaves memory.
         heldJoins.keys.removeIf { (undoHeld[it] ?: 0L) + UNDO_HOLD_MS < now }
-        ids.forEach { undoHeld[it] = now + UNDO_HOLD_MS }
+        val until = now + UNDO_HOLD_MS
+        ids.forEach { undoHeld[it] = until }
+        return until
     }
-    private fun release(ids: Collection<Long>) { ids.forEach { undoHeld.remove(it); heldJoins.remove(it) } }
+    private fun release(ids: Collection<Long>, until: Long) { ids.forEach { if (undoHeld.remove(it, until)) heldJoins.remove(it) } }
     private fun held(id: Long): Boolean = (undoHeld[id] ?: return false) > android.os.SystemClock.elapsedRealtime()
 
     /**
@@ -977,7 +1036,7 @@ class FaceRepository @Inject constructor(
             dao.addApart(j.apart)
             j.rejections.forEach { dao.addRejection(it) }
             j.covers.forEach { (p, t) -> dao.setCover(p, t) }
-            stale(j.rows.map { it.id })
+            stale(j.rows.map { it.id }); staleOnCommit += j.rows.map { it.id }
         }
     }
 
@@ -1096,8 +1155,9 @@ class FaceRepository @Inject constructor(
         val own = rows.filter { it.personId == personId && it.state != "suggested" }
         if (own.isEmpty() || own.map { it.fileId }.distinct().size < minMedia) return@withContext emptyList()
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
-        val refused = dao.rejections().filter { it.personId == personId }.map { it.trackId }.toSet()
         val ownIds = own.map { it.id }.toSet()
+        // A face of theirs never counts against them (a "no" from before it was given to them).
+        val refused = dao.rejections().filter { it.personId == personId && it.trackId !in ownIds }.map { it.trackId }.toSet()
         val apart = dao.apart().mapNotNull { p -> if (p.a in ownIds) p.b else if (p.b in ownIds) p.a else null }.toSet()
         val files = repo.allFilesSnapshot().filter { it.deletedAt == null }.associateBy { it.id }
         // Faces the closer look of their video did not find again ([ASIDE]) are hardly faces: never offered.
@@ -1144,6 +1204,11 @@ class FaceRepository @Inject constructor(
     /**
      * After "Chi è?" on [trackId]: the other unassigned faces of its media that look like its person
      * and share no frame with it, most alike first, for "Anche questi?". Never joined without a yes.
+     *
+     * Scored on purpose otherwise than "Forse è …" ([suggestionsFor], [FaceSuggest]): the mean of
+     * the closest matches among all the person's faces, against a fixed [SUGGEST], with no share of
+     * media that must agree. The faces offered here are of the very media just named, the strongest
+     * hint there is that they are that person, so the bar does not rise with the confirmed media.
      */
     suspend fun alikeInMedia(trackId: Long): List<Suggestion> = withContext(Dispatchers.Default) {
         val rows = dao.allTrackMeta()
@@ -1200,16 +1265,26 @@ class FaceRepository @Inject constructor(
 
     /** A group of faces given to [personId] at once. */
     suspend fun assignAll(trackIds: Collection<Long>, personId: Long): Undo {
-        val before = trackIds.mapNotNull { dao.card(it) }
-        val previous = before.mapNotNull { it.personId }.distinct().mapNotNull { personSnapshot(it) }
-        change { for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons() }
-        hold(before.map { it.id })
+        val ids = trackIds.distinct()
+        // Held before the change, as in [assign].
+        val until = hold(ids)
+        val (before, previous, refusals) = try {
+            change {
+                val before = ids.mapNotNull { dao.card(it) }
+                val previous = before.mapNotNull { it.personId }.distinct().mapNotNull { personSnapshot(it) }
+                val refusals = before.map { it.id }.chunked(500).flatMap { dao.rejectionsOfTracks(it) }.filter { it.personId == personId }
+                refusals.forEach { dao.deleteRejection(it.trackId, it.personId) }
+                for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons()
+                Triple(before, previous, refusals)
+            }
+        } catch (e: Throwable) { release(ids, until); throw e }
         return {
             change {
                 unjoinHeld(before.map { it.id })
                 revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons()
+                refusals.forEach { dao.addRejection(it) }
             }
-            release(before.map { it.id })
+            release(ids, until)
         }
     }
 
@@ -1337,8 +1412,35 @@ class FaceRepository @Inject constructor(
      * aside ([ASIDE]: among "poco chiari", still in "Da sistemare"). [force]: look again though
      * nothing was confirmed since the last look. Null when there was nothing to look at.
      */
-    suspend fun refine(file: FileEntity, force: Boolean = false, onProgress: ((Float) -> Unit)? = null): Refined? =
-        refine(file, force) { free, anchors -> readCloser(file, free, anchors, onProgress) }
+    suspend fun refine(file: FileEntity, force: Boolean = false, watched: Boolean = true, onProgress: ((Float) -> Unit)? = null): Refined? =
+        refine(file, force) { free, anchors -> watchedRead(watched) { beat -> readCloser(file, free, anchors) { p -> beat(); onProgress?.invoke(p) } } }
+
+    /** A closer reading that stopped moving ([watchedRead]): nothing of it is applied. */
+    class ReadingStalled : Exception("reading stalled")
+
+    /**
+     * [read], left behind when it stops moving for [STALL_MS] ([watched]: the scan's own closer
+     * looks, as [analyse] does): a decoder that never returns a frame held one of the scan's
+     * workers, and the scan, for good. Run where [analyse] reads, so nothing waits for it; each
+     * call of its beat says it moved on. Throws [ReadingStalled] when left behind.
+     */
+    private suspend fun <T> watchedRead(watched: Boolean, read: suspend (beat: () -> Unit) -> T): T {
+        if (!watched) return read {}
+        val beat = java.util.concurrent.atomic.AtomicLong(android.os.SystemClock.elapsedRealtime())
+        val job = readers.async { read { beat.set(android.os.SystemClock.elapsedRealtime()) } }
+        try {
+            while (!job.isCompleted) {
+                kotlinx.coroutines.withTimeoutOrNull(5_000) { job.join() }
+                if (!job.isCompleted && android.os.SystemClock.elapsedRealtime() - beat.get() > STALL_MS) {
+                    android.util.Log.w("FaceRepository", "closer reading stalled, left behind")
+                    throw ReadingStalled()
+                }
+            }
+            return job.await()
+        } finally {
+            job.cancel()
+        }
+    }
 
     /** [refine] with the closer reading of the video given ([readCloser] in the app). */
     internal suspend fun refine(file: FileEntity, force: Boolean,
@@ -1383,13 +1485,21 @@ class FaceRepository @Inject constructor(
                     heldBack = true
                     heldUntil = maxOf(heldUntil ?: 0L, undoHeld[h.id] ?: 0L)
                 }
-                // The same person confirmed twice in this video, never in one frame: one face.
-                for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = joinInto(target, o)
+                // The same person confirmed twice in this video, never in one frame: one face. Never
+                // two faces the user split apart ("Dividi"), whatever the closer look thinks.
+                for (o in mine.drop(1)) if (o.frames and target.frames == 0L && !keptApart(target.id, o.id)) target = joinInto(target, o)
                 for ((id, v) in verdicts) {
                     if (v != FaceFollower.Verdict.Join(p.personId) || (id to p.personId) in refused) continue
                     // Changed meanwhile (given to someone, deleted, joined): left alone. Never two faces of one frame.
                     val row = dao.tracks(listOf(id)).firstOrNull() ?: continue
                     if (!loose(row.personId, row.state, row.frames) || row.frames and target.frames != 0L) continue
+                    if (keptApart(target.id, row.id)) continue
+                    // Just taken from someone, its "Annulla" still on offer: joined later, if still free.
+                    if (held(row.id)) {
+                        heldBack = true
+                        heldUntil = maxOf(heldUntil ?: 0L, undoHeld[row.id] ?: 0L)
+                        continue
+                    }
                     target = joinInto(target, row)
                     joined++
                 }
@@ -1462,7 +1572,7 @@ class FaceRepository @Inject constructor(
         val sightings = if (faces.all { it.isNotEmpty() }) FaceCodec.encode(faces.flatten()) else ByteArray(0)
         dao.joinedTrack(keep.id, rows.fold(0L) { m, r -> m or r.frames }, rows.sumOf { it.faceCount },
             EmbeddingCodec.encode(embeddings), times.joinToString(","), sightings)
-        stale(listOf(keep.id))
+        stale(listOf(keep.id)); staleOnCommit += keep.id
         dao.moveTrackRejections(drop, keep.id)
         dao.deleteRejectionsOfTracks(drop)
         for (d in drop) dao.moveCover(d, keep.id)
@@ -1484,13 +1594,28 @@ class FaceRepository @Inject constructor(
         return listOf(StoredFace(-1, r.timeMs, r.quality, r.width, box, e))
     }
 
-    /** The unassigned faces the analysis found in [rows] (one media) that are one person, joined. Returns how many went. */
+    /** Whether the user split [a] and [b] apart ("Dividi", "Dividi il gruppo"): never joined by the app. */
+    private suspend fun keptApart(a: Long, b: Long): Boolean = dao.apartOf(listOf(a)).any { it.a == b || it.b == b }
+
+    /**
+     * The unassigned faces the analysis found in [rows] (one media) that are one person, joined;
+     * never two the user kept apart. Returns how many went.
+     */
     private suspend fun tidyRows(rows: List<FaceTrackEntity>): Int {
         val free = rows.filter { it.personId == null && it.frames != 0L && it.state != "manual" && it.state != "carried" }
         if (free.size < 2) return 0
         val groups = FaceTracker.groups(free.map { it.frames }, free.map { EmbeddingCodec.decode(it.embeddings).first() }, free.map { it.faceCount })
+        val apart = free.map { it.id }.chunked(500).flatMap { dao.apartOf(it) }.flatMap { listOf(it.a to it.b, it.b to it.a) }.toSet()
         var n = 0
-        for (g in groups) if (g.size > 1) { joinRows(g.map { free[it] }); n += g.size - 1 }
+        for (g in groups) {
+            // Each face goes to the first part of its group holding none it was kept apart from.
+            val parts = ArrayList<MutableList<FaceTrackEntity>>()
+            for (r in g.map { free[it] }) {
+                val home = parts.firstOrNull { part -> part.none { (r.id to it.id) in apart } }
+                if (home != null) home += r else parts += mutableListOf(r)
+            }
+            for (part in parts) if (part.size > 1) { joinRows(part); n += part.size - 1 }
+        }
         return n
     }
 
@@ -1521,28 +1646,42 @@ class FaceRepository @Inject constructor(
      * Null when they are not of one media or belong to two different people.
      */
     suspend fun mergeFaces(trackIds: Collection<Long>): Undo? {
-        val before = dao.tracks(trackIds.distinct())
-        // Joined already meanwhile (the closer look at the video, see [refine]): nothing left to do,
-        // and not "persone diverse" as a null would say.
-        if (before.size < 2) return if (before.isNotEmpty()) ({}) else null
-        if (before.map { it.fileId }.distinct().size != 1) return null
-        if (before.filter { it.personId != null && it.state != "suggested" }.map { it.personId }.distinct().size > 1) return null
-        val ids = before.map { it.id }
-        val rejections = dao.rejectionsOfTracks(ids)
-        val covers = dao.persons().filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
-        val apart = dao.apartOf(ids)
-        val (keep, joinedApart) = change { joinRows(before).let { k -> k to dao.apartOf(listOf(k)).filter { it !in apart } } }
+        // Read under the lock, with the join: a closer look committing in between had its join
+        // undone by the rows put back from an older reading.
+        val j = change {
+            val before = dao.tracks(trackIds.distinct())
+            // Joined already meanwhile (the closer look at the video, see [refine]): nothing left to
+            // do, and not "persone diverse" as a null would say.
+            if (before.size < 2) return@change if (before.isNotEmpty()) JoinedFaces.NOTHING else null
+            if (before.map { it.fileId }.distinct().size != 1) return@change null
+            if (before.filter { it.personId != null && it.state != "suggested" }.map { it.personId }.distinct().size > 1) return@change null
+            val ids = before.map { it.id }
+            val rejections = dao.rejectionsOfTracks(ids)
+            val covers = dao.persons().filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
+            val apart = dao.apartOf(ids)
+            val keep = joinRows(before)
+            JoinedFaces(before, keep, rejections, covers, apart, dao.apartOf(listOf(keep)).filter { it !in apart })
+        } ?: return null
+        if (j === JoinedFaces.NOTHING) return {}
         return {
             change {
-                dao.deleteRejectionsOfTracks(listOf(keep))
-                dao.deleteApart(joinedApart)
-                before.forEach { dao.putTrack(it) }
-                dao.addApart(apart)
-                rejections.forEach { dao.addRejection(it) }
-                covers.forEach { (p, t) -> dao.setCover(p, t) }
+                dao.deleteRejectionsOfTracks(listOf(j.keep))
+                dao.deleteApart(j.joinedApart)
+                j.before.forEach { dao.putTrack(it) }
+                dao.addApart(j.apart)
+                j.rejections.forEach { dao.addRejection(it) }
+                j.covers.forEach { (p, t) -> dao.setCover(p, t) }
             }
-            stale(ids)
+            stale(j.before.map { it.id })
         }
+    }
+
+    /** What "Annulla" of [mergeFaces] puts back. */
+    private class JoinedFaces(
+        val before: List<FaceTrackEntity>, val keep: Long, val rejections: List<FaceRejectionEntity>,
+        val covers: List<Pair<Long, Long?>>, val apart: List<FaceApartEntity>, val joinedApart: List<FaceApartEntity>,
+    ) {
+        companion object { val NOTHING = JoinedFaces(emptyList(), 0, emptyList(), emptyList(), emptyList(), emptyList()) }
     }
 
     /**
@@ -1551,20 +1690,26 @@ class FaceRepository @Inject constructor(
      */
     suspend fun deleteFaces(trackIds: Collection<Long>, everywhere: Boolean = false): Undo {
         val ids = trackIds.distinct()
-        val before = dao.tracks(ids)
-        val rejections = dao.rejectionsOfTracks(ids)
-        val all = dao.persons()
-        val covers = all.filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
-        val people = all.filter { p -> before.any { it.personId == p.id } }
-        val now = System.currentTimeMillis()
-        // "Elimina" on a second copy of a face that stays in the media (same person, alike) is a
-        // duplicate going, not a mistake of the analysis: nothing to remember against new analyses.
-        val others = if (everywhere) emptyList() else dao.trackRowsOf(before.map { it.fileId }.distinct()).filter { it.id !in ids }
-        val remember = before.filter { t ->
-            everywhere || others.none { o -> o.fileId == t.fileId &&
-                maxPair(EmbeddingCodec.decode(t.embeddings), EmbeddingCodec.decode(o.embeddings)) >= DELETED }
-        }
+        // Read under the lock, with the deletion: a closer look committing in between had its join
+        // undone (or a deleted face back) by the rows put back from an older reading.
+        lateinit var before: List<FaceTrackEntity>
+        lateinit var rejections: List<FaceRejectionEntity>
+        lateinit var covers: List<Pair<Long, Long?>>
+        lateinit var people: List<PersonEntity>
         val remembered = change {
+            before = dao.tracks(ids)
+            rejections = dao.rejectionsOfTracks(ids)
+            val all = dao.persons()
+            covers = all.filter { it.coverTrackId in ids }.map { it.id to it.coverTrackId }
+            people = all.filter { p -> before.any { it.personId == p.id } }
+            val now = System.currentTimeMillis()
+            // "Elimina" on a second copy of a face that stays in the media (same person, alike) is a
+            // duplicate going, not a mistake of the analysis: nothing to remember against new analyses.
+            val others = if (everywhere) emptyList() else dao.trackRowsOf(before.map { it.fileId }.distinct()).filter { it.id !in ids }
+            val remember = before.filter { t ->
+                everywhere || others.none { o -> o.fileId == t.fileId &&
+                    maxPair(EmbeddingCodec.decode(t.embeddings), EmbeddingCodec.decode(o.embeddings)) >= DELETED }
+            }
             dao.deleteRejectionsOfTracks(ids)
             dao.deleteTracks(ids)
             for ((p, _) in covers) dao.setCover(p, null)
@@ -1604,6 +1749,12 @@ class FaceRepository @Inject constructor(
         val restPic = if (staying.any { it.timeMs == row.timeMs }) null else picture(file, restBest)
         val outPic = picture(file, outBest)
         val newId = change {
+            // Changed while its pictures were found (seconds, on a video): the closer look joined a
+            // face into it, or it into another. Written back from the reading above, that join was lost
+            // or the face joined came back twice: left as it is now.
+            val now = dao.tracks(listOf(trackId)).firstOrNull()
+            if (now == null || !now.sightings.contentEquals(row.sightings) || !now.embeddings.contentEquals(row.embeddings) ||
+                now.personId != row.personId || now.state != row.state) return@change null
             dao.putTrack(row.copy(frames = rest.frames, faceCount = rest.sightings.size, embeddings = EmbeddingCodec.encode(rest.embeddings),
                 times = rest.times.joinToString(","), sightings = FaceCodec.encode(staying), quality = rest.quality,
                 timeMs = if (restPic != null) restBest.timeMs else row.timeMs, crop = restPic?.crop ?: row.crop,
@@ -1615,7 +1766,7 @@ class FaceRepository @Inject constructor(
                 // Someone else, the user says: the two parts are never grouped as one again.
                 dao.addApart(listOf(FaceApartEntity(minOf(trackId, id), maxOf(trackId, id))))
             }
-        }
+        } ?: return null
         stale(listOf(trackId))
         return {
             change { dao.deleteApart(dao.apartOf(listOf(newId))); dao.deleteTracks(listOf(newId)); dao.putTrack(row) }
@@ -1802,6 +1953,8 @@ class FaceRepository @Inject constructor(
         const val VERSION = 4
         /** Media analysed by this version have their faces of one person joined by [tidyOld] instead of analysed again. */
         private const val TIDY_FROM = 3
+        /** Version of a media that could not be read for a moment (memory, I/O): [pending] again at the next scan. */
+        private const val TRANSIENT = 0
         /** A new face this alike to one the user deleted from the same media is that face again. */
         private const val DELETED = 0.5f
         /** A new face this alike to one marked "Non è un volto" is left out in any media (stricter: other light, other day). */

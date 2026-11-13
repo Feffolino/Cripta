@@ -1447,7 +1447,9 @@ class ConversionService : Service() {
                                     else if (closer) try {
                                         running[f.id] = f.originalName to android.os.SystemClock.elapsedRealtime()
                                         progress()
-                                        val r = faces.refine(f, force = faceRefineForced.remove(f.id)) { p -> partial[f.id] = p; progress() }
+                                        // A closer look asked for by hand is waited for however long it takes, as an analysis.
+                                        val forced = faceRefineForced.remove(f.id)
+                                        val r = faces.refine(f, force = forced, watched = !forced) { p -> partial[f.id] = p; progress() }
                                         if (r != null) refined.incrementAndGet()
                                         r?.heldUntil?.let { faceRefineAfterHold.merge(f.id, it, ::maxOf) }
                                     } catch (e: kotlinx.coroutines.CancellationException) {
