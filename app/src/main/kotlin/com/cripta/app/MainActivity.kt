@@ -60,6 +60,13 @@ class MainActivity : FragmentActivity() {
         private const val PREF_NOTIF_ASKED = "notif_permission_asked"
         /** Longest time in a system picker that still doesn't count as "leaving the app". */
         private const val PICKER_GRACE_MS = 5 * 60_000L
+
+        /**
+         * The last auto-lock setting read in this process. An activity recreated after Back (the
+         * process and its unlocked session still alive) found it null and showed the vault for
+         * the frames DataStore took to answer; the session only exists in this process anyway.
+         */
+        @Volatile private var lastAutoLockMinutes: Int? = null
         /** For the whole process: a share being classified outlives the activity that received it. */
         private val shareScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
     }
@@ -96,9 +103,12 @@ class MainActivity : FragmentActivity() {
     /**
      * The auto-lock setting, kept current from onCreate so [onStart] can lock before the first
      * frame. Read from DataStore there, the lock came a few frames late: the vault showed briefly
-     * to whoever reopened the app after the timeout. Null until loaded.
+     * to whoever reopened the app after the timeout. Null until loaded. Kept for the process (see
+     * [lastAutoLockMinutes]): an activity left with Back and reopened is a new one.
      */
-    @Volatile private var autoLockMinutes: Int? = null
+    private var autoLockMinutes: Int?
+        get() = lastAutoLockMinutes
+        set(value) { lastAutoLockMinutes = value }
 
     /** When this activity last stopped (SystemClock.elapsedRealtime(), 0 = never), locked or not. */
     private var stoppedAt = 0L
@@ -197,8 +207,10 @@ class MainActivity : FragmentActivity() {
             pin = pinStepFor(keyVault.unlockMode),
             secretKind = keyVault.secretKind,
         )
-        // A recreated activity gets its original intent back: don't import a share twice.
-        if (savedInstanceState == null) handleShare(intent)
+        // A recreated activity gets its original intent back: don't import a share twice. Nor
+        // when relaunched from Recents, which hands back the task's original SEND intent.
+        val fromHistory = intent?.flags?.and(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) ?: 0
+        if (savedInstanceState == null && fromHistory == 0) handleShare(intent)
         handleOpenDuplicates(intent)
         watchBackgroundWorkForNotificationPermission()
         runCatching { registerReceiver(screenOff, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)) }
@@ -484,6 +496,8 @@ class MainActivity : FragmentActivity() {
     /** Leaving the app while a video plays: continue it in Picture-in-Picture if the user enabled it. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        // A locked vault keeps the viewer composed under the lock screen: no PiP of that.
+        if (session.locked.value) return
         val aspect = com.cripta.app.viewer.PipController.armedAspect ?: return
         runCatching {
             enterPictureInPictureMode(
@@ -523,6 +537,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Back from a picker shown as a window (tablet, split screen): no stop/start happened,
+        // so onStart never consumed the flag, and a later absence of up to five minutes skipped
+        // the auto-lock. When the picker did stop us, onStart has already read it.
+        awaitingResult = false
+        screenOffInPicker = false
         // Back from the security settings with a screen lock now set up: offer the prompt again.
         if (authUi.value.noDeviceCredential && (!needsSystemPrompt() || BiometricAuth.canAuthenticate(this))) {
             authUi.value = authUi.value.copy(noDeviceCredential = false, error = null)

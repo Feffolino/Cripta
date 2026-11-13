@@ -326,7 +326,8 @@ class ConversionService : Service() {
         // Keep the keys alive while this job runs, even if the vault gets locked meanwhile
         // (auto-lock on leaving the app, "Blocca ora"): the UI locks at once, the keys are wiped
         // as soon as the last job ends. Otherwise every remaining item failed silently.
-        val holdsSession = session.beginWork()
+        // A job that never opens the vault (the app update download) does not keep them.
+        val holdsSession = holdsVaultKeys(mode) && session.beginWork()
         // Taken when the command arrives, not when the import gets to its first file: a chunk
         // still reading its files' names took a later value, and an Annulla meanwhile let it run.
         val importGen = importCancels.get()
@@ -2228,6 +2229,9 @@ class ConversionService : Service() {
         private const val MODE_CANCEL = "cancel"
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
         private const val MODE_DUP_SCAN = "dup_scan"
+
+        /** Whether a job of [mode] uses the vault, so keeps its keys alive past a lock (see beginWork). */
+        internal fun holdsVaultKeys(mode: String): Boolean = mode != MODE_UPDATE && mode != MODE_DEBUG_PROGRESS
 
         /** [mode] asks for a duplicate scan or an update download while one runs ([scan], [update]). */
         internal fun alreadyRunning(mode: String, scan: kotlinx.coroutines.Job?, update: kotlinx.coroutines.Job?): Boolean =
