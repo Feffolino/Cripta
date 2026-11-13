@@ -36,10 +36,12 @@ class FaceEngine(detector: ByteArray, recognizer: ByteArray, private val threads
      * The detector (float model) runs on XNNPACK where the runtime has it (Android), else on the
      * default CPU provider; the recogniser is int8, which the default provider handles best.
      */
+    // The options are native objects copied into each session: closed once it is made, or every
+    // engine (one per scan) left them behind.
     private val det = runCatching {
-        env.createSession(detector, options().apply { addXnnpack(mapOf("intra_op_num_threads" to threads.toString())) })
-    }.getOrElse { env.createSession(detector, options()) }
-    private val rec = env.createSession(recognizer, options())
+        options().use { o -> env.createSession(detector, o.apply { addXnnpack(mapOf("intra_op_num_threads" to threads.toString())) }) }
+    }.getOrElse { options().use { o -> env.createSession(detector, o) } }
+    private val rec = options().use { o -> env.createSession(recognizer, o) }
 
     /** A face found in a picture: [embedding] and [preview] are set when it passed the quality checks. */
     class Face(val det: Detection, val reject: FaceReject?, val embedding: FloatArray?, val preview: FaceImage?,
