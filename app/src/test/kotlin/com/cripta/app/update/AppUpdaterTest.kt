@@ -88,13 +88,21 @@ class AppUpdaterTest {
         .put("assets", org.json.JSONArray().put(org.json.JSONObject()
             .put("name", "cripta.apk").put("browser_download_url", "https://example.invalid/b$build.apk").put("size", 1)))
 
-    /** GitHub with [stable] (null: none) behind 200 newer prereleases, 30 a page. */
-    private fun github(stable: Int?, latestEndpoint: Boolean = true): (String) -> String {
-        val all = (300 downTo 101).map { release(it, prerelease = true) } + listOfNotNull(stable?.let { release(it, false) })
+    /**
+     * GitHub with [stable] (null: none) behind [prereleases] newer prereleases, 30 a page.
+     * [latestEndpoint] off: /releases/latest answers 404; [latestApk] off: it gives the release
+     * without its APK.
+     */
+    private fun github(stable: Int?, latestEndpoint: Boolean = true, prereleases: Int = 200,
+                       latestApk: Boolean = true): (String) -> String {
+        val all = (300 downTo 301 - prereleases).map { release(it, prerelease = true) } +
+            listOfNotNull(stable?.let { release(it, false) })
         return { url ->
             when {
                 url.endsWith("/releases/latest") ->
-                    if (stable != null && latestEndpoint) release(stable, false).toString() else throw java.io.FileNotFoundException(url)
+                    if (stable != null && latestEndpoint)
+                        release(stable, false).apply { if (!latestApk) put("assets", org.json.JSONArray()) }.toString()
+                    else throw java.io.FileNotFoundException(url)
                 else -> {
                     val page = Regex("page=(\\d+)$").find(url)!!.groupValues[1].toInt()
                     org.json.JSONArray(all.drop((page - 1) * 30).take(30)).toString()
@@ -108,6 +116,19 @@ class AppUpdaterTest {
         val updater = AppUpdater().apply { get = github(stable = 90) }
         assertEquals(90, updater.latest(includePrerelease = false)?.buildNumber)
         assertEquals(300, updater.latest(includePrerelease = true)?.buildNumber)
+    }
+
+    @Test
+    fun withNoLatestReleaseTheListIsRead() = runBlocking {
+        // /releases/latest answers 404 (no release marked latest): the list still finds the stable one.
+        val updater = AppUpdater().apply { get = github(stable = 5, latestEndpoint = false, prereleases = 3) }
+        assertEquals(5, updater.latest(includePrerelease = false)?.buildNumber)
+    }
+
+    @Test
+    fun aLatestReleaseWithoutItsApkFallsBackToTheList() = runBlocking {
+        val updater = AppUpdater().apply { get = github(stable = 5, prereleases = 3, latestApk = false) }
+        assertEquals(5, updater.latest(includePrerelease = false)?.buildNumber)
     }
 
     @Test

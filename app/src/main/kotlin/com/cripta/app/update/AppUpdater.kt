@@ -70,9 +70,10 @@ class AppUpdater @Inject constructor() {
 
     /** Fetch the newest public release with an APK, or null when none exists. Throws
      *  [java.io.IOException] when GitHub can't be reached, so callers can tell "offline" from
-     *  "no release". Uses the releases LIST (not
-     *  /releases/latest, which skips prereleases — our CI publishes prereleases) and picks the
-     *  highest build number that has an .apk asset. */
+     *  "no release". With [includePrerelease] off it asks /releases/latest first (GitHub's latest
+     *  stable release, which may sit behind more CI prereleases than the list pages below reach);
+     *  with prereleases on, or when that has no APK or answers 404, it reads the releases LIST page
+     *  by page and picks the highest build number that has an .apk asset. */
     suspend fun latest(includePrerelease: Boolean = true): Release? = withContext(Dispatchers.IO) {
         runCatching {
             // Prereleases off: GitHub's own latest stable release first. The CI publishes a
