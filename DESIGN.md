@@ -402,7 +402,15 @@ Plain Italian, short. Controls name their effect, not the mechanism ("Schermo di
 dettagli", "Crea backup"). Messages that point to a setting use its real path
 (`Impostazioni › <pagina>`).
 
-Texts live in `res/values` (English) and `res/values-it` (Italian). A text meant to be joined to
-others with a space at its start or end (" di ", "Cartelle · ") is quoted in both files: Android
-trims unquoted texts, and "18 GB di 64 GB" read "18 GBdi64 GB". `StringsParityTest` checks that
-both languages have the same texts, placeholders and edge spaces.
+Texts live in `res/values` (English) and in eleven translations: `res/values-ar`, `-de`, `-es`,
+`-fr`, `-hi`, `-it`, `-ja`, `-ko`, `-pt-rBR`, `-ru` and `-zh-rCN`, the same list as
+`xml/locales_config.xml`. A new text goes into all twelve files, at the same place. A text meant
+to be joined to others with a space at its start or end (" di ", "Cartelle · ") is quoted in
+every file: Android trims unquoted texts, and "18 GB di 64 GB" read "18 GBdi64 GB". A text with
+a count is a `<plurals>` (read with `plural()`), with the categories of each language: one/other
+in English, German and Hindi; one/many/other in Italian, Spanish, French and Portuguese;
+one/few/many/other in Russian; all six in Arabic; only other in Japanese, Korean and Chinese. In
+French, Portuguese, Hindi and Russian "one" also covers counts other than 1 (0, 21...), so it
+writes the count, not "1". `StringsParityTest` checks that every language has the same keys in
+the same order, the same placeholders and escapes, the plural categories above, and the same
+edge spaces.

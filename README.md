@@ -18,7 +18,7 @@ the device.
 - It locks itself after the time you pick. Screenshots stay blocked and the app hides from the
   recents screen unless you allow them.
 - Deleting a file destroys its key (crypto-shredding). With the trash on, you can get the file back
-  for the number of days you set, from 1 to 90.
+  for 3, 7 or 30 days, as you choose.
 
 ### Importing and downloading
 
@@ -122,5 +122,5 @@ Look and feel: [DESIGN.md](DESIGN.md) (Manrope, Tabler Icons). Product: [PRODUCT
 
 ## Licence
 
-Personal use. No warranty. Fonts and icons carry their own licences in
+MIT, see [LICENSE](LICENSE). No warranty. Fonts and icons carry their own licences in
 `app/src/main/assets/licenses/`.
