@@ -193,8 +193,8 @@ internal fun FacePair(a: TrackCard, b: TrackCard, captionA: String, captionB: St
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            com.cripta.app.ui.components.ChoiceChip(selected = !zoom, onClick = { zoom = false }, label = { Text(str(R.string.face_scene)) })
-            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { Text(str(R.string.face_face)) })
+            com.cripta.app.ui.components.ChoiceChip(selected = !zoom, onClick = { zoom = false }, label = { com.cripta.app.ui.components.OneLineText(str(R.string.face_scene)) })
+            com.cripta.app.ui.components.ChoiceChip(selected = zoom, onClick = { zoom = true }, label = { com.cripta.app.ui.components.OneLineText(str(R.string.face_face)) })
         }
     }
 }

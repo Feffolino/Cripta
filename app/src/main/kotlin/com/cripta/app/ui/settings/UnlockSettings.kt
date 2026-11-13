@@ -260,7 +260,7 @@ private fun NewPinDialog(
                         com.cripta.app.ui.components.ChoiceChip(
                             selected = kind == k,
                             onClick = { if (kind != k) { kind = k; pin = ""; again = "" } },
-                            label = { Text(if (k == SecretKind.PIN) str(R.string.numeric_pin) else str(R.string.password_cap)) },
+                            label = { com.cripta.app.ui.components.OneLineText(if (k == SecretKind.PIN) str(R.string.numeric_pin) else str(R.string.password_cap)) },
                         )
                     }
                 }

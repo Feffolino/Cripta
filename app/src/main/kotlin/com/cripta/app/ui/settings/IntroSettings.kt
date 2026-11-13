@@ -326,7 +326,7 @@ private fun IntroResultsPage(
                     ChipFlowRow {
                         ResultFilter.entries.forEach { f ->
                             com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f },
-                                label = { Text(f.label + (counts[f]?.let { " · $it" } ?: "")) })
+                                label = { com.cripta.app.ui.components.OneLineText(f.label + (counts[f]?.let { " · $it" } ?: "")) })
                         }
                     }
                 }

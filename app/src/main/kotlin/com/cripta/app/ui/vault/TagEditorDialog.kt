@@ -537,11 +537,11 @@ fun BatchTagDialog(
                         com.cripta.app.ui.components.ChoiceChip(
                             // Only a real switch of mode clears the choice: tapping the active one keeps it.
                             selected = !removing, onClick = { if (removing) { removing = false; chosen.clear() } },
-                            label = { Text(str(R.string.add)) },
+                            label = { com.cripta.app.ui.components.OneLineText(str(R.string.add)) },
                         )
                         com.cripta.app.ui.components.ChoiceChip(
                             selected = removing, onClick = { if (!removing) { removing = true; chosen.clear() } },
-                            label = { Text(str(R.string.remove)) },
+                            label = { com.cripta.app.ui.components.OneLineText(str(R.string.remove)) },
                         )
                     }
                 }

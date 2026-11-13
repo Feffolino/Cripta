@@ -244,7 +244,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                     } else {
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MediaOrder.entries.forEach { m ->
-                                com.cripta.app.ui.components.ChoiceChip(selected = order == m, onClick = { order = m }, label = { Text(m.label) })
+                                com.cripta.app.ui.components.ChoiceChip(selected = order == m, onClick = { order = m }, label = { com.cripta.app.ui.components.OneLineText(m.label) })
                             }
                         }
                         Text(str(R.string.person_media_hint),

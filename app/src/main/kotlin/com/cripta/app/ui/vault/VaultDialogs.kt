@@ -370,7 +370,7 @@ internal fun ImportConflictsPage(
                             }
                             com.cripta.app.ui.components.ChipFlowRow(Modifier.padding(top = 10.dp)) {
                                 options.forEach { (c, label) ->
-                                    com.cripta.app.ui.components.ChoiceChip(selected = choiceOf(m) == c, onClick = { choices[m.newId] = c }, label = { Text(label) })
+                                    com.cripta.app.ui.components.ChoiceChip(selected = choiceOf(m) == c, onClick = { choices[m.newId] = c }, label = { com.cripta.app.ui.components.OneLineText(label) })
                                 }
                             }
                         }

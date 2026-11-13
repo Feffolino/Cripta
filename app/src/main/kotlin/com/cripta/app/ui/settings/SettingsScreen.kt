@@ -365,7 +365,7 @@ fun SettingsScreen(
                                     com.cripta.app.data.TagSortMode.CUSTOM to str(R.string.custom),
                                 ).forEach { (m, label) ->
                                     com.cripta.app.ui.components.ChoiceChip(selected = mode == m,
-                                        onClick = { vm.setTagSortMode(m) }, label = { Text(label) })
+                                        onClick = { vm.setTagSortMode(m) }, label = { com.cripta.app.ui.components.OneLineText(label) })
                                 }
                             }
                         }
@@ -589,7 +589,7 @@ fun SettingsScreen(
                                     com.cripta.app.ui.components.ChoiceChip(
                                         selected = s.autoLockMinutes == m,
                                         onClick = { vm.setAutoLock(m) },
-                                        label = { Text(when (m) { -1 -> str(R.string.never); 0 -> str(R.string.immediately); else -> str(R.string.n_min, m) }) },
+                                        label = { com.cripta.app.ui.components.OneLineText(when (m) { -1 -> str(R.string.never); 0 -> str(R.string.immediately); else -> str(R.string.n_min, m) }) },
                                     )
                                 }
                             }
@@ -663,7 +663,7 @@ fun SettingsScreen(
                                     com.cripta.app.data.ConvertAfter.ASK to str(R.string.ask),
                                     com.cripta.app.data.ConvertAfter.KEEP_BOTH to str(R.string.convert_keep_both),
                                 ).forEach { (v, l) ->
-                                    com.cripta.app.ui.components.ChoiceChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { Text(l) })
+                                    com.cripta.app.ui.components.ChoiceChip(selected = s.convertAfter == v, onClick = { vm.setConvertAfter(v) }, label = { com.cripta.app.ui.components.OneLineText(l) })
                                 }
                             }
                             Text(

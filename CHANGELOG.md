@@ -43,6 +43,7 @@ Entries marked **stable** went out as a stable release.
 - Texts: counts read right for a single item in every language ("1 video", "1 face found", "1 original could not be deleted" instead of the plural), with each language's own forms and digits
 - Build: the published APK no longer carries Compose's preview screen; third-party CI actions are pinned to a commit and the token can write only in the build job; an empty signing alias no longer breaks the build; the README states the MIT licence and the trash choices of 3, 7 or 30 days
 - Downloads: the download engine (yt-dlp) updates itself again. Every update was refused on the phone, so it stayed at the version of November 2025, and YouTube answered "403 Forbidden" partway through a video
+- Texts: the labels of segmented buttons, chips and the bottom tabs stay on one line: with little room they get a little smaller, then end with "…", instead of dropping a word's last letter onto a second line ("Manual" + "e" on some phones)
 
 ## 2026-11-12
 

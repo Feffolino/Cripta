@@ -284,7 +284,7 @@ internal fun VaultCleanupDialog(
                         com.cripta.app.ui.components.ChipFlowRow {
                             listOf(CleanupSort.SIZE to R.string.sort_size, CleanupSort.NAME to R.string.sort_name, CleanupSort.DATE to R.string.sort_date)
                                 .forEach { (k, label) ->
-                                    com.cripta.app.ui.components.ChoiceChip(selected = sort == k, onClick = { sort = k }, label = { Text(str(label)) })
+                                    com.cripta.app.ui.components.ChoiceChip(selected = sort == k, onClick = { sort = k }, label = { com.cripta.app.ui.components.OneLineText(str(label)) })
                                 }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {

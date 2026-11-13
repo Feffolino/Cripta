@@ -328,6 +328,28 @@ fun ActionChip(
 }
 
 /**
+ * A label that has one line of room (a segmented button, a chip, a tab of the bottom bar). With a
+ * large font or display size, or a long translation, it shrinks a little (down to 80 %) to fit,
+ * then ends with "…": it never wraps, so a word's last letter can't drop onto a second line.
+ */
+@Composable
+fun OneLineText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    style: TextStyle = androidx.compose.material3.LocalTextStyle.current,
+    fontWeight: androidx.compose.ui.text.font.FontWeight? = null,
+) {
+    val size = style.fontSize.takeIf { it.isSp } ?: 14.sp
+    androidx.compose.material3.Text(
+        text, modifier, color = color, fontWeight = fontWeight, maxLines = 1, softWrap = false,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = style,
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+            minFontSize = size * 0.8f, maxFontSize = size, stepSize = 0.5.sp),
+    )
+}
+
+/**
  * A button's label: up to two lines so longer translations keep the action readable.
  */
 @Composable

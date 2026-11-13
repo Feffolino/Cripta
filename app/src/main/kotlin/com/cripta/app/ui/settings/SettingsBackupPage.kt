@@ -257,10 +257,10 @@ private fun BackupFoldersSheet(
             com.cripta.app.ui.components.ChipFlowRow(Modifier.padding(top = 12.dp, bottom = 4.dp)) {
                 com.cripta.app.ui.components.ChoiceChip(selected = allIn,
                     onClick = { onChange(scope.copy(excludedFolders = emptySet(), rootFiles = true)) },
-                    label = { Text(str(R.string.backup_choose_all)) })
+                    label = { com.cripta.app.ui.components.OneLineText(str(R.string.backup_choose_all)) })
                 com.cripta.app.ui.components.ChoiceChip(selected = noneIn,
                     onClick = { onChange(scope.copy(excludedFolders = ids, rootFiles = false)) },
-                    label = { Text(str(R.string.backup_choose_none)) })
+                    label = { com.cripta.app.ui.components.OneLineText(str(R.string.backup_choose_none)) })
             }
             folders.forEach { f ->
                 PickRow(CriptaIcons.Folder, f.name, statLine(stats[f.id]), f.id !in ex) { on ->

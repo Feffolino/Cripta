@@ -526,7 +526,7 @@ fun VaultScreen(
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     columnChoices.forEach { n ->
-                                        com.cripta.app.ui.components.ChoiceChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n, landscape) }, label = { Text("$n") },
+                                        com.cripta.app.ui.components.ChoiceChip(selected = gridColumns == n, onClick = { vm.setGridColumns(n, landscape) }, label = { com.cripta.app.ui.components.OneLineText("$n") },
                                             modifier = Modifier.semantics { this.contentDescription = str(R.string.n_columns, n) })
                                     }
                                 }

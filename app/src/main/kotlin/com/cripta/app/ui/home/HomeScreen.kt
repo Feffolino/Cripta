@@ -276,7 +276,7 @@ fun HomeScreen(
                             com.cripta.app.ui.components.ActionChip(
                                 onClick = { vm.applySavedFilter(sf.json); onOpenFolders() },
                                 leadingIcon = { Icon(CriptaIcons.FilterList, null, modifier = Modifier.size(18.dp)) },
-                                label = { Text("${sf.name} · $count", maxLines = 1) },
+                                label = { com.cripta.app.ui.components.OneLineText("${sf.name} · $count") },
                             )
                         }
                     }

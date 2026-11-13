@@ -299,7 +299,7 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
                 val moments = t.moments.ifEmpty { listOf(t.timeMs) }
                 Row(Modifier.padding(top = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     moments.forEach { ms ->
-                        com.cripta.app.ui.components.ActionChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { Text(clock(ms)) })
+                        com.cripta.app.ui.components.ActionChip(onClick = { vm.seekPlayer(file.id, maxOf(0L, ms - 1_000), play = true) }, label = { com.cripta.app.ui.components.OneLineText(clock(ms)) })
                     }
                 }
             }
@@ -382,7 +382,7 @@ private fun SplitDialog(t: TrackCard, moments: List<Long>, vm: ViewerViewModel, 
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     moments.forEach { ms ->
                         com.cripta.app.ui.components.ChoiceChip(selected = ms in picked, onClick = { picked = if (ms in picked) picked - ms else picked + ms },
-                            label = { Text(clock(ms)) })
+                            label = { com.cripta.app.ui.components.OneLineText(clock(ms)) })
                     }
                 }
                 TextButton(onClick = { vm.seekPlayer(t.fileId, maxOf(0L, (picked.minOrNull() ?: moments.first()) - 1_000), play = true) }) {

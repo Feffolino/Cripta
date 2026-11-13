@@ -159,7 +159,7 @@ internal fun <T> ChoiceRow(
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             com.cripta.app.ui.components.ChipFlowRow {
-                options.forEach { (v, l) -> com.cripta.app.ui.components.ChoiceChip(selected = v == selected, onClick = { onPick(v) }, label = { Text(l) }) }
+                options.forEach { (v, l) -> com.cripta.app.ui.components.ChoiceChip(selected = v == selected, onClick = { onPick(v) }, label = { com.cripta.app.ui.components.OneLineText(l) }) }
             }
             if (desc != null) {
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

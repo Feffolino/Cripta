@@ -324,7 +324,7 @@ internal fun FolderCoverSheet(
             com.cripta.app.ui.components.ChoiceChip(
                 selected = coverInUse == null,
                 onClick = { afterSheet { onPick(null) } },
-                label = { Text(str(R.string.cover_auto_latest)) },
+                label = { com.cripta.app.ui.components.OneLineText(str(R.string.cover_auto_latest)) },
             )
             val list = files
             // The picker lists the newest files first: said, with a way to list older ones too.

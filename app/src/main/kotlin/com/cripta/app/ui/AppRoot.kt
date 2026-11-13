@@ -379,7 +379,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                             selected = selected,
                             onClick = { onTab(tab.route) },
                             icon = { TabIcon(selected, tab.icon, tab.iconRest, tab.label) },
-                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
+                            label = { com.cripta.app.ui.components.OneLineText(tab.label, style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
                             // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
                             colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
@@ -437,7 +437,7 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                             selected = selected,
                             onClick = { onTab(tab.route) },
                             icon = { TabIcon(selected, tab.icon, tab.iconRest, tab.label) },
-                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall,
+                            label = { com.cripta.app.ui.components.OneLineText(tab.label, style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.SemiBold) },
                             // DS cr-nav: accent-tint pill and filled icon on the current tab, label in ink.
                             colors = androidx.compose.material3.NavigationRailItemDefaults.colors(

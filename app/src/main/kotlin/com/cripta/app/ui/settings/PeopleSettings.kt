@@ -221,7 +221,7 @@ private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
                 Text(str(R.string.analysed_in_period), style = MaterialTheme.typography.labelLarge)
                 com.cripta.app.ui.components.ChipFlowRow {
                     periods.forEach { (ms, label) ->
-                        com.cripta.app.ui.components.ChoiceChip(selected = period == ms, onClick = { period = ms }, label = { Text(label) })
+                        com.cripta.app.ui.components.ChoiceChip(selected = period == ms, onClick = { period = ms }, label = { com.cripta.app.ui.components.OneLineText(label) })
                     }
                 }
                 val f = found
@@ -404,7 +404,7 @@ private fun PeopleSortSheet(
             com.cripta.app.ui.vault.FilterGroup(str(R.string.sort_by)) {
                 com.cripta.app.ui.components.ChipFlowRow {
                     com.cripta.app.data.PeopleSort.entries.forEach { k ->
-                        com.cripta.app.ui.components.ChoiceChip(selected = k == key, onClick = { onSort(k, ascending) }, label = { Text(sortLabel(k)) })
+                        com.cripta.app.ui.components.ChoiceChip(selected = k == key, onClick = { onSort(k, ascending) }, label = { com.cripta.app.ui.components.OneLineText(sortLabel(k)) })
                     }
                 }
                 val (desc, asc) = sortDirections(key)
@@ -633,7 +633,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                         val count = if (todo && known) knownList?.size ?: 0 else n
                         // DS Persone: chips with their count; "Preferite" leads with the star.
                         if (count > 0 || f == PeopleFilter.MAIN || f == filter) com.cripta.app.ui.components.ChoiceChip(selected = filter == f, onClick = { filter = f },
-                            label = { Text("$label · $count") },
+                            label = { com.cripta.app.ui.components.OneLineText("$label · $count") },
                             leadingIcon = if (f == PeopleFilter.FAVORITE) ({ Icon(CriptaIcons.StarBorder, null, Modifier.size(18.dp)) }) else null)
                     }
                 }

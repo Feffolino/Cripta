@@ -276,7 +276,7 @@ internal fun FilterSortSheet(
                             onClick = { onSort(k, sortAscending) },
                             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, keys.size),
                             icon = {},
-                            label = { Text(lbl, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                            label = { com.cripta.app.ui.components.OneLineText(lbl) },
                         )
                     }
                 }
@@ -307,7 +307,7 @@ internal fun FilterSortSheet(
                 com.cripta.app.ui.components.ChipFlowRow {
                     TypeFilter.entries.forEach { t ->
                         com.cripta.app.ui.components.ChoiceChip(selected = filters.type == t, onClick = { onType(t) },
-                            label = { Text(typeLabel(t)) })
+                            label = { com.cripta.app.ui.components.OneLineText(typeLabel(t)) })
                     }
                 }
             }
@@ -357,12 +357,12 @@ internal fun FilterSortSheet(
                             SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
                                 selected = filters.tagMatchAll, onClick = { onTagMatchAll(true) }, enabled = canMatch,
                                 shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
-                                icon = {}, label = { Text(str(R.string.tag_match_all)) },
+                                icon = {}, label = { com.cripta.app.ui.components.OneLineText(str(R.string.tag_match_all)) },
                             )
                             SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
                                 selected = !filters.tagMatchAll, onClick = { onTagMatchAll(false) }, enabled = canMatch,
                                 shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
-                                icon = {}, label = { Text(str(R.string.at_least_one)) },
+                                icon = {}, label = { com.cripta.app.ui.components.OneLineText(str(R.string.at_least_one)) },
                             )
                         }
                     }
@@ -419,7 +419,7 @@ internal fun FilterSortSheet(
                             androidx.compose.material3.InputChip(
                                 selected = false,
                                 onClick = { onApplySaved(sf.json) },
-                                label = { Text(sf.name, maxLines = 1) },
+                                label = { com.cripta.app.ui.components.OneLineText(sf.name) },
                                 trailingIcon = {
                                     androidx.compose.material3.IconButton(onClick = { savedToDelete = sf }) {
                                         Icon(CriptaIcons.Close, str(R.string.delete_saved_filter_x, sf.name),
@@ -509,13 +509,13 @@ internal fun SortDirectionRow(descLabel: String, ascLabel: String, ascending: Bo
             selected = !ascending, onClick = { onChange(false) },
             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(0, 2),
             icon = { Icon(CriptaIcons.ArrowDownward, null, Modifier.size(18.dp)) },
-            label = { Text(descLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            label = { com.cripta.app.ui.components.OneLineText(descLabel) },
         )
         SegmentedButton(colors = com.cripta.app.ui.components.criptaSegmentedColors(),
             selected = ascending, onClick = { onChange(true) },
             shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(1, 2),
             icon = { Icon(CriptaIcons.ArrowUpward, null, Modifier.size(18.dp)) },
-            label = { Text(ascLabel, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            label = { com.cripta.app.ui.components.OneLineText(ascLabel) },
         )
     }
 }
@@ -569,22 +569,22 @@ internal fun QuickChips(
     ) {
         if (atRoot) {
             item {
-                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { Text(str(R.string.favorites_only)) },
+                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { com.cripta.app.ui.components.OneLineText(str(R.string.favorites_only)) },
                     leadingIcon = { Icon(if (filters.favoritesOnly) CriptaIcons.Star else CriptaIcons.StarBorder, null, Modifier.size(18.dp)) })
             }
-            item { com.cripta.app.ui.components.ChoiceChip(filters.untaggedOnly, onUntagged, { Text(str(R.string.untagged)) }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.untaggedOnly, onUntagged, { com.cripta.app.ui.components.OneLineText(str(R.string.untagged)) }) }
             item {
-                com.cripta.app.ui.components.ActionChip(onSort, { Text(sortLabel) },
+                com.cripta.app.ui.components.ActionChip(onSort, { com.cripta.app.ui.components.OneLineText(sortLabel) },
                     leadingIcon = { Icon(CriptaIcons.Sort, null, Modifier.size(18.dp)) })
             }
         } else {
-            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.ALL, { onType(TypeFilter.ALL) }, { Text(str(R.string.all)) }) }
-            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.IMAGE, { onType(TypeFilter.IMAGE) }, { Text(str(R.string.photo)) }) }
-            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.VIDEO, { onType(TypeFilter.VIDEO) }, { Text(str(R.string.video)) }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.ALL, { onType(TypeFilter.ALL) }, { com.cripta.app.ui.components.OneLineText(str(R.string.all)) }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.IMAGE, { onType(TypeFilter.IMAGE) }, { com.cripta.app.ui.components.OneLineText(str(R.string.photo)) }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.VIDEO, { onType(TypeFilter.VIDEO) }, { com.cripta.app.ui.components.OneLineText(str(R.string.video)) }) }
             // Notes, PDFs and other files: the sheet's fourth type, reachable here too.
-            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.OTHER, { onType(TypeFilter.OTHER) }, { Text(str(R.string.other)) }) }
+            item { com.cripta.app.ui.components.ChoiceChip(filters.type == TypeFilter.OTHER, { onType(TypeFilter.OTHER) }, { com.cripta.app.ui.components.OneLineText(str(R.string.other)) }) }
             item {
-                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { Text(str(R.string.favorites)) },
+                com.cripta.app.ui.components.ChoiceChip(filters.favoritesOnly, onFavorites, { com.cripta.app.ui.components.OneLineText(str(R.string.favorites)) },
                     leadingIcon = { Icon(if (filters.favoritesOnly) CriptaIcons.Star else CriptaIcons.StarBorder, null, Modifier.size(18.dp)) })
             }
         }
