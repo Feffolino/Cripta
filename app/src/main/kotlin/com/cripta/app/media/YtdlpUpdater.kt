@@ -9,7 +9,8 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
-import java.util.zip.ZipFile
+import java.util.zip.ZipException
+import java.util.zip.ZipInputStream
 
 /** Bounded update requests, staged and atomically installed without losing the working engine. */
 internal class YtdlpUpdater(
@@ -46,8 +47,8 @@ internal class YtdlpUpdater(
             engineDir.mkdirs()
             val staged = File.createTempFile("yt-dlp-update-", ".zip", engineDir)
             try {
+                check(isEngineArchive(bytes)) { "Engine update is not a yt-dlp archive" }
                 staged.writeBytes(bytes)
-                ZipFile(staged).use { check(it.getEntry("__main__.py") != null && it.getEntry("yt_dlp/__init__.py") != null) }
                 Files.move(staged.toPath(), binary.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } finally { staged.delete() }
         }
@@ -56,6 +57,32 @@ internal class YtdlpUpdater(
 
     companion object {
         const val RELEASE_URL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
+
+        /**
+         * Whether [bytes] is yt-dlp's zipapp: a `#!` line, then a zip holding `__main__.py` and the
+         * `yt_dlp` package. Android's ZipFile refuses a file that does not start with a zip header
+         * (ZipException), unlike the JVM's, so every update failed on the phone and the engine stayed
+         * the one bundled with the library. The entries are read from where the zip starts instead.
+         */
+        internal fun isEngineArchive(bytes: ByteArray): Boolean {
+            val start = zipStart(bytes)
+            if (start < 0 || (start > 0 && !(bytes[0] == '#'.code.toByte() && bytes[1] == '!'.code.toByte()))) return false
+            val names = HashSet<String>()
+            return try {
+                ZipInputStream(java.io.ByteArrayInputStream(bytes, start, bytes.size - start)).use { zip ->
+                    while (true) names += (zip.nextEntry ?: break).name
+                }
+                "__main__.py" in names && "yt_dlp/__init__.py" in names
+            } catch (_: ZipException) { false }
+        }
+
+        /** Offset of the first local file header ("PK\u0003\u0004"), or -1. */
+        private fun zipStart(b: ByteArray): Int {
+            for (i in 0..b.size - 4) {
+                if (b[i] == 0x50.toByte() && b[i + 1] == 0x4b.toByte() && b[i + 2] == 3.toByte() && b[i + 3] == 4.toByte()) return i
+            }
+            return -1
+        }
     }
 }
 

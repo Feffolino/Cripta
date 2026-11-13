@@ -42,6 +42,7 @@ Entries marked **stable** went out as a stable release.
 - Texts and look: the conversion banner, the cover preview, second choices and the Build row follow the app's language; counts and sizes are written like the others (1.234, 1.0 MB instead of 1024.0 KB); messages about the trash name its real place, Settings › Space and cleanup › Trash; the settings search finds keywords with capitals; failed tag changes say so; in the light theme text buttons and the favourite star are easier to read; very long note lines no longer slow typing, and Done on an untouched note just closes
 - Texts: counts read right for a single item in every language ("1 video", "1 face found", "1 original could not be deleted" instead of the plural), with each language's own forms and digits
 - Build: the published APK no longer carries Compose's preview screen; third-party CI actions are pinned to a commit and the token can write only in the build job; an empty signing alias no longer breaks the build; the README states the MIT licence and the trash choices of 3, 7 or 30 days
+- Downloads: the download engine (yt-dlp) updates itself again. Every update was refused on the phone, so it stayed at the version of November 2025, and YouTube answered "403 Forbidden" partway through a video
 
 ## 2026-11-12
 
