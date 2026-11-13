@@ -44,7 +44,7 @@ Entries marked **stable** went out as a stable release.
 - Build: the published APK no longer carries Compose's preview screen; third-party CI actions are pinned to a commit and the token can write only in the build job; an empty signing alias no longer breaks the build; the README states the MIT licence and the trash choices of 3, 7 or 30 days
 - Downloads: the download engine (yt-dlp) updates itself again. Every update was refused on the phone, so it stayed at the version of November 2025, and YouTube answered "403 Forbidden" partway through a video
 - Texts: the labels of segmented buttons, chips and the bottom tabs stay on one line: with little room they get a little smaller, then end with "…", instead of dropping a word's last letter onto a second line ("Manual" + "e" on some phones)
-- Folders: the chips under the search ("Solo preferiti", "Senza etichette", the order, the active filters) go away while the grid scrolls down, leaving its room to the files, and come back on the way up or at the top
+- Folders: the chips under the search ("Solo preferiti", "Senza etichette", the order, the active filters) go away while the grid scrolls down, leaving its room to the files, and come back on the way up or at the top; with the chips gone the search keeps its side margin below it too, and a header with active filters folds more slowly
 
 ## 2026-11-12
 

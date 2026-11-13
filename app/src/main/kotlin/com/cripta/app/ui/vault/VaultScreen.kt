@@ -754,6 +754,12 @@ fun VaultScreen(
                         .focusRequester(searchFocus),
                 )
             }
+            // Active filters make the header much taller: it folds more slowly then, not in a snap.
+            val chipsMs = if (filters.active) Motion.LONG + 180 else Motion.MEDIUM
+            // With the chips gone, the grid keeps the search's side margin (16dp) below it too.
+            val searchGap by androidx.compose.animation.core.animateDpAsState(
+                if (showSearch && !chipsShown && !landscape) 12.dp else 0.dp, Motion.enter(chipsMs), label = "searchGap")
+            Spacer(Modifier.height(searchGap))
             // Landscape: the banners/strips above the grid get a capped, scrollable area so an
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
@@ -767,8 +773,8 @@ fun VaultScreen(
             }
             AnimatedVisibility(
                 visible = chipsShown,
-                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
-                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
+                enter = expandVertically(Motion.enter(chipsMs)) + fadeIn(Motion.enter(chipsMs)),
+                exit = shrinkVertically(Motion.exit(chipsMs)) + fadeOut(Motion.exit(chipsMs)),
             ) {
                 ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                     { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
@@ -785,8 +791,8 @@ fun VaultScreen(
                 onResolveOriginal = vm::resolveOriginal)
             AnimatedVisibility(
                 visible = chipsShown,
-                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
-                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
+                enter = expandVertically(Motion.enter(chipsMs)) + fadeIn(Motion.enter(chipsMs)),
+                exit = shrinkVertically(Motion.exit(chipsMs)) + fadeOut(Motion.exit(chipsMs)),
             ) {
                 QuickChips(
                     atRoot = path.isEmpty(), filters = filters, sortLabel = sortChipLabel(sortKey, sortAscending),
