@@ -391,6 +391,10 @@
         <item quantity="one">%1$s मूल फ़ाइल पर निर्णय बाकी</item>
         <item quantity="other">%1$s मूल फ़ाइलों पर निर्णय बाकी</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s मूल फ़ाइल पर निर्णय बाकी</item>
+        <item quantity="other">%1$s मूल फ़ाइलों पर निर्णय बाकी</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">%1$s मूल फ़ाइल हटाएँ?</item>
         <item quantity="other">%1$s मूल फ़ाइलें हटाएँ?</item>
@@ -793,6 +797,8 @@
     <string name="restore_not_started">बहाली शुरू नहीं हुई। फिर कोशिश करें।</string>
     <string name="backup_not_started">बैकअप शुरू नहीं हुआ। फिर कोशिश करें।</string>
     <string name="tag_exists">\"%1$s\" नाम का टैग पहले से है।</string>
+    <string name="tags_not_changed">टैग नहीं बदले: वॉल्ट लॉक है या स्टोरेज में लिखा नहीं जा सकता।</string>
+    <string name="filter_exists">\"%1$s\" नाम का सहेजा गया फ़िल्टर पहले से है।</string>
     <string name="unlock_mode_set">लॉक खोलें: %1$s।</string>
     <string name="unlock_mode_failed">बदलाव विफल: लॉक खोलने का तरीका पहले जैसा रहा।</string>
     <string name="dup_reason_resolution">बेहतर रिज़ॉल्यूशन (%1$s×%2$s)</string>
@@ -1048,7 +1054,7 @@
     <string name="viewer_open_panel">टैग, विवरण और कार्य खोलें</string>
     <string name="viewer_swipe_up">" विवरण के लिए ऊपर स्वाइप करें"</string>
     <string name="delete_file_q">फ़ाइल हटाएँ?</string>
-    <string name="delete_file_trash">\"%1$s\" कूड़ेदान में जाएगी (सेटिंग › डुप्लिकेट और कूड़ेदान से बहाल कर सकते हैं)।</string>
+    <string name="delete_file_trash">\"%1$s\" कूड़ेदान में जाएगी (सेटिंग › जगह और सफ़ाई › कूड़ेदान से बहाल कर सकते हैं)।</string>
     <string name="delete_file_secure">\"%1$s\" सुरक्षित रूप से हटेगी। यह वापस नहीं हो सकता।</string>
     <string name="export_q">डिवाइस पर निर्यात करें?</string>
     <string name="export_text">\"%1$s\" की बिना एन्क्रिप्शन वाली कॉपी %2$s में सहेजी जाएगी, दूसरे ऐप उसे देख पाएँगे। फ़ाइल वॉल्ट में भी रहेगी।</string>
@@ -1429,7 +1435,7 @@
         <item quantity="one">%1$s फ़ाइल हटाएँ?</item>
         <item quantity="other">%1$s फ़ाइलें हटाएँ?</item>
     </plurals>
-    <string name="files_to_trash_text">इन्हें कूड़ेदान में भेजा जाएगा: सेटिंग › डुप्लिकेट और कूड़ेदान से बहाल कर सकते हैं।</string>
+    <string name="files_to_trash_text">इन्हें कूड़ेदान में भेजा जाएगा: सेटिंग › जगह और सफ़ाई › कूड़ेदान से बहाल कर सकते हैं।</string>
     <string name="files_delete_secure">सुरक्षित मिटाना (एन्क्रिप्शन कुंजी नष्ट करना)। इसे पहले जैसा नहीं कर सकते।</string>
     <plurals name="files_trashed">
         <item quantity="one">%1$s फ़ाइल कूड़ेदान में भेजी गई</item>
@@ -1445,8 +1451,8 @@
         <item quantity="one">%1$s फ़ाइल</item>
         <item quantity="other">%1$s फ़ाइलें</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" कूड़ेदान में जाएगा। सेटिंग › डुप्लिकेट और कूड़ेदान से इसे खोलकर पूरा फ़ोल्डर या कुछ फ़ाइलें बहाल कर सकते हैं।</string>
-    <string name="folder_to_trash">\"%1$s\" और उसका सारा डेटा (%2$s, सबफ़ोल्डर सहित) कूड़ेदान में जाएगा। सेटिंग › डुप्लिकेट और कूड़ेदान से इसे खोलकर सब कुछ या कुछ फ़ाइलें बहाल कर सकते हैं।</string>
+    <string name="folder_to_trash_empty">\"%1$s\" कूड़ेदान में जाएगा। सेटिंग › जगह और सफ़ाई › कूड़ेदान से इसे खोलकर पूरा फ़ोल्डर या कुछ फ़ाइलें बहाल कर सकते हैं।</string>
+    <string name="folder_to_trash">\"%1$s\" और उसका सारा डेटा (%2$s, सबफ़ोल्डर सहित) कूड़ेदान में जाएगा। सेटिंग › जगह और सफ़ाई › कूड़ेदान से इसे खोलकर सब कुछ या कुछ फ़ाइलें बहाल कर सकते हैं।</string>
     <string name="folder_empty_delete">\"%1$s\" खाली है और हटा दिया जाएगा।</string>
     <string name="folder_delete_secure">\"%1$s\" और उसका सारा डेटा (%2$s, सबफ़ोल्डर सहित) सुरक्षित रूप से हटा दिया जाएगा। इसे पहले जैसा नहीं कर सकते।</string>
     <string name="folder_in_trash">फ़ोल्डर \"%1$s\" कूड़ेदान में है</string>
@@ -1721,6 +1727,7 @@
     <string name="never">कभी नहीं</string>
     <string name="immediately">तुरंत</string>
     <string name="n_min">%1$s मिनट</string>
+    <string name="n_sec">%1$s सेकंड</string>
     <string name="sec_privacy">निजता</string>
     <string name="allow_screenshots">स्क्रीनशॉट की अनुमति</string>
     <string name="allow_screenshots_desc">बंद होने पर स्क्रीनशॉट रोकता है और हाल के ऐप्स में ऐप को छिपाता है।</string>
@@ -1836,6 +1843,7 @@
     <string name="check_updates">अपडेट जाँचें</string>
     <string name="sec_about">जानकारी</string>
     <string name="version">वर्शन</string>
+    <string name="build_number">बिल्ड</string>
     <string name="package_">पैकेज</string>
     <string name="sec_last_crash">पिछला क्रैश</string>
     <string name="last_crash_hint">ऐप किसी त्रुटि से बंद होने पर अपने आप सहेजा जाता है। इसमें केवल तकनीकी डेटा होता है, फ़ाइलों के नाम नहीं।</string>
@@ -1953,7 +1961,7 @@
     <string name="si_41_kw">अपडेट वर्शन प्री-रिलीज़ बीटा</string>
     <string name="compress_documents_desc">हल्के नोट और PDF, बहाल करने पर बिल्कुल समान। बहाल करने के लिए Cripta का यही या नया वर्शन चाहिए।</string>
     <string name="deep_search_desc">"उन्हीं फ़ोटो और वीडियो को भी खोजता है जिन्हें फिर सहेजा, कंप्रेस किया या जिनका आकार बदला गया हो। "</string>
-    <string name="check_similar_import_desc">नाम अलग हो तब भी नई फ़ोटो या वीडियो वॉल्ट में मौजूद किसी फ़ाइल जैसा हो तो पूछा जाता है कि क्या करें। बंद होने पर डुप्लिकेट और कूड़ेदान › मिलता-जुलता में खोज सकते हैं। हर वीडियो पर लगभग एक सेकंड अतिरिक्त लगता है।</string>
+    <string name="check_similar_import_desc">नाम अलग हो तब भी नई फ़ोटो या वीडियो वॉल्ट में मौजूद किसी फ़ाइल जैसा हो तो पूछा जाता है कि क्या करें। बंद होने पर जगह और सफ़ाई › मिलता-जुलता में खोज सकते हैं। हर वीडियो पर लगभग एक सेकंड अतिरिक्त लगता है।</string>
     <string name="search_setting">सेटिंग खोजें</string>
     <string name="clear_short">साफ़ करें</string>
     <string name="no_setting_found">कोई सेटिंग नहीं मिली।</string>

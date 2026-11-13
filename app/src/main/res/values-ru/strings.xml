@@ -425,6 +425,12 @@
         <item quantity="many">Оригиналов для обработки: %1$s</item>
         <item quantity="other">Оригиналов для обработки: %1$s</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">Оригиналов для обработки: %1$s</item>
+        <item quantity="few">Оригиналов для обработки: %1$s</item>
+        <item quantity="many">Оригиналов для обработки: %1$s</item>
+        <item quantity="other">Оригиналов для обработки: %1$s</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">Удалить %1$s оригинал?</item>
         <item quantity="few">Удалить %1$s оригинала?</item>
@@ -851,6 +857,8 @@
     <string name="restore_not_started">Восстановление не началось. Попробуйте ещё раз.</string>
     <string name="backup_not_started">Резервное копирование не началось. Попробуйте ещё раз.</string>
     <string name="tag_exists">Метка \"%1$s\" уже существует.</string>
+    <string name="tags_not_changed">Метки не изменены: хранилище заблокировано или память недоступна для записи.</string>
+    <string name="filter_exists">Сохранённый фильтр \"%1$s\" уже существует.</string>
     <string name="unlock_mode_set">Разблокировка: %1$s.</string>
     <string name="unlock_mode_failed">Изменение не удалось: способ разблокировки остался прежним.</string>
     <string name="dup_reason_resolution">большее разрешение (%1$s×%2$s)</string>
@@ -1128,7 +1136,7 @@
     <string name="viewer_open_panel">Открыть метки, сведения и действия</string>
     <string name="viewer_swipe_up">" Смахните вверх для сведений"</string>
     <string name="delete_file_q">Удалить файл?</string>
-    <string name="delete_file_trash">\"%1$s\" будет перемещён в корзину (можно восстановить через Настройки › Дубликаты и корзина).</string>
+    <string name="delete_file_trash">\"%1$s\" будет перемещён в корзину (можно восстановить через Настройки › Место и очистка › Корзина).</string>
     <string name="delete_file_secure">\"%1$s\" будет безопасно удалён. Это необратимо.</string>
     <string name="export_q">Экспортировать на устройство?</string>
     <string name="export_text">НЕЗАШИФРОВАННАЯ копия \"%1$s\" сохранится в %2$s и будет видна другим приложениям. Файл останется и в хранилище.</string>
@@ -1535,7 +1543,7 @@
         <item quantity="many">Удалить %1$s файлов?</item>
         <item quantity="other">Удалить %1$s файла?</item>
     </plurals>
-    <string name="files_to_trash_text">Они попадут в корзину: восстановить можно через Настройки › Дубликаты и корзина.</string>
+    <string name="files_to_trash_text">Они попадут в корзину: восстановить можно через Настройки › Место и очистка › Корзина.</string>
     <string name="files_delete_secure">Безопасное удаление уничтожением ключа шифрования. Это необратимо.</string>
     <plurals name="files_trashed">
         <item quantity="one">%1$s файл перемещён в корзину</item>
@@ -1557,8 +1565,8 @@
         <item quantity="many">%1$s файлов</item>
         <item quantity="other">%1$s файла</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" попадёт в корзину. Через Настройки › Дубликаты и корзина можно открыть её и восстановить целиком или только некоторые файлы.</string>
-    <string name="folder_to_trash">\"%1$s\" со всем содержимым (%2$s, включая подпапки) попадёт в корзину. Через Настройки › Дубликаты и корзина можно открыть её и восстановить целиком или только некоторые файлы.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" попадёт в корзину. Через Настройки › Место и очистка › Корзина можно открыть её и восстановить целиком или только некоторые файлы.</string>
+    <string name="folder_to_trash">\"%1$s\" со всем содержимым (%2$s, включая подпапки) попадёт в корзину. Через Настройки › Место и очистка › Корзина можно открыть её и восстановить целиком или только некоторые файлы.</string>
     <string name="folder_empty_delete">\"%1$s\" пуста и будет удалена.</string>
     <string name="folder_delete_secure">\"%1$s\" со всем содержимым (%2$s, включая подпапки) будет безопасно удалена. Это необратимо.</string>
     <string name="folder_in_trash">Папка \"%1$s\" в корзине</string>
@@ -1845,6 +1853,7 @@
     <string name="never">Никогда</string>
     <string name="immediately">Сразу</string>
     <string name="n_min">%1$s мин</string>
+    <string name="n_sec">%1$s с</string>
     <string name="sec_privacy">Конфиденциальность</string>
     <string name="allow_screenshots">Разрешить снимки экрана</string>
     <string name="allow_screenshots_desc">Если выключено, снимки экрана запрещены, а приложение скрыто в недавних.</string>
@@ -1962,6 +1971,7 @@
     <string name="check_updates">Проверить обновления</string>
     <string name="sec_about">О приложении</string>
     <string name="version">Версия</string>
+    <string name="build_number">Сборка</string>
     <string name="package_">Пакет</string>
     <string name="sec_last_crash">Последний сбой</string>
     <string name="last_crash_hint">Сохраняется автоматически, если приложение закрывается из-за ошибки. Содержит только технические данные, без имён файлов.</string>
@@ -2079,7 +2089,7 @@
     <string name="si_41_kw">обновление версия предварительная бета</string>
     <string name="compress_documents_desc">Заметки и PDF легче, после восстановления идентичны. Для восстановления нужна эта или более новая версия Cripta.</string>
     <string name="deep_search_desc">"Также те же фото и видео, сохранённые повторно, с другим сжатием или размером. "</string>
-    <string name="check_similar_import_desc">Даже с другим именем: если новое фото или видео похоже на уже имеющееся в хранилище, появится выбор действия. Если выключено, похожие находятся в Дубликаты и корзина › Похожие. Примерно на секунду дольше для каждого видео.</string>
+    <string name="check_similar_import_desc">Даже с другим именем: если новое фото или видео похоже на уже имеющееся в хранилище, появится выбор действия. Если выключено, похожие находятся в Место и очистка › Похожие. Примерно на секунду дольше для каждого видео.</string>
     <string name="search_setting">Поиск настройки</string>
     <string name="clear_short">Очистить</string>
     <string name="no_setting_found">Настройки не найдены.</string>

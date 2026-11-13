@@ -59,11 +59,20 @@ class TagOpsTest {
     fun aMergedTagIsReplacedInSavedFilters() {
         val merged = SavedFilterJson.withTagMerged(filter(tags = listOf(1, 2), ex = listOf(1, 5)), from = 1, into = 3)!!
         assertEquals(listOf(3L, 2L), ids(merged, "tags"))
-        assertEquals(listOf(3L, 5L), ids(merged, "ex"))
+        // 1 was both required and left out: after the merge 3 stays required only.
+        assertEquals(listOf(5L), ids(merged, "ex"))
         // Into a tag it already asks for: once, not twice.
         assertEquals(listOf(2L), ids(SavedFilterJson.withTagMerged(filter(tags = listOf(1, 2)), 1, 2)!!, "tags"))
         // A filter that does not name it is left alone.
         assertEquals(null, SavedFilterJson.withTagMerged(filter(tags = listOf(2)), 1, 3))
+    }
+
+    @Test
+    fun aTagMergedIntoOneTheFilterRequiresIsNoLongerLeftOut() {
+        // "With B, without A", then A merged into B: asking for B and leaving B out finds nothing.
+        val merged = SavedFilterJson.withTagMerged(filter(tags = listOf(2), ex = listOf(1, 5)), from = 1, into = 2)!!
+        assertEquals(listOf(2L), ids(merged, "tags"))
+        assertEquals(listOf(5L), ids(merged, "ex"))
     }
 
     @Test

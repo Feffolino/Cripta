@@ -730,6 +730,13 @@ internal fun ReorderableFileGrid(
     inSelection: Boolean = false,
     /** False while filtering/searching: items are shown but can't be dragged. */
     reorderEnabled: Boolean = true,
+    /**
+     * The vault screen's grid state: it keeps each folder's scroll position and starts a new folder
+     * at the top, which a state of this grid's own would not see (the grid stays on screen).
+     */
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState = rememberLazyGridState(),
+    /** A file's TalkBack actions of the normal grid (favourite, tags, rename, move, delete). */
+    fileActions: (FileWithTags) -> List<CustomAccessibilityAction> = { emptyList() },
 ) {
     // The per-item tap handler is keyed on the file id only: read the latest callback, or a tap
     // would keep doing what it did when the cell first appeared (e.g. open while selecting).
@@ -742,7 +749,6 @@ internal fun ReorderableFileGrid(
     /** The list as the vault has it: a drag that ends without a drop leaves nothing of its moves. */
     fun showStored() { list.clear(); list.addAll(currentItems) }
 
-    val gridState = rememberLazyGridState()
     var draggedId by remember { mutableStateOf<String?>(null) }
     var pointer by remember { mutableStateOf(Offset.Zero) }    // finger position in the grid viewport
     var pressLocal by remember { mutableStateOf(Offset.Zero) } // grab point inside the cell
@@ -772,25 +778,26 @@ internal fun ReorderableFileGrid(
         onReorder(list.map { it.file.id })
     }
 
-    // Auto-scroll while the item is held near the top or bottom edge (faster the closer it is).
+    // Auto-scroll while the item is held near the top or bottom edge: the zones, the wait and the
+    // ramp of the vault's move drag (see edgeDepth, edgeSpeed, edgeRamp), by the time between
+    // frames, so a 120 Hz screen scrolls as fast as a 60 Hz one.
     LaunchedEffect(draggedId) {
         if (draggedId == null) return@LaunchedEffect
-        val edge = with(density) { 72.dp.toPx() }
-        val maxStep = with(density) { 14.dp.toPx() }
+        val zone = with(density) { EDGE_ZONE.toPx() }
+        val maxSpeed = with(density) { EDGE_MAX_SPEED.toPx() }
+        var last = androidx.compose.runtime.withFrameNanos { it }
+        var start = -1L // when the finger entered the scrolling part of a zone; -1 = it is not there
         while (draggedId != null) {
+            val now = androidx.compose.runtime.withFrameNanos { it }
             val h = gridState.layoutInfo.viewportSize.height.toFloat()
-            val y = pointer.y
-            val step = when {
-                h <= 0f -> 0f
-                y < edge -> -maxStep * ((edge - y) / edge).coerceIn(0f, 1f)
-                y > h - edge -> maxStep * ((y - (h - edge)) / edge).coerceIn(0f, 1f)
-                else -> 0f
-            }
-            if (step != 0f) {
-                gridState.scrollBy(step)
+            val speed = edgeSpeed(edgeDepth(pointer.y, h, zone), maxSpeed)
+            if (speed == 0f) start = -1L else if (start < 0L) start = now
+            val dy = if (speed == 0f) 0f else speed * edgeRamp((now - start) / 1_000_000) * (now - last) / 1_000_000_000f
+            last = now
+            if (dy != 0f) {
+                gridState.scrollBy(dy)
                 retarget()
             }
-            androidx.compose.runtime.withFrameNanos { }
         }
     }
 
@@ -820,6 +827,7 @@ internal fun ReorderableFileGrid(
                     item = fwt,
                     bmp = bmp,
                     selected = fwt.file.id in selection,
+                    selectionMode = inSelection,
                     dragged = isDragged,
                     asList = asList,
                     display = display,
@@ -845,12 +853,11 @@ internal fun ReorderableFileGrid(
                             onClick(label = if (inSelection) (if (sel) str(R.string.deselect) else str(R.string.select)) else str(R.string.open)) {
                                 currentOnOpen(fwt.file.id); true
                             }
-                            if (reorderEnabled) {
-                                this.customActions = listOf(
-                                    CustomAccessibilityAction(str(R.string.move_earlier)) { moveBy(fwt.file.id, -1); true },
-                                    CustomAccessibilityAction(str(R.string.move_later)) { moveBy(fwt.file.id, 1); true },
-                                )
-                            }
+                            // The same actions as in the other orders, plus the steps of the reorder.
+                            this.customActions = fileActions(fwt) + if (!reorderEnabled) emptyList() else listOf(
+                                CustomAccessibilityAction(str(R.string.move_earlier)) { moveBy(fwt.file.id, -1); true },
+                                CustomAccessibilityAction(str(R.string.move_later)) { moveBy(fwt.file.id, 1); true },
+                            )
                         }
                         .pointerInput(fwt.file.id) { detectTapGestures(onTap = { currentOnOpen(fwt.file.id) }) }
                         .then(if (!reorderEnabled) Modifier else Modifier.pointerInput(fwt.file.id) {
@@ -897,6 +904,8 @@ private fun ReorderCell(
     item: FileWithTags,
     bmp: android.graphics.Bitmap?,
     selected: Boolean,
+    /** Selection mode: unselected covers show the empty ring, as in the other orders. */
+    selectionMode: Boolean,
     dragged: Boolean,
     asList: Boolean,
     display: DisplayPrefs,
@@ -920,7 +929,7 @@ private fun ReorderCell(
         ) {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite, emptyList(), Modifier.size(56.dp),
-                    file = item.file, display = display, compact = true)
+                    file = item.file, display = display, compact = true, selectionMode = selectionMode)
                 Column(Modifier.padding(start = 14.dp).weight(1f)) {
                     Text(item.file.originalName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodyLarge)
@@ -939,7 +948,7 @@ private fun ReorderCell(
             Box {
                 ThumbBox(bmp, fallbackIcon, isVideo, null, selected, item.file.isFavorite,
                     if (display.showTagsOnCover) item.tags else emptyList(),
-                    Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display)
+                    Modifier.fillMaxWidth().aspectRatio(1f), file = item.file, display = display, selectionMode = selectionMode)
                 if (dragged) {
                     Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape)
                         .background(com.cripta.app.ui.components.OnImageGlass), contentAlignment = Alignment.Center) {

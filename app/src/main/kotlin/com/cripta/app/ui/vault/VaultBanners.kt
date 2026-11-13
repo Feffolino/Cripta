@@ -300,7 +300,7 @@ fun ConvertBanner(
                         } else {
                             val pending = state.pendingOriginals
                             if (pending.isNotEmpty()) {
-                                Text("${pending.size} ${if (pending.size == 1) "originale da gestire" else "originali da gestire"}",
+                                Text(plural(R.plurals.originals_to_handle, pending.size),
                                     style = MaterialTheme.typography.titleSmall, color = on)
                                 Text(pending.first().name, style = MaterialTheme.typography.bodySmall, color = on,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)

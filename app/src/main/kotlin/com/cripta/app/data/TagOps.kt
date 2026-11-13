@@ -40,7 +40,8 @@ object SavedFilterJson {
         data class Changed(val json: org.json.JSONObject) : Pruned
     }
 
-    private fun ids(o: org.json.JSONObject, key: String): List<Long> {
+    /** The ids under [key]; an element that is not a number is skipped, not the whole list. */
+    fun ids(o: org.json.JSONObject, key: String): List<Long> {
         val a = o.optJSONArray(key) ?: return emptyList()
         return (0 until a.length()).mapNotNull { runCatching { a.getLong(it) }.getOrNull() }
     }
@@ -57,15 +58,17 @@ object SavedFilterJson {
     /**
      * [o] with tag [from] become [into] (a merge: the files of one now have the other), in what it
      * requires and what it leaves out; null when it does not name [from]. A copy, [o] is left as it is.
+     * A tag both required and left out after the swap stays required: it would match nothing.
      */
     fun withTagMerged(o: org.json.JSONObject, from: Long, into: Long): org.json.JSONObject? {
         val tags = ids(o, "tags")
         val ex = ids(o, "ex")
         if (from !in tags && from !in ex) return null
         fun swap(l: List<Long>) = l.map { if (it == from) into else it }.distinct()
+        val required = swap(tags)
         return org.json.JSONObject(o.toString())
-            .put("tags", org.json.JSONArray(swap(tags)))
-            .put("ex", org.json.JSONArray(swap(ex)))
+            .put("tags", org.json.JSONArray(required))
+            .put("ex", org.json.JSONArray(swap(ex) - required.toSet()))
     }
 
     /** [o] with person [from] become [into] (merged into them); null when it does not name [from]. */

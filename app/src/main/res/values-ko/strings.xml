@@ -374,6 +374,9 @@
     <plurals name="originals_pending">
         <item quantity="other">원본 %1$s개 처리 필요</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="other">원본 %1$s개 처리 필요</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="other">원본 %1$s개를 삭제할까요?</item>
     </plurals>
@@ -764,6 +767,8 @@
     <string name="restore_not_started">복원을 시작하지 못했습니다. 다시 시도하세요.</string>
     <string name="backup_not_started">백업을 시작하지 못했습니다. 다시 시도하세요.</string>
     <string name="tag_exists">\"%1$s\" 태그가 이미 있습니다.</string>
+    <string name="tags_not_changed">태그가 변경되지 않았습니다: 보관함이 잠겨 있거나 저장소에 쓸 수 없습니다.</string>
+    <string name="filter_exists">\"%1$s\" 저장된 필터가 이미 있습니다.</string>
     <string name="unlock_mode_set">잠금 해제: %1$s.</string>
     <string name="unlock_mode_failed">변경하지 못했습니다. 잠금 해제 방법은 그대로입니다.</string>
     <string name="dup_reason_resolution">높은 해상도(%1$s×%2$s)</string>
@@ -1008,7 +1013,7 @@
     <string name="viewer_open_panel">태그, 상세, 작업 열기</string>
     <string name="viewer_swipe_up">" 위로 밀어 상세 보기"</string>
     <string name="delete_file_q">파일을 삭제할까요?</string>
-    <string name="delete_file_trash">\"%1$s\" 파일을 휴지통으로 이동합니다. 설정 › 중복 및 휴지통에서 복원할 수 있습니다.</string>
+    <string name="delete_file_trash">\"%1$s\" 파일을 휴지통으로 이동합니다. 설정 › 공간 및 정리 › 휴지통에서 복원할 수 있습니다.</string>
     <string name="delete_file_secure">\"%1$s\" 파일을 안전하게 삭제합니다. 되돌릴 수 없습니다.</string>
     <string name="export_q">기기로 내보낼까요?</string>
     <string name="export_text">\"%1$s\" 파일의 암호화되지 않은 사본을 %2$s에 저장합니다. 다른 앱에서도 볼 수 있습니다. 보관함의 파일도 유지됩니다.</string>
@@ -1376,7 +1381,7 @@
     <plurals name="delete_files_q">
         <item quantity="other">파일 %1$s개를 삭제할까요?</item>
     </plurals>
-    <string name="files_to_trash_text">휴지통으로 이동합니다. 설정 › 중복 및 휴지통에서 복원할 수 있습니다.</string>
+    <string name="files_to_trash_text">휴지통으로 이동합니다. 설정 › 공간 및 정리 › 휴지통에서 복원할 수 있습니다.</string>
     <string name="files_delete_secure">안전한 삭제(암호화 키 파기). 되돌릴 수 없습니다.</string>
     <plurals name="files_trashed">
         <item quantity="other">파일 %1$s개 휴지통으로 이동함</item>
@@ -1389,8 +1394,8 @@
     <plurals name="files_n">
         <item quantity="other">파일 %1$s개</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" 폴더를 휴지통으로 이동합니다. 설정 › 중복 및 휴지통에서 열어 전체 또는 일부 파일을 복원할 수 있습니다.</string>
-    <string name="folder_to_trash">\"%1$s\" 폴더와 모든 내용(%2$s, 하위 폴더 포함)을 휴지통으로 이동합니다. 설정 › 중복 및 휴지통에서 열어 전체 또는 일부 파일을 복원할 수 있습니다.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" 폴더를 휴지통으로 이동합니다. 설정 › 공간 및 정리 › 휴지통에서 열어 전체 또는 일부 파일을 복원할 수 있습니다.</string>
+    <string name="folder_to_trash">\"%1$s\" 폴더와 모든 내용(%2$s, 하위 폴더 포함)을 휴지통으로 이동합니다. 설정 › 공간 및 정리 › 휴지통에서 열어 전체 또는 일부 파일을 복원할 수 있습니다.</string>
     <string name="folder_empty_delete">\"%1$s\" 폴더는 비어 있어 삭제합니다.</string>
     <string name="folder_delete_secure">\"%1$s\" 폴더와 모든 내용(%2$s, 하위 폴더 포함)을 안전하게 삭제합니다. 되돌릴 수 없습니다.</string>
     <string name="folder_in_trash">\"%1$s\" 폴더가 휴지통에 있습니다</string>
@@ -1659,6 +1664,7 @@
     <string name="never">안 함</string>
     <string name="immediately">즉시</string>
     <string name="n_min">%1$s분</string>
+    <string name="n_sec">%1$s초</string>
     <string name="sec_privacy">개인정보</string>
     <string name="allow_screenshots">스크린샷 허용</string>
     <string name="allow_screenshots_desc">끄면 스크린샷을 차단하고 최근 앱에서 내용을 숨깁니다.</string>
@@ -1773,6 +1779,7 @@
     <string name="check_updates">업데이트 확인</string>
     <string name="sec_about">앱 정보</string>
     <string name="version">버전</string>
+    <string name="build_number">빌드</string>
     <string name="package_">패키지</string>
     <string name="sec_last_crash">마지막 비정상 종료</string>
     <string name="last_crash_hint">오류로 앱이 닫히면 자동으로 저장합니다. 기술 정보만 포함하며 파일 이름은 없습니다.</string>
@@ -1890,7 +1897,7 @@
     <string name="si_41_kw">업데이트 버전 사전출시 베타</string>
     <string name="compress_documents_desc">메모와 PDF를 가볍게 하며 복원 시 원본과 같습니다. 복원하려면 이 버전 이상의 Cripta가 필요합니다.</string>
     <string name="deep_search_desc">"다시 저장하거나 재압축하거나 크기를 바꾼 같은 사진과 동영상도 찾습니다. "</string>
-    <string name="check_similar_import_desc">이름이 달라도 새 사진이나 동영상이 보관함의 파일과 비슷하면 처리 방법을 묻습니다. 꺼도 중복 및 휴지통 › 유사에서 찾을 수 있습니다. 동영상마다 약 1초 더 걸립니다.</string>
+    <string name="check_similar_import_desc">이름이 달라도 새 사진이나 동영상이 보관함의 파일과 비슷하면 처리 방법을 묻습니다. 꺼도 공간 및 정리 › 유사에서 찾을 수 있습니다. 동영상마다 약 1초 더 걸립니다.</string>
     <string name="search_setting">설정 검색</string>
     <string name="clear_short">지우기</string>
     <string name="no_setting_found">설정을 찾지 못했습니다.</string>

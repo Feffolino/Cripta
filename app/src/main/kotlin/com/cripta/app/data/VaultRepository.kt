@@ -2010,8 +2010,19 @@ class VaultRepository @Inject constructor(
 
     fun savedFilters(): Flow<List<com.cripta.app.data.db.SavedFilterEntity>> = live { it.savedFilterDao().all() }
 
-    suspend fun saveFilter(name: String, json: String) = withContext(Dispatchers.IO) {
-        db.savedFilterDao().insert(com.cripta.app.data.db.SavedFilterEntity(name = name.trim(), json = json)); notifyChanged()
+    /**
+     * Save a filter as [name]; false (nothing saved) when one is already called that, case aside as
+     * for the tags: two chips with one name could not be told apart.
+     */
+    suspend fun saveFilter(name: String, json: String): Boolean = withContext(Dispatchers.IO) {
+        val clean = name.trim()
+        val dao = db.savedFilterDao()
+        val saved = db.withTransaction {
+            if (dao.allNow().any { it.name.trim().equals(clean, ignoreCase = true) }) false
+            else { dao.insert(com.cripta.app.data.db.SavedFilterEntity(name = clean, json = json)); true }
+        }
+        if (saved) notifyChanged()
+        saved
     }
 
     suspend fun deleteSavedFilter(id: Long) = withContext(Dispatchers.IO) {

@@ -356,8 +356,12 @@ fun VaultScreen(
             if (fav) plural(R.plurals.favorited_n, n) else plural(R.plurals.unfavorited_n, n),
         ) { vm.restoreFavorites(prev) }
     }
-    // A selection belongs to the folder it was made in.
-    LaunchedEffect(path) { selection = emptySet() }
+    // A selection belongs to the folder it was made in, and so does a search field opened from
+    // the top bar with nothing typed: left open, Back would only close it on the next screen.
+    LaunchedEffect(path) {
+        selection = emptySet()
+        if (filters.query.isEmpty()) searchExpanded = false
+    }
     // ...and to what is on screen: when a filter, search or stats chip hides selected files they
     // leave the selection, otherwise Elimina/Sposta/Etichette would act on files the user can't see.
     LaunchedEffect(visibleIds) {
@@ -605,7 +609,7 @@ fun VaultScreen(
                         val (a, b) = selection.toList()
                         vm.compareAudio(a, b) { compareTitle = str(R.string.audio_compare); compareResult = it }
                     })
-                    // Two photos or videos: why their faces are (not) the same person.
+                    // Any selected photos or videos: look for faces in them now (a manual face scan).
                     val visual = files.count { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
                     if (visual > 0) add(SelAction(CriptaIcons.Face, if (visual == 1) str(R.string.analyse_faces) else str(R.string.analyse_faces_n, visual)) {
                         val ids = files.filter { it.file.id in selection && (VaultRepository.isVideo(it.file.mimeType) || VaultRepository.isImage(it.file.mimeType)) }
@@ -1187,8 +1191,8 @@ fun VaultScreen(
                                 carry = moved == null
                             }
                             if (!startDrag(press.position, carry)) return@awaitEachGesture
-                            val zone = 64.dp.toPx()
-                            val maxSpeed = 1600.dp.toPx()
+                            val zone = EDGE_ZONE.toPx()
+                            val maxSpeed = EDGE_MAX_SPEED.toPx()
                             // Auto-scroll waits until the finger has moved: a long-press near an edge
                             // must not set the grid running by itself.
                             var armed = false
@@ -1300,6 +1304,8 @@ fun VaultScreen(
                         // A filter/search shows results from the whole vault: reordering that
                         // subset would renumber it 0..k-1 and scramble other folders' manual order.
                         reorderEnabled = !filters.active,
+                        gridState = gridState,
+                        fileActions = { fileActions(it) },
                     )
                 else -> Box(Modifier.fillMaxSize()) {
                     LazyVerticalGrid(
@@ -1460,11 +1466,15 @@ fun VaultScreen(
     }
 
     renameTargetId?.let { id ->
-        val current = files.firstOrNull { it.file.id == id }?.file?.originalName ?: ""
+        // The name when the dialog opened: read again later, a file that left the list would
+        // make it "" and Annulla would rename the file to nothing.
+        val current = remember(id) { files.firstOrNull { it.file.id == id }?.file?.originalName ?: "" }
         TextPromptDialog(str(R.string.rename_file), str(R.string.sort_name), initial = current, selectBaseName = true, confirmLabel = str(R.string.rename),
             onConfirm = { name ->
                 vm.renameFile(id, name); renameTargetId = null; selection = emptySet()
-                if (name != current) notify(str(R.string.renamed_to, name)) { vm.renameFile(id, current) }
+                if (name != current) {
+                    notify(str(R.string.renamed_to, name), undo = if (current.isBlank()) null else ({ vm.renameFile(id, current) }))
+                }
             },
             onDismiss = { renameTargetId = null })
     }

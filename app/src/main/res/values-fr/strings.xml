@@ -408,6 +408,11 @@
         <item quantity="many">%1$s originaux à traiter</item>
         <item quantity="other">%1$s originaux à traiter</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s original à traiter</item>
+        <item quantity="many">%1$s originaux à traiter</item>
+        <item quantity="other">%1$s originaux à traiter</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">Supprimer %1$s original ?</item>
         <item quantity="many">Supprimer %1$s originaux ?</item>
@@ -822,6 +827,8 @@
     <string name="restore_not_started">La restauration n’a pas démarré. Réessayez.</string>
     <string name="backup_not_started">La sauvegarde n’a pas démarré. Réessayez.</string>
     <string name="tag_exists">Une étiquette nommée \"%1$s\" existe déjà.</string>
+    <string name="tags_not_changed">Étiquettes non modifiées : le coffre est verrouillé ou le stockage n\'est pas accessible en écriture.</string>
+    <string name="filter_exists">Un filtre enregistré nommé \"%1$s\" existe déjà.</string>
     <string name="unlock_mode_set">Déverrouillage : %1$s.</string>
     <string name="unlock_mode_failed">Échec de la modification : le mode de déverrouillage est inchangé.</string>
     <string name="dup_reason_resolution">résolution supérieure (%1$s×%2$s)</string>
@@ -1088,7 +1095,7 @@
     <string name="viewer_open_panel">Ouvrir les étiquettes, détails et actions</string>
     <string name="viewer_swipe_up">" Balayez vers le haut pour les détails"</string>
     <string name="delete_file_q">Supprimer le fichier ?</string>
-    <string name="delete_file_trash">\"%1$s\" sera placé dans la corbeille (restaurable depuis Paramètres › Doublons et corbeille).</string>
+    <string name="delete_file_trash">\"%1$s\" sera placé dans la corbeille (restaurable depuis Paramètres › Espace et nettoyage › Corbeille).</string>
     <string name="delete_file_secure">\"%1$s\" sera supprimé de manière sécurisée. Cette action est irréversible.</string>
     <string name="export_q">Exporter sur l’appareil ?</string>
     <string name="export_text">Une copie NON CHIFFRÉE de \"%1$s\" sera enregistrée dans %2$s, visible par les autres applications. Le fichier reste aussi dans le coffre.</string>
@@ -1482,7 +1489,7 @@
         <item quantity="many">Supprimer %1$s fichiers ?</item>
         <item quantity="other">Supprimer %1$s fichiers ?</item>
     </plurals>
-    <string name="files_to_trash_text">Ils seront placés dans la corbeille : vous pourrez les restaurer depuis Paramètres › Doublons et corbeille.</string>
+    <string name="files_to_trash_text">Ils seront placés dans la corbeille : vous pourrez les restaurer depuis Paramètres › Espace et nettoyage › Corbeille.</string>
     <string name="files_delete_secure">Suppression sécurisée (destruction des clés de chiffrement). Cette action est irréversible.</string>
     <plurals name="files_trashed">
         <item quantity="one">%1$s fichier déplacé dans la corbeille</item>
@@ -1501,8 +1508,8 @@
         <item quantity="many">%1$s fichiers</item>
         <item quantity="other">%1$s fichiers</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" sera placé dans la corbeille. Depuis Paramètres › Doublons et corbeille, vous pourrez l’ouvrir et restaurer tout son contenu ou seulement certains fichiers.</string>
-    <string name="folder_to_trash">\"%1$s\" et tout son contenu (%2$s, sous-dossiers compris) seront placés dans la corbeille. Depuis Paramètres › Doublons et corbeille, vous pourrez l’ouvrir et restaurer tout son contenu ou seulement certains fichiers.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" sera placé dans la corbeille. Depuis Paramètres › Espace et nettoyage › Corbeille, vous pourrez l’ouvrir et restaurer tout son contenu ou seulement certains fichiers.</string>
+    <string name="folder_to_trash">\"%1$s\" et tout son contenu (%2$s, sous-dossiers compris) seront placés dans la corbeille. Depuis Paramètres › Espace et nettoyage › Corbeille, vous pourrez l’ouvrir et restaurer tout son contenu ou seulement certains fichiers.</string>
     <string name="folder_empty_delete">\"%1$s\" est vide et sera supprimé.</string>
     <string name="folder_delete_secure">\"%1$s\" et tout son contenu (%2$s, sous-dossiers compris) seront supprimés de manière sécurisée. Cette action est irréversible.</string>
     <string name="folder_in_trash">Dossier \"%1$s\" dans la corbeille</string>
@@ -1783,6 +1790,7 @@
     <string name="never">Jamais</string>
     <string name="immediately">Immédiatement</string>
     <string name="n_min">%1$s min</string>
+    <string name="n_sec">%1$s s</string>
     <string name="sec_privacy">Confidentialité</string>
     <string name="allow_screenshots">Autoriser les captures d’écran</string>
     <string name="allow_screenshots_desc">Si désactivé, bloque les captures d’écran et masque l’application dans les applications récentes.</string>
@@ -1899,6 +1907,7 @@
     <string name="check_updates">Rechercher les mises à jour</string>
     <string name="sec_about">À propos</string>
     <string name="version">Version</string>
+    <string name="build_number">Build</string>
     <string name="package_">Package</string>
     <string name="sec_last_crash">Dernier plantage</string>
     <string name="last_crash_hint">Enregistré automatiquement lorsque l’application se ferme à cause d’une erreur. Contient uniquement des données techniques, aucun nom de fichier.</string>
@@ -2016,7 +2025,7 @@
     <string name="si_41_kw">mise à jour version préversion bêta</string>
     <string name="compress_documents_desc">Notes et PDF plus légers, identiques après restauration. La restauration nécessite cette version de Cripta ou une plus récente.</string>
     <string name="deep_search_desc">"Aussi les mêmes photos et vidéos réenregistrées, recompressées ou redimensionnées. "</string>
-    <string name="check_similar_import_desc">Même avec un autre nom : si une nouvelle photo ou vidéo ressemble à un élément du coffre, Cripta vous demande quoi faire. Si désactivé, vous trouverez les éléments similaires dans Doublons et corbeille › Similaires. Environ une seconde de plus par vidéo.</string>
+    <string name="check_similar_import_desc">Même avec un autre nom : si une nouvelle photo ou vidéo ressemble à un élément du coffre, Cripta vous demande quoi faire. Si désactivé, vous trouverez les éléments similaires dans Espace et nettoyage › Similaires. Environ une seconde de plus par vidéo.</string>
     <string name="search_setting">Rechercher un paramètre</string>
     <string name="clear_short">Effacer</string>
     <string name="no_setting_found">Aucun paramètre trouvé.</string>

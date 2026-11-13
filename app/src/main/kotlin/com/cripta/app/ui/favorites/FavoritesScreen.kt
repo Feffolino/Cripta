@@ -91,11 +91,11 @@ fun FavoritesScreen(
                     Box {
                         IconButton(onClick = { sortMenu = true }) { Icon(CriptaIcons.Sort, str(R.string.favorites_sort)) }
                         DropdownMenu(expanded = sortMenu && com.cripta.app.ui.components.vaultUnlocked(), onDismissRequest = { sortMenu = false }) {
-                            listOf(SortKey.DATE to str(R.string.sort_date), SortKey.NAME to str(R.string.sort_name), SortKey.SIZE to str(R.string.sort_size), SortKey.MANUAL to str(R.string.sort_manual)).forEach { (key, label) ->
+                            listOf(SortKey.DATE to str(R.string.sort_date), SortKey.NAME to str(R.string.sort_name), SortKey.SIZE to str(R.string.sort_size)).forEach { (key, label) ->
                                 DropdownMenuItem(text = { Text((if (sort.first == key) "✓ " else "") + label) },
                                     onClick = { vm.setSort(key, sort.second); sortMenu = false })
                             }
-                            if (sort.first != SortKey.MANUAL) DropdownMenuItem(
+                            DropdownMenuItem(
                                 text = { Text(if (sort.second) str(R.string.sort_descending) else str(R.string.sort_ascending)) },
                                 onClick = { vm.setSort(sort.first, !sort.second); sortMenu = false },
                             )

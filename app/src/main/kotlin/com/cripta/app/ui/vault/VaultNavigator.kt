@@ -7,7 +7,8 @@ import javax.inject.Singleton
 
 /**
  * One-shot requests from other screens to the vault (Cartelle) screen: open a given folder, or
- * apply a saved filter. The vault consumes each request once it is on screen.
+ * apply a saved filter. The vault view model takes each request (and clears it) from its init,
+ * so a request made before the screen exists waits for it.
  */
 @Singleton
 class VaultNavigator @Inject constructor() {
@@ -48,10 +49,8 @@ fun Filters.toJson(): String = org.json.JSONObject().apply {
 
 fun filtersFromJson(json: String): Filters? = runCatching {
     val o = org.json.JSONObject(json)
-    fun ids(key: String): Set<Long> {
-        val a = o.optJSONArray(key) ?: return emptySet()
-        return (0 until a.length()).map { a.getLong(it) }.toSet()
-    }
+    // As the data layer reads them: an unreadable id is skipped, not the whole filter.
+    fun ids(key: String): Set<Long> = com.cripta.app.data.SavedFilterJson.ids(o, key).toSet()
     Filters(
         query = o.optString("q", ""),
         tagIds = ids("tags"),

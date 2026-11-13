@@ -38,29 +38,36 @@ class FavoritesViewModel @Inject constructor(
     /** Per-file cover version; the grid re-keys on it so covers refresh after a regeneration. */
     val coverVersions: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = thumbs.versions
 
+    /**
+     * The screen's order. No "Manuale" here: the manual weights are per folder (0, 1, 2... in each)
+     * and nothing here can drag them, so mixed together they read as a random order; one saved
+     * by an older version reads as by date.
+     */
+    private val screenSort = settings.screenSort("favorites")
+        .map { (key, ascending) -> (if (key == SortKey.MANUAL) SortKey.DATE else key) to ascending }
+
     /** Null until the first read completes, so the screen can tell "loading" from "no favorites"
      *  (an initial empty list used to flash "Nessun preferito" on every open). */
     val favorites: StateFlow<List<FileEntity>?> =
-        combine(repo.changes.flatMapLatest { repo.allFiles() }, settings.screenSort("favorites")) { list, sort ->
+        combine(repo.changes.flatMapLatest { repo.allFiles() }, screenSort) { list, sort ->
             val files = list.map { it.file }.filter { it.isFavorite }
             val sorted = when (sort.first) {
-                SortKey.DATE -> files.sortedBy { it.importedAt }
+                SortKey.DATE, SortKey.MANUAL -> files.sortedBy { it.importedAt }
                 SortKey.NAME -> files.sortedBy { it.originalName.lowercase() }
                 SortKey.SIZE -> files.sortedBy { it.sizeBytes }
-                SortKey.MANUAL -> files.sortedBy { it.sortWeight }
             }
-            if (sort.second || sort.first == SortKey.MANUAL) sorted else sorted.reversed()
+            if (sort.second) sorted else sorted.reversed()
         }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val sort: StateFlow<Pair<SortKey, Boolean>> = settings.screenSort("favorites")
+    val sort: StateFlow<Pair<SortKey, Boolean>> = screenSort
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortKey.DATE to false)
     fun setSort(key: SortKey, ascending: Boolean) = safeScope.launch { settings.setScreenSort("favorites", key, ascending) }
 
     /** The folders follow the screen's order too: by name or by creation (a folder has no size to sort on). */
     val folders: StateFlow<List<FolderEntity>?> = combine(
         repo.changes.flatMapLatest { repo.allFolders() }.map { list -> list.filter { it.isFavorite } },
-        settings.screenSort("favorites"),
+        screenSort,
     ) { list, (key, ascending) ->
         val sorted = when (key) {
             SortKey.NAME -> list.sortedBy { it.name.lowercase() }

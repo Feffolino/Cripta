@@ -77,7 +77,12 @@ internal fun folderSubtitle(stat: FolderStat?): String {
 @Composable
 internal fun Breadcrumb(names: List<String>, onGo: (Int) -> Unit) {
     val scroll = rememberScrollState()
-    LaunchedEffect(names.size) { scroll.animateScrollTo(scroll.maxValue) }
+    LaunchedEffect(names) {
+        // After the next layout: read now, maxValue is still the one of the shorter path and the
+        // new last level stayed partly out of view.
+        androidx.compose.runtime.withFrameNanos { }
+        scroll.animateScrollTo(scroll.maxValue)
+    }
     Row(
         Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -129,16 +134,16 @@ fun CoverThumb(
  */
 @Composable
 fun CoverPreview(display: DisplayPrefs, modifier: Modifier = Modifier, tags: List<TagEntity> = emptyList()) {
+    // Marks of no language (icons and a year): only the acronym or emoji is drawn on a cover.
     val fallback = remember {
-        listOf("Mare" to "🌊", "Famiglia" to "FA", "Estate" to "ES", "Viaggi" to "✈️", "Amici" to "AM",
-            "Festa" to "🎉", "Montagna" to "MO", "2024" to "24", "Preferiti" to "PR", "Cane" to "🐶")
-            .mapIndexed { i, (n, a) -> TagEntity(id = -1L - i, name = n, alias = a) }
+        listOf("🌊", "👪", "☀️", "✈️", "🎂", "🎉", "⛰️", "24", "⭐", "🐶")
+            .mapIndexed { i, a -> TagEntity(id = -1L - i, name = a, alias = a) }
     }
     // The user's own tags (acronyms, icons, colours) when there are some: the sample only stands in.
     val sample = remember(tags) { tags.take(10).ifEmpty { fallback } }
     val file = remember {
         com.cripta.app.data.db.FileEntity(
-            id = "preview", originalName = "Esempio.mp4", mimeType = "video/mp4", sizeBytes = 48_000_000,
+            id = "preview", originalName = "video.mp4", mimeType = "video/mp4", sizeBytes = 48_000_000,
             createdAt = 0, importedAt = 0, wrappedKeyset = ByteArray(0),
             durationMs = 192_000, width = 1920, height = 1080,
         )

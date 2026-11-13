@@ -374,6 +374,9 @@
     <plurals name="originals_pending">
         <item quantity="other">%1$s 个原文件待处理</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="other">%1$s 个原文件待处理</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="other">删除 %1$s 个原文件？</item>
     </plurals>
@@ -764,6 +767,8 @@
     <string name="restore_not_started">未能开始恢复，请重试。</string>
     <string name="backup_not_started">未能开始备份，请重试。</string>
     <string name="tag_exists">名为 \"%1$s\" 的标签已存在。</string>
+    <string name="tags_not_changed">标签未更改：保险库已锁定或存储无法写入。</string>
+    <string name="filter_exists">名为 \"%1$s\" 的已保存筛选已存在。</string>
     <string name="unlock_mode_set">解锁方式：%1$s。</string>
     <string name="unlock_mode_failed">更改失败，解锁方式未改变。</string>
     <string name="dup_reason_resolution">分辨率更高（%1$s×%2$s）</string>
@@ -1008,7 +1013,7 @@
     <string name="viewer_open_panel">打开标签、详情与操作</string>
     <string name="viewer_swipe_up">" 上滑查看详情"</string>
     <string name="delete_file_q">删除文件？</string>
-    <string name="delete_file_trash">\"%1$s\" 将移至回收站，可从“设置 › 重复文件与回收站”恢复。</string>
+    <string name="delete_file_trash">\"%1$s\" 将移至回收站，可从“设置 › 空间与清理 › 回收站”恢复。</string>
     <string name="delete_file_secure">将安全删除 \"%1$s\"，此操作无法撤销。</string>
     <string name="export_q">导出到设备？</string>
     <string name="export_text">将把 \"%1$s\" 的未加密副本保存到 %2$s，其他应用可访问。保险库中的文件也会保留。</string>
@@ -1376,7 +1381,7 @@
     <plurals name="delete_files_q">
         <item quantity="other">删除 %1$s 个文件？</item>
     </plurals>
-    <string name="files_to_trash_text">将移至回收站，可从“设置 › 重复文件与回收站”恢复。</string>
+    <string name="files_to_trash_text">将移至回收站，可从“设置 › 空间与清理 › 回收站”恢复。</string>
     <string name="files_delete_secure">安全删除（销毁加密密钥），此操作无法撤销。</string>
     <plurals name="files_trashed">
         <item quantity="other">已将 %1$s 个文件移至回收站</item>
@@ -1389,8 +1394,8 @@
     <plurals name="files_n">
         <item quantity="other">%1$s 个文件</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" 将移至回收站。可从“设置 › 重复文件与回收站”打开并恢复整个文件夹或部分文件。</string>
-    <string name="folder_to_trash">\"%1$s\" 及其全部内容（%2$s，包含子文件夹）将移至回收站。可从“设置 › 重复文件与回收站”打开并恢复整个文件夹或部分文件。</string>
+    <string name="folder_to_trash_empty">\"%1$s\" 将移至回收站。可从“设置 › 空间与清理 › 回收站”打开并恢复整个文件夹或部分文件。</string>
+    <string name="folder_to_trash">\"%1$s\" 及其全部内容（%2$s，包含子文件夹）将移至回收站。可从“设置 › 空间与清理 › 回收站”打开并恢复整个文件夹或部分文件。</string>
     <string name="folder_empty_delete">\"%1$s\" 为空，将被删除。</string>
     <string name="folder_delete_secure">将安全删除 \"%1$s\" 及其全部内容（%2$s，包含子文件夹），此操作无法撤销。</string>
     <string name="folder_in_trash">文件夹 \"%1$s\" 已移至回收站</string>
@@ -1659,6 +1664,7 @@
     <string name="never">从不</string>
     <string name="immediately">立即</string>
     <string name="n_min">%1$s 分钟</string>
+    <string name="n_sec">%1$s 秒</string>
     <string name="sec_privacy">隐私</string>
     <string name="allow_screenshots">允许截屏</string>
     <string name="allow_screenshots_desc">关闭时禁止截屏，并在最近使用的应用中隐藏内容。</string>
@@ -1773,6 +1779,7 @@
     <string name="check_updates">检查更新</string>
     <string name="sec_about">关于</string>
     <string name="version">版本</string>
+    <string name="build_number">构建版本</string>
     <string name="package_">应用包</string>
     <string name="sec_last_crash">最近一次崩溃</string>
     <string name="last_crash_hint">应用因错误关闭时自动保存。仅包含技术数据，不包含文件名。</string>
@@ -1890,7 +1897,7 @@
     <string name="si_41_kw">更新 版本 预发布 测试版</string>
     <string name="compress_documents_desc">笔记和 PDF 更小，恢复后完全一致。恢复需要此版本或更新版本的 Cripta。</string>
     <string name="deep_search_desc">"还会查找重新保存、重新压缩或调整过大小的相同照片和视频。 "</string>
-    <string name="check_similar_import_desc">即使名称不同，如果新照片或视频与保险库中的文件相似，也会询问你如何处理。关闭后，可在“重复文件与回收站 › 相似”中查找。每个视频大约多需一秒。</string>
+    <string name="check_similar_import_desc">即使名称不同，如果新照片或视频与保险库中的文件相似，也会询问你如何处理。关闭后，可在“空间与清理 › 相似”中查找。每个视频大约多需一秒。</string>
     <string name="search_setting">搜索设置</string>
     <string name="clear_short">清除</string>
     <string name="no_setting_found">未找到设置。</string>

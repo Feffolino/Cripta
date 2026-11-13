@@ -23,11 +23,22 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 
+/** Longest name typed for a folder, a file, a saved filter or a tag (a pasted page is cut there). */
+const val MAX_NAME_LENGTH = 255
+
+/** [s] cut to [MAX_NAME_LENGTH], never through the middle of a character made of two chars (emoji). */
+fun limitName(s: String): String {
+    if (s.length <= MAX_NAME_LENGTH) return s
+    val end = if (Character.isHighSurrogate(s[MAX_NAME_LENGTH - 1])) MAX_NAME_LENGTH - 1 else MAX_NAME_LENGTH
+    return s.substring(0, end)
+}
+
 /**
  * Single-line text prompt (new folder, rename, save filter). The field is focused on open; an
  * initial value is pre-selected so typing replaces it. With [selectBaseName] (file rename) only the
  * name before the extension is selected, so "foto.jpg" keeps its ".jpg" unless the user edits it.
- * OK is disabled while the text is blank; the keyboard's Done key confirms.
+ * OK is disabled while the text is blank; the keyboard's Done key confirms. At most
+ * [MAX_NAME_LENGTH] characters.
  */
 @Composable
 fun TextPromptDialog(
@@ -37,7 +48,7 @@ fun TextPromptDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
     selectBaseName: Boolean = false,
-    confirmLabel: String = "OK",
+    confirmLabel: String = str(R.string.done),
 ) {
     var value by remember {
         val dot = initial.lastIndexOf('.')
@@ -58,7 +69,10 @@ fun TextPromptDialog(
         text = {
             com.cripta.app.ui.components.CriptaTextField(
                 value = value,
-                onValueChange = { value = it },
+                onValueChange = { v ->
+                    val text = limitName(v.text)
+                    value = if (text == v.text) v else TextFieldValue(text, TextRange(minOf(v.selection.start, text.length), minOf(v.selection.end, text.length)))
+                },
                 label = { Text(label) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(

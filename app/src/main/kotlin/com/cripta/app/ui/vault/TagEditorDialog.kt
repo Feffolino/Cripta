@@ -217,7 +217,9 @@ fun LabelEditorDialog(
     /** "Elimina" on the left of the buttons, after a confirmation; null = not offered. */
     onDelete: (() -> Unit)? = null,
 ) {
-    // rememberSaveable: the draft survives the activity being recreated, not only a rotation.
+    // rememberSaveable keeps the draft only while the dialog itself stays: the flags that open it
+    // are plain remember, so a recreated activity (a language change; rotations do not recreate
+    // it) closes the dialog and the saved draft is not read again.
     var pinnedState by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialPinned) }
     var onCovers by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialOnCovers) }
     var icon by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialIcon) }
@@ -285,7 +287,7 @@ fun LabelEditorDialog(
                     verticalAlignment = Alignment.Top) {
                     if (nameEditable) {
                         com.cripta.app.ui.components.CriptaTextField(
-                            value = name, onValueChange = { name = it },
+                            value = name, onValueChange = { name = limitName(it) },
                             label = { Text(str(R.string.sort_name)) }, singleLine = true,
                             isError = clash,
                             modifier = Modifier.weight(1f),
@@ -574,7 +576,7 @@ fun BatchTagDialog(
                 // Removal goes by the tags themselves (ids), not by names that may change meanwhile.
                 if (removing) onRemove?.invoke(chosen.mapNotNull { n -> allTags.firstOrNull { it.name == n } })
                 else onConfirm(chosen.toList())
-            }) { Text(if (removing) str(R.string.remove) else str(R.string.add)) }
+            }) { com.cripta.app.ui.components.ButtonText(if (removing) str(R.string.remove) else str(R.string.add)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
     )

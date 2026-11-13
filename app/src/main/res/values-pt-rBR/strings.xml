@@ -408,6 +408,11 @@
         <item quantity="many">%1$s originais para resolver</item>
         <item quantity="other">%1$s originais para resolver</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s original para resolver</item>
+        <item quantity="many">%1$s originais para resolver</item>
+        <item quantity="other">%1$s originais para resolver</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">Excluir %1$s original?</item>
         <item quantity="many">Excluir %1$s originais?</item>
@@ -822,6 +827,8 @@
     <string name="restore_not_started">Restauração não iniciada. Tente novamente.</string>
     <string name="backup_not_started">Backup não iniciado. Tente novamente.</string>
     <string name="tag_exists">Já existe uma etiqueta chamada \"%1$s\".</string>
+    <string name="tags_not_changed">Etiquetas não alteradas: o cofre está bloqueado ou o armazenamento não pode ser gravado.</string>
+    <string name="filter_exists">Já existe um filtro salvo chamado \"%1$s\".</string>
     <string name="unlock_mode_set">Desbloqueio: %1$s.</string>
     <string name="unlock_mode_failed">Falha na alteração: o modo de desbloqueio não mudou.</string>
     <string name="dup_reason_resolution">resolução maior (%1$s×%2$s)</string>
@@ -1088,7 +1095,7 @@
     <string name="viewer_open_panel">Abrir etiquetas, detalhes e ações</string>
     <string name="viewer_swipe_up">" Deslize para cima para ver os detalhes"</string>
     <string name="delete_file_q">Excluir o arquivo?</string>
-    <string name="delete_file_trash">\"%1$s\" irá para a lixeira (pode ser restaurado em Configurações › Duplicados e lixeira).</string>
+    <string name="delete_file_trash">\"%1$s\" irá para a lixeira (pode ser restaurado em Configurações › Espaço e limpeza › Lixeira).</string>
     <string name="delete_file_secure">\"%1$s\" será excluído de forma segura. Isso não pode ser desfeito.</string>
     <string name="export_q">Exportar para o dispositivo?</string>
     <string name="export_text">Uma cópia NÃO CRIPTOGRAFADA de \"%1$s\" será salva em %2$s, visível a outros aplicativos. O arquivo também fica no cofre.</string>
@@ -1482,7 +1489,7 @@
         <item quantity="many">Excluir %1$s arquivos?</item>
         <item quantity="other">Excluir %1$s arquivos?</item>
     </plurals>
-    <string name="files_to_trash_text">Eles serão movidos para a lixeira: você pode restaurá-los em Configurações › Duplicados e lixeira.</string>
+    <string name="files_to_trash_text">Eles serão movidos para a lixeira: você pode restaurá-los em Configurações › Espaço e limpeza › Lixeira.</string>
     <string name="files_delete_secure">Exclusão segura (destruição da chave de criptografia). Isso não pode ser desfeito.</string>
     <plurals name="files_trashed">
         <item quantity="one">%1$s arquivo movido para a lixeira</item>
@@ -1501,8 +1508,8 @@
         <item quantity="many">%1$s arquivos</item>
         <item quantity="other">%1$s arquivos</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" irá para a lixeira. Em Configurações › Duplicados e lixeira, você pode abri-la e restaurar tudo ou apenas alguns arquivos.</string>
-    <string name="folder_to_trash">\"%1$s\" e todo o conteúdo (%2$s, incluindo subpastas) irão para a lixeira. Em Configurações › Duplicados e lixeira, você pode abri-la e restaurar tudo ou apenas alguns arquivos.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" irá para a lixeira. Em Configurações › Espaço e limpeza › Lixeira, você pode abri-la e restaurar tudo ou apenas alguns arquivos.</string>
+    <string name="folder_to_trash">\"%1$s\" e todo o conteúdo (%2$s, incluindo subpastas) irão para a lixeira. Em Configurações › Espaço e limpeza › Lixeira, você pode abri-la e restaurar tudo ou apenas alguns arquivos.</string>
     <string name="folder_empty_delete">\"%1$s\" está vazia e será excluída.</string>
     <string name="folder_delete_secure">\"%1$s\" e todo o conteúdo (%2$s, incluindo subpastas) serão excluídos de forma segura. Isso não pode ser desfeito.</string>
     <string name="folder_in_trash">Pasta \"%1$s\" na lixeira</string>
@@ -1783,6 +1790,7 @@
     <string name="never">Nunca</string>
     <string name="immediately">Imediatamente</string>
     <string name="n_min">%1$s min</string>
+    <string name="n_sec">%1$s s</string>
     <string name="sec_privacy">Privacidade</string>
     <string name="allow_screenshots">Permitir capturas de tela</string>
     <string name="allow_screenshots_desc">Quando desativado, bloqueia capturas de tela e oculta o aplicativo nos aplicativos recentes.</string>
@@ -1899,6 +1907,7 @@
     <string name="check_updates">Verificar atualizações</string>
     <string name="sec_about">Sobre</string>
     <string name="version">Versão</string>
+    <string name="build_number">Compilação</string>
     <string name="package_">Pacote</string>
     <string name="sec_last_crash">Última falha</string>
     <string name="last_crash_hint">Salva automaticamente quando o aplicativo fecha por causa de um erro. Contém apenas dados técnicos, sem nomes de arquivos.</string>
@@ -2016,7 +2025,7 @@
     <string name="si_41_kw">atualização versão pré-lançamento beta</string>
     <string name="compress_documents_desc">Notas e PDFs mais leves, idênticos na restauração. Para restaurar é preciso esta versão do Cripta ou uma mais recente.</string>
     <string name="deep_search_desc">"Também as mesmas fotos e vídeos salvos novamente, recompactados ou redimensionados. "</string>
-    <string name="check_similar_import_desc">Mesmo com outro nome: se uma foto ou vídeo novo se parece com um que já está no cofre, pergunta o que fazer. Quando desativado, você encontra os semelhantes em Duplicados e lixeira › Semelhantes. Cerca de um segundo a mais por vídeo.</string>
+    <string name="check_similar_import_desc">Mesmo com outro nome: se uma foto ou vídeo novo se parece com um que já está no cofre, pergunta o que fazer. Quando desativado, você encontra os semelhantes em Espaço e limpeza › Semelhantes. Cerca de um segundo a mais por vídeo.</string>
     <string name="search_setting">Buscar uma configuração</string>
     <string name="clear_short">Limpar</string>
     <string name="no_setting_found">Nenhuma configuração encontrada.</string>

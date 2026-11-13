@@ -408,6 +408,11 @@
         <item quantity="many">%1$s originales pendientes</item>
         <item quantity="other">%1$s originales pendientes</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s original pendiente</item>
+        <item quantity="many">%1$s originales pendientes</item>
+        <item quantity="other">%1$s originales pendientes</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">¿Eliminar %1$s original?</item>
         <item quantity="many">¿Eliminar %1$s originales?</item>
@@ -822,6 +827,8 @@
     <string name="restore_not_started">Restauración no iniciada. Vuelve a intentarlo.</string>
     <string name="backup_not_started">Copia de seguridad no iniciada. Vuelve a intentarlo.</string>
     <string name="tag_exists">Ya existe una etiqueta llamada \"%1$s\".</string>
+    <string name="tags_not_changed">Etiquetas sin cambios: la caja fuerte está bloqueada o no se puede escribir en el almacenamiento.</string>
+    <string name="filter_exists">Ya existe un filtro guardado llamado \"%1$s\".</string>
     <string name="unlock_mode_set">Desbloqueo: %1$s.</string>
     <string name="unlock_mode_failed">Error al cambiar: se ha conservado el modo de desbloqueo anterior.</string>
     <string name="dup_reason_resolution">mayor resolución (%1$s×%2$s)</string>
@@ -1088,7 +1095,7 @@
     <string name="viewer_open_panel">Abrir etiquetas, detalles y acciones</string>
     <string name="viewer_swipe_up">" Desliza hacia arriba para ver los detalles"</string>
     <string name="delete_file_q">¿Eliminar el archivo?</string>
-    <string name="delete_file_trash">\"%1$s\" irá a la papelera (puedes restaurarlo desde Ajustes › Duplicados y papelera).</string>
+    <string name="delete_file_trash">\"%1$s\" irá a la papelera (puedes restaurarlo desde Ajustes › Espacio y limpieza › Papelera).</string>
     <string name="delete_file_secure">\"%1$s\" se eliminará de forma segura. Esta acción es irreversible.</string>
     <string name="export_q">¿Exportar al dispositivo?</string>
     <string name="export_text">Se guardará una copia SIN CIFRAR de \"%1$s\" en %2$s, visible para otras apps. El archivo también permanece en la caja fuerte.</string>
@@ -1482,7 +1489,7 @@
         <item quantity="many">¿Eliminar %1$s archivos?</item>
         <item quantity="other">¿Eliminar %1$s archivos?</item>
     </plurals>
-    <string name="files_to_trash_text">Irán a la papelera: puedes restaurarlos desde Ajustes › Duplicados y papelera.</string>
+    <string name="files_to_trash_text">Irán a la papelera: puedes restaurarlos desde Ajustes › Espacio y limpieza › Papelera.</string>
     <string name="files_delete_secure">Eliminación segura (destrucción de claves). Esta acción es irreversible.</string>
     <plurals name="files_trashed">
         <item quantity="one">1 archivo movido a la papelera</item>
@@ -1501,8 +1508,8 @@
         <item quantity="many">%1$s archivos</item>
         <item quantity="other">%1$s archivos</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" irá a la papelera. Desde Ajustes › Duplicados y papelera puedes abrirla y restaurarla entera o solo algunos archivos.</string>
-    <string name="folder_to_trash">\"%1$s\" y todo su contenido (%2$s, incluidas las subcarpetas) irán a la papelera. Desde Ajustes › Duplicados y papelera puedes abrirla y restaurarla entera o solo algunos archivos.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" irá a la papelera. Desde Ajustes › Espacio y limpieza › Papelera puedes abrirla y restaurarla entera o solo algunos archivos.</string>
+    <string name="folder_to_trash">\"%1$s\" y todo su contenido (%2$s, incluidas las subcarpetas) irán a la papelera. Desde Ajustes › Espacio y limpieza › Papelera puedes abrirla y restaurarla entera o solo algunos archivos.</string>
     <string name="folder_empty_delete">\"%1$s\" está vacía y se eliminará.</string>
     <string name="folder_delete_secure">\"%1$s\" y todo su contenido (%2$s, incluidas las subcarpetas) se eliminarán de forma segura. Esta acción es irreversible.</string>
     <string name="folder_in_trash">Carpeta \"%1$s\" en la papelera</string>
@@ -1783,6 +1790,7 @@
     <string name="never">Nunca</string>
     <string name="immediately">Inmediatamente</string>
     <string name="n_min">%1$s min</string>
+    <string name="n_sec">%1$s s</string>
     <string name="sec_privacy">Privacidad</string>
     <string name="allow_screenshots">Permitir capturas de pantalla</string>
     <string name="allow_screenshots_desc">Si se desactiva, bloquea las capturas y oculta la app en las aplicaciones recientes.</string>
@@ -1899,6 +1907,7 @@
     <string name="check_updates">Buscar actualizaciones</string>
     <string name="sec_about">Acerca de</string>
     <string name="version">Versión</string>
+    <string name="build_number">Compilación</string>
     <string name="package_">Paquete</string>
     <string name="sec_last_crash">Último cierre inesperado</string>
     <string name="last_crash_hint">Se guarda automáticamente cuando la app se cierra por un error. Solo contiene datos técnicos, sin nombres de archivo.</string>
@@ -2016,7 +2025,7 @@
     <string name="si_41_kw">actualización versión preliminar beta</string>
     <string name="compress_documents_desc">Notas y PDF más ligeros, idénticos al restaurar. Para restaurar se necesita esta versión de Cripta o una posterior.</string>
     <string name="deep_search_desc">"También las mismas fotos y vídeos guardados de nuevo, recomprimidos o redimensionados. "</string>
-    <string name="check_similar_import_desc">Incluso con otro nombre: si una foto o un vídeo nuevo se parece a uno de la caja fuerte, te pregunta qué hacer. Si se desactiva, encontrarás los similares en Duplicados y papelera › Similares. Aproximadamente un segundo más por vídeo.</string>
+    <string name="check_similar_import_desc">Incluso con otro nombre: si una foto o un vídeo nuevo se parece a uno de la caja fuerte, te pregunta qué hacer. Si se desactiva, encontrarás los similares en Espacio y limpieza › Similares. Aproximadamente un segundo más por vídeo.</string>
     <string name="search_setting">Buscar un ajuste</string>
     <string name="clear_short">Borrar</string>
     <string name="no_setting_found">Ningún ajuste encontrado.</string>

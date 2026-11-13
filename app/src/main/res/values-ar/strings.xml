@@ -459,6 +459,14 @@
         <item quantity="many">%1$s أصل بحاجة إلى إجراء</item>
         <item quantity="other">%1$s أصل بحاجة إلى إجراء</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="zero">%1$s أصل بحاجة إلى إجراء</item>
+        <item quantity="one">%1$s أصل بحاجة إلى إجراء</item>
+        <item quantity="two">أصلان (%1$s) بحاجة إلى إجراء</item>
+        <item quantity="few">%1$s أصول بحاجة إلى إجراء</item>
+        <item quantity="many">%1$s أصل بحاجة إلى إجراء</item>
+        <item quantity="other">%1$s أصل بحاجة إلى إجراء</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="zero">حذف الأصول (%1$s)؟</item>
         <item quantity="one">حذف الأصل (%1$s)؟</item>
@@ -909,6 +917,8 @@
     <string name="restore_not_started">لم تبدأ الاستعادة. أعد المحاولة.</string>
     <string name="backup_not_started">لم يبدأ النسخ الاحتياطي. أعد المحاولة.</string>
     <string name="tag_exists">يوجد وسم باسم \"%1$s\" بالفعل.</string>
+    <string name="tags_not_changed">لم تُعدَّل الوسوم: الخزنة مقفلة أو تتعذّر الكتابة في التخزين.</string>
+    <string name="filter_exists">يوجد فلتر محفوظ باسم \"%1$s\" بالفعل.</string>
     <string name="unlock_mode_set">فتح القفل: %1$s.</string>
     <string name="unlock_mode_failed">فشل التغيير: بقي وضع فتح القفل كما كان.</string>
     <string name="dup_reason_resolution">دقة أعلى (%1$s×%2$s)</string>
@@ -1208,7 +1218,7 @@
     <string name="viewer_open_panel">فتح الوسوم والتفاصيل والإجراءات</string>
     <string name="viewer_swipe_up">" اسحب للأعلى للتفاصيل"</string>
     <string name="delete_file_q">حذف الملف؟</string>
-    <string name="delete_file_trash">سينتقل \"%1$s\" إلى المهملات (يمكن استعادته من الإعدادات › المكررات والمهملات).</string>
+    <string name="delete_file_trash">سينتقل \"%1$s\" إلى المهملات (يمكن استعادته من الإعدادات › المساحة والتنظيف › المهملات).</string>
     <string name="delete_file_secure">سيُحذف \"%1$s\" بأمان. لا يمكن التراجع.</string>
     <string name="export_q">التصدير إلى الجهاز؟</string>
     <string name="export_text">ستُحفظ نسخة غير مشفرة من \"%1$s\" في %2$s، وتكون مرئية للتطبيقات الأخرى. يبقى الملف في الخزنة أيضاً.</string>
@@ -1641,7 +1651,7 @@
         <item quantity="many">حذف %1$s ملف؟</item>
         <item quantity="other">حذف %1$s ملف؟</item>
     </plurals>
-    <string name="files_to_trash_text">ستنتقل إلى المهملات: يمكنك استعادتها من الإعدادات › المكررات والمهملات.</string>
+    <string name="files_to_trash_text">ستنتقل إلى المهملات: يمكنك استعادتها من الإعدادات › المساحة والتنظيف › المهملات.</string>
     <string name="files_delete_secure">حذف آمن بإتلاف مفتاح التشفير. لا يمكن التراجع.</string>
     <plurals name="files_trashed">
         <item quantity="zero">نُقل %1$s ملف إلى المهملات</item>
@@ -1669,8 +1679,8 @@
         <item quantity="many">%1$s ملف</item>
         <item quantity="other">%1$s ملف</item>
     </plurals>
-    <string name="folder_to_trash_empty">سينتقل \"%1$s\" إلى المهملات. من الإعدادات › المكررات والمهملات يمكنك فتحه واستعادته كله أو بعض ملفاته.</string>
-    <string name="folder_to_trash">سينتقل \"%1$s\" وكل محتوياته (%2$s، بما فيها المجلدات الفرعية) إلى المهملات. من الإعدادات › المكررات والمهملات يمكنك فتحه واستعادته كله أو بعض ملفاته.</string>
+    <string name="folder_to_trash_empty">سينتقل \"%1$s\" إلى المهملات. من الإعدادات › المساحة والتنظيف › المهملات يمكنك فتحه واستعادته كله أو بعض ملفاته.</string>
+    <string name="folder_to_trash">سينتقل \"%1$s\" وكل محتوياته (%2$s، بما فيها المجلدات الفرعية) إلى المهملات. من الإعدادات › المساحة والتنظيف › المهملات يمكنك فتحه واستعادته كله أو بعض ملفاته.</string>
     <string name="folder_empty_delete">\"%1$s\" فارغ وسيُحذف.</string>
     <string name="folder_delete_secure">سيُحذف \"%1$s\" وكل محتوياته (%2$s، بما فيها المجلدات الفرعية) بأمان. لا يمكن التراجع.</string>
     <string name="folder_in_trash">المجلد \"%1$s\" في المهملات</string>
@@ -1969,6 +1979,7 @@
     <string name="never">أبداً</string>
     <string name="immediately">فوراً</string>
     <string name="n_min">%1$s د</string>
+    <string name="n_sec">%1$s ث</string>
     <string name="sec_privacy">الخصوصية</string>
     <string name="allow_screenshots">السماح بلقطات الشاشة</string>
     <string name="allow_screenshots_desc">عند التعطيل يمنع لقطات الشاشة ويخفي التطبيق في التطبيقات الأخيرة.</string>
@@ -2088,6 +2099,7 @@
     <string name="check_updates">التحقق من التحديثات</string>
     <string name="sec_about">حول التطبيق</string>
     <string name="version">الإصدار</string>
+    <string name="build_number">رقم البناء</string>
     <string name="package_">الحزمة</string>
     <string name="sec_last_crash">آخر تعطل</string>
     <string name="last_crash_hint">يُحفظ تلقائياً حين يُغلق التطبيق بسبب خطأ. يحوي بيانات تقنية فقط، دون أسماء ملفات.</string>
@@ -2205,7 +2217,7 @@
     <string name="si_41_kw">تحديث إصدار أولي بيتا</string>
     <string name="compress_documents_desc">ملاحظات وPDF أخف، مطابقة بعد الاستعادة. تتطلب الاستعادة هذا الإصدار من Cripta أو أحدث.</string>
     <string name="deep_search_desc">"وكذلك الصور والفيديوهات نفسها المحفوظة مجدداً أو المضغوطة أو المغيرة الحجم. "</string>
-    <string name="check_similar_import_desc">حتى باسم مختلف: إن شابهت صورة أو فيديو جديد ما في الخزنة، يسألك عما يجب فعله. عند التعطيل تجد المتشابهة في المكررات والمهملات › المشابهة. نحو ثانية إضافية لكل فيديو.</string>
+    <string name="check_similar_import_desc">حتى باسم مختلف: إن شابهت صورة أو فيديو جديد ما في الخزنة، يسألك عما يجب فعله. عند التعطيل تجد المتشابهة في المساحة والتنظيف › المشابهة. نحو ثانية إضافية لكل فيديو.</string>
     <string name="search_setting">البحث عن إعداد</string>
     <string name="clear_short">مسح</string>
     <string name="no_setting_found">لم يُعثر على إعداد.</string>

@@ -158,18 +158,24 @@ internal fun androidx.compose.foundation.layout.BoxScope.FastScroller(
                     val within = ((pos - rowStart) / cols * rowH).roundToInt().coerceAtLeast(0)
                     scope.launch { state.scrollToItem(rowStart, within) }
                 }
-                detectVerticalDragGestures(
-                    onDragStart = { o ->
-                        val top = listFraction * maxOffset
-                        grab = if (o.y in top..(top + thumbPx)) o.y - top else thumbPx / 2f
-                        dragFraction = listFraction
-                        dragging = true
-                        follow(o.y)
-                    },
-                    onDragEnd = { dragging = false },
-                    onDragCancel = { dragging = false },
-                    onVerticalDrag = { change, _ -> change.consume(); follow(change.position.y) },
-                )
+                try {
+                    detectVerticalDragGestures(
+                        onDragStart = { o ->
+                            val top = listFraction * maxOffset
+                            grab = if (o.y in top..(top + thumbPx)) o.y - top else thumbPx / 2f
+                            dragFraction = listFraction
+                            dragging = true
+                            follow(o.y)
+                        },
+                        onDragEnd = { dragging = false },
+                        onDragCancel = { dragging = false },
+                        onVerticalDrag = { change, _ -> change.consume(); follow(change.position.y) },
+                    )
+                } finally {
+                    // Restarted mid-drag (files added, the track resized) the detector is cancelled
+                    // without onDragCancel: the thumb would stay held, no longer following the list.
+                    dragging = false
+                }
             }),
     ) {
         Box(

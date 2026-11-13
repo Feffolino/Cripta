@@ -391,6 +391,10 @@
         <item quantity="one">MP4 copy created</item>
         <item quantity="other">%1$s originals to handle</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s original to handle</item>
+        <item quantity="other">%1$s originals to handle</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">Delete %1$s original?</item>
         <item quantity="other">Delete %1$s originals?</item>
@@ -793,6 +797,8 @@
     <string name="restore_not_started">Restore not started. Try again.</string>
     <string name="backup_not_started">Backup not started. Try again.</string>
     <string name="tag_exists">A tag called \"%1$s\" already exists.</string>
+    <string name="tags_not_changed">Tags not changed: the vault is locked or storage can\'t be written.</string>
+    <string name="filter_exists">A saved filter called \"%1$s\" already exists.</string>
     <string name="unlock_mode_set">Unlock: %1$s.</string>
     <string name="unlock_mode_failed">Change failed: the unlock mode stayed as it was.</string>
     <string name="dup_reason_resolution">higher resolution (%1$s×%2$s)</string>
@@ -1048,7 +1054,7 @@
     <string name="viewer_open_panel">Open tags, details and actions</string>
     <string name="viewer_swipe_up">" Swipe up for the details"</string>
     <string name="delete_file_q">Delete the file?</string>
-    <string name="delete_file_trash">\"%1$s\" will be moved to the trash (it can be restored from Settings › Duplicates and trash).</string>
+    <string name="delete_file_trash">\"%1$s\" will be moved to the trash (it can be restored from Settings › Space and cleanup › Trash).</string>
     <string name="delete_file_secure">\"%1$s\" will be deleted securely. This can\'t be undone.</string>
     <string name="export_q">Export to the device?</string>
     <string name="export_text">An UNENCRYPTED copy of \"%1$s\" will be saved in %2$s, visible to other apps. The file also stays in the vault.</string>
@@ -1429,7 +1435,7 @@
         <item quantity="one">Delete 1 file?</item>
         <item quantity="other">Delete %1$s files?</item>
     </plurals>
-    <string name="files_to_trash_text">They will be moved to the trash: you can restore them from Settings › Duplicates and trash.</string>
+    <string name="files_to_trash_text">They will be moved to the trash: you can restore them from Settings › Space and cleanup › Trash.</string>
     <string name="files_delete_secure">Secure deletion (crypto-shredding). This can\'t be undone.</string>
     <plurals name="files_trashed">
         <item quantity="one">1 file moved to the trash</item>
@@ -1445,8 +1451,8 @@
         <item quantity="one">1 file</item>
         <item quantity="other">%1$s files</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" will go to the trash. From Settings › Duplicates and trash you can open it and restore all of it or just some files.</string>
-    <string name="folder_to_trash">\"%1$s\" and all its contents (%2$s, subfolders included) will go to the trash. From Settings › Duplicates and trash you can open it and restore all of it or just some files.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" will go to the trash. From Settings › Space and cleanup › Trash you can open it and restore all of it or just some files.</string>
+    <string name="folder_to_trash">\"%1$s\" and all its contents (%2$s, subfolders included) will go to the trash. From Settings › Space and cleanup › Trash you can open it and restore all of it or just some files.</string>
     <string name="folder_empty_delete">\"%1$s\" is empty and will be deleted.</string>
     <string name="folder_delete_secure">\"%1$s\" and all its contents (%2$s, subfolders included) will be deleted securely. This can\'t be undone.</string>
     <string name="folder_in_trash">Folder \"%1$s\" in the trash</string>
@@ -1721,6 +1727,7 @@
     <string name="never">Never</string>
     <string name="immediately">Immediately</string>
     <string name="n_min">%1$s min</string>
+    <string name="n_sec">%1$s s</string>
     <string name="sec_privacy">Privacy</string>
     <string name="allow_screenshots">Allow screenshots</string>
     <string name="allow_screenshots_desc">When off, blocks screenshots and hides the app in recent apps.</string>
@@ -1836,6 +1843,7 @@
     <string name="check_updates">Check for updates</string>
     <string name="sec_about">About</string>
     <string name="version">Version</string>
+    <string name="build_number">Build</string>
     <string name="package_">Package</string>
     <string name="sec_last_crash">Last crash</string>
     <string name="last_crash_hint">Saved automatically when the app closes because of an error. It contains only technical data, no file names.</string>
@@ -1953,7 +1961,7 @@
     <string name="si_41_kw">update version pre-release beta</string>
     <string name="compress_documents_desc">Lighter notes and PDFs, identical on restore. Restoring needs this version of Cripta or later.</string>
     <string name="deep_search_desc">"Also the same photos and videos saved again, recompressed or resized. "</string>
-    <string name="check_similar_import_desc">Even with a different name: if a new photo or video looks like one already in the vault, it asks you what to do. When off, you find similar ones in Duplicates and trash › Similar. About one second more per video.</string>
+    <string name="check_similar_import_desc">Even with a different name: if a new photo or video looks like one already in the vault, it asks you what to do. When off, you find similar ones in Space and cleanup › Similar. About one second more per video.</string>
     <string name="search_setting">Search a setting</string>
     <string name="clear_short">Clear</string>
     <string name="no_setting_found">No setting found.</string>

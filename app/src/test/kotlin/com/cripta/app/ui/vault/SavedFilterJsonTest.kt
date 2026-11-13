@@ -22,4 +22,16 @@ class SavedFilterJsonTest {
         val back = filtersFromJson("""{"q":"x","tags":[],"ex":[],"type":"ALL","fav":false,"untagged":false,"all":true,"people":[]}""")!!
         assertEquals(Filters(query = "x"), back)
     }
+
+    @Test fun anUnreadableIdIsSkippedNotTheWholeFilter() {
+        val back = filtersFromJson("""{"q":"","tags":[3,"x"],"ex":[],"type":"ALL","people":[]}""")
+        assertEquals(Filters(tagIds = setOf(3)), back)
+    }
+
+    @Test fun aGoneTagFollowsItsMergeAndIsNotBothRequiredAndLeftOut() {
+        val f = Filters(tagIds = setOf(2), excludedTagIds = setOf(1, 5), query = "q")
+        // 1 merged into 2, 5 deleted.
+        val after = f.withTagsGone(mapOf(1L to 2L, 5L to null))
+        assertEquals(Filters(tagIds = setOf(2), query = "q"), after)
+    }
 }

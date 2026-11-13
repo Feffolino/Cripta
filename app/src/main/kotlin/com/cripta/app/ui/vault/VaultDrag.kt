@@ -1,6 +1,13 @@
 package com.cripta.app.ui.vault
 
+import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+
+/** Depth of the auto-scroll edge zones of a dragging finger (move drag and manual reorder alike). */
+internal val EDGE_ZONE = 64.dp
+
+/** Auto-scroll speed at the far end of an edge zone, per second. */
+internal val EDGE_MAX_SPEED = 1600.dp
 
 /**
  * How deep [y] is in the grid's auto-scroll edge zones, from -1 to 1: negative inside the top zone

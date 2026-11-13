@@ -391,6 +391,10 @@
         <item quantity="one">MP4-Kopie erstellt</item>
         <item quantity="other">%1$s Originale zu bearbeiten</item>
     </plurals>
+    <plurals name="originals_to_handle">
+        <item quantity="one">%1$s Original zu bearbeiten</item>
+        <item quantity="other">%1$s Originale zu bearbeiten</item>
+    </plurals>
     <plurals name="delete_original_q">
         <item quantity="one">%1$s Original löschen?</item>
         <item quantity="other">%1$s Originale löschen?</item>
@@ -793,6 +797,8 @@
     <string name="restore_not_started">Wiederherstellung nicht gestartet. Erneut versuchen.</string>
     <string name="backup_not_started">Sicherung nicht gestartet. Erneut versuchen.</string>
     <string name="tag_exists">Ein Schlagwort namens \"%1$s\" existiert bereits.</string>
+    <string name="tags_not_changed">Schlagwörter nicht geändert: Der Tresor ist gesperrt oder der Speicher nicht beschreibbar.</string>
+    <string name="filter_exists">Ein gespeicherter Filter namens \"%1$s\" existiert bereits.</string>
     <string name="unlock_mode_set">Entsperren: %1$s.</string>
     <string name="unlock_mode_failed">Änderung fehlgeschlagen: Der Entsperrmodus blieb unverändert.</string>
     <string name="dup_reason_resolution">höhere Auflösung (%1$s×%2$s)</string>
@@ -1048,7 +1054,7 @@
     <string name="viewer_open_panel">Schlagwörter, Details und Aktionen öffnen</string>
     <string name="viewer_swipe_up">" Für Details nach oben wischen"</string>
     <string name="delete_file_q">Datei löschen?</string>
-    <string name="delete_file_trash">\"%1$s\" wird in den Papierkorb verschoben (unter Einstellungen › Duplikate und Papierkorb wiederherstellbar).</string>
+    <string name="delete_file_trash">\"%1$s\" wird in den Papierkorb verschoben (unter Einstellungen › Speicher und Bereinigung › Papierkorb wiederherstellbar).</string>
     <string name="delete_file_secure">\"%1$s\" wird sicher gelöscht. Das ist unumkehrbar.</string>
     <string name="export_q">Auf das Gerät exportieren?</string>
     <string name="export_text">Eine UNVERSCHLÜSSELTE Kopie von \"%1$s\" wird in %2$s gespeichert und ist für andere Apps sichtbar. Die Datei bleibt auch im Tresor.</string>
@@ -1429,7 +1435,7 @@
         <item quantity="one">1 Datei löschen?</item>
         <item quantity="other">%1$s Dateien löschen?</item>
     </plurals>
-    <string name="files_to_trash_text">Sie werden in den Papierkorb verschoben: Unter Einstellungen › Duplikate und Papierkorb wiederherstellbar.</string>
+    <string name="files_to_trash_text">Sie werden in den Papierkorb verschoben: Unter Einstellungen › Speicher und Bereinigung › Papierkorb wiederherstellbar.</string>
     <string name="files_delete_secure">Sicheres Löschen (Schlüsselvernichtung). Das ist unumkehrbar.</string>
     <plurals name="files_trashed">
         <item quantity="one">1 Datei in den Papierkorb verschoben</item>
@@ -1445,8 +1451,8 @@
         <item quantity="one">1 Datei</item>
         <item quantity="other">%1$s Dateien</item>
     </plurals>
-    <string name="folder_to_trash_empty">\"%1$s\" wird in den Papierkorb verschoben. Unter Einstellungen › Duplikate und Papierkorb kannst du den Ordner öffnen und alles oder einzelne Dateien wiederherstellen.</string>
-    <string name="folder_to_trash">\"%1$s\" mit gesamtem Inhalt (%2$s, einschließlich Unterordnern) wird in den Papierkorb verschoben. Unter Einstellungen › Duplikate und Papierkorb kannst du ihn öffnen und alles oder einzelne Dateien wiederherstellen.</string>
+    <string name="folder_to_trash_empty">\"%1$s\" wird in den Papierkorb verschoben. Unter Einstellungen › Speicher und Bereinigung › Papierkorb kannst du den Ordner öffnen und alles oder einzelne Dateien wiederherstellen.</string>
+    <string name="folder_to_trash">\"%1$s\" mit gesamtem Inhalt (%2$s, einschließlich Unterordnern) wird in den Papierkorb verschoben. Unter Einstellungen › Speicher und Bereinigung › Papierkorb kannst du ihn öffnen und alles oder einzelne Dateien wiederherstellen.</string>
     <string name="folder_empty_delete">\"%1$s\" ist leer und wird gelöscht.</string>
     <string name="folder_delete_secure">\"%1$s\" mit gesamtem Inhalt (%2$s, einschließlich Unterordnern) wird sicher gelöscht. Das ist unumkehrbar.</string>
     <string name="folder_in_trash">Ordner \"%1$s\" im Papierkorb</string>
@@ -1721,6 +1727,7 @@
     <string name="never">Nie</string>
     <string name="immediately">Sofort</string>
     <string name="n_min">%1$s Min.</string>
+    <string name="n_sec">%1$s s</string>
     <string name="sec_privacy">Datenschutz</string>
     <string name="allow_screenshots">Screenshots erlauben</string>
     <string name="allow_screenshots_desc">Wenn aus, werden Screenshots blockiert und die App in den zuletzt verwendeten Apps verborgen.</string>
@@ -1836,6 +1843,7 @@
     <string name="check_updates">Nach Updates suchen</string>
     <string name="sec_about">Info</string>
     <string name="version">Version</string>
+    <string name="build_number">Build</string>
     <string name="package_">Paket</string>
     <string name="sec_last_crash">Letzter Absturz</string>
     <string name="last_crash_hint">Wird automatisch gespeichert, wenn sich die App wegen eines Fehlers schließt. Enthält nur technische Daten, keine Dateinamen.</string>
@@ -1953,7 +1961,7 @@
     <string name="si_41_kw">Update Version Vorabversion Beta</string>
     <string name="compress_documents_desc">Leichtere Notizen und PDFs, nach Wiederherstellung identisch. Zum Wiederherstellen ist diese oder eine neuere Cripta-Version nötig.</string>
     <string name="deep_search_desc">"Auch gleiche Fotos und Videos, die neu gespeichert, komprimiert oder skaliert wurden. "</string>
-    <string name="check_similar_import_desc">Auch bei anderem Namen: Ähnelt ein neues Foto oder Video einem vorhandenen, fragt Cripta nach. Wenn aus, findest du ähnliche unter Duplikate und Papierkorb › Ähnliche. Etwa eine Sekunde mehr pro Video.</string>
+    <string name="check_similar_import_desc">Auch bei anderem Namen: Ähnelt ein neues Foto oder Video einem vorhandenen, fragt Cripta nach. Wenn aus, findest du ähnliche unter Speicher und Bereinigung › Ähnliche. Etwa eine Sekunde mehr pro Video.</string>
     <string name="search_setting">Einstellung suchen</string>
     <string name="clear_short">Leeren</string>
     <string name="no_setting_found">Keine Einstellung gefunden.</string>

@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -37,6 +38,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -65,6 +68,17 @@ data class Filters(
     val active: Boolean
         get() = query.isNotBlank() || tagIds.isNotEmpty() || excludedTagIds.isNotEmpty() ||
             type != TypeFilter.ALL || favoritesOnly || untaggedOnly || personIds.isNotEmpty() || inProgress
+}
+
+/**
+ * These filters once the tags in [gone] left the library: each becomes the tag it was merged into
+ * (its value) or, deleted (null), leaves; as in the saved filters. One then both required and left
+ * out stays required: the filters would show nothing.
+ */
+fun Filters.withTagsGone(gone: Map<Long, Long?>): Filters {
+    fun follow(s: Set<Long>) = s.mapNotNull { id -> if (id in gone) gone[id] else id }.toSet()
+    val required = follow(tagIds)
+    return copy(tagIds = required, excludedTagIds = follow(excludedTagIds) - required)
 }
 
 /**
@@ -381,9 +395,11 @@ class VaultViewModel @Inject constructor(
      * The files the filters run on: the current folder, or the whole vault while filtering when
      * allowed by Settings. Re-queried only when that scope changes, never on a filter or a keystroke.
      */
+    private val filterLocalOnlyFlow = settings.settings.map { it.filterCurrentFolderOnly }.distinctUntilChanged()
+
     private val source =
         combine(currentFolderId, filters.map { it.active to it.wholeVault }.distinctUntilChanged(),
-            settings.settings.map { it.filterCurrentFolderOnly }.distinctUntilChanged(), refresh) { folder, (active, whole), localOnly, _ ->
+            filterLocalOnlyFlow, refresh) { folder, (active, whole), localOnly, _ ->
             folder to searchesWholeVault(active, whole, localOnly)
         }
             .distinctUntilChanged()
@@ -423,10 +439,15 @@ class VaultViewModel @Inject constructor(
     }
 
     private val scoped =
-        combine(source, lookups, sortFlow) { (folder, whole, list), l, sort ->
+        combine(source, lookups, sortFlow, filterLocalOnlyFlow) { (folder, whole, list), l, sort, localOnly ->
+            // The scope follows the filters at once, the filters wait for a pause in the typing:
+            // for that pause the first letter would show the whole vault unfiltered, and clearing
+            // the last one the folder filtered by the old text. The pair waits until both agree.
+            if (whole != searchesWholeVault(l.f.active, l.f.wholeVault, localOnly)) return@combine null
             val shown = l.f.applyTo(list, l.people, l.byName)
             Scoped(list, applySort(shown, sort.first, sort.second), folder, l.f, whole)
         }
+            .filterNotNull()
             .flowOn(Dispatchers.Default)
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
@@ -492,13 +513,12 @@ class VaultViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startDownload(appContext, fileIds, tree)
     }
 
-    /** Queue the selected convertible videos ([convertibleIds]) for conversion (they run one at a time). */
     /** "Confronta audio": what the starts of two analysed videos share, for [onResult]. */
     fun compareAudio(idA: String, idB: String, onResult: (String) -> Unit) = safeScope.launch {
         onResult(runCatching { intro.compare(idA, idB) }.getOrElse { str(R.string.compare_failed) })
     }
 
-
+    /** Queue the selected videos among [fileIds] for conversion (they run one at a time). */
     fun convertToMp4(fileIds: List<String>) {
         val ids = fileIds.toSet()
         files.value.map { it.file }
@@ -529,8 +549,6 @@ class VaultViewModel @Inject constructor(
         // Manual order is intrinsically directional (weight ascending = top); ignore asc/desc.
         return if (key == com.cripta.app.data.SortKey.MANUAL || ascending) sorted else sorted.reversed()
     }
-
-    private fun applyFilters(list: List<FileWithTags>, f: Filters): List<FileWithTags> = list.filter { f.matches(it) }
 
     // --- Navigation ---
     fun enterFolder(folder: FolderEntity) {
@@ -584,11 +602,12 @@ class VaultViewModel @Inject constructor(
                 val ids = list.mapTo(HashSet()) { it.id }
                 val gone = known - ids
                 known = ids
-                val f = filters.value
+                if (gone.isEmpty()) return@collect
                 // One merged into another becomes that one, as in the saved filters; one deleted goes.
-                fun follow(s: Set<Long>) = s.mapNotNull { id -> if (id in gone) repo.tagMergedInto(id)?.takeIf { it in ids } else id }.toSet()
-                if (gone.isNotEmpty() && (f.tagIds.any { it in gone } || f.excludedTagIds.any { it in gone }))
-                    filters.value = f.copy(tagIds = follow(f.tagIds), excludedTagIds = follow(f.excludedTagIds))
+                // Looked up first: the filters are then changed in one step, so a filter the user
+                // changed meanwhile (typing, a chip) is not overwritten by the copy read before.
+                val into = gone.associateWith { id -> repo.tagMergedInto(id)?.takeIf { it in ids } }
+                filters.update { it.withTagsGone(into) }
             }
         }
         // Cartelle tab tapped again while already on it: back to the root.
@@ -602,17 +621,19 @@ class VaultViewModel @Inject constructor(
         refresh.flatMapLatest { repo.savedFilters() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun saveCurrentFilter(name: String) = safeScope.launch {
-        if (name.isNotBlank() && filters.value.active) repo.saveFilter(name, filters.value.toJson())
+        if (name.isBlank() || !filters.value.active) return@launch
+        if (!repo.saveFilter(name, filters.value.toJson()))
+            android.widget.Toast.makeText(appContext, str(R.string.filter_exists, name.trim()), android.widget.Toast.LENGTH_SHORT).show()
     }
     fun applySavedFilter(json: String) { filtersFromJson(json)?.let { filters.value = it } }
     fun deleteSavedFilter(id: Long) = safeScope.launch { repo.deleteSavedFilter(id) }
 
-    /** Whether deleting moves to the trash (for the confirmation wording). */
     /** Settings › "Filtri solo nella cartella corrente": the empty state names the scope actually searched. */
     val filterLocalOnly: StateFlow<Boolean> =
         settings.settings.map { it.filterCurrentFolderOnly }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    /** Whether deleting moves to the trash (for the confirmation wording). */
     val trashEnabled: StateFlow<Boolean> =
         settings.settings.map { it.trashEnabled }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -701,10 +722,6 @@ class VaultViewModel @Inject constructor(
 
     suspend fun filesInFolder(folderId: Long, limit: Int): com.cripta.app.data.VaultRepository.CoverChoices = repo.filesInFolder(folderId, limit)
 
-    fun importUris(uris: List<android.net.Uri>) {
-        com.cripta.app.work.ConversionService.startImport(appContext, uris, currentFolderId.value)
-    }
-
     fun toggleFavorite(fileId: String, fav: Boolean) = safeScope.launch {
         repo.toggleFavorite(fileId, fav)    }
 
@@ -752,13 +769,13 @@ class VaultViewModel @Inject constructor(
         repo.clearImportDuplicates(listOf(f.id))
     }
 
+    /** A file by id (the import conflicts page shows the new copy's cover). */
+    suspend fun fileFor(id: String): FileEntity? = repo.fileById(id)
+
     /**
      * "Elimina la nuova" for media that look like vault ones: the new files go where any deletion
      * goes (the trash when it is on), so a wrong answer can be undone.
      */
-    /** A file by id (the import conflicts page shows the new copy's cover). */
-    suspend fun fileFor(id: String): FileEntity? = repo.fileById(id)
-
     fun removeNewCopies(matches: List<VaultRepository.VersionMatch>) {
         repo.resolveNewVersions(matches.map { it.newId })
         launchBulk("removeNewCopies") {
@@ -810,13 +827,13 @@ class VaultViewModel @Inject constructor(
         if (!r.created) android.widget.Toast.makeText(appContext, str(R.string.tag_exists, draft.name), android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    /** Save a tag's editor in one go, by id. */
     /** Each tag's use (files, folders), for the tag editor's line under its title. */
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun deleteTag(id: Long) = safeScope.launch { repo.deleteTag(id) }
 
+    /** Save a tag's editor in one go, by id. */
     fun saveTag(id: Long, draft: TagDraft) = safeScope.launch {
         val r = repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)
         if (r == com.cripta.app.data.TagSave.NAME_TAKEN)
@@ -857,12 +874,18 @@ class VaultViewModel @Inject constructor(
         fileIds.forEach { if (!repo.deleteOrTrash(it)) thumbs.evict(it); c.done++ }
     }
 
+    /**
+     * Saves of the manual order one after the other, in the order asked: two quick moves (two
+     * TalkBack actions, two drops) each run on IO and the older order could be written last.
+     */
+    private val reorderLock = kotlinx.coroutines.sync.Mutex()
+
     /** Persist a user drag-reorder (Manual sort). */
     fun reorder(orderedIds: List<String>) = launchBulk("reorder") {
         // Filtered results span the whole vault: renumbering that subset 0..k-1 would scramble
         // other folders' manual order (the screen also disables the drag while filtering).
         if (filters.value.active) return@launchBulk
-        repo.setSortWeights(orderedIds)
+        reorderLock.withLock { repo.setSortWeights(orderedIds) }
     }
 
     /** True when "Casuale" shuffles only what is on screen (a folder or filtered results). */
