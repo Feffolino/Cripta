@@ -614,4 +614,10 @@ class SettingsStore @Inject constructor(
     suspend fun setDeleteOriginalPolicy(policy: DeleteOriginalPolicy) {
         context.dataStore.edit { it[delPolicy] = policy.ordinal }
     }
+
+    /** Every preference removed. For tests: the store is one per process, so one test's values reach the next. */
+    @androidx.annotation.VisibleForTesting
+    internal suspend fun clearAll() {
+        context.dataStore.edit { it.clear() }
+    }
 }
