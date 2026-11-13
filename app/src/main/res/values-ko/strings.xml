@@ -420,6 +420,8 @@
     <string name="note_delete_text">\"%1$s\" 메모를 삭제합니다(설정에서 휴지통을 켰다면 휴지통으로 이동).</string>
     <string name="note_open_failed">메모를 열지 못했습니다.</string>
     <string name="note_save_failed">메모를 저장하지 못했습니다. 다시 시도하세요.</string>
+    <string name="note_unsaved_title">메모가 저장되지 않았습니다</string>
+    <string name="note_unsaved_text">Cripta가 백그라운드로 전환될 때 작성 중이던 메모를 저장하지 못했습니다. 저장하려면 Cripta를 여세요.</string>
     <string name="note_delete_failed">메모를 삭제하지 못했습니다.</string>
     <string name="tab_home">홈</string>
     <string name="tab_folders">컬렉션</string>

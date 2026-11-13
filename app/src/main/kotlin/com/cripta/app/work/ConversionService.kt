@@ -2277,7 +2277,7 @@ class ConversionService : Service() {
         private const val SUMMARY_ACTIONS_ID = 4241
         /** How long the unanswered keep/delete choice stays in the notifications (10 min). */
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
-        private const val RESULT_CHANNEL = "results"
+        internal const val RESULT_CHANNEL = "results"
         private const val LIVE_CHANNEL = "progress_island"
         private const val GROUP_ONGOING = "cripta_ongoing"
         private const val LIVE_CHANNEL_HIGH = "progress_island_debug_high"
@@ -2289,7 +2289,7 @@ class ConversionService : Service() {
         private const val MODE_DROP_OUTCOME = "drop_outcome"
         private const val EX_NOTIF_ID = "notif_id"
         private const val EX_DEBUG_KIND = "debug_kind"
-        private const val BRAND_COLOR = 0xFF5AA9FF.toInt()
+        internal const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         /**
          * Encrypt [uris] into [folderId] (null = root). Progress and the outcome are published to

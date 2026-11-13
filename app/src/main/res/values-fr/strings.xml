@@ -462,6 +462,8 @@
     <string name="note_delete_text">\"%1$s\" sera supprimée (dans la corbeille si elle est activée dans les paramètres).</string>
     <string name="note_open_failed">Impossible d’ouvrir la note.</string>
     <string name="note_save_failed">Impossible d’enregistrer la note. Réessayez.</string>
+    <string name="note_unsaved_title">Note non enregistrée</string>
+    <string name="note_unsaved_text">La note que vous écriviez n’a pas pu être enregistrée quand Cripta est passée en arrière-plan. Ouvrez Cripta pour l’enregistrer.</string>
     <string name="note_delete_failed">Impossible de supprimer la note.</string>
     <string name="tab_home">Accueil</string>
     <string name="tab_folders">Collection</string>

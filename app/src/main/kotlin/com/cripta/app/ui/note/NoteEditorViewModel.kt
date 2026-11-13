@@ -124,10 +124,10 @@ class NoteEditorViewModel @Inject constructor(
      * vault, the editor stays open. Android may close Cripta there, and the draft only lives here.
      * Nothing is written for a note that could not be read, an unchanged draft or an empty new note.
      */
-    fun saveInBackground(id: String?, folderId: Long?) {
+    fun saveInBackground(id: String?, folderId: Long?, onFailed: () -> Unit = {}) {
         if (!loaded || loadFailed || saving || !dirty) return
         if (id == null && emptyNew) return
-        save(id, folderId) {}
+        save(id, folderId, onFailed) {}
     }
 
     /** A new note with nothing typed and not written yet: leaving it writes nothing. */

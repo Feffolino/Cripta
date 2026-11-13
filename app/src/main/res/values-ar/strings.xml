@@ -525,6 +525,8 @@
     <string name="note_delete_text">ستُحذف \"%1$s\" (إلى المهملات إن كانت مفعلة في الإعدادات).</string>
     <string name="note_open_failed">تعذر فتح الملاحظة.</string>
     <string name="note_save_failed">تعذر حفظ الملاحظة. أعد المحاولة.</string>
+    <string name="note_unsaved_title">لم يتم حفظ الملاحظة</string>
+    <string name="note_unsaved_text">تعذر حفظ الملاحظة التي كنت تكتبها عندما انتقل Cripta إلى الخلفية. افتح Cripta لحفظها.</string>
     <string name="note_delete_failed">تعذر حذف الملاحظة.</string>
     <string name="tab_home">الرئيسية</string>
     <string name="tab_folders">المجموعة</string>

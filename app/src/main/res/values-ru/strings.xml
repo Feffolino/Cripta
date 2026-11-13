@@ -483,6 +483,8 @@
     <string name="note_delete_text">\"%1$s\" будет удалена (в корзину, если она включена в настройках).</string>
     <string name="note_open_failed">Не удалось открыть заметку.</string>
     <string name="note_save_failed">Не удалось сохранить заметку. Попробуйте ещё раз.</string>
+    <string name="note_unsaved_title">Заметка не сохранена</string>
+    <string name="note_unsaved_text">Не удалось сохранить заметку, которую вы писали, когда Cripta ушла в фон. Откройте Cripta, чтобы сохранить её.</string>
     <string name="note_delete_failed">Не удалось удалить заметку.</string>
     <string name="tab_home">Главная</string>
     <string name="tab_folders">Коллекция</string>

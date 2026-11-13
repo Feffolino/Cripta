@@ -441,6 +441,8 @@
     <string name="note_delete_text">\"%1$s\" wird gelöscht (in den Papierkorb, falls in den Einstellungen aktiviert).</string>
     <string name="note_open_failed">Notiz konnte nicht geöffnet werden.</string>
     <string name="note_save_failed">Notiz konnte nicht gespeichert werden. Erneut versuchen.</string>
+    <string name="note_unsaved_title">Notiz nicht gespeichert</string>
+    <string name="note_unsaved_text">Die Notiz, die du geschrieben hast, konnte nicht gespeichert werden, als Cripta in den Hintergrund ging. Öffne Cripta, um sie zu speichern.</string>
     <string name="note_delete_failed">Notiz konnte nicht gelöscht werden.</string>
     <string name="tab_home">Startseite</string>
     <string name="tab_folders">Sammlung</string>

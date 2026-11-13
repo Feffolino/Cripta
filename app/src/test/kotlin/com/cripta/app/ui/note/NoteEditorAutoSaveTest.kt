@@ -23,6 +23,8 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,7 +55,7 @@ class NoteEditorAutoSaveTest {
 
     @After
     fun close() {
-        db.close()
+        if (db.isOpen) db.close()
         Dispatchers.resetMain()
     }
 
@@ -95,6 +97,27 @@ class NoteEditorAutoSaveTest {
         vm.load(null)
         stop(null)
         assertEquals(0, notes().size)
+    }
+
+    @Test
+    fun aNoteThatCannotBeSavedInTheBackgroundIsSaidInANotification() = runBlocking {
+        val app = RuntimeEnvironment.getApplication()
+        vm.load(null)
+        vm.name = "Diario"; vm.text = "testo privato"
+        db.close()   // the write fails, as with a full disk
+        var failed = false
+        vm.saveInBackground(null, null) { failed = true; NoteSaveNotice.post(app) }
+        settled()
+        assertTrue(failed)
+        assertTrue(vm.dirty)
+        val mgr = app.getSystemService(android.app.NotificationManager::class.java)
+        val posted = org.robolectric.Shadows.shadowOf(mgr).getNotification(NoteSaveNotice.ID)
+        val shown = listOf(android.app.Notification.EXTRA_TITLE, android.app.Notification.EXTRA_TEXT, android.app.Notification.EXTRA_BIG_TEXT)
+            .joinToString(" ") { posted.extras.getCharSequence(it)?.toString().orEmpty() }
+        assertFalse(shown, shown.contains("Diario") || shown.contains("testo privato"))
+        assertEquals(android.app.Notification.VISIBILITY_PRIVATE, posted.visibility)
+        NoteSaveNotice.cancel(app)
+        assertNull(org.robolectric.Shadows.shadowOf(mgr).getNotification(NoteSaveNotice.ID))
     }
 
     @Test

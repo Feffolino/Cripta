@@ -13,6 +13,7 @@ Entries marked **stable** went out as a stable release.
 - "Perché" on the faces of a media names a person with a "%" in the name ("Mario 100%"): before, it failed with an error
 - "Annulla" right after giving a face to someone also takes back the faces the closer look joined into it meanwhile: before, they stayed inside the face given back to nobody
 - A face given to someone who already had one in the same video is joined with it as soon as its "Annulla" is gone: the closer look waits for it and looks at the video again, instead of leaving it to the next look asked by hand
+- A note that cannot be saved when Cripta goes to the background (a full phone) is said in a notification, without its title or text: before, it was said only on coming back, too late if Android had closed Cripta meanwhile
 
 ## 2026-11-12
 

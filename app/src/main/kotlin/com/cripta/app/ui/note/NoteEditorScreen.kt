@@ -105,7 +105,11 @@ fun NoteEditorScreen(
     androidx.compose.runtime.DisposableEffect(lifecycle, fileId, folderId) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && unlocked &&
-                (context as? android.app.Activity)?.isChangingConfigurations != true) vm.saveInBackground(fileId, folderId)
+                (context as? android.app.Activity)?.isChangingConfigurations != true) {
+                // Not saved: said in a notification, the editor's own message is seen only on coming back.
+                vm.saveInBackground(fileId, folderId) { NoteSaveNotice.post(context.applicationContext) }
+            }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) NoteSaveNotice.cancel(context.applicationContext)
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }

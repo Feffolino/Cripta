@@ -462,6 +462,8 @@
     <string name="note_delete_text">\"%1$s\" será excluída (para a lixeira, se estiver ativada nas Configurações).</string>
     <string name="note_open_failed">Não foi possível abrir a nota.</string>
     <string name="note_save_failed">Não foi possível salvar a nota. Tente novamente.</string>
+    <string name="note_unsaved_title">Nota não salva</string>
+    <string name="note_unsaved_text">Não foi possível salvar a nota que você estava escrevendo quando o Cripta foi para segundo plano. Abra o Cripta para salvá-la.</string>
     <string name="note_delete_failed">Não foi possível excluir a nota.</string>
     <string name="tab_home">Início</string>
     <string name="tab_folders">Coleção</string>

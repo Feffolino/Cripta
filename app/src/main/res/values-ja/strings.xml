@@ -420,6 +420,8 @@
     <string name="note_delete_text">\"%1$s\" を削除します（設定で有効ならごみ箱に移動）。</string>
     <string name="note_open_failed">メモを開けませんでした。</string>
     <string name="note_save_failed">メモを保存できませんでした。再試行してください。</string>
+    <string name="note_unsaved_title">メモが保存されていません</string>
+    <string name="note_unsaved_text">Cripta がバックグラウンドに移ったとき、書いていたメモを保存できませんでした。保存するには Cripta を開いてください。</string>
     <string name="note_delete_failed">メモを削除できませんでした。</string>
     <string name="tab_home">ホーム</string>
     <string name="tab_folders">コレクション</string>

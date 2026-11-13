@@ -441,6 +441,8 @@
     <string name="note_delete_text">\"%1$s\" will be deleted (to the trash if it is on in Settings).</string>
     <string name="note_open_failed">Couldn\'t open the note.</string>
     <string name="note_save_failed">Couldn\'t save the note. Try again.</string>
+    <string name="note_unsaved_title">Note not saved</string>
+    <string name="note_unsaved_text">The note you were writing couldn\'t be saved when Cripta went to the background. Open Cripta to save it.</string>
     <string name="note_delete_failed">Couldn\'t delete the note.</string>
     <string name="tab_home">Home</string>
     <string name="tab_folders">Collection</string>

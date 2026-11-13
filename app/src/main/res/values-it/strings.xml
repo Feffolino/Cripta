@@ -462,6 +462,8 @@
     <string name="note_delete_text">\"%1$s\" verrà eliminata (nel cestino se attivo in Impostazioni).</string>
     <string name="note_open_failed">Impossibile aprire la nota.</string>
     <string name="note_save_failed">Impossibile salvare la nota. Riprova.</string>
+    <string name="note_unsaved_title">Nota non salvata</string>
+    <string name="note_unsaved_text">Non è stato possibile salvare la nota che stavi scrivendo quando Cripta è passata in secondo piano. Apri Cripta per salvarla.</string>
     <string name="note_delete_failed">Impossibile eliminare la nota.</string>
     <string name="tab_home">Home</string>
     <string name="tab_folders">Raccolta</string>
