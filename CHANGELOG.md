@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-14
+
+- A video whose size was noted wrong when it was imported (some apps that share files report it badly) can be played and moved through to its end, and a backup writes every file with its exact length: both took the size noted at import, because asking the vault for the real one always failed
+
 ## 2026-11-13
 
 - The closer look at a video that starts right after giving a face to someone joins the other faces of that person into it again: since yesterday it joined nothing until the next look, when the person had no other face confirmed in that video

@@ -31,13 +31,18 @@ class OnceTest {
         val runs = AtomicInteger()
         val finished = AtomicInteger()
         val once = Once { runs.incrementAndGet(); started.countDown(); release.await() }
-        val first = Thread { once.run() }.apply { start() }
-        assertTrue(started.await(5, TimeUnit.SECONDS))
-        // Arrives while the first run is still going: it must not return before that run ends.
-        val second = Thread { once.run(); finished.incrementAndGet() }.apply { start() }
-        second.join(300)
-        assertEquals(0, finished.get())
-        release.countDown()
+        val first = Thread { once.run() }.apply { isDaemon = true; start() }
+        val second: Thread
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+            // Arrives while the first run is still going: it must not return before that run ends.
+            second = Thread { once.run(); finished.incrementAndGet() }.apply { isDaemon = true; start() }
+            second.join(300)
+            assertEquals(0, finished.get())
+        } finally {
+            // Even when an assertion fails, so the first thread is not left waiting forever.
+            release.countDown()
+        }
         first.join(); second.join()
         assertEquals(1, finished.get())
         assertEquals(1, runs.get())
