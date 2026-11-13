@@ -497,7 +497,7 @@ class ViewerViewModel @Inject constructor(
             _message.value = when {
                 n == null -> str(R.string.stretch_too_short)
                 n == 0 -> str(R.string.not_found_elsewhere)
-                else -> str(R.string.found_in_n, n)
+                else -> plural(R.plurals.found_in_n, n)
             }
         }
 

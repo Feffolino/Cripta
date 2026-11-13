@@ -323,8 +323,8 @@ private fun ProfileHeader(p: FaceRepository.Person, vm: SettingsViewModel, onCov
         }
         val videos = p.media.count { VaultRepository.isVideo(it.mimeType) }
         Text(listOfNotNull(
-            str(R.string.media_n, p.media.size),
-            if (videos > 0) str(R.string.videos_n, videos) else null,
+            plural(R.plurals.media_n, p.media.size),
+            if (videos > 0) plural(R.plurals.videos_n, videos) else null,
             if (p.entity.ignored) str(R.string.hidden_f) else null,
         ).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -473,7 +473,7 @@ private fun CoverPicker(p: FaceRepository.Person, vm: SettingsViewModel, onClose
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text(str(R.string.face_to_show)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(if (p.faces.isEmpty()) str(R.string.person_no_faces) else str(R.string.faces_found_n, p.faces.size),
+                Text(if (p.faces.isEmpty()) str(R.string.person_no_faces) else plural(R.plurals.faces_found_n, p.faces.size),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyVerticalGrid(GridCells.Adaptive(88.dp), Modifier.fillMaxWidth().heightIn(max = 420.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

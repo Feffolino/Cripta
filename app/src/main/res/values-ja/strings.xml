@@ -667,7 +667,9 @@
     <string name="end_after_start">終了は開始より後にしてください</string>
     <string name="stretch_too_short">区間が短すぎるか、動画が未解析です</string>
     <string name="not_found_elsewhere">ほかの動画では見つかりませんでした</string>
-    <string name="found_in_n">%1$s 件の動画で見つかりました</string>
+    <plurals name="found_in_n">
+        <item quantity="other">%1$s 件の動画で見つかりました</item>
+    </plurals>
     <string name="discarded_here_and_n">この動画と、ほかの %1$s 件で除外済み</string>
     <string name="discarded_everywhere">すべての動画で除外済み</string>
     <string name="export_started_in">%1$s への書き出しを開始しました</string>
@@ -742,7 +744,9 @@
     <plurals name="signatures_deleted">
         <item quantity="other">音声フィンガープリント %1$s 件を削除し、その音声を除外区間に追加しました</item>
     </plurals>
-    <string name="duration_applied">%1$s 件の動画に長さを適用しました</string>
+    <plurals name="duration_applied">
+        <item quantity="other">%1$s 件の動画に長さを適用しました</item>
+    </plurals>
     <string name="video_removed_from_signature">音声フィンガープリントのグループから動画を外しました</string>
     <string name="group_split">グループを分割しました</string>
     <string name="operation_failed_prefix">"操作に失敗しました： "</string>
@@ -891,8 +895,12 @@
     <string name="merge_into">%1$sに統合</string>
     <string name="move_media_to">メディア %1$s 件の移動先…</string>
     <string name="choose_face_to_show">表示する顔を選択</string>
-    <string name="media_n">メディア %1$s 件</string>
-    <string name="videos_n">動画 %1$s 件</string>
+    <plurals name="media_n">
+        <item quantity="other">メディア %1$s 件</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="other">動画 %1$s 件</item>
+    </plurals>
     <string name="hidden_f">非表示</string>
     <string name="person_assign_first">顔を 1 件以上割り当てると、Cripta がほかのメディアから似た顔を探します。</string>
     <string name="person_two_media">異なる 2 件以上のメディアで顔を割り当ててください。「既知の人物のみ」の提案が始まります。</string>
@@ -914,7 +922,9 @@
     <string name="name_applies_all">名前はその人物のすべてのメディアに適用します。</string>
     <string name="face_to_show">表示する顔</string>
     <string name="person_no_faces">この人物の顔が見つかりません。</string>
-    <string name="faces_found_n">この人物のメディアに %1$s 件の顔が見つかりました。</string>
+    <plurals name="faces_found_n">
+        <item quantity="other">この人物のメディアに %1$s 件の顔が見つかりました。</item>
+    </plurals>
     <string name="use_this_face">この顔を使用</string>
     <string name="very_similar">とても似ている</string>
     <string name="similar">似ている</string>
@@ -1490,7 +1500,9 @@
     <string name="import_continues">アプリを離れても、読み込みはバックグラウンドで続きます。</string>
     <string name="and_n_more">ほか %1$s 件</string>
     <string name="already_in_vault_one">\"%1$s\" は保管庫に保存済みです。</string>
-    <string name="already_in_vault_n">ファイル %1$s 件は保管庫に保存済みです（同一のコピー）。</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="other">ファイル %1$s 件は保管庫に保存済みです（同一のコピー）。</item>
+    </plurals>
     <string name="summary">概要</string>
     <string name="videos_lower">動画</string>
     <string name="photos_lower">写真</string>
@@ -2002,7 +2014,9 @@
     <string name="sec_backup_restore">復元</string>
     <string name="backup_folders">フォルダー</string>
     <string name="backup_folders_all">すべてのフォルダー</string>
-    <string name="backup_folders_n">%2$s 件中 %1$s 件のフォルダー</string>
+    <plurals name="backup_folders_n">
+        <item quantity="other">%2$s 件中 %1$s 件のフォルダー</item>
+    </plurals>
     <string name="backup_root_in">フォルダー外のファイルを含む</string>
     <string name="backup_root_out">フォルダー外のファイルを除く</string>
     <string name="backup_folders_sheet">バックアップに含めるフォルダー</string>
@@ -2012,7 +2026,9 @@
     <string name="dup_to_trash">%2$sで%1$sをゴミ箱に移動しました。</string>
     <string name="dup_no_other_copy">このファイルの他のコピーが保管庫にありません。何も削除していません</string>
     <string name="n_originals_kept_title">元のファイルを削除できませんでした</string>
-    <string name="n_originals_kept">元のファイル%1$d件を削除できませんでした。まだ端末に残っています</string>
+    <plurals name="n_originals_kept">
+        <item quantity="other">元のファイル%1$s件を削除できませんでした。まだ端末に残っています</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s件のコピーが不完全の可能性"</string>
     <string name="reset_failed">リセットが完了しませんでした。古いデータを削除できませんでした。もう一度お試しください。</string>
     <string name="n_backup_failed_reason">バックアップに失敗しました（%1$s）。保存先を確認して、もう一度お試しください。</string>

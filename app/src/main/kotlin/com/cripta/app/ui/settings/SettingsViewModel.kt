@@ -375,7 +375,7 @@ class SettingsViewModel @Inject constructor(
     fun deleteSignatures(sigs: List<com.cripta.app.data.intro.IntroRepository.Signature>) =
         signatureAction(sigs.first().kind, plural(R.plurals.signatures_deleted, sigs.size)) { sigs.forEach { intro.deleteSignature(it) } }
     fun setSignatureDuration(s: com.cripta.app.data.intro.IntroRepository.Signature, startDelta: Long, endDelta: Long) =
-        signatureAction(s.kind, str(R.string.duration_applied, s.entries.size)) { intro.setSignatureDuration(s, startDelta, endDelta) }
+        signatureAction(s.kind, plural(R.plurals.duration_applied, s.entries.size)) { intro.setSignatureDuration(s, startDelta, endDelta) }
     fun removeFromSignature(s: com.cripta.app.data.intro.IntroRepository.Signature, fileId: String) =
         signatureAction(s.kind, str(R.string.video_removed_from_signature)) { intro.setNone(fileId, s.kind) }
     /** A video opened from the results: the viewer swipes through the same filtered list. */

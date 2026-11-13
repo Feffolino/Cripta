@@ -739,7 +739,12 @@
     <string name="end_after_start">Конец должен быть после начала</string>
     <string name="stretch_too_short">Фрагмент слишком короткий или видео ещё не проанализировано</string>
     <string name="not_found_elsewhere">В других видео не найдено</string>
-    <string name="found_in_n">Найдено в %1$s видео</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Найдено в %1$s видео</item>
+        <item quantity="few">Найдено в %1$s видео</item>
+        <item quantity="many">Найдено в %1$s видео</item>
+        <item quantity="other">Найдено в %1$s видео</item>
+    </plurals>
     <string name="discarded_here_and_n">Исключено здесь и в %1$s других видео</string>
     <string name="discarded_everywhere">Исключено во всех видео</string>
     <string name="export_started_in">Экспорт начат в %1$s</string>
@@ -817,7 +822,12 @@
         <item quantity="many">Удалено %1$s аудиоотпечатков: звуки добавлены в исключённые фрагменты</item>
         <item quantity="other">Удалено %1$s аудиоотпечатка: звуки добавлены в исключённые фрагменты</item>
     </plurals>
-    <string name="duration_applied">Длительность применена к %1$s видео</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Длительность применена к %1$s видео</item>
+        <item quantity="few">Длительность применена к %1$s видео</item>
+        <item quantity="many">Длительность применена к %1$s видео</item>
+        <item quantity="other">Длительность применена к %1$s видео</item>
+    </plurals>
     <string name="video_removed_from_signature">Видео удалено из аудиоотпечатка</string>
     <string name="group_split">Группа разделена</string>
     <string name="operation_failed_prefix">"Операция не удалась: "</string>
@@ -993,8 +1003,18 @@
     <string name="merge_into">Объединить с %1$s</string>
     <string name="move_media_to">Переместить файлы (%1$s) к…</string>
     <string name="choose_face_to_show">Выберите отображаемое лицо</string>
-    <string name="media_n">Файлов: %1$s</string>
-    <string name="videos_n">%1$s видео</string>
+    <plurals name="media_n">
+        <item quantity="one">%1$s файл</item>
+        <item quantity="few">%1$s файла</item>
+        <item quantity="many">%1$s файлов</item>
+        <item quantity="other">%1$s файла</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">%1$s видео</item>
+        <item quantity="few">%1$s видео</item>
+        <item quantity="many">%1$s видео</item>
+        <item quantity="other">%1$s видео</item>
+    </plurals>
     <string name="hidden_f">скрыто</string>
     <string name="person_assign_first">Назначьте хотя бы одно лицо: тогда Cripta будет искать похожие в других файлах.</string>
     <string name="person_two_media">Назначьте лицо хотя бы в 2 разных файлах: с настройкой «Только знакомые люди» после этого появятся предложения.</string>
@@ -1019,7 +1039,12 @@
     <string name="name_applies_all">Имя применяется ко всем файлам человека.</string>
     <string name="face_to_show">Отображаемое лицо</string>
     <string name="person_no_faces">Для этого человека лица не найдены.</string>
-    <string name="faces_found_n">В файлах человека найдено лиц: %1$s.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">В файлах человека найдено %1$s лицо.</item>
+        <item quantity="few">В файлах человека найдено %1$s лица.</item>
+        <item quantity="many">В файлах человека найдено %1$s лиц.</item>
+        <item quantity="other">В файлах человека найдено %1$s лица.</item>
+    </plurals>
     <string name="use_this_face">Использовать это лицо</string>
     <string name="very_similar">Очень похоже</string>
     <string name="similar">Похоже</string>
@@ -1673,7 +1698,12 @@
     <string name="import_continues">Можно выйти из приложения: импорт продолжится в фоне.</string>
     <string name="and_n_more">и ещё %1$s</string>
     <string name="already_in_vault_one">\"%1$s\" уже был в хранилище.</string>
-    <string name="already_in_vault_n">Файлы уже есть в хранилище: %1$s (идентичные копии).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">%1$s файл уже был в хранилище (идентичная копия).</item>
+        <item quantity="few">%1$s файла уже были в хранилище (идентичные копии).</item>
+        <item quantity="many">%1$s файлов уже были в хранилище (идентичные копии).</item>
+        <item quantity="other">%1$s файла уже были в хранилище (идентичные копии).</item>
+    </plurals>
     <string name="summary">Сводка</string>
     <string name="videos_lower">видео</string>
     <string name="photos_lower">фото</string>
@@ -2203,7 +2233,12 @@
     <string name="sec_backup_restore">Восстановление</string>
     <string name="backup_folders">Папки</string>
     <string name="backup_folders_all">Все папки</string>
-    <string name="backup_folders_n">Папок: %1$s из %2$s</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">Папок: %1$s из %2$s</item>
+        <item quantity="few">Папок: %1$s из %2$s</item>
+        <item quantity="many">Папок: %1$s из %2$s</item>
+        <item quantity="other">Папок: %1$s из %2$s</item>
+    </plurals>
     <string name="backup_root_in">с файлами вне папок</string>
     <string name="backup_root_out">без файлов вне папок</string>
     <string name="backup_folders_sheet">Папки в резервной копии</string>
@@ -2213,7 +2248,12 @@
     <string name="dup_to_trash">В корзину перемещено %1$s в %2$s.</string>
     <string name="dup_no_other_copy">В хранилище не осталось другой копии этого файла: ничего не удалено</string>
     <string name="n_originals_kept_title">Оригиналы не удалены</string>
-    <string name="n_originals_kept">Не удалось удалить оригиналы: %1$d. Они остались на телефоне</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">Не удалось удалить %1$s оригинал: он остался на телефоне</item>
+        <item quantity="few">Не удалось удалить %1$s оригинала: они остались на телефоне</item>
+        <item quantity="many">Не удалось удалить %1$s оригиналов: они остались на телефоне</item>
+        <item quantity="other">Не удалось удалить %1$s оригинала: они остались на телефоне</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · возможно неполных копий: %1$s"</string>
     <string name="reset_failed">Сброс не завершён: старые данные не удалось удалить. Попробуй ещё раз.</string>
     <string name="n_backup_failed_reason">Не удалось создать резервную копию (%1$s). Проверь место сохранения и попробуй снова.</string>

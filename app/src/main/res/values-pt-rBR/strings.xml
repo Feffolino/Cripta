@@ -715,7 +715,11 @@
     <string name="end_after_start">O fim deve vir depois do início</string>
     <string name="stretch_too_short">Trecho curto demais ou vídeo ainda não analisado</string>
     <string name="not_found_elsewhere">Não encontrado em outros vídeos</string>
-    <string name="found_in_n">Encontrado em %1$s vídeos</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Encontrado em %1$s vídeo</item>
+        <item quantity="many">Encontrado em %1$s vídeos</item>
+        <item quantity="other">Encontrado em %1$s vídeos</item>
+    </plurals>
     <string name="discarded_here_and_n">Descartado aqui e em %1$s outros vídeos</string>
     <string name="discarded_everywhere">Descartado em todos os vídeos</string>
     <string name="export_started_in">Exportação iniciada em %1$s</string>
@@ -792,7 +796,11 @@
         <item quantity="many">%1$s impressões digitais de áudio excluídas: os sons estão entre os segmentos descartados</item>
         <item quantity="other">%1$s impressões digitais de áudio excluídas: os sons estão entre os segmentos descartados</item>
     </plurals>
-    <string name="duration_applied">Duração aplicada a %1$s vídeos</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Duração aplicada a %1$s vídeo</item>
+        <item quantity="many">Duração aplicada a %1$s vídeos</item>
+        <item quantity="other">Duração aplicada a %1$s vídeos</item>
+    </plurals>
     <string name="video_removed_from_signature">Vídeo removido da impressão digital de áudio</string>
     <string name="group_split">Grupo separado</string>
     <string name="operation_failed_prefix">"Falha na operação: "</string>
@@ -959,8 +967,16 @@
     <string name="merge_into">Unir a %1$s</string>
     <string name="move_media_to">Mover %1$s mídias para…</string>
     <string name="choose_face_to_show">Escolher o rosto a mostrar</string>
-    <string name="media_n">%1$s mídias</string>
-    <string name="videos_n">%1$s vídeos</string>
+    <plurals name="media_n">
+        <item quantity="one">%1$s mídia</item>
+        <item quantity="many">%1$s mídias</item>
+        <item quantity="other">%1$s mídias</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">%1$s vídeo</item>
+        <item quantity="many">%1$s vídeos</item>
+        <item quantity="other">%1$s vídeos</item>
+    </plurals>
     <string name="hidden_f">oculta</string>
     <string name="person_assign_first">Atribua pelo menos um rosto à pessoa: o Cripta buscará rostos semelhantes nas outras mídias.</string>
     <string name="person_two_media">Atribua um rosto em pelo menos 2 mídias diferentes: as sugestões de “Somente pessoas conhecidas” partem disso.</string>
@@ -984,7 +1000,11 @@
     <string name="name_applies_all">O nome vale para todas as mídias desta pessoa.</string>
     <string name="face_to_show">Rosto a mostrar</string>
     <string name="person_no_faces">Nenhum rosto encontrado para esta pessoa.</string>
-    <string name="faces_found_n">%1$s rostos encontrados nas mídias desta pessoa.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">%1$s rosto encontrado nas mídias desta pessoa.</item>
+        <item quantity="many">%1$s rostos encontrados nas mídias desta pessoa.</item>
+        <item quantity="other">%1$s rostos encontrados nas mídias desta pessoa.</item>
+    </plurals>
     <string name="use_this_face">Usar este rosto</string>
     <string name="very_similar">Muito semelhante</string>
     <string name="similar">Semelhante</string>
@@ -1612,7 +1632,11 @@
     <string name="import_continues">Você pode sair do aplicativo: a importação continua em segundo plano.</string>
     <string name="and_n_more">e mais %1$s</string>
     <string name="already_in_vault_one">\"%1$s\" já estava no cofre.</string>
-    <string name="already_in_vault_n">%1$s arquivos já estavam no cofre (cópias idênticas).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">%1$s arquivo já estava no cofre (cópia idêntica).</item>
+        <item quantity="many">%1$s arquivos já estavam no cofre (cópias idênticas).</item>
+        <item quantity="other">%1$s arquivos já estavam no cofre (cópias idênticas).</item>
+    </plurals>
     <string name="summary">Resumo</string>
     <string name="videos_lower">vídeos</string>
     <string name="photos_lower">fotos</string>
@@ -2136,7 +2160,11 @@
     <string name="sec_backup_restore">Restauração</string>
     <string name="backup_folders">Pastas</string>
     <string name="backup_folders_all">Todas as pastas</string>
-    <string name="backup_folders_n">%1$s de %2$s pastas</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s de %2$s pasta</item>
+        <item quantity="many">%1$s de %2$s pastas</item>
+        <item quantity="other">%1$s de %2$s pastas</item>
+    </plurals>
     <string name="backup_root_in">com os arquivos fora delas</string>
     <string name="backup_root_out">sem os arquivos fora delas</string>
     <string name="backup_folders_sheet">Pastas no backup</string>
@@ -2146,7 +2174,11 @@
     <string name="dup_to_trash">%1$s movidos para a lixeira em %2$s.</string>
     <string name="dup_no_other_copy">Não resta outra cópia deste arquivo no cofre: nada foi excluído</string>
     <string name="n_originals_kept_title">Originais não excluídos</string>
-    <string name="n_originals_kept">%1$d originais não puderam ser excluídos: continuam no telefone</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">%1$s original não pôde ser excluído: continua no telefone</item>
+        <item quantity="many">%1$s originais não puderam ser excluídos: continuam no telefone</item>
+        <item quantity="other">%1$s originais não puderam ser excluídos: continuam no telefone</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s cópias talvez incompletas"</string>
     <string name="reset_failed">Redefinição não concluída: não foi possível excluir os dados antigos. Tente novamente.</string>
     <string name="n_backup_failed_reason">O backup falhou (%1$s). Verifique o destino e tente novamente.</string>

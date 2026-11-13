@@ -1643,7 +1643,7 @@ class ConversionService : Service() {
     /** Originals the provider kept: the user is told, they are still readable copies on the phone. */
     private fun reportOriginalsNotDeleted(count: Int) {
         if (count <= 0) return
-        notifyResult(str(R.string.n_originals_kept_title), str(R.string.n_originals_kept, count),
+        notifyResult(str(R.string.n_originals_kept_title), plural(R.plurals.n_originals_kept, count),
             ResultKind.IMPORT, state = ResultState.FAILED)
     }
 

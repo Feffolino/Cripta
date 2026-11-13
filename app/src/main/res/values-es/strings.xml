@@ -715,7 +715,11 @@
     <string name="end_after_start">El final debe ser posterior al inicio</string>
     <string name="stretch_too_short">Tramo demasiado corto o vídeo aún sin analizar</string>
     <string name="not_found_elsewhere">No encontrado en otros vídeos</string>
-    <string name="found_in_n">Encontrado en %1$s vídeos</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Encontrado en 1 vídeo</item>
+        <item quantity="many">Encontrado en %1$s vídeos</item>
+        <item quantity="other">Encontrado en %1$s vídeos</item>
+    </plurals>
     <string name="discarded_here_and_n">Descartado aquí y en otros %1$s vídeos</string>
     <string name="discarded_everywhere">Descartado en todos los vídeos</string>
     <string name="export_started_in">Exportación iniciada en %1$s</string>
@@ -792,7 +796,11 @@
         <item quantity="many">%1$s huellas de audio eliminadas: los sonidos están entre los segmentos descartados</item>
         <item quantity="other">%1$s huellas de audio eliminadas: los sonidos están entre los segmentos descartados</item>
     </plurals>
-    <string name="duration_applied">Duración aplicada a %1$s vídeos</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Duración aplicada a 1 vídeo</item>
+        <item quantity="many">Duración aplicada a %1$s vídeos</item>
+        <item quantity="other">Duración aplicada a %1$s vídeos</item>
+    </plurals>
     <string name="video_removed_from_signature">Vídeo quitado de la huella de audio</string>
     <string name="group_split">Grupo separado</string>
     <string name="operation_failed_prefix">"Error en la operación: "</string>
@@ -959,8 +967,16 @@
     <string name="merge_into">Unir a %1$s</string>
     <string name="move_media_to">Mover %1$s archivos multimedia a…</string>
     <string name="choose_face_to_show">Elige el rostro que se mostrará</string>
-    <string name="media_n">%1$s archivos multimedia</string>
-    <string name="videos_n">%1$s vídeos</string>
+    <plurals name="media_n">
+        <item quantity="one">1 archivo multimedia</item>
+        <item quantity="many">%1$s archivos multimedia</item>
+        <item quantity="other">%1$s archivos multimedia</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">1 vídeo</item>
+        <item quantity="many">%1$s vídeos</item>
+        <item quantity="other">%1$s vídeos</item>
+    </plurals>
     <string name="hidden_f">oculta</string>
     <string name="person_assign_first">Asígnale al menos un rostro: Cripta buscará rostros similares en los otros archivos.</string>
     <string name="person_two_media">Asígnale un rostro en al menos 2 archivos distintos: con «Solo personas conocidas», las sugerencias empiezan a partir de ahí.</string>
@@ -984,7 +1000,11 @@
     <string name="name_applies_all">El nombre se aplica a todos sus archivos multimedia.</string>
     <string name="face_to_show">Rostro que se mostrará</string>
     <string name="person_no_faces">No se encontró ningún rostro de esta persona.</string>
-    <string name="faces_found_n">%1$s rostros encontrados en sus archivos.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">1 rostro encontrado en sus archivos.</item>
+        <item quantity="many">%1$s rostros encontrados en sus archivos.</item>
+        <item quantity="other">%1$s rostros encontrados en sus archivos.</item>
+    </plurals>
     <string name="use_this_face">Usar este rostro</string>
     <string name="very_similar">Muy similares</string>
     <string name="similar">Similares</string>
@@ -1612,7 +1632,11 @@
     <string name="import_continues">Puedes salir de la app: la importación continúa en segundo plano.</string>
     <string name="and_n_more">y %1$s más</string>
     <string name="already_in_vault_one">\"%1$s\" ya estaba en la caja fuerte.</string>
-    <string name="already_in_vault_n">%1$s archivos ya estaban en la caja fuerte (copias idénticas).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">1 archivo ya estaba en la caja fuerte (copia idéntica).</item>
+        <item quantity="many">%1$s archivos ya estaban en la caja fuerte (copias idénticas).</item>
+        <item quantity="other">%1$s archivos ya estaban en la caja fuerte (copias idénticas).</item>
+    </plurals>
     <string name="summary">Resumen</string>
     <string name="videos_lower">vídeos</string>
     <string name="photos_lower">fotos</string>
@@ -2136,7 +2160,11 @@
     <string name="sec_backup_restore">Restauración</string>
     <string name="backup_folders">Carpetas</string>
     <string name="backup_folders_all">Todas las carpetas</string>
-    <string name="backup_folders_n">%1$s de %2$s carpetas</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s de 1 carpeta</item>
+        <item quantity="many">%1$s de %2$s carpetas</item>
+        <item quantity="other">%1$s de %2$s carpetas</item>
+    </plurals>
     <string name="backup_root_in">con los archivos sueltos</string>
     <string name="backup_root_out">sin los archivos sueltos</string>
     <string name="backup_folders_sheet">Carpetas en la copia</string>
@@ -2146,7 +2174,11 @@
     <string name="dup_to_trash">Se movieron %1$s a la papelera en %2$s.</string>
     <string name="dup_no_other_copy">No queda otra copia de este archivo en la bóveda: no se eliminó nada</string>
     <string name="n_originals_kept_title">Originales no eliminados</string>
-    <string name="n_originals_kept">No se pudieron eliminar %1$d originales: siguen en el teléfono</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">No se pudo eliminar 1 original: sigue en el teléfono</item>
+        <item quantity="many">No se pudieron eliminar %1$s originales: siguen en el teléfono</item>
+        <item quantity="other">No se pudieron eliminar %1$s originales: siguen en el teléfono</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s copias quizá incompletas"</string>
     <string name="reset_failed">Restablecimiento incompleto: no se pudieron eliminar los datos antiguos. Inténtalo de nuevo.</string>
     <string name="n_backup_failed_reason">La copia de seguridad falló (%1$s). Revisa el destino e inténtalo de nuevo.</string>

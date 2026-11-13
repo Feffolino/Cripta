@@ -691,7 +691,10 @@
     <string name="end_after_start">अंत शुरुआत के बाद होना चाहिए</string>
     <string name="stretch_too_short">हिस्सा बहुत छोटा या वीडियो अभी विश्लेषित नहीं</string>
     <string name="not_found_elsewhere">अन्य वीडियो में नहीं मिला</string>
-    <string name="found_in_n">%1$s वीडियो में मिला</string>
+    <plurals name="found_in_n">
+        <item quantity="one">%1$s वीडियो में मिला</item>
+        <item quantity="other">%1$s वीडियो में मिला</item>
+    </plurals>
     <string name="discarded_here_and_n">यहाँ और %1$s अन्य वीडियो में नकारा</string>
     <string name="discarded_everywhere">सभी वीडियो में नकारा</string>
     <string name="export_started_in">%1$s में निर्यात शुरू</string>
@@ -767,7 +770,10 @@
         <item quantity="one">%1$s ऑडियो पहचान हटाई गई: ऑडियो नकारे गए हिस्सों में है</item>
         <item quantity="other">%1$s ऑडियो पहचानें हटाई गईं: ऑडियो नकारे गए हिस्सों में हैं</item>
     </plurals>
-    <string name="duration_applied">अवधि %1$s वीडियो पर लागू</string>
+    <plurals name="duration_applied">
+        <item quantity="one">अवधि %1$s वीडियो पर लागू</item>
+        <item quantity="other">अवधि %1$s वीडियो पर लागू</item>
+    </plurals>
     <string name="video_removed_from_signature">वीडियो ऑडियो पहचान से हटाया गया</string>
     <string name="group_split">समूह अलग किया गया</string>
     <string name="operation_failed_prefix">"प्रक्रिया विफल: "</string>
@@ -925,8 +931,14 @@
     <string name="merge_into">%1$s में मिलाएँ</string>
     <string name="move_media_to">%1$s मीडिया यहाँ ले जाएँ…</string>
     <string name="choose_face_to_show">दिखाने वाला चेहरा चुनें</string>
-    <string name="media_n">%1$s मीडिया</string>
-    <string name="videos_n">%1$s वीडियो</string>
+    <plurals name="media_n">
+        <item quantity="one">%1$s मीडिया</item>
+        <item quantity="other">%1$s मीडिया</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">%1$s वीडियो</item>
+        <item quantity="other">%1$s वीडियो</item>
+    </plurals>
     <string name="hidden_f">छिपी</string>
     <string name="person_assign_first">कम से कम एक चेहरा दें: फिर Cripta अन्य मीडिया में मिलते-जुलते चेहरे खोजता है।</string>
     <string name="person_two_media">कम से कम 2 अलग मीडिया में चेहरा दें: “केवल जाने-पहचाने लोग” में तभी सुझाव शुरू होते हैं।</string>
@@ -949,7 +961,10 @@
     <string name="name_applies_all">नाम इस व्यक्ति के सभी मीडिया पर लागू होता है।</string>
     <string name="face_to_show">दिखाने वाला चेहरा</string>
     <string name="person_no_faces">इस व्यक्ति का चेहरा नहीं मिला।</string>
-    <string name="faces_found_n">इनके मीडिया में %1$s चेहरे मिले।</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">इनके मीडिया में %1$s चेहरा मिला।</item>
+        <item quantity="other">इनके मीडिया में %1$s चेहरे मिले।</item>
+    </plurals>
     <string name="use_this_face">यह चेहरा लगाएँ</string>
     <string name="very_similar">बहुत मिलता-जुलता</string>
     <string name="similar">मिलता-जुलता</string>
@@ -1551,7 +1566,10 @@
     <string name="import_continues">आप ऐप छोड़ सकते हैं: आयात बैकग्राउंड में जारी रहेगा।</string>
     <string name="and_n_more">और %1$s अन्य</string>
     <string name="already_in_vault_one">\"%1$s\" पहले से वॉल्ट में थी।</string>
-    <string name="already_in_vault_n">%1$s फ़ाइलें पहले से वॉल्ट में थीं (बिल्कुल समान कॉपियाँ)।</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">%1$s फ़ाइल पहले से वॉल्ट में थी (बिल्कुल समान कॉपी)।</item>
+        <item quantity="other">%1$s फ़ाइलें पहले से वॉल्ट में थीं (बिल्कुल समान कॉपियाँ)।</item>
+    </plurals>
     <string name="summary">सारांश</string>
     <string name="videos_lower">वीडियो</string>
     <string name="photos_lower">फ़ोटो</string>
@@ -2069,7 +2087,10 @@
     <string name="sec_backup_restore">बहाल करना</string>
     <string name="backup_folders">फ़ोल्डर</string>
     <string name="backup_folders_all">सभी फ़ोल्डर</string>
-    <string name="backup_folders_n">%2$s में से %1$s फ़ोल्डर</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%2$s में से %1$s फ़ोल्डर</item>
+        <item quantity="other">%2$s में से %1$s फ़ोल्डर</item>
+    </plurals>
     <string name="backup_root_in">फ़ोल्डर के बाहर की फ़ाइलों सहित</string>
     <string name="backup_root_out">फ़ोल्डर के बाहर की फ़ाइलों के बिना</string>
     <string name="backup_folders_sheet">बैकअप में फ़ोल्डर</string>
@@ -2079,7 +2100,10 @@
     <string name="dup_to_trash">%2$s में %1$s ट्रैश में भेजे गए।</string>
     <string name="dup_no_other_copy">वॉल्ट में इस फ़ाइल की कोई और प्रति नहीं बची: कुछ नहीं हटाया गया</string>
     <string name="n_originals_kept_title">मूल फ़ाइलें नहीं हटाई गईं</string>
-    <string name="n_originals_kept">%1$d मूल फ़ाइलें नहीं हटाई जा सकीं: वे अब भी फ़ोन में हैं</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">%1$s मूल फ़ाइल नहीं हटाई जा सकी: वह अब भी फ़ोन में है</item>
+        <item quantity="other">%1$s मूल फ़ाइलें नहीं हटाई जा सकीं: वे अब भी फ़ोन में हैं</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s प्रतियाँ शायद अधूरी"</string>
     <string name="reset_failed">रीसेट पूरा नहीं हुआ: पुराना डेटा हटाया नहीं जा सका। फिर कोशिश करें।</string>
     <string name="n_backup_failed_reason">बैकअप विफल (%1$s)। गंतव्य जाँचें और फिर कोशिश करें।</string>

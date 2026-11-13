@@ -253,7 +253,7 @@ internal fun ImportBanner(state: VaultRepository.ImportState, onDismiss: () -> U
                     val n = state.duplicates.size
                     Text(
                         if (n == 1) str(R.string.already_in_vault_one, state.duplicates.first().second)
-                        else str(R.string.already_in_vault_n, n),
+                        else plural(R.plurals.already_in_vault_n, n),
                         style = MaterialTheme.typography.bodySmall, color = onContainer,
                     )
                 }

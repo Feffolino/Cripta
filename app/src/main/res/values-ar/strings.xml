@@ -787,7 +787,14 @@
     <string name="end_after_start">يجب أن تكون النهاية بعد البداية</string>
     <string name="stretch_too_short">المقطع قصير جداً، أو لم يُحلل الفيديو بعد</string>
     <string name="not_found_elsewhere">لم يُعثر عليه في فيديوهات أخرى</string>
-    <string name="found_in_n">وُجد في %1$s فيديو</string>
+    <plurals name="found_in_n">
+        <item quantity="zero">وُجد في %1$s فيديو</item>
+        <item quantity="one">وُجد في فيديو واحد</item>
+        <item quantity="two">وُجد في فيديوين (%1$s)</item>
+        <item quantity="few">وُجد في %1$s فيديوهات</item>
+        <item quantity="many">وُجد في %1$s فيديو</item>
+        <item quantity="other">وُجد في %1$s فيديو</item>
+    </plurals>
     <string name="discarded_here_and_n">استُبعد هنا وفي %1$s من الفيديوهات الأخرى</string>
     <string name="discarded_everywhere">استُبعد في جميع الفيديوهات</string>
     <string name="export_started_in">بدأ التصدير في %1$s</string>
@@ -867,7 +874,14 @@
         <item quantity="many">حُذفت %1$s بصمة صوتية: الأصوات ضمن المقاطع المستبعدة</item>
         <item quantity="other">حُذفت %1$s بصمة صوتية: الأصوات ضمن المقاطع المستبعدة</item>
     </plurals>
-    <string name="duration_applied">طُبقت المدة على %1$s فيديو</string>
+    <plurals name="duration_applied">
+        <item quantity="zero">طُبقت المدة على %1$s فيديو</item>
+        <item quantity="one">طُبقت المدة على فيديو واحد</item>
+        <item quantity="two">طُبقت المدة على فيديوين (%1$s)</item>
+        <item quantity="few">طُبقت المدة على %1$s فيديوهات</item>
+        <item quantity="many">طُبقت المدة على %1$s فيديو</item>
+        <item quantity="other">طُبقت المدة على %1$s فيديو</item>
+    </plurals>
     <string name="video_removed_from_signature">أُزيل الفيديو من البصمة الصوتية</string>
     <string name="group_split">فُصلت المجموعة</string>
     <string name="operation_failed_prefix">"فشلت العملية: "</string>
@@ -1061,8 +1075,22 @@
     <string name="merge_into">دمج في %1$s</string>
     <string name="move_media_to">نقل %1$s من الوسائط إلى…</string>
     <string name="choose_face_to_show">اختر الوجه المعروض</string>
-    <string name="media_n">%1$s من الوسائط</string>
-    <string name="videos_n">%1$s فيديو</string>
+    <plurals name="media_n">
+        <item quantity="zero">%1$s من الوسائط</item>
+        <item quantity="one">وسيط واحد</item>
+        <item quantity="two">وسيطان (%1$s)</item>
+        <item quantity="few">%1$s وسائط</item>
+        <item quantity="many">%1$s وسيطاً</item>
+        <item quantity="other">%1$s من الوسائط</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="zero">%1$s فيديو</item>
+        <item quantity="one">فيديو واحد</item>
+        <item quantity="two">فيديوان (%1$s)</item>
+        <item quantity="few">%1$s فيديوهات</item>
+        <item quantity="many">%1$s فيديو</item>
+        <item quantity="other">%1$s فيديو</item>
+    </plurals>
     <string name="hidden_f">مخفية</string>
     <string name="person_assign_first">عيّن له وجهاً واحداً على الأقل: بعدها يبحث Cripta عن وجوه مشابهة في الوسائط الأخرى.</string>
     <string name="person_two_media">عيّن له وجهاً في وسيطين مختلفين على الأقل: تبدأ الاقتراحات عندها مع «الأشخاص المعروفون فقط».</string>
@@ -1089,7 +1117,14 @@
     <string name="name_applies_all">ينطبق الاسم على كل وسائط الشخص.</string>
     <string name="face_to_show">الوجه المعروض</string>
     <string name="person_no_faces">لم يُعثر على وجه لهذا الشخص.</string>
-    <string name="faces_found_n">الوجوه المكتشفة في وسائطه: %1$s.</string>
+    <plurals name="faces_found_n">
+        <item quantity="zero">الوجوه المكتشفة في وسائطه: %1$s.</item>
+        <item quantity="one">وُجد وجه واحد في وسائطه.</item>
+        <item quantity="two">وُجد وجهان في وسائطه (%1$s).</item>
+        <item quantity="few">وُجدت %1$s وجوه في وسائطه.</item>
+        <item quantity="many">وُجد %1$s وجهاً في وسائطه.</item>
+        <item quantity="other">الوجوه المكتشفة في وسائطه: %1$s.</item>
+    </plurals>
     <string name="use_this_face">استخدام هذا الوجه</string>
     <string name="very_similar">مشابه جداً</string>
     <string name="similar">مشابه</string>
@@ -1795,7 +1830,14 @@
     <string name="import_continues">يمكنك مغادرة التطبيق: يستمر الاستيراد في الخلفية.</string>
     <string name="and_n_more">و%1$s أخرى</string>
     <string name="already_in_vault_one">كان \"%1$s\" في الخزنة مسبقاً.</string>
-    <string name="already_in_vault_n">كان %1$s ملف في الخزنة مسبقاً (نسخ متطابقة).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="zero">كان %1$s ملف في الخزنة مسبقاً (نسخ متطابقة).</item>
+        <item quantity="one">كان ملف واحد في الخزنة مسبقاً (نسخة متطابقة).</item>
+        <item quantity="two">كان ملفان (%1$s) في الخزنة مسبقاً (نسخ متطابقة).</item>
+        <item quantity="few">كانت %1$s ملفات في الخزنة مسبقاً (نسخ متطابقة).</item>
+        <item quantity="many">كان %1$s ملفاً في الخزنة مسبقاً (نسخ متطابقة).</item>
+        <item quantity="other">كان %1$s ملف في الخزنة مسبقاً (نسخ متطابقة).</item>
+    </plurals>
     <string name="summary">الملخص</string>
     <string name="videos_lower">فيديوهات</string>
     <string name="photos_lower">صور</string>
@@ -2337,7 +2379,14 @@
     <string name="sec_backup_restore">الاستعادة</string>
     <string name="backup_folders">المجلدات</string>
     <string name="backup_folders_all">كل المجلدات</string>
-    <string name="backup_folders_n">%1$s من أصل %2$s مجلد</string>
+    <plurals name="backup_folders_n">
+        <item quantity="zero">%1$s من أصل %2$s مجلد</item>
+        <item quantity="one">%1$s من أصل مجلد واحد</item>
+        <item quantity="two">%1$s من أصل مجلدين (%2$s)</item>
+        <item quantity="few">%1$s من أصل %2$s مجلدات</item>
+        <item quantity="many">%1$s من أصل %2$s مجلداً</item>
+        <item quantity="other">%1$s من أصل %2$s مجلد</item>
+    </plurals>
     <string name="backup_root_in">مع الملفات خارج المجلدات</string>
     <string name="backup_root_out">بدون الملفات خارج المجلدات</string>
     <string name="backup_folders_sheet">المجلدات في النسخة الاحتياطية</string>
@@ -2347,7 +2396,14 @@
     <string name="dup_to_trash">تم نقل %1$s إلى سلة المهملات في %2$s.</string>
     <string name="dup_no_other_copy">لا توجد نسخة أخرى من هذا الملف في الخزنة: لم يُحذف شيء</string>
     <string name="n_originals_kept_title">لم تُحذف الملفات الأصلية</string>
-    <string name="n_originals_kept">تعذّر حذف %1$d من الملفات الأصلية: ما زالت على الهاتف</string>
+    <plurals name="n_originals_kept">
+        <item quantity="zero">تعذّر حذف %1$s من الملفات الأصلية: ما زالت على الهاتف</item>
+        <item quantity="one">تعذّر حذف ملف أصلي واحد: ما زال على الهاتف</item>
+        <item quantity="two">تعذّر حذف ملفين أصليين (%1$s): ما زالا على الهاتف</item>
+        <item quantity="few">تعذّر حذف %1$s ملفات أصلية: ما زالت على الهاتف</item>
+        <item quantity="many">تعذّر حذف %1$s ملفاً أصلياً: ما زالت على الهاتف</item>
+        <item quantity="other">تعذّر حذف %1$s من الملفات الأصلية: ما زالت على الهاتف</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s نسخ قد تكون ناقصة"</string>
     <string name="reset_failed">لم تكتمل إعادة الضبط: تعذّر حذف البيانات القديمة. حاول مرة أخرى.</string>
     <string name="n_backup_failed_reason">فشل النسخ الاحتياطي (%1$s). تحقق من الوجهة وحاول مرة أخرى.</string>

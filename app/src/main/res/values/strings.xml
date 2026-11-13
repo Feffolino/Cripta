@@ -691,7 +691,10 @@
     <string name="end_after_start">The end must come after the start</string>
     <string name="stretch_too_short">Stretch too short, or video not analysed yet</string>
     <string name="not_found_elsewhere">Not found in other videos</string>
-    <string name="found_in_n">Found in %1$s videos</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Found in 1 video</item>
+        <item quantity="other">Found in %1$s videos</item>
+    </plurals>
     <string name="discarded_here_and_n">Discarded here and in %1$s other videos</string>
     <string name="discarded_everywhere">Discarded in all videos</string>
     <string name="export_started_in">Export started in %1$s</string>
@@ -767,7 +770,10 @@
         <item quantity="one">Signature deleted: the sound is among the discarded segments</item>
         <item quantity="other">%1$s signatures deleted: the sounds are among the discarded segments</item>
     </plurals>
-    <string name="duration_applied">Length applied to %1$s videos</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Length applied to 1 video</item>
+        <item quantity="other">Length applied to %1$s videos</item>
+    </plurals>
     <string name="video_removed_from_signature">Video removed from the signature</string>
     <string name="group_split">Group split</string>
     <string name="operation_failed_prefix">"Operation failed: "</string>
@@ -925,8 +931,14 @@
     <string name="merge_into">Join into %1$s</string>
     <string name="move_media_to">Move %1$s media to…</string>
     <string name="choose_face_to_show">Choose the face to show</string>
-    <string name="media_n">%1$s media</string>
-    <string name="videos_n">%1$s videos</string>
+    <plurals name="media_n">
+        <item quantity="one">1 media file</item>
+        <item quantity="other">%1$s media</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">1 video</item>
+        <item quantity="other">%1$s videos</item>
+    </plurals>
     <string name="hidden_f">hidden</string>
     <string name="person_assign_first">Give them at least one face: then Cripta looks for similar faces in the other media.</string>
     <string name="person_two_media">Give them a face in at least 2 different media: with “Known people only” the suggestions start from there.</string>
@@ -949,7 +961,10 @@
     <string name="name_applies_all">The name applies to all their media.</string>
     <string name="face_to_show">Face to show</string>
     <string name="person_no_faces">No face found for this person.</string>
-    <string name="faces_found_n">%1$s faces found in their media.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">1 face found in their media.</item>
+        <item quantity="other">%1$s faces found in their media.</item>
+    </plurals>
     <string name="use_this_face">Use this face</string>
     <string name="very_similar">Very similar</string>
     <string name="similar">Similar</string>
@@ -1551,7 +1566,10 @@
     <string name="import_continues">You can leave the app: the import carries on in the background.</string>
     <string name="and_n_more">and %1$s more</string>
     <string name="already_in_vault_one">\"%1$s\" was already in the vault.</string>
-    <string name="already_in_vault_n">%1$s files were already in the vault (identical copies).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">1 file was already in the vault (identical copy).</item>
+        <item quantity="other">%1$s files were already in the vault (identical copies).</item>
+    </plurals>
     <string name="summary">Summary</string>
     <string name="videos_lower">videos</string>
     <string name="photos_lower">photos</string>
@@ -2069,7 +2087,10 @@
     <string name="sec_backup_restore">Restore</string>
     <string name="backup_folders">Folders</string>
     <string name="backup_folders_all">All folders</string>
-    <string name="backup_folders_n">%1$s of %2$s folders</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s of 1 folder</item>
+        <item quantity="other">%1$s of %2$s folders</item>
+    </plurals>
     <string name="backup_root_in">with the files outside them</string>
     <string name="backup_root_out">without the files outside them</string>
     <string name="backup_folders_sheet">Folders in the backup</string>
@@ -2079,7 +2100,10 @@
     <string name="dup_to_trash">Moved %1$s to the trash in %2$s.</string>
     <string name="dup_no_other_copy">No other copy of this file is left in the vault: nothing deleted</string>
     <string name="n_originals_kept_title">Originals not deleted</string>
-    <string name="n_originals_kept">%1$d originals could not be deleted: they are still on the phone</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">1 original could not be deleted: it is still on the phone</item>
+        <item quantity="other">%1$s originals could not be deleted: they are still on the phone</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s copies maybe incomplete"</string>
     <string name="reset_failed">Reset not completed: the old data could not be deleted. Try again.</string>
     <string name="n_backup_failed_reason">Backup failed (%1$s). Check the destination and try again.</string>

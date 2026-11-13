@@ -184,7 +184,7 @@ internal fun BackupScopeChoice(
         val ids = folders.map { it.id }.toSet()
         val chosen = ids.count { it !in scope.excludedFolders }
         val summary = (if (chosen == ids.size) str(R.string.backup_folders_all)
-            else str(R.string.backup_folders_n, com.cripta.app.ui.components.formatCount(chosen), com.cripta.app.ui.components.formatCount(ids.size))) +
+            else plural(R.plurals.backup_folders_n, ids.size, com.cripta.app.ui.components.formatCount(chosen), com.cripta.app.ui.components.formatCount(ids.size))) +
             ", " + (if (scope.rootFiles) str(R.string.backup_root_in) else str(R.string.backup_root_out))
         Row(
             Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(MaterialTheme.shapes.small)

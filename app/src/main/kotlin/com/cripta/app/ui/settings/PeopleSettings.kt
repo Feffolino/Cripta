@@ -759,7 +759,7 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp),
                             color = if (on) MaterialTheme.colorScheme.primary
                                 else if (p.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                        Text(str(R.string.media_n, com.cripta.app.ui.components.formatCount(p.media.size)),
+                        Text(plural(R.plurals.media_n, p.media.size),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }

@@ -715,7 +715,11 @@
     <string name="end_after_start">La fin doit être après le début</string>
     <string name="stretch_too_short">Passage trop court, ou vidéo pas encore analysée</string>
     <string name="not_found_elsewhere">Introuvable dans les autres vidéos</string>
-    <string name="found_in_n">Trouvé dans %1$s vidéos</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Trouvé dans %1$s vidéo</item>
+        <item quantity="many">Trouvé dans %1$s vidéos</item>
+        <item quantity="other">Trouvé dans %1$s vidéos</item>
+    </plurals>
     <string name="discarded_here_and_n">Écarté ici et dans %1$s autres vidéos</string>
     <string name="discarded_everywhere">Écarté dans toutes les vidéos</string>
     <string name="export_started_in">Exportation lancée dans %1$s</string>
@@ -792,7 +796,11 @@
         <item quantity="many">%1$s empreintes audio supprimées : les sons figurent parmi les segments écartés</item>
         <item quantity="other">%1$s empreintes audio supprimées : les sons figurent parmi les segments écartés</item>
     </plurals>
-    <string name="duration_applied">Durée appliquée à %1$s vidéos</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Durée appliquée à %1$s vidéo</item>
+        <item quantity="many">Durée appliquée à %1$s vidéos</item>
+        <item quantity="other">Durée appliquée à %1$s vidéos</item>
+    </plurals>
     <string name="video_removed_from_signature">Vidéo retirée de l’empreinte audio</string>
     <string name="group_split">Groupe séparé</string>
     <string name="operation_failed_prefix">"Échec de l’opération : "</string>
@@ -959,8 +967,16 @@
     <string name="merge_into">Fusionner dans %1$s</string>
     <string name="move_media_to">Déplacer %1$s médias vers…</string>
     <string name="choose_face_to_show">Choisir le visage à afficher</string>
-    <string name="media_n">%1$s médias</string>
-    <string name="videos_n">%1$s vidéos</string>
+    <plurals name="media_n">
+        <item quantity="one">%1$s média</item>
+        <item quantity="many">%1$s médias</item>
+        <item quantity="other">%1$s médias</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">%1$s vidéo</item>
+        <item quantity="many">%1$s vidéos</item>
+        <item quantity="other">%1$s vidéos</item>
+    </plurals>
     <string name="hidden_f">masquée</string>
     <string name="person_assign_first">Attribuez-lui au moins un visage : Cripta cherchera ensuite des visages similaires dans les autres médias.</string>
     <string name="person_two_media">Attribuez-lui un visage dans au moins 2 médias différents : les suggestions de « Personnes connues uniquement » partent de là.</string>
@@ -984,7 +1000,11 @@
     <string name="name_applies_all">Le nom s’applique à tous ses médias.</string>
     <string name="face_to_show">Visage à afficher</string>
     <string name="person_no_faces">Aucun visage trouvé pour cette personne.</string>
-    <string name="faces_found_n">%1$s visages trouvés dans ses médias.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">%1$s visage trouvé dans ses médias.</item>
+        <item quantity="many">%1$s visages trouvés dans ses médias.</item>
+        <item quantity="other">%1$s visages trouvés dans ses médias.</item>
+    </plurals>
     <string name="use_this_face">Utiliser ce visage</string>
     <string name="very_similar">Très similaire</string>
     <string name="similar">Similaire</string>
@@ -1612,7 +1632,11 @@
     <string name="import_continues">Vous pouvez quitter l’application : l’importation se poursuit en arrière-plan.</string>
     <string name="and_n_more">et %1$s autres</string>
     <string name="already_in_vault_one">\"%1$s\" était déjà dans le coffre.</string>
-    <string name="already_in_vault_n">%1$s fichiers étaient déjà dans le coffre (copies identiques).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">%1$s fichier était déjà dans le coffre (copie identique).</item>
+        <item quantity="many">%1$s fichiers étaient déjà dans le coffre (copies identiques).</item>
+        <item quantity="other">%1$s fichiers étaient déjà dans le coffre (copies identiques).</item>
+    </plurals>
     <string name="summary">Récapitulatif</string>
     <string name="videos_lower">vidéos</string>
     <string name="photos_lower">photos</string>
@@ -2136,7 +2160,11 @@
     <string name="sec_backup_restore">Restauration</string>
     <string name="backup_folders">Dossiers</string>
     <string name="backup_folders_all">Tous les dossiers</string>
-    <string name="backup_folders_n">%1$s dossiers sur %2$s</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s dossier sur %2$s</item>
+        <item quantity="many">%1$s dossiers sur %2$s</item>
+        <item quantity="other">%1$s dossiers sur %2$s</item>
+    </plurals>
     <string name="backup_root_in">avec les fichiers hors dossiers</string>
     <string name="backup_root_out">sans les fichiers hors dossiers</string>
     <string name="backup_folders_sheet">Dossiers dans la sauvegarde</string>
@@ -2146,7 +2174,11 @@
     <string name="dup_to_trash">%1$s déplacés vers la corbeille dans %2$s.</string>
     <string name="dup_no_other_copy">Il ne reste aucune autre copie de ce fichier dans le coffre : rien n\'a été supprimé</string>
     <string name="n_originals_kept_title">Originaux non supprimés</string>
-    <string name="n_originals_kept">%1$d originaux n\'ont pas pu être supprimés : ils sont toujours sur le téléphone</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">%1$s original n\'a pas pu être supprimé : il est toujours sur le téléphone</item>
+        <item quantity="many">%1$s originaux n\'ont pas pu être supprimés : ils sont toujours sur le téléphone</item>
+        <item quantity="other">%1$s originaux n\'ont pas pu être supprimés : ils sont toujours sur le téléphone</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s copies peut-être incomplètes"</string>
     <string name="reset_failed">Réinitialisation incomplète : les anciennes données n\'ont pas pu être supprimées. Réessaie.</string>
     <string name="n_backup_failed_reason">Échec de la sauvegarde (%1$s). Vérifie la destination et réessaie.</string>

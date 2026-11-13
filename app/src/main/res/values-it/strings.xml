@@ -715,7 +715,11 @@
     <string name="end_after_start">La fine deve venire dopo l\'inizio</string>
     <string name="stretch_too_short">Tratto troppo corto, o video non ancora analizzato</string>
     <string name="not_found_elsewhere">Non trovato in altri video</string>
-    <string name="found_in_n">Trovato in %1$s video</string>
+    <plurals name="found_in_n">
+        <item quantity="one">Trovato in 1 video</item>
+        <item quantity="many">Trovato in %1$s video</item>
+        <item quantity="other">Trovato in %1$s video</item>
+    </plurals>
     <string name="discarded_here_and_n">Scartato qui e in altri %1$s video</string>
     <string name="discarded_everywhere">Scartato in tutti i video</string>
     <string name="export_started_in">Esportazione avviata in %1$s</string>
@@ -792,7 +796,11 @@
         <item quantity="many">%1$s firme eliminate: i suoni sono tra i segmenti scartati</item>
         <item quantity="other">%1$s firme eliminate: i suoni sono tra i segmenti scartati</item>
     </plurals>
-    <string name="duration_applied">Durata applicata a %1$s video</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Durata applicata a 1 video</item>
+        <item quantity="many">Durata applicata a %1$s video</item>
+        <item quantity="other">Durata applicata a %1$s video</item>
+    </plurals>
     <string name="video_removed_from_signature">Video tolto dalla firma</string>
     <string name="group_split">Gruppo diviso</string>
     <string name="operation_failed_prefix">"Operazione non riuscita: "</string>
@@ -959,8 +967,16 @@
     <string name="merge_into">Unisci a %1$s</string>
     <string name="move_media_to">Sposta %1$s media a…</string>
     <string name="choose_face_to_show">Scegli il volto da mostrare</string>
-    <string name="media_n">%1$s media</string>
-    <string name="videos_n">%1$s video</string>
+    <plurals name="media_n">
+        <item quantity="one">1 media</item>
+        <item quantity="many">%1$s media</item>
+        <item quantity="other">%1$s media</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">1 video</item>
+        <item quantity="many">%1$s video</item>
+        <item quantity="other">%1$s video</item>
+    </plurals>
     <string name="hidden_f">nascosta</string>
     <string name="person_assign_first">Assegnagli almeno un volto: poi Cripta cerca volti simili negli altri media.</string>
     <string name="person_two_media">Dagli un volto in almeno 2 media diversi: con «Solo persone note» i suggerimenti partono da lì.</string>
@@ -984,7 +1000,11 @@
     <string name="name_applies_all">Il nome vale per tutti i suoi media.</string>
     <string name="face_to_show">Volto da mostrare</string>
     <string name="person_no_faces">Nessun volto trovato per questa persona.</string>
-    <string name="faces_found_n">%1$s volti trovati nei suoi media.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">1 volto trovato nei suoi media.</item>
+        <item quantity="many">%1$s volti trovati nei suoi media.</item>
+        <item quantity="other">%1$s volti trovati nei suoi media.</item>
+    </plurals>
     <string name="use_this_face">Usa questo volto</string>
     <string name="very_similar">Molto simile</string>
     <string name="similar">Simile</string>
@@ -1612,7 +1632,11 @@
     <string name="import_continues">Puoi uscire dall\'app: l\'importazione continua in background.</string>
     <string name="and_n_more">e altri %1$s</string>
     <string name="already_in_vault_one">\"%1$s\" era già nel vault.</string>
-    <string name="already_in_vault_n">%1$s file erano già nel vault (copie identiche).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">1 file era già nel vault (copia identica).</item>
+        <item quantity="many">%1$s file erano già nel vault (copie identiche).</item>
+        <item quantity="other">%1$s file erano già nel vault (copie identiche).</item>
+    </plurals>
     <string name="summary">Riepilogo</string>
     <string name="videos_lower">video</string>
     <string name="photos_lower">foto</string>
@@ -2136,7 +2160,11 @@
     <string name="sec_backup_restore">Ripristino</string>
     <string name="backup_folders">Cartelle</string>
     <string name="backup_folders_all">Tutte le cartelle</string>
-    <string name="backup_folders_n">%1$s di %2$s cartelle</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s di 1 cartella</item>
+        <item quantity="many">%1$s di %2$s cartelle</item>
+        <item quantity="other">%1$s di %2$s cartelle</item>
+    </plurals>
     <string name="backup_root_in">con i file fuori</string>
     <string name="backup_root_out">senza i file fuori</string>
     <string name="backup_folders_sheet">Cartelle nel backup</string>
@@ -2146,7 +2174,11 @@
     <string name="dup_to_trash">Spostati %1$s nel cestino in %2$s.</string>
     <string name="dup_no_other_copy">Non resta nessun\'altra copia di questo file nel vault: nulla eliminato</string>
     <string name="n_originals_kept_title">Originali non eliminati</string>
-    <string name="n_originals_kept">%1$d originali non si sono potuti eliminare: sono ancora sul telefono</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">1 originale non si è potuto eliminare: è ancora sul telefono</item>
+        <item quantity="many">%1$s originali non si sono potuti eliminare: sono ancora sul telefono</item>
+        <item quantity="other">%1$s originali non si sono potuti eliminare: sono ancora sul telefono</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s copie forse incomplete"</string>
     <string name="reset_failed">Reset non completato: i vecchi dati non si sono potuti eliminare. Riprova.</string>
     <string name="n_backup_failed_reason">Backup non riuscito (%1$s). Controlla la destinazione e riprova.</string>

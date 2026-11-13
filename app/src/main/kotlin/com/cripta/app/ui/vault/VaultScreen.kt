@@ -1786,7 +1786,7 @@ fun VaultScreen(
                 )
             },
             confirmButton = { TextButton(onClick = {
-                vm.deleteOriginals(pendingOriginals) { kept -> if (kept > 0) notify(str(R.string.n_originals_kept, kept)) }
+                vm.deleteOriginals(pendingOriginals) { kept -> if (kept > 0) notify(plural(R.plurals.n_originals_kept, kept)) }
             }) { com.cripta.app.ui.components.ButtonText(plural(R.plurals.delete_original_btn, n)) } },
             dismissButton = { TextButton(onClick = { vm.clearPendingOriginals() }) { com.cripta.app.ui.components.ButtonText(str(R.string.keep)) } },
         )

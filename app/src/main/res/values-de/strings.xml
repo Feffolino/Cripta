@@ -691,7 +691,10 @@
     <string name="end_after_start">Das Ende muss nach dem Anfang liegen</string>
     <string name="stretch_too_short">Abschnitt zu kurz oder Video noch nicht analysiert</string>
     <string name="not_found_elsewhere">In anderen Videos nicht gefunden</string>
-    <string name="found_in_n">In %1$s Videos gefunden</string>
+    <plurals name="found_in_n">
+        <item quantity="one">In 1 Video gefunden</item>
+        <item quantity="other">In %1$s Videos gefunden</item>
+    </plurals>
     <string name="discarded_here_and_n">Hier und in %1$s weiteren Videos verworfen</string>
     <string name="discarded_everywhere">In allen Videos verworfen</string>
     <string name="export_started_in">Export nach %1$s gestartet</string>
@@ -767,7 +770,10 @@
         <item quantity="one">Audiofingerabdruck gelöscht: Das Audio gehört nun zu den verworfenen Segmenten</item>
         <item quantity="other">%1$s Audiofingerabdrücke gelöscht: Die Audios gehören nun zu den verworfenen Segmenten</item>
     </plurals>
-    <string name="duration_applied">Dauer auf %1$s Videos angewendet</string>
+    <plurals name="duration_applied">
+        <item quantity="one">Dauer auf 1 Video angewendet</item>
+        <item quantity="other">Dauer auf %1$s Videos angewendet</item>
+    </plurals>
     <string name="video_removed_from_signature">Video vom Audiofingerabdruck entfernt</string>
     <string name="group_split">Gruppe getrennt</string>
     <string name="operation_failed_prefix">"Vorgang fehlgeschlagen: "</string>
@@ -925,8 +931,14 @@
     <string name="merge_into">Mit %1$s zusammenführen</string>
     <string name="move_media_to">%1$s Medien verschieben nach…</string>
     <string name="choose_face_to_show">Angezeigtes Gesicht wählen</string>
-    <string name="media_n">%1$s Medien</string>
-    <string name="videos_n">%1$s Videos</string>
+    <plurals name="media_n">
+        <item quantity="one">1 Medium</item>
+        <item quantity="other">%1$s Medien</item>
+    </plurals>
+    <plurals name="videos_n">
+        <item quantity="one">1 Video</item>
+        <item quantity="other">%1$s Videos</item>
+    </plurals>
     <string name="hidden_f">ausgeblendet</string>
     <string name="person_assign_first">Ordne der Person mindestens ein Gesicht zu: Dann sucht Cripta nach ähnlichen Gesichtern in anderen Medien.</string>
     <string name="person_two_media">Ordne der Person Gesichter in mindestens 2 verschiedenen Medien zu: Darauf basieren Vorschläge bei „Nur bekannte Personen“.</string>
@@ -949,7 +961,10 @@
     <string name="name_applies_all">Der Name gilt für alle ihre Medien.</string>
     <string name="face_to_show">Angezeigtes Gesicht</string>
     <string name="person_no_faces">Kein Gesicht für diese Person gefunden.</string>
-    <string name="faces_found_n">%1$s Gesichter in ihren Medien gefunden.</string>
+    <plurals name="faces_found_n">
+        <item quantity="one">1 Gesicht in ihren Medien gefunden.</item>
+        <item quantity="other">%1$s Gesichter in ihren Medien gefunden.</item>
+    </plurals>
     <string name="use_this_face">Dieses Gesicht verwenden</string>
     <string name="very_similar">Sehr ähnlich</string>
     <string name="similar">Ähnlich</string>
@@ -1551,7 +1566,10 @@
     <string name="import_continues">Du kannst die App verlassen: Der Import läuft im Hintergrund weiter.</string>
     <string name="and_n_more">und %1$s weitere</string>
     <string name="already_in_vault_one">\"%1$s\" war bereits im Tresor.</string>
-    <string name="already_in_vault_n">%1$s Dateien waren bereits im Tresor (identische Kopien).</string>
+    <plurals name="already_in_vault_n">
+        <item quantity="one">1 Datei war bereits im Tresor (identische Kopie).</item>
+        <item quantity="other">%1$s Dateien waren bereits im Tresor (identische Kopien).</item>
+    </plurals>
     <string name="summary">Übersicht</string>
     <string name="videos_lower">Videos</string>
     <string name="photos_lower">Fotos</string>
@@ -2069,7 +2087,10 @@
     <string name="sec_backup_restore">Wiederherstellen</string>
     <string name="backup_folders">Ordner</string>
     <string name="backup_folders_all">Alle Ordner</string>
-    <string name="backup_folders_n">%1$s von %2$s Ordnern</string>
+    <plurals name="backup_folders_n">
+        <item quantity="one">%1$s von 1 Ordner</item>
+        <item quantity="other">%1$s von %2$s Ordnern</item>
+    </plurals>
     <string name="backup_root_in">mit den Dateien außerhalb</string>
     <string name="backup_root_out">ohne die Dateien außerhalb</string>
     <string name="backup_folders_sheet">Ordner in der Sicherung</string>
@@ -2079,7 +2100,10 @@
     <string name="dup_to_trash">%1$s in %2$s in den Papierkorb verschoben.</string>
     <string name="dup_no_other_copy">Keine weitere Kopie dieser Datei im Tresor: nichts gelöscht</string>
     <string name="n_originals_kept_title">Originale nicht gelöscht</string>
-    <string name="n_originals_kept">%1$d Originale konnten nicht gelöscht werden: Sie sind noch auf dem Telefon</string>
+    <plurals name="n_originals_kept">
+        <item quantity="one">1 Original konnte nicht gelöscht werden: Es ist noch auf dem Telefon</item>
+        <item quantity="other">%1$s Originale konnten nicht gelöscht werden: Sie sind noch auf dem Telefon</item>
+    </plurals>
     <string name="n_maybe_incomplete">" · %1$s Kopien evtl. unvollständig"</string>
     <string name="reset_failed">Zurücksetzen nicht abgeschlossen: Die alten Daten konnten nicht gelöscht werden. Versuche es erneut.</string>
     <string name="n_backup_failed_reason">Sicherung fehlgeschlagen (%1$s). Prüfe das Ziel und versuche es erneut.</string>
