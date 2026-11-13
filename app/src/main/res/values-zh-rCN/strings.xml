@@ -1058,6 +1058,7 @@
     <string name="rotation_unlock">解锁旋转</string>
     <string name="rotation_lock">锁定旋转</string>
     <string name="pip_unavailable">Picture-in-Picture 不可用</string>
+    <string name="pip_enter">以画中画模式打开</string>
     <string name="file_x_of_y">文件 %1$s/%2$s</string>
     <string name="photo">照片</string>
     <string name="file_">文件</string>

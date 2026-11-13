@@ -1098,6 +1098,7 @@
     <string name="rotation_unlock">घुमाव का लॉक खोलें</string>
     <string name="rotation_lock">घुमाव लॉक करें</string>
     <string name="pip_unavailable">Picture-in-Picture उपलब्ध नहीं</string>
+    <string name="pip_enter">Picture-in-Picture में खोलें</string>
     <string name="file_x_of_y">फ़ाइल %1$s/%2$s</string>
     <string name="photo">फ़ोटो</string>
     <string name="file_">फ़ाइल</string>

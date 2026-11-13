@@ -73,6 +73,40 @@ class ViewerViewModelTest {
         }
     }
 
+    // Regression: a swipe half way to the next video and back made the player again, and it
+    // resumed from the point loaded when the page opened, not from where it had just been left.
+    @Test
+    fun aPlayerMadeAgainResumesFromWhereItWasJustLeft() = runTest {
+        val app = RuntimeEnvironment.getApplication()
+        val settings = SettingsStore(app)
+        val session = SessionManager()
+        val repo = VaultRepository(app, session, BlobStore(app), settings)
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val vm = ViewerViewModel(
+                app, repo, ThumbnailLoader(app, repo, session), settings,
+                IntroRepository(session, repo, AudioDecoder(repo)),
+                FaceRepository(app, session, repo), session, ViewerQueue(), SavedStateHandle(),
+            )
+            try {
+                val file = com.cripta.app.data.db.FileEntity(
+                    id = "v", originalName = "v.mp4", mimeType = "video/mp4", sizeBytes = 1, folderId = null,
+                    createdAt = 0, importedAt = 0, wrappedKeyset = ByteArray(0), playbackPosMs = 10_000, durationMs = 600_000,
+                )
+                assertEquals(10_000L, vm.resumePosition(file))
+                vm.savePosition("v", 60_000, 600_000)
+                assertEquals(60_000L, vm.resumePosition(file))
+                // Left at the very start: no resume point, not the old one.
+                vm.savePosition("v", 1_000, 600_000)
+                assertEquals(null, vm.resumePosition(file))
+            } finally {
+                vm.viewModelScope.cancel()
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun theSavedPartOfTheQueueIsCentredAndBounded() {
         val max = ViewerViewModel.MAX_SAVED_QUEUE

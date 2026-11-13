@@ -1058,6 +1058,7 @@
     <string name="rotation_unlock">회전 잠금 해제</string>
     <string name="rotation_lock">회전 잠금</string>
     <string name="pip_unavailable">Picture-in-Picture 이용 불가</string>
+    <string name="pip_enter">PIP 모드로 열기</string>
     <string name="file_x_of_y">파일 %1$s/%2$s</string>
     <string name="photo">사진</string>
     <string name="file_">파일</string>

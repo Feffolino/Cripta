@@ -12,7 +12,8 @@ class ViewerQueue @Inject constructor() {
     @Volatile var ids: List<String> = emptyList()
         private set
 
-    fun set(list: List<String>) { ids = list }
+    /** A new list: a seek armed for a viewer that never opened goes with the old one. */
+    fun set(list: List<String>) { ids = list; seek = null }
 
     /** Where to start one of them (a face found in a video): taken once by the viewer. */
     @Volatile private var seek: Pair<String, Long>? = null

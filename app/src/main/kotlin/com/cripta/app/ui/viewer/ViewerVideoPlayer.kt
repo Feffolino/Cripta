@@ -122,7 +122,8 @@ internal fun VideoPlayer(
     val ctx = LocalContext.current
     var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
-        ExoPlayer.Builder(ctx).build().apply {
+        // Headphones unplugged (or Bluetooth gone): paused, not played on aloud from the speaker.
+        ExoPlayer.Builder(ctx).setHandleAudioBecomingNoisy(true).build().apply {
             // Route audio properly and cooperate with other apps (pause on focus loss).
             setAudioAttributes(
                 AudioAttributes.Builder()
@@ -165,7 +166,7 @@ internal fun VideoPlayer(
         if (!prefs.muted) player.volume = 1f
         resumeEnabled = prefs.resume
         // Resume where it was left (skipping a position too close to either end).
-        val pos = file.playbackPosMs ?: 0L
+        val pos = vm.resumePosition(file) ?: 0L
         val dur = file.durationMs ?: 0L
         if (prefs.resume && pos > 3_000 && (dur <= 0 || pos < dur - 5_000)) player.seekTo(pos)
         vm.takeSeek(file.id)?.let { player.seekTo(it) }
@@ -1022,7 +1023,7 @@ internal fun VideoPlayer(
                                 )
                             }.onFailure { modeLabel = str(R.string.pip_unavailable) }
                         }) {
-                            Icon(CriptaIcons.PictureInPictureAlt, "Picture-in-Picture", tint = Color.White)
+                            Icon(CriptaIcons.PictureInPictureAlt, str(R.string.pip_enter), tint = Color.White)
                         }
                     }
                 }

@@ -1178,6 +1178,7 @@
     <string name="rotation_unlock">Разрешить поворот</string>
     <string name="rotation_lock">Заблокировать поворот</string>
     <string name="pip_unavailable">Picture-in-Picture недоступен</string>
+    <string name="pip_enter">Открыть в режиме «картинка в картинке»</string>
     <string name="file_x_of_y">Файл %1$s из %2$s</string>
     <string name="photo">Фото</string>
     <string name="file_">Файл</string>

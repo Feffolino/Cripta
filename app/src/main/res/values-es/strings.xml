@@ -1138,6 +1138,7 @@
     <string name="rotation_unlock">Desbloquear rotación</string>
     <string name="rotation_lock">Bloquear rotación</string>
     <string name="pip_unavailable">Picture-in-Picture no disponible</string>
+    <string name="pip_enter">Abrir en Picture-in-Picture</string>
     <string name="file_x_of_y">Archivo %1$s de %2$s</string>
     <string name="photo">Foto</string>
     <string name="file_">Archivo</string>

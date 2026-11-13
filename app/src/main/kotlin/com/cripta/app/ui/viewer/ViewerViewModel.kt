@@ -514,9 +514,24 @@ class ViewerViewModel @Inject constructor(
      * Saved on the repository's scope, not viewModelScope: the viewer may be closing, which would
      * cancel the save.
      */
+    /**
+     * Positions saved while this viewer is open, by file (-1: none). A player made again for a page
+     * (a swipe half way to the next video and back) resumes from here: the page's file, loaded when
+     * it opened, still has the point from before.
+     */
+    private val savedPositions = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** Where [file] resumes: the last position saved here, else the one it was loaded with. */
+    fun resumePosition(file: com.cripta.app.data.db.FileEntity): Long? {
+        val saved = savedPositions[file.id] ?: return file.playbackPosMs
+        return saved.takeIf { it >= 0 }
+    }
+
     fun savePosition(fileId: String, posMs: Long, durationMs: Long) {
         val finished = durationMs > 0 && posMs >= durationMs - 5_000
-        repo.savePlaybackPos(fileId, if (finished || posMs < 3_000) null else posMs)
+        val kept = if (finished || posMs < 3_000) null else posMs
+        savedPositions[fileId] = kept ?: -1L
+        repo.savePlaybackPos(fileId, kept)
     }
 
     /** Detailed technical info for the viewer's Info dialog (video codec/size/crop/rotation). */

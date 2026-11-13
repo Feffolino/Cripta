@@ -1138,6 +1138,7 @@
     <string name="rotation_unlock">Déverrouiller la rotation</string>
     <string name="rotation_lock">Verrouiller la rotation</string>
     <string name="pip_unavailable">Picture-in-Picture indisponible</string>
+    <string name="pip_enter">Ouvrir en Picture-in-Picture</string>
     <string name="file_x_of_y">Fichier %1$s sur %2$s</string>
     <string name="photo">Photo</string>
     <string name="file_">Fichier</string>
