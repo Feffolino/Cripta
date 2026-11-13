@@ -114,7 +114,7 @@ class ConversionService : Service() {
             faceScanAll = false; faceAsked.clear(); faceRerun = false
             // A media asked for the deep way and dropped here would have been searched deep the next
             // time it was analysed, asked or not.
-            faceDeep.clear(); faceRefine.clear(); faceRefineForced.clear()
+            faceDeep.clear(); faceRefine.clear(); faceRefineForced.clear(); faceRefineAfterHold.clear()
             faceJob?.let { job ->
                 faceStopping = true
                 job.cancel()
@@ -1306,6 +1306,11 @@ class ConversionService : Service() {
     private val faceRefine = java.util.concurrent.ConcurrentLinkedQueue<String>()
     /** Those asked with "Analizza meglio": looked at again even when nothing was confirmed since. */
     private val faceRefineForced = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /**
+     * Videos whose closer look left out faces just given to someone, while their "Annulla" was on
+     * offer: looked at again when it is gone (at that [android.os.SystemClock.elapsedRealtime]).
+     */
+    private val faceRefineAfterHold = java.util.concurrent.ConcurrentHashMap<String, Long>()
     @Volatile private var faceScanAll = false
     /** Annulla was pressed: the running scan is stopping. */
     @Volatile private var faceStopping = false
@@ -1419,7 +1424,16 @@ class ConversionService : Service() {
                         val t = todo[next++]
                         if (t.id !in askedIds) chunk += false to suspend { t }
                     }
-                    if (chunk.isEmpty()) break
+                    if (chunk.isEmpty()) {
+                        if (faceRefineAfterHold.isEmpty()) break
+                        // Nothing else to do but videos waiting for an "Annulla" to go: waited for
+                        // here (a minute at most), anything asked meanwhile first.
+                        while (faceAsked.isEmpty() && faceRefine.isEmpty() &&
+                            (faceRefineAfterHold.values.minOrNull() ?: 0L) > android.os.SystemClock.elapsedRealtime()) kotlinx.coroutines.delay(500)
+                        val now = android.os.SystemClock.elapsedRealtime()
+                        faceRefineAfterHold.entries.removeIf { (id, at) -> (at <= now).also { due -> if (due) faceRefine += id } }
+                        continue
+                    }
                     val cursor = java.util.concurrent.atomic.AtomicInteger(0)
                     kotlinx.coroutines.coroutineScope {
                         repeat(minOf(FACE_WORKERS, chunk.size)) {
@@ -1433,6 +1447,7 @@ class ConversionService : Service() {
                                         progress()
                                         val r = faces.refine(f, force = faceRefineForced.remove(f.id)) { p -> partial[f.id] = p; progress() }
                                         if (r != null) refined.incrementAndGet()
+                                        r?.heldUntil?.let { faceRefineAfterHold.merge(f.id, it, ::maxOf) }
                                     } catch (e: kotlinx.coroutines.CancellationException) {
                                         throw e
                                     } catch (e: Exception) {

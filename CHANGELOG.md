@@ -12,6 +12,7 @@ Entries marked **stable** went out as a stable release.
 - The side-by-side preview of duplicates shows very large photos (tens of megapixels) smaller instead of closing the app or loading forever, and says when a photo cannot be shown
 - "Perché" on the faces of a media names a person with a "%" in the name ("Mario 100%"): before, it failed with an error
 - "Annulla" right after giving a face to someone also takes back the faces the closer look joined into it meanwhile: before, they stayed inside the face given back to nobody
+- A face given to someone who already had one in the same video is joined with it as soon as its "Annulla" is gone: the closer look waits for it and looks at the video again, instead of leaving it to the next look asked by hand
 
 ## 2026-11-12
 

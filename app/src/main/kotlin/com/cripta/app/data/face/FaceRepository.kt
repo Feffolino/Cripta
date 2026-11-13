@@ -1272,7 +1272,11 @@ class FaceRepository @Inject constructor(
     // ---- A closer look at videos with a confirmed face --------------------------------------
 
     /** What [refine] did to one video. */
-    class Refined(val joined: Int, val aside: Int, val frames: Int)
+    /**
+     * What the closer look did. [heldUntil]: faces whose "Annulla" was still on offer were left
+     * apart, until then ([android.os.SystemClock.elapsedRealtime]): the video is to be looked at again after.
+     */
+    class Refined(val joined: Int, val aside: Int, val frames: Int, val heldUntil: Long? = null)
 
     /** The confirmed faces of a video, as the closer look records them ("track:person", sorted). */
     private fun signature(rows: List<TrackMeta>) =
@@ -1365,6 +1369,7 @@ class FaceRepository @Inject constructor(
             // this look is then not recorded as done, and the next one joins them. Other faces are
             // still joined into them: a face given to someone keeps its id, "Annulla" still finds it.
             var heldBack = false
+            var heldUntil: Long? = null
             // A face the user said is not that person ("Non è lui/lei") is never joined to them,
             // whatever the closer look thinks.
             val refused = verdicts.keys.chunked(500).flatMap { dao.rejectionsOfTracks(it) }.map { it.trackId to it.personId }.toSet()
@@ -1374,7 +1379,10 @@ class FaceRepository @Inject constructor(
                     FaceCodec.decode(it.sightings).isNotEmpty() }.sortedByDescending { it.faceCount }
                 val mine = all.filterNot { held(it.id) }
                 var target = mine.firstOrNull() ?: all.firstOrNull() ?: continue
-                if (all.any { it.id != target.id && held(it.id) }) heldBack = true
+                for (h in all) if (h.id != target.id && held(h.id)) {
+                    heldBack = true
+                    heldUntil = maxOf(heldUntil ?: 0L, undoHeld[h.id] ?: 0L)
+                }
                 // The same person confirmed twice in this video, never in one frame: one face.
                 for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = joinInto(target, o)
                 for ((id, v) in verdicts) {
@@ -1395,7 +1403,7 @@ class FaceRepository @Inject constructor(
             }
             val after = signature(meta(dao.tracksOfFile(file.id)))
             if (!heldBack) dao.setScanStats(file.id, FaceStats.withRefine(now.stats, FaceStats.Refine(after, joined, aside, seen.size)))
-            Refined(joined, aside, seen.size)
+            Refined(joined, aside, seen.size, heldUntil)
         }
     }
 
