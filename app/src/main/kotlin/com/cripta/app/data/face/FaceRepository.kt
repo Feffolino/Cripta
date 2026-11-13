@@ -914,7 +914,10 @@ class FaceRepository @Inject constructor(
         change { dao.confirm(trackId, personId); dao.deleteEmptyPersons() }
         hold(listOf(trackId))
         return {
-            change { revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons() }
+            change {
+                unjoinHeld(listOf(trackId))
+                revive(previous); if (before != null) dao.place(trackId, before.personId, before.state, before.similarity); dao.deleteEmptyPersons()
+            }
             release(listOf(trackId))
         }
     }
@@ -925,9 +928,58 @@ class FaceRepository @Inject constructor(
      * face was gone and "Annulla" put nothing back, leaving it confirmed inside the other one.
      */
     private val undoHeld = java.util.concurrent.ConcurrentHashMap<Long, Long>()
-    private fun hold(ids: Collection<Long>) { val until = android.os.SystemClock.elapsedRealtime() + UNDO_HOLD_MS; ids.forEach { undoHeld[it] = until } }
-    private fun release(ids: Collection<Long>) { ids.forEach { undoHeld.remove(it) } }
+    private fun hold(ids: Collection<Long>) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        // What "Annulla" can no longer be asked for leaves memory.
+        heldJoins.keys.removeIf { (undoHeld[it] ?: 0L) + UNDO_HOLD_MS < now }
+        ids.forEach { undoHeld[it] = now + UNDO_HOLD_MS }
+    }
+    private fun release(ids: Collection<Long>) { ids.forEach { undoHeld.remove(it); heldJoins.remove(it) } }
     private fun held(id: Long): Boolean = (undoHeld[id] ?: return false) > android.os.SystemClock.elapsedRealtime()
+
+    /**
+     * Faces the closer look joined into a face whose "Annulla" is still on offer, as they were
+     * before (the face itself first): "Annulla" puts them back apart, else they stayed inside a
+     * face given back to nobody. Leaves memory with the lock, as the faces' pictures do.
+     */
+    private class HeldJoin(
+        val rows: List<FaceTrackEntity>, val rejections: List<FaceRejectionEntity>,
+        val covers: List<Pair<Long, Long?>>, val apart: List<FaceApartEntity>,
+    )
+    private val heldJoins = java.util.concurrent.ConcurrentHashMap<Long, HeldJoin>()
+
+    /** [row] joined into [target] by the closer look; remembered as it was when [target] is [held]. */
+    private suspend fun joinInto(target: FaceTrackEntity, row: FaceTrackEntity): FaceTrackEntity {
+        if (held(target.id)) {
+            val prev = heldJoins[target.id]
+            val people = dao.persons()
+            fun covers(id: Long) = people.filter { it.coverTrackId == id }.map { it.id to it.coverTrackId }
+            heldJoins[target.id] = HeldJoin(
+                rows = (prev?.rows ?: listOf(target)) + row,
+                rejections = (prev?.rejections ?: dao.rejectionsOfTracks(listOf(target.id))) + dao.rejectionsOfTracks(listOf(row.id)),
+                covers = (prev?.covers ?: covers(target.id)) + covers(row.id),
+                apart = ((prev?.apart ?: dao.apartOf(listOf(target.id))) + dao.apartOf(listOf(row.id))).distinct(),
+            )
+        }
+        return dao.tracks(listOf(joinRows(listOf(target, row)))).first()
+    }
+
+    /** The faces joined into [ids] since they were given ([joinInto]) back apart, as they were. */
+    private suspend fun unjoinHeld(ids: Collection<Long>) {
+        for (id in ids) {
+            val j = heldJoins.remove(id) ?: continue
+            // Changed again since (analysed again, joined by hand): left as it is now.
+            val now = dao.tracks(listOf(id)).firstOrNull() ?: continue
+            if (now.frames != j.rows.fold(0L) { m, r -> m or r.frames }) continue
+            dao.deleteRejectionsOfTracks(listOf(id))
+            dao.deleteApart(dao.apartOf(listOf(id)))
+            j.rows.forEach { dao.putTrack(it) }
+            dao.addApart(j.apart)
+            j.rejections.forEach { dao.addRejection(it) }
+            j.covers.forEach { (p, t) -> dao.setCover(p, t) }
+            stale(j.rows.map { it.id })
+        }
+    }
 
     /** A face the user can add by hand: shown even when the analysis would set it aside ([why]). */
     class FoundFace(val face: FaceEngine.Face, val picture: Bitmap, val timeMs: Long) {
@@ -1153,7 +1205,10 @@ class FaceRepository @Inject constructor(
         change { for (t in before) dao.confirm(t.id, personId); dao.deleteEmptyPersons() }
         hold(before.map { it.id })
         return {
-            change { revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons() }
+            change {
+                unjoinHeld(before.map { it.id })
+                revive(*previous.toTypedArray()); for (t in before) dao.place(t.id, t.personId, t.state, t.similarity); dao.deleteEmptyPersons()
+            }
             release(before.map { it.id })
         }
     }
@@ -1172,6 +1227,7 @@ class FaceRepository @Inject constructor(
                 synchronized(crops) { crops.evictAll(); cropsOf = null }
                 synchronized(frames) { frames.evictAll(); framesOf = null }
                 embeddingCache.clear(); cacheDb = null
+                heldJoins.clear()
             }
         }
     }
@@ -1320,13 +1376,13 @@ class FaceRepository @Inject constructor(
                 var target = mine.firstOrNull() ?: all.firstOrNull() ?: continue
                 if (all.any { it.id != target.id && held(it.id) }) heldBack = true
                 // The same person confirmed twice in this video, never in one frame: one face.
-                for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = dao.tracks(listOf(joinRows(listOf(target, o)))).first()
+                for (o in mine.drop(1)) if (o.frames and target.frames == 0L) target = joinInto(target, o)
                 for ((id, v) in verdicts) {
                     if (v != FaceFollower.Verdict.Join(p.personId) || (id to p.personId) in refused) continue
                     // Changed meanwhile (given to someone, deleted, joined): left alone. Never two faces of one frame.
                     val row = dao.tracks(listOf(id)).firstOrNull() ?: continue
                     if (!loose(row.personId, row.state, row.frames) || row.frames and target.frames != 0L) continue
-                    target = dao.tracks(listOf(joinRows(listOf(target, row)))).first()
+                    target = joinInto(target, row)
                     joined++
                 }
             }

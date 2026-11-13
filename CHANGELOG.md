@@ -11,6 +11,7 @@ Entries marked **stable** went out as a stable release.
 - After Android closes Cripta, a viewer opened on more than 300 files comes back on the file it showed: before, it could open another one and forget which
 - The side-by-side preview of duplicates shows very large photos (tens of megapixels) smaller instead of closing the app or loading forever, and says when a photo cannot be shown
 - "Perché" on the faces of a media names a person with a "%" in the name ("Mario 100%"): before, it failed with an error
+- "Annulla" right after giving a face to someone also takes back the faces the closer look joined into it meanwhile: before, they stayed inside the face given back to nobody
 
 ## 2026-11-12
 

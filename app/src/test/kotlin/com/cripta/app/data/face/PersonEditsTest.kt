@@ -258,6 +258,26 @@ class PersonEditsTest {
     }
 
     @Test
+    fun undoingAnAssignmentAfterACloserLookTakesBackTheFacesJoinedIntoIt() = runBlocking {
+        video()
+        val p = faces.newPerson("P")
+        val a = videoFace(1, 1_000)
+        val b = videoFace(2, 9_000)
+        dao.addRejection(FaceRejectionEntity(b, faces.newPerson("Q"), 0.5f))
+        val undo = faces.assign(a, p)
+        assertEquals(1, lookCloser()!!.joined)
+        undo()
+        val rows = dao.tracksOfFile("v").associateBy { it.id }
+        assertEquals(setOf(a, b), rows.keys)
+        assertNull(rows.getValue(a).personId)
+        assertEquals(1L, rows.getValue(a).frames)
+        assertEquals(1, FaceCodec.decode(rows.getValue(a).sightings).size)
+        assertEquals(2L, rows.getValue(b).frames)
+        assertEquals(listOf(9_000L), FaceCodec.decode(rows.getValue(b).sightings).map { it.timeMs })
+        assertEquals(listOf(b), dao.rejectionsOfTracks(listOf(a, b)).map { it.trackId })
+    }
+
+    @Test
     fun aCloserLookNeverJoinsAFaceWhoseAssignmentCanStillBeUndone() = runBlocking {
         video()
         val p = faces.newPerson("P")
