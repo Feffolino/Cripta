@@ -62,10 +62,14 @@ class RestoreKnownFilesTest {
 
     @Test
     fun aNoteRestoredIntoItsVaultIsNotAddedAgain() = runBlocking {
-        repo.createNote(null, "alpha", "alpha")
+        val note = repo.createNote(null, "alpha", "alpha")
+        val hash = db.fileDao().byId(note.id)!!.contentHash
+        assertNotNull(hash)
         val report = roundTrip()
         assertEquals(1, liveNotes().size)
         assertEquals(1, report.duplicates)
+        // The note here keeps the hash it was found by.
+        assertEquals(hash, liveNotes().single().contentHash)
     }
 
     @Test
@@ -76,6 +80,8 @@ class RestoreKnownFilesTest {
         val report = roundTrip()
         assertEquals(1, liveNotes().size)
         assertEquals(1, report.duplicates)
+        // Computed to find it, the hash is kept: the next restore does not read the note again.
+        assertNotNull(liveNotes().single().contentHash)
     }
 
     private var made = 0

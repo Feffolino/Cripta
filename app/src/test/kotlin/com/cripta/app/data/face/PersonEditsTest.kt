@@ -136,6 +136,40 @@ class PersonEditsTest {
         assertTrue((y to a) in rejections)
     }
 
+    @Test
+    fun undoingAMergePutsBackANoSaidToBothPeople() = runBlocking {
+        file("f1")
+        val a = faces.newPerson("A")
+        val b = faces.newPerson("B")
+        val x = track("f1")   // the user said it is neither A nor B
+        dao.addRejection(FaceRejectionEntity(x, a, 0.5f))
+        dao.addRejection(FaceRejectionEntity(x, b, 0.5f))
+        val undo = faces.merge(a, listOf(b))
+        assertEquals(listOf(x to a), dao.rejections().map { it.trackId to it.personId })
+        undo()
+        assertEquals(setOf(x to a, x to b), dao.rejections().map { it.trackId to it.personId }.toSet())
+    }
+
+    @Test
+    fun undoingAMergeOfTwoPeopleAtOnceBringsBothBack() = runBlocking {
+        file("f1"); file("f2")
+        val a = faces.newPerson("A")
+        val b = faces.newPerson("B")
+        val c = faces.newPerson("C")
+        faces.setProfile(b, "about B", emptyList())
+        faces.setProfile(c, "about C", emptyList())
+        val tb = track("f1", personId = b)
+        val tc = track("f2", personId = c)
+        val undo = faces.merge(a, listOf(b, c))
+        assertEquals(listOf(a, a), dao.tracks(listOf(tb, tc)).map { it.personId })
+        undo()
+        assertEquals("about B", person(b)!!.notes)
+        assertEquals("about C", person(c)!!.notes)
+        val back = dao.tracks(listOf(tb, tc)).associate { it.id to it.personId }
+        assertEquals(b, back[tb])
+        assertEquals(c, back[tc])
+    }
+
     // ---- Faces kept apart ----
 
     @Test
