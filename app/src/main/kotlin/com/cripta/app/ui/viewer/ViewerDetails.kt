@@ -2,6 +2,7 @@
 
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.theme.favorite
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.ui.theme.CriptaIcons
@@ -228,7 +229,7 @@ internal fun DetailsSheet(
                         if (file.isFavorite) CriptaIcons.Star else CriptaIcons.StarBorder,
                         if (file.isFavorite) str(R.string.favorite) else str(R.string.favorites),
                         a.onFavorite,
-                        tint = if (file.isFavorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurface,
+                        tint = if (file.isFavorite) MaterialTheme.colorScheme.favorite else MaterialTheme.colorScheme.onSurface,
                         active = file.isFavorite,
                         modifier = Modifier.weight(1f).semantics {
                             stateDescription = if (file.isFavorite) str(R.string.in_favorites) else str(R.string.not_in_favorites)

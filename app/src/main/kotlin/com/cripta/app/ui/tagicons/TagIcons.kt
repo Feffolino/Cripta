@@ -123,7 +123,7 @@ object TagIcons {
             }.also { lexicons.put(lang, it) }
         }
 
-    /** Every icon name in alphabetical order. */
+    /** Every icon name, in the catalogue's order (not sorted). */
     suspend fun names(context: Context): List<String> = load(context)?.paths?.keys?.toList().orEmpty()
 
     suspend fun title(context: Context, name: String): String {

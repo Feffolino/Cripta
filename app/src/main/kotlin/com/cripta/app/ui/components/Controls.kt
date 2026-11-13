@@ -223,28 +223,37 @@ fun CriptaTextField(
 val FieldTextStyle: TextStyle
     @Composable get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
 
-/** [CriptaTextField] for a [TextFieldValue] (keeps the selection, e.g. a pre-selected name). */
+/**
+ * [CriptaTextField] for a [TextFieldValue] (keeps the selection, e.g. a pre-selected name): the
+ * same parameters and the same height as the [String] one, so a field looks the same with both.
+ */
 @Composable
 fun CriptaTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = FieldTextStyle,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
 ) {
     TextField(
-        value = value, onValueChange = onValueChange, modifier = modifier, enabled = enabled,
-        textStyle = FieldTextStyle, label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
-        supportingText = supportingText, isError = isError, keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions, singleLine = singleLine,
+        value = value, onValueChange = onValueChange, modifier = modifier.heightIn(min = if (singleLine) 52.dp else 56.dp), enabled = enabled, readOnly = readOnly,
+        textStyle = textStyle, label = label, placeholder = placeholder, leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon, supportingText = supportingText, isError = isError,
+        visualTransformation = visualTransformation, keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions, singleLine = singleLine, maxLines = maxLines, minLines = minLines,
         shape = if (singleLine) PillFieldShape else FieldShape, colors = criptaFieldColors(),
     )
 }

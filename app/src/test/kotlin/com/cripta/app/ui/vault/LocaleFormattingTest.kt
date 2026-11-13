@@ -1,7 +1,9 @@
 package com.cripta.app.ui.vault
 
 import android.app.Application
+import com.cripta.app.R
 import com.cripta.app.Strings
+import com.cripta.app.plural
 import com.cripta.app.data.db.FileEntity
 import com.cripta.app.data.db.FileWithTags
 import com.cripta.app.ui.components.formatBytes
@@ -59,6 +61,21 @@ class LocaleFormattingTest {
     @Config(qualifiers = "de")
     fun germanUsesItsMonthNameAndDecimalComma() {
         checkFormatting("de", "23 Januar 2000", "1,5 KB", "0 B", "1:01:01", "12.345")
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun aCountedTextGivenOnlyItsCountWritesItLikeTheOthers() {
+        // "1234 Elemente" next to "1.234 Dateien" before.
+        assertEquals("1.234 Elemente", plural(R.plurals.items_n, 1234))
+    }
+
+    @Test
+    fun aSizeThatRoundsUpToTheNextUnitIsWrittenInIt() {
+        assertEquals("1.0 MB", formatBytes(1_048_575))
+        assertEquals("1.0 GB", formatBytes(1_073_741_823))
+        assertEquals("1023.9 KB", formatBytes(1_048_524))
+        assertEquals("1023 B", formatBytes(1023))
     }
 
     private fun checkFormatting(

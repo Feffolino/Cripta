@@ -96,7 +96,7 @@ fun TagPill(
     state: TagPillState = TagPillState.Plain,
     onImage: Boolean = false,
     base: Color = MaterialTheme.colorScheme.surface,
-    /** Icon before the name when Off/Plain (e.g. a pin); the colour dot otherwise (Medium/Large). */
+    /** Icon before the name when Off/Plain (e.g. a pin); without one, the colour dot (every size). */
     leadingIcon: ImageVector? = null,
     /** Icon after the name, e.g. a close cross on a removable filter. */
     trailingIcon: ImageVector? = null,
@@ -105,7 +105,7 @@ fun TagPill(
     onLongClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
     onLongClickLabel: String? = null,
-    /** TalkBack text for the state; defaults to Italian names of [state]. */
+    /** TalkBack text for the state; defaults to the localized name of [state]. */
     stateLabel: String? = null,
     /** The tag's own icon ([com.cripta.app.ui.tagicons.TagIcons] name), before the text. */
     tagIcon: String? = null,

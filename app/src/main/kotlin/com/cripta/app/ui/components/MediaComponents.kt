@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,8 @@ fun formatBytes(bytes: Long): String {
     var value = bytes.toDouble()
     var unit = 0
     while (value >= 1024.0 && unit < sizeUnits.size - 1) { value /= 1024.0; unit++ }
+    // Just under a unit (1 048 575 B = 1023.999 KB) one decimal rounds to "1024.0 KB": the next one.
+    if (unit in 1 until sizeUnits.size - 1 && Math.round(value * 10) >= 10240) { value /= 1024.0; unit++ }
     val pattern = if (unit == 0) "%.0f %s" else "%.1f %s"
     return String.format(com.cripta.app.Strings.locale, pattern, value, sizeUnits[unit])
 }
@@ -101,7 +104,9 @@ fun MediaThumb(
     showFavoriteBadge: Boolean = true,
     shape: Shape = CoverShape,
 ) {
-    val bmp by produceState<Bitmap?>(initialValue = null, file.id, coverVersion) { value = thumb(file) }
+    // Keyed on the file: a slot reused for another file (a list without keys) started from the
+    // previous file's cover and showed it until the new one came.
+    val bmp by key(file.id) { produceState<Bitmap?>(initialValue = null, coverVersion) { value = thumb(file) } }
     val icon = typeIconFor(file.mimeType)
     val isVideo = VaultRepository.isVideo(file.mimeType)
     SelectableThumbFrame(

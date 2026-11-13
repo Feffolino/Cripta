@@ -15,13 +15,11 @@ val SurfaceElevated = Color(0xFF1E232E)
 val Primary = Color(0xFF5AA9FF)
 val OnPrimary = Color(0xFF04121F)
 val Accent = Color(0xFFF5B041)
-val Danger = Color(0xFFEF4444)
 // Error colour used AS TEXT: per theme so it keeps >= 4.5:1 on dialogs and cards.
 // Dark #FF7A7A on #1E232E ≈ 6.3:1; light #C62828 on #FFFFFF ≈ 5.6:1 (≈ 4.7:1 on #E7ECF4).
 val DangerDark = Color(0xFFFF7A7A)
 val OnDangerDark = Color(0xFF2B0A0A)
 val DangerLight = Color(0xFFC62828)
-val Success = Color(0xFF3FB950)
 val OnBg = Color(0xFFF2F5F9)
 val OnSurfaceMuted = Color(0xFF98A2B3)
 // Outline = borders that must be seen (text fields, outlined buttons/chips): >= 3:1 against the
@@ -30,17 +28,22 @@ val OnSurfaceMuted = Color(0xFF98A2B3)
 val Outline = Color(0xFF646E80)
 val OutlineVariant = Color(0xFF2A303C)
 
-// Semantic accents shared by both themes. Favorite = warm gold (the brand's second colour, until
-// now hardcoded per-screen); scrim = translucent black behind on-thumbnail badges so they stay
-// legible over light images in either theme.
-val Favorite = Color(0xFFF5B041)
-val BadgeScrim = Color(0x66000000)
+// Favorite = warm gold, the brand's second colour ([Accent]), as drawn on a picture's dark glass.
+// On a page or a sheet of the light theme it reads at under 2:1: there [favorite] is darker.
+val Favorite = Accent
+private val FavoriteLight = Color(0xFFB45309) // ≈ 5:1 on white, ≈ 4:1 on #E2E7EF
+
+/** The favourite star's gold where it is drawn straight on the theme's pages and sheets (see [Favorite]). */
+val androidx.compose.material3.ColorScheme.favorite: Color
+    get() = if (background.luminance() > 0.5f) FavoriteLight else Favorite
 
 // Light palette (v2) — designed, not inverted.
 val LightBg = Color(0xFFF7F8FA)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFE9EDF3)
-val LightPrimary = Color(0xFF2563EB)
+// #1D4ED8: text buttons of dialogs and sheets read at 5:1 or more on their containers
+// (#2563EB gave 3.9 to 4.4:1 on #DBE1EA..#E9EDF3).
+val LightPrimary = Color(0xFF1D4ED8)
 val LightOnBg = Color(0xFF0F172A)
 val LightMuted = Color(0xFF475467) // darkened for >=4.5:1 on light card captions
 // #7E889A ≈ 3.6:1 on white, ≈ 3.3:1 on LightBg; the faint one stays for dividers.
@@ -190,8 +193,8 @@ fun tagColor(tag: com.cripta.app.data.db.TagEntity): Color = tag.color?.let { Co
 // Cripta Design System roles on top of the Material scheme (same original colours):
 // surface = background, surface-raised = surfaceContainer, surface-overlay = surfaceContainerHigh,
 // surface-control = secondaryContainer, surface-well = surface.
-private val AccentTintDark = Color(0xFF1E2A3D)
-private val AccentTintLight = Color(0xFFD6E4FF)
+internal val AccentTintDark = Color(0xFF1E2A3D)
+internal val AccentTintLight = Color(0xFFD6E4FF)
 
 /** DS `accent-tint`: quiet accent ground (navigation indicator, a selected row, empty-state disc). Text on it is ink. */
 val androidx.compose.material3.ColorScheme.accentTint: Color

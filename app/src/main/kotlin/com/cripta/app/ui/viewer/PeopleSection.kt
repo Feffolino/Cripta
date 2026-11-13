@@ -1,5 +1,6 @@
 package com.cripta.app.ui.viewer
 
+import com.cripta.app.ui.theme.favorite
 import com.cripta.app.R
 import com.cripta.app.str
 import com.cripta.app.plural
@@ -319,7 +320,7 @@ private fun FaceRow(t: TrackCard, p: FaceRepository.Person?, file: FileEntity, i
             androidx.compose.animation.Crossfade(fav, animationSpec = com.cripta.app.ui.theme.Motion.enter(com.cripta.app.ui.theme.Motion.SHORT), label = "personStar") { on ->
                 Icon(if (on) CriptaIcons.Star else CriptaIcons.StarBorder,
                     if (on) str(R.string.unfavorite_x, p.title) else str(R.string.favorite_x, p.title),
-                    tint = if (on) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (on) MaterialTheme.colorScheme.favorite else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.popOn(fav))
             }
         }
@@ -442,7 +443,7 @@ private fun FaceEditor(
                             FaceAvatar(q.cover, { vm.faceCrop(it) }, 48.dp)
                             Text(q.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                                 color = if (q.entity.name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                            if (q.entity.favorite) Icon(CriptaIcons.Star, str(R.string.favorite_f), tint = com.cripta.app.ui.theme.Favorite)
+                            if (q.entity.favorite) Icon(CriptaIcons.Star, str(R.string.favorite_f), tint = MaterialTheme.colorScheme.favorite)
                         }
                     }
                 }

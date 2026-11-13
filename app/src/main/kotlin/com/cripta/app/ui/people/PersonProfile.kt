@@ -1,5 +1,6 @@
 package com.cripta.app.ui.people
 
+import com.cripta.app.ui.theme.favorite
 import androidx.compose.material3.minimumInteractiveComponentSize
 import com.cripta.app.R
 import com.cripta.app.str
@@ -178,7 +179,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                         IconButton(onClick = { vm.setPersonFavorite(p.id, !p.entity.favorite) }) {
                             Icon(if (p.entity.favorite) CriptaIcons.Star else CriptaIcons.StarBorder,
                                 if (p.entity.favorite) str(R.string.unfavorite_short) else str(R.string.favorite_add),
-                                tint = if (p.entity.favorite) com.cripta.app.ui.theme.Favorite else MaterialTheme.colorScheme.onSurfaceVariant)
+                                tint = if (p.entity.favorite) MaterialTheme.colorScheme.favorite else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Box {
                             IconButton(onClick = { menu = true }) { Icon(CriptaIcons.MoreVert, str(R.string.more)) }

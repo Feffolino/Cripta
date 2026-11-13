@@ -20,11 +20,11 @@ screen shows the same mark tinted with the theme accent. If the palette changes,
 | Background | `#0A0C10` | `#F7F8FA` |
 | Surface | `#12151C` | `#FFFFFF` |
 | Surface container high | `#1E232E` | `#E2E7EF` |
-| Accent (primary) | `#5AA9FF` | `#2563EB` |
+| Accent (primary) | `#5AA9FF` | `#1D4ED8` |
 | Text | `#F2F5F9` | `#0F172A` |
 | Secondary text | `#98A2B3` | `#475467` |
 | Error text | `#FF7A7A` | `#C62828` |
-| Favourite | `#F5B041` | `#F5B041` |
+| Favourite | `#F5B041` | `#B45309` on pages and sheets, `#F5B041` on pictures |
 
 - Restrained: neutrals plus one accent. The accent marks actions, state and section headings.
   Never one colour per category, per file type or per screen section.
@@ -208,7 +208,7 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   where "Da confermare" lists only faces like someone with faces in at least 2 media. The people
   grid selects as Raccolta (long press, drag over the others): star, "Unisci" (the user picks who
   stays), "Nascondi".
-- **Similar media** (Impostazioni › Duplicati e cestino, "Ricerca approfondita"): one group per
+- **Similar media** (Impostazioni › Spazio e pulizia, "Ricerca approfondita"): one group per
   page, full screen, swiped up like "Da sistemare". The copy in view takes the free space (tap: the
   viewer, full screen, swiping through the group); under it name and figures, never on the
   picture. The copies in a row, each kept (ring and tick) or deleted (bin): a tap switches it and

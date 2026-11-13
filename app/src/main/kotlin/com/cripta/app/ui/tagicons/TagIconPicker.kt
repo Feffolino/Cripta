@@ -132,7 +132,7 @@ fun TagIconRow(name: String, icon: String?, onPick: (String?) -> Unit, onBrowse:
 }
 
 /**
- * The folder's icon choice: the search field always in view ("Cerca tra 1.480 icone"); without a
+ * The folder's icon choice: the search field always in view ("Cerca tra N icone", N the catalogue's count); without a
  * query, a row of icons that fit the name (none first) and a grid of 12 common ones; with one,
  * the results in a grid of their own. Six cells to a row.
  */

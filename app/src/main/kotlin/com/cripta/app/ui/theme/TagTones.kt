@@ -123,12 +123,11 @@ fun tagTones(color: Color, dark: Boolean): TagTones {
 
 /**
  * The tones while "Etichette colorate" is off: every tag on the quiet accent ground
- * ([accentTint], #1E2A3D / #D6E4FF) with [primary] text and sign; the blue preset on covers.
- * The text is the accent moved just enough towards ink to read at 4.5:1 ([readableOn]): the
- * light accent #2563EB gives only about 4:1 on #D6E4FF.
+ * ([accentTint]) with [primary] text and sign; the blue preset on covers. The text is the accent
+ * moved towards ink as far as it needs to read at 4.5:1 ([readableOn]).
  */
 fun tagOffTones(dark: Boolean, primary: Color, onPrimary: Color): TagTones {
-    val container = if (dark) Color(0xFF1E2A3D) else Color(0xFFD6E4FF)
+    val container = if (dark) AccentTintDark else AccentTintLight
     return TagTones(
         container = container,
         onContainer = readableOn(primary, container),
