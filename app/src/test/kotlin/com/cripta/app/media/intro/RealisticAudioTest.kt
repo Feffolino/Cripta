@@ -13,19 +13,40 @@ import kotlin.math.sqrt
  * Prints what each step keeps, to see where a real match would get lost.
  */
 class RealisticAudioTest {
+    /**
+     * [seconds] of music from [seed], the same every time. The 15 partials of a chord run as rotating
+     * oscillators, not a sin() per sample each, which made these two tests most of the suite's time.
+     */
     private fun music(seconds: Double, seed: Long, sr: Int = 48_000): FloatArray {
         val r = java.util.Random(seed)
         val out = FloatArray((seconds * sr).toInt())
         val noteLen = sr / 4
+        val decay = exp(-3.0 / sr)
+        val sinP = DoubleArray(15); val cosP = DoubleArray(15)
+        val sinW = DoubleArray(15); val cosW = DoubleArray(15); val amp = DoubleArray(15)
         var i = 0
         while (i < out.size) {
             val notes = List(3) { 440.0 * 2.0.pow((r.nextInt(36) - 21) / 12.0) }
             val drum = r.nextInt(2) == 0
+            var p = 0
+            for (f in notes) for (h in 1..5) {
+                val w = 2 * PI * f * h / sr
+                sinP[p] = sin(w * i); cosP[p] = kotlin.math.cos(w * i)
+                sinW[p] = sin(w); cosW[p] = kotlin.math.cos(w); amp[p] = 1.0 / h
+                p++
+            }
+            var env = 1.0
             for (k in 0 until noteLen) {
                 if (i + k >= out.size) break
                 val t = k.toDouble() / sr
                 var v = 0.0
-                for (f in notes) for (h in 1..5) v += sin(2 * PI * f * h * (i + k) / sr) / h * exp(-3 * t)
+                for (q in 0 until 15) {
+                    v += sinP[q] * amp[q] * env
+                    val s2 = sinP[q] * cosW[q] + cosP[q] * sinW[q]
+                    cosP[q] = cosP[q] * cosW[q] - sinP[q] * sinW[q]
+                    sinP[q] = s2
+                }
+                env *= decay
                 if (drum && t < 0.05) v += (r.nextDouble() * 2 - 1) * 2 * exp(-60 * t)
                 v += (r.nextDouble() * 2 - 1) * 0.05
                 out[i + k] = (v * 0.15).toFloat()
@@ -60,14 +81,17 @@ class RealisticAudioTest {
     fun report() {
         for (introSec in listOf(20.0, 2.5)) {
             val intro = music(introSec, 9)
+            // The same pieces for every encoding: made once.
+            val a = print("a", intro + music(40.0, 1), 48_000)
+            val after = intro + music(40.0, 2)
             for ((name, coldOpen) in listOf("all'inizio" to 0.0, "dopo 7,3 s" to 7.3)) {
+                val episode = music(coldOpen, 3) + after
                 for ((label, enc) in listOf(
                     "stessa codifica" to Triple(48_000, 1.0f, -60.0),
                     "44,1 kHz, vol 0,7, -25 dB" to Triple(44_100, 0.7f, -25.0),
                     "44,1 kHz, vol 0,5, -15 dB" to Triple(44_100, 0.5f, -15.0),
                 )) {
-                    val a = print("a", intro + music(40.0, 1), 48_000)
-                    val b = print("b", reencode(music(coldOpen, 3) + intro + music(40.0, 2), enc.first, enc.second, enc.third, 1024, 5), enc.first)
+                    val b = print("b", reencode(episode, enc.first, enc.second, enc.third, 1024, 5), enc.first)
                     val m = SegmentMatcher.best(a.hashes, b.hashes, 1)
                     val off = m?.let { it.bStart - it.aStart } ?: 0
                     val introHashes = (introSec * 1000 / Fingerprint.HOP_MS).toInt()
