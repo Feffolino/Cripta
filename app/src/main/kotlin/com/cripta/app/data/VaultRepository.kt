@@ -1497,7 +1497,8 @@ class VaultRepository @Inject constructor(
 
     /**
      * References to tags no longer in the library, left by older versions (a delete that stopped
-     * half way, a download that waited): links to nothing and ids in saved filters. Cheap; run at unlock.
+     * half way, a download that waited): links to nothing and ids in saved filters. Cheap; run when Home starts,
+     * and again at the next unlock when a lock stopped it.
      */
     suspend fun repairTagReferences() = withContext(Dispatchers.IO) {
         db.withTransaction {
@@ -2070,6 +2071,9 @@ class VaultRepository @Inject constructor(
      */
     val jobRestoreRetries: Flow<Unit> = session.database.map { it != null }.distinctUntilChanged()
         .drop(1).filter { open -> open && !jobsRestored.get() }.map { }
+    /** Each time the vault opens again after a lock (not the opening already there when collected). */
+    val vaultReopened: Flow<Unit> = session.database.map { it != null }.distinctUntilChanged()
+        .drop(1).filter { it }.map { }
     /**
      * Awaited, and not cancellable: fire-and-forget, it could run after the job released the keys
      * and fail silently, and the finished download or conversion was resumed at the next unlock.

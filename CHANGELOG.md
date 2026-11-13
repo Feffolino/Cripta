@@ -23,6 +23,7 @@ Entries marked **stable** went out as a stable release.
 - Restoring the same backup twice no longer adds again the faces deleted everywhere; an intro or an ending removed in every video ("Non è un'intro", "Non è una sigla") does not come back when an older backup is restored
 - A backup that cannot be read (moved, or on a card removed) says so when restored, instead of blaming the passphrase
 - The trash says its count in every language (it was in Italian), and "Svuota il cestino" asks the same way from the Space page as from the trash; choosing a shorter time for the trash asks first when files already in it would be destroyed by it
+- A maintenance step at the start (old trash, files left by an interrupted operation) stopped by a lock runs again at the next unlock; one waiting download or conversion that cannot be resumed no longer keeps the others waiting
 
 ## 2026-11-12
 

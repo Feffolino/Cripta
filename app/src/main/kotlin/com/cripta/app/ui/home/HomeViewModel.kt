@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -62,35 +63,61 @@ class HomeViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.resolveOriginal(appContext, originalId, delete)
 
     init {
-        // Shred trash entries past their retention (only when the trash is in use).
         safeScope.launch {
-            runCatching {
-                val s = settings.settingsOnce()
-                repo.purgeExpiredTrash(s.trashDays).forEach { thumbs.evict(it) }
-            }
-            // Emojis of folders and tags (older vaults, restored backups) become icons.
-            runCatching { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
-            // Links and saved filters still naming tags deleted by older versions.
-            runCatching { repo.repairTagReferences() }
-            // Blobs of a restore the process was killed in: space no file in the app holds.
-            runCatching { repo.reconcileInterruptedRestore() }
-            // Blobs of an import, download, conversion or new note the process was killed in.
-            runCatching { repo.reconcileInterruptedWrites() }
-            // Blobs no row lists (a deletion killed before the blob went).
-            runCatching { repo.sweepOrphanBlobs() }
-            // Folders of a deletion without the trash the process was killed in: open again.
-            runCatching { repo.repairInterruptedFolderDeletes() }
+            maintain()
             // Resume downloads/conversions that were waiting when Android killed the app.
             resumeJobs()
         }
         // Not everything was resumed: tried again each time the vault opens after a lock.
         safeScope.launch { repo.jobRestoreRetries.collect { resumeJobs() } }
+        // A maintenance step stopped by a lock (its database closed under it) runs again at the
+        // next unlock, instead of waiting for the next start of the app.
+        safeScope.launch { repo.vaultReopened.collect { maintain() } }
+    }
+
+    /** The maintenance steps done in this view model's life: each one runs until it gets through once. */
+    private val maintained = HashSet<String>()
+    private val maintenance = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun maintain() = maintenance.withLock {
+        suspend fun step(name: String, block: suspend () -> Unit) {
+            if (name in maintained) return
+            try {
+                block()
+                maintained += name
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.cripta.app.logException(android.util.Log.WARN, "HomeViewModel", "maintenance step $name failed", e)
+            }
+        }
+        // Shred trash entries past their retention (with the trash off too: what is still in it).
+        step("purge") { repo.purgeExpiredTrash(settings.settingsOnce().trashDays).forEach { thumbs.evict(it) } }
+        // Emojis of folders and tags (older vaults, restored backups) become icons.
+        step("icons") { repo.convertEmojisToIcons { e -> com.cripta.app.ui.tagicons.TagIcons.forEmoji(appContext, e) } }
+        // Links and saved filters still naming tags deleted by older versions.
+        step("tags") { repo.repairTagReferences() }
+        // Blobs of a restore the process was killed in: space no file in the app holds.
+        step("restore") { repo.reconcileInterruptedRestore() }
+        // Blobs of an import, download, conversion or new note the process was killed in.
+        step("writes") { repo.reconcileInterruptedWrites() }
+        // Blobs no row lists (a deletion killed before the blob went).
+        step("orphans") { repo.sweepOrphanBlobs() }
+        // Folders of a deletion without the trash the process was killed in: open again.
+        step("folders") { repo.repairInterruptedFolderDeletes() }
     }
 
     /** [restorePendingJobs] once per process; again when it did not get through. */
     private suspend fun resumeJobs() {
         if (!repo.claimJobRestore()) return
-        val complete = runCatching { restorePendingJobs() }.getOrDefault(false)
+        val complete = try {
+            restorePendingJobs()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            repo.releaseJobRestore()
+            throw e
+        } catch (e: Exception) {
+            false
+        }
         if (!complete) repo.releaseJobRestore()
     }
 
@@ -101,46 +128,54 @@ class HomeViewModel @Inject constructor(
         val queuedIds = queued.map { it.id }.toSet()
         val converting = repo.convertingIds.value
         for (job in repo.pendingJobs()) {
-            val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
-            when (job.kind) {
-                "conversion_original" -> {
-                    val id = o.optString("id")
-                    val original = id.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
-                    if (original != null && original.deletedAt == null) {
-                        repo.restoreConvertedOriginal(id, o.optString("name"), o.optString("copyId"))
-                    } else repo.deletePendingJob(job.id)
-                }
-                "download" -> {
-                    val url = o.optString("url")
-                    // A link queued in this process: this row is its own record (it survives the
-                    // process being killed) and stays; deleting it lost the waiting link.
-                    if (job.id in queuedIds) continue
-                    val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
-                    val height = o.optInt("height", 0).takeIf { it > 0 }
-                    val folder = o.optLong("folder", -1L).takeIf { it >= 0 }
-                    // Blank, or an older record of the same link queued again meanwhile with the same
-                    // quality, folder and tags. Queued again otherwise, it is another request: the
-                    // record was dropped, and its own choices with it.
-                    if (url.isBlank() || queued.any { it.url == url && it.maxHeight == height && it.folderId == folder && it.tagIds.toSet() == tags.toSet() }) {
-                        repo.deletePendingJob(job.id); continue
+            // One job that throws (an unreadable record) does not keep the ones after it waiting.
+            try {
+                val o = runCatching { org.json.JSONObject(job.payload) }.getOrNull() ?: continue
+                when (job.kind) {
+                    "conversion_original" -> {
+                        val id = o.optString("id")
+                        val original = id.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
+                        if (original != null && original.deletedAt == null) {
+                            repo.restoreConvertedOriginal(id, o.optString("name"), o.optString("copyId"))
+                        } else repo.deletePendingJob(job.id)
                     }
-                    // Resumed under its own id: the service keeps this record (and replaces it),
-                    // so there is no moment with no record of the link. If the start throws (e.g.
-                    // the app is in the background) the record stays for the next launch.
-                    val started = runCatching {
-                        com.cripta.app.work.ConversionService.startDownloadUrl(
-                            appContext, url, height, folder, tags, jobId = job.id,
-                        )
-                    }.isSuccess
-                    if (!started) complete = false
+                    "download" -> {
+                        val url = o.optString("url")
+                        // A link queued in this process: this row is its own record (it survives the
+                        // process being killed) and stays; deleting it lost the waiting link.
+                        if (job.id in queuedIds) continue
+                        val tags = o.optJSONArray("tags")?.let { a -> (0 until a.length()).map { a.getLong(it) } }.orEmpty()
+                        val height = o.optInt("height", 0).takeIf { it > 0 }
+                        val folder = o.optLong("folder", -1L).takeIf { it >= 0 }
+                        // Blank, or an older record of the same link queued again meanwhile with the same
+                        // quality, folder and tags. Queued again otherwise, it is another request: the
+                        // record was dropped, and its own choices with it.
+                        if (url.isBlank() || queued.any { it.url == url && it.maxHeight == height && it.folderId == folder && it.tagIds.toSet() == tags.toSet() }) {
+                            repo.deletePendingJob(job.id); continue
+                        }
+                        // Resumed under its own id: the service keeps this record (and replaces it),
+                        // so there is no moment with no record of the link. If the start throws (e.g.
+                        // the app is in the background) the record stays for the next launch.
+                        val started = runCatching {
+                            com.cripta.app.work.ConversionService.startDownloadUrl(
+                                appContext, url, height, folder, tags, jobId = job.id,
+                            )
+                        }.isSuccess
+                        if (!started) complete = false
+                    }
+                    "convert" -> {
+                        val id = o.optString("id")
+                        if (id.isBlank() || id in converting) continue
+                        if (repo.fileById(id) == null) { repo.deletePendingJob(job.id); continue }
+                        val after = com.cripta.app.data.ConvertAfter.entries.getOrNull(o.optInt("after", -1))
+                        if (runCatching { com.cripta.app.work.ConversionService.startConvert(appContext, id, after) }.isFailure) complete = false
+                    }
                 }
-                "convert" -> {
-                    val id = o.optString("id")
-                    if (id.isBlank() || id in converting) continue
-                    if (repo.fileById(id) == null) { repo.deletePendingJob(job.id); continue }
-                    val after = com.cripta.app.data.ConvertAfter.entries.getOrNull(o.optInt("after", -1))
-                    if (runCatching { com.cripta.app.work.ConversionService.startConvert(appContext, id, after) }.isFailure) complete = false
-                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.cripta.app.logException(android.util.Log.WARN, "HomeViewModel", "pending job ${job.kind} not resumed", e)
+                complete = false
             }
         }
         return complete
