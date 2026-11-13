@@ -68,13 +68,14 @@ class YtdlpDownloader @Inject constructor(
         if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
         val dir = File(appContext.cacheDir, "ytdl-${UUID.randomUUID()}").apply { mkdirs() }
         val request = DownloadRequests.download(url, maxHeight, dir)
+        val progress = DownloadProgress()
         try {
             withEngine {
                 if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
-                YoutubeDL.getInstance().execute(request, processId) { progress, etaInSeconds, _ ->
+                YoutubeDL.getInstance().execute(request, processId) { _, etaInSeconds, line ->
                     // A cancel that came before the process was registered is honoured here.
                     if (isCancelled()) cancel(processId)
-                    onProgress(progress.toInt().coerceIn(0, 100), etaInSeconds)
+                    onProgress(progress.update(line), etaInSeconds)
                 }
             }
             if (isCancelled()) throw java.io.InterruptedIOException("cancelled")

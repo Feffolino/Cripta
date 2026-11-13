@@ -28,6 +28,7 @@ Entries marked **stable** went out as a stable release.
 - The duplicate search stops at once when cancelled, even while it reads a big file whole, and its progress no longer reaches 100% before that reading; "N di M analizzati" no longer counts the videos the next search will analyse again
 - Duplicates: a second tap on "Tieni" no longer sends the same copies to the trash again (their undo kept working); a copy to keep that cannot be read and copies all changed since the search are said as such; results opened later leave out files deleted or changed since; keeping two or more similar copies closes their group; the longer video is suggested; "Non sono simili" has "Annulla" like the other choices
 - The duplicates screens show the folder of each copy, and deleting copies says when they are in a folder the kept copy is not in
+- Videos from streaming sites are fetched eight pieces at a time instead of four, to start each piece sooner. The download bar moves on steadily while the pieces come in, instead of standing still and then jumping, never goes back, and no longer starts again from zero for the audio of a video
 
 ## 2026-11-12
 

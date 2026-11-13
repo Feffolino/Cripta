@@ -26,8 +26,10 @@ internal object DownloadRequests {
         addOption("-f", "bv*[ext=mp4]$cap+ba[ext=m4a]/b[ext=mp4]$cap/bv*$cap+ba/b$cap/bv*$cap")
         addOption("--merge-output-format", "mp4/mkv")
         addOption("-o", File(dir, "%(title).80s.%(ext)s").absolutePath)
-        // HLS/DASH: fetch fragments in parallel instead of one at a time.
-        addOption("--concurrent-fragments", 4)
+        // HLS/DASH: fetch fragments in parallel instead of one at a time. The Python inside
+        // youtubedl-android has no `requests`, so yt-dlp opens a new connection (TCP + TLS) for
+        // every fragment: more of them in flight hide that wait.
+        addOption("--concurrent-fragments", 8)
         addOption("--no-mtime")
         addOption("--newline")
         addOption("--no-simulate")
