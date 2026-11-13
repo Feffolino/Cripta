@@ -128,7 +128,15 @@ object NoteMarkdown {
         inline(line, p, keep)
     }
 
+    /**
+     * Longest line whose inline styles are looked for. The italic and link rules scan to the end of
+     * the line from every opening mark without a close: a line of thousands of them ("*a *a ...")
+     * costs the square of its length, and the editor renders on every key. Longer lines stay plain.
+     */
+    private const val INLINE_MAX = 2000
+
     private fun AnnotatedString.Builder.inline(text: String, p: Palette, keep: Boolean) {
+        if (text.length > INLINE_MAX) { append(text); return }
         var at = 0
         for (m in INLINE.findAll(text)) {
             append(text.substring(at, m.range.first))

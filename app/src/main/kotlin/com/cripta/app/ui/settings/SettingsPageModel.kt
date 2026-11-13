@@ -80,6 +80,16 @@ internal fun pageSummary(p: SettingsPage, s: com.cripta.app.data.Settings, tagCo
 /** A searchable option: what it is called, extra words people may type, where it lives (page + section). */
 internal class SearchEntry(val label: String, val keywords: String, val page: SettingsPage, val section: String)
 
+/**
+ * The entries of [index] that [query] finds in their label or their keywords, case aside in the
+ * app's language ([locale]): keywords such as "PIN Fingerabdruck" have capitals too.
+ */
+internal fun searchSettings(index: List<SearchEntry>, query: String, locale: java.util.Locale): List<SearchEntry> {
+    val q = query.trim().lowercase(locale)
+    if (q.isEmpty()) return emptyList()
+    return index.filter { it.label.lowercase(locale).contains(q) || it.keywords.lowercase(locale).contains(q) }
+}
+
 // A getter: the texts are read in the current language each time the search runs.
 internal val SEARCH_INDEX: List<SearchEntry> get() = listOf(
     SearchEntry(str(R.string.si_00), str(R.string.si_00_kw), SettingsPage.ASPETTO, str(R.string.sec_theme)),

@@ -146,7 +146,9 @@ fun NoteEditorScreen(
         floatingActionButton = {
             // DS cr-fab "Fatto": saves and closes. While saving, the tick turns into progress.
             if (vm.loaded && !vm.loadFailed) androidx.compose.material3.FloatingActionButton(
-                onClick = { if (!vm.saving) vm.save(fileId, folderId) { onBack() } },
+                // As Back: an unchanged note or an empty new one just closes (no empty note made,
+                // no rewrite of the same text).
+                onClick = leave,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,

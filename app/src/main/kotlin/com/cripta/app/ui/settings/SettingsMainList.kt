@@ -33,9 +33,9 @@ internal fun MainSettingsList(
     space: com.cripta.app.data.SpaceReport?,
     onOpenSpace: () -> Unit,
 ) {
-    val q = query.trim().lowercase()
+    val q = query.trim()
     val hits = if (q.isNotEmpty()) remember(q, com.cripta.app.Strings.locale) {
-        SEARCH_INDEX.filter { e -> e.label.lowercase().contains(q) || e.keywords.contains(q) }
+        searchSettings(SEARCH_INDEX, q, com.cripta.app.Strings.locale)
     } else emptyList()
     // Two columns of page rows in landscape; search, group labels and the lock button span the width.
     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> androidx.compose.foundation.lazy.grid.GridItemSpan =

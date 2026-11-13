@@ -292,7 +292,6 @@ class SettingsViewModel @Inject constructor(
      * [heldToEnd] from the view model scope. A failure (the vault locked before the start: the
      * repository throws "Vault locked") is logged and said instead of crashing the app.
      */
-
     private fun launchHeld(what: String, block: suspend () -> Unit) = safeScope.launch {
         try {
             heldToEnd(block)
@@ -518,8 +517,10 @@ class SettingsViewModel @Inject constructor(
     /** The last "Da confermare" list, shown at once when the page comes back from a media. */
     var lastKnown: List<com.cripta.app.data.face.FaceRepository.PersonSuggestion>? = null
     suspend fun frameOf(card: com.cripta.app.data.db.TrackCard) = faces.frameOf(card)
-    /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
-    /** [onFailed]: the answer was not saved, so the page takes it back. */
+    /**
+     * "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face.
+     * [onFailed]: the answer was not saved, so the page takes it back.
+     */
     fun acceptSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) =
         faceChange(onFailed) { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
     fun refuseSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) = faceChange(onFailed) { faces.reject(trackId, personId) }
@@ -615,8 +616,23 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * A change to the tag library. Failing (the vault locked meanwhile, storage full) it says so: the
+     * dialog has already closed, and only a log line left the user thinking it was done.
+     */
+    private fun tagChange(block: suspend () -> Unit) = safeScope.launch {
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logException(android.util.Log.ERROR, "SettingsViewModel", "tag change not saved", e)
+            _message.value = str(R.string.tags_not_changed)
+        }
+    }
+
     /** A new tag with its whole look, in one write. A name already in the library is said so, not reused. */
-    fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
+    fun createTag(draft: com.cripta.app.ui.vault.TagDraft) = tagChange {
         val r = repo.createTag(draft.name, draft.alias, draft.icon, draft.color, draft.pinned, draft.onCovers)
         if (!r.created) _message.value = str(R.string.tag_exists, draft.name)
     }
@@ -625,7 +641,7 @@ class SettingsViewModel @Inject constructor(
      * Gives every tag a colour from the sober palette, at random but spread out (no two tags share
      * one until the palette runs out). Replaces the colours chosen so far.
      */
-    fun randomizeTagColors() = safeScope.launch {
+    fun randomizeTagColors() = tagChange {
         var pool = emptyList<androidx.compose.ui.graphics.Color>()
         val colors = tags.value.associate { t ->
             if (pool.isEmpty()) pool = com.cripta.app.ui.theme.TagPalette.shuffled()
@@ -643,19 +659,19 @@ class SettingsViewModel @Inject constructor(
     val tagUsage: StateFlow<Map<Long, com.cripta.app.data.db.TagUsage>> =
         repo.tagUsage().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun deleteTag(id: Long) = safeScope.launch { repo.deleteTag(id) }
+    fun deleteTag(id: Long) = tagChange { repo.deleteTag(id) }
 
     /** Merge [fromId] into [intoId] (Manutenzione): its files get the second, the first goes. */
-    fun mergeTags(fromId: Long, intoId: Long) = safeScope.launch { repo.mergeTags(fromId, intoId) }
+    fun mergeTags(fromId: Long, intoId: Long) = tagChange { repo.mergeTags(fromId, intoId) }
 
     /** Delete the tags of [ids] still on no file (Manutenzione). */
-    fun deleteUnusedTags(ids: Collection<Long>) = safeScope.launch { repo.deleteUnusedTags(ids) }
+    fun deleteUnusedTags(ids: Collection<Long>) = tagChange { repo.deleteUnusedTags(ids) }
 
     /**
      * Save the tag editor: name, alias, colour, pin and icon together, by id, in one transaction.
      * A name taken meanwhile by another tag leaves the tag exactly as it was, and is said so.
      */
-    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = safeScope.launch {
+    fun saveTag(id: Long, draft: com.cripta.app.ui.vault.TagDraft) = tagChange {
         when (repo.saveTag(id, draft.name, draft.alias, draft.color, draft.pinned, draft.icon, draft.onCovers)) {
             com.cripta.app.data.TagSave.SAVED -> Unit
             com.cripta.app.data.TagSave.NAME_TAKEN -> _message.value = str(R.string.tag_exists, draft.name)
@@ -784,10 +800,10 @@ class SettingsViewModel @Inject constructor(
         dupStore.state.map { it.running != null }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val dupProgress: StateFlow<Pair<Int, Int>> =
         dupStore.state.map { it.done to it.total }.stateIn(viewModelScope, SharingStarted.Eagerly, 0 to 0)
-    /** A finished scan the user hasn't opened yet (e.g. it completed in the background). */
     /** The last scan's result, seen or not (it can be opened again until the app closes). */
     val dupLastResult: StateFlow<com.cripta.app.data.dedup.DupScanStore.Result?> =
         dupStore.state.map { it.result }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /** A finished scan the user hasn't opened yet (e.g. it completed in the background). */
     val dupResultWaiting: StateFlow<com.cripta.app.data.dedup.DupScanStore.Result?> =
         dupStore.state.map { it.result?.takeIf { r -> !r.seen } }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     /** Set when this screen started the scan: open the results as soon as it finishes. */

@@ -262,7 +262,6 @@ class HomeViewModel @Inject constructor(
     /** Ask the Cartelle screen to open this folder (the caller then switches tab). */
     fun openFolder(id: Long) = navigator.openFolder(id)
 
-    /** Ask the Cartelle screen to apply a saved filter (the caller then switches tab). */
     /** The Home row of people: starred first, then the most seen; empty when Settings hides it. */
     val homePeople: StateFlow<List<com.cripta.app.data.face.FaceRepository.Person>> =
         combine(faces.people(), settings.settings.map { it.peopleOnHome }) { o, mode ->
@@ -292,12 +291,14 @@ class HomeViewModel @Inject constructor(
     /** The vault, filtered on [personId]. */
     fun openPerson(personId: Long) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(personIds = setOf(personId), wholeVault = true))
 
-    /** Counted over the whole vault on Home, so it opens over the whole vault (not the folder last open). */
+    /**
+     * Ask the Cartelle screen to apply a saved filter (the caller then switches tab). Counted over
+     * the whole vault on Home, so it opens over the whole vault (not the folder last open).
+     */
     fun applySavedFilter(json: String) {
         filtersFromJson(json)?.let { navigator.applyFilters(it.copy(wholeVault = true)) }
     }
 
-    /** Open Cartelle filtered to one type (from the summary card). */
     /** The Home search pill: the query opens in Cartelle, over the whole vault. */
     fun search(query: String) = navigator.applyFilters(com.cripta.app.ui.vault.Filters(query = query, wholeVault = true))
 
@@ -305,7 +306,7 @@ class HomeViewModel @Inject constructor(
     fun showContinueWatching() =
         navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = com.cripta.app.ui.vault.TypeFilter.VIDEO, inProgress = true, wholeVault = true))
 
-    /** Every file of [type] in the vault, wherever it is: the figure tapped counted them all. */
+    /** Open Cartelle on every file of [type], wherever it is: the summary figure tapped counted them all. */
     fun showType(type: com.cripta.app.ui.vault.TypeFilter) =
         navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type, wholeVault = true))
 }

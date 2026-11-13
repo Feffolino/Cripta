@@ -24,6 +24,16 @@ class NoteMarkdownTest {
         )
     }
 
+    @Test fun aVeryLongLineIsLeftPlainInsteadOfScannedForEveryMark() {
+        // Thousands of unclosed marks made each key cost seconds; past the limit no style is looked for.
+        val long = "*x* " + "*a ".repeat(4000)
+        val out = NoteMarkdown.render(long, p, keepMarkers = true)
+        assertEquals(long, out.text)
+        assertEquals(0, out.spanStyles.size)
+        // A normal line keeps its styles.
+        assertEquals(1, NoteMarkdown.render("*x* e testo", p, keepMarkers = true).spanStyles.count { it.item.fontStyle != null })
+    }
+
     @Test fun enterContinuesAndEndsLists() {
         val old = TextFieldValue("- [x] latte", TextRange(11))
         val typed = TextFieldValue("- [x] latte\n", TextRange(12))

@@ -47,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
+import com.cripta.app.ui.components.formatCount
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -489,7 +490,7 @@ fun SettingsScreen(
                                     else str(R.string.auto_next_desc),
                                 icon = CriptaIcons.SkipNext) { vm.setAutoNext(it) }
                             if (s.autoNext) {
-                                ChoiceRow(str(R.string.show_next_in_last), listOf(5 to "5 s", 8 to "8 s", 15 to "15 s"),
+                                ChoiceRow(str(R.string.show_next_in_last), listOf(5 to str(R.string.n_sec, formatCount(5)), 8 to str(R.string.n_sec, formatCount(8)), 15 to str(R.string.n_sec, formatCount(15))),
                                     s.autoNextSec) { vm.setAutoNextSec(it) }
                             }
                         }
@@ -512,7 +513,7 @@ fun SettingsScreen(
                                 ChoiceRow(str(R.string.speed_while_holding), listOf(15 to str(R.string.speed_1_5), 20 to "2×", 30 to "3×"),
                                     s.holdSpeedX10) { vm.setHoldSpeed(it) }
                             }
-                            ChoiceRow(str(R.string.double_tap_skip), listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"),
+                            ChoiceRow(str(R.string.double_tap_skip), listOf(5 to str(R.string.n_sec, formatCount(5)), 10 to str(R.string.n_sec, formatCount(10)), 30 to str(R.string.n_sec, formatCount(30))),
                                 s.seekStepSec, icon = CriptaIcons.FastRewind) { vm.setSeekStep(it) }
                         }
                     },
@@ -522,7 +523,7 @@ fun SettingsScreen(
                                 desc = if (s.autoRotate) str(R.string.follow_orientation_on)
                                     else str(R.string.follow_orientation_off),
                                 icon = CriptaIcons.ScreenRotation) { vm.setAutoRotate(it) }
-                            ChoiceRow(str(R.string.controls_visible_for), listOf(2 to "2 s", 4 to "4 s", 8 to "8 s"),
+                            ChoiceRow(str(R.string.controls_visible_for), listOf(2 to str(R.string.n_sec, formatCount(2)), 4 to str(R.string.n_sec, formatCount(4)), 8 to str(R.string.n_sec, formatCount(8))),
                                 s.controlsTimeoutSec, icon = CriptaIcons.Timer) { vm.setControlsTimeout(it) }
                         }
                     },
@@ -928,7 +929,7 @@ fun SettingsScreen(
                     sec(str(R.string.sec_about)) {
                         Section(str(R.string.sec_about)) {
                             InfoRow(str(R.string.version), pkgInfo?.versionName ?: "—")
-                            InfoRow("Build", pkgInfo?.longVersionCode?.toString() ?: "—")
+                            InfoRow(str(R.string.build_number), pkgInfo?.longVersionCode?.toString() ?: "—")
                             InfoRow(str(R.string.package_), ctx.packageName)
                             InfoRow("Android", "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
                         }
