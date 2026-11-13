@@ -29,4 +29,15 @@ class DragOrderTest {
         val out = afterDrop(listOf("B" to 1, "A" to 1), listOf("A" to 2, "B" to 2)) { it.first }
         assertEquals(listOf("B" to 2, "A" to 2), out)
     }
+
+    @Test
+    fun aDroppedDragIsShownAndSaved() {
+        assertEquals(DragEnd(ids("BACD"), ids("BACD")), endDrag(true, ids("BAC"), ids("ABCD")) { it })
+    }
+
+    @Test
+    fun aCancelledDragShowsTheStoredOrderAndSavesNothing() {
+        // The moves made (B before A) are dropped; a file added meanwhile is shown, as the vault has it.
+        assertEquals(DragEnd(ids("ABCD"), null), endDrag(false, ids("BAC"), ids("ABCD")) { it })
+    }
 }

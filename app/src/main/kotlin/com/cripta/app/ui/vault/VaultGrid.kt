@@ -746,10 +746,15 @@ internal fun ReorderableFileGrid(
     LaunchedEffect(items) { if (!dragging) { list.clear(); list.addAll(items) } }
     // The vault as it is now, for the end of a drag: an update that came meanwhile was held back.
     val currentItems by rememberUpdatedState(items)
-    /** The list as the vault has it: a drag that ends without a drop leaves nothing of its moves. */
-    fun showStored() { list.clear(); list.addAll(currentItems) }
 
     var draggedId by remember { mutableStateOf<String?>(null) }
+    /** The end of a drag: a drop shows and saves the order, any other end the stored one ([endDrag]). */
+    fun finishDrag(dropped: Boolean) {
+        dragging = false; draggedId = null
+        val end = endDrag(dropped, list.toList(), currentItems) { it.file.id }
+        if (end.shown != list) { list.clear(); list.addAll(end.shown) }
+        end.saved?.let(onReorder)
+    }
     var pointer by remember { mutableStateOf(Offset.Zero) }    // finger position in the grid viewport
     var pressLocal by remember { mutableStateOf(Offset.Zero) } // grab point inside the cell
     val density = LocalDensity.current
@@ -875,21 +880,16 @@ internal fun ReorderableFileGrid(
                                         pointer += amount
                                         retarget()
                                     },
-                                    onDragEnd = {
-                                        dragging = false; draggedId = null
-                                        // Files added, removed or renamed during the drag join the order dropped.
-                                        val dropped = afterDrop(list.toList(), currentItems) { it.file.id }
-                                        if (dropped != list) { list.clear(); list.addAll(dropped) }
-                                        onReorder(dropped.map { it.file.id })
-                                    },
+                                    // Files added, removed or renamed during the drag join the order dropped.
+                                    onDragEnd = { finishDrag(dropped = true) },
                                     // Cancelled by the system before the release: nothing is saved, and the
                                     // grid shows the stored order again (left moved, a later drop saved it too).
-                                    onDragCancel = { dragging = false; draggedId = null; showStored() },
+                                    onDragCancel = { finishDrag(dropped = false) },
                                 )
                             } finally {
                                 // Handler removed mid-drag (e.g. a filter turned reordering off): unfreeze
                                 // the list without persisting a half-done order.
-                                if (draggedId == fwt.file.id) { dragging = false; draggedId = null; showStored() }
+                                if (draggedId == fwt.file.id) finishDrag(dropped = false)
                             }
                         }),
                 )
