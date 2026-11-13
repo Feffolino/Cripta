@@ -597,9 +597,11 @@ class ThumbnailLoader @Inject constructor(
     suspend fun regenerateVideoCover(file: FileEntity, cover: VideoCover): Bitmap? =
         withContext(Dispatchers.IO) {
             if (!VaultRepository.isVideo(file.mimeType)) return@withContext null
+            // Locked while the frame was decoded: the cover must not go back into memory after.
+            val epoch = lockEpoch.get()
             val bmp = videoFrame(file, cover)
                 ?: return@withContext null
-            cache.put(file.id, bmp)
+            if (!remember(file.id, bmp, epoch)) return@withContext null
             failed.remove(file.id)                 // a good cover now exists: allow reload paths
             // Persist as a user-chosen cover (survives cache purges / restarts) and verify it reads
             // back; the automatic cache entry is dropped so it can never shadow the chosen one.
@@ -609,7 +611,8 @@ class ThumbnailLoader @Inject constructor(
                 runCatching { File(diskDir, file.id).delete() }
             } else {
                 android.util.Log.w("ThumbnailLoader", "custom cover not persisted for ${file.id}")
-                val cached = runCatching { writeDisk(file.id, bmp) }.isSuccess
+                // writeDisk says false without throwing (no key, compression or rename failed).
+                val cached = runCatching { writeDisk(file.id, bmp) }.getOrDefault(false)
                 // Nothing reached the disk: a cover shown now would be gone after a restart. Not offered.
                 if (!cached) { cache.remove(file.id); return@withContext null }
             }
