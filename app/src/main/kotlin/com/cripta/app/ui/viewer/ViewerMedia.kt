@@ -236,11 +236,19 @@ private fun ZoomableImage(bytes: ByteArray, name: String, onSingleTap: () -> Uni
             ((fw * s - w) / 2f).coerceAtLeast(0f), ((fh * s - h) / 2f).coerceAtLeast(0f))
     }
 
+    // Decoded for the zoom (up to 6x), not for the page: at the page's size the zoom only enlarged
+    // a photo already shrunk to the screen. Three screens at most, 4096 px a side (a texture's
+    // limit), never larger than the photo itself.
+    val decodeSide = remember(ctx) {
+        with(ctx.resources.displayMetrics) { (maxOf(widthPixels, heightPixels) * 3).coerceIn(1, 4096) }
+    }
+
     Box(Modifier.fillMaxSize()) {
     AsyncImage(
         onError = { failed = true },
         onSuccess = { imageSize = it.painter.intrinsicSize },
-        model = ImageRequest.Builder(ctx).data(bytes).diskCachePolicy(CachePolicy.DISABLED).build(),
+        model = ImageRequest.Builder(ctx).data(bytes).diskCachePolicy(CachePolicy.DISABLED)
+            .size(decodeSide).precision(coil.size.Precision.INEXACT).build(),
         contentDescription = name,
         contentScale = ContentScale.Fit,
         modifier = Modifier
