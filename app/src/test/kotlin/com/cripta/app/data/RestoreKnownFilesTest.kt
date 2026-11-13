@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.cripta.app.Strings
 import com.cripta.app.data.db.AudioPrintEntity
 import com.cripta.app.data.db.CriptaDatabase
+import com.cripta.app.data.db.DupPrintEntity
 import com.cripta.app.data.db.FaceScanEntity
 import com.cripta.app.data.db.FaceTrackEntity
 import com.cripta.app.data.db.FileEntity
@@ -23,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -112,6 +114,53 @@ class RestoreKnownFilesTest {
         assertEquals(1_000L to 5_000L, sa.startMs to sa.endMs)
         val sb = db.introDao().segmentsOf(b.id).single()
         assertEquals(2_000L to 3_000L, sb.startMs to sb.endMs)
+    }
+
+    @Test
+    fun aFileAlreadyHereGetsOnlyTheEndingItLacks() = runBlocking {
+        val a = video()
+        db.introDao().putSegment(MediaSegmentEntity(a.id, "intro", 1_000, 5_000, "manual"))
+        db.introDao().putSegment(MediaSegmentEntity(a.id, "outro", 50_000, 60_000, "manual"))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // Here: the ending lost, the intro marked otherwise since.
+        db.introDao().deleteSegment(a.id, "outro")
+        db.introDao().putSegment(MediaSegmentEntity(a.id, "intro", 2_000, 3_000, "manual"))
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        val segs = db.introDao().segmentsOf(a.id).associateBy { it.kind }
+        assertEquals(2_000L to 3_000L, segs.getValue("intro").let { it.startMs to it.endMs })
+        assertEquals(50_000L to 60_000L, segs.getValue("outro").let { it.startMs to it.endMs })
+    }
+
+    @Test
+    fun aFileAlreadyHereGetsTheAudioPrintItLacksAndIsComparedAgain() = runBlocking {
+        val a = video()
+        val hashes = ByteArray(64) { it.toByte() }
+        db.introDao().putPrint(AudioPrintEntity(a.id, "head", 0, hashes, "ok", matched = true))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        db.introDao().clearPrints(a.id)
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        val print = db.introDao().printsOf(a.id).single()
+        assertTrue(print.hashes.contentEquals(hashes))
+        // Compared with this vault's videos at the next analysis, not taken as done.
+        assertEquals(listOf(a.id), db.introDao().unmatchedIds())
+    }
+
+    @Test
+    fun aFileAlreadyHereGetsTheSimilarityPrintItLacksAndKeepsItsOwn() = runBlocking {
+        val a = video(); val b = video()
+        db.dupPrintDao().put(DupPrintEntity(a.id, 1, 1, ByteArray(8) { 1 }))
+        db.dupPrintDao().put(DupPrintEntity(b.id, 1, 1, ByteArray(8) { 2 }))
+        val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
+        repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        // Here: a lost its print, b has another one since.
+        sql("DELETE FROM dup_prints WHERE fileId = '${a.id}'")
+        db.dupPrintDao().put(DupPrintEntity(b.id, 1, 1, ByteArray(8) { 3 }))
+        repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
+        val prints = db.dupPrintDao().all().associateBy { it.fileId }
+        assertTrue(prints.getValue(a.id).hashes.contentEquals(ByteArray(8) { 1 }))
+        assertTrue(prints.getValue(b.id).hashes.contentEquals(ByteArray(8) { 3 }))
     }
 
     @Test
