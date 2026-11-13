@@ -820,7 +820,13 @@
         <item quantity="many">Объединено %1$s человек</item>
         <item quantity="other">Объединено %1$s человека</item>
     </plurals>
-    <string name="person_hidden">Человек скрыт</string>
+    <plurals name="people_hidden">
+        <item quantity="one">Скрыт %1$s человек</item>
+        <item quantity="few">Скрыто %1$s человека</item>
+        <item quantity="many">Скрыто %1$s человек</item>
+        <item quantity="other">Скрыто %1$s человека</item>
+    </plurals>
+    <string name="person_deleted">Человек удалён</string>
     <plurals name="media_removed">
         <item quantity="one">Из профиля удалён %1$s файл</item>
         <item quantity="few">Из профиля удалено %1$s файла</item>
@@ -829,7 +835,6 @@
     </plurals>
     <string name="confirmed">Подтверждено</string>
     <string name="rejected">Отклонено</string>
-    <string name="everywhere_suffix">везде</string>
     <plurals name="faces_assigned">
         <item quantity="one">Назначено %1$s лицо</item>
         <item quantity="few">Назначено %1$s лица</item>

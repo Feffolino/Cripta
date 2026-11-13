@@ -745,13 +745,15 @@
     <plurals name="people_merged">
         <item quantity="other">已合并 %1$s 个人物</item>
     </plurals>
-    <string name="person_hidden">已隐藏人物</string>
+    <plurals name="people_hidden">
+        <item quantity="other">已隐藏 %1$s 个人物</item>
+    </plurals>
+    <string name="person_deleted">已删除人物</string>
     <plurals name="media_removed">
         <item quantity="other">已移除 %1$s 个媒体文件</item>
     </plurals>
     <string name="confirmed">已确认</string>
     <string name="rejected">已拒绝</string>
-    <string name="everywhere_suffix">所有位置</string>
     <plurals name="faces_assigned">
         <item quantity="other">已分配 %1$s 张人脸</item>
     </plurals>

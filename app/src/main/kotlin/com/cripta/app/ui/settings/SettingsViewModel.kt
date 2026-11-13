@@ -420,19 +420,40 @@ class SettingsViewModel @Inject constructor(
     }
     /** Run [block] and offer its undo as "[message] · Annulla". */
     private fun undoable(message: String, block: suspend () -> com.cripta.app.data.face.Undo) = faceAction { faceUndo.value = message to block() }
-    fun undoFaceChange() { val u = faceUndo.value ?: return; faceUndo.value = null; faceAction { u.second() } }
+    /**
+     * [faceAction] for a change of faces or people that has no "Annulla" of its own: the one still
+     * on offer goes first. Its snapshot was taken before this change, and taking it back put the
+     * old faces and people back over it (as in the viewer).
+     */
+    private fun faceChange(onFailed: () -> Unit = {}, block: suspend () -> Unit) = faceAction(onFailed) { faceUndo.value = null; block() }
+    fun undoFaceChange() {
+        val u = faceUndo.value ?: return
+        faceUndo.value = null
+        faceAction(onFailed = {
+            // Not undone: "Annulla" stays on offer to try again (unless something newer took its place).
+            if (faceUndo.value == null) faceUndo.value = u
+        }) { u.second() }
+    }
     fun renamePerson(id: Long, name: String) = faceAction { faces.rename(id, name) }
     fun setPersonFavorite(id: Long, favorite: Boolean) = faceAction { faces.setFavorite(id, favorite) }
     fun mergePeople(into: Long, others: Collection<Long>) =
         undoable(plural(R.plurals.people_merged, others.size + 1)) { faces.merge(into, others) }
     fun keepApart(a: Long, b: Long) = faceAction { faces.keepApart(a, b) }
-    fun ignorePerson(id: Long) = undoable(str(R.string.person_hidden)) { faces.ignore(id) }
-    fun deleteEmptyPerson(id: Long) = faceAction { faces.deleteEmpty(id) }
+    fun ignorePerson(id: Long) = ignorePeople(listOf(id))
+    /** "Nascondi" on the people picked: one "Annulla" for all of them. */
+    fun ignorePeople(ids: Collection<Long>) {
+        if (ids.isEmpty()) return
+        undoable(plural(R.plurals.people_hidden, ids.size)) { faces.ignore(ids) }
+    }
+    /** "Elimina la persona" (no media left): their name, notes and links come back with "Annulla". */
+    fun deleteEmptyPerson(id: Long) = undoable(str(R.string.person_deleted)) { faces.deleteEmpty(id) }
     fun restorePerson(id: Long) = faceAction { faces.restore(id) }
+    /** "Ripristina" on the hidden people picked. */
+    fun restorePeople(ids: Collection<Long>) = faceAction { ids.forEach { faces.restore(it) } }
     fun removeFromPerson(personId: Long, fileIds: Collection<String>) =
         undoable(plural(R.plurals.media_removed, fileIds.size)) { faces.removeMedia(personId, fileIds) }
     /** "Sposta a…" ([to] a person) or "Dividi" ([to] null: a new person named [newName]). */
-    fun moveToPerson(from: Long, fileIds: Collection<String>, to: Long?, newName: String = "") = faceAction { faces.moveMedia(from, fileIds, to, newName) }
+    fun moveToPerson(from: Long, fileIds: Collection<String>, to: Long?, newName: String = "") = faceChange { faces.moveMedia(from, fileIds, to, newName) }
     fun confirmFace(trackId: Long, personId: Long) = undoable(str(R.string.confirmed)) { faces.assign(trackId, personId).also { lookCloser(listOf(trackId)) } }
     /** Faces confirmed: their videos are looked at closer in the background ([com.cripta.app.data.face.FaceRepository.refine]). */
     private suspend fun lookCloser(trackIds: Collection<Long>) =
@@ -446,11 +467,11 @@ class SettingsViewModel @Inject constructor(
         com.cripta.app.work.ConversionService.startFaceRefine(appContext, faces.refineWanted(), manual = true)
     }
     fun rejectFace(trackId: Long, personId: Long) = undoable(str(R.string.rejected)) { faces.reject(trackId, personId) }
-    fun setPersonCover(personId: Long, trackId: Long) = faceAction { faces.setCover(personId, trackId) }
+    fun setPersonCover(personId: Long, trackId: Long) = faceChange { faces.setCover(personId, trackId) }
     /** "Da sistemare": the unassigned faces grouped by likeness. */
     suspend fun unsortedGroups() = faces.unsortedGroups()
     fun deleteFaces(trackIds: Collection<Long>, everywhere: Boolean) =
-        undoable(plural(R.plurals.faces_deleted, trackIds.size) + if (everywhere) str(R.string.everywhere_suffix) else "") {
+        undoable(plural(R.plurals.faces_deleted, trackIds.size).let { if (everywhere) str(R.string.x_everywhere, it) else it }) {
             faces.deleteFaces(trackIds, everywhere)
         }
     /** A group of faces to [personId], or to a new person named [newName]. */
@@ -482,10 +503,10 @@ class SettingsViewModel @Inject constructor(
     /** "È lui/lei" from the suggestions: no snackbar, the list moves on to the next face. */
     /** [onFailed]: the answer was not saved, so the page takes it back. */
     fun acceptSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) =
-        faceAction(onFailed) { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
-    fun refuseSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) = faceAction(onFailed) { faces.reject(trackId, personId) }
+        faceChange(onFailed) { faces.assign(trackId, personId); lookCloser(listOf(trackId)) }
+    fun refuseSuggestion(trackId: Long, personId: Long, onFailed: () -> Unit = {}) = faceChange(onFailed) { faces.reject(trackId, personId) }
     suspend fun detectedSince(since: Long) = faces.detectedSince(since)
-    fun clearDetected(fileIds: Collection<String>) = faceAction {
+    fun clearDetected(fileIds: Collection<String>) = faceChange {
         val n = faces.clearDetected(fileIds)
         faceMessage.value = plural(R.plurals.faces_deleted_n, n)
     }

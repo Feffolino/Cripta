@@ -870,7 +870,15 @@
         <item quantity="many">دُمج %1$s شخص</item>
         <item quantity="other">دُمج %1$s شخص</item>
     </plurals>
-    <string name="person_hidden">أُخفي الشخص</string>
+    <plurals name="people_hidden">
+        <item quantity="zero">أُخفي %1$s شخص</item>
+        <item quantity="one">أُخفي الشخص</item>
+        <item quantity="two">أُخفي شخصان (%1$s)</item>
+        <item quantity="few">أُخفي %1$s أشخاص</item>
+        <item quantity="many">أُخفي %1$s شخص</item>
+        <item quantity="other">أُخفي %1$s شخص</item>
+    </plurals>
+    <string name="person_deleted">حُذف الشخص</string>
     <plurals name="media_removed">
         <item quantity="zero">أُزيل %1$s من الوسائط</item>
         <item quantity="one">أُزيلت الوسائط</item>
@@ -881,7 +889,6 @@
     </plurals>
     <string name="confirmed">مؤكد</string>
     <string name="rejected">مرفوض</string>
-    <string name="everywhere_suffix">في كل مكان</string>
     <plurals name="faces_assigned">
         <item quantity="zero">عُين %1$s وجه</item>
         <item quantity="one">عُين الوجه</item>

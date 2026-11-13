@@ -770,14 +770,17 @@
         <item quantity="one">%1$s व्यक्ति मिलाया गया</item>
         <item quantity="other">%1$s लोग मिलाए गए</item>
     </plurals>
-    <string name="person_hidden">व्यक्ति छिपाया गया</string>
+    <plurals name="people_hidden">
+        <item quantity="one">%1$s व्यक्ति छिपाया गया</item>
+        <item quantity="other">%1$s लोग छिपाए गए</item>
+    </plurals>
+    <string name="person_deleted">व्यक्ति हटाया गया</string>
     <plurals name="media_removed">
         <item quantity="one">%1$s मीडिया हटाया गया</item>
         <item quantity="other">%1$s मीडिया हटाए गए</item>
     </plurals>
     <string name="confirmed">पुष्टि की गई</string>
     <string name="rejected">नकारा गया</string>
-    <string name="everywhere_suffix">हर जगह</string>
     <plurals name="faces_assigned">
         <item quantity="one">%1$s चेहरा सौंपा गया</item>
         <item quantity="other">%1$s चेहरे सौंपे गए</item>

@@ -795,7 +795,12 @@
         <item quantity="many">%1$s persone unite</item>
         <item quantity="other">%1$s persone unite</item>
     </plurals>
-    <string name="person_hidden">Persona nascosta</string>
+    <plurals name="people_hidden">
+        <item quantity="one">Persona nascosta</item>
+        <item quantity="many">%1$s persone nascoste</item>
+        <item quantity="other">%1$s persone nascoste</item>
+    </plurals>
+    <string name="person_deleted">Persona eliminata</string>
     <plurals name="media_removed">
         <item quantity="one">Media tolto</item>
         <item quantity="many">%1$s media tolti</item>
@@ -803,7 +808,6 @@
     </plurals>
     <string name="confirmed">Confermato</string>
     <string name="rejected">Rifiutato</string>
-    <string name="everywhere_suffix">ovunque</string>
     <plurals name="faces_assigned">
         <item quantity="one">Volto assegnato</item>
         <item quantity="many">%1$s volti assegnati</item>

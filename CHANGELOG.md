@@ -30,6 +30,7 @@ Entries marked **stable** went out as a stable release.
 - The duplicates screens show the folder of each copy, and deleting copies says when they are in a folder the kept copy is not in
 - Videos from streaming sites are fetched eight pieces at a time instead of four, to start each piece sooner. The download bar moves on steadily while the pieces come in, instead of standing still and then jumping, never goes back, and no longer starts again from zero for the audio of a video
 - Faces: the closer look at a video and the tidying of old media no longer join two faces you split apart; giving a face to the person you had said it was not takes that "no" back; a face taken from someone is not joined elsewhere while its "Annulla" is on offer; a nameless person with notes or links stays in the list; a media that could not be read for a moment (memory, reading) is tried again at the next scan; a closer look whose video stops reading is left behind instead of holding the scan
+- People pages: "Nascondi" on several people has one "Annulla" for all of them (and "Ripristina" among the hidden ones); "Elimina la persona" has "Annulla" too, and the profile stays open while it is on offer; "Annulla" lasts as long on every page and not while the vault is locked; "Unisci" acts on all the people picked; the star in the grid works with TalkBack; "Face deleted everywhere" and the undo button read correctly in every language
 
 ## 2026-11-12
 

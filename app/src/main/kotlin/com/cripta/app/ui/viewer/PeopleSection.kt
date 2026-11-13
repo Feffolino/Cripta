@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import kotlinx.coroutines.delay
 import com.cripta.app.ui.components.CriptaAlertDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -93,17 +92,13 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     var menu by remember { mutableStateOf(false) }
     val undo by vm.faceUndo.collectAsStateWithLifecycle()
     LaunchedEffect(file.id) { vm.tidyFaces(file.id) }
-    // As long as the accessibility settings ask for (longer for who needs it), and not counting
-    // while the vault is locked: the chance to undo is not used up behind the lock screen.
-    val a11y = androidx.compose.ui.platform.LocalAccessibilityManager.current
-    val undoMs = remember(a11y) {
-        a11y?.calculateRecommendedTimeoutMillis(8_000L, containsIcons = false, containsText = true, containsControls = true) ?: 8_000L
-    }
-    val locked = com.cripta.app.ui.LocalVaultLocked.current
-    LaunchedEffect(undo, locked, undoMs) {
+    // As long as on the people pages ([rememberUndoMillis]), not counting while the vault is locked:
+    // the chance to undo is not used up behind the lock screen.
+    val undoMs = com.cripta.app.ui.components.rememberUndoMillis()
+    val locked = com.cripta.app.ui.components.rememberVaultLocked()
+    LaunchedEffect(undo, undoMs) {
         val u = undo ?: return@LaunchedEffect
-        if (locked) return@LaunchedEffect
-        delay(undoMs.coerceAtLeast(8_000L))
+        com.cripta.app.ui.components.waitUnlocked(undoMs, locked)
         if (vm.faceUndo.value === u) vm.faceUndo.value = null
     }
 
@@ -195,7 +190,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
         AnimatedVisibility(mine != null, enter = fadeIn(tween(220)), exit = fadeOut(tween(120))) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(last, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
+                TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText(str(R.string.undo)) }
             }
         }
     }
@@ -215,7 +210,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
             // Faces analysed before they were kept one by one cannot be split.
             CriptaAlertDialog(onDismissRequest = { splitting = null }, title = { Text(str(R.string.split)) },
                 text = { Text(str(R.string.split_need_two)) },
-                confirmButton = { TextButton(onClick = { splitting = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
+                confirmButton = { TextButton(onClick = { splitting = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
         }
     }
     val foundAll by vm.foundFaces.collectAsStateWithLifecycle()
@@ -270,7 +265,7 @@ internal fun PeopleSection(file: FileEntity, vm: ViewerViewModel) {
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text(str(R.string.faces_title)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
     }
     val also by vm.alsoFaces.collectAsStateWithLifecycle()
     also?.takeIf { it.fileId == file.id }?.let { a -> AlsoDialog(a, byId[a.personId]?.title ?: FaceRepository.UNNAMED, vm) }

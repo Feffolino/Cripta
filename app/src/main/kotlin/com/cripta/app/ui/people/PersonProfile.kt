@@ -46,10 +46,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
@@ -92,6 +90,7 @@ import com.cripta.app.data.face.FaceRepository
 import com.cripta.app.ui.components.CriptaAlertDialog
 import com.cripta.app.ui.components.CriptaDialog
 import com.cripta.app.ui.components.MediaThumb
+import com.cripta.app.ui.components.showUndo
 import com.cripta.app.ui.components.vaultUnlocked
 import com.cripta.app.ui.settings.CompareDialog
 import com.cripta.app.ui.settings.FaceAvatar
@@ -118,16 +117,21 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
     val undo by vm.faceUndo.collectAsStateWithLifecycle()
     val message by vm.faceMessage.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    // As long as in the viewer and the people page, not counting while the vault is locked.
+    val undoMs = com.cripta.app.ui.components.rememberUndoMillis()
+    val locked = com.cripta.app.ui.components.rememberVaultLocked()
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect
-        if (snackbar.showSnackbar(u.first, str(R.string.undo), duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoFaceChange()
+        if (snackbar.showUndo(u.first, str(R.string.undo), undoMs, locked)) vm.undoFaceChange()
         else if (vm.faceUndo.value === u) vm.faceUndo.value = null
     }
     val o = overview
     val p = o?.people?.firstOrNull { it.id == personId }
-    // Gone (merged into another, deleted): nothing to show here any more.
+    // Gone (merged into another, deleted): nothing to show here any more. Not while the "Annulla"
+    // of what took them away is on offer: it lives on this page, and leaving at once lost it (the
+    // last media taken from a nameless person, "Elimina la persona"); taken back, they show again.
     var seen by remember { mutableStateOf(false) }
-    LaunchedEffect(p != null, o != null) { if (p != null) seen = true else if (o != null && seen) onBack() }
+    LaunchedEffect(p != null, o != null, undo == null) { if (p != null) seen = true else if (o != null && seen && undo == null) onBack() }
 
     var menu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
@@ -189,8 +193,8 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
                                 if (confirmedVideos.isNotEmpty()) DropdownMenuItem(text = { Text(str(R.string.analyse_their_videos)) },
                                     onClick = { menu = false; vm.refineVideos(confirmedVideos) })
                                 if (p.entity.ignored) DropdownMenuItem(text = { Text(str(R.string.restore)) }, onClick = { menu = false; vm.restorePerson(p.id) })
-                                // The page goes once the person is gone (see `seen` above), so the
-                                // work is never cut short with it.
+                                // The page goes once the person is gone and its "Annulla" with it (see
+                                // `seen` above), so the work is never cut short with it.
                                 else if (p.media.isEmpty()) DropdownMenuItem(text = { Text(str(R.string.delete_person)) }, onClick = { menu = false; vm.deleteEmptyPerson(p.id) })
                                 // Hidden, the person keeps their profile (marked hidden, "Ripristina" in
                                 // this menu): the page stays, with its "Annulla". Leaving at once lost it.
@@ -280,7 +284,7 @@ fun PersonProfileScreen(personId: Long, onBack: () -> Unit, onOpenFile: (String)
     message?.let { m ->
         CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text(str(R.string.faces_title)) },
             text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
     }
 }
 
@@ -334,7 +338,7 @@ private fun SuggestionsEntry(p: FaceRepository.Person, vm: SettingsViewModel, on
     val mode = vm.settings.collectAsStateWithLifecycle().value.facesMode
     // Counted again when their faces grow too (the closer look at a video joins faces into theirs), not only when they get one more.
     val found by produceState<Int?>(null, p.id, p.faces.size, p.faces.sumOf { it.faceCount }, mode) {
-        value = runCatching { vm.suggestionsFor(p.id).size }.getOrDefault(0)
+        value = com.cripta.app.util.catching { vm.suggestionsFor(p.id).size }.getOrDefault(0)
     }
     val n = found
     val known = mode == "known"
@@ -508,7 +512,7 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
     var loading by remember(p.id) { mutableStateOf(cached == null) }
     LaunchedEffect(p.id) {
         if (cached == null) {
-            list.addAll(runCatching { vm.suggestionsFor(p.id) }.getOrDefault(emptyList())); loading = false
+            list.addAll(com.cripta.app.util.catching { vm.suggestionsFor(p.id) }.getOrDefault(emptyList())); loading = false
         }
         vm.lastSuggestions = p.id to list.toList()
     }
@@ -528,7 +532,7 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
         refresh?.cancel()
         refresh = scope.launch {
             kotlinx.coroutines.delay(600)   // the yes is written first
-            val fresh = runCatching { vm.suggestionsFor(p.id) }.getOrNull() ?: return@launch
+            val fresh = com.cripta.app.util.catching { vm.suggestionsFor(p.id) }.getOrNull() ?: return@launch
             val keep = list.take(pager.currentPage + 1)
             val kept = keep.map { it.card.id }.toSet()
             val ahead = fresh.filter { it.card.id !in kept && it.card.id !in answers }
@@ -590,7 +594,7 @@ private fun SuggestionsDialog(p: FaceRepository.Person, files: Map<String, FileE
 @Composable
 private fun SuggestionPage(s: FaceRepository.Suggestion, p: FaceRepository.Person, file: FileEntity?, vm: SettingsViewModel,
                            answer: Boolean?, onYes: () -> Unit, onNo: () -> Unit, onOpen: () -> Unit) {
-    val frame by produceState<Bitmap?>(null, s.card.id) { value = runCatching { vm.frameOf(s.card) }.getOrNull() }
+    val frame by produceState<Bitmap?>(null, s.card.id) { value = com.cripta.app.util.catching { vm.frameOf(s.card) }.getOrNull() }
     val isVideo = file != null && VaultRepository.isVideo(file.mimeType)
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -670,7 +674,7 @@ private fun SuggestionPage(s: FaceRepository.Suggestion, p: FaceRepository.Perso
 @Composable
 internal fun SuggestionItem(s: FaceRepository.Suggestion, p: FaceRepository.Person, file: FileEntity?, vm: SettingsViewModel,
                            onYes: () -> Unit, onNo: () -> Unit, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val frame by produceState<Bitmap?>(null, s.card.id) { value = runCatching { vm.frameOf(s.card) }.getOrNull() }
+    val frame by produceState<Bitmap?>(null, s.card.id) { value = com.cripta.app.util.catching { vm.frameOf(s.card) }.getOrNull() }
     val isVideo = file != null && VaultRepository.isVideo(file.mimeType)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {

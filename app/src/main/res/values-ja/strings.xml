@@ -745,13 +745,15 @@
     <plurals name="people_merged">
         <item quantity="other">%1$s 人を統合しました</item>
     </plurals>
-    <string name="person_hidden">人物を非表示にしました</string>
+    <plurals name="people_hidden">
+        <item quantity="other">%1$s 人を非表示にしました</item>
+    </plurals>
+    <string name="person_deleted">人物を削除しました</string>
     <plurals name="media_removed">
         <item quantity="other">%1$s 件のメディアを外しました</item>
     </plurals>
     <string name="confirmed">確認済み</string>
     <string name="rejected">拒否済み</string>
-    <string name="everywhere_suffix">すべての場所</string>
     <plurals name="faces_assigned">
         <item quantity="other">%1$s 件の顔を割り当てました</item>
     </plurals>

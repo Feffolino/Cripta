@@ -156,6 +156,33 @@ class FaceChoicesTest {
         assertEquals(p, dao.tracks(listOf(a)).single().personId)
     }
 
+    // ---- "Nascondi" and "Elimina la persona" taken back ----
+
+    @Test
+    fun hidingSeveralPeopleIsTakenBackAtOnce() = runBlocking {
+        val a = faces.newPerson("A")
+        val b = faces.newPerson("B")
+        val undo = faces.ignore(listOf(a, b))
+        assertTrue(dao.persons().filter { it.id in setOf(a, b) }.all { it.ignored })
+        undo()
+        assertFalse(dao.persons().filter { it.id in setOf(a, b) }.any { it.ignored })
+    }
+
+    @Test
+    fun deletingAPersonIsTakenBackWithTheirProfile() = runBlocking {
+        val p = faces.newPerson("P")
+        faces.setProfile(p, "private notes", listOf("https://p.example"))
+        faces.setFavorite(p, true)
+        val undo = faces.deleteEmpty(p)
+        assertTrue(dao.persons().none { it.id == p })
+        undo()
+        val back = dao.persons().single { it.id == p }
+        assertEquals("P", back.name)
+        assertEquals("private notes", back.notes)
+        assertEquals("https://p.example", back.links)
+        assertTrue(back.favorite)
+    }
+
     // ---- A person with only a profile ----
 
     @Test

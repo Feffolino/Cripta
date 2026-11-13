@@ -47,6 +47,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -58,6 +59,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.components.showUndo
 import com.cripta.app.ui.components.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -72,10 +74,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import com.cripta.app.ui.components.TextButton
 import androidx.compose.material3.TopAppBar
@@ -141,7 +141,7 @@ internal fun PeopleSettings(s: Settings, vm: SettingsViewModel) {
         ToggleRow(str(R.string.analyse_new_media), s.facesAnalyzeNew, desc = str(R.string.analyse_new_videos_desc),
             icon = CriptaIcons.Face) { vm.setFacesAnalyzeNew(it) }
         // Videos with someone confirmed that the closer look has not seen as they are now (counted again after each scan).
-        val wanted by produceState(0, progress == null) { value = if (progress == null) runCatching { vm.refineWanted().size }.getOrDefault(0) else value }
+        val wanted by produceState(0, progress == null) { value = if (progress == null) com.cripta.app.util.catching { vm.refineWanted().size }.getOrDefault(0) else value }
         if (wanted > 0) {
             Text(str(R.string.refine_explain),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -211,7 +211,7 @@ private fun ClearDetectedDialog(vm: SettingsViewModel, onClose: () -> Unit) {
     val found by produceState<FaceRepository.Detected?>(null, period) {
         value = null
         val since = if (period == Long.MAX_VALUE) 0L else System.currentTimeMillis() - period
-        value = runCatching { vm.detectedSince(since) }.getOrNull()
+        value = com.cripta.app.util.catching { vm.detectedSince(since) }.getOrNull()
     }
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text(str(R.string.delete_found_faces)) },
         text = {
@@ -294,7 +294,7 @@ private fun StatsDialog(vm: SettingsViewModel, onClose: () -> Unit) {
     // null = still computing; a failure is its own state, with a retry, never an endless "Calcolo…".
     var attempt by remember { mutableIntStateOf(0) }
     var tech by remember { mutableStateOf(false) }
-    val st by produceState<Result<FaceRepository.Stats>?>(null, attempt) { value = null; value = runCatching { vm.faceStats() } }
+    val st by produceState<Result<FaceRepository.Stats>?>(null, attempt) { value = null; value = com.cripta.app.util.catching { vm.faceStats() } }
     CriptaAlertDialog(onDismissRequest = onClose, title = { Text(str(R.string.face_statistics)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -348,7 +348,7 @@ internal fun FaceAvatar(trackId: Long?, load: suspend (Long) -> android.graphics
                         /** Changes when the face's picture does (a face split keeps its id). */
                         key: Any? = null, selected: Boolean = false) {
     // Locked while it was read ("Vault locked"): no picture, not a crash of the app.
-    val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { runCatching { load(it) }.getOrNull() } }
+    val bmp by produceState<android.graphics.Bitmap?>(null, trackId, key) { value = trackId?.let { com.cripta.app.util.catching { load(it) }.getOrNull() } }
     Box(modifier.size(size).then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(5.dp) else Modifier)
         .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         val b = bmp
@@ -484,16 +484,21 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     // Who the page shows now (filter chip and search); the sort sheet's button counts them.
     val keep: (FaceRepository.Person) -> Boolean = { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
     val shownCount = overview?.people?.count(keep) ?: 0
+    // As long as in the viewer and the profile, not counting while the vault is locked.
+    val undoMs = com.cripta.app.ui.components.rememberUndoMillis()
+    val locked = com.cripta.app.ui.components.rememberVaultLocked()
     LaunchedEffect(undo) {
         val u = undo ?: return@LaunchedEffect
-        if (snackbar.showSnackbar(u.first, str(R.string.undo), duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) vm.undoFaceChange()
+        if (snackbar.showUndo(u.first, str(R.string.undo), undoMs, locked)) vm.undoFaceChange()
         else if (vm.faceUndo.value === u) vm.faceUndo.value = null
     }
+    // The people picked, wherever they are: the bar's count, its actions and "Unisci" act on the
+    // same ones, also those the chip or the search now leave out of view.
+    val chosen = overview?.people.orEmpty().filter { it.id in selected }
     val topLift = remember { com.cripta.app.ui.components.TopBarLift() }
     Scaffold(
         topBar = {
             if (selected.isNotEmpty()) {
-                val chosen = overview?.people.orEmpty().filter { it.id in selected }
                 TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets, colors = com.cripta.app.ui.components.criptaTopBarColors(),
                     title = { com.cripta.app.ui.components.RollingCountText(selected.size) { plural(R.plurals.n_selected_f_pl, it) } },
                     navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(CriptaIcons.Close, str(R.string.cancel_selection)) } },
@@ -503,7 +508,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             Icon(if (allFav) CriptaIcons.Star else CriptaIcons.StarBorder, if (allFav) str(R.string.unfavorite_short) else str(R.string.favorite_add))
                         }
                         if (selected.size >= 2) TextButton(onClick = { askMerge = true }) { com.cripta.app.ui.components.ButtonText(str(R.string.merge)) }
-                        IconButton(onClick = { chosen.forEach { vm.ignorePerson(it.id) }; selected = emptySet() }) {
+                        // All hidden already ("Non persone"): shown again; else hidden at once, one "Annulla".
+                        if (chosen.isNotEmpty() && chosen.all { it.entity.ignored }) IconButton(onClick = {
+                            vm.restorePeople(chosen.map { it.id }); selected = emptySet()
+                        }) { Icon(CriptaIcons.Visibility, str(R.string.restore)) }
+                        else IconButton(onClick = { vm.ignorePeople(chosen.filter { !it.entity.ignored }.map { it.id }); selected = emptySet() }) {
                             Icon(CriptaIcons.VisibilityOff, str(R.string.hide))
                         }
                     })
@@ -538,12 +547,12 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         val groupsVersion by vm.groupsVersion.collectAsStateWithLifecycle()
         val groups by produceState(if (filter == PeopleFilter.TODO) vm.lastGroups else null, filter, o.unassigned, groupsVersion) {
             // Locked while grouping ("Vault locked"): the last groups stay, the app does not crash.
-            value = if (filter == PeopleFilter.TODO) runCatching { vm.unsortedGroups() }.getOrNull()?.also { vm.lastGroups = it } ?: value else null
+            value = if (filter == PeopleFilter.TODO) com.cripta.app.util.catching { vm.unsortedGroups() }.getOrNull()?.also { vm.lastGroups = it } ?: value else null
         }
         // "Solo persone note": "Da sistemare" becomes "Da confermare", the faces like someone known.
         val known = st.facesMode == "known"
         val knownList by produceState(if (known) vm.lastKnown else null, known, o.unassigned, o.people.size, groupsVersion) {
-            value = if (known) runCatching { vm.knownSuggestions() }.getOrNull() else null
+            value = if (known) com.cripta.app.util.catching { vm.knownSuggestions() }.getOrNull() else null
         }
         var answered by remember { mutableStateOf(emptySet<Long>()) }
         val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
@@ -734,6 +743,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
                             true
                         }
                         onLongClick(label = str(R.string.select)) { selected = selected + p.id; true }
+                        // The star is merged into the card: offered as an action of its own, or
+                        // TalkBack had no way to it.
+                        if (!p.entity.ignored && selected.isEmpty()) customActions = listOf(androidx.compose.ui.semantics.CustomAccessibilityAction(
+                            if (p.entity.favorite) str(R.string.unfavorite_x, p.title) else str(R.string.favorite_x, p.title)
+                        ) { vm.setPersonFavorite(p.id, !p.entity.favorite); true })
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box {
                             FaceAvatar(p.cover, { vm.faceCrop(it) }, 88.dp, selected = on)
@@ -756,7 +770,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         else naming?.let { ids -> WhoDialog(ids, o, vm) { naming = null } }
         if (askMerge) {
             // The user picks who stays (name, face, star); a named one is offered first.
-            val chosen = shown.filter { it.id in selected }
             var keepId by remember { mutableStateOf((chosen.firstOrNull { it.entity.name.isNotBlank() } ?: chosen.firstOrNull())?.id) }
             val into = chosen.firstOrNull { it.id == keepId }
             if (chosen.size < 2) askMerge = false
@@ -786,9 +799,10 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
         }
     }
     message?.let { m ->
-        CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text(str(R.string.why)) },
+        // Errors, counts and a media's faces alike: titled as in the profile and the viewer.
+        CriptaAlertDialog(onDismissRequest = { vm.faceMessage.value = null }, title = { Text(str(R.string.faces_title)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { Text(m) } },
-            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText("OK") } })
+            confirmButton = { TextButton(onClick = { vm.faceMessage.value = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.close)) } })
     }
 }
 
@@ -824,12 +838,15 @@ private fun TodoPager(groups: List<FaceRepository.FaceGroup>, o: FaceRepository.
                 navigationIcon = { IconButton(onClick = close) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) } })
         }, bottomBar = {
             // The snackbar of the page is under this screen: "Annulla" lives here instead.
+            // The message stays while the bar fades out (as in the viewer): emptied, it shrank first.
+            var last by remember { mutableStateOf("") }
+            undo?.let { last = it.first }
             androidx.compose.animation.AnimatedVisibility(undo != null,
                 enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)),
                 exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
                 Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(undo?.first.orEmpty(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
+                    Text(last, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.undoFaceChange() }) { com.cripta.app.ui.components.ButtonText(str(R.string.undo)) }
                 }
             }
         }) { pad ->
@@ -859,7 +876,7 @@ private fun TodoPage(g: FaceRepository.FaceGroup, vm: SettingsViewModel, onName:
     var focus by remember(g) { mutableStateOf(g.cards.first()) }
     val picked = g.cards.map { it.id }.filter { it !in off }
     val many = g.cards.size > 1
-    val frame by produceState<android.graphics.Bitmap?>(null, focus.id) { value = runCatching { vm.frameOf(focus) }.getOrNull() }
+    val frame by produceState<android.graphics.Bitmap?>(null, focus.id) { value = com.cripta.app.util.catching { vm.frameOf(focus) }.getOrNull() }
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val picture: @Composable (Modifier) -> Unit = { m ->

@@ -812,8 +812,14 @@ class FaceRepository @Inject constructor(
      * the usual cleanup removes it. The cleanup keeps people with a profile (it runs by itself);
      * kept so, the deleted profile stayed hidden in the database and went on into backups.
      */
-    suspend fun deleteEmpty(personId: Long) = change {
-        dao.rename(personId, ""); dao.setFavorite(personId, false); dao.setProfile(personId, "", ""); dao.deleteEmptyPersons()
+    suspend fun deleteEmpty(personId: Long): Undo {
+        val before = change {
+            personSnapshot(personId).also {
+                dao.rename(personId, ""); dao.setFavorite(personId, false); dao.setProfile(personId, "", ""); dao.deleteEmptyPersons()
+            }
+        }
+        // "Annulla": the person back as they were, name, star, notes and links (with their id).
+        return { change { revive(before) } }
     }
 
     /** "Unisci": everything goes to [into]; each merge can be undone. */
@@ -873,10 +879,10 @@ class FaceRepository @Inject constructor(
         for (t in dao.cardsOfPerson(b)) dao.addRejection(FaceRejectionEntity(t.id, a, 0f))
     }
 
-    /** "Non è una persona": hidden, and similar new faces go with it. */
-    suspend fun ignore(personId: Long): Undo {
-        change { dao.setIgnored(personId, true); dao.lockTracks(personId) }
-        return { restore(personId) }
+    /** "Non è una persona": hidden, and similar new faces go with them; all of [personIds] at once, one "Annulla". */
+    suspend fun ignore(personIds: Collection<Long>): Undo {
+        change { for (id in personIds) { dao.setIgnored(id, true); dao.lockTracks(id) } }
+        return { change { for (id in personIds) dao.setIgnored(id, false) } }
     }
 
     suspend fun restore(personId: Long) = change { dao.setIgnored(personId, false) }

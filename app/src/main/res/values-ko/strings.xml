@@ -745,13 +745,15 @@
     <plurals name="people_merged">
         <item quantity="other">인물 %1$s명을 합쳤습니다</item>
     </plurals>
-    <string name="person_hidden">인물을 숨겼습니다</string>
+    <plurals name="people_hidden">
+        <item quantity="other">인물 %1$s명을 숨겼습니다</item>
+    </plurals>
+    <string name="person_deleted">인물을 삭제했습니다</string>
     <plurals name="media_removed">
         <item quantity="other">미디어 %1$s개를 제거했습니다</item>
     </plurals>
     <string name="confirmed">확인됨</string>
     <string name="rejected">거부됨</string>
-    <string name="everywhere_suffix">모든 위치</string>
     <plurals name="faces_assigned">
         <item quantity="other">얼굴 %1$s개를 할당했습니다</item>
     </plurals>
