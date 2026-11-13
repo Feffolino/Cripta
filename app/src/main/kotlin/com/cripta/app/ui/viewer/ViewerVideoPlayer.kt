@@ -439,6 +439,12 @@ internal fun VideoPlayer(
     }
     // Vault locked: always pause, whatever "pause on leave" says, so nothing plays on behind the lock
     // screen (or in the background after a lock).
+    // Paused, not released: the player, its buffer and the open channel stay in memory under the
+    // lock, as the bytes of an open photo or PDF do (ViewerState) and as the rest of the screens
+    // kept composed under the lock screen. A chosen compromise: nothing shows (the cover is opaque,
+    // hidden from TalkBack), only a memory dump would reach them, and that is outside what Cripta
+    // guards against (someone holding the unlocked phone). Releasing here would mean reloading and
+    // resuming the page at every unlock.
     LaunchedEffect(player) {
         vm.vaultLocked.collect { locked ->
             if (!locked) return@collect
