@@ -259,10 +259,6 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * [heldToEnd] from the view model scope. A failure (the vault locked before the start: the
-     * repository throws "Vault locked") is logged instead of crashing the app.
-     */
-    /**
      * A preference write. Failing (storage full, say), it says so instead of crashing the app: an
      * error left to the view model scope ended the whole process.
      */
@@ -277,6 +273,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * [heldToEnd] from the view model scope. A failure (the vault locked before the start: the
+     * repository throws "Vault locked") is logged and said instead of crashing the app.
+     */
+
     private fun launchHeld(what: String, block: suspend () -> Unit) = safeScope.launch {
         try {
             heldToEnd(block)
@@ -284,6 +285,8 @@ class SettingsViewModel @Inject constructor(
             throw e
         } catch (e: Exception) {
             logException(android.util.Log.ERROR, "SettingsViewModel", "$what failed", e)
+            // Said, as a preference that is not saved: the lists show what is left, not why.
+            _message.value = str(R.string.operation_failed, com.cripta.app.work.UserErrors.of(e))
         }
     }
 
@@ -519,11 +522,11 @@ class SettingsViewModel @Inject constructor(
     /** Backup/restore running now (label shown with a progress bar), or null. */
     val backupBusy: StateFlow<String?> = backups.running.map { it?.label }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.label)
-    /** 0..1 while a backup / restore streams, null when idle or the size is unknown. */
     /** A restore is running: the vault's other changes wait for its end (one transaction). */
     val restoring: StateFlow<Boolean> = backups.running.map { it?.restore == true }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.restore == true)
 
+    /** 0..1 while a backup / restore streams, null when idle or the size is unknown. */
     val backupProgress: StateFlow<Float?> = backups.running.map { it?.progress }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, backups.running.value?.progress)
     /** What a backup made now would contain: (files, bytes). Live, always shown in its section. */

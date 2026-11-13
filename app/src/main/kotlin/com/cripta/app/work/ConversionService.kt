@@ -508,11 +508,6 @@ class ConversionService : Service() {
     }
 
     /**
-     * Download the app update in the background (the app can be closed meanwhile): progress and
-     * Annulla in the notification, then "Aggiornamento pronto" whose tap / Installa opens the
-     * system installer. The settings screen follows it through [AppUpdater.downloadState].
-     */
-    /**
      * The backup or restore handed over by Settings ([com.cripta.app.data.BackupJobs]), run here in
      * the foreground so it ends even with the app in the background. Not cancellable halfway: an
      * archive stopped there is deleted, a restore is undone ([VaultRepository.importBackup]).
@@ -567,6 +562,11 @@ class ConversionService : Service() {
         }
     }
 
+    /**
+     * Download the app update in the background (the app can be closed meanwhile): progress and
+     * Annulla in the notification, then "Aggiornamento pronto" whose tap / Installa opens the
+     * system installer. The settings screen follows it through [AppUpdater.downloadState].
+     */
     private suspend fun downloadUpdate(intent: Intent) {
         val rel = com.cripta.app.update.AppUpdater.Release(
             versionName = intent.getStringExtra(EX_UPD_VERSION) ?: return,

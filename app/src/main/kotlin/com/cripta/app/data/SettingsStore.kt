@@ -37,7 +37,6 @@ enum class TagSortMode { ALPHA, CUSTOM, USED }
  * stays recoverable. ASK: previous behaviour (prompt). KEEP_BOTH: keep both, no prompt.
  */
 enum class ConvertAfter { REPLACE, ASK, KEEP_BOTH }
-/** How a tag is written on a cover badge: its icon or acronym, or its full name. */
 /** How tags look on covers: round marks with an icon or initial (default), or full-colour pills with the alias. */
 enum class CoverTagStyle { BUBBLE, PILL }
 
@@ -146,7 +145,6 @@ data class Settings(
     val swipeToClose: Boolean = true,
     /** Portrait: the info panel shares the screen with the media, which keeps playing above it. */
     val splitDetails: Boolean = false,
-    /** Viewer: vertical swipe up opens tags & details. */
     /** Player: hold on a side to play faster until release. */
     val holdForSpeed: Boolean = true,
     /** Speed while holding, in tenths (15 = 1.5x, 20 = 2x, 30 = 3x). */
@@ -289,10 +287,11 @@ class SettingsStore @Inject constructor(
     private val bkSettingsKey = booleanPreferencesKey("backup_settings")
     private val bkCoversKey = booleanPreferencesKey("backup_covers")
 
-    val settings: Flow<Settings> = context.dataStore.data
-        // A read error (storage trouble) gives the defaults instead of crashing whoever collects.
+    /** The stored preferences; a read error (storage trouble) gives the defaults instead of crashing whoever collects. */
+    private val prefs: Flow<androidx.datastore.preferences.core.Preferences> = context.dataStore.data
         .catch { e -> if (e is java.io.IOException) emit(androidx.datastore.preferences.core.emptyPreferences()) else throw e }
-        .map(::toSettings)
+
+    val settings: Flow<Settings> = prefs.map(::toSettings)
 
     /** The typed settings of the stored preferences [p] (a value of another type throws ClassCastException). */
     private fun toSettings(p: androidx.datastore.preferences.core.Preferences): Settings =
@@ -558,7 +557,7 @@ class SettingsStore @Inject constructor(
     }
 
     /** Independent sort for screens without an open folder. The vault root keeps its legacy keys. */
-    fun screenSort(screen: String): Flow<Pair<SortKey, Boolean>> = context.dataStore.data.map { p ->
+    fun screenSort(screen: String): Flow<Pair<SortKey, Boolean>> = prefs.map { p ->
         SortKey.entries.getOrElse(p[intPreferencesKey("sort_${screen}_key")] ?: 0) { SortKey.DATE } to
             (p[booleanPreferencesKey("sort_${screen}_asc")] ?: false)
     }
