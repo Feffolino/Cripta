@@ -6,39 +6,18 @@ import com.google.crypto.tink.CleartextKeysetHandle
 import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.aead.AeadKeyTemplates
 import java.io.ByteArrayInputStream
-import java.util.Arrays
 
 /**
- * Manages the Data Encryption Key: a Tink AEAD keyset serialized and wrapped by the KEK.
- * The DEK in turn wraps every per-file keyset.
+ * The Data Encryption Key: a Tink AEAD keyset that wraps every per-file keyset and the DB key.
+ * The app wraps its serialized bytes with a Keystore cipher authorized by the user (see KeyVault),
+ * so this object only creates the keyset and rebuilds the primitive from its bytes.
  */
 object DekManager {
 
-    /** Generate a new DEK keyset and return it wrapped by the KEK. Call once at setup. */
-    fun createWrappedDek(kek: KekProvider): ByteArray {
-        val serialized = newDekKeysetBytes()
-        return try {
-            kek.wrap(serialized)
-        } finally {
-            Arrays.fill(serialized, 0)
-        }
-    }
-
-    /** Unwrap the stored DEK and return its Aead primitive. Call after unlock. */
-    fun loadDekAead(wrappedDek: ByteArray, kek: KekProvider): Aead {
-        TinkInit.ensureInitialized()
-        val serialized = kek.unwrap(wrappedDek)
-        return try {
-            dekAeadFromBytes(serialized)
-        } finally {
-            Arrays.fill(serialized, 0)
-        }
-    }
-
     /**
      * Generate a fresh DEK keyset and return its serialized (cleartext) bytes.
-     * The caller must wipe these bytes after use, including when wrapping them (e.g. with a biometric-authorized
-     * Keystore cipher). Used by the app layer where the KEK requires user authentication.
+     * The caller must wipe these bytes after use, including after wrapping them with the
+     * biometric-authorized Keystore cipher.
      */
     fun newDekKeysetBytes(): ByteArray {
         TinkInit.ensureInitialized()

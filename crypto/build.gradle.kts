@@ -20,7 +20,6 @@ android {
 dependencies {
     implementation(libs.tink.android)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.biometric)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
 }

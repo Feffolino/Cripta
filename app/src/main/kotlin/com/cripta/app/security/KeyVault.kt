@@ -46,7 +46,7 @@ class KeyVault @Inject constructor(
         prefs.contains(KEY_WRAPPED_DEK) -> LEGACY_ALIAS   // existing pre-fix install
         else -> ALIAS_V2                                   // fresh install
     }
-    private val kek = AndroidKeystoreKekProvider(requireAuth = true, alias = activeAlias)
+    private val kek = AndroidKeystoreKekProvider(alias = activeAlias)
 
     val isInitialized: Boolean get() = prefs.contains(KEY_WRAPPED_DEK) || prefs.contains(KEY_WRAPPED_DEK_PIN)
 
@@ -337,8 +337,8 @@ class KeyVault @Inject constructor(
         }
         // Drop both possible keys (legacy + safe) so no orphan alias survives the reset.
         runCatching { kek.deleteKey() }
-        runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = LEGACY_ALIAS).deleteKey() }
-        runCatching { AndroidKeystoreKekProvider(requireAuth = true, alias = ALIAS_V2).deleteKey() }
+        runCatching { AndroidKeystoreKekProvider(alias = LEGACY_ALIAS).deleteKey() }
+        runCatching { AndroidKeystoreKekProvider(alias = ALIAS_V2).deleteKey() }
         runCatching { PinCrypto.deletePepper() }
         // Written now: the app restarts its process right after a reset.
         prefs.edit().clear().commit()

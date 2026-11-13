@@ -12,19 +12,9 @@ import javax.crypto.spec.GCMParameterSpec
 /**
  * KEK backed by Android Keystore. In production the key requires user authentication,
  * so [encryptCipher]/[decryptCipher] must be unlocked via a BiometricPrompt CryptoObject
- * before wrap/unwrap. StrongBox is used when available.
- *
- * @param requireAuth false only for instrumented CI tests.
+ * before [wrapWith]/[unwrapWith]. StrongBox is used when available.
  */
-class AndroidKeystoreKekProvider(
-    private val requireAuth: Boolean = true,
-    private val alias: String = DEFAULT_ALIAS,
-) : KekProvider {
-
-    fun keyExists(): Boolean {
-        val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        return ks.containsAlias(alias)
-    }
+class AndroidKeystoreKekProvider(private val alias: String = DEFAULT_ALIAS) {
 
     fun ensureKey() {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
@@ -36,16 +26,14 @@ class AndroidKeystoreKekProvider(
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
-            .setUserAuthenticationRequired(requireAuth)
-            .apply {
-                // Per use, by a strong biometric OR the device credential. Left out, the key took
-                // biometrics only: the phone PIN/pattern offered by the prompt (and its fallback
-                // after a biometric lockout) failed at the cipher, and phones without an enrolled
-                // finger could not create the key at all. Existing keys keep their parameters.
-                if (requireAuth) setUserAuthenticationParameters(
-                    0, KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
-                )
-            }
+            .setUserAuthenticationRequired(true)
+            // Per use, by a strong biometric OR the device credential. Left out, the key took
+            // biometrics only: the phone PIN/pattern offered by the prompt (and its fallback
+            // after a biometric lockout) failed at the cipher, and phones without an enrolled
+            // finger could not create the key at all. Existing keys keep their parameters.
+            .setUserAuthenticationParameters(
+                0, KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
+            )
             // Do NOT invalidate the KEK when biometrics are added/changed. This KEK is the root
             // of the whole key hierarchy (KEK -> DEK -> DB key + per-file keys); invalidating it
             // makes every encrypted file permanently unrecoverable the moment the user enrols a
@@ -107,18 +95,6 @@ class AndroidKeystoreKekProvider(
 
     fun unwrapWith(cipher: Cipher, wrapped: ByteArray): ByteArray =
         cipher.doFinal(wrapped.copyOfRange(IV_LEN, wrapped.size))
-
-    // Convenience path for non-auth (test) keys only.
-    override fun wrap(plaintext: ByteArray): ByteArray {
-        check(!requireAuth) { "auth-required key must use encryptCipher()/wrapWith()" }
-        ensureKey()
-        return wrapWith(encryptCipher(), plaintext)
-    }
-
-    override fun unwrap(ciphertext: ByteArray): ByteArray {
-        check(!requireAuth) { "auth-required key must use decryptCipher()/unwrapWith()" }
-        return unwrapWith(decryptCipher(ciphertext), ciphertext)
-    }
 
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
