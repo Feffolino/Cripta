@@ -36,6 +36,7 @@ Entries marked **stable** went out as a stable release.
 - Background work: running out of memory on a huge video or photo is reported as such instead of closing the app; a start Android refuses no longer closes it either (the update download says it failed, a failed link stays in the list); starting the intro or face analysis over no longer reports it as cancelled; a conversion asked twice makes one MP4; "Controlla aggiornamenti" waits for the check in progress
 - Downloads: links with characters like | { } ^ or _ in the site name are accepted; the size estimate follows the formats the download really takes; the reason of a failure is no longer guessed from words inside the link; the daily engine update no longer holds up the analysis of a pasted link while another video downloads
 - Video covers: a cover chosen while the vault locks no longer stays in memory, and one that could not be saved is no longer shown as done
+- Viewer: a video swiped half way to the next one and back goes on where it was instead of jumping back; it pauses when the headphones are unplugged; photos show their real detail when zoomed in; a video opened at a face no longer starts there again the next time
 
 ## 2026-11-12
 
