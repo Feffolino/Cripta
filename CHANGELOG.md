@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-14
 
+- A link with a port and no "https://" in a person's profile ("example.com:8080/page", "localhost:3000") opens in the browser: before, Cripta said no app could open it
 - Folders: locking the vault while the grid was showing the faces on its covers no longer closes the app ("Vault locked")
 - A video whose size was noted wrong when it was imported (some apps that share files report it badly) can be played and moved through to its end, and a backup writes every file with its exact length: both took the size noted at import, because asking the vault for the real one always failed
 

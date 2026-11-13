@@ -26,4 +26,18 @@ class OpenLinkTest {
         openLink(app, "http://example.com")
         assertEquals("http://example.com", shadowOf(app).nextStartedActivity.data.toString())
     }
+
+    @Test fun anAddressWithAPortButNoSchemeOpensAsHttps() {
+        openLink(app, "example.com:8080/a")
+        assertEquals("https://example.com:8080/a", shadowOf(app).nextStartedActivity.data.toString())
+        openLink(app, "localhost:3000")
+        assertEquals("https://localhost:3000", shadowOf(app).nextStartedActivity.data.toString())
+    }
+
+    @Test fun schemesWithoutSlashesAreKept() {
+        for (link in listOf("mailto:a@example.com", "tel:0123456", "tel:+39 06 1234", "https://example.com:8080/a")) {
+            openLink(app, link)
+            assertEquals(link, shadowOf(app).nextStartedActivity.data.toString())
+        }
+    }
 }

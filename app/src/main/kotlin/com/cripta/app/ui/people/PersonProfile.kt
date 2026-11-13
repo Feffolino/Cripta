@@ -440,9 +440,20 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
     }
 }
 
+/**
+ * Whether [link] starts with its own scheme ("https:", "mailto:", "tel:"). An address with a port
+ * and no scheme ("example.com:8080/a", "localhost:3000") is not one: taken as the scheme
+ * "example.com", no app could open it.
+ */
+internal fun hasScheme(link: String): Boolean {
+    if (!Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:").containsMatchIn(link)) return false
+    val hostWithPort = Regex("^([^/:]+):\\d+(?:[/?#]|$)").find(link)?.groupValues?.get(1)
+    return hostWithPort == null || !(hostWithPort.contains('.') || hostWithPort.equals("localhost", ignoreCase = true))
+}
+
 /** A link opens in the user's browser (Cripta itself has no network access). */
 internal fun openLink(context: android.content.Context, link: String) {
-    val url = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:").containsMatchIn(link)) link else "https://$link"
+    val url = if (hasScheme(link)) link else "https://$link"
     runCatching {
         context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
