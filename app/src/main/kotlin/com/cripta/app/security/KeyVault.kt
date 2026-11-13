@@ -224,16 +224,8 @@ class KeyVault @Inject constructor(
         val salt = loadBytes(KEY_PIN_SALT) ?: error("No PIN salt")
         val opened = PinCrypto.open(pin, salt, sealed, PIN_AAD)
         if (opened == null) {
-            // A pause grows with repeated failures (5th wrong PIN on): on this phone, with the
-            // hardware-bound pepper, that is what keeps a short PIN from being guessed.
             val fails = prefs.getInt(KEY_PIN_FAILS, 0) + 1
-            val wait = when {
-                fails < 5 -> 0L
-                fails == 5 -> 30L
-                fails == 6 -> 60L
-                fails == 7 -> 5 * 60L
-                else -> 15 * 60L
-            }
+            val wait = pinWaitAfter(fails)
             val edit = prefs.edit().putInt(KEY_PIN_FAILS, fails)
             if (wait > 0) startPinWait(wait * 1000L, edit)
             else edit.remove(KEY_PIN_WAIT_UNTIL).remove(KEY_PIN_WAIT_LEN).remove(KEY_PIN_WAIT_BOOT).commit()
@@ -351,6 +343,18 @@ class KeyVault @Inject constructor(
         prefs.getString(key, null)?.let { Base64.decode(it, Base64.NO_WRAP) }
 
     companion object {
+        /**
+         * Seconds to wait after the [fails]-th wrong PIN in a row. The pause grows from the 5th on:
+         * on this phone, with the hardware-bound pepper, that is what keeps a short PIN from being guessed.
+         */
+        internal fun pinWaitAfter(fails: Int): Long = when {
+            fails < 5 -> 0L
+            fails == 5 -> 30L
+            fails == 6 -> 60L
+            fails == 7 -> 5 * 60L
+            else -> 15 * 60L
+        }
+
         private const val KEY_WRAPPED_DEK = "wrapped_dek"
         private const val KEY_WRAPPED_DBKEY = "wrapped_dbkey"
         private const val KEY_KEK_ALIAS = "kek_alias"
