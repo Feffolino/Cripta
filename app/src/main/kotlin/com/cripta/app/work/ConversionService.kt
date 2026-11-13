@@ -71,7 +71,10 @@ class ConversionService : Service() {
     /**
      * Keeps the CPU running while the service lives (it stops itself once idle): a foreground
      * service alone doesn't, so with the screen off a conversion, a face scan or a download would
-     * stall until the phone woke up. The timeout only bounds a stuck job.
+     * stall until the phone woke up. The timeout only bounds a stuck job, and every job that begins
+     * takes it again for its own [WAKE_MS] (a service kept busy for longer lost it halfway).
+     * Before targetSdk 35: Android 15 stops a dataSync service after 6 h, so the service will need
+     * onTimeout (stop cleanly) and maybe the mediaProcessing type for conversions.
      */
     private val wakeLock by lazy {
         getSystemService(android.os.PowerManager::class.java)
@@ -81,7 +84,7 @@ class ConversionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        runCatching { wakeLock.acquire(6 * 60 * 60 * 1000L) }
+        runCatching { wakeLock.acquire(WAKE_MS) }
     }
 
     override fun onDestroy() {
@@ -267,6 +270,15 @@ class ConversionService : Service() {
         // (asked after the channel changed) rewrote or deleted the file the first was checking.
         // One duplicate scan at a time too: two shared one result and its progress, and the first
         // one ending took the second out of reach of "Annulla".
+        // A conversion asked again before the first one even marked its video (resumed twice at
+        // unlock) would make a second MP4: one per video at a time, counted as the command arrives.
+        val convertId = if (mode == MODE_CONVERT) intent.getStringExtra(EX_ID) else null
+        if (convertId != null && !convertsQueued.add(convertId)) {
+            ensureChannel()
+            startForeground(NOTIF_ID, lastProgress ?: build(str(R.string.n_preparing), 0, indeterminate = true, kind = ResultKind.CONVERT))
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
         if (alreadyRunning(mode, scanJob, updateJob)) {
             // Started as a foreground service: it must still say so, with the download on show.
             ensureChannel()
@@ -360,7 +372,9 @@ class ConversionService : Service() {
                             // Persisted until done, so a queued conversion survives the app being killed.
                             repo.putPendingJob("conv-$fid", "convert",
                                 org.json.JSONObject().put("id", fid).put("after", after?.ordinal ?: -1).toString())
-                            try { convertOne(fid, after) } finally { repo.deletePendingJob("conv-$fid") }
+                            try { convertOne(fid, after) } finally {
+                                try { repo.deletePendingJob("conv-$fid") } finally { convertsQueued.remove(fid) }
+                            }
                         }
                     }
                     MODE_DOWNLOAD_URL -> downloadWorker()
@@ -374,7 +388,8 @@ class ConversionService : Service() {
                     MODE_FACE_SCAN -> if (holdsSession) {
                         intent.getStringExtra(EX_RESET)?.let { what ->
                             // Start over: stop a running scan first, so it writes nothing after the wipe.
-                            faceJob?.let { it.cancel(); it.join() }
+                            // Not cancelled by the user: it says nothing ("annullata" was wrong).
+                            faceJob?.let { faceResetting = true; try { it.cancel(); it.join() } finally { faceResetting = false } }
                             faces.resetAll(everything = what == "all")
                         }
                         val ids = intent.getStringArrayListExtra(EX_IDS)
@@ -390,7 +405,8 @@ class ConversionService : Service() {
                     MODE_INTRO_SCAN -> if (holdsSession) {
                         intent.getStringExtra(EX_RESET)?.let { what ->
                             // Start over: stop a running scan first, so it writes nothing after the wipe.
-                            introJob?.let { it.cancel(); it.join() }
+                            // Not cancelled by the user: it says nothing ("annullata" was wrong).
+                            introJob?.let { introResetting = true; try { it.cancel(); it.join() } finally { introResetting = false } }
                             intro.resetAll(everything = what == "all")
                         }
                         introScan(intent.getBooleanExtra(EX_MANUAL, false), intent.getStringArrayListExtra(EX_IDS))
@@ -398,8 +414,9 @@ class ConversionService : Service() {
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                // best-effort; individual items already guarded below
+            } catch (e: Throwable) {
+                // best-effort; individual items already guarded below. An Error too (out of
+                // memory on a huge frame): uncaught, it went past the cleanups and closed the app.
                 logException(android.util.Log.ERROR, "ConversionService", "job failed: $mode", e)
             } finally {
                 // New videos get their intro/outro analysis right after (when on in Settings).
@@ -408,10 +425,8 @@ class ConversionService : Service() {
                 // exception crashed the app and skipped the lines below (keys held, service stuck).
                 if (mode == MODE_IMPORT || mode == MODE_DOWNLOAD_URL || mode == MODE_CONVERT) withContext(NonCancellable) {
                     val s = runCatching { settings.settingsOnce() }.getOrNull()
-                    if (s?.introAnalyzeNew == true) runCatching { startIntroScan(this@ConversionService, manual = false) }
-                        .onFailure { logException(android.util.Log.WARN, "ConversionService", "intro scan not started", it) }
-                    if (s?.facesAnalyzeNew == true) runCatching { startFaceScan(this@ConversionService, manual = false) }
-                        .onFailure { logException(android.util.Log.WARN, "ConversionService", "face scan not started", it) }
+                    if (s?.introAnalyzeNew == true) startIntroScan(this@ConversionService, manual = false)
+                    if (s?.facesAnalyzeNew == true) startFaceScan(this@ConversionService, manual = false)
                 }
                 if (counted) otherJobs.decrementAndGet()
                 if (holdsSession) session.endWork()
@@ -425,6 +440,8 @@ class ConversionService : Service() {
     }
 
     @Volatile private var convertJob: kotlinx.coroutines.Job? = null
+    /** Videos with a conversion asked and not ended yet (see onStartCommand). */
+    private val convertsQueued = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var lastStartId = 0
     @Volatile private var scanJob: kotlinx.coroutines.Job? = null
     @Volatile private var updateJob: kotlinx.coroutines.Job? = null
@@ -606,7 +623,8 @@ class ConversionService : Service() {
             notifyResult(str(R.string.n_update_failed), str(R.string.n_update_retry_from),
                 ResultKind.UPDATE, state = ResultState.FAILED)
         } finally {
-            updateJob = null
+            // Only its own: a download asked meanwhile (after this one was cancelled) keeps its slot.
+            if (updateJob === kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]) updateJob = null
         }
     }
     /** Guards [downloadWorkerRunning] so a link enqueued while the worker drains is never missed. */
@@ -635,6 +653,8 @@ class ConversionService : Service() {
      */
     private fun beginJob(startId: Int) {
         synchronized(lock) {
+            // Not reference counted: taken again, its timeout starts over.
+            runCatching { wakeLock.acquire(WAKE_MS) }
             active.incrementAndGet()
             lastStartId = maxOf(lastStartId, startId)
             working.value = true
@@ -982,7 +1002,8 @@ class ConversionService : Service() {
             result = false to str(R.string.n_convert_cancelled_long)
             notifyResult(str(R.string.n_convert_cancelled), str(R.string.n_original_file_untouched), state = ResultState.CANCELLED)
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Out of memory included: said as such (UserErrors.of) instead of closing the app.
             logException(android.util.Log.ERROR, "ConversionService", "convert failed: $id", e)
             val msg = convertErrorText(e)
             result = false to str(R.string.n_convert_failed_long, msg)
@@ -1129,7 +1150,7 @@ class ConversionService : Service() {
             dupStore.cancelled()
             notifyResult(str(R.string.n_x_cancelled, label), null, ResultKind.SCAN, state = ResultState.CANCELLED)
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logException(android.util.Log.ERROR, "ConversionService", "duplicate scan failed", e)
             val msg = UserErrors.of(e)
             dupStore.fail(msg)
@@ -1149,6 +1170,8 @@ class ConversionService : Service() {
     @Volatile private var introScanAll = false
     /** Annulla was pressed: the running intro scan is stopping. */
     @Volatile private var introStopping = false
+    /** "Ricomincia da capo" is stopping the running intro scan: not the user's Annulla. */
+    @Volatile private var introResetting = false
 
     /**
      * Fingerprint every video not analysed yet ([onlyIds]: just those, again), then match them
@@ -1282,9 +1305,9 @@ class ConversionService : Service() {
             } while (introRerun)
             if (anyFull && (introManual || found > 0)) notifyResult(str(R.string.n_analysis_done), summary(), ResultKind.INTRO)
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
+            if (!introResetting) notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.INTRO, state = ResultState.CANCELLED)
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logException(android.util.Log.ERROR, "ConversionService", "intro scan failed", e)
             notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.INTRO, state = ResultState.FAILED)
         } finally {
@@ -1316,6 +1339,8 @@ class ConversionService : Service() {
     @Volatile private var faceScanAll = false
     /** Annulla was pressed: the running scan is stopping. */
     @Volatile private var faceStopping = false
+    /** "Ricomincia da capo" is stopping the running face scan: not the user's Annulla. */
+    @Volatile private var faceResetting = false
     /** Posts the running scan's progress again (the cancel's "Annullamento in corso…"). */
     @Volatile private var faceRepost: (() -> Unit)? = null
 
@@ -1496,9 +1521,9 @@ class ConversionService : Service() {
                 actions = listOf(NotificationCompat.Action(R.drawable.ic_action_open, str(R.string.n_see_people), openAppIntent(openPeople = true))))
             return true
         } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.FACES, state = ResultState.CANCELLED)
+            if (!faceResetting) notifyResult(str(R.string.n_x_cancelled, label), summary(), ResultKind.FACES, state = ResultState.CANCELLED)
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logException(android.util.Log.ERROR, "ConversionService", "face scan failed", e)
             notifyResult(str(R.string.n_x_failed, label), UserErrors.of(e), ResultKind.FACES, state = ResultState.FAILED)
             return false
@@ -1592,7 +1617,7 @@ class ConversionService : Service() {
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.CANCELLED) }
             notifyResult(str(R.string.n_download_cancelled), null, ResultKind.DOWNLOAD, state = ResultState.CANCELLED)
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // A yt-dlp process killed by the Cancel action surfaces as an ordinary exception, not a
             // coroutine cancellation, so distinguish it here. Otherwise surface the real cause.
             if (cancelRequested) {
@@ -1747,7 +1772,14 @@ class ConversionService : Service() {
             val cancelIntent = Intent(this, ConversionService::class.java).putExtra(EX_MODE, cancelMode)
             // One request code per cancel: the intro and face scans shared one, so the PendingIntent
             // carried whichever cancel was built last and "Annulla" could stop the other scan.
-            val req = when (cancelMode) { MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_EXPORT -> 31; MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7; else -> 6 }
+            val req = when (cancelMode) {
+                MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_EXPORT -> 31
+                MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7
+                MODE_CANCEL_CONVERT -> 6; MODE_CANCEL_INTRO -> 15
+                // A new cancel needs its own code: sharing one, the last notification built sets
+                // the mode of the other's Annulla too (the extras don't tell PendingIntents apart).
+                else -> 6.also { android.util.Log.w("ConversionService", "No request code of its own for $cancelMode") }
+            }
             val pi = android.app.PendingIntent.getService(
                 this, req, cancelIntent,
                 android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
@@ -2228,6 +2260,8 @@ class ConversionService : Service() {
         private const val MODE_IMPORT = "import"
         private const val MODE_DOWNLOAD = "download"
         private const val EX_TREE = "tree"
+        /** How long the wake lock lasts from the start of the last job (see [wakeLock]). */
+        private const val WAKE_MS = 6 * 60 * 60 * 1000L
         private const val MODE_CONVERT = "convert"
         private const val MODE_CANCEL = "cancel"
         private const val MODE_CANCEL_CONVERT = "cancel_convert"
@@ -2238,7 +2272,8 @@ class ConversionService : Service() {
 
         /** [mode] asks for a duplicate scan or an update download while one runs ([scan], [update]). */
         internal fun alreadyRunning(mode: String, scan: kotlinx.coroutines.Job?, update: kotlinx.coroutines.Job?): Boolean =
-            (mode == MODE_DUP_SCAN && scan?.isActive == true) || (mode == MODE_UPDATE && update?.isActive == true)
+            // Not completed rather than active: one being cancelled is still running its last lines.
+            (mode == MODE_DUP_SCAN && scan?.isCompleted == false) || (mode == MODE_UPDATE && update?.isCompleted == false)
         private const val MODE_CANCEL_SCAN = "cancel_scan"
         private const val MODE_INTRO_SCAN = "intro_scan"
         private const val MODE_CANCEL_INTRO = "cancel_intro"
@@ -2325,7 +2360,7 @@ class ConversionService : Service() {
                     }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                ContextCompat.startForegroundService(ctx, i)
+                startInForeground(ctx, i)
             }
         }
 
@@ -2340,10 +2375,20 @@ class ConversionService : Service() {
                 putExtra(EX_IDS_KEY, key)
                 tree?.let { putExtra(EX_TREE, it.toString()) }
             }
-            try { ContextCompat.startForegroundService(ctx, i) } catch (e: Exception) {
-                exportHandoff.remove(key)
-                logException(android.util.Log.ERROR, "ConversionService", "export not started", e)
-            }
+            if (!startInForeground(ctx, i)) exportHandoff.remove(key)
+        }
+
+        /**
+         * Start the service in the foreground for intent [i]; false when Android refused (the app
+         * went to the background meanwhile, ForegroundServiceStartNotAllowedException): logged,
+         * never thrown at the caller (a tap closed the app with it).
+         */
+        private fun startInForeground(ctx: Context, i: Intent): Boolean = try {
+            ContextCompat.startForegroundService(ctx, i)
+            true
+        } catch (e: Exception) {
+            logException(android.util.Log.ERROR, "ConversionService", "service not started: ${i.getStringExtra(EX_MODE)}", e)
+            false
         }
         /** Ids of an export handed to the service in this process (see [startDownload]). */
         private val exportHandoff = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
@@ -2365,12 +2410,12 @@ class ConversionService : Service() {
         }
 
         /** Run a duplicate scan (exact or [similar]) in the background, with a progress notification. */
-        fun startDupScan(ctx: Context, similar: Boolean) {
+        fun startDupScan(ctx: Context, similar: Boolean): Boolean {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DUP_SCAN)
                 putExtra(EX_SIMILAR, similar)
             }
-            ContextCompat.startForegroundService(ctx, i)
+            return startInForeground(ctx, i)
         }
 
         fun cancelDupScan(ctx: Context) {
@@ -2387,8 +2432,8 @@ class ConversionService : Service() {
          */
         val working = kotlinx.coroutines.flow.MutableStateFlow(false)
 
-        fun startIntroScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+        fun startIntroScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, manual)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)) })
         }
@@ -2410,8 +2455,8 @@ class ConversionService : Service() {
         val introProgress = kotlinx.coroutines.flow.MutableStateFlow<IntroProgress?>(null)
 
         /** Throw the analysis away ([everything]: also manual marks and rejections) and analyse every video anew. */
-        fun restartIntroScan(ctx: Context, everything: Boolean) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+        fun restartIntroScan(ctx: Context, everything: Boolean): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_INTRO_SCAN).putExtra(EX_MANUAL, true)
                 .putExtra(EX_RESET, if (everything) "all" else "auto"))
         }
@@ -2426,15 +2471,15 @@ class ConversionService : Service() {
          * ([com.cripta.app.data.face.FaceRepository.refine]), in the face scan; [force]: "Analizza
          * meglio", again even when nothing was confirmed since, its result posted.
          */
-        fun startFaceRefine(ctx: Context, fileIds: List<String>, force: Boolean = false, manual: Boolean = force) {
-            if (fileIds.isEmpty()) return
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+        fun startFaceRefine(ctx: Context, fileIds: List<String>, force: Boolean = false, manual: Boolean = force): Boolean {
+            if (fileIds.isEmpty()) return true
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_REFINE, true).putExtra(EX_FORCE, force)
                 .putStringArrayListExtra(EX_IDS, ArrayList(fileIds)))
         }
 
-        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null, deep: Boolean = false) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+        fun startFaceScan(ctx: Context, manual: Boolean, fileIds: List<String>? = null, reset: String? = null, deep: Boolean = false): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_FACE_SCAN).putExtra(EX_MANUAL, manual).putExtra(EX_DEEP, deep)
                 .apply { if (fileIds != null) putStringArrayListExtra(EX_IDS, ArrayList(fileIds)); if (reset != null) putExtra(EX_RESET, reset) })
         }
@@ -2463,8 +2508,8 @@ class ConversionService : Service() {
          */
         fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList(),
                              /** A saved job resumed: the link keeps its id (and its record). */
-                             jobId: String? = null) {
-            ContextCompat.startForegroundService(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds)
+                             jobId: String? = null): Boolean {
+            return startInForeground(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds)
                 .apply { jobId?.let { putExtra(EX_JOB_ID, it) } })
         }
 
@@ -2478,7 +2523,7 @@ class ConversionService : Service() {
             }
 
         /** Download the app update [rel] in the background (see [downloadUpdate]). */
-        fun startUpdateDownload(ctx: Context, rel: com.cripta.app.update.AppUpdater.Release) {
+        fun startUpdateDownload(ctx: Context, rel: com.cripta.app.update.AppUpdater.Release): Boolean {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_UPDATE)
                 putExtra(EX_URL, rel.apkUrl)
@@ -2487,25 +2532,25 @@ class ConversionService : Service() {
                 putExtra(EX_UPD_SIZE, rel.sizeBytes)
                 rel.sha256Url?.let { putExtra(EX_UPD_SHA, it) }
             }
-            ContextCompat.startForegroundService(ctx, i)
+            return startInForeground(ctx, i)
         }
 
         /**
          * Debug isola: a sample operation with Annulla, lasting Durata prova (see [debugRun]).
          * [kind]: convert, download, download_fail, import, export, scan, update.
          */
-        fun debugProgress(ctx: Context, kind: String = "convert") {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java)
+        fun debugProgress(ctx: Context, kind: String = "convert"): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
                 .putExtra(EX_MODE, MODE_DEBUG_PROGRESS).putExtra(EX_DEBUG_KIND, kind))
         }
         /** Debug isola › Solo scelta: a sample two-button choice. */
-        fun debugChoice(ctx: Context) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE))
+        fun debugChoice(ctx: Context): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE))
         }
 
         /** Run the backup or restore waiting in [com.cripta.app.data.BackupJobs]. */
-        fun startBackup(ctx: Context) {
-            ContextCompat.startForegroundService(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_BACKUP))
+        fun startBackup(ctx: Context): Boolean {
+            return startInForeground(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_BACKUP))
         }
 
         fun cancelUpdateDownload(ctx: Context) {
@@ -2523,13 +2568,13 @@ class ConversionService : Service() {
         }
 
         /** Queue a conversion; [after] overrides the saved "Dopo la conversione" choice for this one. */
-        fun startConvert(ctx: Context, id: String, after: com.cripta.app.data.ConvertAfter? = null) {
+        fun startConvert(ctx: Context, id: String, after: com.cripta.app.data.ConvertAfter? = null): Boolean {
             val i = Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_CONVERT)
                 putExtra(EX_ID, id)
                 after?.let { putExtra(EX_CONVERT_AFTER, it.ordinal) }
             }
-            ContextCompat.startForegroundService(ctx, i)
+            return startInForeground(ctx, i)
         }
     }
 }

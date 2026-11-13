@@ -918,7 +918,8 @@ fun SettingsScreen(
                             ToggleRow(str(R.string.include_prerelease), s.updatePrerelease) { vm.setUpdatePrerelease(it) }
                             if (updateState !is SettingsViewModel.UpdateState.Downloading) {
                                 com.cripta.app.ui.components.FilledTonalButton(
-                                    onClick = { vm.checkUpdate(ctx) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                    onClick = { vm.checkUpdate(ctx) }, enabled = updateState !is SettingsViewModel.UpdateState.Checking,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                                     Text(str(R.string.check_updates))
                                 }
                             }

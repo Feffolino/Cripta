@@ -154,13 +154,11 @@ class HomeViewModel @Inject constructor(
                             repo.deletePendingJob(job.id); continue
                         }
                         // Resumed under its own id: the service keeps this record (and replaces it),
-                        // so there is no moment with no record of the link. If the start throws (e.g.
+                        // so there is no moment with no record of the link. If the start is refused (e.g.
                         // the app is in the background) the record stays for the next launch.
-                        val started = runCatching {
-                            com.cripta.app.work.ConversionService.startDownloadUrl(
-                                appContext, url, height, folder, tags, jobId = job.id,
-                            )
-                        }.isSuccess
+                        val started = com.cripta.app.work.ConversionService.startDownloadUrl(
+                            appContext, url, height, folder, tags, jobId = job.id,
+                        )
                         if (!started) complete = false
                     }
                     "convert" -> {
@@ -168,7 +166,7 @@ class HomeViewModel @Inject constructor(
                         if (id.isBlank() || id in converting) continue
                         if (repo.fileById(id) == null) { repo.deletePendingJob(job.id); continue }
                         val after = com.cripta.app.data.ConvertAfter.entries.getOrNull(o.optInt("after", -1))
-                        if (runCatching { com.cripta.app.work.ConversionService.startConvert(appContext, id, after) }.isFailure) complete = false
+                        if (!com.cripta.app.work.ConversionService.startConvert(appContext, id, after)) complete = false
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

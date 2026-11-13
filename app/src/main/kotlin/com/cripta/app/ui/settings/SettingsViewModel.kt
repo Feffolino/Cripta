@@ -72,22 +72,34 @@ class SettingsViewModel @Inject constructor(
     private val _update = kotlinx.coroutines.flow.MutableStateFlow<UpdateState>(UpdateState.Idle)
     val update: StateFlow<UpdateState> = _update
 
-    fun checkUpdate(ctx: android.content.Context) = safeScope.launch {
+    fun checkUpdate(ctx: android.content.Context) {
+        // One check at a time, and none over a download: each tap started another, and a late
+        // answer put "Disponibile" back over the download started meanwhile.
+        val now = _update.value
+        if (now is UpdateState.Checking || now is UpdateState.Downloading) return
         _update.value = UpdateState.Checking
-        val pre = store.settingsOnce().updatePrerelease
-        val rel = try {
-            updater.latest(includePrerelease = pre)
-        } catch (e: java.io.IOException) {
-            _update.value = UpdateState.Error(str(R.string.update_no_connection))
-            return@launch
-        }
-        _update.value = when {
-            rel == null -> UpdateState.Error(
-                if (pre) str(R.string.update_none)
-                else str(R.string.update_none_stable)
-            )
-            rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
-            else -> UpdateState.Available(rel)
+        safeScope.launch {
+            fun answer(state: UpdateState) { if (_update.value is UpdateState.Checking) _update.value = state }
+            try {
+                val pre = store.settingsOnce().updatePrerelease
+                val rel = try {
+                    updater.latest(includePrerelease = pre)
+                } catch (e: java.io.IOException) {
+                    answer(UpdateState.Error(str(R.string.update_no_connection)))
+                    return@launch
+                }
+                answer(when {
+                    rel == null -> UpdateState.Error(
+                        if (pre) str(R.string.update_none)
+                        else str(R.string.update_none_stable)
+                    )
+                    rel.buildNumber <= updater.currentBuild(ctx) -> UpdateState.UpToDate
+                    else -> UpdateState.Available(rel)
+                })
+            } finally {
+                // Failed some other way (safeScope logs it): the button comes back.
+                if (_update.value is UpdateState.Checking) _update.value = UpdateState.Idle
+            }
         }
     }
 
@@ -100,7 +112,10 @@ class SettingsViewModel @Inject constructor(
         val rel = (_update.value as? UpdateState.Available)?.release ?: return
         _update.value = UpdateState.Downloading(0)
         watchingDownload = true
-        com.cripta.app.work.ConversionService.startUpdateDownload(ctx, rel)
+        if (!com.cripta.app.work.ConversionService.startUpdateDownload(ctx, rel)) {
+            watchingDownload = false
+            _update.value = UpdateState.Error(str(R.string.n_update_failed))
+        }
     }
 
     fun cancelUpdateDownload(ctx: android.content.Context) = com.cripta.app.work.ConversionService.cancelUpdateDownload(ctx)
@@ -594,8 +609,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun startBackup(request: com.cripta.app.data.BackupJobs.Request) {
         if (!backups.offer(request)) return
-        runCatching { com.cripta.app.work.ConversionService.startBackup(appContext) }.onFailure {
-            logException(android.util.Log.ERROR, "SettingsViewModel", "backup service not started", it)
+        if (!com.cripta.app.work.ConversionService.startBackup(appContext)) {
             backups.take()?.passphrase?.fill('\u0000')
             backups.finish(if (request.restore) str(R.string.restore_not_started) else str(R.string.backup_not_started))
         }

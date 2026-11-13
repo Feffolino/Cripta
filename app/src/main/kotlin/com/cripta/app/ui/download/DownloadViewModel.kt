@@ -142,8 +142,8 @@ class DownloadViewModel @Inject constructor(
 
     /** Queue a failed/cancelled link again with the same quality and destination. */
     fun retry(ctx: Context, job: com.cripta.app.data.DownloadJob) {
-        queue.removeDownload(job.id)
-        ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds)
+        // Refused to start: the failed link stays in the list, to try again.
+        if (ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds)) queue.removeDownload(job.id)
     }
     fun clearFinished() = queue.clearFinishedDownloads()
 
