@@ -14,7 +14,9 @@ val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
-fun signingSecret(name: String): String? = System.getenv(name) ?: keystoreProps.getProperty(name)
+// A secret set but left empty counts as missing, so the build falls back (or says what is absent).
+fun signingSecret(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(name)?.takeIf { it.isNotBlank() }
 val keystoreFile = file(signingSecret("KEYSTORE_FILE") ?: "cripta-release.keystore")
 val hasSigning = keystoreFile.exists() && signingSecret("KEYSTORE_PASSWORD") != null
 
@@ -101,10 +103,8 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
-    debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
