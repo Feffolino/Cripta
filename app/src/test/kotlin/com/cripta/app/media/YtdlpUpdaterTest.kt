@@ -104,4 +104,49 @@ class YtdlpUpdaterTest {
         assertThrows(IllegalStateException::class.java) { wrong.updateIfDue(now) }
         assertEquals("working old engine", engine.readText())
     }
+
+    private fun releaseOf(tag: String, name: String, url: String, digest: String) = JSONObject().put("tag_name", tag)
+        .put("assets", org.json.JSONArray().put(JSONObject().put("name", name).put("browser_download_url", url).put("digest", digest)))
+        .toString().toByteArray()
+
+    @Test fun anAssetOutsideTheYtDlpReleasesIsNeverDownloaded() {
+        var downloaded = false
+        val bytes = zip("__main__.py", "yt_dlp/__init__.py")
+        val updater = YtdlpUpdater(context) {
+            if (it == YtdlpUpdater.RELEASE_URL) releaseOf("new-version", "yt-dlp", "https://example.org/yt-dlp", sha256(bytes))
+            else { downloaded = true; bytes }
+        }
+        assertThrows(IllegalArgumentException::class.java) { updater.updateIfDue(now) }
+        assertFalse(downloaded)
+        assertEquals("working old engine", engine.readText())
+    }
+
+    @Test fun aReleaseWithoutTheEngineAssetChangesNothing() {
+        val updater = YtdlpUpdater(context) {
+            if (it == YtdlpUpdater.RELEASE_URL)
+                releaseOf("new-version", "yt-dlp.exe", "https://github.com/yt-dlp/yt-dlp/releases/download/new-version/yt-dlp.exe", sha256(ByteArray(1)))
+            else throw AssertionError("nothing to download")
+        }
+        assertThrows(NoSuchElementException::class.java) { updater.updateIfDue(now) }
+        assertEquals("working old engine", engine.readText())
+    }
+
+    @Test fun theSameVersionAlreadyInstalledIsNotDownloadedAgain() {
+        val bytes = zip("__main__.py", "yt_dlp/__init__.py")
+        var downloads = 0
+        val updater = YtdlpUpdater(context) {
+            if (it == YtdlpUpdater.RELEASE_URL)
+                releaseOf("same", "yt-dlp", "https://github.com/yt-dlp/yt-dlp/releases/download/same/yt-dlp", sha256(bytes))
+            else { downloads++; bytes }
+        }
+        updater.updateIfDue(now)
+        assertEquals(1, downloads)
+        updater.updateIfDue(now + 24 * 60 * 60_000L)
+        assertEquals("same version, engine present: not fetched again", 1, downloads)
+        // Gone from the disk: fetched again even with the same version.
+        engine.delete()
+        updater.updateIfDue(now + 48 * 60 * 60_000L)
+        assertEquals(2, downloads)
+        assertArrayEquals(bytes, engine.readBytes())
+    }
 }

@@ -5,7 +5,9 @@ import java.io.File
 /**
  * Test data: the real models from the app's assets and public-domain photos (US government works
  * from Wikimedia Commons) in `src/test/resources/faces`, with hand-checked identities in labels.csv.
- * The folder is local only (not in the repository); see [available].
+ * The folder is local only (not in the repository); see [available]. Without it the tests that need
+ * it skip, so the CI never runs them (the OpenCV comparison and "the tracker never joins two people"):
+ * run them on the machine that has the photos before a release.
  */
 object TestFaces {
     // The photos are kept only on the developer's machine (git-ignored): tests that need them skip without.

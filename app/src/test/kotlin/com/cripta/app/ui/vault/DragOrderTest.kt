@@ -19,6 +19,19 @@ class DragOrderTest {
     }
 
     @Test
+    fun twoFilesAddedSideBySideKeepTheirPlaceAndOrder() {
+        assertEquals(ids("BXYAC"), afterDrop(ids("BAC"), ids("AXYBC")) { it })
+        assertEquals(ids("BACXY"), afterDrop(ids("BAC"), ids("ABCXY")) { it })
+    }
+
+    @Test
+    fun everyFileRemovedOrNoneThereLeavesTheVaultsList() {
+        assertEquals(emptyList<String>(), afterDrop(ids("BAC"), emptyList()) { it })
+        assertEquals(emptyList<String>(), afterDrop(emptyList(), emptyList<String>()) { it })
+        assertEquals(ids("AB"), afterDrop(emptyList(), ids("AB")) { it })
+    }
+
+    @Test
     fun aFileRemovedDuringTheDragIsNotShownAgain() {
         assertEquals(ids("BC"), afterDrop(ids("BAC"), ids("BC")) { it })
     }

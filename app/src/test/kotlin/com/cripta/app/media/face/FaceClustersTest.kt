@@ -23,15 +23,6 @@ class FaceClustersTest {
     private fun track(id: Long, file: String, vararg e: FloatArray, frames: Long = 1L) = TrackInfo(id, file, frames, e.toList(), 0.5f)
 
     @Test
-    fun framePlanSpreadsTheFrames() {
-        assertEquals(8, FramePlan.times(30_000).size)
-        assertEquals(30, FramePlan.times(300_000).size)
-        assertEquals(40, FramePlan.times(7_200_000).size)
-        val t = FramePlan.times(80_000)
-        assertEquals(5_000L, t.first()); assertEquals(75_000L, t.last())
-    }
-
-    @Test
     fun codecKeepsTheSimilarity() {
         val a = random(); val b = near(a, 0.5f)
         val (da, db) = EmbeddingCodec.decode(EmbeddingCodec.encode(listOf(a, b)))

@@ -41,12 +41,23 @@ class JobRestoreRetryTest {
         repo = VaultRepository(app, session, BlobStore(app), SettingsStore(app))
     }
 
-    @After
-    fun close() = db.close()
+    private val reopened = mutableListOf<CriptaDatabase>()
 
+    @After
+    fun close() {
+        db.close()
+        reopened.forEach { it.close() }
+    }
+
+    /**
+     * Lock, then unlock with a database of its own, as the app does. Reopening the same instance
+     * would leave it to the lock's delayed close, which shuts it after a few seconds even in use.
+     */
     private suspend fun relockAndOpen() {
         session.lock(); yield()
-        session.activate(dek, db); yield()
+        val next = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), CriptaDatabase::class.java)
+            .allowMainThreadQueries().build().also { reopened += it }
+        session.activate(dek, next); yield()
     }
 
     @Test

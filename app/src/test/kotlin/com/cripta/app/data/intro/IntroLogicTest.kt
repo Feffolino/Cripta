@@ -1,7 +1,6 @@
 package com.cripta.app.data.intro
 
 import com.cripta.app.data.db.MediaSegmentEntity
-import com.cripta.app.media.face.FaceStats
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -45,19 +44,8 @@ class IntroLogicTest {
     @Test fun anAutoSegmentIsFoundAndOtherKindsAreIgnored() {
         val auto = seg("intro", "auto", 1_000, 30_000)
         val outro = seg("outro", "auto", 90_000, 100_000)
-        assertEquals(auto, activeSegment(listOf(seg("intro", "none"), auto, outro).filter { it === auto || it === outro }, "intro"))
+        // The "none" mark comes first: it must be passed over, not returned.
+        assertEquals(auto, activeSegment(listOf(seg("intro", "none"), auto, outro), "intro"))
         assertEquals(outro, activeSegment(listOf(auto, outro), "outro"))
-    }
-
-    @Test fun anAlikeFrameFarInTimeIsNotADuplicate() {
-        val h = 0x0F0F0F0F0F0F0F0FL
-        // Same picture, key frame returned twice at the same real time: a duplicate.
-        assertTrue(FaceStats.isSameMoment(h, h, 10_000, 10_000))
-        // Same picture hash 8 seconds later (fixed camera, a small face came in): a different frame.
-        assertFalse(FaceStats.isSameMoment(h, h, 18_000, 10_000))
-        // The first frame has nothing before it.
-        assertFalse(FaceStats.isSameMoment(h, h, 10_000, null))
-        // A different picture is never a duplicate.
-        assertFalse(FaceStats.isSameMoment(h, h.inv(), 10_000, 10_000))
     }
 }

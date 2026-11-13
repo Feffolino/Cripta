@@ -74,6 +74,6 @@ class DownloadEstimateTest {
     @Test fun theLargestRenditionWithinTheCapIsUsed() {
         val source = info(format(360, 5_000_000), format(720, 20_000_000), format(1080, 50_000_000))
         assertNotNull(DownloadEstimate.bytes(source, 720))
-        assert(DownloadEstimate.bytes(source, 720)!! == 20_000_000L)
+        assertEquals(20_000_000L, DownloadEstimate.bytes(source, 720))
     }
 }

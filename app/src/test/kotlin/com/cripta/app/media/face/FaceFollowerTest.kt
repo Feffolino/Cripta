@@ -3,6 +3,7 @@ package com.cripta.app.media.face
 import com.cripta.app.data.db.TrackCard
 import com.cripta.app.data.face.FaceRepository
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -162,5 +163,17 @@ class FaceFollowerTest {
     fun sampledFramesFitTheTrackMask() {
         // Bit n of a track's frames is frame n: the plan and the frames added near faces stay below 64.
         assertTrue(FramePlan.MAX + FaceRepository.MAX_EXTRA <= 64)
+    }
+
+    @Test fun anAlikeFrameFarInTimeIsNotADuplicate() {
+        val h = 0x0F0F0F0F0F0F0F0FL
+        // Same picture, key frame returned twice at the same real time: a duplicate.
+        assertTrue(FaceStats.isSameMoment(h, h, 10_000, 10_000))
+        // Same picture hash 8 seconds later (fixed camera, a small face came in): a different frame.
+        assertFalse(FaceStats.isSameMoment(h, h, 18_000, 10_000))
+        // The first frame has nothing before it.
+        assertFalse(FaceStats.isSameMoment(h, h, 10_000, null))
+        // A different picture is never a duplicate.
+        assertFalse(FaceStats.isSameMoment(h, h.inv(), 10_000, 10_000))
     }
 }

@@ -26,4 +26,13 @@ class FramePlanTest {
         assertEquals(10_000L, FramePlan.spacing(80_000))
         assertEquals(FramePlan.STEP_MS, FramePlan.spacing(0))
     }
+
+    @Test
+    fun framePlanSpreadsTheFrames() {
+        assertEquals(8, FramePlan.times(30_000).size)
+        assertEquals(30, FramePlan.times(300_000).size)
+        assertEquals(40, FramePlan.times(7_200_000).size)
+        val t = FramePlan.times(80_000)
+        assertEquals(5_000L, t.first()); assertEquals(75_000L, t.last())
+    }
 }

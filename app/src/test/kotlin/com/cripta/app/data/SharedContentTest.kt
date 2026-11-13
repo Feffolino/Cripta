@@ -54,4 +54,37 @@ class SharedContentTest {
         val intent = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, Uri.parse("file:///private/video.mp4"))
         assertEquals(SharedContent.None, classifySharedContent(intent, resolver))
     }
+
+    private fun shared(uri: Uri, type: String, content: String): SharedContent {
+        org.robolectric.Shadows.shadowOf(resolver).registerInputStream(uri, java.io.ByteArrayInputStream(content.toByteArray()))
+        return classifySharedContent(Intent(Intent.ACTION_SEND).setType(type).putExtra(Intent.EXTRA_STREAM, uri), resolver)
+    }
+
+    @Test fun aSharedUriListIsReadForItsLink() {
+        assertEquals(SharedContent.WebLink("https://example.com/list"),
+            shared(Uri.parse("content://files/links"), "text/uri-list", "# a comment\r\nhttps://example.com/list\r\n"))
+    }
+
+    @Test fun anInternetShortcutFileIsReadForItsLink() {
+        assertEquals(SharedContent.WebLink("https://example.com/watch"),
+            shared(Uri.parse("content://files/page"), "application/x-url", "[InternetShortcut]\r\nURL=https://example.com/watch\r\n"))
+    }
+
+    @Test fun aPlainTextFileWithALinkInsideIsAFile() {
+        val uri = Uri.parse("content://files/notes")
+        assertEquals(SharedContent.Files(listOf(uri)), shared(uri, "text/plain", "see https://example.com/inside"))
+    }
+
+    @Test fun anHtmlShareGivesItsLink() {
+        val intent = Intent(Intent.ACTION_SEND).setType("text/html")
+            .putExtra(Intent.EXTRA_HTML_TEXT, "<p>Look: <a href=\"https://example.com/a?x=1&amp;y=2\">this</a></p>")
+        assertEquals(SharedContent.WebLink("https://example.com/a?x=1&y=2"), classifySharedContent(intent, resolver))
+    }
+
+    @Test fun aLinkInTheIntentDataOrAsAStreamIsALink() {
+        val data = Intent(Intent.ACTION_SEND).setData(Uri.parse("https://example.com/d"))
+        assertEquals(SharedContent.WebLink("https://example.com/d"), classifySharedContent(data, resolver))
+        val stream = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, Uri.parse("https://example.com/s"))
+        assertEquals(SharedContent.WebLink("https://example.com/s"), classifySharedContent(stream, resolver))
+    }
 }

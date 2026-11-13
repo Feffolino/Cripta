@@ -108,18 +108,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /** [restorePendingJobs] once per process; again when it did not get through. */
-    private suspend fun resumeJobs() {
-        if (!repo.claimJobRestore()) return
-        val complete = try {
-            restorePendingJobs()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            repo.releaseJobRestore()
-            throw e
-        } catch (e: Exception) {
-            false
-        }
-        if (!complete) repo.releaseJobRestore()
-    }
+    private suspend fun resumeJobs() =
+        resumeOnce({ repo.claimJobRestore() }, { repo.releaseJobRestore() }, { restorePendingJobs() })
 
     /** Resume what was waiting; false when something could not be (unreadable list, start refused). */
     private suspend fun restorePendingJobs(): Boolean {
@@ -309,4 +299,21 @@ class HomeViewModel @Inject constructor(
     /** Open Cartelle on every file of [type], wherever it is: the summary figure tapped counted them all. */
     fun showType(type: com.cripta.app.ui.vault.TypeFilter) =
         navigator.applyFilters(com.cripta.app.ui.vault.Filters(type = type, wholeVault = true))
+}
+
+/**
+ * Run [restore] if [claim] gets the turn, and give the turn back ([release]) unless it got through:
+ * false, a failure or a cancel leave it to be tried again at the next unlock.
+ */
+internal suspend fun resumeOnce(claim: suspend () -> Boolean, release: suspend () -> Unit, restore: suspend () -> Boolean) {
+    if (!claim()) return
+    val complete = try {
+        restore()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        release()
+        throw e
+    } catch (e: Exception) {
+        false
+    }
+    if (!complete) release()
 }

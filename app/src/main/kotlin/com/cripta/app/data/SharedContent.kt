@@ -38,7 +38,6 @@ internal fun classifySharedContent(intent: Intent, resolver: ContentResolver): S
     // the caption (the link wins only over the preview image a browser attaches to a page).
     if (intent.action == Intent.ACTION_SEND && files.size == 1) {
         val mime = runCatching { resolver.getType(files.first()) }.getOrNull() ?: intent.type.orEmpty()
-        val caption = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty()
         if (isAttachmentNotPreview(mime)) return SharedContent.Files(files)
     }
     text.map(::extractUrl).firstOrNull(::looksLikeUrl)?.let { return SharedContent.WebLink(it) }

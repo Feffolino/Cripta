@@ -15,7 +15,7 @@ class DownloadRequestsTest {
         File(dir, "intermediate.f137.mp4").writeBytes(ByteArray(100))
         File(dir, "unfinished.mp4.part").writeBytes(ByteArray(200))
         File(dir, DownloadRequests.RESULT_FILE).writeText(video.absolutePath + "\n")
-        assertEquals(video, DownloadRequests.completedFile(dir))
+        assertEquals(video.canonicalFile, DownloadRequests.completedFile(dir))
         assertEquals("video/webm", downloadedVideoMime(video))
         assertEquals("video/x-matroska", downloadedVideoMime(File("merged.mkv")))
     }

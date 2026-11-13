@@ -46,4 +46,22 @@ class SegmentSkipperTest {
     fun nothingWhileScrubbing() {
         assertEquals(Action.None, SegmentSkipper().at(12_000, segs, true, true, true))
     }
+
+    @Test
+    fun goingIntoAnIntroOnPurposeStopsItsAutoSkip() {
+        val s = SegmentSkipper()
+        s.seekedTo(20_000, segs)
+        // Auto-skip on: the spot chosen in the intro is kept, the button still offers the skip.
+        assertEquals(Action.Show(intro), s.at(20_500, segs, false, true, true))
+        // The outro is untouched and still skips by itself.
+        assertEquals(Action.AutoSkip(outro), s.at(1_010_000, segs, false, true, true))
+    }
+
+    @Test
+    fun goingOutsideEverySegmentChangesNothing() {
+        val s = SegmentSkipper()
+        s.seekedTo(5_000, segs)
+        s.seekedTo(40_000, segs)   // the end is outside the segment
+        assertEquals(Action.AutoSkip(intro), s.at(12_000, segs, false, true, false))
+    }
 }
