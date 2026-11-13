@@ -1225,9 +1225,6 @@ class VaultRepository @Inject constructor(
         db.fileDao().setFavorite(fileId, fav); notifyChanged()
     }
 
-    /** All file ids only (cheap) — for building a random queue over large libraries. */
-    suspend fun allFileIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().allIds() }
-
     suspend fun randomEligibleIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().randomEligibleIds() }
 
     /** One-shot snapshot of every file entity (no tags). Used by the duplicate scanner. */
@@ -1249,10 +1246,6 @@ class VaultRepository @Inject constructor(
 
     suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
         db.fileDao().rename(fileId, newName.trim()); notifyChanged()
-    }
-
-    suspend fun setTagAlias(tagName: String, alias: String?) = withContext(Dispatchers.IO) {
-        db.tagDao().setAlias(tagName, alias?.trim()?.ifEmpty { null }); notifyChanged()
     }
 
     /** Add [tagNames] to a file without clearing its existing tags. */
@@ -1333,11 +1326,6 @@ class VaultRepository @Inject constructor(
         return ids.filter { it in present }
     }
 
-    /** Pin/unpin a tag (pinned tags come first in every picker). */
-    suspend fun setTagPinned(name: String, pinned: Boolean) = withContext(Dispatchers.IO) {
-        db.tagDao().setPinned(name, pinned); notifyChanged()
-    }
-
     /** Toggle one tag on one file (viewer quick-tag bar). Returns true when it is now assigned. */
     suspend fun toggleFileTag(fileId: String, tagId: Long): Boolean = withContext(Dispatchers.IO) {
         val dao = db.tagDao()
@@ -1403,11 +1391,6 @@ class VaultRepository @Inject constructor(
             result
         }
 
-    /** Set a tag's icon (null = none). */
-    suspend fun setTagIcon(tagName: String, icon: String?) = withContext(Dispatchers.IO) {
-        db.tagDao().setIcon(tagName, icon?.ifBlank { null }); notifyChanged()
-    }
-
     /** Set a tag's colour (null = automatic). */
     suspend fun setTagColor(tagId: Long, color: Int?) = withContext(Dispatchers.IO) {
         db.tagDao().setColor(tagId, color); notifyChanged()
@@ -1418,10 +1401,6 @@ class VaultRepository @Inject constructor(
         if (colors.isEmpty()) return@withContext
         db.withTransaction { colors.forEach { (id, c) -> db.tagDao().setColor(id, c) } }
         notifyChanged()
-    }
-
-    suspend fun setTagColorByName(name: String, color: Int?) = withContext(Dispatchers.IO) {
-        db.tagDao().setColorByName(name.trim(), color); notifyChanged()
     }
 
     /**
@@ -1561,16 +1540,6 @@ class VaultRepository @Inject constructor(
 
     fun seekableChannel(file: FileEntity): SeekableByteChannel =
         FileCrypto.seekableDecryptingChannel(file.wrappedKeyset, dek, file.id, blobs.blob(file.id))
-
-    suspend fun export(file: FileEntity, dest: Uri) = withContext(Dispatchers.IO) {
-        val sink = context.contentResolver.openOutputStream(dest)
-            ?: throw java.io.IOException(str(R.string.err_write_destination))
-        sink.use { out ->
-            FileCrypto.decryptingStream(file.wrappedKeyset, dek, file.id, blobs.blob(file.id)).use {
-                it.copyTo(out)
-            }
-        }
-    }
 
     /**
      * Decrypt the file back into shared storage (MediaStore) so it reappears in the gallery.

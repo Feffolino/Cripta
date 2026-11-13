@@ -49,10 +49,6 @@ internal object HyperFocus {
 
     @Volatile private var supported: Boolean? = null
 
-    /** The last focus payload sent (Debug isola › Copia payload), to compare what HyperOS got. */
-    @Volatile var lastPayload: String? = null
-        private set
-
     /**
      * Xiaomi with the island: the focus extras are added. Whether Cripta may show focus
      * notifications is not a condition any more: that check (canShowFocus) can answer false or
@@ -113,11 +109,8 @@ internal object HyperFocus {
         progress: Int?,
         buttons: List<Button>,
         float: Boolean,
-        /** A finished operation: shown in the island for this many seconds, then it goes (null: stays). */
-        islandTimeoutSec: Int? = null,
     ): Bundle {
         if (!isSupported(ctx)) return Bundle()
-        val dbg = IslandDebug.get(ctx)
         // Every operation shows the same icon: the Cripta keyhole, cut out as the status bar wants it.
         val icon = R.drawable.ic_notification
         // Keys unique to this icon and this notification: HyperOS keeps the pictures and buttons
@@ -138,51 +131,39 @@ internal object HyperFocus {
             .put("textInfo", JSONObject().put("title", chip)))
         val big = JSONObject()
             .put("imageTextInfoLeft", JSONObject().put("type", 1).put("picInfo", pic)
-                .put("textInfo", JSONObject().put("title", if (dbg.shortLabel) label else title)))
+                .put("textInfo", JSONObject().put("title", label)))
         right.keys().forEach { big.put(it, right.get(it)) }
         val param = JSONObject()
             .put("protocol", protocol(ctx).takeIf { it in 1..3 } ?: 3)
             .put("business", business)
             .put("updatable", true)
             .put("ticker", chip)
-            .put("enableFloat", if (progress != null) dbg.floatOnUpdate else float && dbg.floatOnChoice)
-            .put("islandFirstFloat", if (progress != null) dbg.floatOnUpdate else float && dbg.floatOnChoice)
+            // The island pops open once for a choice, never on progress updates.
+            .put("enableFloat", progress == null && float)
+            .put("islandFirstFloat", progress == null && float)
             .put("isShowNotification", true)
-        if (dbg.padding) param.put("padding", true)
-        // Swipe down on the island: Cripta in a small floating window, as the system apps do
-        // (the vault's own lock screen shows first when it is locked).
-        when (dbg.smallWindow) {
-            "class" -> param.put("smallWindowInfo", JSONObject().put("targetPage", "com.cripta.app.MainActivity"))
-            "component" -> param.put("smallWindowInfo", JSONObject().put("targetPage", "${ctx.packageName}/com.cripta.app.MainActivity"))
-        }
-        // Expanded: the chat template (the operation's icon on the left, title and text beside
-        // it, as HyperOS lays out its own ongoing items). The base template put the text above
-        // the title with the icon squeezed after it, and its padding flag didn't add margins.
-        if (dbg.template == "base") {
-            param.put("baseInfo", JSONObject().put("type", 1).put("title", title).put("content", text ?: "")
+            // Swipe down on the island: Cripta in a small floating window, as the system apps do
+            // (the vault's own lock screen shows first when it is locked).
+            .put("smallWindowInfo", JSONObject().put("targetPage", "com.cripta.app.MainActivity"))
+            // Expanded: the chat template (the operation's icon on the left, title and text beside
+            // it, as HyperOS lays out its own ongoing items). The base template put the text above
+            // the title with the icon squeezed after it, and its padding flag didn't add margins.
+            .put("chatInfo", JSONObject().put("title", title).put("content", text ?: "")
                 .put("picFunction", picKey))
-        } else {
-            param.put("chatInfo", JSONObject().put("title", title).put("content", text ?: "")
-                .put("picFunction", picKey))
-        }
-        param
             .put("param_island", JSONObject()
                 .put("islandProperty", 1)
                 .put("islandPriority", 2)
-                .put("dismissIsland", islandTimeoutSec != null)
-                .apply { islandTimeoutSec?.let { put("islandTimeout", it) } }
+                .put("dismissIsland", false)
                 .put("needCloseAnimation", true)
                 .put("highlightColor", BRAND)
                 .put("smallIslandArea", small)
                 .put("bigIslandArea", big))
-        if (progress != null && dbg.progressBar) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
+        if (progress != null) param.put("progressInfo", JSONObject().put("progress", progress).put("colorProgress", BRAND))
         // Buttons as the system Clock shows them: round icon buttons beside the title (the
         // template's actions, icon only), which leaves the progress bar room below and fits two.
         // Without icons: one as the template's text pill, several as the row of text buttons.
         val style = when {
-            dbg.buttons == "icon" && buttons.all { it.icon != null } -> "icon"
-            dbg.buttons == "row" -> "row"
-            dbg.buttons == "pill" -> "pill"
+            buttons.all { it.icon != null } -> "icon"
             buttons.size == 1 -> "pill"
             else -> "row"
         }
@@ -229,7 +210,6 @@ internal object HyperFocus {
                 Notification.Action.Builder(Icon.createWithResource(ctx, b.icon ?: icon), b.title, b.intent).build())
         }
         val json = JSONObject().put("param_v2", param).put("isShowNotification", true).toString()
-        lastPayload = json
         return Bundle().apply {
             putString("miui.focus.param", json)
             putBundle("miui.focus.actions", actions)

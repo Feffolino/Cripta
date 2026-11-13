@@ -92,12 +92,6 @@ class SimilarityPrintsTest {
     }
 
     @Test
-    fun maxDistanceIsTheWidestPair() {
-        val prints = listOf(longArrayOf(0L), longArrayOf(1L), longArrayOf(7L))
-        assertEquals(3, SimilarityPrints.maxDistance(prints, BooleanArray(3), intArrayOf(0, 1, 2)))
-    }
-
-    @Test
     fun flatPicturesAreNotInformative() {
         assertEquals(false, SimilarityPrints.informative(longArrayOf(0L)))
         assertEquals(false, SimilarityPrints.informative(longArrayOf(-1L)))

@@ -225,13 +225,3 @@ fun TagPill(
         }
     }
 }
-
-/** Neutral "+N" pill in the same shape, for tags that didn't fit. */
-@Composable
-fun MoreTagsPill(count: Int, onImage: Boolean, modifier: Modifier = Modifier) {
-    val bg = if (onImage) OnImageGlass else tonalContainer()
-    val fg = if (onImage) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(modifier.heightIn(min = 22.dp).clip(CircleShape).background(bg).padding(horizontal = 8.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
-        Text("+$count", style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1)
-    }
-}

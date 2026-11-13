@@ -51,7 +51,6 @@
     <string name="convert_original_kept">已保留原文件和 MP4 副本。</string>
     <string name="err_open_import">无法打开要导入的文件</string>
     <string name="err_write_converted">转换副本写入不完整</string>
-    <string name="err_write_destination">无法写入所选位置</string>
     <string name="err_write_gallery">无法写入图库</string>
     <string name="err_create_in_folder">无法在所选文件夹中创建文件</string>
     <string name="err_write_folder">无法写入所选文件夹</string>
@@ -190,8 +189,6 @@
     <string name="dl_err_failed">下载失败</string>
     <string name="n_download">下载</string>
     <string name="n_unlock_then_retry">解锁 Cripta 后点按“重试”</string>
-    <string name="n_test_choice">测试选择操作</string>
-    <string name="n_test_two_buttons">两个测试按钮</string>
     <string name="delete">删除</string>
     <string name="keep">保留</string>
     <string name="n_original_unchanged">原文件未改动</string>
@@ -206,33 +203,25 @@
     <string name="n_export_gallery">正在导出到图库</string>
     <string name="n_file_of">文件 %1$s/%2$s</string>
     <string name="n_dup_search">查找重复文件</string>
-    <string name="n_dup_compared_test">已比较 200 个项目中的 %1$s 个</string>
     <string name="n_update">Cripta 更新</string>
-    <string name="n_update_test">测试版本 · %1$s%%</string>
     <string name="n_convert">正在转换为 MP4</string>
     <string name="n_encoding_pct">正在编码视频 · %1$s%%</string>
-    <string name="n_test_starting">正在启动测试…</string>
     <plurals name="imported_n">
         <item quantity="other">已导入 %1$s 个文件</item>
     </plurals>
     <string name="n_delete_originals_q">删除原文件？</string>
     <string name="n_delete_originals">删除原文件</string>
     <string name="n_export_done">导出完成</string>
-    <string name="n_export_saved_test">已将 %1$s 个文件保存到图库</string>
     <string name="n_dups_found">找到重复文件</string>
-    <string name="n_dups_found_test">在 200 个项目中找到 3 组</string>
     <string name="n_see_results">查看结果</string>
     <string name="n_update_ready">更新已就绪</string>
-    <string name="n_update_ready_test">测试：没有可安装的文件</string>
     <string name="install">安装</string>
     <string name="n_download_done">下载完成</string>
     <string name="n_video_encrypted">视频已加密存入保险库</string>
-    <string name="n_download_failed_test">错误测试：无法访问链接</string>
     <string name="retry">重试</string>
     <string name="n_mp4_created">已创建 MP4 副本</string>
     <string name="n_delete_original_q">删除原文件？</string>
     <string name="n_delete_original">删除原文件</string>
-    <string name="n_test_cancelled">测试已取消</string>
     <string name="n_restoring">正在恢复备份</string>
     <string name="n_backing_up">正在创建备份</string>
     <string name="n_restore_failed_unlock">恢复失败，请解锁 Cripta 后重试。</string>
@@ -242,7 +231,6 @@
     </plurals>
     <string name="n_restore_done">恢复完成</string>
     <string name="n_backup_done">备份完成</string>
-    <string name="n_backup_failed_space">备份失败，请检查目标位置的可用空间后重试。</string>
     <string name="n_restore_failed_passphrase">恢复失败：备份口令错误或备份文件无效。保险库未改动。</string>
     <string name="n_restore_failed_reason">恢复失败（%1$s）。保险库未改动。</string>
     <string name="n_restore_failed">恢复失败</string>
@@ -357,7 +345,6 @@
     <string name="ch_done">已完成的操作</string>
     <string name="n_chip_start">开始</string>
     <string name="cancel">取消</string>
-    <string name="ch_ongoing_island_test">进行中的操作（灵动岛，测试）</string>
     <string name="kind_import">导入</string>
     <string name="kind_convert">转换</string>
     <string name="kind_duplicates">重复文件</string>
@@ -624,8 +611,6 @@
     <string name="pinned">已置顶</string>
     <string name="recent">最近使用</string>
     <string name="tag_rename_hint">可从“设置 › 标签”更改名称。</string>
-    <string name="tag_alias">简称（可选）</string>
-    <string name="tag_alias_hint">在封面上代替图标显示，或显示在图标旁。</string>
     <string name="tag_pin_top">置顶</string>
     <string name="tag_pin_top_hint">始终排在前面，位置固定。</string>
     <string name="colour">颜色</string>
@@ -643,7 +628,6 @@
     <string name="tags_none_create">暂无标签，可在下方创建。</string>
     <string name="search_tag">搜索标签</string>
     <string name="clear_search">清除搜索</string>
-    <string name="colour_n">颜色 %1$s</string>
     <string name="viewer_too_big">文件过大，无法预览。请导出到设备，用其他应用打开。</string>
     <string name="viewer_decrypt_failed">无法解密文件，数据可能已损坏。</string>
     <string name="viewer_content_missing">找不到此文件的加密内容。</string>

@@ -92,7 +92,7 @@ object UserErrors {
 
     /** The app's own messages (thrown in the user's language), shown as they are. */
     private val OWN = intArrayOf(
-        R.string.err_open_import, R.string.err_write_converted, R.string.err_write_destination, R.string.err_write_gallery,
+        R.string.err_open_import, R.string.err_write_converted, R.string.err_write_gallery,
         R.string.err_create_in_folder, R.string.err_write_folder, R.string.err_write_backup, R.string.err_read_incomplete,
         R.string.err_open_backup, R.string.err_bad_format, R.string.err_wrong_passphrase_or_corrupt, R.string.file_corrupt,
         R.string.err_backup_truncated, R.string.err_wrong_passphrase_or_invalid, R.string.err_note_save, R.string.settings_invalid,

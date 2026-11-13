@@ -142,14 +142,4 @@ internal object SimilarityPrints {
 
     /** The stored key of a "not alike" pair, whatever the order of [x] and [y]. */
     fun pairKey(x: String, y: String) = if (x < y) "$x|$y" else "$y|$x"
-
-    /** The largest pairwise distance inside [group]. */
-    fun maxDistance(prints: List<LongArray>, video: BooleanArray, group: IntArray): Int {
-        var maxD = 0
-        for (a in group.indices) for (b in a + 1 until group.size) {
-            val d = distance(prints[group[a]], video[group[a]], prints[group[b]], video[group[b]])
-            if (d > maxD) maxD = d
-        }
-        return maxD
-    }
 }

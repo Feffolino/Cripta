@@ -810,8 +810,6 @@ class SettingsViewModel @Inject constructor(
     private var openWhenDone = false
     private val _exactGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.ExactGroup>>(emptyList())
     val exactGroups: StateFlow<List<DuplicateScanner.ExactGroup>> = _exactGroups
-    private val _similarGroups = kotlinx.coroutines.flow.MutableStateFlow<List<DuplicateScanner.SimilarGroup>>(emptyList())
-    val similarGroups: StateFlow<List<DuplicateScanner.SimilarGroup>> = _similarGroups
     /** How many files/images the last scan actually examined — shown so the user sees it ran. */
     private val _dupScannedCount = kotlinx.coroutines.flow.MutableStateFlow(0)
     val dupScannedCount: StateFlow<Int> = _dupScannedCount
@@ -948,7 +946,6 @@ class SettingsViewModel @Inject constructor(
         val groups = r.groups.map { g -> g.mapNotNull { DupIdentity.stillScanned(it, repo.fileById(it.id)) } }
             .filter { it.size > 1 }
         _exactGroups.value = if (exact) groups.map { DuplicateScanner.ExactGroup(it.first().sizeBytes, it) } else emptyList()
-        _similarGroups.value = if (!exact) groups.map { DuplicateScanner.SimilarGroup(it, 0) } else emptyList()
         _dupGroups.value = buildGroups(groups, exact)
         _dupScannedCount.value = r.scanned
         _dupMode.value = if (exact) DupMode.EXACT else DupMode.SIMILAR
@@ -1103,13 +1100,12 @@ class SettingsViewModel @Inject constructor(
     private class ResultsSnapshot(
         val dup: List<DupGroup>,
         val exact: List<DuplicateScanner.ExactGroup>,
-        val similar: List<DuplicateScanner.SimilarGroup>,
         val stored: List<List<com.cripta.app.data.db.FileEntity>>?,
     )
     private var beforeResolution: ResultsSnapshot? = null
 
     private fun snapshotResults() =
-        ResultsSnapshot(_dupGroups.value, _exactGroups.value, _similarGroups.value, dupStore.state.value.result?.groups)
+        ResultsSnapshot(_dupGroups.value, _exactGroups.value, dupStore.state.value.result?.groups)
 
     /** Copies just sent to the trash by a resolution, restorable with [undoDuplicates]. */
     private val _dupUndo = kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
@@ -1147,7 +1143,6 @@ class SettingsViewModel @Inject constructor(
         beforeResolution?.let { r ->
             _dupGroups.value = r.dup
             _exactGroups.value = r.exact
-            _similarGroups.value = r.similar
             r.stored?.let { dupStore.putBack(it) }
             dropFromResults(emptySet())
         }
@@ -1231,9 +1226,6 @@ class SettingsViewModel @Inject constructor(
         _exactGroups.value = _exactGroups.value
             .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
             .filter { it.files.size > 1 }
-        _similarGroups.value = _similarGroups.value
-            .map { g -> g.copy(files = g.files.filterNot { it.id in ids }) }
-            .filter { it.files.size > 1 }
         // Re-read the survivors (tags/favorite may have changed by the merge) and re-rank. Each
         // keeps the size and hash its scan proved, and one changed since leaves its group: its new
         // state is no proof that it is still a copy.
@@ -1261,7 +1253,6 @@ class SettingsViewModel @Inject constructor(
         keptBefore = null
         beforeResolution = null
         _exactGroups.value = emptyList()
-        _similarGroups.value = emptyList()
     }
 }
 

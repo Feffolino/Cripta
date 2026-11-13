@@ -86,7 +86,6 @@
     <string name="convert_original_kept">بقي الأصل بجانب نسخة MP4.</string>
     <string name="err_open_import">تعذر فتح الملف المطلوب استيراده</string>
     <string name="err_write_converted">لم تكتمل كتابة النسخة المحولة</string>
-    <string name="err_write_destination">تعذرت الكتابة في الوجهة المختارة</string>
     <string name="err_write_gallery">تعذرت الكتابة في المعرض</string>
     <string name="err_create_in_folder">تعذر إنشاء الملف في المجلد المختار</string>
     <string name="err_write_folder">تعذرت الكتابة في المجلد المختار</string>
@@ -235,8 +234,6 @@
     <string name="dl_err_failed">فشل التنزيل</string>
     <string name="n_download">تنزيل</string>
     <string name="n_unlock_then_retry">افتح قفل Cripta، ثم اضغط «إعادة المحاولة»</string>
-    <string name="n_test_choice">اختبار الاختيار</string>
-    <string name="n_test_two_buttons">زرا اختبار</string>
     <string name="delete">حذف</string>
     <string name="keep">إبقاء</string>
     <string name="n_original_unchanged">لم يتغير الأصل</string>
@@ -251,12 +248,9 @@
     <string name="n_export_gallery">جارٍ التصدير إلى المعرض</string>
     <string name="n_file_of">الملف %1$s من %2$s</string>
     <string name="n_dup_search">البحث عن المكررات</string>
-    <string name="n_dup_compared_test">قورنت %1$s من 200 عنصر</string>
     <string name="n_update">تحديث Cripta</string>
-    <string name="n_update_test">إصدار تجريبي · %1$s%%</string>
     <string name="n_convert">جارٍ التحويل إلى MP4</string>
     <string name="n_encoding_pct">جارٍ ترميز الفيديو · %1$s%%</string>
-    <string name="n_test_starting">جارٍ بدء الاختبار…</string>
     <plurals name="imported_n">
         <item quantity="zero">استُورد %1$s ملف</item>
         <item quantity="one">استُورد ملف واحد</item>
@@ -268,21 +262,16 @@
     <string name="n_delete_originals_q">حذف الأصول؟</string>
     <string name="n_delete_originals">حذف الأصول</string>
     <string name="n_export_done">اكتمل التصدير</string>
-    <string name="n_export_saved_test">حُفظ %1$s ملف في المعرض</string>
     <string name="n_dups_found">وُجدت مكررات</string>
-    <string name="n_dups_found_test">3 مجموعات ضمن 200 عنصر</string>
     <string name="n_see_results">عرض النتائج</string>
     <string name="n_update_ready">التحديث جاهز</string>
-    <string name="n_update_ready_test">اختبار: لا ملف للتثبيت</string>
     <string name="install">تثبيت</string>
     <string name="n_download_done">اكتمل التنزيل</string>
     <string name="n_video_encrypted">شُفّر الفيديو في الخزنة</string>
-    <string name="n_download_failed_test">اختبار خطأ: الرابط غير متاح</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="n_mp4_created">أُنشئت نسخة MP4</string>
     <string name="n_delete_original_q">حذف الأصل؟</string>
     <string name="n_delete_original">حذف الأصل</string>
-    <string name="n_test_cancelled">أُلغي الاختبار</string>
     <string name="n_restoring">جارٍ استعادة النسخة الاحتياطية</string>
     <string name="n_backing_up">جارٍ إنشاء النسخة الاحتياطية</string>
     <string name="n_restore_failed_unlock">فشلت الاستعادة: افتح قفل Cripta وأعد المحاولة.</string>
@@ -297,7 +286,6 @@
     </plurals>
     <string name="n_restore_done">اكتملت الاستعادة</string>
     <string name="n_backup_done">اكتمل النسخ الاحتياطي</string>
-    <string name="n_backup_failed_space">فشل النسخ الاحتياطي. تحقق من المساحة المتاحة في الوجهة وأعد المحاولة.</string>
     <string name="n_restore_failed_passphrase">فشلت الاستعادة: عبارة مرور غير صحيحة أو ملف نسخة احتياطية غير صالح. لم تتغير الخزنة.</string>
     <string name="n_restore_failed_reason">فشلت الاستعادة (%1$s). لم تتغير الخزنة.</string>
     <string name="n_restore_failed">فشلت الاستعادة</string>
@@ -437,7 +425,6 @@
     <string name="ch_done">العمليات المكتملة</string>
     <string name="n_chip_start">بدء</string>
     <string name="cancel">إلغاء</string>
-    <string name="ch_ongoing_island_test">العمليات الجارية (الجزيرة، اختبار)</string>
     <string name="kind_import">استيراد</string>
     <string name="kind_convert">تحويل</string>
     <string name="kind_duplicates">مكررات</string>
@@ -734,8 +721,6 @@
     <string name="pinned">المثبتة</string>
     <string name="recent">الأخيرة</string>
     <string name="tag_rename_hint">يُغير الاسم من الإعدادات › الوسوم.</string>
-    <string name="tag_alias">اسم مختصر (اختياري)</string>
-    <string name="tag_alias_hint">بدلاً من الأيقونة على الأغلفة، أو بجانبها.</string>
     <string name="tag_pin_top">تثبيت في الأعلى</string>
     <string name="tag_pin_top_hint">دائماً ضمن الأوائل، في موضع ثابت.</string>
     <string name="colour">اللون</string>
@@ -758,7 +743,6 @@
     <string name="tags_none_create">لا وسوم. أنشئ واحداً أدناه.</string>
     <string name="search_tag">البحث عن وسم</string>
     <string name="clear_search">مسح البحث</string>
-    <string name="colour_n">اللون %1$s</string>
     <string name="viewer_too_big">الملف كبير جداً للمعاينة. صدّره إلى الجهاز لفتحه بتطبيق آخر.</string>
     <string name="viewer_decrypt_failed">تعذر فك تشفير الملف: قد تكون البيانات تالفة.</string>
     <string name="viewer_content_missing">لم يُعثر على المحتوى المشفر للملف.</string>

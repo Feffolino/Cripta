@@ -6,13 +6,11 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FolderDao {
     @Insert suspend fun insert(folder: FolderEntity): Long
-    @Update suspend fun update(folder: FolderEntity)
     @Query("UPDATE folders SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
     @Delete suspend fun delete(folder: FolderEntity)
@@ -186,9 +184,6 @@ interface TagDao {
     @Query("UPDATE tags SET color = :color WHERE name = :name")
     suspend fun setColorByName(name: String, color: Int?)
 
-    @Query("UPDATE tags SET name = :newName WHERE id = :id")
-    suspend fun rename(id: Long, newName: String)
-
     @Query("DELETE FROM tags WHERE id = :id")
     suspend fun deleteById(id: Long)
 
@@ -209,7 +204,6 @@ interface TagDao {
 @Dao
 interface FileDao {
     @Insert suspend fun insert(file: FileEntity)
-    @Update suspend fun update(file: FileEntity)
     @Delete suspend fun delete(file: FileEntity)
 
     @Query("SELECT * FROM files WHERE id = :id")
@@ -309,9 +303,6 @@ interface FileDao {
     /** Restore the files trashed together with a folder (same timestamp). */
     @Query("UPDATE files SET deletedAt = NULL WHERE folderId IN (:folderIds) AND deletedAt = :at")
     suspend fun restoreInFolders(folderIds: List<Long>, at: Long)
-
-    @Query("SELECT id FROM files WHERE deletedAt IS NULL")
-    suspend fun allIds(): List<String>
 
     /** UNION (not UNION ALL) also terminates safely if an old folder tree contains a cycle. */
     @Query("""
@@ -689,14 +680,8 @@ interface FaceDao {
     @Query("SELECT COALESCE(SUM(length(crop) + length(embeddings) + 208), 0) FROM face_tracks")
     fun observeBackupBytes(): Flow<Long>
 
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks")
-    suspend fun allTrackRows(): List<TrackRow>
-
     @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks WHERE fileId IN (:ids)")
     suspend fun trackRowsOf(ids: List<String>): List<TrackRow>
-
-    @Query("SELECT id, fileId, frames, quality, embeddings, personId, state, similarity, width, times FROM face_tracks WHERE id = :id")
-    suspend fun trackRow(id: Long): TrackRow?
 
     @Query("SELECT id, fileId, timeMs, width, faceCount, personId, state, similarity, times, box, quality FROM face_tracks")
     fun observeCards(): Flow<List<TrackCard>>
@@ -734,9 +719,6 @@ interface FaceDao {
 
     @Query("UPDATE face_tracks SET state = 'manual' WHERE personId = :personId AND state = 'auto'")
     suspend fun lockTracks(personId: Long)
-
-    @Query("UPDATE face_tracks SET personId = NULL, state = 'auto', similarity = 0 WHERE state NOT IN ('manual', 'carried')")
-    suspend fun unplaceAuto()
 
     @Query("DELETE FROM face_tracks WHERE fileId = :fileId")
     suspend fun deleteTracksOf(fileId: String)
@@ -858,9 +840,6 @@ interface FaceDao {
 
     @Query("SELECT * FROM face_merges WHERE id = :id")
     suspend fun mergeById(id: Long): FaceMergeEntity?
-
-    @Query("SELECT * FROM face_merges ORDER BY createdAt DESC LIMIT 200")
-    fun observeMerges(): Flow<List<FaceMergeEntity>>
 
     @Query("DELETE FROM face_merges WHERE id = :id")
     suspend fun deleteMerge(id: Long)

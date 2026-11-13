@@ -54,6 +54,11 @@ class RestoreKnownFilesTest {
     @After
     fun close() = db.close()
 
+    /** A tag renamed here, as the tag editor saves it. */
+    private suspend fun renameTag(id: Long, name: String) = db.tagDao().byId(id)!!.let {
+        db.tagDao().update(id, name, it.alias, it.color, it.pinned, it.icon, it.onCovers)
+    }
+
     private suspend fun roundTrip(): RestoreReport {
         val file = File.createTempFile("vault", ".cripta", app.cacheDir)
         repo.exportBackup(Uri.fromFile(file), "a passphrase".toCharArray())
@@ -227,7 +232,7 @@ class RestoreKnownFilesTest {
         val backup = File.createTempFile("vault", ".cripta", app.cacheDir)
         repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
         // Here the tag is written "Vacanze" (another phone's archive writes it "vacanze").
-        db.tagDao().rename(t, "Vacanze")
+        renameTag(t, "Vacanze")
         repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
         assertEquals(listOf("Vacanze"), db.tagDao().allNow().map { it.name })
         assertEquals(setOf("Vacanze"), tagNames(a.id))
@@ -241,7 +246,7 @@ class RestoreKnownFilesTest {
         repo.exportBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
         // Here they became one tag, "AB".
         db.tagDao().byName("ab")!!.let { db.tagDao().unlinkAll(it.id); db.tagDao().deleteById(it.id) }
-        db.tagDao().rename(db.tagDao().byName("Ab")!!.id, "AB")
+        renameTag(db.tagDao().byName("Ab")!!.id, "AB")
         tag(b.id, "AB")
         repo.importBackup(Uri.fromFile(backup), "a passphrase".toCharArray())
         // The archive told them apart: its two tags are not both made "AB".

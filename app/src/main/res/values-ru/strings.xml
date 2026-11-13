@@ -72,7 +72,6 @@
     <string name="convert_original_kept">Оригинал сохранён рядом с копией MP4.</string>
     <string name="err_open_import">Не удаётся открыть файл для импорта</string>
     <string name="err_write_converted">Копия после конвертации записана не полностью</string>
-    <string name="err_write_destination">Не удаётся записать в выбранное место</string>
     <string name="err_write_gallery">Не удаётся записать в галерею</string>
     <string name="err_create_in_folder">Не удаётся создать файл в выбранной папке</string>
     <string name="err_write_folder">Не удаётся записать в выбранную папку</string>
@@ -217,8 +216,6 @@
     <string name="dl_err_failed">Не удалось скачать</string>
     <string name="n_download">Скачивание</string>
     <string name="n_unlock_then_retry">Разблокируйте Cripta и нажмите «Повторить»</string>
-    <string name="n_test_choice">Проверка выбора</string>
-    <string name="n_test_two_buttons">Две тестовые кнопки</string>
     <string name="delete">Удалить</string>
     <string name="keep">Сохранить</string>
     <string name="n_original_unchanged">Оригинал не изменён</string>
@@ -233,12 +230,9 @@
     <string name="n_export_gallery">Экспорт в галерею</string>
     <string name="n_file_of">Файл %1$s из %2$s</string>
     <string name="n_dup_search">Поиск дубликатов</string>
-    <string name="n_dup_compared_test">Сравнено %1$s из 200 элементов</string>
     <string name="n_update">Обновление Cripta</string>
-    <string name="n_update_test">Тестовая версия · %1$s%%</string>
     <string name="n_convert">Конвертация в MP4</string>
     <string name="n_encoding_pct">Кодирование видео · %1$s%%</string>
-    <string name="n_test_starting">Запуск проверки…</string>
     <plurals name="imported_n">
         <item quantity="one">Импортирован %1$s файл</item>
         <item quantity="few">Импортировано %1$s файла</item>
@@ -248,21 +242,16 @@
     <string name="n_delete_originals_q">Удалить оригиналы?</string>
     <string name="n_delete_originals">Удалить оригиналы</string>
     <string name="n_export_done">Экспорт завершён</string>
-    <string name="n_export_saved_test">В галерею сохранено файлов: %1$s</string>
     <string name="n_dups_found">Найдены дубликаты</string>
-    <string name="n_dups_found_test">3 группы среди 200 элементов</string>
     <string name="n_see_results">Посмотреть результаты</string>
     <string name="n_update_ready">Обновление готово</string>
-    <string name="n_update_ready_test">Проверка: нет файла для установки</string>
     <string name="install">Установить</string>
     <string name="n_download_done">Скачивание завершено</string>
     <string name="n_video_encrypted">Видео зашифровано в хранилище</string>
-    <string name="n_download_failed_test">Проверка ошибки: ссылка недоступна</string>
     <string name="retry">Повторить</string>
     <string name="n_mp4_created">Копия MP4 создана</string>
     <string name="n_delete_original_q">Удалить оригинал?</string>
     <string name="n_delete_original">Удалить оригинал</string>
-    <string name="n_test_cancelled">Проверка отменена</string>
     <string name="n_restoring">Восстановление резервной копии</string>
     <string name="n_backing_up">Создание резервной копии</string>
     <string name="n_restore_failed_unlock">Восстановление не удалось: разблокируйте Cripta и повторите.</string>
@@ -275,7 +264,6 @@
     </plurals>
     <string name="n_restore_done">Восстановление завершено</string>
     <string name="n_backup_done">Резервное копирование завершено</string>
-    <string name="n_backup_failed_space">Не удалось создать резервную копию. Проверьте свободное место в месте назначения и повторите.</string>
     <string name="n_restore_failed_passphrase">Восстановление не удалось: неверная парольная фраза или недопустимая резервная копия. Хранилище не изменено.</string>
     <string name="n_restore_failed_reason">Восстановление не удалось (%1$s). Хранилище не изменено.</string>
     <string name="n_restore_failed">Восстановление не удалось</string>
@@ -405,7 +393,6 @@
     <string name="ch_done">Завершённые операции</string>
     <string name="n_chip_start">Начать</string>
     <string name="cancel">Отмена</string>
-    <string name="ch_ongoing_island_test">Текущие операции (островок, проверка)</string>
     <string name="kind_import">Импорт</string>
     <string name="kind_convert">Конвертация</string>
     <string name="kind_duplicates">Дубликаты</string>
@@ -690,8 +677,6 @@
     <string name="pinned">Закреплённые</string>
     <string name="recent">Недавние</string>
     <string name="tag_rename_hint">Имя меняется в разделе Настройки › Метки.</string>
-    <string name="tag_alias">Краткая подпись (необязательно)</string>
-    <string name="tag_alias_hint">Вместо значка на обложках или рядом с ним.</string>
     <string name="tag_pin_top">Закрепить сверху</string>
     <string name="tag_pin_top_hint">Всегда в начале, на фиксированном месте.</string>
     <string name="colour">Цвет</string>
@@ -712,7 +697,6 @@
     <string name="tags_none_create">Меток нет. Создайте ниже.</string>
     <string name="search_tag">Поиск метки</string>
     <string name="clear_search">Очистить поиск</string>
-    <string name="colour_n">Цвет %1$s</string>
     <string name="viewer_too_big">Файл слишком велик для предпросмотра. Экспортируйте его на устройство и откройте другим приложением.</string>
     <string name="viewer_decrypt_failed">Не удаётся расшифровать файл: возможно, данные повреждены.</string>
     <string name="viewer_content_missing">Зашифрованное содержимое файла не найдено.</string>

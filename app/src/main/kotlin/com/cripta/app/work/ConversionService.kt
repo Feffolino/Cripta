@@ -188,28 +188,9 @@ class ConversionService : Service() {
             stopIfIdle(startId)
             return START_NOT_STICKY
         }
-        // Debug isola: sample notifications to try the variants without a real operation.
-        if (mode == MODE_CANCEL_DEBUG) { debugJob?.cancel(); stopIfIdle(startId); return START_NOT_STICKY }
-        if (mode == MODE_DEBUG_DISMISS) {
-            // Any sample outcome still in the island goes too (their buttons all land here).
-            synchronized(lock) { hold?.let { endHold(it, moveOn = false) } }
-            getSystemService(NotificationManager::class.java).cancel(DEBUG_NOTIF_ID)
-            stopIfIdle(startId); return START_NOT_STICKY
-        }
         // A choice answered in the app: its notification goes, and from the island too.
         if (mode == MODE_DROP_OUTCOME) {
             cancelOutcome(intent.getIntExtra(EX_NOTIF_ID, 0))
-            stopIfIdle(startId); return START_NOT_STICKY
-        }
-        if (mode == MODE_DEBUG_CHOICE) {
-            ensureChannel()
-            // Foreground, as a real choice: HyperOS only puts the service's own notification in the island.
-            startForeground(NOTIF_ID, build(str(R.string.n_test_choice), 0, indeterminate = true, kind = ResultKind.CONVERT))
-            postChoice(
-                DEBUG_NOTIF_ID, ResultKind.CONVERT, str(R.string.n_test_choice), str(R.string.n_test_two_buttons),
-                serviceAction(str(R.string.delete), MODE_DEBUG_DISMISS, 20, icon = R.drawable.ic_action_delete),
-                serviceAction(str(R.string.keep), MODE_DEBUG_DISMISS, 21, icon = R.drawable.ic_action_keep),
-            )
             stopIfIdle(startId); return START_NOT_STICKY
         }
         if (mode == MODE_CANCEL_CONVERT) {
@@ -380,7 +361,6 @@ class ConversionService : Service() {
                     MODE_DOWNLOAD_URL -> downloadWorker()
                     MODE_UPDATE -> downloadUpdate(intent)
                     MODE_BACKUP -> runBackup(holdsSession)
-                    MODE_DEBUG_PROGRESS -> debugRun(intent.getStringExtra(EX_DEBUG_KIND) ?: "convert")
                     MODE_DUP_SCAN -> {
                         val similar = intent.getBooleanExtra(EX_SIMILAR, false)
                         scanDuplicates(similar)
@@ -433,96 +413,16 @@ class ConversionService : Service() {
                 if (active.decrementAndGet() == 0) stopWhenIdle()
             }
         }
-        if (mode == MODE_CONVERT) convertJob = job
         if (mode == MODE_DUP_SCAN) scanJob = job
         if (mode == MODE_UPDATE) updateJob = job
         return START_NOT_STICKY
     }
 
-    @Volatile private var convertJob: kotlinx.coroutines.Job? = null
     /** Videos with a conversion asked and not ended yet (see onStartCommand). */
     private val convertsQueued = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var lastStartId = 0
     @Volatile private var scanJob: kotlinx.coroutines.Job? = null
     @Volatile private var updateJob: kotlinx.coroutines.Job? = null
-    @Volatile private var debugJob: kotlinx.coroutines.Job? = null
-
-    /**
-     * Debug isola: a sample of one operation, with the same notifications as the real one (title,
-     * icon, text, island chip, Annulla) and its real ending: the keep/delete choice for a
-     * conversion or an import (with buttons that only close it), the result for the others, the
-     * "annullata" result when cancelled. Nothing in the vault is touched.
-     */
-    private suspend fun debugRun(kind: String) {
-        debugJob = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
-        val files = 5
-        // The time left from the same calculation as the real operations (nothing the first
-        // seconds: with a short Durata prova it only shows near the end, if at all).
-        val eta = EtaEstimator()
-        fun step(p: Int): Notification {
-            val left = eta.left(p / 100f)
-            return when (kind) {
-                "download", "download_fail" -> build(str(R.string.n_download), p, sub = str(R.string.n_downloading_pct, p),
-                    eta = left, header = str(R.string.n_one_queued), cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.DOWNLOAD)
-                "import" -> {
-                    val n = (p * files / 100).coerceAtMost(files - 1)
-                    build(str(R.string.n_import), p, sub = str(R.string.n_import_file_pct, n + 1, files, (p * files) % 100), chip = "$n/$files",
-                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.IMPORT)
-                }
-                "export" -> {
-                    val n = (p * files / 100).coerceAtMost(files - 1)
-                    build(str(R.string.n_export_gallery), p, sub = str(R.string.n_file_of, n + 1, files), chip = "$n/$files",
-                        eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.EXPORT)
-                }
-                "scan" -> build(str(R.string.n_dup_search), p, sub = str(R.string.n_dup_compared_test, p * 2),
-                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.SCAN)
-                "update" -> build(str(R.string.n_update), p, sub = str(R.string.n_update_test, p),
-                    eta = left, cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.UPDATE)
-                else -> build(str(R.string.n_convert), p, sub = str(R.string.n_encoding_pct, p), eta = left, header = str(R.string.n_one_queued),
-                    cancelable = true, cancelMode = MODE_CANCEL_DEBUG, kind = ResultKind.CONVERT)
-            }
-        }
-        val closeOnly = { label: String, req: Int, icon: Int -> serviceAction(label, MODE_DEBUG_DISMISS, req, icon = icon) }
-        // Debug isola › Durata prova: the whole sample in about this many seconds.
-        val stepMs = (IslandDebug.get(this).sampleSeconds * 1000L / 25).coerceAtLeast(120L)
-        try {
-            notify(build(if (kind == "download" || kind == "download_fail") str(R.string.n_download) else str(R.string.n_preparing), 0,
-                sub = str(R.string.n_test_starting), indeterminate = true, cancelable = true, cancelMode = MODE_CANCEL_DEBUG,
-                kind = when (kind) {
-                    "download", "download_fail" -> ResultKind.DOWNLOAD
-                    "import" -> ResultKind.IMPORT
-                    "export" -> ResultKind.EXPORT
-                    "scan" -> ResultKind.SCAN
-                    "update" -> ResultKind.UPDATE
-                    else -> ResultKind.CONVERT
-                }))
-            kotlinx.coroutines.delay(stepMs * 2)
-            for (p in 0..100 step 4) {
-                if (kind == "download_fail" && p >= 60) break
-                notify(step(p))
-                kotlinx.coroutines.delay(stepMs)
-            }
-            when (kind) {
-                "import" -> postChoice(DEBUG_NOTIF_ID, ResultKind.IMPORT, plural(R.plurals.imported_n, files), str(R.string.n_delete_originals_q),
-                    closeOnly(str(R.string.n_delete_originals), 20, R.drawable.ic_action_delete), closeOnly(str(R.string.keep), 21, R.drawable.ic_action_keep))
-                "export" -> notifyResult(str(R.string.n_export_done), str(R.string.n_export_saved_test, files), ResultKind.EXPORT)
-                "scan" -> notifyResult(str(R.string.n_dups_found), str(R.string.n_dups_found_test), ResultKind.SCAN, openDuplicates = true,
-                    actions = listOf(closeOnly(str(R.string.n_see_results), 23, R.drawable.ic_action_open)))
-                "update" -> notifyResult(str(R.string.n_update_ready), str(R.string.n_update_ready_test), ResultKind.UPDATE,
-                    actions = listOf(closeOnly(str(R.string.install), 24, R.drawable.ic_action_install)))
-                "download" -> notifyResult(str(R.string.n_download_done), str(R.string.n_video_encrypted), ResultKind.DOWNLOAD)
-                "download_fail" -> notifyResult(str(R.string.dl_err_failed), str(R.string.n_download_failed_test), ResultKind.DOWNLOAD,
-                    state = ResultState.FAILED, actions = listOf(closeOnly(str(R.string.retry), 22, R.drawable.ic_action_retry)))
-                else -> postChoice(DEBUG_NOTIF_ID, ResultKind.CONVERT, str(R.string.n_mp4_created), str(R.string.n_delete_original_q),
-                    closeOnly(str(R.string.n_delete_original), 20, R.drawable.ic_action_delete), closeOnly(str(R.string.keep), 21, R.drawable.ic_action_keep))
-            }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            notifyResult(str(R.string.n_test_cancelled), null, ResultKind.CONVERT, state = ResultState.CANCELLED)
-            throw e
-        } finally {
-            debugJob = null
-        }
-    }
 
     /**
      * The backup or restore handed over by Settings ([com.cripta.app.data.BackupJobs]), run here in
@@ -850,7 +750,6 @@ class ConversionService : Service() {
                         else -> str(R.string.n_import_done_errors)
                     }
                     val text = importSummary(fin)
-                    lastImportSummary = text
                     lastImportCount = fin.succeeded
                     notifyResult(title, text, ResultKind.IMPORT, state = when {
                         cancelled -> ResultState.CANCELLED
@@ -873,8 +772,6 @@ class ConversionService : Service() {
         if (fin.versionAsks > 0) append(str(R.string.n_same_name_confirm, fin.versionAsks))
         if (fin.similarAsks > 0) append(str(R.string.n_similar_confirm, fin.similarAsks))
     }
-    /** Summary of the last finished import, reused by the "Chiedi" originals notification. */
-    @Volatile private var lastImportSummary: String? = null
     @Volatile private var lastImportCount: Int? = null
 
     /**
@@ -1065,26 +962,6 @@ class ConversionService : Service() {
             null
         } catch (e: Exception) {
             str(R.string.conv_unreadable_file)
-        } finally {
-            runCatching { r.release() }
-        }
-    }
-
-    /**
-     * True only if [f] is a decodable video with a plausible duration (>= half the source's, when
-     * known). Guards against importing a corrupt/truncated transcode.
-     */
-    private fun isPlayableVideo(f: java.io.File, srcDurMs: Long?): Boolean {
-        if (!f.exists() || f.length() <= 0L) return false
-        val r = MediaMetadataRetriever()
-        return try {
-            r.setDataSource(f.absolutePath)
-            val hasVideo = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes"
-            val durMs = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-            val durOk = durMs > 0 && (srcDurMs == null || srcDurMs <= 0 || durMs >= srcDurMs / 2)
-            hasVideo && durOk
-        } catch (e: Exception) {
-            false
         } finally {
             runCatching { r.release() }
         }
@@ -1713,6 +1590,8 @@ class ConversionService : Service() {
                 }
             )
         }
+        // The channel the removed "Debug isola" created when chosen: no longer used.
+        if (mgr.getNotificationChannel(OLD_ISLAND_TEST_CHANNEL) != null) mgr.deleteNotificationChannel(OLD_ISLAND_TEST_CHANNEL)
         // Outcomes get their own channel (normal importance) so they are noticed, while the
         // ongoing progress stays silent.
         if (mgr.getNotificationChannel(RESULT_CHANNEL) == null) {
@@ -1774,7 +1653,7 @@ class ConversionService : Service() {
             // carried whichever cancel was built last and "Annulla" could stop the other scan.
             val req = when (cancelMode) {
                 MODE_CANCEL -> 1; MODE_CANCEL_SCAN -> 4; MODE_CANCEL_BATCH -> 5; MODE_CANCEL_EXPORT -> 31
-                MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_DEBUG -> 14; MODE_CANCEL_FACES -> 7
+                MODE_CANCEL_UPDATE -> 13; MODE_CANCEL_FACES -> 7
                 MODE_CANCEL_CONVERT -> 6; MODE_CANCEL_INTRO -> 15
                 // A new cancel needs its own code: sharing one, the last notification built sets
                 // the mode of the other's Annulla too (the extras don't tell PendingIntents apart).
@@ -1802,18 +1681,7 @@ class ConversionService : Service() {
 
     /** Channel of the ongoing notification and the choices: the island's own on HyperOS (see ensureChannel). */
     private fun ongoingChannel(): String {
-        if (!HyperFocus.isSupported(this)) return CHANNEL
-        if (!IslandDebug.get(this).highChannel) return LIVE_CHANNEL
-        // Debug isola: a silent high-importance channel, created when first chosen.
-        val mgr = getSystemService(NotificationManager::class.java)
-        if (mgr.getNotificationChannel(LIVE_CHANNEL_HIGH) == null) {
-            mgr.createNotificationChannel(
-                NotificationChannel(LIVE_CHANNEL_HIGH, str(R.string.ch_ongoing_island_test), NotificationManager.IMPORTANCE_HIGH).apply {
-                    setSound(null, null); enableVibration(false); setShowBadge(false)
-                }
-            )
-        }
-        return LIVE_CHANNEL_HIGH
+        return if (HyperFocus.isSupported(this)) LIVE_CHANNEL else CHANNEL
     }
 
     /** Extras asking for a Live Update (promoted ongoing) with [chip] as its short text. */
@@ -1821,7 +1689,7 @@ class ConversionService : Service() {
         // HyperOS with focus notifications active: the island's own template (HyperFocus) instead.
         // With both, HyperOS showed the Android Live Update and ignored the focus one (standard
         // buttons instead of the island's large rounded ones).
-        if (HyperFocus.isSupported(this@ConversionService) && !IslandDebug.get(this@ConversionService).liveUpdate) return@apply
+        if (HyperFocus.isSupported(this@ConversionService)) return@apply
         putBoolean("android.requestPromotedOngoing", true)
         putCharSequence("android.shortCriticalText", chip)
     }
@@ -1979,7 +1847,7 @@ class ConversionService : Service() {
             ).joinToString("|")
             if (key == lastPostKey) return
             val now = SystemClock.elapsedRealtime()
-            val interval = IslandDebug.get(this).intervalMs
+            val interval = PROGRESS_INTERVAL_MS
             if (title == lastPostTitle && now - lastPostAt < interval) {
                 if (pendingProgress == null) main.postDelayed(flushProgress, lastPostAt + interval - now)
                 pendingProgress = n
@@ -2081,7 +1949,7 @@ class ConversionService : Service() {
             .build()
         // Silent: the island popping open was the alert; a sound at the swap came seconds late.
         val normal = base(RESULT_CHANNEL).setSilent(true).build()
-        holdInIsland(kind.id, island, IslandDebug.get(this).resultSeconds) { postResult(mgr, kind, normal) }
+        holdInIsland(kind.id, island, RESULT_ISLAND_SECONDS) { postResult(mgr, kind, normal) }
     }
 
     /** The results of the analyses (duplicates, intro, faces) and those of the other operations: two stacks, each folded on its own. */
@@ -2201,7 +2069,7 @@ class ConversionService : Service() {
                 float = true,
             ))
             .build()
-        holdInIsland(id, island, IslandDebug.get(this).choiceSeconds) { post(mgr, id, shade) }
+        holdInIsland(id, island, CHOICE_ISLAND_SECONDS) { post(mgr, id, shade) }
     }
 
     private fun serviceAction(label: String, mode: String, req: Int, originalId: String? = null, icon: Int = 0) = NotificationCompat.Action(
@@ -2268,7 +2136,7 @@ class ConversionService : Service() {
         private const val MODE_DUP_SCAN = "dup_scan"
 
         /** Whether a job of [mode] uses the vault, so keeps its keys alive past a lock (see beginWork). */
-        internal fun holdsVaultKeys(mode: String): Boolean = mode != MODE_UPDATE && mode != MODE_DEBUG_PROGRESS
+        internal fun holdsVaultKeys(mode: String): Boolean = mode != MODE_UPDATE
 
         /** [mode] asks for a duplicate scan or an update download while one runs ([scan], [update]). */
         internal fun alreadyRunning(mode: String, scan: kotlinx.coroutines.Job?, update: kotlinx.coroutines.Job?): Boolean =
@@ -2321,16 +2189,16 @@ class ConversionService : Service() {
         private const val DONE_TIMEOUT_MS = 10 * 60_000L
         internal const val RESULT_CHANNEL = "results"
         private const val LIVE_CHANNEL = "progress_island"
+        private const val OLD_ISLAND_TEST_CHANNEL = "progress_island_debug_high"
         private const val GROUP_ONGOING = "cripta_ongoing"
-        private const val LIVE_CHANNEL_HIGH = "progress_island_debug_high"
-        private const val MODE_DEBUG_PROGRESS = "debug_progress"
-        private const val MODE_DEBUG_CHOICE = "debug_choice"
-        private const val MODE_DEBUG_DISMISS = "debug_dismiss"
-        private const val MODE_CANCEL_DEBUG = "cancel_debug"
-        private const val DEBUG_NOTIF_ID = 4230
+        /** Minimum time between two updates of the ongoing notification. */
+        private const val PROGRESS_INTERVAL_MS = 1000
+        /** How long a result stays in the island before it becomes a normal notification. */
+        private const val RESULT_ISLAND_SECONDS = 5
+        /** How long a choice stays in the island before it waits in the notifications. */
+        private const val CHOICE_ISLAND_SECONDS = 15
         private const val MODE_DROP_OUTCOME = "drop_outcome"
         private const val EX_NOTIF_ID = "notif_id"
-        private const val EX_DEBUG_KIND = "debug_kind"
         internal const val BRAND_COLOR = 0xFF5AA9FF.toInt()
 
         /**
@@ -2533,19 +2401,6 @@ class ConversionService : Service() {
                 rel.sha256Url?.let { putExtra(EX_UPD_SHA, it) }
             }
             return startInForeground(ctx, i)
-        }
-
-        /**
-         * Debug isola: a sample operation with Annulla, lasting Durata prova (see [debugRun]).
-         * [kind]: convert, download, download_fail, import, export, scan, update.
-         */
-        fun debugProgress(ctx: Context, kind: String = "convert"): Boolean {
-            return startInForeground(ctx, Intent(ctx, ConversionService::class.java)
-                .putExtra(EX_MODE, MODE_DEBUG_PROGRESS).putExtra(EX_DEBUG_KIND, kind))
-        }
-        /** Debug isola › Solo scelta: a sample two-button choice. */
-        fun debugChoice(ctx: Context): Boolean {
-            return startInForeground(ctx, Intent(ctx, ConversionService::class.java).putExtra(EX_MODE, MODE_DEBUG_CHOICE))
         }
 
         /** Run the backup or restore waiting in [com.cripta.app.data.BackupJobs]. */

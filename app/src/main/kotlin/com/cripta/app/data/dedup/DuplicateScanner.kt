@@ -36,7 +36,7 @@ import kotlin.coroutines.coroutineContext
  *
  * Two independent scans are offered:
  *  - [scanExact]   : byte-identical plaintext, found with a cheap multi-phase hash.
- *  - [scanSimilar] : visually near-identical images, found with a perceptual dHash.
+ *  - [scanSimilar] : images and videos that look the same, found with a perceptual dHash.
  *
  * Both decrypt in memory only. No plaintext is ever written to disk, honouring the vault's
  * security model, and neither needs any network access. Both cooperate with coroutine
@@ -50,8 +50,8 @@ class DuplicateScanner @Inject constructor(
     /** A set of files whose decrypted plaintext is byte-identical. */
     data class ExactGroup(val sizeBytes: Long, val files: List<FileEntity>)
 
-    /** A cluster of images that look the same (re-encodes, resizes, minor edits). */
-    data class SimilarGroup(val files: List<FileEntity>, val maxDistance: Int)
+    /** A cluster of images or videos that look the same (re-encodes, resizes, minor edits). */
+    data class SimilarGroup(val files: List<FileEntity>)
 
     /** Exact-scan outcome plus how many files were examined (for user feedback). */
     data class ExactResult(val groups: List<ExactGroup>, val filesScanned: Int)
@@ -315,7 +315,7 @@ class DuplicateScanner @Inject constructor(
             coroutineContext.ensureActive()
         }
         val groups = clusters.map { idxs ->
-            SimilarGroup(idxs.map { media[kept[it]] }.sortedBy { it.importedAt }, SimilarityPrints.maxDistance(prints, isVideo, idxs))
+            SimilarGroup(idxs.map { media[kept[it]] }.sortedBy { it.importedAt })
         }.sortedByDescending { g -> g.files.sumOf { it.sizeBytes } }
         android.util.Log.i(TAG, "similar scan: $total media, ${todo.size} fingerprinted in $printedMs ms " +
             "(work: images ${imagesMs.get()} ms, videos ${videosMs.get()} ms), " +

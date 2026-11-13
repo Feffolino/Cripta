@@ -58,7 +58,6 @@
     <string name="convert_original_kept">मूल फ़ाइल MP4 कॉपी के साथ रखी गई।</string>
     <string name="err_open_import">आयात करने के लिए फ़ाइल नहीं खुल सकती</string>
     <string name="err_write_converted">बदली गई कॉपी पूरी नहीं लिखी गई</string>
-    <string name="err_write_destination">चुनी गई जगह पर नहीं लिखा जा सकता</string>
     <string name="err_write_gallery">गैलरी में नहीं लिखा जा सकता</string>
     <string name="err_create_in_folder">चुने गए फ़ोल्डर में फ़ाइल नहीं बन सकती</string>
     <string name="err_write_folder">चुने गए फ़ोल्डर में नहीं लिखा जा सकता</string>
@@ -199,8 +198,6 @@
     <string name="dl_err_failed">डाउनलोड विफल</string>
     <string name="n_download">डाउनलोड</string>
     <string name="n_unlock_then_retry">Cripta का लॉक खोलें, फिर “फिर कोशिश करें” दबाएँ</string>
-    <string name="n_test_choice">चुनाव की जाँच</string>
-    <string name="n_test_two_buttons">दो जाँच बटन</string>
     <string name="delete">हटाएँ</string>
     <string name="keep">रखें</string>
     <string name="n_original_unchanged">मूल फ़ाइल नहीं बदली</string>
@@ -215,12 +212,9 @@
     <string name="n_export_gallery">गैलरी में निर्यात हो रहा है</string>
     <string name="n_file_of">फ़ाइल %1$s/%2$s</string>
     <string name="n_dup_search">डुप्लिकेट खोज</string>
-    <string name="n_dup_compared_test">200 में से %1$s आइटम की तुलना हुई</string>
     <string name="n_update">Cripta अपडेट</string>
-    <string name="n_update_test">परीक्षण संस्करण · %1$s%%</string>
     <string name="n_convert">MP4 में बदल रहा है</string>
     <string name="n_encoding_pct">वीडियो एनकोड हो रहा है · %1$s%%</string>
-    <string name="n_test_starting">जाँच शुरू हो रही है…</string>
     <plurals name="imported_n">
         <item quantity="one">%1$s फ़ाइल आयात हुई</item>
         <item quantity="other">%1$s फ़ाइलें आयात हुईं</item>
@@ -228,21 +222,16 @@
     <string name="n_delete_originals_q">मूल फ़ाइलें हटाएँ?</string>
     <string name="n_delete_originals">मूल फ़ाइलें हटाएँ</string>
     <string name="n_export_done">निर्यात पूरा</string>
-    <string name="n_export_saved_test">गैलरी में %1$s फ़ाइलें सहेजी गईं</string>
     <string name="n_dups_found">डुप्लिकेट मिले</string>
-    <string name="n_dups_found_test">200 आइटम में 3 समूह</string>
     <string name="n_see_results">नतीजे देखें</string>
     <string name="n_update_ready">अपडेट तैयार</string>
-    <string name="n_update_ready_test">जाँच: इंस्टॉल करने को फ़ाइल नहीं</string>
     <string name="install">इंस्टॉल करें</string>
     <string name="n_download_done">डाउनलोड पूरा</string>
     <string name="n_video_encrypted">वीडियो वॉल्ट में एन्क्रिप्ट किया गया</string>
-    <string name="n_download_failed_test">त्रुटि जाँच: लिंक उपलब्ध नहीं</string>
     <string name="retry">फिर कोशिश करें</string>
     <string name="n_mp4_created">MP4 कॉपी बनी</string>
     <string name="n_delete_original_q">मूल फ़ाइल हटाएँ?</string>
     <string name="n_delete_original">मूल फ़ाइल हटाएँ</string>
-    <string name="n_test_cancelled">जाँच रद्द</string>
     <string name="n_restoring">बैकअप बहाल हो रहा है</string>
     <string name="n_backing_up">बैकअप बन रहा है</string>
     <string name="n_restore_failed_unlock">बहाल नहीं हुआ: Cripta का लॉक खोलें और फिर कोशिश करें।</string>
@@ -253,7 +242,6 @@
     </plurals>
     <string name="n_restore_done">बहाली पूरी</string>
     <string name="n_backup_done">बैकअप पूरा</string>
-    <string name="n_backup_failed_space">बैकअप विफल। चुनी जगह पर खाली जगह जाँचें और फिर कोशिश करें।</string>
     <string name="n_restore_failed_passphrase">बहाली विफल: गलत पासफ़्रेज़ या अमान्य बैकअप फ़ाइल। वॉल्ट नहीं बदला।</string>
     <string name="n_restore_failed_reason">बहाली विफल (%1$s)। वॉल्ट नहीं बदला।</string>
     <string name="n_restore_failed">बहाली विफल</string>
@@ -373,7 +361,6 @@
     <string name="ch_done">पूरी हुई प्रक्रियाएँ</string>
     <string name="n_chip_start">शुरू करें</string>
     <string name="cancel">रद्द करें</string>
-    <string name="ch_ongoing_island_test">चल रही प्रक्रियाएँ (आइलैंड, जाँच)</string>
     <string name="kind_import">आयात</string>
     <string name="kind_convert">रूपांतरण</string>
     <string name="kind_duplicates">डुप्लिकेट</string>
@@ -646,8 +633,6 @@
     <string name="pinned">पिन किए</string>
     <string name="recent">हाल के</string>
     <string name="tag_rename_hint">नाम सेटिंग › टैग से बदलता है।</string>
-    <string name="tag_alias">छोटा नाम (वैकल्पिक)</string>
-    <string name="tag_alias_hint">कवर पर आइकन की जगह, या उसके साथ।</string>
     <string name="tag_pin_top">ऊपर पिन करें</string>
     <string name="tag_pin_top_hint">हमेशा सबसे पहले, एक तय जगह पर।</string>
     <string name="colour">रंग</string>
@@ -666,7 +651,6 @@
     <string name="tags_none_create">टैग नहीं। नीचे बनाएँ।</string>
     <string name="search_tag">टैग खोजें</string>
     <string name="clear_search">खोज साफ़ करें</string>
-    <string name="colour_n">रंग %1$s</string>
     <string name="viewer_too_big">पूर्वावलोकन के लिए फ़ाइल बहुत बड़ी है। दूसरे ऐप में खोलने के लिए डिवाइस पर निर्यात करें।</string>
     <string name="viewer_decrypt_failed">फ़ाइल डिक्रिप्ट नहीं हो सकती: डेटा क्षतिग्रस्त हो सकता है।</string>
     <string name="viewer_content_missing">फ़ाइल की एन्क्रिप्टेड सामग्री नहीं मिली।</string>

@@ -80,7 +80,6 @@ object CriptaIcons {
     val KeyboardArrowDown: ImageVector by lazy { load(R.drawable.tabler_chevron_down) }
     val KeyboardArrowLeft: ImageVector by lazy { load(R.drawable.tabler_chevron_left) }
     val KeyboardArrowRight: ImageVector by lazy { load(R.drawable.tabler_chevron_right) }
-    val KeyboardArrowUp: ImageVector by lazy { load(R.drawable.tabler_chevron_up) }
     val Label: ImageVector by lazy { load(R.drawable.tabler_tag) }
     val LabelOff: ImageVector by lazy { load(R.drawable.tabler_tag_off) }
     val LightMode: ImageVector by lazy { load(R.drawable.tabler_sun) }

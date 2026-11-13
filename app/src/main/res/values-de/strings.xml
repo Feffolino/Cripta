@@ -58,7 +58,6 @@
     <string name="convert_original_kept">Original neben der MP4-Kopie behalten.</string>
     <string name="err_open_import">Zu importierende Datei kann nicht geöffnet werden</string>
     <string name="err_write_converted">Konvertierte Kopie unvollständig geschrieben</string>
-    <string name="err_write_destination">Schreiben am gewählten Ziel nicht möglich</string>
     <string name="err_write_gallery">Schreiben in die Galerie nicht möglich</string>
     <string name="err_create_in_folder">Datei kann im gewählten Ordner nicht erstellt werden</string>
     <string name="err_write_folder">Schreiben in den gewählten Ordner nicht möglich</string>
@@ -199,8 +198,6 @@
     <string name="dl_err_failed">Download fehlgeschlagen</string>
     <string name="n_download">Download</string>
     <string name="n_unlock_then_retry">Entsperre Cripta und tippe auf Erneut versuchen</string>
-    <string name="n_test_choice">Auswahl testen</string>
-    <string name="n_test_two_buttons">Zwei Testschaltflächen</string>
     <string name="delete">Löschen</string>
     <string name="keep">Behalten</string>
     <string name="n_original_unchanged">Original unverändert</string>
@@ -215,12 +212,9 @@
     <string name="n_export_gallery">Export in die Galerie</string>
     <string name="n_file_of">Datei %1$s von %2$s</string>
     <string name="n_dup_search">Duplikatsuche</string>
-    <string name="n_dup_compared_test">%1$s von 200 Elementen verglichen</string>
     <string name="n_update">Cripta-Update</string>
-    <string name="n_update_test">Testversion · %1$s%%</string>
     <string name="n_convert">Konvertierung in MP4</string>
     <string name="n_encoding_pct">Video wird kodiert · %1$s%%</string>
-    <string name="n_test_starting">Test wird gestartet…</string>
     <plurals name="imported_n">
         <item quantity="one">1 Datei importiert</item>
         <item quantity="other">%1$s Dateien importiert</item>
@@ -228,21 +222,16 @@
     <string name="n_delete_originals_q">Originale löschen?</string>
     <string name="n_delete_originals">Originale löschen</string>
     <string name="n_export_done">Export abgeschlossen</string>
-    <string name="n_export_saved_test">%1$s Dateien in der Galerie gespeichert</string>
     <string name="n_dups_found">Duplikate gefunden</string>
-    <string name="n_dups_found_test">3 Gruppen unter 200 Elementen</string>
     <string name="n_see_results">Ergebnisse ansehen</string>
     <string name="n_update_ready">Update bereit</string>
-    <string name="n_update_ready_test">Test: Keine Datei zu installieren</string>
     <string name="install">Installieren</string>
     <string name="n_download_done">Download abgeschlossen</string>
     <string name="n_video_encrypted">Video im Tresor verschlüsselt</string>
-    <string name="n_download_failed_test">Fehlertest: Link nicht erreichbar</string>
     <string name="retry">Erneut versuchen</string>
     <string name="n_mp4_created">MP4-Kopie erstellt</string>
     <string name="n_delete_original_q">Original löschen?</string>
     <string name="n_delete_original">Original löschen</string>
-    <string name="n_test_cancelled">Test abgebrochen</string>
     <string name="n_restoring">Sicherung wird wiederhergestellt</string>
     <string name="n_backing_up">Sicherung wird erstellt</string>
     <string name="n_restore_failed_unlock">Wiederherstellung fehlgeschlagen: Entsperre Cripta und versuche es erneut.</string>
@@ -253,7 +242,6 @@
     </plurals>
     <string name="n_restore_done">Wiederherstellung abgeschlossen</string>
     <string name="n_backup_done">Sicherung abgeschlossen</string>
-    <string name="n_backup_failed_space">Sicherung fehlgeschlagen. Prüfe den freien Speicher am Ziel und versuche es erneut.</string>
     <string name="n_restore_failed_passphrase">Wiederherstellung fehlgeschlagen: Falsche Passphrase oder ungültige Sicherung. Der Tresor ist unverändert.</string>
     <string name="n_restore_failed_reason">Wiederherstellung fehlgeschlagen (%1$s). Der Tresor ist unverändert.</string>
     <string name="n_restore_failed">Wiederherstellung fehlgeschlagen</string>
@@ -373,7 +361,6 @@
     <string name="ch_done">Abgeschlossene Vorgänge</string>
     <string name="n_chip_start">Starten</string>
     <string name="cancel">Abbrechen</string>
-    <string name="ch_ongoing_island_test">Laufende Vorgänge (Insel, Test)</string>
     <string name="kind_import">Import</string>
     <string name="kind_convert">Konvertierung</string>
     <string name="kind_duplicates">Duplikate</string>
@@ -646,8 +633,6 @@
     <string name="pinned">Angeheftet</string>
     <string name="recent">Zuletzt verwendet</string>
     <string name="tag_rename_hint">Der Name wird unter Einstellungen › Schlagwörter geändert.</string>
-    <string name="tag_alias">Kurzname (optional)</string>
-    <string name="tag_alias_hint">Statt des Symbols auf Vorschaubildern oder daneben.</string>
     <string name="tag_pin_top">Oben anheften</string>
     <string name="tag_pin_top_hint">Immer unter den ersten, an einer festen Position.</string>
     <string name="colour">Farbe</string>
@@ -666,7 +651,6 @@
     <string name="tags_none_create">Keine Schlagwörter. Erstelle unten eines.</string>
     <string name="search_tag">Schlagwort suchen</string>
     <string name="clear_search">Suche leeren</string>
-    <string name="colour_n">Farbe %1$s</string>
     <string name="viewer_too_big">Datei zu groß für die Vorschau. Exportiere sie auf das Gerät, um sie mit einer anderen App zu öffnen.</string>
     <string name="viewer_decrypt_failed">Datei kann nicht entschlüsselt werden: Die Daten sind möglicherweise beschädigt.</string>
     <string name="viewer_content_missing">Der verschlüsselte Dateiinhalt wurde nicht gefunden.</string>

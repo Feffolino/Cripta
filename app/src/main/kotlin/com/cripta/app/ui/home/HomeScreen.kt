@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,11 +52,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -107,7 +103,6 @@ fun HomeScreen(
 ) {
     val recents by vm.recents.collectAsStateWithLifecycle()
     val favorites by vm.favorites.collectAsStateWithLifecycle()
-    val favoriteCount by vm.favoriteCount.collectAsStateWithLifecycle()
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val folderStats by vm.folderStats.collectAsStateWithLifecycle()
@@ -470,58 +465,6 @@ private fun ContinueCard(
         formatDuration(left.takeIf { it > 0 })?.let {
             Text(str(R.string.time_left, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp))
-        }
-    }
-}
-
-/** The latest additions as a swipeable 16:9 carousel, title/duration/tags over a gradient. */
-@Composable
-private fun HeroCarousel(
-    items: List<FileWithTags>,
-    display: DisplayPrefs,
-    thumb: suspend (FileEntity) -> android.graphics.Bitmap?,
-    coverVersions: Map<String, Int>,
-    onOpen: (String) -> Unit,
-) {
-    val pager = rememberPagerState { items.size }
-    // No heading of its own: it takes the room a heading would.
-    Column(Modifier.padding(top = 20.dp)) {
-        HorizontalPager(state = pager, contentPadding = PaddingValues(horizontal = 16.dp), pageSpacing = 10.dp) { page ->
-            val fwt = items[page]
-            val f = fwt.file
-            val bmp by produceState<android.graphics.Bitmap?>(null, f.id, coverVersions[f.id] ?: 0) { value = thumb(f) }
-            val source = remember { MutableInteractionSource() }
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).pressScale(source, pressed = 0.98f).clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(source, LocalIndication.current, onClickLabel = str(R.string.open)) { onOpen(f.id) }) {
-                // The title is already read from the overlay text below.
-                bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                // A short shade only under the title: most of the picture stays clear.
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(80.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
-                Column(Modifier.align(Alignment.BottomStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(f.originalName, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                        formatDuration(f.durationMs)?.let {
-                            Text(" · $it", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                        }
-                    }
-                    // The same marks as the vault's covers: shown or not, bubbles or pills, rows (Impostazioni › Copertine).
-                    if (fwt.tags.isNotEmpty() && display.showTagsOnCover) {
-                        com.cripta.app.ui.vault.TagBadges(fwt.tags, display,
-                            Modifier.fillMaxWidth(), outerPad = 0.dp)
-                    }
-                }
-            }
-        }
-        if (items.size > 1) {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
-                repeat(items.size) { i ->
-                    Box(Modifier.padding(horizontal = 3.dp).size(if (i == pager.currentPage) 8.dp else 6.dp).clip(CircleShape)
-                        .background(if (i == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)))
-                }
-            }
         }
     }
 }

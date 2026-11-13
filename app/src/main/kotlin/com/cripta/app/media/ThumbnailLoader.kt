@@ -23,6 +23,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -292,9 +293,6 @@ class ThumbnailLoader @Inject constructor(
         }.getOrNull()
     }
 
-    /** Forget this session's failed-extraction ids so those covers are retried (pull-to-refresh). */
-    fun clearFailed() = failed.clear()
-
     /**
      * Empty the covers cached on disk (they are rebuilt when next shown); the ones chosen by hand
      * are kept. Returns the bytes freed.
@@ -305,14 +303,6 @@ class ThumbnailLoader @Inject constructor(
         return freed
     }
 
-    /** Bump a file's version so any cover keyed on it reloads (re-runs the full extraction chain). */
-    fun invalidate(id: String) = bumpVersion(id)
-
-    /**
-     * Detailed diagnostics for a video (codec, coded size, crop rect, pixel aspect, rotation,
-     * color info) — used by the viewer's Info dialog so the user can share why a cover looks wrong.
-     * Reads over the in-memory channel; returns a human-readable multi-line string.
-     */
     /** The video track's codec mime type (e.g. video/avc, video/av01), or null if unreadable. */
     suspend fun videoCodec(file: FileEntity): String? = withContext(Dispatchers.IO) {
         if (!VaultRepository.isVideo(file.mimeType)) null else runCatching { videoMime(file) }.getOrNull()
@@ -330,6 +320,11 @@ class ThumbnailLoader @Inject constructor(
         return codec != "video/avc" && codec != "video/hevc"
     }
 
+    /**
+     * Detailed diagnostics for a video (codec, coded size, crop rect, pixel aspect, rotation,
+     * color info) — used by the viewer's Info dialog so the user can share why a cover looks wrong.
+     * Reads over the in-memory channel; returns a human-readable multi-line string.
+     */
     suspend fun videoDiagnostics(file: FileEntity): String = withContext(Dispatchers.IO) {
         if (!VaultRepository.isVideo(file.mimeType)) return@withContext ""
         val sb = StringBuilder()
@@ -376,28 +371,18 @@ class ThumbnailLoader @Inject constructor(
     }
 
     /**
-     * Force-rebuild a cover: drop both cache levels, recompute from the source, and bump the
-     * file's [versions] entry so any on-screen thumbnail re-keyed on it reloads the fresh bitmap.
-     * Returns the new bitmap (null if extraction still fails, e.g. an unreadable file).
-     */
-    suspend fun regenerate(file: FileEntity): Bitmap? {
-        evict(file.id)
-        val bmp = load(file)
-        bumpVersion(file.id)
-        return bmp
-    }
-
-    /**
      * Bump a file's cover version so every surface keyed on [versions] (grid, Home/Favorites
      * shelves, the viewer) reloads it. Most-recent last; the map is capped so it can't grow
      * without bound.
      */
     private fun bumpVersion(id: String) {
-        val next = LinkedHashMap(_versions.value)
-        val v = (next.remove(id) ?: 0) + 1
-        next[id] = v
-        while (next.size > 256) next.remove(next.keys.first())
-        _versions.value = next
+        // Atomic: bumped from IO and Default at once, a read-then-write lost one of the two.
+        _versions.update { current ->
+            val next = LinkedHashMap(current)
+            next[id] = (next.remove(id) ?: 0) + 1
+            while (next.size > 256) next.remove(next.keys.first())
+            next
+        }
     }
 
     private fun imageThumb(file: FileEntity): Bitmap? {
@@ -599,7 +584,8 @@ class ThumbnailLoader @Inject constructor(
             if (!VaultRepository.isVideo(file.mimeType)) return@withContext null
             // Locked while the frame was decoded: the cover must not go back into memory after.
             val epoch = lockEpoch.get()
-            val bmp = videoFrame(file, cover)
+            // Through the same gate as the grid's covers: two decoders at most at once.
+            val bmp = videoDecoders.withPermit { videoFrame(file, cover) }
                 ?: return@withContext null
             if (!remember(file.id, bmp, epoch)) return@withContext null
             failed.remove(file.id)                 // a good cover now exists: allow reload paths
@@ -917,31 +903,6 @@ class ThumbnailLoader @Inject constructor(
             runCatching { retriever.release() }
             runCatching { channel?.close() }
         }
-    }
-
-    /** Pick a frame according to [cover]; falls back to the automatic best frame when the chosen
-     *  position yields nothing (e.g. unknown duration or an undecodable spot). */
-    private fun coverFrame(r: MediaMetadataRetriever, cover: VideoCover): Bitmap? {
-        if (cover == VideoCover.AUTO) return extractFrame(r)
-        val durationUs =
-            (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) * 1000L
-        val timeUs = when (cover) {
-            VideoCover.START -> 0L
-            VideoCover.MIDDLE -> durationUs / 2
-            VideoCover.END -> durationUs * 9 / 10
-            VideoCover.RANDOM -> if (durationUs > 0) (Math.random() * durationUs).toLong() else 0L
-            VideoCover.AUTO -> 0L // handled above
-        }
-        return frameAt(r, timeUs) ?: extractFrame(r)
-    }
-
-    /** Frame closest to [timeUs], trying the scaled paths first and a hand-scaled full decode last. */
-    private fun frameAt(r: MediaMetadataRetriever, timeUs: Long): Bitmap? {
-        // Full-resolution frames only (getFrameAtTime preserves aspect + applies rotation).
-        // getScaledFrameAtTime(w,h) forces the frame into w x h, squishing non-square videos into a
-        // square — the caller crops to a square itself via centerSquare().
-        return runCatching { r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST) }.getOrNull()
-            ?: runCatching { r.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) }.getOrNull()
     }
 
     /**

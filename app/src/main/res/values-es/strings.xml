@@ -65,7 +65,6 @@
     <string name="convert_original_kept">Original conservado junto a la copia MP4.</string>
     <string name="err_open_import">No se puede abrir el archivo que se va a importar</string>
     <string name="err_write_converted">Escritura incompleta de la copia convertida</string>
-    <string name="err_write_destination">No se puede escribir en el destino elegido</string>
     <string name="err_write_gallery">No se puede escribir en la galería</string>
     <string name="err_create_in_folder">No se puede crear el archivo en la carpeta elegida</string>
     <string name="err_write_folder">No se puede escribir en la carpeta elegida</string>
@@ -208,8 +207,6 @@
     <string name="dl_err_failed">Error de descarga</string>
     <string name="n_download">Descarga</string>
     <string name="n_unlock_then_retry">Desbloquea Cripta y toca Reintentar</string>
-    <string name="n_test_choice">Probar la elección</string>
-    <string name="n_test_two_buttons">Dos botones de prueba</string>
     <string name="delete">Eliminar</string>
     <string name="keep">Conservar</string>
     <string name="n_original_unchanged">Original sin cambios</string>
@@ -224,12 +221,9 @@
     <string name="n_export_gallery">Exportando a la galería</string>
     <string name="n_file_of">Archivo %1$s de %2$s</string>
     <string name="n_dup_search">Búsqueda de duplicados</string>
-    <string name="n_dup_compared_test">%1$s de 200 elementos comparados</string>
     <string name="n_update">Actualización de Cripta</string>
-    <string name="n_update_test">Versión de prueba · %1$s%%</string>
     <string name="n_convert">Convirtiendo a MP4</string>
     <string name="n_encoding_pct">Codificando el vídeo · %1$s%%</string>
-    <string name="n_test_starting">Iniciando la prueba…</string>
     <plurals name="imported_n">
         <item quantity="one">1 archivo importado</item>
         <item quantity="many">%1$s archivos importados</item>
@@ -238,21 +232,16 @@
     <string name="n_delete_originals_q">¿Eliminar los originales?</string>
     <string name="n_delete_originals">Eliminar originales</string>
     <string name="n_export_done">Exportación completada</string>
-    <string name="n_export_saved_test">%1$s archivos guardados en la galería</string>
     <string name="n_dups_found">Duplicados encontrados</string>
-    <string name="n_dups_found_test">3 grupos entre 200 elementos</string>
     <string name="n_see_results">Ver resultados</string>
     <string name="n_update_ready">Actualización lista</string>
-    <string name="n_update_ready_test">Prueba: ningún archivo que instalar</string>
     <string name="install">Instalar</string>
     <string name="n_download_done">Descarga completada</string>
     <string name="n_video_encrypted">Vídeo cifrado en la caja fuerte</string>
-    <string name="n_download_failed_test">Prueba de error: enlace inaccesible</string>
     <string name="retry">Reintentar</string>
     <string name="n_mp4_created">Copia MP4 creada</string>
     <string name="n_delete_original_q">¿Eliminar el original?</string>
     <string name="n_delete_original">Eliminar original</string>
-    <string name="n_test_cancelled">Prueba cancelada</string>
     <string name="n_restoring">Restaurando la copia de seguridad</string>
     <string name="n_backing_up">Creando la copia de seguridad</string>
     <string name="n_restore_failed_unlock">Error de restauración: desbloquea Cripta y reinténtalo.</string>
@@ -264,7 +253,6 @@
     </plurals>
     <string name="n_restore_done">Restauración completada</string>
     <string name="n_backup_done">Copia de seguridad completada</string>
-    <string name="n_backup_failed_space">Error de copia de seguridad. Comprueba el espacio libre en el destino y reinténtalo.</string>
     <string name="n_restore_failed_passphrase">Error de restauración: frase de contraseña incorrecta o copia de seguridad no válida. La caja fuerte no ha cambiado.</string>
     <string name="n_restore_failed_reason">Error de restauración (%1$s). La caja fuerte no ha cambiado.</string>
     <string name="n_restore_failed">Error de restauración</string>
@@ -389,7 +377,6 @@
     <string name="ch_done">Operaciones completadas</string>
     <string name="n_chip_start">Iniciar</string>
     <string name="cancel">Cancelar</string>
-    <string name="ch_ongoing_island_test">Operaciones en curso (isla, prueba)</string>
     <string name="kind_import">Importación</string>
     <string name="kind_convert">Conversión</string>
     <string name="kind_duplicates">Duplicados</string>
@@ -668,8 +655,6 @@
     <string name="pinned">Fijadas</string>
     <string name="recent">Recientes</string>
     <string name="tag_rename_hint">El nombre se cambia en Ajustes › Etiquetas.</string>
-    <string name="tag_alias">Etiqueta corta (opcional)</string>
-    <string name="tag_alias_hint">En lugar del icono en las portadas, o junto a él.</string>
     <string name="tag_pin_top">Fijar arriba</string>
     <string name="tag_pin_top_hint">Siempre entre las primeras, en una posición fija.</string>
     <string name="colour">Color</string>
@@ -689,7 +674,6 @@
     <string name="tags_none_create">Sin etiquetas. Crea una abajo.</string>
     <string name="search_tag">Buscar etiqueta</string>
     <string name="clear_search">Borrar búsqueda</string>
-    <string name="colour_n">Color %1$s</string>
     <string name="viewer_too_big">El archivo es demasiado grande para la vista previa. Expórtalo al dispositivo para abrirlo con otra app.</string>
     <string name="viewer_decrypt_failed">No se puede descifrar el archivo: los datos podrían estar dañados.</string>
     <string name="viewer_content_missing">No se encontró el contenido cifrado del archivo.</string>

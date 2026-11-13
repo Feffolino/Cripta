@@ -196,8 +196,6 @@ class HomeViewModel @Inject constructor(
 
     val favorites: StateFlow<List<FileWithTags>> = all.map { list -> list.filter { it.file.isFavorite }.take(24) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val favoriteCount: StateFlow<Int> = all.map { list -> list.count { it.file.isFavorite } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** Saved filters with how many files each one currently matches. */
     val savedFilters: StateFlow<List<Pair<SavedFilterEntity, Int>>> =

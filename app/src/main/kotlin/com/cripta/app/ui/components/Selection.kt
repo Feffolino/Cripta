@@ -39,15 +39,12 @@ import com.cripta.app.ui.theme.Motion
  * Thumbnail frame that explains selection (DS `cr-cover.is-selected`): a 3dp accent ring on the
  * cover's own edge, the picture drawn 6dp inside it with smaller corners. [content] is drawn inside
  * the (inset, clipped) frame; [overlay] on top, e.g. the [SelectionCheck] in a corner.
- * [selectedScale] is kept for the call sites: the inset now does that job.
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SelectableThumbFrame(
     selected: Boolean,
     shape: Shape,
     modifier: Modifier = Modifier,
-    selectedScale: Float = 0.92f,
     overlay: @Composable BoxScope.() -> Unit = {},
     content: @Composable BoxScope.() -> Unit,
 ) {

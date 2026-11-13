@@ -6,7 +6,6 @@ import com.cripta.app.str
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import com.cripta.app.ui.theme.CriptaIcons
 import androidx.compose.material3.Icon
@@ -68,35 +66,6 @@ private fun IconCell(name: String?, selected: Boolean, size: Dp = 48.dp, onClick
         when {
             name == null -> Icon(CriptaIcons.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(size * 0.45f))
             icon != null -> Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(size * 0.58f))
-        }
-    }
-}
-
-/**
- * The editor's "Icona" row: the icon chosen, a few fitting the tag's name (localized or English) or
- * common ones, and "Tutte le icone" for the full searchable list.
- */
-@Composable
-fun TagIconField(
-    name: String, icon: String?, onPick: (String?) -> Unit, onBrowse: () -> Unit,
-    /** False where the caller already puts a heading over it (the tag editor). */
-    showLabel: Boolean = true,
-) {
-    val context = LocalContext.current
-    val resolved = rememberResolvedTagIcon(icon)
-    val suggested by produceState(emptyList<String>(), name) {
-        value = TagIcons.suggest(context, name, 10).ifEmpty { TagIcons.search(context, "", 10) }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (showLabel) Text(str(R.string.icon), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            IconCell(null, resolved == null) { onPick(null) }
-            // The chosen one stays first even when the name suggests others.
-            (listOfNotNull(resolved) + suggested.filter { it != resolved }).forEach { n -> IconCell(n, n == resolved) { onPick(n) } }
-        }
-        TextButton(onClick = onBrowse, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
-            com.cripta.app.ui.components.ButtonText(str(R.string.icon_all))
         }
     }
 }

@@ -51,7 +51,6 @@
     <string name="convert_original_kept">元のファイルと MP4 のコピーを両方残しました。</string>
     <string name="err_open_import">読み込むファイルを開けません</string>
     <string name="err_write_converted">変換したコピーの書き込みが不完全です</string>
-    <string name="err_write_destination">選択した保存先に書き込めません</string>
     <string name="err_write_gallery">ギャラリーに書き込めません</string>
     <string name="err_create_in_folder">選択したフォルダーにファイルを作成できません</string>
     <string name="err_write_folder">選択したフォルダーに書き込めません</string>
@@ -190,8 +189,6 @@
     <string name="dl_err_failed">ダウンロードに失敗しました</string>
     <string name="n_download">ダウンロード</string>
     <string name="n_unlock_then_retry">Cripta のロックを解除して「再試行」をタップ</string>
-    <string name="n_test_choice">選択のテスト</string>
-    <string name="n_test_two_buttons">テスト用ボタン 2 個</string>
     <string name="delete">削除</string>
     <string name="keep">残す</string>
     <string name="n_original_unchanged">元のファイルは変更されていません</string>
@@ -206,33 +203,25 @@
     <string name="n_export_gallery">ギャラリーに書き出し中</string>
     <string name="n_file_of">ファイル %1$s/%2$s</string>
     <string name="n_dup_search">重複ファイルを検索</string>
-    <string name="n_dup_compared_test">200 件中 %1$s 件を比較済み</string>
     <string name="n_update">Cripta の更新</string>
-    <string name="n_update_test">テストバージョン · %1$s%%</string>
     <string name="n_convert">MP4 に変換中</string>
     <string name="n_encoding_pct">動画をエンコード中 · %1$s%%</string>
-    <string name="n_test_starting">テストを開始中…</string>
     <plurals name="imported_n">
         <item quantity="other">%1$s 件のファイルを読み込みました</item>
     </plurals>
     <string name="n_delete_originals_q">元のファイルを削除しますか？</string>
     <string name="n_delete_originals">元のファイルを削除</string>
     <string name="n_export_done">書き出し完了</string>
-    <string name="n_export_saved_test">%1$s 件のファイルをギャラリーに保存しました</string>
     <string name="n_dups_found">重複が見つかりました</string>
-    <string name="n_dups_found_test">200 件中 3 グループ</string>
     <string name="n_see_results">結果を見る</string>
     <string name="n_update_ready">更新の準備ができました</string>
-    <string name="n_update_ready_test">テスト：インストールするファイルなし</string>
     <string name="install">インストール</string>
     <string name="n_download_done">ダウンロード完了</string>
     <string name="n_video_encrypted">動画を暗号化して保管庫に保存しました</string>
-    <string name="n_download_failed_test">エラーのテスト：リンクにアクセス不可</string>
     <string name="retry">再試行</string>
     <string name="n_mp4_created">MP4 のコピーを作成しました</string>
     <string name="n_delete_original_q">元のファイルを削除しますか？</string>
     <string name="n_delete_original">元のファイルを削除</string>
-    <string name="n_test_cancelled">テストを中止しました</string>
     <string name="n_restoring">バックアップを復元中</string>
     <string name="n_backing_up">バックアップを作成中</string>
     <string name="n_restore_failed_unlock">復元に失敗しました。Cripta のロックを解除して再試行してください。</string>
@@ -242,7 +231,6 @@
     </plurals>
     <string name="n_restore_done">復元完了</string>
     <string name="n_backup_done">バックアップ完了</string>
-    <string name="n_backup_failed_space">バックアップに失敗しました。保存先の空き容量を確認して再試行してください。</string>
     <string name="n_restore_failed_passphrase">復元に失敗しました。パスフレーズが違うか、無効なバックアップです。保管庫は変更されていません。</string>
     <string name="n_restore_failed_reason">復元に失敗しました（%1$s）。保管庫は変更されていません。</string>
     <string name="n_restore_failed">復元に失敗しました</string>
@@ -357,7 +345,6 @@
     <string name="ch_done">完了した操作</string>
     <string name="n_chip_start">開始</string>
     <string name="cancel">キャンセル</string>
-    <string name="ch_ongoing_island_test">進行中の操作（アイランド、テスト）</string>
     <string name="kind_import">読み込み</string>
     <string name="kind_convert">変換</string>
     <string name="kind_duplicates">重複</string>
@@ -624,8 +611,6 @@
     <string name="pinned">固定済み</string>
     <string name="recent">最近使用</string>
     <string name="tag_rename_hint">名前は設定 › タグから変更できます。</string>
-    <string name="tag_alias">略称（任意）</string>
-    <string name="tag_alias_hint">カバー上のアイコンの代わり、または隣に表示します。</string>
     <string name="tag_pin_top">上部に固定</string>
     <string name="tag_pin_top_hint">常に先頭近くの決まった位置に表示します。</string>
     <string name="colour">色</string>
@@ -643,7 +628,6 @@
     <string name="tags_none_create">タグがありません。下で作成できます。</string>
     <string name="search_tag">タグを検索</string>
     <string name="clear_search">検索を消去</string>
-    <string name="colour_n">色 %1$s</string>
     <string name="viewer_too_big">ファイルが大きすぎてプレビューできません。端末に書き出して別のアプリで開いてください。</string>
     <string name="viewer_decrypt_failed">ファイルを復号できません。データが破損している可能性があります。</string>
     <string name="viewer_content_missing">ファイルの暗号化データが見つかりません。</string>

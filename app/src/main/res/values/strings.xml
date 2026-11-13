@@ -58,7 +58,6 @@
     <string name="convert_original_kept">Original kept next to the MP4 copy.</string>
     <string name="err_open_import">Cannot open the file to import</string>
     <string name="err_write_converted">Incomplete write of the converted copy</string>
-    <string name="err_write_destination">Cannot write to the chosen destination</string>
     <string name="err_write_gallery">Cannot write to the gallery</string>
     <string name="err_create_in_folder">Cannot create the file in the chosen folder</string>
     <string name="err_write_folder">Cannot write to the chosen folder</string>
@@ -199,8 +198,6 @@
     <string name="dl_err_failed">Download failed</string>
     <string name="n_download">Download</string>
     <string name="n_unlock_then_retry">Unlock Cripta, then tap Retry</string>
-    <string name="n_test_choice">Test choice</string>
-    <string name="n_test_two_buttons">Two test buttons</string>
     <string name="delete">Delete</string>
     <string name="keep">Keep</string>
     <string name="n_original_unchanged">Original not changed</string>
@@ -215,12 +212,9 @@
     <string name="n_export_gallery">Exporting to the gallery</string>
     <string name="n_file_of">File %1$s of %2$s</string>
     <string name="n_dup_search">Duplicate search</string>
-    <string name="n_dup_compared_test">%1$s of 200 items compared</string>
     <string name="n_update">Cripta update</string>
-    <string name="n_update_test">Test version · %1$s%%</string>
     <string name="n_convert">Converting to MP4</string>
     <string name="n_encoding_pct">Encoding the video · %1$s%%</string>
-    <string name="n_test_starting">Starting the test…</string>
     <plurals name="imported_n">
         <item quantity="one">1 file imported</item>
         <item quantity="other">%1$s files imported</item>
@@ -228,21 +222,16 @@
     <string name="n_delete_originals_q">Delete the originals?</string>
     <string name="n_delete_originals">Delete originals</string>
     <string name="n_export_done">Export complete</string>
-    <string name="n_export_saved_test">%1$s files saved to the gallery</string>
     <string name="n_dups_found">Duplicates found</string>
-    <string name="n_dups_found_test">3 groups among 200 items</string>
     <string name="n_see_results">See results</string>
     <string name="n_update_ready">Update ready</string>
-    <string name="n_update_ready_test">Test: no file to install</string>
     <string name="install">Install</string>
     <string name="n_download_done">Download complete</string>
     <string name="n_video_encrypted">Video encrypted into the vault</string>
-    <string name="n_download_failed_test">Error test: link not reachable</string>
     <string name="retry">Retry</string>
     <string name="n_mp4_created">MP4 copy created</string>
     <string name="n_delete_original_q">Delete the original?</string>
     <string name="n_delete_original">Delete original</string>
-    <string name="n_test_cancelled">Test cancelled</string>
     <string name="n_restoring">Restoring the backup</string>
     <string name="n_backing_up">Creating the backup</string>
     <string name="n_restore_failed_unlock">Restore failed: unlock Cripta and try again.</string>
@@ -253,7 +242,6 @@
     </plurals>
     <string name="n_restore_done">Restore complete</string>
     <string name="n_backup_done">Backup complete</string>
-    <string name="n_backup_failed_space">Backup failed. Check the free space at the destination and try again.</string>
     <string name="n_restore_failed_passphrase">Restore failed: wrong passphrase or invalid backup file. The vault has not changed.</string>
     <string name="n_restore_failed_reason">Restore failed (%1$s). The vault has not changed.</string>
     <string name="n_restore_failed">Restore failed</string>
@@ -373,7 +361,6 @@
     <string name="ch_done">Completed operations</string>
     <string name="n_chip_start">Start</string>
     <string name="cancel">Cancel</string>
-    <string name="ch_ongoing_island_test">Operations in progress (island, test)</string>
     <string name="kind_import">Import</string>
     <string name="kind_convert">Convert</string>
     <string name="kind_duplicates">Duplicates</string>
@@ -646,8 +633,6 @@
     <string name="pinned">Pinned</string>
     <string name="recent">Recent</string>
     <string name="tag_rename_hint">The name is changed from Settings › Tags.</string>
-    <string name="tag_alias">Short label (optional)</string>
-    <string name="tag_alias_hint">Instead of the icon on the covers, or next to it.</string>
     <string name="tag_pin_top">Pin to the top</string>
     <string name="tag_pin_top_hint">Always among the first, in a fixed position.</string>
     <string name="colour">Colour</string>
@@ -666,7 +651,6 @@
     <string name="tags_none_create">No tags. Create one below.</string>
     <string name="search_tag">Search tag</string>
     <string name="clear_search">Clear search</string>
-    <string name="colour_n">Colour %1$s</string>
     <string name="viewer_too_big">The file is too big for the preview. Export it to the device to open it with another app.</string>
     <string name="viewer_decrypt_failed">Can\'t decrypt the file: the data may be damaged.</string>
     <string name="viewer_content_missing">The file\'s encrypted content was not found.</string>

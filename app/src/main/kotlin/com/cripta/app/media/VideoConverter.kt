@@ -5,10 +5,8 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -41,20 +39,11 @@ class VideoConverter @Inject constructor(
      * Call on the main thread.
      */
     suspend fun toMp4(src: File, out: File, videoBitrate: Int? = null, onProgress: (Int) -> Unit = {}): Unit =
-        export(MediaItem.fromUri(Uri.fromFile(src)), out, maxHeight = null, videoBitrate = videoBitrate, onProgress = onProgress)
-
-    /**
-     * Download and remux/transcode a remote video (direct link or HLS .m3u8) into [out] as MP4.
-     * [maxHeight] caps the output resolution (quality); null keeps the source resolution.
-     * Call on the main thread.
-     */
-    suspend fun downloadToMp4(url: String, out: File, maxHeight: Int?, onProgress: (Int) -> Unit = {}): Unit =
-        export(MediaItem.fromUri(url), out, maxHeight, null, onProgress)
+        export(MediaItem.fromUri(Uri.fromFile(src)), out, videoBitrate = videoBitrate, onProgress = onProgress)
 
     private suspend fun export(
         source: MediaItem,
         out: File,
-        maxHeight: Int?,
         videoBitrate: Int?,
         onProgress: (Int) -> Unit,
     ): Unit = suspendCancellableCoroutine { cont ->
@@ -100,12 +89,7 @@ class VideoConverter @Inject constructor(
             })
             .build()
 
-        val effects = if (maxHeight != null) {
-            Effects(emptyList(), listOf(Presentation.createForHeight(maxHeight)))
-        } else {
-            Effects.EMPTY
-        }
-        val edited = EditedMediaItem.Builder(source).setEffects(effects).build()
+        val edited = EditedMediaItem.Builder(source).build()
         // The deprecated item constructor keeps the tracks of the source as they are (what
         // Transformer uses for single-asset exports); withAudioAndVideoFrom would add a silent
         // audio track to a video without sound.

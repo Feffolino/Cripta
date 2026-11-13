@@ -61,7 +61,7 @@ class NoteEditorAutoSaveTest {
 
     private suspend fun settled() = withTimeout(10_000) { while (vm.saving) delay(10) }
 
-    private suspend fun notes() = db.fileDao().allIds().mapNotNull { repo.fileById(it) }
+    private suspend fun notes() = repo.allFilesSnapshot()
 
     /** The app goes to the background (ON_STOP) with the editor of [id] open. */
     private suspend fun stop(id: String?) { vm.saveInBackground(id, null); settled() }

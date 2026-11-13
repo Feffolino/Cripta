@@ -65,7 +65,6 @@
     <string name="convert_original_kept">Original conservé à côté de la copie MP4.</string>
     <string name="err_open_import">Impossible d’ouvrir le fichier à importer</string>
     <string name="err_write_converted">Écriture incomplète de la copie convertie</string>
-    <string name="err_write_destination">Impossible d’écrire à l’emplacement choisi</string>
     <string name="err_write_gallery">Impossible d’écrire dans la galerie</string>
     <string name="err_create_in_folder">Impossible de créer le fichier dans le dossier choisi</string>
     <string name="err_write_folder">Impossible d’écrire dans le dossier choisi</string>
@@ -208,8 +207,6 @@
     <string name="dl_err_failed">Échec du téléchargement</string>
     <string name="n_download">Téléchargement</string>
     <string name="n_unlock_then_retry">Déverrouillez Cripta, puis appuyez sur Réessayer</string>
-    <string name="n_test_choice">Tester le choix</string>
-    <string name="n_test_two_buttons">Deux boutons de test</string>
     <string name="delete">Supprimer</string>
     <string name="keep">Conserver</string>
     <string name="n_original_unchanged">Original inchangé</string>
@@ -224,12 +221,9 @@
     <string name="n_export_gallery">Exportation vers la galerie</string>
     <string name="n_file_of">Fichier %1$s sur %2$s</string>
     <string name="n_dup_search">Recherche de doublons</string>
-    <string name="n_dup_compared_test">%1$s éléments comparés sur 200</string>
     <string name="n_update">Mise à jour de Cripta</string>
-    <string name="n_update_test">Version de test · %1$s%%</string>
     <string name="n_convert">Conversion en MP4</string>
     <string name="n_encoding_pct">Encodage de la vidéo · %1$s%%</string>
-    <string name="n_test_starting">Démarrage du test…</string>
     <plurals name="imported_n">
         <item quantity="one">%1$s fichier importé</item>
         <item quantity="many">%1$s fichiers importés</item>
@@ -238,21 +232,16 @@
     <string name="n_delete_originals_q">Supprimer les originaux ?</string>
     <string name="n_delete_originals">Supprimer les originaux</string>
     <string name="n_export_done">Exportation terminée</string>
-    <string name="n_export_saved_test">%1$s fichiers enregistrés dans la galerie</string>
     <string name="n_dups_found">Doublons trouvés</string>
-    <string name="n_dups_found_test">3 groupes parmi 200 éléments</string>
     <string name="n_see_results">Voir les résultats</string>
     <string name="n_update_ready">Mise à jour prête</string>
-    <string name="n_update_ready_test">Test : aucun fichier à installer</string>
     <string name="install">Installer</string>
     <string name="n_download_done">Téléchargement terminé</string>
     <string name="n_video_encrypted">Vidéo chiffrée dans le coffre</string>
-    <string name="n_download_failed_test">Test d’erreur : lien inaccessible</string>
     <string name="retry">Réessayer</string>
     <string name="n_mp4_created">Copie MP4 créée</string>
     <string name="n_delete_original_q">Supprimer l’original ?</string>
     <string name="n_delete_original">Supprimer l’original</string>
-    <string name="n_test_cancelled">Test annulé</string>
     <string name="n_restoring">Restauration de la sauvegarde</string>
     <string name="n_backing_up">Création de la sauvegarde</string>
     <string name="n_restore_failed_unlock">Échec de la restauration : déverrouillez Cripta et réessayez.</string>
@@ -264,7 +253,6 @@
     </plurals>
     <string name="n_restore_done">Restauration terminée</string>
     <string name="n_backup_done">Sauvegarde terminée</string>
-    <string name="n_backup_failed_space">Échec de la sauvegarde. Vérifiez l’espace libre à destination et réessayez.</string>
     <string name="n_restore_failed_passphrase">Échec de la restauration : phrase secrète incorrecte ou sauvegarde invalide. Le coffre est inchangé.</string>
     <string name="n_restore_failed_reason">Échec de la restauration (%1$s). Le coffre est inchangé.</string>
     <string name="n_restore_failed">Échec de la restauration</string>
@@ -389,7 +377,6 @@
     <string name="ch_done">Opérations terminées</string>
     <string name="n_chip_start">Démarrer</string>
     <string name="cancel">Annuler</string>
-    <string name="ch_ongoing_island_test">Opérations en cours (îlot, test)</string>
     <string name="kind_import">Importation</string>
     <string name="kind_convert">Conversion</string>
     <string name="kind_duplicates">Doublons</string>
@@ -668,8 +655,6 @@
     <string name="pinned">Épinglées</string>
     <string name="recent">Récentes</string>
     <string name="tag_rename_hint">Le nom se modifie dans Paramètres › Étiquettes.</string>
-    <string name="tag_alias">Libellé court (facultatif)</string>
-    <string name="tag_alias_hint">À la place de l’icône sur les vignettes, ou à côté.</string>
     <string name="tag_pin_top">Épingler en haut</string>
     <string name="tag_pin_top_hint">Toujours parmi les premières, à une position fixe.</string>
     <string name="colour">Couleur</string>
@@ -689,7 +674,6 @@
     <string name="tags_none_create">Aucune étiquette. Créez-en une ci-dessous.</string>
     <string name="search_tag">Rechercher une étiquette</string>
     <string name="clear_search">Effacer la recherche</string>
-    <string name="colour_n">Couleur %1$s</string>
     <string name="viewer_too_big">Le fichier est trop volumineux pour l’aperçu. Exportez-le sur l’appareil pour l’ouvrir avec une autre application.</string>
     <string name="viewer_decrypt_failed">Impossible de déchiffrer le fichier : les données sont peut-être endommagées.</string>
     <string name="viewer_content_missing">Le contenu chiffré du fichier est introuvable.</string>

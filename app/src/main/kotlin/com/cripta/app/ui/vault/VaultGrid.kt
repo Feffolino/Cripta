@@ -235,7 +235,6 @@ internal fun ThumbBox(
         selected = selected,
         shape = if (compact) com.cripta.app.ui.theme.CoverShapeSmall else com.cripta.app.ui.theme.CoverShape,
         modifier = modifier,
-        selectedScale = if (compact) 0.9f else 0.92f,
         overlay = { CornerSelectionCheck(selected, selectionMode, size = if (compact) 20.dp else 24.dp) },
     ) {
         // Without a cover: the type's icon on a neutral tile (the shape tells the type; colour stays for state).

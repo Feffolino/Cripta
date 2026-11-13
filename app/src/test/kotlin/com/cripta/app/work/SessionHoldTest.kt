@@ -5,15 +5,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Only the jobs that touch the vault keep its keys alive past a lock: the app update download (and
- * the debug progress demo) used neither the DEK nor the database, yet held both in memory for as
- * long as the download ran after "Blocca ora".
+ * Only the jobs that touch the vault keep its keys alive past a lock: the app update download used
+ * neither the DEK nor the database, yet held both in memory for as long as the download ran after
+ * "Blocca ora".
  */
 class SessionHoldTest {
     @Test
     fun theUpdateDownloadDoesNotHoldTheKeys() {
         assertFalse(ConversionService.holdsVaultKeys("update"))
-        assertFalse(ConversionService.holdsVaultKeys("debug_progress"))
     }
 
     @Test
