@@ -1933,6 +1933,7 @@
     <string name="days_3">3 дня</string>
     <string name="days_7">7 дней</string>
     <string name="days_30">30 дней</string>
+    <string name="trash_shorten_q">Хранить файлы %1$s?</string>
     <string name="trash_empty">Корзина пуста</string>
     <string name="open_trash_n">Открыть корзину (%1$s)</string>
     <string name="sec_updates">Обновления</string>

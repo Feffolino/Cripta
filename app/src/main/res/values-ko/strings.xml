@@ -1747,6 +1747,7 @@
     <string name="days_3">3일</string>
     <string name="days_7">7일</string>
     <string name="days_30">30일</string>
+    <string name="trash_shorten_q">파일을 %1$s 동안 보관할까요?</string>
     <string name="trash_empty">휴지통 비어 있음</string>
     <string name="open_trash_n">휴지통 열기(%1$s)</string>
     <string name="sec_updates">업데이트</string>

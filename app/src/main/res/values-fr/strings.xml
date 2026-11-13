@@ -1871,6 +1871,7 @@
     <string name="days_3">3 jours</string>
     <string name="days_7">7 jours</string>
     <string name="days_30">30 jours</string>
+    <string name="trash_shorten_q">Conserver les fichiers %1$s ?</string>
     <string name="trash_empty">Corbeille vide</string>
     <string name="open_trash_n">Ouvrir la corbeille (%1$s)</string>
     <string name="sec_updates">Mises à jour</string>

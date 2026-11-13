@@ -1747,6 +1747,7 @@
     <string name="days_3">3 日</string>
     <string name="days_7">7 日</string>
     <string name="days_30">30 日</string>
+    <string name="trash_shorten_q">ファイルを%1$s保持しますか？</string>
     <string name="trash_empty">ごみ箱は空です</string>
     <string name="open_trash_n">ごみ箱を開く（%1$s）</string>
     <string name="sec_updates">更新</string>

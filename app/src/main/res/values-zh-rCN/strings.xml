@@ -1747,6 +1747,7 @@
     <string name="days_3">3 天</string>
     <string name="days_7">7 天</string>
     <string name="days_30">30 天</string>
+    <string name="trash_shorten_q">文件保留%1$s？</string>
     <string name="trash_empty">回收站为空</string>
     <string name="open_trash_n">打开回收站（%1$s）</string>
     <string name="sec_updates">更新</string>

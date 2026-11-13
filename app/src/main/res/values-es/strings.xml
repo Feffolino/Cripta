@@ -1871,6 +1871,7 @@
     <string name="days_3">3 días</string>
     <string name="days_7">7 días</string>
     <string name="days_30">30 días</string>
+    <string name="trash_shorten_q">¿Conservar los archivos %1$s?</string>
     <string name="trash_empty">Papelera vacía</string>
     <string name="open_trash_n">Abrir la papelera (%1$s)</string>
     <string name="sec_updates">Actualizaciones</string>

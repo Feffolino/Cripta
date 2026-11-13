@@ -1809,6 +1809,7 @@
     <string name="days_3">3 दिन</string>
     <string name="days_7">7 दिन</string>
     <string name="days_30">30 दिन</string>
+    <string name="trash_shorten_q">फ़ाइलें %1$s तक रखें?</string>
     <string name="trash_empty">कूड़ेदान खाली है</string>
     <string name="open_trash_n">कूड़ेदान खोलें (%1$s)</string>
     <string name="sec_updates">अपडेट</string>

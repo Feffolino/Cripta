@@ -141,6 +141,8 @@ fun SettingsScreen(
     val cleanupFiles by vm.allFiles.collectAsStateWithLifecycle()
     var showCleanup by remember { mutableStateOf(false) }
     var confirmEmptyTrash by remember { mutableStateOf(false) }
+    // A shorter time the trash keeps files, chosen while some in it are already older: confirmed first.
+    var shorterTrashDays by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) { vm.refreshSpace() }
     val trashedFolders by vm.trashedFolders.collectAsStateWithLifecycle()
 
@@ -844,7 +846,10 @@ fun SettingsScreen(
                                 desc = str(R.string.use_trash_desc)) { vm.setTrashEnabled(it) }
                             if (s.trashEnabled) {
                                 ChoiceRow(str(R.string.keep_for), listOf(3 to str(R.string.days_3), 7 to str(R.string.days_7), 30 to str(R.string.days_30)), s.trashDays,
-                                    indent = 0.dp) { vm.setTrashDays(it) }
+                                    indent = 0.dp) { days ->
+                                    if (days < s.trashDays && expiredWith(days, trashed, trashedFolders) > 0) shorterTrashDays = days
+                                    else vm.setTrashDays(days)
+                                }
                             }
                             com.cripta.app.ui.components.FilledTonalButton(onClick = { showTrash = true }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                                 com.cripta.app.ui.components.ButtonText(if (trashed.isEmpty() && trashedFolders.isEmpty()) str(R.string.trash_empty)
@@ -996,9 +1001,29 @@ fun SettingsScreen(
         com.cripta.app.ui.components.CriptaAlertDialog(
             onDismissRequest = { confirmEmptyTrash = false },
             title = { Text(str(R.string.empty_trash_q)) },
-            text = { Text(str(R.string.cleanup_delete_text, com.cripta.app.ui.components.formatBytes(space?.byKind?.get(com.cripta.app.data.SpaceKind.TRASH) ?: 0L))) },
-            confirmButton = { TextButton(onClick = { vm.emptyTrash(); confirmEmptyTrash = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.empty_trash)) } },
+            // The same words as "Svuota" in the trash itself.
+            text = {
+                val total = trashed.size + trashedFolders.size
+                Text(plural(R.plurals.items_destroyed, total, elementsLabel(total)))
+            },
+            confirmButton = { TextButton(onClick = { vm.emptyTrash(); confirmEmptyTrash = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.empty_short), color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmEmptyTrash = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
+        )
+    }
+
+    shorterTrashDays?.let { days ->
+        // They go for good at the next purge: said as "Svuota" says it.
+        val n = expiredWith(days, trashed, trashedFolders)
+        com.cripta.app.ui.components.CriptaAlertDialog(
+            onDismissRequest = { shorterTrashDays = null },
+            title = { Text(str(R.string.trash_shorten_q, str(when (days) { 3 -> R.string.days_3; 7 -> R.string.days_7; else -> R.string.days_30 }))) },
+            text = { Text(plural(R.plurals.items_destroyed, n, elementsLabel(n))) },
+            confirmButton = {
+                TextButton(onClick = { vm.setTrashDays(days); shorterTrashDays = null }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { shorterTrashDays = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
     }
 
@@ -1164,3 +1189,9 @@ fun SettingsScreen(
 private fun androidx.compose.animation.AnimatedContentTransitionScope<*>.calmSwap(): androidx.compose.animation.ContentTransform =
     (androidx.compose.animation.fadeIn(Motion.enter()) togetherWith androidx.compose.animation.fadeOut(Motion.exit())).using(
         androidx.compose.animation.SizeTransform { _, _ -> Motion.enter(Motion.MEDIUM) })
+
+/** Files and folders in the trash already older than [days]: destroyed by the next purge if the trash keeps them that long only. */
+private fun expiredWith(days: Int, files: List<com.cripta.app.data.db.FileWithTags>, folders: List<com.cripta.app.data.db.FolderEntity>): Int {
+    val cutoff = System.currentTimeMillis() - days * 86_400_000L
+    return files.count { (it.file.deletedAt ?: Long.MAX_VALUE) < cutoff } + folders.count { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }
+}

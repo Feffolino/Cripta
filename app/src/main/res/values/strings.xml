@@ -1809,6 +1809,7 @@
     <string name="days_3">3 days</string>
     <string name="days_7">7 days</string>
     <string name="days_30">30 days</string>
+    <string name="trash_shorten_q">Keep files for %1$s?</string>
     <string name="trash_empty">Trash empty</string>
     <string name="open_trash_n">Open the trash (%1$s)</string>
     <string name="sec_updates">Updates</string>

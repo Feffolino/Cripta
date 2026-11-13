@@ -244,9 +244,8 @@ internal fun TrashDialog(
                         Column {
                             Text(str(R.string.trash_days_hint, days),
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            com.cripta.app.ui.components.CountRow(str(R.string.in_trash), com.cripta.app.ui.components.formatCount(items.size + folders.size),
-                                after = (if (items.size + folders.size == 1) " elemento" else " elementi") + " · " +
-                                    com.cripta.app.ui.components.formatBytes(items.sumOf { it.sizeBytes }),
+                            com.cripta.app.ui.components.CountRow(str(R.string.in_trash), com.cripta.app.ui.components.formatBytes(items.sumOf { it.sizeBytes }),
+                                after = " · " + elementsLabel(items.size + folders.size),
                                 modifier = Modifier.padding(top = 8.dp))
                         }
                     }

@@ -2057,6 +2057,7 @@
     <string name="days_3">3 أيام</string>
     <string name="days_7">7 أيام</string>
     <string name="days_30">30 يوماً</string>
+    <string name="trash_shorten_q">الاحتفاظ بالملفات لمدة %1$s؟</string>
     <string name="trash_empty">المهملات فارغة</string>
     <string name="open_trash_n">فتح المهملات (%1$s)</string>
     <string name="sec_updates">التحديثات</string>
