@@ -256,7 +256,11 @@ interface FileDao {
     @Query("UPDATE files SET playbackPosMs = :pos, lastPlayedAt = :at WHERE id = :id")
     suspend fun setPlaybackPos(id: String, pos: Long?, at: Long?)
 
-    @Query("UPDATE files SET contentHash = :hash WHERE id = :id")
+    /**
+     * Fills a missing hash only: a scan that read a note before it was saved again would put the
+     * old text's hash over the new one, and the note was then deleted as a copy of the old text.
+     */
+    @Query("UPDATE files SET contentHash = :hash WHERE id = :id AND contentHash IS NULL")
     suspend fun setContentHash(id: String, hash: String)
 
     @Query("SELECT * FROM files WHERE id IN (:ids)")

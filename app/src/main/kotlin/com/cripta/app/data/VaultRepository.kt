@@ -2041,7 +2041,7 @@ class VaultRepository @Inject constructor(
         }
     }
 
-    /** Store a hash computed elsewhere (duplicate scan) so the next check is instant. */
+    /** Store a hash computed elsewhere (duplicate scan) so the next check is instant; only where none is stored. */
     suspend fun setContentHash(id: String, hash: String) = withContext(Dispatchers.IO) { db.fileDao().setContentHash(id, hash) }
 
     // --- Persistent job queue (survives the app being killed) ---

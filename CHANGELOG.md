@@ -17,6 +17,7 @@ Entries marked **stable** went out as a stable release.
 - A vault whose key the phone lost offers to start over, as one whose key was invalidated, instead of a generic error at every start; a phone whose secure chip refuses a key with an unusual error makes it in the normal key store; a new unlock code is checked to open the vault before it replaces the old one
 - Downloading an app update no longer keeps the vault keys in memory after "Blocca ora"; the vault locks after the timeout also when coming back from a file picker shown as a window, and right away (not a few frames late) when Cripta is reopened after leaving it with Back; a video no longer goes into Picture-in-Picture from a locked vault, and Cripta opened again from Recents does not import a shared file a second time
 - The space taken by a file whose deletion was cut short (Cripta closed half way through emptying a large trash) is freed at the next start; an import that fails before it starts leaves nothing behind; a folder deletion stopped by a power cut reopens its folders at the next start in every case
+- A note saved again while a duplicate search was reading it is no longer taken for a copy of its old text
 
 ## 2026-11-12
 
