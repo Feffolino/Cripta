@@ -245,7 +245,8 @@ class ConversionService : Service() {
                             val copy = choice.copyId.takeIf { it.isNotBlank() }?.let { repo.fileById(it) }
                             check(copy != null && copy.deletedAt == null) { str(R.string.n_mp4_copy_missing) }
                         }
-                        if (delete) repo.deleteOrTrash(oid)
+                        // Destroyed (trash off): its cover and thumbnail go too.
+                        if (delete && !repo.deleteOrTrash(oid)) thumbs.evict(oid)
                         repo.resolveConvertedOriginal(oid, deleted = delete)
                         cancelOutcome(DONE_NOTIF_ID)
                         postConvertDone()

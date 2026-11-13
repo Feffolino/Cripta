@@ -18,6 +18,7 @@ Entries marked **stable** went out as a stable release.
 - Downloading an app update no longer keeps the vault keys in memory after "Blocca ora"; the vault locks after the timeout also when coming back from a file picker shown as a window, and right away (not a few frames late) when Cripta is reopened after leaving it with Back; a video no longer goes into Picture-in-Picture from a locked vault, and Cripta opened again from Recents does not import a shared file a second time
 - The space taken by a file whose deletion was cut short (Cripta closed half way through emptying a large trash) is freed at the next start; an import that fails before it starts leaves nothing behind; a folder deletion stopped by a power cut reopens its folders at the next start in every case
 - A note saved again while a duplicate search was reading it is no longer taken for a copy of its old text
+- Deleting the original after a conversion with the trash off also removes its cover and thumbnail
 
 ## 2026-11-12
 
