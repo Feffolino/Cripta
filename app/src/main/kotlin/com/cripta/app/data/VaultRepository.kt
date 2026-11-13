@@ -2470,13 +2470,20 @@ class VaultRepository @Inject constructor(
         }.getOrNull()?.takeIf { it > 0 }
         val source = object : java.io.FilterInputStream(opened) {
             private var read = 0L
+            /**
+             * A failure to read the file itself (moved, its card removed): told apart from a wrong
+             * passphrase, which the decryption reports as an IOException too.
+             */
+            var readError: java.io.IOException? = null
             private fun count(n: Long) {
                 if (n <= 0 || archiveSize == null) return
                 read += n; onProgress((read.toFloat() / archiveSize).coerceAtMost(1f))
             }
-            override fun read(): Int = super.read().also { if (it >= 0) count(1) }
-            override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { count(it.toLong()) }
-            override fun skip(n: Long): Long = super.skip(n).also { count(it) }
+            private inline fun <T> reading(block: () -> T): T =
+                try { block() } catch (e: java.io.IOException) { readError = e; throw e }
+            override fun read(): Int = reading { super.read() }.also { if (it >= 0) count(1) }
+            override fun read(b: ByteArray, off: Int, len: Int): Int = reading { super.read(b, off, len) }.also { count(it.toLong()) }
+            override fun skip(n: Long): Long = reading { super.skip(n) }.also { count(it) }
         }
         return source.use { raw ->
             val header = java.io.DataInputStream(raw)
@@ -2498,7 +2505,9 @@ class VaultRepository @Inject constructor(
                     else -> throw IllegalArgumentException(str(R.string.err_bad_format))
                 }
             } catch (e: Exception) {
-                // Too short, not a backup, or a key that can't even be derived.
+                // Too short, not a backup, or a key that can't even be derived; a file that could
+                // not be read is said as such.
+                source.readError?.let { throw it }
                 throw WrongPassphraseException(e)
             }
             plaintext.use { cis ->
@@ -2513,6 +2522,7 @@ class VaultRepository @Inject constructor(
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    source.readError?.let { throw it }
                     throw WrongPassphraseException(e)
                 }
                 // All or nothing: one transaction, and the blobs written so far removed on failure.

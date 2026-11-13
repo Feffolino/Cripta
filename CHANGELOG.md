@@ -21,6 +21,7 @@ Entries marked **stable** went out as a stable release.
 - Deleting the original after a conversion with the trash off also removes its cover and thumbnail
 - The restore summary no longer counts a cover it could not put in place
 - Restoring the same backup twice no longer adds again the faces deleted everywhere; an intro or an ending removed in every video ("Non è un'intro", "Non è una sigla") does not come back when an older backup is restored
+- A backup that cannot be read (moved, or on a card removed) says so when restored, instead of blaming the passphrase
 
 ## 2026-11-12
 
