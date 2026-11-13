@@ -68,8 +68,10 @@ class BackupCryptoTest {
             assertRejected(valid.copyOf(end), "truncated at $end")
         }
 
+        // Not inside MAGIC: that is read and checked by the restore before BackupCrypto (and here by
+        // the helper's require), so a flip there would not prove anything about BackupCrypto.
         val positions = listOf(
-            0, BackupCrypto.MAGIC.size + 3, headerSize - 1,
+            BackupCrypto.MAGIC.size + 3, headerSize - 1,
             headerSize, valid.size / 2, valid.lastIndex,
         )
         positions.forEach { index ->
@@ -100,11 +102,40 @@ class BackupCryptoTest {
         assertFails { open(bytes.copyOf(bytes.size - (1 shl 20)), "correct horse battery") }
     }
 
+    /**
+     * A changed salt fails. Every header field also feeds the key derivation, so this cannot tell the
+     * header-as-associated-data binding apart from a different key: it proves a changed header is refused.
+     */
     @Test
     fun tamperedHeaderFails() {
         val bytes = archive(ByteArray(1000) { 3 }, "correct horse battery")
-        // Flip a salt byte: the key changes and the header no longer matches the associated data.
         bytes[BackupCrypto.MAGIC.size + 4] = (bytes[BackupCrypto.MAGIC.size + 4].toInt() xor 1).toByte()
-        assertFails { open(bytes, "correct horse battery") }
+        try {
+            open(bytes, "correct horse battery")
+            fail("a changed header must not decrypt")
+        } catch (_: IOException) {
+        }
+    }
+}
+
+/** The header check speaks the app's texts: Robolectric, for its resources. */
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34], application = android.app.Application::class, qualifiers = "en")
+class BackupHeaderTest {
+    @org.junit.Before
+    fun texts() = com.cripta.app.Strings.init(org.robolectric.RuntimeEnvironment.getApplication())
+
+    @Test
+    fun anImpossibleIterationCountIsRefusedBeforeAnyKeyIsDerived() {
+        for (iterations in listOf(0, 99_999, 10_000_001, -1)) {
+            val raw = ByteArrayOutputStream().also { out ->
+                java.io.DataOutputStream(out).apply { writeInt(iterations); write(ByteArray(16)); flush() }
+            }.toByteArray()
+            try {
+                BackupCrypto.decryptingStream(ByteArrayInputStream(raw), "x".toCharArray())
+                fail("$iterations iterations accepted")
+            } catch (_: IllegalArgumentException) {
+            }
+        }
     }
 }

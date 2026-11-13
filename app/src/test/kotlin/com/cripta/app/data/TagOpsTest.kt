@@ -43,16 +43,23 @@ class TagOpsTest {
         assertTrue(kept is SavedFilterJson.Pruned.Changed)
     }
 
+    private fun sortedInAppLanguage(vararg names: String): List<String> {
+        com.cripta.app.Strings.init(org.robolectric.RuntimeEnvironment.getApplication())
+        return names.toList().sortedWith(NameOrder.comparator { it })
+    }
+
+    /** The app's language, not the JVM's default: Swedish puts Å after Z, English next to A. */
     @Test
-    fun namesSortAsTheLanguageDoes() {
-        val before = java.util.Locale.getDefault()
-        java.util.Locale.setDefault(java.util.Locale.ITALIAN)
-        try {
-            val sorted = listOf("Zoo", "Èrica", "erica", "Elefante").sortedWith(NameOrder.comparator { it })
-            assertEquals(listOf("Elefante", "erica", "Èrica", "Zoo"), sorted)
-        } finally {
-            java.util.Locale.setDefault(before)
-        }
+    @Config(qualifiers = "sv")
+    fun namesSortAsTheAppLanguageDoes() {
+        assertEquals(listOf("Anna", "Zoo", "Åsa"), sortedInAppLanguage("Zoo", "Åsa", "Anna"))
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun accentsSortNextToTheirLetterAndCaseOnlyBreaksTies() {
+        assertEquals(listOf("Anna", "Åsa", "Zoo"), sortedInAppLanguage("Zoo", "Åsa", "Anna"))
+        assertEquals(listOf("Elefante", "erica", "Èrica", "Zoo"), sortedInAppLanguage("Zoo", "Èrica", "erica", "Elefante"))
     }
 
     @Test

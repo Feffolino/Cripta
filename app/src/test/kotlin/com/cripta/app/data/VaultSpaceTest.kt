@@ -1,6 +1,5 @@
 package com.cripta.app.data
 
-import com.cripta.app.ui.vault.searchesWholeVault
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -36,13 +35,5 @@ class VaultSpaceTest {
         assertEquals(SpaceKind.NOTES, spaceKindOf(VaultRepository.MIME_MARKDOWN, trashed = false))
         assertEquals(SpaceKind.PDF, spaceKindOf("application/pdf", trashed = false))
         assertEquals(SpaceKind.OTHER_FILES, spaceKindOf("application/zip", trashed = false))
-    }
-
-    @Test
-    fun homeFiguresSearchTheWholeVaultEvenWithCurrentFolderOnly() {
-        assertTrue(searchesWholeVault(active = true, wholeVault = true, currentFolderOnly = true))
-        assertFalse(searchesWholeVault(active = true, wholeVault = false, currentFolderOnly = true))
-        assertTrue(searchesWholeVault(active = true, wholeVault = false, currentFolderOnly = false))
-        assertFalse(searchesWholeVault(active = false, wholeVault = true, currentFolderOnly = false))
     }
 }

@@ -22,7 +22,7 @@ class ConversionChoicesTest {
         assertEquals(listOf("two", "three"), state.resolved("one").resolved("one").pendingOriginals.map { it.id })
     }
 
-    @Test fun restoredChoicesAreIdempotentAndDismissingResultDoesNotLoseThem() {
+    @Test fun restoredChoicesAreIdempotentAndClearingTheResultKeepsThem() {
         val original = VaultRepository.ConvertedOriginal("one", "one")
         val state = VaultRepository.ConvertStatus(lastResult = "Done").awaiting(original).awaiting(original)
         assertEquals(listOf(original), state.copy(lastResult = null).pendingOriginals)

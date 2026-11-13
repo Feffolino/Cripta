@@ -44,9 +44,14 @@ class SkipReasonsTest {
         }
     }
 
+    /**
+     * The stored codes are the Italian texts, so in Italian each reads back as itself. This only checks
+     * the Italian resources still match the codes: a branch missing from SkipReasons would also give the
+     * code back here, and is caught by the English test above.
+     */
     @Test
     @Config(qualifiers = "it")
-    fun everyLegacyCodeAlsoWorksWithItalianResources() {
+    fun italianResourcesMatchTheStoredCodes() {
         for (code in codes) {
             assertEquals(code, SkipReasons.text(code))
             assertEquals(code, SkipReasons.text("skip:$code"))

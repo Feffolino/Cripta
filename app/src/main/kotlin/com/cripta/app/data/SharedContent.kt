@@ -39,7 +39,7 @@ internal fun classifySharedContent(intent: Intent, resolver: ContentResolver): S
     if (intent.action == Intent.ACTION_SEND && files.size == 1) {
         val mime = runCatching { resolver.getType(files.first()) }.getOrNull() ?: intent.type.orEmpty()
         val caption = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty()
-        if (isAttachmentNotPreview(mime, caption)) return SharedContent.Files(files)
+        if (isAttachmentNotPreview(mime)) return SharedContent.Files(files)
     }
     text.map(::extractUrl).firstOrNull(::looksLikeUrl)?.let { return SharedContent.WebLink(it) }
 
@@ -74,11 +74,12 @@ internal fun classifySharedContent(intent: Intent, resolver: ContentResolver): S
 }
 
 /**
- * Whether the single attachment shared with [caption] is the thing being shared rather than the
+ * Whether the single attachment shared with a caption is the thing being shared rather than the
  * preview a browser sends with a page link: a video (browsers attach only a picture). A picture
- * stays a preview: a browser shares "title + link" with one, which a caption cannot be told from.
+ * stays a preview: a browser shares "title + link" with one, which a caption cannot be told from,
+ * so the caption plays no part.
  */
-internal fun isAttachmentNotPreview(mime: String, @Suppress("UNUSED_PARAMETER") caption: String): Boolean =
+internal fun isAttachmentNotPreview(mime: String): Boolean =
     mime.startsWith("video/")
 
 private fun htmlShareUrl(html: String): String? = webShortcutUrl(html, "text/html", "html")

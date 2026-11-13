@@ -51,4 +51,25 @@ class VaultFiltersLogicTest {
         val labels = fastScrollLabels("Folders", null, listOf("Today" to listOf("T"), "Yesterday" to listOf("Y")))
         assertEquals(listOf("Folders", "Today", "T · 1/2", "Yesterday", "Y · 2/2"), labels)
     }
+
+    private fun video(id: String, pos: Long?) = FileWithTags(
+        FileEntity(id = id, originalName = id, mimeType = "video/mp4", sizeBytes = 1, createdAt = 0, importedAt = 0,
+            wrappedKeyset = ByteArray(0), playbackPosMs = pos),
+        emptyList(),
+    )
+
+    @Test fun inProgressFilterKeepsOnlyStartedVideos() {
+        val f = Filters(inProgress = true)
+        assertTrue(f.active)
+        assertTrue(f.matches(video("a", 5_000)))
+        assertFalse(f.matches(video("b", null)))
+    }
+
+    @Test
+    fun homeFiguresSearchTheWholeVaultEvenWithCurrentFolderOnly() {
+        assertTrue(searchesWholeVault(active = true, wholeVault = true, currentFolderOnly = true))
+        assertFalse(searchesWholeVault(active = true, wholeVault = false, currentFolderOnly = true))
+        assertTrue(searchesWholeVault(active = true, wholeVault = false, currentFolderOnly = false))
+        assertFalse(searchesWholeVault(active = false, wholeVault = true, currentFolderOnly = false))
+    }
 }
