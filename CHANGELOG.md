@@ -10,6 +10,7 @@ Entries marked **stable** went out as a stable release.
 - A note being written is saved in the vault when Cripta goes to the background, and the editor stays open: if Android closes the app there, the text typed is no longer lost. A new note saved this way is written once, "Fatto" then updates it
 - After Android closes Cripta, a viewer opened on more than 300 files comes back on the file it showed: before, it could open another one and forget which
 - The side-by-side preview of duplicates shows very large photos (tens of megapixels) smaller instead of closing the app or loading forever, and says when a photo cannot be shown
+- "Perché" on the faces of a media names a person with a "%" in the name ("Mario 100%"): before, it failed with an error
 
 ## 2026-11-12
 

@@ -1663,7 +1663,8 @@ class FaceRepository @Inject constructor(
             lines += "• " + when {
                 who == null -> str(R.string.face_unassigned)
                 c.state == "manual" -> str(R.string.face_confirmed, nameOf(who))
-                else -> str(R.string.face_similarity, nameOf(who)).format(com.cripta.app.Strings.locale, c.similarity)
+                // Formatted twice (name, then number): a "%" in the name must stay a "%".
+                else -> str(R.string.face_similarity, nameOf(who).replace("%", "%%")).format(com.cripta.app.Strings.locale, c.similarity)
             }
         }
         lines.joinToString("\n")

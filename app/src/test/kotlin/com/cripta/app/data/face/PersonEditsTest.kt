@@ -204,6 +204,22 @@ class PersonEditsTest {
         assertEquals(p, dao.tracks(listOf(a)).single().personId)
     }
 
+    // ---- "Perché" on the faces of a media ----
+
+    @Test
+    fun aPersonWithAPercentSignInTheNameIsNamedInTheExplanation() = runBlocking {
+        com.cripta.app.Strings.init(RuntimeEnvironment.getApplication())
+        file("x")
+        dao.putScan(FaceScanEntity("x", "ok", 10, 0, 2, "", 1, 1))
+        for (name in listOf("Mario 100%", "50%d %s", "Anna")) {
+            val p = faces.newPerson(name)
+            dao.place(track("x"), p, "suggested", 0.8f)
+        }
+        val answer = faces.describe("x")
+        for (name in listOf("Mario 100%", "50%d %s", "Anna")) assertTrue("$name missing from: $answer", answer.contains(name))
+        assertTrue(answer, answer.contains("0.80"))
+    }
+
     private val box = floatArrayOf(0.2f, 0.2f, 0.2f, 0.2f)
 
     private suspend fun video() {
