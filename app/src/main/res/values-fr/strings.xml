@@ -1060,6 +1060,7 @@
     <string name="copy_will_trash">\"%1$s\" sera placée dans la corbeille pendant %2$s jours.</string>
     <string name="copy_will_delete">\"%1$s\" sera supprimée de manière sécurisée et définitive.</string>
     <string name="its_tags_moved_to">" Ses étiquettes %1$s seront transférées sur \"%2$s\"."</string>
+    <string name="copies_removed_in">" Les copies retirées sont dans : %1$s."</string>
     <string name="move_to_trash">Déplacer dans la corbeille</string>
     <string name="copies_total_reclaim">%1$s copies · %2$s · %3$s peuvent être libérés</string>
     <string name="recommended_x">Recommandée : \"%1$s\"</string>

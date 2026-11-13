@@ -984,6 +984,7 @@
     <string name="copy_will_trash">\"%1$s\" をごみ箱に %2$s 日間保存します。</string>
     <string name="copy_will_delete">\"%1$s\" を安全に完全削除します。</string>
     <string name="its_tags_moved_to">" タグ %1$s を \"%2$s\" に移動します。"</string>
+    <string name="copies_removed_in">" 削除するコピーの場所：%1$s。"</string>
     <string name="move_to_trash">ごみ箱に移動</string>
     <string name="copies_total_reclaim">コピー %1$s 件 · %2$s · %3$s 解放可能</string>
     <string name="recommended_x">おすすめ：\"%1$s\"</string>

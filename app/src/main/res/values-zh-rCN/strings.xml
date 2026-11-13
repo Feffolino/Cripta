@@ -984,6 +984,7 @@
     <string name="copy_will_trash">\"%1$s\" 将移至回收站并保留 %2$s 天。</string>
     <string name="copy_will_delete">将安全永久删除 \"%1$s\"。</string>
     <string name="its_tags_moved_to">" 其标签 %1$s 将转移到 \"%2$s\"。"</string>
+    <string name="copies_removed_in">" 要删除的副本位于：%1$s。"</string>
     <string name="move_to_trash">移至回收站</string>
     <string name="copies_total_reclaim">%1$s 个副本 · %2$s · 可释放 %3$s</string>
     <string name="recommended_x">推荐：\"%1$s\"</string>

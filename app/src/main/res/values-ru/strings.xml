@@ -1098,6 +1098,7 @@
     <string name="copy_will_trash">\"%1$s\" попадёт в корзину на %2$s дн.</string>
     <string name="copy_will_delete">\"%1$s\" будет безопасно и безвозвратно удалена.</string>
     <string name="its_tags_moved_to">" Её метки %1$s перейдут к \"%2$s\"."</string>
+    <string name="copies_removed_in">" Удаляемые копии находятся в: %1$s."</string>
     <string name="move_to_trash">Переместить в корзину</string>
     <string name="copies_total_reclaim">Копий: %1$s · %2$s · можно освободить %3$s</string>
     <string name="recommended_x">Рекомендуется: \"%1$s\"</string>

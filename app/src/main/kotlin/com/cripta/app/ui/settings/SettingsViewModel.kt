@@ -768,6 +768,8 @@ class SettingsViewModel @Inject constructor(
         val tags: List<String>,
         /** Display width x height, when readable. */
         val resolution: Pair<Int, Int>?,
+        /** Where the copy is ("Foto / 2024", or the vault root): copies kept on purpose in two folders. */
+        val folder: String = "",
     ) {
         val pixels: Long get() = resolution?.let { it.first.toLong() * it.second } ?: 0L
     }
@@ -839,13 +841,27 @@ class SettingsViewModel @Inject constructor(
         return r
     }
 
+    /** The folder path of each of [files]' folders, as [DupCandidate.folder] shows it. */
+    private suspend fun folderNames(files: List<com.cripta.app.data.db.FileEntity>): Map<Long?, String> =
+        files.map { it.folderId }.distinct().associateWith { id ->
+            val path = if (id == null) emptyList() else try {
+                repo.folderPath(id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return@associateWith ""
+            }
+            if (path.isEmpty()) str(R.string.vault_root) else path.joinToString(" / ") { it.name }
+        }
+
     private suspend fun buildGroups(sets: List<List<com.cripta.app.data.db.FileEntity>>, exact: Boolean): List<DupGroup> {
         val ids = sets.flatten().map { it.id }
         val tags = repo.tagNamesOf(ids)
+        val folders = folderNames(sets.flatten())
         return sets.mapNotNull { files ->
             if (files.size < 2) return@mapNotNull null
             // Identical bytes have identical resolution: skip the probe for exact groups.
-            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), if (exact) null else thumbs.mediaResolution(f)) }
+            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), if (exact) null else thumbs.mediaResolution(f), folders[f.folderId].orEmpty()) }
             val ranked = rank(cands)
             val best = ranked.first()
             DupGroup(ranked, best.file.id, reasonsFor(best, ranked.drop(1), exact), exact)
@@ -1172,9 +1188,10 @@ class SettingsViewModel @Inject constructor(
             .map { files -> files.mapNotNull { DupIdentity.stillScanned(it, repo.fileById(it.id)) } }
         val old = _dupGroups.value.flatMap { it.candidates }.associateBy { it.file.id }
         val tags = repo.tagNamesOf(remaining.flatten().map { it.id })
+        val folders = folderNames(remaining.flatten())
         _dupGroups.value = remaining.filter { it.size > 1 }.map { files ->
             val exact = _dupGroups.value.firstOrNull { g -> g.candidates.any { it.file.id == files.first().id } }?.exact ?: false
-            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), old[f.id]?.resolution) }
+            val cands = files.map { f -> DupCandidate(f, tags[f.id].orEmpty(), old[f.id]?.resolution, folders[f.folderId].orEmpty()) }
             val ranked = rank(cands)
             DupGroup(ranked, ranked.first().file.id, reasonsFor(ranked.first(), ranked.drop(1), exact), exact)
         }

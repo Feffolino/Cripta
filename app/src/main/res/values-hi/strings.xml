@@ -1022,6 +1022,7 @@
     <string name="copy_will_trash">\"%1$s\" %2$s दिन कूड़ेदान में रहेगी।</string>
     <string name="copy_will_delete">\"%1$s\" सुरक्षित और स्थायी रूप से हटाई जाएगी।</string>
     <string name="its_tags_moved_to">" इसके टैग %1$s \"%2$s\" में जाएँगे।"</string>
+    <string name="copies_removed_in">" हटाई जाने वाली कॉपियाँ यहाँ हैं: %1$s।"</string>
     <string name="move_to_trash">कूड़ेदान में भेजें</string>
     <string name="copies_total_reclaim">%1$s कॉपियाँ · %2$s · %3$s खाली हो सकते हैं</string>
     <string name="recommended_x">सुझाव: \"%1$s\"</string>

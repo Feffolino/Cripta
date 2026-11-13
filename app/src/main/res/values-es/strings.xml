@@ -1060,6 +1060,7 @@
     <string name="copy_will_trash">\"%1$s\" irá a la papelera durante %2$s días.</string>
     <string name="copy_will_delete">\"%1$s\" se eliminará de forma segura y permanente.</string>
     <string name="its_tags_moved_to">" Sus etiquetas %1$s pasarán a \"%2$s\"."</string>
+    <string name="copies_removed_in">" Las copias que se quitan están en: %1$s."</string>
     <string name="move_to_trash">Mover a la papelera</string>
     <string name="copies_total_reclaim">%1$s copias · %2$s · se pueden liberar %3$s</string>
     <string name="recommended_x">Recomendada: \"%1$s\"</string>

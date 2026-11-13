@@ -984,6 +984,7 @@
     <string name="copy_will_trash">\"%1$s\" 사본을 휴지통에 %2$s일간 보관합니다.</string>
     <string name="copy_will_delete">\"%1$s\" 사본을 안전하게 영구 삭제합니다.</string>
     <string name="its_tags_moved_to">" \"%2$s\" 사본으로 태그 이동: %1$s."</string>
+    <string name="copies_removed_in">" 삭제할 사본의 위치: %1$s."</string>
     <string name="move_to_trash">휴지통으로 이동</string>
     <string name="copies_total_reclaim">사본 %1$s개 · %2$s · %3$s 확보 가능</string>
     <string name="recommended_x">추천: \"%1$s\"</string>

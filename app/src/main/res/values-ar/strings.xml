@@ -1174,6 +1174,7 @@
     <string name="copy_will_trash">ستنتقل \"%1$s\" إلى المهملات لمدة %2$s يوم.</string>
     <string name="copy_will_delete">ستُحذف \"%1$s\" بأمان ونهائياً.</string>
     <string name="its_tags_moved_to">" ستنتقل وسومها %1$s إلى \"%2$s\"."</string>
+    <string name="copies_removed_in">" النسخ المحذوفة موجودة في: %1$s."</string>
     <string name="move_to_trash">نقل إلى المهملات</string>
     <string name="copies_total_reclaim">نسخ: %1$s · %2$s · يمكن تحرير %3$s</string>
     <string name="recommended_x">الموصى بها: \"%1$s\"</string>

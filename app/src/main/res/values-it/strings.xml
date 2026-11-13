@@ -1060,6 +1060,7 @@
     <string name="copy_will_trash">\"%1$s\" verrà spostato nel cestino per %2$s giorni.</string>
     <string name="copy_will_delete">\"%1$s\" verrà eliminato in modo sicuro e irreversibile.</string>
     <string name="its_tags_moved_to">" Le sue etichette %1$s verranno spostate su \"%2$s\"."</string>
+    <string name="copies_removed_in">" Le copie tolte sono in: %1$s."</string>
     <string name="move_to_trash">Sposta nel cestino</string>
     <string name="copies_total_reclaim">%1$s copie · %2$s · recuperabili %3$s</string>
     <string name="recommended_x">Consigliato: \"%1$s\"</string>

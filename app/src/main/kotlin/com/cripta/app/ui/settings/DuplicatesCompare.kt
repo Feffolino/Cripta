@@ -389,6 +389,10 @@ private fun SimilarPage(
                 append(listOfNotNull(focus.resolution?.let { "${it.first}×${it.second}" }, formatBytes(f.sizeBytes),
                     java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, com.cripta.app.Strings.locale).format(java.util.Date(f.importedAt))).joinToString(" · "))
             }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (focus.folder.isNotEmpty()) {
+                Text(focus.folder, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
     val details: @Composable (Modifier) -> Unit = { m ->
@@ -689,6 +693,16 @@ private fun decodeFitted(bytes: ByteArray, side: Int): android.graphics.Bitmap? 
     return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
 }
 
+/**
+ * " The copies removed are in …" when some of [removed] sit in a folder none of [kept] is in: the
+ * kept copy stays in its own folder, and that one loses the file.
+ */
+private fun otherFolders(removed: List<SettingsViewModel.DupCandidate>, kept: List<SettingsViewModel.DupCandidate>): String {
+    val keptIn = kept.map { it.folder }.toSet()
+    val from = removed.map { it.folder }.filter { it.isNotEmpty() }.distinct()
+    return if (from.any { it !in keptIn }) str(R.string.copies_removed_in, from.joinToString(", ")) else ""
+}
+
 @Composable
 private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val fate = if (trashDays != null) str(R.string.trash_for_days, trashDays)
@@ -703,6 +717,7 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
                 append(if (moving.isEmpty()) str(R.string.no_tags_to_move)
                     else str(R.string.tags_moved_to_kept, moving.joinToString(", ") { "#$it" }))
                 append(fate)
+                append(otherFolders(others, listOf(action.keep)))
             }
             t to b
         }
@@ -716,6 +731,7 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
                 append(if (keep.size == 1) str(R.string.stays_x, heir?.file?.originalName) else str(R.string.n_copies_stay, keep.size))
                 if (moving.isNotEmpty() && heir != null) append(str(R.string.tags_pass_to, moving.joinToString(", ") { "#$it" }, heir.file.originalName))
                 append(fate)
+                append(otherFolders(others, keep))
             }
         }
         is DupAction.DeleteOne -> {
@@ -728,6 +744,7 @@ private fun ConfirmDialog(action: DupAction, trashDays: Int?, onConfirm: () -> U
                 if (moving.isNotEmpty() && heir != null) {
                     append(str(R.string.its_tags_moved_to, moving.joinToString(", ") { "#$it" }, heir.file.originalName))
                 }
+                append(otherFolders(listOf(action.target), g.candidates.filter { it.file.id != action.target.file.id }))
             }
         }
     }
@@ -864,6 +881,11 @@ private fun CandidateCard(
                 if (f.isFavorite) com.cripta.app.ui.components.CoverStar(Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
             Text(f.originalName, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // The folder: "Tieni solo questa" deletes the others from theirs.
+            if (c.folder.isNotEmpty()) {
+                Text(c.folder, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             // Resolution is highlighted when it is lower than the suggested copy's.
             c.resolution?.let { (w, h) ->
                 val lower = c.pixels in 1 until bestPixels

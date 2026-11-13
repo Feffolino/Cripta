@@ -1022,6 +1022,7 @@
     <string name="copy_will_trash">\"%1$s\" will be moved to the trash for %2$s days.</string>
     <string name="copy_will_delete">\"%1$s\" will be deleted securely and permanently.</string>
     <string name="its_tags_moved_to">" Its tags %1$s will be moved to \"%2$s\"."</string>
+    <string name="copies_removed_in">" The copies removed are in: %1$s."</string>
     <string name="move_to_trash">Move to the trash</string>
     <string name="copies_total_reclaim">%1$s copies · %2$s · %3$s can be freed</string>
     <string name="recommended_x">Recommended: \"%1$s\"</string>
