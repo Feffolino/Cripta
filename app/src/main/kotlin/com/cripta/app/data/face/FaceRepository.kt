@@ -759,11 +759,23 @@ class FaceRepository @Inject constructor(
 
 
     suspend fun crop(trackId: Long): Bitmap? {
-        val d = db
+        // Screens ask for faces on their own (the faces on a cover, rows of people): the vault can
+        // lock, or its database close, first. Then there is no face to show, not a crash
+        // ("Vault locked" from the grid's covers on 0.1.0-b414).
+        val d = session.dbOrNull() ?: return null
         synchronized(crops) { if (cropsOf !== d) { crops.evictAll(); cropsOf = d } }
         crops.get(trackId)?.let { return it }
         return withContext(Dispatchers.IO) {
-            dao.crop(trackId)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { crops.put(trackId, it) }
+            val bytes = try {
+                d.faceDao().crop(trackId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: IllegalStateException) {
+                null
+            } catch (e: android.database.SQLException) {
+                null
+            }
+            bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { crops.put(trackId, it) }
         }
     }
 
