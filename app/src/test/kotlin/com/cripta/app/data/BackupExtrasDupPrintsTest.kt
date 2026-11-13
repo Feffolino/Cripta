@@ -71,6 +71,23 @@ class BackupExtrasDupPrintsTest {
     }
 
     @Test
+    fun aFaceDeletedEverywhereIsNotAddedAgainByASecondRestore() = runBlocking {
+        val from = db()
+        val emb = byteArrayOf(9, 8, 7, 6)
+        from.faceDao().addIgnored(com.cripta.app.data.db.IgnoredFaceEntity(fileId = null, embeddings = emb, createdAt = 1L))
+        val bytes = ByteArrayOutputStream()
+        DataOutputStream(bytes).use { BackupExtras.write(from, emptyMap(), it) }
+        val to = db()
+        repeat(2) {
+            DataInputStream(ByteArrayInputStream(bytes.toByteArray())).use { BackupExtras.read(to, arrayOf(), it) }
+        }
+        val ignored = to.faceDao().allIgnored()
+        assertEquals(1, ignored.size)
+        assertArrayEquals(emb, ignored.single().embeddings)
+        from.close(); to.close()
+    }
+
+    @Test
     fun savedFiltersNameThePeopleAsWrittenNotAsInTheManifest() = runBlocking {
         val from = db()
         val kept = from.faceDao().addPerson(com.cripta.app.data.db.PersonEntity(name = "B", createdAt = 1L))

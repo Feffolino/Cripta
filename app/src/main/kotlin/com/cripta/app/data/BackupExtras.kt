@@ -301,10 +301,16 @@ internal object BackupExtras {
         contents?.personIds?.putAll(personIds)
         contents?.people = created.size
         o.optJSONArray("ignored")?.let { a ->
+            // Faces deleted everywhere already here: the same archive restored twice added each again.
+            val everywhere = faces.allIgnored().filter { it.fileId == null }.mapTo(ArrayList()) { it.embeddings }
             for (i in 0 until a.length()) {
                 val g = a.getJSONObject(i)
                 val f = if (g.isNull("f")) null else file(g.get("f")) ?: continue
                 val emb = runCatching { java.util.Base64.getDecoder().decode(g.optString("emb")) }.getOrNull() ?: continue
+                if (f == null) {
+                    if (everywhere.any { it.contentEquals(emb) }) continue
+                    everywhere += emb
+                }
                 faces.addIgnored(IgnoredFaceEntity(fileId = f, embeddings = emb, createdAt = g.optLong("at")))
             }
         }
@@ -383,6 +389,9 @@ internal object BackupExtras {
                     hashes = hashes, createdAt = r.optLong("at")))
             }
         }
+        // Automatic segments put back on the archive's files whose sound is rejected (by the vault,
+        // after the backup was made, or by the archive): gone again, as when the sound was rejected.
+        dropRejectedSegments(intro, (newIds.asList() + known.asList()).filterNotNull().distinct())
         // Checked like any stored fingerprint when used (size and version), so a stale one is made again.
         o.optJSONArray("dupPrints")?.let { a ->
             val dup = db.dupPrintDao()
@@ -403,5 +412,25 @@ internal object BackupExtras {
             if (pairs.isNotEmpty()) db.dupPrintDao().putApart(pairs)
         }
         return true
+    }
+
+    /**
+     * The automatic segments of [files] whose stretch is a rejected sample's sound, deleted (see
+     * IntroRepository.rejectEverywhere). Never the user's own ("manual", "none").
+     */
+    private suspend fun dropRejectedSegments(intro: com.cripta.app.data.db.IntroDao, files: List<String>) {
+        val rejected = HashMap<String, List<IntArray>>()
+        for (fid in files) for (seg in intro.segmentsOf(fid)) {
+            if (seg.source != "auto") continue
+            val kind = com.cripta.app.media.intro.SegmentKind.entries.firstOrNull { it.id == seg.kind } ?: continue
+            val samples = rejected.getOrPut(kind.id) {
+                intro.rejectedOfKind(kind.id).map { com.cripta.app.media.intro.PrintCodec.decode(it.hashes) }
+            }
+            if (samples.isEmpty()) continue
+            val p = intro.printsOf(fid).firstOrNull { it.part == kind.part && it.status == "ok" } ?: continue
+            val stretch = com.cripta.app.media.intro.Print(fid, p.startMs, com.cripta.app.media.intro.PrintCodec.decode(p.hashes))
+                .slice(seg.startMs, seg.endMs)
+            if (stretch.isNotEmpty() && com.cripta.app.media.intro.IntroDetector.isRejected(stretch, samples)) intro.deleteSegment(fid, kind.id)
+        }
     }
 }
