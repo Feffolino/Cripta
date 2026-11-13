@@ -76,6 +76,8 @@ class HomeViewModel @Inject constructor(
             runCatching { repo.reconcileInterruptedRestore() }
             // Blobs of an import, download, conversion or new note the process was killed in.
             runCatching { repo.reconcileInterruptedWrites() }
+            // Blobs no row lists (a deletion killed before the blob went).
+            runCatching { repo.sweepOrphanBlobs() }
             // Folders of a deletion without the trash the process was killed in: open again.
             runCatching { repo.repairInterruptedFolderDeletes() }
             // Resume downloads/conversions that were waiting when Android killed the app.

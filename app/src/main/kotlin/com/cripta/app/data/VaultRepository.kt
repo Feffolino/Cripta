@@ -690,12 +690,13 @@ class VaultRepository @Inject constructor(
         // Count the actual plaintext bytes streamed in, rather than trusting OpenableColumns.SIZE
         // (some providers report it wrong). The exact length is what the seekable player needs.
         val md = java.security.MessageDigest.getInstance("SHA-256")
-        val source = context.contentResolver.openInputStream(uri)
-            ?: throw java.io.IOException(str(R.string.err_open_import))
         // Failing halfway (a provider error, the vault locked before the insert) left the partial
-        // ciphertext behind, taking space for good: removed on every failure.
+        // ciphertext behind, taking space for good: removed on every failure. The source is opened
+        // once the write is noted, inside the try: a note that could not be made left it open.
         blobs.beginWrite(uuid)
         try {
+            val source = context.contentResolver.openInputStream(uri)
+                ?: throw java.io.IOException(str(R.string.err_open_import))
             val written = java.security.DigestInputStream(source, md).use { input ->
                 blobs.durableOutput(blob).use { out ->
                     FileCrypto.encryptingStream(wrappedKeyset, dek, uuid, out).use { enc ->
@@ -771,6 +772,28 @@ class VaultRepository @Inject constructor(
         for (id in ids) {
             if (id in valid && id !in listed) runCatching { blobs.shred(id) }
             if (id !in valid || id in listed || !blobs.blob(id).exists()) blobs.forgetWrite(id)
+        }
+    }
+
+    /**
+     * Blobs no row lists, left by a deletion killed between its commit and the blob's removal (or a
+     * removal that failed): deleted, as nothing else could free that space. In this order, so that
+     * nothing being written goes: the folder is listed first; then come the writes noted (a write
+     * that began before the listing still has its note, or its row is committed by now, as the note
+     * goes only after the commit) and what a restore wrote down; the rows are read last. A database
+     * that cannot be read deletes nothing. Skipped while a restore runs.
+     */
+    suspend fun sweepOrphanBlobs() = withContext(Dispatchers.IO) {
+        if (!restoreLock.tryLock()) return@withContext
+        try {
+            val names = blobs.blobNames()?.filter { RESTORED_ID.matches(it) } ?: return@withContext
+            if (names.isEmpty()) return@withContext
+            val running = blobs.writesInProgress() + blobs.restoreJournal()
+            val unsure = names.filterNot { it in running }
+            val listed = unsure.chunked(SQL_CHUNK).flatMap { db.fileDao().existingIds(it) }.toHashSet()
+            unsure.filterNot { it in listed }.forEach { runCatching { blobs.shred(it) } }
+        } finally {
+            restoreLock.unlock()
         }
     }
 

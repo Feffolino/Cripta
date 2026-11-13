@@ -66,10 +66,16 @@ class BlobStore @Inject constructor(
 
     /** A folder deletion is about to close [ids] with the time [at]. */
     fun journalFolderDelete(ids: List<Long>, at: Long) {
-        FileOutputStream(folderDeleteJournal).use { out ->
+        // Written beside it, then renamed over it: rewritten in place (a subfolder found during the
+        // deletion), an interruption between the truncation and the sync left it empty, and the
+        // folders already closed were never reopened.
+        val tmp = File(folderDeleteJournal.parentFile, "${folderDeleteJournal.name}.tmp")
+        FileOutputStream(tmp).use { out ->
             out.write(buildString { append(at).append('\n'); ids.forEach { append(it).append('\n') } }.toByteArray())
             out.fd.sync()
         }
+        java.nio.file.Files.move(tmp.toPath(), folderDeleteJournal.toPath(),
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
     }
 
     /** The time and folders of a deletion that did not end, or null (none, or unreadable). */
@@ -96,8 +102,14 @@ class BlobStore @Inject constructor(
     /** [uuid]'s blob is about to be written: noted first, forced to storage. */
     fun beginWrite(uuid: String) {
         writing += uuid
-        writesDir.mkdirs()
-        FileOutputStream(File(writesDir, uuid)).use { it.fd.sync() }
+        try {
+            writesDir.mkdirs()
+            FileOutputStream(File(writesDir, uuid)).use { it.fd.sync() }
+        } catch (e: Throwable) {
+            // Not noted, so not written: nothing of it is running.
+            writing -= uuid
+            throw e
+        }
     }
 
     /** [uuid]'s row is committed, or its blob removed: nothing left to check ([keepNote]: a blob failed to go, left for the next start). */
@@ -105,6 +117,13 @@ class BlobStore @Inject constructor(
         if (!keepNote) runCatching { File(writesDir, uuid).delete() }
         writing -= uuid
     }
+
+    /** Every write not ended: this process's own and those noted by one killed earlier. */
+    internal fun writesInProgress(): Set<String> =
+        writing.toSet() + runCatching { writesDir.list()?.toList().orEmpty() }.getOrDefault(emptyList())
+
+    /** The names of everything in the vault folder, or null when it cannot be listed. */
+    fun blobNames(): List<String>? = runCatching { dir.list()?.toList() }.getOrNull()
 
     /** Writes noted and never ended, other than this process's own. */
     fun unfinishedWrites(): List<String> =
