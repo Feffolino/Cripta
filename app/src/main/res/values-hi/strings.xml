@@ -802,6 +802,7 @@
     <string name="scan_failed">स्कैन विफल। फिर कोशिश करें; समस्या बनी रहे तो ऐप रीस्टार्ट करें।</string>
     <string name="dup_keep_gone">रखने वाली कॉपी अब वॉल्ट में नहीं: कोई कॉपी नहीं हटाई गई</string>
     <string name="dup_changed">खोज के बाद एक कॉपी बदल गई: कोई कॉपी नहीं हटाई गई। फिर से खोजें</string>
+    <string name="dup_keep_unreadable">रखने वाली कॉपी पढ़ी नहीं जा सकती: कोई कॉपी नहीं हटाई गई</string>
     <string name="dup_kept_n">"%1$s कॉपियाँ रखीं, "</string>
     <string name="dup_kept_name">"\"%1$s\" रखी, "</string>
     <plurals name="dup_deleted">
@@ -811,6 +812,7 @@
     <string name="in_trash_paren">" (कूड़ेदान में)"</string>
     <string name="dup_tags_moved_n">" · %1$s टैग ले जाए गए"</string>
     <string name="dup_marked_not_similar">अलग चिह्नित: फिर साथ नहीं सुझाए जाएँगे</string>
+    <string name="dup_apart_undone">चिह्न हटाया: फिर साथ सुझाए जा सकते हैं</string>
     <plurals name="dup_restored">
         <item quantity="one">%1$s कॉपी बहाल हुई</item>
         <item quantity="other">%1$s कॉपियाँ बहाल हुईं</item>

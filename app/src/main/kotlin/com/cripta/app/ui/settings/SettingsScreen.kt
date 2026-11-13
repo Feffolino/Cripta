@@ -122,6 +122,7 @@ fun SettingsScreen(
     val dupFreed by vm.dupFreed.collectAsStateWithLifecycle()
     val dupApart by vm.dupApart.collectAsStateWithLifecycle()
     val dupUndo by vm.dupUndo.collectAsStateWithLifecycle()
+    val dupApartUndo by vm.dupApartUndo.collectAsStateWithLifecycle()
     val backupBusy by vm.backupBusy.collectAsStateWithLifecycle()
     val restoring by vm.restoring.collectAsStateWithLifecycle()
     val backupProgress by vm.backupProgress.collectAsStateWithLifecycle()
@@ -1110,7 +1111,7 @@ fun SettingsScreen(
             onClearNotice = { vm.clearDupNotice() },
             onDismiss = { vm.closeDuplicates() },
             trashDays = if (s.trashEnabled) s.trashDays else null,
-            canUndo = dupUndo.isNotEmpty(),
+            canUndo = dupUndo.isNotEmpty() || dupApartUndo != null,
             onUndo = { vm.undoDuplicates() },
         )
         SettingsViewModel.DupMode.SIMILAR -> SimilarPager(
@@ -1131,7 +1132,7 @@ fun SettingsScreen(
             initialPage = vm.lastSimilarPage,
             onPage = { vm.lastSimilarPage = it },
             trashDays = if (s.trashEnabled) s.trashDays else null,
-            canUndo = dupUndo.isNotEmpty(),
+            canUndo = dupUndo.isNotEmpty() || dupApartUndo != null,
             onUndo = { vm.undoDuplicates() },
         )
         SettingsViewModel.DupMode.NONE -> Unit

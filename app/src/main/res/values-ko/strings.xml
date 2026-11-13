@@ -774,6 +774,7 @@
     <string name="scan_failed">스캔하지 못했습니다. 다시 시도하고, 문제가 계속되면 앱을 다시 시작하세요.</string>
     <string name="dup_keep_gone">유지할 사본이 보관함에 없어 아무 사본도 삭제하지 않았습니다</string>
     <string name="dup_changed">검색 후 사본이 변경되어 아무 사본도 삭제하지 않았습니다. 다시 검색하세요</string>
+    <string name="dup_keep_unreadable">유지할 사본을 읽을 수 없어 아무 사본도 삭제하지 않았습니다</string>
     <string name="dup_kept_n">"사본 %1$s개 유지, "</string>
     <string name="dup_kept_name">"\"%1$s\" 유지, "</string>
     <plurals name="dup_deleted">
@@ -782,6 +783,7 @@
     <string name="in_trash_paren">" (휴지통에 있음)"</string>
     <string name="dup_tags_moved_n">" · 태그 %1$s개 이동"</string>
     <string name="dup_marked_not_similar">유사하지 않음으로 표시했습니다. 다시 함께 제안하지 않습니다</string>
+    <string name="dup_apart_undone">표시를 취소했습니다. 다시 함께 제안될 수 있습니다</string>
     <plurals name="dup_restored">
         <item quantity="other">사본 %1$s개 복원함</item>
     </plurals>

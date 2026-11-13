@@ -858,6 +858,7 @@
     <string name="scan_failed">Сканирование не удалось. Попробуйте ещё раз; если ошибка повторяется, перезапустите приложение.</string>
     <string name="dup_keep_gone">Сохраняемой копии больше нет в хранилище: ни одна копия не удалена</string>
     <string name="dup_changed">Копия изменилась после поиска: ни одна копия не удалена. Выполните поиск снова</string>
+    <string name="dup_keep_unreadable">Сохраняемую копию не удаётся прочитать: ни одна копия не удалена</string>
     <string name="dup_kept_n">"Сохранено копий: %1$s, "</string>
     <string name="dup_kept_name">"Сохранено \"%1$s\", "</string>
     <plurals name="dup_deleted">
@@ -869,6 +870,7 @@
     <string name="in_trash_paren">" (в корзине)"</string>
     <string name="dup_tags_moved_n">" · перенесено меток: %1$s"</string>
     <string name="dup_marked_not_similar">Отмечены как непохожие: больше не будут предлагаться вместе</string>
+    <string name="dup_apart_undone">Отметка отменена: снова могут предлагаться вместе</string>
     <plurals name="dup_restored">
         <item quantity="one">Восстановлена %1$s копия</item>
         <item quantity="few">Восстановлено %1$s копии</item>

@@ -26,6 +26,7 @@ Entries marked **stable** went out as a stable release.
 - A maintenance step at the start (old trash, files left by an interrupted operation) stopped by a lock runs again at the next unlock; one waiting download or conversion that cannot be resumed no longer keeps the others waiting
 - An action of the trash or of the cleanup that fails says so, instead of doing nothing
 - The duplicate search stops at once when cancelled, even while it reads a big file whole, and its progress no longer reaches 100% before that reading; "N di M analizzati" no longer counts the videos the next search will analyse again
+- Duplicates: a second tap on "Tieni" no longer sends the same copies to the trash again (their undo kept working); a copy to keep that cannot be read and copies all changed since the search are said as such; results opened later leave out files deleted or changed since; keeping two or more similar copies closes their group; the longer video is suggested; "Non sono simili" has "Annulla" like the other choices
 
 ## 2026-11-12
 

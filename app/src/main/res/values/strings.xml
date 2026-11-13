@@ -802,6 +802,7 @@
     <string name="scan_failed">Scan failed. Try again; if it keeps happening, restart the app.</string>
     <string name="dup_keep_gone">The copy to keep is no longer in the vault: no copy deleted</string>
     <string name="dup_changed">A copy changed since the search: no copy deleted. Search again</string>
+    <string name="dup_keep_unreadable">The copy to keep cannot be read: no copy deleted</string>
     <string name="dup_kept_n">"Kept %1$s copies, "</string>
     <string name="dup_kept_name">"Kept \"%1$s\", "</string>
     <plurals name="dup_deleted">
@@ -811,6 +812,7 @@
     <string name="in_trash_paren">" (in the trash)"</string>
     <string name="dup_tags_moved_n">" · moved %1$s tags"</string>
     <string name="dup_marked_not_similar">Marked as not similar: they won\'t be offered together again</string>
+    <string name="dup_apart_undone">Undone: they can be offered together again</string>
     <plurals name="dup_restored">
         <item quantity="one">Copy restored</item>
         <item quantity="other">%1$s copies restored</item>

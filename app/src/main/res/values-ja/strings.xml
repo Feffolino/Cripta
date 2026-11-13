@@ -774,6 +774,7 @@
     <string name="scan_failed">スキャンに失敗しました。再試行し、解決しない場合はアプリを再起動してください。</string>
     <string name="dup_keep_gone">残すコピーが保管庫にないため、コピーは削除していません</string>
     <string name="dup_changed">検索後にコピーが変更されたため、コピーは削除していません。もう一度検索してください</string>
+    <string name="dup_keep_unreadable">残すコピーを読み込めないため、コピーは削除していません</string>
     <string name="dup_kept_n">"%1$s 件のコピーを残し、 "</string>
     <string name="dup_kept_name">"\"%1$s\" を残し、 "</string>
     <plurals name="dup_deleted">
@@ -782,6 +783,7 @@
     <string name="in_trash_paren">" （ごみ箱内）"</string>
     <string name="dup_tags_moved_n">" · %1$s 個のタグを移動"</string>
     <string name="dup_marked_not_similar">類似しないと設定しました。今後同じグループでは提案しません</string>
+    <string name="dup_apart_undone">設定を取り消しました。今後も同じグループで提案されることがあります</string>
     <plurals name="dup_restored">
         <item quantity="other">%1$s 件のコピーを復元しました</item>
     </plurals>

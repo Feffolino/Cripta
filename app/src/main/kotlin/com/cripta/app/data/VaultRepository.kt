@@ -1728,13 +1728,26 @@ class VaultRepository @Inject constructor(
         val keep = db.fileDao().withTagsById(keepId)
         // The copy to keep is gone or in the trash: removing the others would leave no live copy.
         if (keep == null || keep.file.deletedAt != null) return MergeOutcome.NOTHING
-        val stale = staleCopies(keep.file, removeIds, exact, provedHash)
+        // Copies already gone or in the trash were settled by a resolution queued before this one
+        // (a second tap): trashing them again would move their trash date and lose its undo.
+        val live = removeIds.filter { it != keepId }.distinct().filter { id -> db.fileDao().byId(id).let { it != null && it.deletedAt == null } }
+        if (live.isEmpty()) return MergeOutcome.NOTHING
+        // The kept copy is read whole: a scan of files hashed at import reads only their head and
+        // tail, and a blob damaged in between would have been the only copy left.
+        val keepHash = try {
+            fullHashOf(keep.file)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return MergeOutcome(false, stale = setOf(keepId), unreadable = true)
+        }
+        val stale = staleCopies(keep.file, keepHash, live, exact, provedHash)
         if (stale.isNotEmpty()) return MergeOutcome(false, stale = stale)
         val keepTags = keep.tags.map { it.name }.toSet()
         val moved = LinkedHashSet<String>()
         var favorite = keep.file.isFavorite
         var link = keep.file.sourceUrl?.takeIf { it.isNotBlank() }
-        for (id in removeIds.filter { it != keepId }.distinct()) {
+        for (id in live) {
             val other = db.fileDao().withTagsById(id) ?: continue
             other.tags.map { it.name }.filterNot { it in keepTags }.forEach { moved += it }
             favorite = favorite || other.file.isFavorite
@@ -1743,24 +1756,16 @@ class VaultRepository @Inject constructor(
         if (moved.isNotEmpty()) addTags(keepId, moved.toList())
         if (favorite != keep.file.isFavorite) db.fileDao().setFavorite(keepId, favorite)
         if (link != keep.file.sourceUrl) db.fileDao().setSourceUrl(keepId, link)
-        for (id in removeIds.filter { it != keepId }.distinct()) deleteOrTrash(id)
+        for (id in live) deleteOrTrash(id)
         notifyChanged()
         return MergeOutcome(true, moved.toList(), keep.file.isFavorite, keep.file.sourceUrl)
     }
 
     /**
-     * The copies of a resolution that are no longer what the scan proved (see [mergeDuplicates]).
-     * The kept copy is read whole: a scan of files hashed at import reads only their head and
-     * tail, and a blob damaged in between would have been the only copy left.
+     * The copies of a resolution that are no longer what the scan proved (see [mergeDuplicates]),
+     * given [keepHash], the content the kept copy holds now.
      */
-    private suspend fun staleCopies(keep: FileEntity, removeIds: List<String>, exact: Boolean, provedHash: String?): Set<String> {
-        val keepHash = try {
-            fullHashOf(keep)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            return setOf(keep.id)
-        }
+    private suspend fun staleCopies(keep: FileEntity, keepHash: String, removeIds: List<String>, exact: Boolean, provedHash: String?): Set<String> {
         if (!exact) return emptySet()
         val expected = provedHash ?: keepHash
         val stale = LinkedHashSet<String>()
@@ -1804,8 +1809,9 @@ class VaultRepository @Inject constructor(
 
     /**
      * What [mergeDuplicates] did: [merged] is false when nothing was deleted (the copy to keep is
-     * missing or trashed, or [stale] names copies changed or damaged since the scan). [tagsMoved],
-     * [previousFavorite] and [previousSourceUrl] describe the kept copy.
+     * missing or trashed, no copy to remove is left, or [stale] names copies changed or damaged
+     * since the scan; [unreadable] when it is the kept copy that cannot be read to its end).
+     * [tagsMoved], [previousFavorite] and [previousSourceUrl] describe the kept copy.
      */
     data class MergeOutcome(
         val merged: Boolean,
@@ -1813,6 +1819,7 @@ class VaultRepository @Inject constructor(
         val previousFavorite: Boolean = false,
         val previousSourceUrl: String? = null,
         val stale: Set<String> = emptySet(),
+        val unreadable: Boolean = false,
     ) {
         companion object { val NOTHING = MergeOutcome(false) }
     }

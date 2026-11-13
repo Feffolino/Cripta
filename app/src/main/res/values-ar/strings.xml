@@ -914,6 +914,7 @@
     <string name="scan_failed">فشل الفحص. أعد المحاولة؛ إن استمرت المشكلة، أعد تشغيل التطبيق.</string>
     <string name="dup_keep_gone">النسخة المراد إبقاؤها لم تعد في الخزنة: لم تُحذف أي نسخة</string>
     <string name="dup_changed">تغيّرت نسخة منذ البحث: لم تُحذف أي نسخة. ابحث مجددًا</string>
+    <string name="dup_keep_unreadable">تتعذر قراءة النسخة المراد إبقاؤها: لم تُحذف أي نسخة</string>
     <string name="dup_kept_n">"أُبقيت %1$s نسخة، "</string>
     <string name="dup_kept_name">"أُبقيت \"%1$s\"، "</string>
     <plurals name="dup_deleted">
@@ -927,6 +928,7 @@
     <string name="in_trash_paren">" (في المهملات)"</string>
     <string name="dup_tags_moved_n">" · نُقل %1$s وسم"</string>
     <string name="dup_marked_not_similar">عُلّمت كغير متشابهة: لن تُقترح معاً مجدداً</string>
+    <string name="dup_apart_undone">أُلغي التعليم: يمكن أن تُقترح معاً مجدداً</string>
     <plurals name="dup_restored">
         <item quantity="zero">استُعيدت %1$s نسخة</item>
         <item quantity="one">استُعيدت النسخة</item>

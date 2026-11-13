@@ -830,6 +830,7 @@
     <string name="scan_failed">Error de búsqueda. Reinténtalo; si sigue ocurriendo, reinicia la app.</string>
     <string name="dup_keep_gone">La copia que se iba a conservar ya no está en la caja fuerte: no se eliminó ninguna copia</string>
     <string name="dup_changed">Una copia cambió después de la búsqueda: no se eliminó ninguna copia. Vuelve a buscar</string>
+    <string name="dup_keep_unreadable">La copia que se iba a conservar no se puede leer: no se eliminó ninguna copia</string>
     <string name="dup_kept_n">"Se conservaron %1$s copias, "</string>
     <string name="dup_kept_name">"Se conservó \"%1$s\", "</string>
     <plurals name="dup_deleted">
@@ -840,6 +841,7 @@
     <string name="in_trash_paren">" (en la papelera)"</string>
     <string name="dup_tags_moved_n">" · %1$s etiquetas trasladadas"</string>
     <string name="dup_marked_not_similar">Marcadas como distintas: no se volverán a proponer juntas</string>
+    <string name="dup_apart_undone">Marca deshecha: se pueden volver a proponer juntas</string>
     <plurals name="dup_restored">
         <item quantity="one">Copia restaurada</item>
         <item quantity="many">%1$s copias restauradas</item>

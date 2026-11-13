@@ -830,6 +830,7 @@
     <string name="scan_failed">Falha na busca. Tente novamente; se continuar acontecendo, reinicie o aplicativo.</string>
     <string name="dup_keep_gone">A cópia a manter não está mais no cofre: nenhuma cópia excluída</string>
     <string name="dup_changed">Uma cópia mudou depois da busca: nenhuma cópia excluída. Busque de novo</string>
+    <string name="dup_keep_unreadable">A cópia a manter não pode ser lida: nenhuma cópia excluída</string>
     <string name="dup_kept_n">"%1$s cópias mantidas, "</string>
     <string name="dup_kept_name">"\"%1$s\" mantido, "</string>
     <plurals name="dup_deleted">
@@ -840,6 +841,7 @@
     <string name="in_trash_paren">" (na lixeira)"</string>
     <string name="dup_tags_moved_n">" · %1$s etiquetas transferidas"</string>
     <string name="dup_marked_not_similar">Marcados como não semelhantes: não serão oferecidos juntos novamente</string>
+    <string name="dup_apart_undone">Marcação desfeita: podem ser oferecidos juntos novamente</string>
     <plurals name="dup_restored">
         <item quantity="one">%1$s cópia restaurada</item>
         <item quantity="many">%1$s cópias restauradas</item>

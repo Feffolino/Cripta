@@ -102,6 +102,7 @@ class DupContentIdentityTest {
         val out = repo.mergeDuplicates(a.id, listOf(b.id), exact = true, provedHash = group.first().contentHash)
         assertFalse(out.merged)
         assertEquals(setOf(a.id), out.stale)
+        assertFalse(out.unreadable)
         assertEquals("alpha", text(b.id))
     }
 
@@ -124,6 +125,8 @@ class DupContentIdentityTest {
         val out = repo.mergeDuplicates(a.id, listOf(b.id), exact = true, provedHash = group.first().contentHash)
         assertFalse(out.merged)
         assertEquals(setOf(a.id), out.stale)
+        // Said as such: the kept copy did not change, it cannot be read.
+        assertTrue(out.unreadable)
         assertEquals(big, text(b.id))
     }
 

@@ -830,6 +830,7 @@
     <string name="scan_failed">Scansione non riuscita. Riprova; se il problema continua, riavvia l\'app.</string>
     <string name="dup_keep_gone">La copia da tenere non è più nel vault: nessuna copia eliminata</string>
     <string name="dup_changed">Una copia è cambiata dopo la ricerca: nessuna copia eliminata. Cerca di nuovo</string>
+    <string name="dup_keep_unreadable">La copia da tenere non si può leggere: nessuna copia eliminata</string>
     <string name="dup_kept_n">"Tenute %1$s copie, "</string>
     <string name="dup_kept_name">"Tenuto \"%1$s\", "</string>
     <plurals name="dup_deleted">
@@ -840,6 +841,7 @@
     <string name="in_trash_paren">" (nel cestino)"</string>
     <string name="dup_tags_moved_n">" · spostate %1$s etichette"</string>
     <string name="dup_marked_not_similar">Segnati come non simili: non verranno più proposti insieme</string>
+    <string name="dup_apart_undone">Annullato: potranno essere di nuovo proposti insieme</string>
     <plurals name="dup_restored">
         <item quantity="one">Copia ripristinata</item>
         <item quantity="many">Ripristinate %1$s copie</item>

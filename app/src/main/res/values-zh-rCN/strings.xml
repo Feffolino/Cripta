@@ -774,6 +774,7 @@
     <string name="scan_failed">扫描失败，请重试；若问题持续，请重启应用。</string>
     <string name="dup_keep_gone">要保留的副本已不在保险库中，未删除任何副本</string>
     <string name="dup_changed">搜索后有副本已更改，未删除任何副本。请重新搜索</string>
+    <string name="dup_keep_unreadable">要保留的副本无法读取，未删除任何副本</string>
     <string name="dup_kept_n">"保留了 %1$s 个副本， "</string>
     <string name="dup_kept_name">"保留了 \"%1$s\"， "</string>
     <plurals name="dup_deleted">
@@ -782,6 +783,7 @@
     <string name="in_trash_paren">" （在回收站中）"</string>
     <string name="dup_tags_moved_n">" · 已转移 %1$s 个标签"</string>
     <string name="dup_marked_not_similar">已标记为不相似，不会再放在一起推荐</string>
+    <string name="dup_apart_undone">已取消标记，可能会再放在一起推荐</string>
     <plurals name="dup_restored">
         <item quantity="other">已恢复 %1$s 个副本</item>
     </plurals>

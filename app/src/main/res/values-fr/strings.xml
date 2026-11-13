@@ -830,6 +830,7 @@
     <string name="scan_failed">Échec de la recherche. Réessayez ; si le problème persiste, redémarrez l’application.</string>
     <string name="dup_keep_gone">La copie à conserver n’est plus dans le coffre : aucune copie supprimée</string>
     <string name="dup_changed">Une copie a changé depuis la recherche : aucune copie supprimée. Relancez la recherche</string>
+    <string name="dup_keep_unreadable">La copie à conserver est illisible : aucune copie supprimée</string>
     <string name="dup_kept_n">"%1$s copies conservées, "</string>
     <string name="dup_kept_name">"\"%1$s\" conservé, "</string>
     <plurals name="dup_deleted">
@@ -840,6 +841,7 @@
     <string name="in_trash_paren">" (dans la corbeille)"</string>
     <string name="dup_tags_moved_n">" · %1$s étiquettes transférées"</string>
     <string name="dup_marked_not_similar">Marqués comme non similaires : ils ne seront plus proposés ensemble</string>
+    <string name="dup_apart_undone">Marque annulée : ils peuvent de nouveau être proposés ensemble</string>
     <plurals name="dup_restored">
         <item quantity="one">%1$s copie restaurée</item>
         <item quantity="many">%1$s copies restaurées</item>

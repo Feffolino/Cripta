@@ -802,6 +802,7 @@
     <string name="scan_failed">Suche fehlgeschlagen. Versuche es erneut; starte bei weiteren Problemen die App neu.</string>
     <string name="dup_keep_gone">Die zu behaltende Kopie ist nicht mehr im Tresor: Keine Kopie gelöscht</string>
     <string name="dup_changed">Eine Kopie hat sich seit der Suche geändert: Keine Kopie gelöscht. Erneut suchen</string>
+    <string name="dup_keep_unreadable">Die zu behaltende Kopie kann nicht gelesen werden: Keine Kopie gelöscht</string>
     <string name="dup_kept_n">"%1$s Kopien behalten, "</string>
     <string name="dup_kept_name">"\"%1$s\" behalten, "</string>
     <plurals name="dup_deleted">
@@ -811,6 +812,7 @@
     <string name="in_trash_paren">" (im Papierkorb)"</string>
     <string name="dup_tags_moved_n">" · %1$s Schlagwörter übertragen"</string>
     <string name="dup_marked_not_similar">Als nicht ähnlich markiert: Werden nicht erneut zusammen vorgeschlagen</string>
+    <string name="dup_apart_undone">Markierung aufgehoben: Können wieder zusammen vorgeschlagen werden</string>
     <plurals name="dup_restored">
         <item quantity="one">Kopie wiederhergestellt</item>
         <item quantity="other">%1$s Kopien wiederhergestellt</item>
