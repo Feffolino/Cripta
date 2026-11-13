@@ -292,7 +292,12 @@ private fun CodeEntry(
     }
 }
 
-/** Numeric keypad: dots for the digits typed, ⌫ (hold to clear), ✓ to unlock. */
+/**
+ * Numeric keypad: dots for the digits typed, ⌫ (hold to clear), ✓ to unlock. The digits are a
+ * String while typed (Compose state, like the password field's text and the keyboard's copies):
+ * they cannot be wiped, unlike the CharArray handed to [onSubmit]. Accepted: only a memory dump
+ * could read them, outside the threat model (snoopers with the unlocked phone).
+ */
 @Composable
 private fun PinKeypad(busy: Boolean, compact: Boolean, onSubmit: (CharArray) -> Unit) {
     var digits by remember { mutableStateOf("") }

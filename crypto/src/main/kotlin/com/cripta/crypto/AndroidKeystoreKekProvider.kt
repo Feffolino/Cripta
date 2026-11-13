@@ -1,6 +1,7 @@
 package com.cripta.crypto
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -55,7 +56,9 @@ class AndroidKeystoreKekProvider(
         try {
             builder.setIsStrongBoxBacked(true)
             buildKey(builder)
-        } catch (e: android.security.keystore.StrongBoxUnavailableException) {
+        } catch (e: java.security.ProviderException) {
+            // StrongBoxUnavailableException is the documented signal, but some providers throw a
+            // plain ProviderException when the StrongBox key cannot be made: fall back to the TEE.
             builder.setIsStrongBoxBacked(false)
             buildKey(builder)
         }
@@ -72,9 +75,20 @@ class AndroidKeystoreKekProvider(
         kg.generateKey()
     }
 
+    /**
+     * The KEK. A vault whose alias vanished from the Keystore (or whose entry can no longer be
+     * read) can never be opened again, exactly like an invalidated key: report it as one, so the
+     * app offers its reset instead of a generic Keystore error at every start.
+     */
     private fun secretKey(): SecretKey {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        return (ks.getEntry(alias, null) as KeyStore.SecretKeyEntry).secretKey
+        val entry = try {
+            ks.getEntry(alias, null)
+        } catch (e: java.security.UnrecoverableKeyException) {
+            throw KeyPermanentlyInvalidatedException("KEK entry unreadable").apply { initCause(e) }
+        }
+        return (entry as? KeyStore.SecretKeyEntry)?.secretKey
+            ?: throw KeyPermanentlyInvalidatedException("KEK alias missing from the Keystore")
     }
 
     /** Cipher for wrapping; feed to BiometricPrompt.CryptoObject before [wrapWith]. */

@@ -49,6 +49,8 @@ import kotlinx.coroutines.launch
  * The unlock mode choice (Impostazioni › Sicurezza e privacy). A change is confirmed with the current way in
  * (the system prompt, or the current app PIN in PIN-only mode) and asks for a new PIN whenever the
  * chosen mode uses one; the vault key is then re-wrapped for the new mode in one step.
+ * "Sistema e PIN" asks for the system prompt twice on a change: the Keystore key needs one
+ * authorization per use, and the change uses it twice (unwrap the current key, then wrap it again).
  */
 @Composable
 internal fun UnlockModeOptions(vm: SettingsViewModel) {

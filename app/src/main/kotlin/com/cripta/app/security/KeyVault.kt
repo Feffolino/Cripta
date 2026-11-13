@@ -38,8 +38,8 @@ class KeyVault @Inject constructor(
 
     /**
      * The Keystore alias currently protecting the DEK. New/migrated vaults use [ALIAS_V2] (created
-     * with `setInvalidatedByBiometricEnrollment(false)`); pre-fix installs still carry their key
-     * under the legacy alias and are migrated on first unlock (see [needsKekMigration]).
+     * with `setInvalidatedByBiometricEnrollment(false)`); pre-fix installs keep their key under the
+     * legacy alias: there is no migration (see [completeUnlock], which does not re-wrap the DEK).
      */
     private val activeAlias: String = when {
         prefs.contains(KEY_KEK_ALIAS) -> prefs.getString(KEY_KEK_ALIAS, ALIAS_V2)!!
@@ -262,7 +262,16 @@ class KeyVault @Inject constructor(
             val salt = PinCrypto.newSalt()
             val pinSealed = if (newMode.usesPin) {
                 require(newPin != null && PinCrypto.isValid(newPin, kind)) { "Invalid PIN" }
-                PinCrypto.seal(newPin, salt, dekBytes, PIN_AAD)
+                PinCrypto.seal(newPin, salt, dekBytes, PIN_AAD).also { sealed ->
+                    // Proved before anything is written: a blob that does not open again (a pepper
+                    // the Keystore wrote but cannot read back) would lock the vault for good.
+                    val back = PinCrypto.open(newPin, salt, sealed, PIN_AAD)
+                    try {
+                        check(back != null && back.contentEquals(dekBytes)) { "The new code does not open the vault" }
+                    } finally {
+                        back?.fill(0)
+                    }
+                }
             } else null
             val kekBlob = when (newMode) {
                 UnlockMode.SYSTEM, UnlockMode.SYSTEM_OR_PIN -> kek.wrapWith(requireNotNull(authorizedEncryptCipher), dekBytes)

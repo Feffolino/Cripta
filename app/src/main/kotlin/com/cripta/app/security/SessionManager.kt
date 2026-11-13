@@ -37,7 +37,9 @@ class SessionManager @Inject constructor() {
 
     /**
      * The database the UI may observe: null while locked (even when the keys are still retained
-     * for background work), a fresh instance after every unlock. Repository flows switch on this,
+     * for background work), after every unlock a fresh instance, or the one still retained by
+     * background work when the vault is unlocked again before that work ends. Repository flows
+     * switch on this,
      * so screens kept composed across a lock never query a closed database and re-query the new
      * one after unlocking.
      */

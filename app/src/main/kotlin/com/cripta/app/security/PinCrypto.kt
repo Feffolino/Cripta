@@ -102,7 +102,8 @@ object PinCrypto {
             try {
                 builder.setIsStrongBoxBacked(true)
                 generate()
-            } catch (e: android.security.keystore.StrongBoxUnavailableException) {
+            } catch (e: java.security.ProviderException) {
+                // StrongBoxUnavailableException or a provider's plain ProviderException: use the TEE.
                 builder.setIsStrongBoxBacked(false)
                 generate()
             }
