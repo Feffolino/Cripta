@@ -37,32 +37,47 @@ object UserErrors {
     /** yt-dlp / network failures of the in-app downloader. */
     fun ofDownload(e: Throwable): String {
         if (e.message in downloadMessages) return e.message!!
+        if (generateSequence(e) { it.cause }.take(6).any { it is com.cripta.app.media.IncompleteDownloadException }) {
+            return str(R.string.dl_err_incomplete)
+        }
+        // Without the links in it: a word of a link ("/drm/", "login-…") is not the reason.
         val text = generateSequence(e) { it.cause }.take(6)
-            .joinToString(" ") { it.message ?: "" }.lowercase()
+            .joinToString(" ") { it.message ?: "" }.lowercase().replace(LINK, " ")
+        fun has(vararg words: Regex) = words.any { it.containsMatchIn(text) }
         return when {
             "no space" in text || "enospc" in text -> str(R.string.err_no_space)
-            "ssl" in text || "certificate verify failed" in text -> str(R.string.dl_err_certificate)
+            has(SSL) || "certificate verify failed" in text -> str(R.string.dl_err_certificate)
             "requested format" in text || "no video formats" in text -> str(R.string.dl_err_no_format)
             "no supported javascript runtime" in text || "javascript challenge" in text || "nsig extraction failed" in text ->
                 str(R.string.dl_err_extractor)
             "unsupported url" in text -> str(R.string.dl_err_unsupported)
-            "drm" in text -> str(R.string.dl_err_drm)
-            "private video" in text || "sign in" in text || "login" in text || "members-only" in text ->
+            has(DRM) -> str(R.string.dl_err_drm)
+            "private video" in text || "sign in" in text || has(LOGIN) || "members-only" in text ->
                 str(R.string.dl_err_private)
-            "not available" in text || "unavailable" in text || "removed" in text ->
+            "not available" in text || "unavailable" in text || has(REMOVED) ->
                 str(R.string.dl_err_unavailable)
-            "geo" in text && "restrict" in text -> str(R.string.dl_err_geo)
-            "429" in text || "too many requests" in text -> str(R.string.dl_err_too_many)
-            "403" in text || "forbidden" in text -> str(R.string.dl_err_forbidden)
-            "404" in text || "not found" in text -> str(R.string.dl_err_not_found)
+            has(GEO) && "restrict" in text -> str(R.string.dl_err_geo)
+            has(HTTP_429) || "too many requests" in text -> str(R.string.dl_err_too_many)
+            has(HTTP_403) || "forbidden" in text -> str(R.string.dl_err_forbidden)
+            has(HTTP_404) || "not found" in text -> str(R.string.dl_err_not_found)
             "unable to download webpage" in text || "name or service not known" in text ||
                 "failed to resolve" in text || "network is unreachable" in text ||
-                "timed out" in text || "connection" in text -> str(R.string.dl_err_connection)
-            "non ha prodotto" in text || "nessun file completo" in text || "nessun video completo" in text ->
-                str(R.string.dl_err_incomplete)
+                "timed out" in text || has(CONNECTION) -> str(R.string.dl_err_connection)
             else -> of(e).let { if (it == str(R.string.err_unexpected)) str(R.string.dl_err_failed) else it }
         }
     }
+
+    // Words, not parts of words or numbers: "14043" is no HTTP 404, "geoffrey" no geo block.
+    private val LINK = Regex("""[a-z][a-z0-9+.-]*://\S+""")
+    private val SSL = Regex("""\bssl""")
+    private val DRM = Regex("""\bdrm\b""")
+    private val LOGIN = Regex("""\blog ?in\b""")
+    private val REMOVED = Regex("""\bremoved\b""")
+    private val GEO = Regex("""\bgeo""")
+    private val HTTP_429 = Regex("""\b429\b""")
+    private val HTTP_403 = Regex("""\b403\b""")
+    private val HTTP_404 = Regex("""\b404\b""")
+    private val CONNECTION = Regex("""\bconnection""")
 
     // Error text goes through this mapper both in the service and again in the queue UI.
     // Keep canonical messages intact instead of replacing useful errors with "Download failed".

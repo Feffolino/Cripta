@@ -3,6 +3,7 @@ package com.cripta.app.work
 import android.app.Application
 import com.cripta.app.R
 import com.cripta.app.Strings
+import com.cripta.app.media.IncompleteDownloadException
 import com.cripta.app.str
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -113,9 +114,6 @@ class UserErrorsTest {
             "Network is unreachable" to R.string.dl_err_connection,
             "Timed out" to R.string.dl_err_connection,
             "Connection reset" to R.string.dl_err_connection,
-            "Il download non ha prodotto un file" to R.string.dl_err_incomplete,
-            "Nessun file completo" to R.string.dl_err_incomplete,
-            "Nessun video completo" to R.string.dl_err_incomplete,
             "opaque downloader diagnostic" to R.string.dl_err_failed,
         )
         for ((diagnostic, expected) in cases) {
@@ -141,6 +139,24 @@ class UserErrorsTest {
         assertEquals(str(R.string.err_io), UserErrors.ofDownload(IOException("raw disk diagnostic")))
         assertEquals(str(R.string.err_no_space),
             UserErrors.ofDownload(IllegalStateException("SSL: ENOSPC")))
+    }
+
+    // Regression: the words were looked for anywhere, in the link and inside other words or numbers.
+    @Test
+    fun downloadErrorsAreReadFromWordsNotFromTheLinkOrPartsOfWords() {
+        val cases = listOf(
+            "Unable to download https://cdn.example.com/drm/login/geo/ssl/v.m3u8: HTTP Error 404: Not Found" to
+                R.string.dl_err_not_found,
+            "Got 14043 bytes from https://example.com/removed-videos/a: HTTP Error 403" to R.string.dl_err_forbidden,
+            "[SSL: CERTIFICATE_VERIFY_FAILED] handshake" to R.string.dl_err_certificate,
+            "SSLError while reading" to R.string.dl_err_certificate,
+            "This video is DRM protected" to R.string.dl_err_drm,
+            "Video unavailable in https://example.com/connection-tips" to R.string.dl_err_unavailable,
+        )
+        for ((diagnostic, expected) in cases) {
+            assertEquals(diagnostic, str(expected), UserErrors.ofDownload(IllegalStateException(diagnostic)))
+        }
+        assertEquals(str(R.string.dl_err_incomplete), UserErrors.ofDownload(IncompleteDownloadException()))
     }
 
     // Regression: a word-based heuristic once let raw diagnostics containing "vault" through.

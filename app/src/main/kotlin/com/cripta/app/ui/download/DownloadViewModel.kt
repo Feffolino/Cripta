@@ -171,35 +171,21 @@ fun extractUrl(text: String): String {
 }
 
 /**
- * True for something that looks like a web link (what yt-dlp can fetch). A domain in its Unicode
- * form ("https://例子.中国/…") counts as its ASCII (IDN) form does: java.net.URI gives it no host.
+ * True for something that looks like a web link (what yt-dlp can fetch): http(s), a host, then
+ * anything. Not java.net.URI: it refused links yt-dlp fetches ("|", "{", "^", a stray "%" in the
+ * query, "_" in a host). A domain in its Unicode form ("https://例子.中国/…") counts too.
  */
 fun looksLikeUrl(text: String): Boolean {
     val t = text.trim()
     if (t.isEmpty() || t.any { it.isWhitespace() }) return false
-    fun ok(s: String): Boolean {
-        val uri = runCatching { java.net.URI(s) }.getOrNull() ?: return false
-        return (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) && !uri.host.isNullOrBlank()
-    }
-    if (ok(t)) return true
-    return asciiHost(t)?.let { it != t && ok(it) } == true
+    return WEB_LINK.matches(t)
 }
 
-/** [url] with its host in the ASCII (IDN) form, or null when it has none to convert. */
-internal fun asciiHost(url: String): String? {
-    val m = Regex("^(https?://)([^/?#]*)(.*)$", RegexOption.IGNORE_CASE).find(url) ?: return null
-    val (scheme, authority, rest) = m.destructured
-    val at = authority.lastIndexOf('@')
-    val user = if (at >= 0) authority.substring(0, at + 1) else ""
-    val hostPort = authority.substring(at + 1)
-    if (hostPort.startsWith("[")) return null   // an IPv6 literal: nothing to convert
-    val colon = hostPort.lastIndexOf(':')
-    val host = if (colon >= 0) hostPort.substring(0, colon) else hostPort
-    val port = if (colon >= 0) hostPort.substring(colon) else ""
-    if (host.isEmpty() || host.all { it.code < 128 }) return null
-    val ascii = runCatching { java.net.IDN.toASCII(host, java.net.IDN.ALLOW_UNASSIGNED) }.getOrNull() ?: return null
-    return scheme + user + ascii + port + rest
-}
+/** http(s)://, an optional "user@", a host name or an [IPv6] literal, an optional port, the rest. */
+private val WEB_LINK = Regex(
+    """^https?://(?:[^/?#@]*@)?(?:[^/?#@:\[\]]+|\[[0-9a-f:.]+])(?::\d*)?(?:[/?#].*)?$""",
+    RegexOption.IGNORE_CASE,
+)
 
 /**
  * Plain Italian message for a download/estimate failure. yt-dlp and the network stack report in

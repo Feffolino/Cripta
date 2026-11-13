@@ -35,7 +35,16 @@ class DownloadUrlTest {
         assertTrue(looksLikeUrl("https://例子.中国/video.mp4"))
         assertTrue(looksLikeUrl("https://xn--fsqu00a.xn--fiqs8s/video.mp4"))
         assertTrue(looksLikeUrl("https://user@例子.中国:8080/v"))
-        assertEquals("https://xn--fsqu00a.xn--fiqs8s/video.mp4", asciiHost("https://例子.中国/video.mp4"))
+    }
+
+    // Regression: java.net.URI refuses these, yet yt-dlp fetches such links.
+    @Test
+    fun aLinkWithCharactersJavaUriRefusesIsStillALink() {
+        assertTrue(looksLikeUrl("https://example.com/watch?v=a|b"))
+        assertTrue(looksLikeUrl("https://example.com/p?q={x}&r=^"))
+        assertTrue(looksLikeUrl("https://example.com/a%zz"))
+        assertTrue(looksLikeUrl("https://my_host.example.com/v"))
+        assertTrue(looksLikeUrl("https://[2001:db8::1]:8080/v"))
     }
 
     @Test
@@ -43,5 +52,8 @@ class DownloadUrlTest {
         assertFalse(looksLikeUrl("ftp://example.com/a"))
         assertFalse(looksLikeUrl("https://"))
         assertFalse(looksLikeUrl("hello world"))
+        assertFalse(looksLikeUrl("https:///path"))
+        assertFalse(looksLikeUrl("https://user@/path"))
+        assertFalse(looksLikeUrl("-o https://example.com"))
     }
 }

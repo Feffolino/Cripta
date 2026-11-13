@@ -59,7 +59,11 @@ internal class YtdlpUpdater(
     }
 }
 
+/** At most this long for one request, however slowly the bytes trickle in (each read has its own timeout). */
+private const val FETCH_LIMIT_MS = 90_000L
+
 private fun fetchUpdate(url: String): ByteArray {
+    val deadline = System.nanoTime() + FETCH_LIMIT_MS * 1_000_000
     val connection = URL(url).openConnection() as HttpURLConnection
     connection.connectTimeout = 10_000
     connection.readTimeout = 15_000
@@ -73,6 +77,7 @@ private fun fetchUpdate(url: String): ByteArray {
                 val count = input.read(buffer)
                 if (count < 0) break
                 check(output.size() + count <= 32 * 1024 * 1024) { "Engine update too large" }
+                check(System.nanoTime() < deadline) { "Engine update too slow" }
                 output.write(buffer, 0, count)
             }
             output.toByteArray()

@@ -51,11 +51,9 @@ internal object DownloadRequests {
     fun completedFile(dir: File): File {
         val manifest = File(dir, RESULT_FILE)
         val path = manifest.takeIf { it.isFile }?.readLines()?.lastOrNull { it.isNotBlank() }
-            ?: throw IllegalStateException("Nessun file completo prodotto dal downloader")
+            ?: throw IncompleteDownloadException()
         val file = File(path).canonicalFile
-        check(file.parentFile == dir.canonicalFile && file.isFile && file.length() > 0) {
-            "Nessun file completo prodotto dal downloader"
-        }
+        if (file.parentFile != dir.canonicalFile || !file.isFile || file.length() <= 0) throw IncompleteDownloadException()
         downloadedVideoMime(file) // Reject fragments, subtitles and other non-video outputs.
         return file
     }
@@ -71,5 +69,8 @@ internal fun downloadedVideoMime(file: File): String = when (file.extension.lowe
     "flv" -> "video/x-flv"
     "avi" -> "video/x-msvideo"
     "3gp" -> "video/3gpp"
-    else -> throw IllegalStateException("Nessun video completo prodotto dal downloader")
+    else -> throw IncompleteDownloadException()
 }
+
+/** The downloader ended without a complete video to import. */
+class IncompleteDownloadException : IllegalStateException("No complete video produced by the downloader")

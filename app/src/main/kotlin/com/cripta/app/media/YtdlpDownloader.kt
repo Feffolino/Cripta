@@ -29,19 +29,29 @@ class YtdlpDownloader @Inject constructor(
     private val engineLock = ReentrantReadWriteLock()
     private val updater = YtdlpUpdater(appContext)
 
-    /** Initialize once and check for extractor updates daily, with bounded network timeouts.
-     * Offline/failed updates retain the installed engine and are retried after five minutes.
-     * Blocking; call on IO. */
-    fun ensureInit() {
-        if (initialized && !updater.isDue()) return
+    /**
+     * Initialize once and, when [update] (a download about to start), check for extractor updates
+     * daily, with bounded network timeouts. Offline/failed updates retain the installed engine and
+     * are retried after five minutes. The update needs the engine to itself: while another link
+     * is downloading or being analysed it waits for a later start instead of holding this one (and
+     * the analysis of a pasted link) up until that download ends. Blocking; call on IO.
+     */
+    fun ensureInit(update: Boolean = false) {
+        if (!initialized) {
+            val lock = engineLock.writeLock()
+            lock.lockInterruptibly()
+            try {
+                if (!initialized) {
+                    YoutubeDL.getInstance().init(appContext)
+                    FFmpeg.getInstance().init(appContext)
+                    initialized = true
+                }
+            } finally { lock.unlock() }
+        }
+        if (!update || !updater.isDue()) return
         val lock = engineLock.writeLock()
-        lock.lockInterruptibly()
+        if (!lock.tryLock()) return
         try {
-            if (!initialized) {
-                YoutubeDL.getInstance().init(appContext)
-                FFmpeg.getInstance().init(appContext)
-                initialized = true
-            }
             runCatching { updater.updateIfDue() }
                 .onFailure { android.util.Log.w("YtdlpDownloader", "Engine update failed (${it.javaClass.simpleName}); keeping installed version") }
         } finally { lock.unlock() }
@@ -62,7 +72,7 @@ class YtdlpDownloader @Inject constructor(
         isCancelled: () -> Boolean = { false },
         onProgress: (Int, Long) -> Unit,
     ): File {
-        ensureInit()
+        ensureInit(update = true)
         // Annulla during the first-use setup (payload extraction, self-update): there was no
         // process to kill yet, so the download started anyway.
         if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
@@ -123,8 +133,8 @@ class YtdlpDownloader @Inject constructor(
 
     /**
      * Estimated output size in bytes for a download of [info] capped at [maxHeight] (null = best).
-     * Picks the best video format within the cap and adds a separate audio track when the video is
-     * muxed video-only.
+     * Picks the streams the download itself prefers within the cap (MP4 video with M4A audio first,
+     * then any container) and adds the separate audio track when the video has none.
      *
      * Sites frequently report a concrete size (or bitrate) for only *some* renditions — often just
      * the top one, which is what "Auto" selects — so every other quality used to come back with no
@@ -152,14 +162,26 @@ internal object DownloadEstimate {
         fun ownBytes(f: VideoFormat): Long? =
             declaredSize(f).takeIf { it > 0 } ?: bytesFromKbps(f.tbr).takeIf { it > 0 }
 
-        val videos = formats.filter { it.vcodec != null && it.vcodec != "none" && it.height > 0 }
+        fun hasVideo(f: VideoFormat) = f.vcodec != null && f.vcodec != "none"
+        fun hasAudio(f: VideoFormat) = f.acodec != null && f.acodec != "none"
+        val videos = formats.filter { hasVideo(it) && it.height > 0 }
         if (videos.isEmpty()) return null
         // The download never goes above the cap: a source with only larger renditions cannot be
         // fetched at this quality, so there is no estimate (falling back to the smallest one showed
         // a size for a download that would then fail).
-        val video = if (maxHeight == null) videos.maxByOrNull { it.height }
-        else videos.filter { it.height <= maxHeight }.maxByOrNull { it.height }
-        video ?: return null
+        val fitting = videos.filter { maxHeight == null || it.height <= maxHeight }
+        val audios = formats.filter { !hasVideo(it) && hasAudio(it) }
+        // The streams the download takes, in its order ([DownloadRequests.download]): an MP4 video
+        // with M4A audio, an MP4 with both, then the best video and audio of any container.
+        fun tallest(list: List<VideoFormat>) = list.maxByOrNull { it.height }
+        val m4a = audios.filter { it.ext == "m4a" }.maxByOrNull { it.abr }
+        val mp4 = tallest(fitting.filter { it.ext == "mp4" })
+        val mp4Muxed = tallest(fitting.filter { it.ext == "mp4" && hasAudio(it) })
+        val (video, audio) = when {
+            mp4 != null && m4a != null -> mp4 to m4a
+            mp4Muxed != null -> mp4Muxed to null
+            else -> (tallest(fitting) ?: return null).let { v -> v to (if (hasAudio(v)) null else audios.maxByOrNull { it.abr }) }
+        }
 
         // Video part: the rendition's own size when known, otherwise scale the highest rendition that
         // does have a size down (or up) to this one's pixel area.
@@ -172,12 +194,9 @@ internal object DownloadEstimate {
         }
 
         var total = videoBytes
-        // Video-only stream: add the best audio track that will be muxed in.
-        if (video.acodec == null || video.acodec == "none") {
-            val audios = formats.filter { (it.vcodec == null || it.vcodec == "none") && it.acodec != null && it.acodec != "none" }
-            audios.maxByOrNull { it.abr }?.let { a ->
-                total += (declaredSize(a).takeIf { it > 0 } ?: bytesFromKbps(if (a.abr > 0) a.abr else a.tbr))
-            }
+        // Video-only stream: add the audio track that will be muxed in.
+        audio?.let { a ->
+            total += (declaredSize(a).takeIf { it > 0 } ?: bytesFromKbps(if (a.abr > 0) a.abr else a.tbr))
         }
         return total.takeIf { it > 0 }
     }
