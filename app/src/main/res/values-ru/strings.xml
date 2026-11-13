@@ -792,6 +792,7 @@
     <string name="end">Конец</string>
     <string name="trim_back">%1$s назад на %2$s с</string>
     <string name="trim_forward">%1$s вперёд на %2$s с</string>
+    <string name="trim_step">%1$s с</string>
     <string name="update_no_connection">Нет подключения: сервер обновлений недоступен. Повторите позже.</string>
     <string name="update_none">Нет доступных версий.</string>
     <string name="update_none_stable">Нет доступной стабильной версии (попробуйте включить предварительные версии).</string>
@@ -1225,6 +1226,7 @@
     <string name="discarded_segments">Исключённые фрагменты</string>
     <string name="discarded_segments_hint">Эти звуковые фрагменты никогда не станут заставками или финалами. «Убрать» сразу возвращает фрагменты, которые они блокировали.</string>
     <string name="discarded_line">" · %1$s · %2$s с · нажмите, чтобы открыть"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s с"</string>
     <string name="start_over_q">Начать заново?</string>
     <string name="start_over_text">Останавливает текущий анализ, удаляет все аудиоотпечатки и найденные заставки и финалы, затем анализирует каждое видео заново. При большом числе видео это займёт время.</string>
     <string name="start_over_clear_marks">Также удалить ручные отметки и исключённые фрагменты</string>
@@ -1262,12 +1264,14 @@
     <string name="apply">Применить</string>
     <string name="intro_none_nor_ending">Без заставки и финала</string>
     <string name="unnamed_signature">Безымянный аудиоотпечаток (%1$s)</string>
+    <string name="signature_sound">Звук аудиоотпечатка</string>
     <string name="signature_line">%1$s видео · звук около %2$s</string>
     <string name="signature_deltas">" · начало %1$s, конец %2$s"</string>
     <string name="signature_actions">Действия с аудиоотпечатком</string>
     <string name="merge_with_others">Объединить с другими…</string>
     <string name="not_a_theme">Не заставка и не финал</string>
     <string name="marked_by_you_f">" · отмечено вами"</string>
+    <string name="marked_by_you_m">" · отмечен вами"</string>
     <string name="people_page_intro">Cripta находит лица на фото и видео во всех папках; вы указываете людей в сведениях о каждом файле. Всё происходит на телефоне: лица и люди остаются в зашифрованной базе данных.</string>
     <string name="see_people">Посмотреть людей</string>
     <string name="recognition">Распознавание</string>

@@ -328,10 +328,10 @@ private fun Trim(label: String, ms: Long, onDelta: (Long) -> Unit) {
         Text("$label ${clockTenths(ms)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 92.dp))
         ChipFlowRow(gap = 4.dp) {
             val tenth = String.format(com.cripta.app.Strings.locale, "%.1f", 0.1)
-            for ((d, t) in listOf(-1_000L to "−1 s", -100L to "−$tenth s", 100L to "+$tenth s", 1_000L to "+1 s")) {
+            for ((d, n) in listOf(-1_000L to "1", -100L to tenth, 100L to tenth, 1_000L to "1")) {
                 TextButton(onClick = { onDelta(d) }, contentPadding = PaddingValues(horizontal = 6.dp),
-                    modifier = Modifier.semantics { contentDescription = str(if (d < 0) R.string.trim_back else R.string.trim_forward, label, t.trimStart('−', '+').removeSuffix(" s")) }) {
-                    com.cripta.app.ui.components.ButtonText(t)
+                    modifier = Modifier.semantics { contentDescription = str(if (d < 0) R.string.trim_back else R.string.trim_forward, label, n) }) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.trim_step, (if (d < 0) "−" else "+") + n))
                 }
             }
         }

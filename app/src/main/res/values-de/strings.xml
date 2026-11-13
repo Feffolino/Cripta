@@ -746,6 +746,7 @@
     <string name="end">Ende</string>
     <string name="trim_back">%1$s um %2$s Sekunden zurück</string>
     <string name="trim_forward">%1$s um %2$s Sekunden vor</string>
+    <string name="trim_step">%1$s s</string>
     <string name="update_no_connection">Keine Verbindung: Update-Server nicht erreichbar. Später erneut versuchen.</string>
     <string name="update_none">Keine Version verfügbar.</string>
     <string name="update_none_stable">Keine stabile Version verfügbar (versuche, Vorabversionen zu aktivieren).</string>
@@ -1145,6 +1146,7 @@
     <string name="discarded_segments">Verworfene Segmente</string>
     <string name="discarded_segments_hint">Diese Audioabschnitte werden nie als Intro oder Abspann erkannt. „Entfernen“ stellt die von ihnen blockierten Segmente sofort wieder her.</string>
     <string name="discarded_line">" · %1$s · %2$s s · zum Öffnen tippen"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s s"</string>
     <string name="start_over_q">Neu beginnen?</string>
     <string name="start_over_text">Stoppt die laufende Analyse, löscht alle Audiofingerabdrücke und gefundenen Intros und Abspänne und analysiert dann alle Videos erneut. Bei vielen Videos dauert das.</string>
     <string name="start_over_clear_marks">Auch manuelle Markierungen und verworfene Segmente löschen</string>
@@ -1180,12 +1182,14 @@
     <string name="apply">Anwenden</string>
     <string name="intro_none_nor_ending">Kein Intro oder Abspann</string>
     <string name="unnamed_signature">Unbenannter Audiofingerabdruck (%1$s)</string>
+    <string name="signature_sound">Ton eines Audiofingerabdrucks</string>
     <string name="signature_line">%1$s Videos · Audio von etwa %2$s</string>
     <string name="signature_deltas">" · Anfang %1$s, Ende %2$s"</string>
     <string name="signature_actions">Aktionen für den Audiofingerabdruck</string>
     <string name="merge_with_others">Mit anderen zusammenführen…</string>
     <string name="not_a_theme">Kein Vorspann oder Abspann</string>
     <string name="marked_by_you_f">" · von dir markiert"</string>
+    <string name="marked_by_you_m">" · von dir markiert"</string>
     <string name="people_page_intro">Cripta findet Gesichter in Fotos und Videos aller Ordner; in den Mediendetails bestimmst du, wer sie sind. Alles geschieht auf dem Telefon: Gesichter und Personen bleiben in der verschlüsselten Datenbank.</string>
     <string name="see_people">Personen ansehen</string>
     <string name="recognition">Erkennung</string>

@@ -723,6 +723,7 @@
     <string name="end">끝</string>
     <string name="trim_back">%1$s: %2$s초 이전으로 이동</string>
     <string name="trim_forward">%1$s: %2$s초 이후로 이동</string>
+    <string name="trim_step">%1$s초</string>
     <string name="update_no_connection">연결되지 않아 업데이트 서버에 접근할 수 없습니다. 나중에 다시 시도하세요.</string>
     <string name="update_none">사용 가능한 버전이 없습니다.</string>
     <string name="update_none_stable">안정 버전이 없습니다. 사전 출시 버전을 켜 보세요.</string>
@@ -1105,6 +1106,7 @@
     <string name="discarded_segments">제외된 구간</string>
     <string name="discarded_segments_hint">이 오디오 구간은 오프닝이나 엔딩으로 감지하지 않습니다. “제거”하면 이 구간 때문에 제외되었던 결과를 즉시 되살립니다.</string>
     <string name="discarded_line">" · %1$s · %2$s초 · 눌러서 열기"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s초"</string>
     <string name="start_over_q">처음부터 다시 시작할까요?</string>
     <string name="start_over_text">진행 중인 분석을 중지하고 모든 오디오 지문과 찾은 오프닝 및 엔딩을 지운 뒤 모든 동영상을 다시 분석합니다. 동영상이 많으면 시간이 걸립니다.</string>
     <string name="start_over_clear_marks">직접 표시한 구간과 제외된 구간도 지우기</string>
@@ -1139,12 +1141,14 @@
     <string name="apply">적용</string>
     <string name="intro_none_nor_ending">오프닝과 엔딩 없음</string>
     <string name="unnamed_signature">이름 없는 오디오 지문(%1$s)</string>
+    <string name="signature_sound">오디오 지문의 소리</string>
     <string name="signature_line">동영상 %1$s개 · 약 %2$s의 오디오</string>
     <string name="signature_deltas">" · 시작 %1$s, 끝 %2$s"</string>
     <string name="signature_actions">오디오 지문 작업</string>
     <string name="merge_with_others">다른 지문과 합치기…</string>
     <string name="not_a_theme">오프닝도 엔딩도 아님</string>
     <string name="marked_by_you_f">" · 직접 표시함"</string>
+    <string name="marked_by_you_m">" · 직접 표시함"</string>
     <string name="people_page_intro">Cripta는 모든 폴더의 사진과 동영상에서 얼굴을 찾습니다. 각 미디어 상세에서 누구인지 지정하세요. 모든 처리는 휴대전화에서 이루어지며 얼굴과 인물은 암호화 데이터베이스에 저장됩니다.</string>
     <string name="see_people">인물 보기</string>
     <string name="recognition">인식</string>

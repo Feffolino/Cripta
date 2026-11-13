@@ -746,6 +746,7 @@
     <string name="end">End</string>
     <string name="trim_back">%1$s back by %2$s seconds</string>
     <string name="trim_forward">%1$s forward by %2$s seconds</string>
+    <string name="trim_step">%1$s s</string>
     <string name="update_no_connection">No connection: can\'t reach the update server. Try again later.</string>
     <string name="update_none">No version available.</string>
     <string name="update_none_stable">No stable version available (try turning on pre-releases).</string>
@@ -1145,6 +1146,7 @@
     <string name="discarded_segments">Discarded segments</string>
     <string name="discarded_segments_hint">These audio stretches never become intros or endings. “Remove” brings back at once the segments they were blocking.</string>
     <string name="discarded_line">" · %1$s · %2$s s · tap to open"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s s"</string>
     <string name="start_over_q">Start over?</string>
     <string name="start_over_text">Stops the analysis in progress, clears all the audio fingerprints and all the intros and endings found, then analyses every video again. With many videos it takes time.</string>
     <string name="start_over_clear_marks">Also clear the marks made by hand and the discarded segments</string>
@@ -1180,12 +1182,14 @@
     <string name="apply">Apply</string>
     <string name="intro_none_nor_ending">No intro or ending</string>
     <string name="unnamed_signature">Unnamed signature (%1$s)</string>
+    <string name="signature_sound">Sound of a signature</string>
     <string name="signature_line">%1$s videos · sound of about %2$s</string>
     <string name="signature_deltas">" · start %1$s, end %2$s"</string>
     <string name="signature_actions">Actions for the signature</string>
     <string name="merge_with_others">Join with others…</string>
     <string name="not_a_theme">Not a theme</string>
     <string name="marked_by_you_f">" · marked by you"</string>
+    <string name="marked_by_you_m">" · marked by you"</string>
     <string name="people_page_intro">Cripta finds the faces in photos and videos, in any folder; you say who they are, from each media\'s details. Everything happens on the phone: faces and people stay in the encrypted database.</string>
     <string name="see_people">See the people</string>
     <string name="recognition">Recognition</string>

@@ -769,6 +769,7 @@
     <string name="end">Fim</string>
     <string name="trim_back">Recuar %1$s em %2$s segundos</string>
     <string name="trim_forward">Avançar %1$s em %2$s segundos</string>
+    <string name="trim_step">%1$s s</string>
     <string name="update_no_connection">Sem conexão: não é possível acessar o servidor de atualização. Tente mais tarde.</string>
     <string name="update_none">Nenhuma versão disponível.</string>
     <string name="update_none_stable">Nenhuma versão estável disponível (tente ativar as versões de pré-lançamento).</string>
@@ -1185,6 +1186,7 @@
     <string name="discarded_segments">Segmentos descartados</string>
     <string name="discarded_segments_hint">Estes trechos de áudio nunca viram aberturas ou encerramentos. “Remover” recupera imediatamente os segmentos que eles bloqueavam.</string>
     <string name="discarded_line">" · %1$s · %2$s s · toque para abrir"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s s"</string>
     <string name="start_over_q">Recomeçar?</string>
     <string name="start_over_text">Para a análise em andamento, limpa todas as impressões digitais de áudio e todas as aberturas e encerramentos encontrados, e analisa cada vídeo novamente. Com muitos vídeos, isso leva tempo.</string>
     <string name="start_over_clear_marks">Limpar também as marcações manuais e os segmentos descartados</string>
@@ -1221,12 +1223,14 @@
     <string name="apply">Aplicar</string>
     <string name="intro_none_nor_ending">Sem abertura ou encerramento</string>
     <string name="unnamed_signature">Impressão digital de áudio sem nome (%1$s)</string>
+    <string name="signature_sound">Som de uma impressão digital de áudio</string>
     <string name="signature_line">%1$s vídeos · som de cerca de %2$s</string>
     <string name="signature_deltas">" · início %1$s, fim %2$s"</string>
     <string name="signature_actions">Ações da impressão digital de áudio</string>
     <string name="merge_with_others">Unir com outras…</string>
     <string name="not_a_theme">Não é abertura nem encerramento</string>
     <string name="marked_by_you_f">" · marcada por você"</string>
+    <string name="marked_by_you_m">" · marcado por você"</string>
     <string name="people_page_intro">O Cripta encontra rostos em fotos e vídeos, em qualquer pasta; você diz quem são nos detalhes de cada mídia. Tudo acontece no celular: rostos e pessoas ficam no banco de dados criptografado.</string>
     <string name="see_people">Ver as pessoas</string>
     <string name="recognition">Reconhecimento</string>

@@ -746,6 +746,7 @@
     <string name="end">अंत</string>
     <string name="trim_back">%1$s को %2$s सेकंड पीछे</string>
     <string name="trim_forward">%1$s को %2$s सेकंड आगे</string>
+    <string name="trim_step">%1$s सेकंड</string>
     <string name="update_no_connection">कनेक्शन नहीं: अपडेट सर्वर उपलब्ध नहीं। बाद में फिर कोशिश करें।</string>
     <string name="update_none">कोई संस्करण उपलब्ध नहीं।</string>
     <string name="update_none_stable">स्थिर संस्करण उपलब्ध नहीं (प्री-रिलीज़ चालू करके देखें)।</string>
@@ -1145,6 +1146,7 @@
     <string name="discarded_segments">नकारे गए हिस्से</string>
     <string name="discarded_segments_hint">ये ऑडियो हिस्से कभी इंट्रो या अंत नहीं बनते। “हटाएँ” तुरंत वे हिस्से वापस लाता है जिन्हें ये रोक रहे थे।</string>
     <string name="discarded_line">" · %1$s · %2$s सेकंड · खोलने को दबाएँ"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s सेकंड"</string>
     <string name="start_over_q">फिर शुरू करें?</string>
     <string name="start_over_text">चल रहा विश्लेषण रोकता है, सभी ऑडियो पहचान और मिले इंट्रो और अंत साफ़ करता है, फिर हर वीडियो का विश्लेषण दोबारा करता है। अधिक वीडियो हों तो समय लगता है।</string>
     <string name="start_over_clear_marks">हाथ से लगाए निशान और नकारे गए हिस्से भी साफ़ करें</string>
@@ -1180,12 +1182,14 @@
     <string name="apply">लागू करें</string>
     <string name="intro_none_nor_ending">कोई इंट्रो या अंत नहीं</string>
     <string name="unnamed_signature">बिना नाम की ऑडियो पहचान (%1$s)</string>
+    <string name="signature_sound">ऑडियो पहचान की ध्वनि</string>
     <string name="signature_line">%1$s वीडियो · करीब %2$s की आवाज़</string>
     <string name="signature_deltas">" · शुरुआत %1$s, अंत %2$s"</string>
     <string name="signature_actions">ऑडियो पहचान की कार्रवाइयाँ</string>
     <string name="merge_with_others">दूसरी पहचान से जोड़ें…</string>
     <string name="not_a_theme">इंट्रो या अंत की धुन नहीं</string>
     <string name="marked_by_you_f">" · आपके लगाए निशान"</string>
+    <string name="marked_by_you_m">" · आपके लगाए निशान"</string>
     <string name="people_page_intro">Cripta सभी फ़ोल्डर की फ़ोटो और वीडियो में चेहरे खोजता है; हर मीडिया के विवरण से आप बताते हैं कि वे कौन हैं। सब कुछ फ़ोन पर होता है: चेहरे और लोग एन्क्रिप्टेड डेटाबेस में रहते हैं।</string>
     <string name="see_people">लोग देखें</string>
     <string name="recognition">पहचान</string>

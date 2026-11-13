@@ -324,6 +324,9 @@ class SettingsViewModel @Inject constructor(
     val rejectedSegments: StateFlow<List<com.cripta.app.data.db.RejectedPrintEntity>> =
         intro.rejected().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     fun restoreRejected(id: Long) = safeScope.launch { intro.restoreRejected(id) }
+    /** Which of [ids] are videos still in the vault: a rejected sample opens its origin only then. */
+    suspend fun liveFiles(ids: Collection<String>): Set<String> =
+        ids.filter { it.isNotEmpty() }.toSet().filterTo(HashSet()) { id -> repo.fileById(id)?.let { it.deletedAt == null } == true }
     /** The analysis so far (status card and results page); null until first loaded. */
     val introOverview = kotlinx.coroutines.flow.MutableStateFlow<com.cripta.app.data.intro.IntroRepository.Overview?>(null)
     fun refreshIntro() = safeScope.launch { runCatching { intro.overview() }.getOrNull()?.let { introOverview.value = it } }

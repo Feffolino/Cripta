@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -167,6 +168,9 @@ private fun StatusCard(o: IntroRepository.Overview?, progress: com.cripta.app.wo
 private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
     val rejected by vm.rejectedSegments.collectAsStateWithLifecycle()
     var showRejected by remember { mutableStateOf(false) }
+    val live by produceState(emptySet<String>(), rejected, showRejected) {
+        if (showRejected) com.cripta.app.util.catching { vm.liveFiles(rejected.map { it.originFileId }) }.getOrNull()?.let { value = it }
+    }
     var askRestart by remember { mutableStateOf(false) }
     var restartAll by remember { mutableStateOf(false) }
     // Like the people page: the rare actions as text, the one that throws work away a destructive button.
@@ -190,11 +194,16 @@ private fun Maintenance(vm: SettingsViewModel, onOpenFile: (String) -> Unit) {
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(rejected, key = { it.id }) { r ->
+                    // A saved signature's sound has no video of its own, and an origin may be gone:
+                    // no tap that opens nothing.
+                    val openable = r.originFileId in live
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f).minimumInteractiveComponentSize().clickable { showRejected = false; onOpenFile(r.originFileId) }.padding(vertical = 4.dp)) {
-                            Text(r.originName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Column(Modifier.weight(1f).minimumInteractiveComponentSize()
+                            .then(if (openable) Modifier.clickable { showRejected = false; onOpenFile(r.originFileId) } else Modifier)
+                            .padding(vertical = 4.dp)) {
+                            Text(r.originName.ifBlank { str(R.string.signature_sound) }, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text((if (r.kind == "intro") str(R.string.intro) else str(R.string.ending)) +
-                                str(R.string.discarded_line, span(r.startMs, r.endMs), (r.endMs - r.startMs + 500) / 1000),
+                                str(if (openable) R.string.discarded_line else R.string.discarded_line_closed, span(r.startMs, r.endMs), (r.endMs - r.startMs + 500) / 1000),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         TextButton(onClick = { vm.restoreRejected(r.id) }) { com.cripta.app.ui.components.ButtonText(str(R.string.remove_short)) }
@@ -252,7 +261,7 @@ private fun IntroResultsPage(
 ) {
     var filter by rememberSaveable { mutableStateOf(ResultFilter.WITH) }
     var query by rememberSaveable { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(setOf<Int>()) }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var renaming by remember { mutableStateOf<IntroRepository.Signature?>(null) }
     var timing by remember { mutableStateOf<IntroRepository.Signature?>(null) }
@@ -339,13 +348,13 @@ private fun IntroResultsPage(
                     shownGroups?.forEach { (i, g) ->
                         val key = sigKey(i, g)
                         item(key = key) {
-                            SignatureCard(i + 1, g, thumb, open = i in expanded, selecting = selected.isNotEmpty(), selected = key in selected,
-                                onToggleOpen = { expanded = if (i in expanded) expanded - i else expanded + i },
+                            SignatureCard(i + 1, g, thumb, open = key in expanded, selecting = selected.isNotEmpty(), selected = key in selected,
+                                onToggleOpen = { expanded = if (key in expanded) expanded - key else expanded + key },
                                 onToggleSelect = { selected = if (key in selected) selected - key else selected + key },
                                 onRename = { renaming = g }, onMerge = { selected = setOf(key) }, onDuration = { timing = g },
                                 onDelete = { deleting = listOf(g) })
                         }
-                        if (i in expanded && selected.isEmpty()) items(g.entries, key = { "$key-${it.first.id}" }) { (file, seg) ->
+                        if (key in expanded && selected.isEmpty()) items(g.entries, key = { "$key-${it.first.id}" }) { (file, seg) ->
                             val e = IntroRepository.Entry(file, seg.takeIf { filter.kind == SegmentKind.INTRO },
                                 seg.takeIf { filter.kind == SegmentKind.OUTRO }, null)
                             EntryRow(e, thumb, Modifier.padding(start = 12.dp), trailing = {
@@ -486,7 +495,8 @@ private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.da
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else -> {
                     e.intro?.let { SegLine(str(R.string.intro), it, MaterialTheme.colorScheme.primary) }
-                    e.outro?.let { SegLine(str(R.string.ending), it, MaterialTheme.colorScheme.tertiary) }
+                    // The viewer's colour for the ending: the one accent, lighter.
+                    e.outro?.let { SegLine(str(R.string.ending), it, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) }
                 }
             }
         }
@@ -494,7 +504,11 @@ private fun EntryRow(e: IntroRepository.Entry, thumb: suspend (com.cripta.app.da
     }
 }
 
-private fun sigKey(i: Int, g: IntroRepository.Signature) = g.id?.let { "s$it" } ?: "u$i"
+/**
+ * A signature's key across reloads: its id, or for an unsaved one its first video (each video is in
+ * one signature only). By position, a list reordered after a change opened another signature.
+ */
+private fun sigKey(i: Int, g: IntroRepository.Signature) = g.id?.let { "s$it" } ?: "u" + (g.entries.firstOrNull()?.first?.id ?: "$i")
 
 private fun deltaText(ms: Long) = (if (ms > 0) "+" else if (ms < 0) "−" else "") + String.format(com.cripta.app.Strings.locale, "%.1f s", kotlin.math.abs(ms) / 1000.0)
 
@@ -561,7 +575,9 @@ private fun SignatureCard(
 @Composable
 private fun SegLine(label: String, seg: MediaSegmentEntity, color: androidx.compose.ui.graphics.Color) {
     if (seg.source == "none") return
-    Text("$label ${span(seg.startMs, seg.endMs)}" + if (seg.source == "auto") "" else str(R.string.marked_by_you_f),
+    // Intro is feminine, finale masculine: "segnata" / "segnato".
+    val mine = if (seg.kind == SegmentKind.OUTRO.id) R.string.marked_by_you_m else R.string.marked_by_you_f
+    Text("$label ${span(seg.startMs, seg.endMs)}" + if (seg.source == "auto") "" else str(mine),
         style = MaterialTheme.typography.bodySmall, color = color)
 }
 

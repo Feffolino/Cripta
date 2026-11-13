@@ -769,6 +769,7 @@
     <string name="end">Fin</string>
     <string name="trim_back">%1$s: retroceder %2$s segundos</string>
     <string name="trim_forward">%1$s: avanzar %2$s segundos</string>
+    <string name="trim_step">%1$s s</string>
     <string name="update_no_connection">Sin conexión: no se puede acceder al servidor de actualizaciones. Reinténtalo más tarde.</string>
     <string name="update_none">Ninguna versión disponible.</string>
     <string name="update_none_stable">Ninguna versión estable disponible (prueba a activar las versiones preliminares).</string>
@@ -1185,6 +1186,7 @@
     <string name="discarded_segments">Segmentos descartados</string>
     <string name="discarded_segments_hint">Estos tramos de audio nunca se convierten en intros ni finales. «Quitar» recupera de inmediato los segmentos que estaban bloqueando.</string>
     <string name="discarded_line">" · %1$s · %2$s s · toca para abrir"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s s"</string>
     <string name="start_over_q">¿Empezar de nuevo?</string>
     <string name="start_over_text">Detiene el análisis en curso, borra todas las huellas de audio y todas las intros y finales encontrados y vuelve a analizar cada vídeo. Con muchos vídeos tardará.</string>
     <string name="start_over_clear_marks">Borrar también las marcas manuales y los segmentos descartados</string>
@@ -1221,12 +1223,14 @@
     <string name="apply">Aplicar</string>
     <string name="intro_none_nor_ending">Sin intro ni final</string>
     <string name="unnamed_signature">Huella de audio sin nombre (%1$s)</string>
+    <string name="signature_sound">Sonido de una huella de audio</string>
     <string name="signature_line">%1$s vídeos · sonido de unos %2$s</string>
     <string name="signature_deltas">" · inicio %1$s, fin %2$s"</string>
     <string name="signature_actions">Acciones de la huella de audio</string>
     <string name="merge_with_others">Unir con otras…</string>
     <string name="not_a_theme">No es una intro ni un final</string>
     <string name="marked_by_you_f">" · marcada por ti"</string>
+    <string name="marked_by_you_m">" · marcado por ti"</string>
     <string name="people_page_intro">Cripta encuentra los rostros de fotos y vídeos, en cualquier carpeta; tú indicas quiénes son desde los detalles de cada archivo. Todo ocurre en el teléfono: los rostros y las personas se guardan en la base de datos cifrada.</string>
     <string name="see_people">Ver las personas</string>
     <string name="recognition">Reconocimiento</string>

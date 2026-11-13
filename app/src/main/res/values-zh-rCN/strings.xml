@@ -723,6 +723,7 @@
     <string name="end">结束</string>
     <string name="trim_back">将%1$s提前 %2$s 秒</string>
     <string name="trim_forward">将%1$s延后 %2$s 秒</string>
+    <string name="trim_step">%1$s 秒</string>
     <string name="update_no_connection">无网络连接，无法访问更新服务器，请稍后重试。</string>
     <string name="update_none">没有可用版本。</string>
     <string name="update_none_stable">没有可用的稳定版本，可尝试启用预发布版本。</string>
@@ -1105,6 +1106,7 @@
     <string name="discarded_segments">排除片段</string>
     <string name="discarded_segments_hint">这些音频片段不会被识别为片头或片尾。“移除”会立即恢复此前被它们屏蔽的片段。</string>
     <string name="discarded_line">" · %1$s · %2$s 秒 · 点按打开"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s 秒"</string>
     <string name="start_over_q">从头开始？</string>
     <string name="start_over_text">停止正在进行的分析，清除所有音频指纹及已找到的片头和片尾，然后重新分析所有视频。视频较多时需要一些时间。</string>
     <string name="start_over_clear_marks">同时清除手动标记和排除片段</string>
@@ -1139,12 +1141,14 @@
     <string name="apply">应用</string>
     <string name="intro_none_nor_ending">无片头或片尾</string>
     <string name="unnamed_signature">未命名音频指纹（%1$s）</string>
+    <string name="signature_sound">音频指纹的声音</string>
     <string name="signature_line">%1$s 个视频 · 音频约 %2$s</string>
     <string name="signature_deltas">" · 开始 %1$s，结束 %2$s"</string>
     <string name="signature_actions">音频指纹操作</string>
     <string name="merge_with_others">与其他组合并…</string>
     <string name="not_a_theme">不是片头或片尾</string>
     <string name="marked_by_you_f">" · 你已手动标记"</string>
+    <string name="marked_by_you_m">" · 你已手动标记"</string>
     <string name="people_page_intro">Cripta 会查找各文件夹中照片和视频的人脸，你可在各媒体文件的详情页指定人物。所有处理都在手机上完成，人脸和人物保存在加密数据库中。</string>
     <string name="see_people">查看人物</string>
     <string name="recognition">识别</string>

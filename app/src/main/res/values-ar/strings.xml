@@ -838,6 +838,7 @@
     <string name="end">النهاية</string>
     <string name="trim_back">%1$s إلى الخلف بمقدار %2$s ثانية</string>
     <string name="trim_forward">%1$s إلى الأمام بمقدار %2$s ثانية</string>
+    <string name="trim_step">%1$s ث</string>
     <string name="update_no_connection">لا اتصال: تعذر الوصول إلى خادم التحديث. أعد المحاولة لاحقاً.</string>
     <string name="update_none">لا إصدار متاح.</string>
     <string name="update_none_stable">لا إصدار مستقر متاح (جرّب تفعيل الإصدارات الأولية).</string>
@@ -1305,6 +1306,7 @@
     <string name="discarded_segments">المقاطع المستبعدة</string>
     <string name="discarded_segments_hint">لن تصبح هذه المقاطع الصوتية مقدمات أو نهايات. يعيد «إزالة» فوراً المقاطع التي كانت تمنعها.</string>
     <string name="discarded_line">" · %1$s · %2$s ث · اضغط للفتح"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s ث"</string>
     <string name="start_over_q">البدء من جديد؟</string>
     <string name="start_over_text">يوقف التحليل الجاري ويمسح جميع البصمات الصوتية والمقدمات والنهايات المكتشفة، ثم يحلل كل فيديو مجدداً. يستغرق وقتاً مع كثرة الفيديوهات.</string>
     <string name="start_over_clear_marks">مسح العلامات اليدوية والمقاطع المستبعدة أيضاً</string>
@@ -1344,12 +1346,14 @@
     <string name="apply">تطبيق</string>
     <string name="intro_none_nor_ending">بلا مقدمة أو نهاية</string>
     <string name="unnamed_signature">بصمة صوتية بلا اسم (%1$s)</string>
+    <string name="signature_sound">صوت بصمة صوتية</string>
     <string name="signature_line">%1$s فيديو · صوت نحو %2$s</string>
     <string name="signature_deltas">" · البداية %1$s، النهاية %2$s"</string>
     <string name="signature_actions">إجراءات البصمة الصوتية</string>
     <string name="merge_with_others">دمج مع أخرى…</string>
     <string name="not_a_theme">ليست شارة</string>
     <string name="marked_by_you_f">" · حددتَها يدوياً"</string>
+    <string name="marked_by_you_m">" · حددتَها يدوياً"</string>
     <string name="people_page_intro">يجد Cripta الوجوه في الصور والفيديوهات بأي مجلد؛ وتحدد أنت أصحابها من تفاصيل كل وسيط. كل شيء يجري على الهاتف: تبقى الوجوه والأشخاص في قاعدة البيانات المشفرة.</string>
     <string name="see_people">عرض الأشخاص</string>
     <string name="recognition">التعرف</string>

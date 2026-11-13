@@ -723,6 +723,7 @@
     <string name="end">終了</string>
     <string name="trim_back">%1$sを %2$s 秒前へ</string>
     <string name="trim_forward">%1$sを %2$s 秒後へ</string>
+    <string name="trim_step">%1$s 秒</string>
     <string name="update_no_connection">接続されていないため、更新サーバーにアクセスできません。後で再試行してください。</string>
     <string name="update_none">利用できるバージョンはありません。</string>
     <string name="update_none_stable">安定版がありません。プレビュー版を有効にしてみてください。</string>
@@ -1105,6 +1106,7 @@
     <string name="discarded_segments">除外区間</string>
     <string name="discarded_segments_hint">これらの音声区間をオープニングやエンディングとして検出しません。「削除」で、その区間が妨げていた検出結果をすぐに戻せます。</string>
     <string name="discarded_line">" · %1$s · %2$s 秒 · タップして開く"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s 秒"</string>
     <string name="start_over_q">最初からやり直しますか？</string>
     <string name="start_over_text">進行中の解析を止め、すべての音声フィンガープリントと検出したオープニング・エンディングを消去してから、全動画を再解析します。動画が多いと時間がかかります。</string>
     <string name="start_over_clear_marks">手動設定と除外区間も消去</string>
@@ -1139,12 +1141,14 @@
     <string name="apply">適用</string>
     <string name="intro_none_nor_ending">オープニングもエンディングもなし</string>
     <string name="unnamed_signature">名前のない音声フィンガープリント（%1$s）</string>
+    <string name="signature_sound">音声フィンガープリントの音</string>
     <string name="signature_line">動画 %1$s 件 · 音声約 %2$s</string>
     <string name="signature_deltas">" · 開始 %1$s、終了 %2$s"</string>
     <string name="signature_actions">音声フィンガープリントの操作</string>
     <string name="merge_with_others">ほかと統合…</string>
     <string name="not_a_theme">オープニングでもエンディングでもない</string>
     <string name="marked_by_you_f">" · 手動設定"</string>
+    <string name="marked_by_you_m">" · 手動設定"</string>
     <string name="people_page_intro">Cripta は全フォルダーの写真や動画から顔を探します。各メディアの詳細で誰なのか指定してください。処理はすべて端末内で行い、顔と人物は暗号化データベースに保存します。</string>
     <string name="see_people">人物を見る</string>
     <string name="recognition">認識</string>

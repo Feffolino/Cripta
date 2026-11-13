@@ -769,6 +769,7 @@
     <string name="end">Fin</string>
     <string name="trim_back">Reculer %1$s de %2$s secondes</string>
     <string name="trim_forward">Avancer %1$s de %2$s secondes</string>
+    <string name="trim_step">%1$s s</string>
     <string name="update_no_connection">Aucune connexion : serveur de mise à jour inaccessible. Réessayez plus tard.</string>
     <string name="update_none">Aucune version disponible.</string>
     <string name="update_none_stable">Aucune version stable disponible (essayez d’activer les préversions).</string>
@@ -1185,6 +1186,7 @@
     <string name="discarded_segments">Segments écartés</string>
     <string name="discarded_segments_hint">Ces passages audio ne deviennent jamais des intros ou des fins. « Retirer » rétablit immédiatement les segments qu’ils bloquaient.</string>
     <string name="discarded_line">" · %1$s · %2$s s · appuyez pour ouvrir"</string>
+    <string name="discarded_line_closed">" · %1$s · %2$s s"</string>
     <string name="start_over_q">Recommencer ?</string>
     <string name="start_over_text">Arrête l’analyse en cours, efface toutes les empreintes audio et les intros et fins trouvées, puis analyse de nouveau chaque vidéo. Avec beaucoup de vidéos, cela prend du temps.</string>
     <string name="start_over_clear_marks">Effacer aussi les repères manuels et les segments écartés</string>
@@ -1221,12 +1223,14 @@
     <string name="apply">Appliquer</string>
     <string name="intro_none_nor_ending">Sans intro ni fin</string>
     <string name="unnamed_signature">Empreinte audio sans nom (%1$s)</string>
+    <string name="signature_sound">Son d’une empreinte audio</string>
     <string name="signature_line">%1$s vidéos · son d’environ %2$s</string>
     <string name="signature_deltas">" · début %1$s, fin %2$s"</string>
     <string name="signature_actions">Actions sur l’empreinte audio</string>
     <string name="merge_with_others">Fusionner avec d’autres…</string>
     <string name="not_a_theme">Ce n’est pas un générique</string>
     <string name="marked_by_you_f">" · marquée par vous"</string>
+    <string name="marked_by_you_m">" · marquée par vous"</string>
     <string name="people_page_intro">Cripta trouve les visages dans les photos et vidéos de tous les dossiers ; vous les identifiez depuis les détails de chaque média. Tout se passe sur le téléphone : les visages et personnes restent dans la base de données chiffrée.</string>
     <string name="see_people">Voir les personnes</string>
     <string name="recognition">Reconnaissance</string>
