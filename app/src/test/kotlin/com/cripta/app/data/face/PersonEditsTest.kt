@@ -323,11 +323,33 @@ class PersonEditsTest {
         val until = first.heldUntil!!
         assertTrue(until > android.os.SystemClock.elapsedRealtime())
         assertEquals(setOf(c, a), dao.tracksOfFile("v").map { it.id }.toSet())
+        // Held back, the look is not recorded as done: the next one is not skipped as already made.
+        assertNull(FaceStats.refineOf(dao.scanOf("v")!!.stats))
         org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(until - android.os.SystemClock.elapsedRealtime() + 1))
         val again = lookCloser()!!
         assertNull(again.heldUntil)
         assertEquals(listOf(c), dao.tracksOfFile("v").map { it.id })
         assertNotNull(FaceStats.refineOf(dao.scanOf("v")!!.stats))
+    }
+
+    @Test
+    fun aCloserLookAfterTheUndoNoLongerHoldsTheFaceBack() = runBlocking {
+        video()
+        val p = faces.newPerson("P")
+        val c = videoFace(1, 1_000, p)
+        val a = videoFace(2, 5_000)
+        val undo = faces.assign(a, p)
+        assertNotNull(lookCloser()!!.heldUntil)
+        assertNull(FaceStats.refineOf(dao.scanOf("v")!!.stats))
+        // "Annulla" releases the hold at once, long before it would run out.
+        undo()
+        val again = lookCloser()!!
+        assertNull(again.heldUntil)
+        // Free again and no longer held, it is joined like any other free face of P.
+        assertEquals(1, again.joined)
+        assertEquals(listOf(c), dao.tracksOfFile("v").map { it.id })
+        assertNotNull(FaceStats.refineOf(dao.scanOf("v")!!.stats))
+        assertEquals(p, dao.tracks(listOf(c)).single().personId)
     }
 
     @Test
