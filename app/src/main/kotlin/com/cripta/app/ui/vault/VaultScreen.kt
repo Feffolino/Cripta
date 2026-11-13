@@ -380,6 +380,10 @@ fun VaultScreen(
     // Collapse the secondary FABs while scrolling down so they don't cover the content
     // (they otherwise block dragging items in Manual reorder); bring them back on scroll up.
     var fabsVisible by remember { mutableStateOf(true) }
+    // The chips under the search (quick filters, the active ones) take room from the grid: they go
+    // away while the grid scrolls down, like the buttons, and come back on the way up or at the top.
+    val gridAtTop by remember { derivedStateOf { !gridState.canScrollBackward } }
+    val chipsShown = fabsVisible || gridAtTop
     var fabExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(fabsVisible) { if (!fabsVisible) fabExpanded = false }
     val fabScroll = remember {
@@ -761,23 +765,35 @@ fun VaultScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { heading() })
                 Box(Modifier.padding(horizontal = 8.dp)) { PeopleFaceRow(foundPeople, filters.personIds, { vm.faceCrop(it) }, vm::pickSearchedPerson) }
             }
-            ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
-                { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
-                { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
-                people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors,
-                wholeVault = searchesWholeVault(filters.active, filters.wholeVault, filterLocalOnly),
-                onClearInProgress = { vm.setInProgress(false) })
+            AnimatedVisibility(
+                visible = chipsShown,
+                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
+                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
+            ) {
+                ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
+                    { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
+                    { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
+                    people = filterPeople, onPerson = vm::togglePerson, tagColors = display.tagColors,
+                    wholeVault = searchesWholeVault(filters.active, filters.wholeVault, filterLocalOnly),
+                    onClearInProgress = { vm.setInProgress(false) })
+            }
             if (path.size >= 2 && !filters.active) {
                 Breadcrumb(pathNames, onGo = vm::goToDepth)
             }
             ImportBanner(importState, onDismiss = vm::dismissImportResult)
             ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult,
                 onResolveOriginal = vm::resolveOriginal)
-            QuickChips(
-                atRoot = path.isEmpty(), filters = filters, sortLabel = sortChipLabel(sortKey, sortAscending),
-                onType = vm::setType, onFavorites = { vm.setFavoritesOnly(!filters.favoritesOnly) },
-                onUntagged = { vm.setUntaggedOnly(!filters.untaggedOnly) }, onSort = { showFilterSheet = true },
-            )
+            AnimatedVisibility(
+                visible = chipsShown,
+                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
+                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit()),
+            ) {
+                QuickChips(
+                    atRoot = path.isEmpty(), filters = filters, sortLabel = sortChipLabel(sortKey, sortAscending),
+                    onType = vm::setType, onFavorites = { vm.setFavoritesOnly(!filters.favoritesOnly) },
+                    onUntagged = { vm.setUntaggedOnly(!filters.untaggedOnly) }, onSort = { showFilterSheet = true },
+                )
+            }
             if (stats.scope.total > 0 && display.showStatsStrip) {
                 StatsStrip(stats, filters.active, filters.type, onOpen = { showStats = true }, onType = vm::toggleType)
             }
