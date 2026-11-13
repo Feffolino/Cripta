@@ -310,16 +310,16 @@ data class FaceTrackEntity(
 )
 
 /**
- * A face the user deleted: found again in that media ([fileId]) it is left out; with no media
- * ("Non è un volto") it is left out everywhere.
- */
-/**
  * Two faces the user said are not one person ("Dividi il gruppo" in "Da sistemare"): never offered
  * together again. Stored once per pair, smaller id first.
  */
 @Entity(tableName = "face_apart", primaryKeys = ["a", "b"], indices = [Index("b")])
 data class FaceApartEntity(val a: Long, val b: Long)
 
+/**
+ * A face the user deleted: found again in that media ([fileId]) it is left out; with no media
+ * ("Non è un volto") it is left out everywhere.
+ */
 @Entity(tableName = "face_ignored", indices = [Index("fileId")])
 data class IgnoredFaceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

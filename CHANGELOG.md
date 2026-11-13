@@ -19,6 +19,7 @@ Entries marked **stable** went out as a stable release.
 - The space taken by a file whose deletion was cut short (Cripta closed half way through emptying a large trash) is freed at the next start; an import that fails before it starts leaves nothing behind; a folder deletion stopped by a power cut reopens its folders at the next start in every case
 - A note saved again while a duplicate search was reading it is no longer taken for a copy of its old text
 - Deleting the original after a conversion with the trash off also removes its cover and thumbnail
+- The restore summary no longer counts a cover it could not put in place
 
 ## 2026-11-12
 

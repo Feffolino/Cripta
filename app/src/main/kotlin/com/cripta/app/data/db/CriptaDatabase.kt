@@ -300,12 +300,6 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * People are made by hand only: every face placed automatically (or waiting as a suggestion)
-         * goes back to unassigned, unnamed people left with nothing go, and so do the merge logs.
-         * The faces the user confirmed, named and starred people stay.
-         */
-        /** People: each face of a track (to split it) and the faces the user deleted (not found again). */
         /** Media the user said are not alike: the "simili" scan keeps them apart. */
         internal val MIGRATION_32_33 = object : Migration(32, 33) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -322,6 +316,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** Faces the user said are not one person: never offered together again. */
         internal val MIGRATION_30_31 = object : Migration(30, 31) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `face_apart` (`a` INTEGER NOT NULL, `b` INTEGER NOT NULL, PRIMARY KEY(`a`, `b`))")
@@ -329,6 +324,7 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /** People: each face of a track (to split it) and the faces the user deleted (not found again). */
         internal val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE face_tracks ADD COLUMN sightings BLOB NOT NULL DEFAULT x''")
@@ -364,6 +360,11 @@ abstract class CriptaDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * People are made by hand only: every face placed automatically (or waiting as a suggestion)
+         * goes back to unassigned, unnamed people left with nothing go, and so do the merge logs.
+         * The faces the user confirmed, named and starred people stay.
+         */
         internal val MIGRATION_25_26 = object : Migration(25, 26) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("UPDATE face_tracks SET personId = NULL, state = 'auto', similarity = 0 WHERE state NOT IN ('manual', 'carried')")

@@ -63,8 +63,10 @@ class VaultRepository @Inject constructor(
     private fun notifyChanged() { _changes.value++ }
 
     // --- Video conversion events (foreground service -> UI) ---
-    /** Emitted after a video is successfully transcoded+encrypted into the vault. */
-    /** [ask] = the user chose to be asked whether to delete the original (otherwise it's handled). */
+    /**
+     * Emitted after a video is successfully transcoded+encrypted into the vault. [ask] = the user
+     * chose to be asked whether to delete the original (otherwise it's handled).
+     */
     data class ConversionEvent(val originalId: String, val newId: String, val ask: Boolean = true, val replaced: Boolean = true)
     private val _convertEvents =
         kotlinx.coroutines.flow.MutableSharedFlow<ConversionEvent>(extraBufferCapacity = 16)
@@ -104,7 +106,10 @@ class VaultRepository @Inject constructor(
         "original-$id", "conversion_original", org.json.JSONObject().put("id", id).put("name", name).put("copyId", copyId).toString(), now())
 
     suspend fun awaitConvertedOriginal(id: String, name: String, copyId: String) {
-        withContext(Dispatchers.IO) { runCatching { db.pendingJobDao().put(originalQuestion(id, name, copyId)) } }
+        withContext(Dispatchers.IO) {
+            runCatching { db.pendingJobDao().put(originalQuestion(id, name, copyId)) }
+                .onFailure { logException(android.util.Log.WARN, "VaultRepository", "original question not saved", it) }
+        }
         _convertStatus.update { it.awaiting(ConvertedOriginal(id, name, copyId)) }
     }
 
@@ -513,13 +518,11 @@ class VaultRepository @Inject constructor(
     }
 
     /**
-     * Recursively crypto-shred every file in the folder subtree, then delete the folders.
-     * Returns the ids of the deleted files so the caller can evict their cover cache.
-     */
-    /**
      * Delete a folder with everything in it. With the trash on, the whole subtree (folders and live
      * files) goes to the trash with ONE timestamp, so it is browsable there and restorable as a unit
-     * or file by file; returns nothing to evict. Otherwise everything is crypto-shredded now.
+     * or file by file; returns nothing to evict. Otherwise every live file of the subtree is
+     * crypto-shredded now and the folders deleted; returns the ids of the destroyed files so the
+     * caller can evict their covers.
      */
     suspend fun deleteFolderRecursive(folderId: Long): List<String> = deleteFolderRecursive(folderId) { secureDelete(it) }
 
@@ -648,11 +651,9 @@ class VaultRepository @Inject constructor(
         return out
     }
 
-    private suspend fun snapshotChildren(db: com.cripta.app.data.db.CriptaDatabase = this.db): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
-        // One-shot read of the folder table to build a parent -> children map.
+    private suspend fun snapshotChildren(): Map<Long?, List<Long>> = withContext(Dispatchers.IO) {
+        // One-shot read of the folder table (live and trashed) into a parent -> children map.
         val result = mutableMapOf<Long?, MutableList<Long>>()
-        // Use a blocking first collection via a simple query through DAO.all() is a Flow;
-        // instead reconstruct from repeated byId is costly. We read via a raw snapshot.
         val folders = db.query("SELECT id, parentId FROM folders", null)
         folders.use { c ->
             val idIdx = c.getColumnIndexOrThrow("id")
@@ -1539,6 +1540,9 @@ class VaultRepository @Inject constructor(
         val d = session.dbOrNull() ?: return default
         return try {
             read(d)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // An IllegalStateException too: a cancelled read is not one with nothing to show.
+            throw e
         } catch (e: IllegalStateException) {
             default
         } catch (e: android.database.SQLException) {
@@ -1687,12 +1691,12 @@ class VaultRepository @Inject constructor(
     }
 
     /**
-     * Resolve a duplicate set by keeping [keepId] and crypto-shredding [removeIds], without losing
-     * the organisation carried by the removed copies: their tags are added to the kept file, a
-     * favorite mark carries over, and their source link is copied when the kept file has none.
-     * Returns the names of the tags that were newly added to the kept file.
-     */
-    /**
+     * Resolve a duplicate set by keeping [keepId] and deleting [removeIds] (to the trash when it is
+     * on), without losing the organisation carried by the removed copies: their tags are added to
+     * the kept file, a favorite mark carries over, and their source link is copied when the kept
+     * file has none. The [MergeOutcome] tells whether it was done, the tags newly added to the kept
+     * file and what it had before (for an undo).
+     *
      * [exact]: the copies were proved byte-identical by a scan ([provedHash], the content it saw;
      * null takes the kept copy's). Nothing is deleted unless the kept copy still reads to its end
      * and, for an exact group, every copy still holds that content: a note edited since the scan,
@@ -2051,6 +2055,8 @@ class VaultRepository @Inject constructor(
 
     suspend fun putPendingJob(id: String, kind: String, payload: String) = withContext(Dispatchers.IO) {
         runCatching { db.pendingJobDao().put(com.cripta.app.data.db.PendingJobEntity(id, kind, payload, now())) }
+            .onFailure { logException(android.util.Log.WARN, "VaultRepository", "pending job not saved", it) }
+        Unit
     }
     private val jobsRestored = java.util.concurrent.atomic.AtomicBoolean(false)
     /** True only the first time it is called in this process: restore pending jobs once. */
@@ -2533,6 +2539,7 @@ class VaultRepository @Inject constructor(
                 blobs.clearRestoreJournal()
                 // Covers of files that were already here, held aside until now: written in place
                 // before the commit, a restore killed halfway left them on files it never changed.
+                val stagedCovers = knownCovers.size
                 knownCovers.removeAll { id ->
                     val staged = java.io.File(restoreCoverStage, id)
                     val target = java.io.File(customCoverDir.apply { mkdirs() }, id)
@@ -2541,6 +2548,9 @@ class VaultRepository @Inject constructor(
                     !moved
                 }
                 restoreCoverStage.deleteRecursively()
+                // Those that were dropped (the file got a cover of its own meanwhile, the move
+                // failed) are not counted as restored.
+                val dropped = stagedCovers - knownCovers.size
                 // Settings only once the vault part is in: a failed restore changes nothing.
                 val settingsOk = settingsBytes?.let { b ->
                     runCatching { settings.importFromBackup(b) }
@@ -2551,7 +2561,8 @@ class VaultRepository @Inject constructor(
                 // memory, would go on showing.
                 if (knownCovers.isNotEmpty()) _coversReplaced.tryEmit(knownCovers.toList())
                 // Failed, said so: left out of the list alone, it read as an archive without settings.
-                restored.copy(settings = settingsOk, settingsFailed = settingsBytes != null && !settingsOk)
+                restored.copy(settings = settingsOk, settingsFailed = settingsBytes != null && !settingsOk,
+                    covers = restored.covers - dropped)
             }
         }
     }
