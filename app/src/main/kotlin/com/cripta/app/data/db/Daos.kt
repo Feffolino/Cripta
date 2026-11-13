@@ -914,9 +914,13 @@ interface DupPrintDao {
     @Query("SELECT COUNT(*) FROM files WHERE deletedAt IS NULL AND (mimeType LIKE 'image/%' OR mimeType LIKE 'video/%')")
     suspend fun mediaCount(): Int
 
-    /** Live media with a fingerprint of their current content. */
-    @Query("SELECT COUNT(*) FROM dup_prints p JOIN files f ON f.id = p.fileId WHERE f.deletedAt IS NULL AND f.sizeBytes = p.sizeBytes")
-    suspend fun printedCount(): Int
+    /**
+     * Live media with a fingerprint of their current content, made the current way ([imageVersion]
+     * for photos, [videoVersion] for videos): one of another version is made again by the scan.
+     */
+    @Query("SELECT COUNT(*) FROM dup_prints p JOIN files f ON f.id = p.fileId WHERE f.deletedAt IS NULL AND f.sizeBytes = p.sizeBytes " +
+        "AND p.version = CASE WHEN f.mimeType LIKE 'video/%' THEN :videoVersion ELSE :imageVersion END")
+    suspend fun printedCount(imageVersion: Int, videoVersion: Int): Int
 
     /** Rows of files no longer in the vault (destroyed some other way than [forget]). */
     @Query("DELETE FROM dup_prints WHERE fileId NOT IN (SELECT id FROM files)")
@@ -925,8 +929,12 @@ interface DupPrintDao {
     @Query("SELECT * FROM dup_apart")
     suspend fun apartPairs(): List<DupApartEntity>
 
+    /** Row ids of the pairs added, -1 for those already there. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun putApart(pairs: List<DupApartEntity>)
+    suspend fun putApart(pairs: List<DupApartEntity>): List<Long>
+
+    @Delete
+    suspend fun deleteApart(pairs: List<DupApartEntity>)
 
     @Query("DELETE FROM dup_apart WHERE a = :fileId OR b = :fileId")
     suspend fun forgetApart(fileId: String)

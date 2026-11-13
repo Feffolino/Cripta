@@ -72,14 +72,15 @@ class DuplicateScanner @Inject constructor(
      * split it, and only the matches are read (head and tail, to leave out an unreadable copy).
      *
      * Groups of 2+ are returned, each sorted oldest-import-first (the natural "keep" candidate),
-     * ordered by reclaimable space descending. [onProgress] reports (processed, total) files.
+     * ordered by reclaimable space descending. [onProgress] reports (processed, total) files; the
+     * total grows by the files a full hash is read for, so it does not show 100% before them.
      */
     suspend fun scanExact(onProgress: (Int, Int) -> Unit = { _, _ -> }): ExactResult =
         withContext(Dispatchers.IO) {
             val started = SystemClock.elapsedRealtime()
             val all = repo.allFilesSnapshot()
             val bySize = all.groupBy { it.sizeBytes }.filterValues { it.size > 1 }
-            val total = bySize.values.sumOf { it.size }
+            var total = bySize.values.sumOf { it.size }
             var done = 0
             onProgress(0, total)
             val confirmed = mutableListOf<ExactGroup>()
@@ -106,12 +107,15 @@ class DuplicateScanner @Inject constructor(
                     if (p != null) byPartial.getOrPut(p) { mutableListOf() }.add(f)
                 }
                 // Phase 2: full hash only where the partial hash already collided.
-                for (candidates in byPartial.values.filter { it.size > 1 }) {
+                val collided = byPartial.values.filter { it.size > 1 }
+                val toRead = collided.sumOf { c -> c.count { it.contentHash == null } }
+                if (toRead > 0) { total += toRead; onProgress(done, total) }
+                for (candidates in collided) {
                     val byFull = HashMap<String, MutableList<FileEntity>>()
                     for (f in candidates) {
                         coroutineContext.ensureActive()
                         // The hash recorded at import: no need to decrypt the whole file again.
-                        val h = f.contentHash ?: runCatching { fullHash(f) }.getOrNull()?.also { repo.setContentHash(f.id, it) }
+                        val h = f.contentHash ?: fullHashOrNull(f).also { done++; onProgress(done, total) }?.also { repo.setContentHash(f.id, it) }
                         // The group carries the hash it was proved with: without it, a copy edited
                         // later to the same size still passed for the copy the scan had seen.
                         if (h != null) byFull.getOrPut(h) { mutableListOf() }.add(if (f.contentHash == null) f.copy(contentHash = h) else f)
@@ -135,7 +139,7 @@ class DuplicateScanner @Inject constructor(
         val candidates = repo.sameSizeAs(file)
         if (candidates.isEmpty()) return@withContext emptyList()
         // Fast path: hashes recorded at import time are compared directly, no decryption at all.
-        val own = file.contentHash ?: runCatching { fullHash(file) }.getOrNull()?.also { repo.setContentHash(file.id, it) }
+        val own = file.contentHash ?: fullHashOrNull(file)?.also { repo.setContentHash(file.id, it) }
             ?: return@withContext emptyList()
         val (hashed, unhashed) = candidates.partition { it.contentHash != null }
         val matches = hashed.filter { it.contentHash == own }.toMutableList()
@@ -145,7 +149,7 @@ class DuplicateScanner @Inject constructor(
             val p = runCatching { partialHash(file) }.getOrNull()
             if (p != null) {
                 unhashed.filter { runCatching { partialHash(it) }.getOrNull() == p }.forEach { c ->
-                    val h = runCatching { fullHash(c) }.getOrNull() ?: return@forEach
+                    val h = fullHashOrNull(c) ?: return@forEach
                     repo.setContentHash(c.id, h)
                     if (h == own) matches += c
                 }
@@ -169,12 +173,24 @@ class DuplicateScanner @Inject constructor(
         return md.hex()
     }
 
-    /** Full streaming SHA-256 of the decrypted plaintext (constant memory, no temp file). */
-    private fun fullHash(f: FileEntity): String {
+    /**
+     * Full streaming SHA-256 of the decrypted plaintext (constant memory, no temp file), or null when
+     * it cannot be read. A cancel stops it between blocks: a big video is not read to its end first.
+     */
+    private suspend fun fullHashOrNull(f: FileEntity): String? = try {
+        fullHash(f)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
+    private suspend fun fullHash(f: FileEntity): String {
         val md = MessageDigest.getInstance("SHA-256")
         repo.decryptingStream(f).use { input ->
             val buf = ByteArray(64 * 1024)
             while (true) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 val n = input.read(buf)
                 if (n < 0) break
                 md.update(buf, 0, n)
@@ -365,17 +381,27 @@ class DuplicateScanner @Inject constructor(
         found
     }
 
-    /** "Non sono simili": no two of [fileIds] are grouped together again. */
-    suspend fun keepApart(fileIds: List<String>) = withContext(Dispatchers.IO) {
+    /**
+     * "Non sono simili": no two of [fileIds] are grouped together again. Returns the pairs it
+     * added (not those already apart), which [bringTogether] takes back.
+     */
+    suspend fun keepApart(fileIds: List<String>): List<DupApartEntity> = withContext(Dispatchers.IO) {
         val ids = fileIds.distinct()
         val pairs = ids.indices.flatMap { i -> (i + 1 until ids.size).map { j -> DupApartEntity(minOf(ids[i], ids[j]), maxOf(ids[i], ids[j])) } }
-        if (pairs.isNotEmpty()) session.requireDb().dupPrintDao().putApart(pairs)
+        if (pairs.isEmpty()) return@withContext emptyList()
+        val rows = session.requireDb().dupPrintDao().putApart(pairs)
+        pairs.filterIndexed { i, _ -> rows[i] != -1L }
+    }
+
+    /** Undo of [keepApart]: [pairs] may be grouped together again. */
+    suspend fun bringTogether(pairs: List<DupApartEntity>) = withContext(Dispatchers.IO) {
+        if (pairs.isNotEmpty()) session.requireDb().dupPrintDao().deleteApart(pairs)
     }
 
     /** Live photos and videos and how many have a fingerprint already (null while locked). */
     suspend fun printStats(): Pair<Int, Int>? = withContext(Dispatchers.IO) {
         val dao = session.dbOrNull()?.dupPrintDao() ?: return@withContext null
-        orNull { dao.printedCount() to dao.mediaCount() }
+        orNull { dao.printedCount(IMAGE_PRINT_VERSION, VIDEO_PRINT_VERSION) to dao.mediaCount() }
     }
 
     /** The version of the fingerprint [f] gets: a stored one made another way is made again. */

@@ -69,6 +69,18 @@ class DupContentIdentityTest {
     }
 
     @Test
+    fun theProgressCountsTheFilesReadWhole() = runBlocking {
+        repo.createNote(null, "a", "alpha")
+        repo.createNote(null, "b", "alpha")
+        forgetHashes()
+        val seen = mutableListOf<Pair<Int, Int>>()
+        scanner.scanExact { done, total -> seen += done to total }
+        // Two files read head and tail, then both read whole: 100% only at the very end.
+        assertEquals(4 to 4, seen.last())
+        assertTrue(seen.dropLast(1).none { (done, total) -> done == total && total == 4 })
+    }
+
+    @Test
     fun aCopyEditedToTheSameSizeIsNotDeleted() = runBlocking {
         val a = repo.createNote(null, "a", "alpha")
         val b = repo.createNote(null, "b", "alpha")
