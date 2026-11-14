@@ -380,9 +380,7 @@ internal fun FilterSortSheet(
                         )
                     }
                     val q = query.trim()
-                    val shown = if (q.isEmpty()) tags else tags.filter {
-                        it.name.contains(q, ignoreCase = true) || it.alias?.contains(q, ignoreCase = true) == true
-                    }
+                    val shown = tags.filter { tagMatches(it, q) }
                     if (shown.isEmpty()) {
                         Text(str(R.string.tag_no_match, q), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)

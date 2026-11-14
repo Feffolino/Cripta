@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.withLock
@@ -95,7 +96,7 @@ fun Filters.matches(fwt: FileWithTags): Boolean {
     val nameOk = f.query.isBlank() ||
         fwt.file.originalName.contains(f.query, ignoreCase = true) ||
         // A tag is found by its acronym too, as in the tag pickers and the filter's tag search.
-        fwt.tags.any { it.name.contains(f.query, ignoreCase = true) || it.alias?.contains(f.query, ignoreCase = true) == true }
+        fwt.tags.any { tagMatches(it, f.query) }
     val tagsOk = f.tagIds.isEmpty() ||
         if (f.tagMatchAll) fwt.tags.map { it.id }.containsAll(f.tagIds) else fwt.tags.any { it.id in f.tagIds }
     val notExcludedOk = f.excludedTagIds.isEmpty() || fwt.tags.none { it.id in f.excludedTagIds }
@@ -426,7 +427,10 @@ class VaultViewModel @Inject constructor(
             // the lookups read (who, named how, on which media): the people are rebuilt often
             // during a face analysis, and each rebuild filtered and sorted the whole vault again.
             .combine(
+                // Empty until the face index is read: the grid does not wait for it (the lookups
+                // below ask the faces themselves), and runs again when the real key comes.
                 faces.people().map { it.lookupKey }
+                    .onStart { emit(emptyList()) }
                     .distinctUntilChanged(),
             ) { f, _ -> f }
             .mapLatest { f ->

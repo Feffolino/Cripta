@@ -483,7 +483,11 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     val sortKey = com.cripta.app.data.PeopleSort.entries.firstOrNull { it.name == st.peopleSort } ?: com.cripta.app.data.PeopleSort.RELEVANCE
     // Who the page shows now (filter chip and search); the sort sheet's button counts them.
     val keep: (FaceRepository.Person) -> Boolean = { filter.matches(it) && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true)) }
-    val shownCount = overview?.people?.count(keep) ?: 0
+    // Filtered and sorted again only when what they read changes: not on every selection drag or press.
+    val shown = remember(overview, filter, query, sortKey, st.peopleSortAscending) {
+        overview?.people?.filter(keep)?.ordered(sortKey, st.peopleSortAscending).orEmpty()
+    }
+    val shownCount = shown.size
     // As long as in the viewer and the profile, not counting while the vault is locked.
     val undoMs = com.cripta.app.ui.components.rememberUndoMillis()
     val locked = com.cripta.app.ui.components.rememberVaultLocked()
@@ -538,8 +542,6 @@ fun PeopleScreen(onBack: () -> Unit, onOpenFile: (String) -> Unit) {
             PeopleSkeleton(Modifier.fillMaxSize().padding(pad))
             return@Scaffold
         }
-        val shown = o.people.filter(keep)
-            .ordered(sortKey, st.peopleSortAscending)
         val noFaces = remember(o) {
             o.scans.filter { s -> s.status != "ok" || s.faces == 0 || s.faces == s.rejects.split(',').sumOf { it.substringAfter('=', "0").toIntOrNull() ?: 0 } }
         }

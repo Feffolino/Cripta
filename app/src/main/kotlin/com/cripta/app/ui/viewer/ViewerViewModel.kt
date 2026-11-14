@@ -146,15 +146,23 @@ class ViewerViewModel @Inject constructor(
     val allTags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    suspend fun stateFor(id: String): ViewerState = try {
+    suspend fun stateFor(id: String, previous: ViewerState? = null): ViewerState = try {
         val file = repo.fileById(id)
+        // A star or a tag given in the viewer reloads the page: the photo or PDF already decrypted
+        // is kept when its content is the same (same instance: no new decode, no new PDF document).
+        fun same(f: FileEntity) = file != null && f.id == file.id && f.sizeBytes == file.sizeBytes && f.contentHash == file.contentHash
+        val shown = when (previous) {
+            is ViewerState.Photo -> previous.bytes.takeIf { same(previous.file) }
+            is ViewerState.Pdf -> previous.bytes.takeIf { same(previous.file) }
+            else -> null
+        }
         when {
             // Trashed counts as gone (a note deleted from its editor stayed open here, editable).
             file == null || file.deletedAt != null -> ViewerState.Error(str(R.string.viewer_gone), missing = true)
-            VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, repo.decryptBytes(file))
+            VaultRepository.isImage(file.mimeType) -> ViewerState.Photo(file, shown ?: repo.decryptBytes(file))
             VaultRepository.isPlayable(file.mimeType) -> ViewerState.Video(file)
             VaultRepository.isNote(file.mimeType) -> ViewerState.Note(file, repo.noteText(file))
-            VaultRepository.isPdf(file.mimeType) -> ViewerState.Pdf(file, repo.decryptBytes(file))
+            VaultRepository.isPdf(file.mimeType) -> ViewerState.Pdf(file, shown ?: repo.decryptBytes(file))
             else -> ViewerState.Other(file)
         }
     } catch (e: kotlinx.coroutines.CancellationException) {

@@ -25,7 +25,8 @@ import androidx.compose.ui.unit.em
  * markers are dropped (bullets and boxes drawn as • ☐ ☑): the viewer's reading form.
  */
 object NoteMarkdown {
-    class Palette(val muted: Color, val accent: Color, val codeBackground: Color)
+    /** A data class: equal colours give an equal palette, so the editor's styling is remembered across recompositions. */
+    data class Palette(val muted: Color, val accent: Color, val codeBackground: Color)
 
     private val FENCE = Regex("""^\s*```.*$""")
     private val HEADING = Regex("""^(#{1,6})(\s+)(.*)$""")

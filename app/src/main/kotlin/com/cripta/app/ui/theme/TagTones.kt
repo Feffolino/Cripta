@@ -151,7 +151,8 @@ fun rememberTagTones(color: Color?, colored: Boolean = TagColorsEnabled.on): Tag
     val scheme = androidx.compose.material3.MaterialTheme.colorScheme
     val primary = scheme.primary
     val onPrimary = scheme.onPrimary
-    return remember(color, colored, dark, primary, onPrimary) {
-        if (color == null || !colored) tagOffTones(dark, primary, onPrimary) else tagTones(color, dark)
-    }
+    // The accent only matters to the uncoloured tones: a coloured tag keeps its tones while the
+    // theme change animates the accent frame by frame.
+    return if (color == null || !colored) remember(dark, primary, onPrimary) { tagOffTones(dark, primary, onPrimary) }
+    else remember(color, dark) { tagTones(color, dark) }
 }

@@ -118,7 +118,7 @@ internal fun MediaPage(
     var retry by remember(id) { mutableIntStateOf(0) }
     val state by produceState<ViewerState>(initialValue = ViewerState.Loading, id, refreshKey, retry) {
         if (value is ViewerState.Error) value = ViewerState.Loading
-        value = vm.stateFor(id)
+        value = vm.stateFor(id, previous = value)
     }
     // The file was deleted meanwhile (e.g. from the note editor): drop its page.
     val latestMissing by androidx.compose.runtime.rememberUpdatedState(onMissing)

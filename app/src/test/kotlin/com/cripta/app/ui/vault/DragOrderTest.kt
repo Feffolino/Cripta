@@ -49,6 +49,12 @@ class DragOrderTest {
     }
 
     @Test
+    fun aDropWhereItStartedSavesNothing() {
+        // Held and let go without a move: nothing to write (every weight, and a refresh of the vault).
+        assertEquals(DragEnd(ids("ABC"), null), endDrag(true, ids("ABC"), ids("ABC")) { it })
+    }
+
+    @Test
     fun aCancelledDragShowsTheStoredOrderAndSavesNothing() {
         // The moves made (B before A) are dropped; a file added meanwhile is shown, as the vault has it.
         assertEquals(DragEnd(ids("ABCD"), null), endDrag(false, ids("BAC"), ids("ABCD")) { it })

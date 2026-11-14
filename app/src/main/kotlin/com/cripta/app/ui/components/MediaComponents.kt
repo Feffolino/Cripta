@@ -186,7 +186,6 @@ fun CoverPlayMark(modifier: Modifier = Modifier, size: Dp = 34.dp) {
  */
 @Composable
 fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Boolean = false) {
-    val tones = com.cripta.app.ui.theme.rememberTagTones(color?.let { Color(it) }, colored = true)
     val resolved = com.cripta.app.ui.tagicons.rememberResolvedTagIcon(icon)
     val vector = com.cripta.app.ui.tagicons.rememberTagIcon(resolved)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
@@ -198,6 +197,8 @@ fun FolderGlyph(color: Int?, icon: String?, emoji: String?, size: Dp, open: Bool
             val emojiSize = with(LocalDensity.current) { (size * 0.82f).toSp() }
             Text(emoji, fontSize = emojiSize, lineHeight = emojiSize, maxLines = 1, softWrap = false)
         } else {
+            // The tones only for the folder symbol: an icon or an emoji does not use them.
+            val tones = com.cripta.app.ui.theme.rememberTagTones(color?.let { Color(it) }, colored = true)
             Icon(if (open) CriptaIcons.FolderOpen else CriptaIcons.Folder, null, tint = tones.mark, modifier = Modifier.matchParentSize())
         }
     }

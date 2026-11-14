@@ -464,7 +464,8 @@ internal class CoverMarkMetrics private constructor(
         ): CoverMarkMetrics = with(density) {
             val measure = { s: String -> measurer.measure(s, style, maxLines = 1, softWrap = false).size.width }
             val slot = ((if (small) 18.dp else 22.dp) * scale).roundToPx()
-            val pillH = maxOf((22.dp * scale).roundToPx(),
+            // Bubbles take the slot's height: no text to measure for them.
+            val pillH = if (bubbles) slot else maxOf((22.dp * scale).roundToPx(),
                 measurer.measure("Ag", style, maxLines = 1).size.height + (4.dp * scale).roundToPx())
             CoverMarkMetrics(
                 slot = slot,
@@ -740,9 +741,11 @@ internal fun ReorderableFileGrid(
     // The per-item tap handler is keyed on the file id only: read the latest callback, or a tap
     // would keep doing what it did when the cell first appeared (e.g. open while selecting).
     val currentOnOpen by rememberUpdatedState(onOpen)
-    val list = remember { mutableStateListOf<FileWithTags>() }
+    // Filled at once (an empty first frame when switching to the manual order), then replaced only
+    // when the vault's list really differs: every emission of the same files copied it all again.
+    val list = remember { mutableStateListOf<FileWithTags>().apply { addAll(items) } }
     var dragging by remember { mutableStateOf(false) }
-    LaunchedEffect(items) { if (!dragging) { list.clear(); list.addAll(items) } }
+    LaunchedEffect(items) { if (!dragging && list.toList() != items) { list.clear(); list.addAll(items) } }
     // The vault as it is now, for the end of a drag: an update that came meanwhile was held back.
     val currentItems by rememberUpdatedState(items)
 

@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
@@ -26,16 +25,16 @@ import com.cripta.app.ui.theme.animationsEnabled
  */
 @Composable
 fun Skeleton(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.shapes.small) {
-    val alpha = if (animationsEnabled()) {
-        val a by rememberInfiniteTransition(label = "skeleton").animateFloat(
+    // Read in the layer only: the pulse redraws the box, it no longer recomposes it every frame.
+    val pulse = if (animationsEnabled()) {
+        rememberInfiniteTransition(label = "skeleton").animateFloat(
             initialValue = 0.55f, targetValue = 1f,
             animationSpec = infiniteRepeatable(tween(900, 0, Motion.EaseOutQuart), RepeatMode.Reverse),
             label = "skeletonAlpha",
         )
-        a
-    } else 1f
+    } else null
     Box(
-        modifier.clearAndSetSemantics {}.graphicsLayer { this.alpha = alpha }.clip(shape)
+        modifier.clearAndSetSemantics {}.graphicsLayer { this.alpha = pulse?.value ?: 1f }.clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
     )
 }

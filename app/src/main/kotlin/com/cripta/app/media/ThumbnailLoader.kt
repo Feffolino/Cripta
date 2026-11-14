@@ -249,6 +249,7 @@ class ThumbnailLoader @Inject constructor(
     fun evict(id: String) {
         cache.remove(id)
         failed.remove(id)
+        mp4Codecs.remove(id)
         runCatching { File(diskDir, id).delete() }
         runCatching { File(customDir, id).delete() }
     }
@@ -316,9 +317,13 @@ class ThumbnailLoader @Inject constructor(
     suspend fun worthConvertingToMp4(file: FileEntity): Boolean {
         if (!VaultRepository.isVideo(file.mimeType)) return false
         if (file.mimeType != "video/mp4") return true
+        // Remembered per file and size: "Seleziona tutto" asked again for every selected MP4 at
+        // every change of the selection, each time opening the file and its extractor.
+        mp4Codecs[file.id]?.takeIf { it.first == file.sizeBytes }?.let { return it.second }
         val codec = videoCodec(file) ?: return false
-        return codec != "video/avc" && codec != "video/hevc"
+        return (codec != "video/avc" && codec != "video/hevc").also { mp4Codecs[file.id] = file.sizeBytes to it }
     }
+    private val mp4Codecs = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
 
     /**
      * Detailed diagnostics for a video (codec, coded size, crop rect, pixel aspect, rotation,

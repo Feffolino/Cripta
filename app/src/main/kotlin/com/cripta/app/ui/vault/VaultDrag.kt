@@ -84,9 +84,13 @@ internal data class DragEnd<T>(val shown: List<T>, val saved: List<String>?)
 
 /**
  * The end of a reorder drag. [dropped]: the finger lifted, so the user's order ([afterDrop]) is
- * shown and saved. Otherwise (cancelled by the system, or the gesture handler removed mid-drag)
+ * shown and saved (unless it is the order the vault already has: let go where it started).
+ * Otherwise (cancelled by the system, or the gesture handler removed mid-drag)
  * nothing is saved and the grid shows [latest], the order the vault has, without the moves made.
  */
 internal fun <T : Any> endDrag(dropped: Boolean, dragged: List<T>, latest: List<T>, key: (T) -> String): DragEnd<T> =
     if (!dropped) DragEnd(latest, null)
-    else afterDrop(dragged, latest, key).let { DragEnd(it, it.map(key)) }
+    else afterDrop(dragged, latest, key).let { shown ->
+        val order = shown.map(key)
+        DragEnd(shown, order.takeIf { it != latest.map(key) })
+    }

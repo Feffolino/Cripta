@@ -203,7 +203,7 @@ fun NoteEditorScreen(
                                 readOnly = vm.saving,
                                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = str(R.string.note_title) },
                             )
-                            val words = vm.text.split(Regex("\\s+")).count { it.isNotBlank() }
+                            val words = remember(vm.text) { vm.text.split(WHITESPACE).count { it.isNotBlank() } }
                             Text(plural(R.plurals.note_words, words, com.cripta.app.ui.components.formatCount(words)),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 16.dp))
@@ -305,3 +305,5 @@ fun NoteEditorScreen(
         )
     }
 }
+
+private val WHITESPACE = Regex("\\s+")

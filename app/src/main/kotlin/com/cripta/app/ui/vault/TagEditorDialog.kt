@@ -139,9 +139,7 @@ internal fun TagSections(
     }
     val q = query.trim()
     if (q.isNotEmpty()) {
-        val matches = library.filter { n ->
-            n.contains(q, ignoreCase = true) || byName[n]?.alias?.contains(q, ignoreCase = true) == true
-        }
+        val matches = library.filter { n -> byName[n]?.let { tagMatches(it, q) } ?: n.contains(q, ignoreCase = true) }
         if (matches.isEmpty()) {
             Text(str(R.string.tag_no_match, q), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -599,7 +597,7 @@ fun BatchTagDialog(
 /** Above this many tags the pickers show a search field. */
 internal const val SEARCH_THRESHOLD = 12
 
-/** Whether [tag] is found by [query]: its name or its acronym, case aside (the same rule everywhere). */
+/** Whether [tag] is found by [query]: its name or its acronym, case aside. The one rule of every tag search (pickers, filter bar, vault search). */
 internal fun tagMatches(tag: TagEntity, query: String): Boolean {
     val q = query.trim()
     return q.isEmpty() || tag.name.contains(q, ignoreCase = true) || tag.alias?.contains(q, ignoreCase = true) == true
