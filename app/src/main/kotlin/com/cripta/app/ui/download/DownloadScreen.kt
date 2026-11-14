@@ -418,7 +418,7 @@ fun DownloadScreen(
     if (pickFolder) {
         val scope = androidx.compose.runtime.rememberCoroutineScope()
         FolderPickerSheet(folders, effectiveFolder, onPick = { folderId = it; pickFolder = false }, onDismiss = { pickFolder = false },
-            onCreate = { name, parent -> scope.launch { folderId = vm.createFolder(name, parent); pickFolder = false } })
+            onCreate = { name, parent -> scope.launch { vm.createFolder(name, parent)?.let { folderId = it }; pickFolder = false } })
     }
     if (pickTags) {
         TagPickerSheet(tags, effectiveTags.toSet(),

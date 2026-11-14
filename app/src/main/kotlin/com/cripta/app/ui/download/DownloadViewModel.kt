@@ -45,8 +45,19 @@ class DownloadViewModel @Inject constructor(
     val folders: StateFlow<List<FolderEntity>> =
         repo.allFolders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** A new folder made from the destination picker; its id, to choose it right away. */
-    suspend fun createFolder(name: String, parentId: Long?): Long = repo.createFolder(name, parentId)
+    /**
+     * A new folder made from the destination picker; its id, to choose it right away. Null when it
+     * could not be made (the vault locked as it was tapped, a full phone): the picker runs this on
+     * the screen's own scope, where an error closed the app.
+     */
+    suspend fun createFolder(name: String, parentId: Long?): Long? = try {
+        repo.createFolder(name, parentId)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        com.cripta.app.logException(android.util.Log.ERROR, "DownloadViewModel", "folder not created", e)
+        null
+    }
     val tags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
