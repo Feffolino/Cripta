@@ -1764,8 +1764,21 @@ class FaceRepository @Inject constructor(
     }
 
     /** The moments of [trackId] that "Dividi" can move (none for faces analysed before faces were kept one by one). */
-    suspend fun splittable(trackId: Long): List<Long> =
-        dao.tracks(listOf(trackId)).firstOrNull()?.let { r -> FaceCodec.decode(r.sightings).map { it.timeMs }.distinct().sorted() }.orEmpty()
+    suspend fun splittable(trackId: Long): List<Long> {
+        // Read by "Dividi" on its own (the viewer's produceState): the vault can lock, or its
+        // database close, first. Then there is nothing to split, not a crash ("Vault locked").
+        val d = session.dbOrNull() ?: return emptyList()
+        val row = try {
+            d.faceDao().tracks(listOf(trackId)).firstOrNull()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: IllegalStateException) {
+            null
+        } catch (e: android.database.SQLException) {
+            null
+        }
+        return row?.let { r -> FaceCodec.decode(r.sightings).map { it.timeMs }.distinct().sorted() }.orEmpty()
+    }
 
     /**
      * "Dividi": the faces of [trackId] at [moments] are someone else: they become a face of their

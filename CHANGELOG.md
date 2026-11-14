@@ -7,6 +7,7 @@ Entries marked **stable** went out as a stable release.
 
 - A link with a port and no "https://" in a person's profile ("example.com:8080/page", "localhost:3000") opens in the browser: before, Cripta said no app could open it
 - Folders: locking the vault while the grid was showing the faces on its covers no longer closes the app ("Vault locked")
+- "Dividi" on a face in the viewer no longer closes the app when the vault locks just as it opens ("Vault locked")
 - A PDF with very large pages (an A0 drawing, a poster, a plan) opens with those pages drawn a little less sharp instead of closing the app as soon as they show
 - A video whose size was noted wrong when it was imported (some apps that share files report it badly) can be played and moved through to its end, and a backup writes every file with its exact length: both took the size noted at import, because asking the vault for the real one always failed
 - An update already installed no longer stays in Cripta's cache (tens of MB): it is deleted when the app starts, and an old "Installa" notification says the file is gone instead of opening the installer on it
