@@ -418,6 +418,20 @@ private fun Modifier.toggleableRow(checked: Boolean, onToggle: () -> Unit): Modi
 
 /** Keeps a PDF open and renders pages on demand (one visible page at a time), so a large
  *  document doesn't rasterize every page into RAM up front. Render calls are serialized. */
+/** Longest side of a drawn PDF page: at most 4096 x 4096 ARGB pixels, 64 MB, under Android's 100 MB. */
+private const val PDF_MAX_SIDE = 4096
+
+/**
+ * Pixels per PDF point for a page of [widthPt] x [heightPt]: 150 dpi, less for a page so large it
+ * would pass [PDF_MAX_SIDE]. An A0 drawing at 150 dpi was a 139 MB bitmap, which Android refuses
+ * to draw: the app closed as soon as the page showed.
+ */
+internal fun pdfRenderScale(widthPt: Float, heightPt: Float): Float {
+    val dpiScale = 150f / 72f
+    val longest = maxOf(widthPt, heightPt)
+    return if (longest <= 0f) dpiScale else minOf(dpiScale, PDF_MAX_SIDE / longest)
+}
+
 private class PdfDoc(bytes: ByteArray) {
     private val doc = PDDocument.load(ByteArrayInputStream(bytes))
     private val renderer = PDFRenderer(doc)
@@ -427,7 +441,10 @@ private class PdfDoc(bytes: ByteArray) {
     val pageCount: Int = doc.numberOfPages
     suspend fun render(index: Int): Bitmap? = recent.get(index) ?: mutex.withLock {
         recent.get(index) ?: withContext(Dispatchers.IO) {
-            runCatching { renderer.renderImageWithDPI(index, 150f) }.getOrNull()
+            runCatching {
+                val box = doc.getPage(index).cropBox
+                renderer.renderImage(index, pdfRenderScale(box.width, box.height))
+            }.getOrNull()
         }?.also { recent.put(index, it) }
     }
     fun close() { runCatching { doc.close() } }
