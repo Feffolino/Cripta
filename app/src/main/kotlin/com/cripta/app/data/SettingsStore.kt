@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -291,7 +292,14 @@ class SettingsStore @Inject constructor(
     private val prefs: Flow<androidx.datastore.preferences.core.Preferences> = context.dataStore.data
         .catch { e -> if (e is java.io.IOException) emit(androidx.datastore.preferences.core.emptyPreferences()) else throw e }
 
-    val settings: Flow<Settings> = prefs.map(::toSettings)
+    val settings: Flow<Settings> = prefs.map(::toSettings).onEach { lastRead = it }
+
+    /**
+     * The settings as last read (null before the first read): a screen opened later starts from
+     * them, instead of showing the defaults for a frame or two (dark theme, trash off…).
+     */
+    @Volatile var lastRead: Settings? = null
+        private set
 
     /** The typed settings of the stored preferences [p] (a value of another type throws ClassCastException). */
     private fun toSettings(p: androidx.datastore.preferences.core.Preferences): Settings =

@@ -9,6 +9,7 @@ Entries marked **stable** went out as a stable release.
 - Folders: locking the vault while the grid was showing the faces on its covers no longer closes the app ("Vault locked")
 - A video whose size was noted wrong when it was imported (some apps that share files report it badly) can be played and moved through to its end, and a backup writes every file with its exact length: both took the size noted at import, because asking the vault for the real one always failed
 - An update already installed no longer stays in Cripta's cache (tens of MB): it is deleted when the app starts, and an old "Installa" notification says the file is gone instead of opening the installer on it
+- Settings and the app's theme open with your choices from the first frame: for a moment they showed the defaults (dark theme, trash off, lock after 1 minute)
 
 ## 2026-11-13
 

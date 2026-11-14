@@ -30,7 +30,8 @@ class CriptaApp : Application(), ImageLoaderFactory {
         Strings.init(this)
         com.cripta.app.ui.theme.CriptaIcons.init(resources)
         CrashLog.install(this)
-        TinkInit.ensureInitialized()
+        // Registered in the background: whatever needs Tink first (the unlock) waits for it there.
+        kotlin.concurrent.thread(name = "tink-init", isDaemon = true) { runCatching { TinkInit.ensureInitialized() } }
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
         // At cold start no conversion can be in flight, so any leftover decrypted conversion
         // temp files are orphans from a killed process: listed now, shredded in the background.

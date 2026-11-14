@@ -174,7 +174,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val settings: StateFlow<Settings> =
-        store.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Settings())
+        store.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), store.lastRead ?: Settings())
 
     val tags: StateFlow<List<TagEntity>> =
         repo.tags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

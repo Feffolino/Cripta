@@ -215,7 +215,7 @@ class MainActivity : FragmentActivity() {
         watchBackgroundWorkForNotificationPermission()
         runCatching { registerReceiver(screenOff, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)) }
         setContent {
-            val set by settings.settings.collectAsState(initial = com.cripta.app.data.Settings())
+            val set by settings.settings.collectAsState(initial = settings.lastRead ?: com.cripta.app.data.Settings())
             // Honour the "allow screenshots" setting: FLAG_SECURE on unless the user opted out.
             LaunchedEffect(set.allowScreenshots) {
                 if (set.allowScreenshots) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -460,14 +460,16 @@ class MainActivity : FragmentActivity() {
                 authInFlight = false
                 lifecycleScope.launch {
                     runCatching {
+                        // Off the main thread, as the PIN is checked: the Keystore, Tink, the
+                        // database key and (at setup) a synchronous write stalled the first frame.
                         if (setup) {
-                            keyVault.completeSetup(authed)
+                            withContext(Dispatchers.Default) { keyVault.completeSetup(authed) }
                         } else if (twoStep) {
-                            val layer = keyVault.unwrapSystemLayer(authed)
+                            val layer = withContext(Dispatchers.Default) { keyVault.unwrapSystemLayer(authed) }
                             clearSystemLayer()
                             systemLayer = layer
                         } else {
-                            keyVault.completeUnlock(authed)
+                            withContext(Dispatchers.Default) { keyVault.completeUnlock(authed) }
                         }
                     }.onSuccess {
                         authUi.value = authUi.value.copy(firstRun = false, error = null,
