@@ -22,6 +22,7 @@ class CriptaApp : Application(), ImageLoaderFactory {
         fun sharedLinkStore(): com.cripta.app.data.SharedLinkStore
         fun dupScanStore(): com.cripta.app.data.dedup.DupScanStore
         fun sharedFilesStore(): com.cripta.app.data.SharedFilesStore
+        fun appUpdater(): com.cripta.app.update.AppUpdater
     }
 
     override fun onCreate() {
@@ -36,6 +37,10 @@ class CriptaApp : Application(), ImageLoaderFactory {
         runCatching {
             EntryPointAccessors.fromApplication(this, AppEntryPoint::class.java)
                 .vaultRepository().sweepConversionTemp()
+        }
+        // An update already installed leaves its APK behind in the cache: removed, off the main thread.
+        kotlin.concurrent.thread(name = "drop-installed-update", isDaemon = true) {
+            runCatching { EntryPointAccessors.fromApplication(this, AppEntryPoint::class.java).appUpdater().dropInstalled(this) }
         }
     }
 

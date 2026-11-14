@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -226,5 +227,24 @@ class AppUpdaterTest {
         assertThrows(kotlinx.coroutines.CancellationException::class.java) { runBlocking { job.await() } }
         assertFalse(part.exists())
         assertFalse(AppUpdater.apkFile(app).exists())
+    }
+
+    @Test
+    fun anInstalledUpdateLeavesTheCacheAndANewerOneStays() {
+        val apk = AppUpdater.apkFile(app).apply { parentFile?.mkdirs(); writeBytes(ByteArray(16)) }
+        val updater = AppUpdater()
+        val installed = updater.currentBuild(app).toLong()
+        updater.archiveBuild = { _, _ -> installed + 1 }
+        updater.dropInstalled(app)
+        assertTrue(apk.exists())
+        updater.archiveBuild = { _, _ -> installed }
+        updater.dropInstalled(app)
+        assertFalse(apk.exists())
+        // Unreadable: of no use to the installer either.
+        apk.writeBytes(ByteArray(16))
+        updater.archiveBuild = { _, _ -> null }
+        updater.dropInstalled(app)
+        assertFalse(apk.exists())
+        updater.dropInstalled(app)
     }
 }

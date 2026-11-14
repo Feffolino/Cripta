@@ -78,6 +78,23 @@ class AppUpdater @Inject constructor() {
         ctx.packageManager.getPackageArchiveInfo(apk.path, 0)?.packageName
     }
 
+    internal var archiveBuild: (Context, File) -> Long? = { ctx, apk ->
+        @Suppress("DEPRECATION")
+        ctx.packageManager.getPackageArchiveInfo(apk.path, 0)?.versionCode?.toLong()
+    }
+
+    /**
+     * The downloaded update once it is installed (or older, or unreadable): deleted. It stayed in the
+     * cache for good, tens of MB, and an old "Installa" notification opened the installer on it.
+     * One still newer than the app stays (installed later from its notification). Off the main thread.
+     */
+    fun dropInstalled(ctx: Context) {
+        val apk = apkFile(ctx)
+        if (!apk.exists()) return
+        val build = runCatching { archiveBuild(ctx, apk) }.getOrNull()
+        if (build == null || build <= currentBuild(ctx)) apk.delete()
+    }
+
     /** Checksum asset per APK url, remembered from [latest] so [download] can verify it. */
     private val checksumFor = java.util.concurrent.ConcurrentHashMap<String, String>()
 
