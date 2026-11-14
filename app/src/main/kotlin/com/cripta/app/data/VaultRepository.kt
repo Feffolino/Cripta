@@ -641,10 +641,11 @@ class VaultRepository @Inject constructor(
     private suspend fun subtreeOf(root: Long): List<Long> {
         val childrenMap = snapshotChildren()
         val out = mutableListOf<Long>()
+        val seen = HashSet<Long>()
         val todo = ArrayDeque<Long>().apply { add(root) }
         while (todo.isNotEmpty() && out.size < 100_000) {
             val id = todo.removeFirst()
-            if (id in out) continue
+            if (!seen.add(id)) continue
             out.add(id)
             childrenMap[id]?.let { todo.addAll(it) }
         }
@@ -1227,10 +1228,8 @@ class VaultRepository @Inject constructor(
 
     suspend fun randomEligibleIds(): List<String> = withContext(Dispatchers.IO) { db.fileDao().randomEligibleIds() }
 
-    /** One-shot snapshot of every file entity (no tags). Used by the duplicate scanner. */
-    suspend fun allFilesSnapshot(): List<FileEntity> = withContext(Dispatchers.IO) {
-        db.fileDao().allWithTags().first().map { it.file }
-    }
+    /** One-shot snapshot of every live file entity (no tags, so no relation queries). Used by the scans. */
+    suspend fun allFilesSnapshot(): List<FileEntity> = withContext(Dispatchers.IO) { db.fileDao().liveNow() }
 
     // --- Thumbnail sealing (persistent cover cache) ---
     /** Encrypt small thumbnail bytes with the session DEK (safe to persist on disk). */
@@ -1635,7 +1634,7 @@ class VaultRepository @Inject constructor(
      * meanwhile (a new retention period) is not destroyed on the strength of its old date.
      * Returns whether the file was destroyed.
      */
-    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false, trashedBefore: Long? = null): Boolean = withContext(Dispatchers.IO) {
+    suspend fun secureDelete(fileId: String, onlyIfTrashed: Boolean = false, trashedBefore: Long? = null, notify: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         val deleted = db.withTransaction {
             val f = db.fileDao().byId(fileId)
             if (f == null || (onlyIfTrashed && f.deletedAt == null)) return@withTransaction false
@@ -1656,8 +1655,14 @@ class VaultRepository @Inject constructor(
         blobs.shred(fileId)         // best-effort overwrite + delete of the blob
         // Deleting a file must not remove its tags from the library: they stay available for
         // other files. Tags are only removed via an explicit deleteTag.
-        notifyChanged()
+        // [notify] false: a loop over many files tells the screens once, at its end.
+        if (notify) notifyChanged()
         true
+    }
+
+    /** Destroy these trashed files for good, one after the other; returns the ids destroyed. */
+    suspend fun deleteForever(ids: List<String>): List<String> = withContext(Dispatchers.IO) {
+        ids.filter { secureDelete(it, onlyIfTrashed = true, notify = false) }.also { if (it.isNotEmpty()) notifyChanged() }
     }
 
     /**
@@ -1858,7 +1863,7 @@ class VaultRepository @Inject constructor(
     suspend fun deleteFolderForever(folderId: Long): List<String> = withContext(Dispatchers.IO) {
         val subtree = subtreeOf(folderId)
         // Only the ids really destroyed: a file restored meanwhile keeps its cover.
-        val ids = db.fileDao().trashedIdsInFolders(subtree).filter { secureDelete(it, onlyIfTrashed = true) }
+        val ids = db.fileDao().trashedIdsInFolders(subtree).filter { secureDelete(it, onlyIfTrashed = true, notify = false) }
         removeEmptyTrashedFolders(subtree.reversed())
         notifyChanged()
         ids
@@ -1879,7 +1884,7 @@ class VaultRepository @Inject constructor(
     suspend fun emptyTrash(): List<String> = withContext(Dispatchers.IO) {
         // What is in the trash now: a file restored and trashed again while it empties stays.
         val asked = now() + 1
-        val ids = db.fileDao().trashedBefore(asked).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = asked) }
+        val ids = db.fileDao().trashedBefore(asked).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = asked, notify = false) }
         val folders = db.folderDao().trashedNow().map { it.id }
         removeEmptyTrashedFolders(folders.flatMap { subtreeOf(it) }.distinct().reversed())
         notifyChanged()
@@ -1918,10 +1923,11 @@ class VaultRepository @Inject constructor(
     /** Crypto-shred trashed files older than [days]; returns their ids (for cover eviction). */
     suspend fun purgeExpiredTrash(days: Int): List<String> = withContext(Dispatchers.IO) {
         val cutoff = now() - days * 86_400_000L
-        val ids = db.fileDao().trashedBefore(cutoff).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = cutoff) }
+        val ids = db.fileDao().trashedBefore(cutoff).filter { secureDelete(it, onlyIfTrashed = true, trashedBefore = cutoff, notify = false) }
         // Expired trashed folders go once empty (their files, trashed at the same time, just went).
         val expired = db.folderDao().trashedNow().filter { (it.deletedAt ?: Long.MAX_VALUE) < cutoff }.map { it.id }
         if (expired.isNotEmpty()) removeEmptyTrashedFolders(expired.flatMap { subtreeOf(it) }.distinct().reversed())
+        if (ids.isNotEmpty() || expired.isNotEmpty()) notifyChanged()
         ids
     }
 
@@ -2519,7 +2525,7 @@ class VaultRepository @Inject constructor(
                 // All or nothing: one transaction, and the blobs written so far removed on failure.
                 // Stopped halfway (a full disk, a damaged archive), a restore left a half-merged
                 // vault, and trying again duplicated what had come in.
-                val written = ArrayList<String>()
+                val written = LinkedHashSet<String>()
                 val covers = ArrayList<java.io.File>()
                 val knownCovers = ArrayList<String>()
                 // What an earlier restore killed halfway left there.
@@ -2606,7 +2612,7 @@ class VaultRepository @Inject constructor(
     private suspend fun restoreArchive(
         manifest: org.json.JSONObject,
         inp: java.io.DataInputStream,
-        written: MutableList<String>,
+        written: MutableSet<String>,
         coverFiles: MutableList<java.io.File>,
         knownCovers: MutableList<String>,
         onSettings: (ByteArray) -> Unit,

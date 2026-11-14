@@ -220,6 +220,10 @@ interface FileDao {
     @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")
     fun allWithTags(): Flow<List<FileWithTags>>
 
+    /** Every live file, newest first, without its tags (no relation queries). */
+    @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")
+    suspend fun liveNow(): List<FileEntity>
+
     /** One-shot [allWithTags] (a backup's snapshot, inside its transaction). */
     @Transaction
     @Query("SELECT * FROM files WHERE deletedAt IS NULL ORDER BY importedAt DESC")

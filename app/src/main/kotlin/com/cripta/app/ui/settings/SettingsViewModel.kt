@@ -319,7 +319,7 @@ class SettingsViewModel @Inject constructor(
     /** Selection in the trash: destroy these for good, one after the other. */
     fun deleteManyForever(files: List<String>, folders: List<Long>) = launchHeld("deleteManyForever") {
         folders.forEach { id -> repo.deleteFolderForever(id).forEach { thumbs.evict(it) } }
-        files.forEach { if (repo.secureDelete(it, onlyIfTrashed = true)) thumbs.evict(it) }
+        repo.deleteForever(files).forEach { thumbs.evict(it) }
     }
     fun setVideoLoop(v: Boolean) = savePref { store.setVideoLoop(v) }
     fun setSeekStep(v: Int) = savePref { store.setSeekStep(v) }
