@@ -1169,22 +1169,35 @@ class FaceRepository @Inject constructor(
      * faces; faces in media where they already are, and those set aside ([ASIDE]), are left out.
      */
     suspend fun suggestionsFor(personId: Long, limit: Int = Int.MAX_VALUE, minMedia: Int = 1): List<Suggestion> = withContext(Dispatchers.Default) {
-        val rows = dao.allTrackMeta()
+        suggestionsIn(suggestTables(), personId, limit, minMedia)
+    }
+
+    /** What [suggestionsFor] reads, read once for all the people of [knownSuggestions]. */
+    private class SuggestTables(
+        val rows: List<com.cripta.app.data.db.TrackMeta>, val rejections: List<FaceRejectionEntity>, val apart: List<FaceApartEntity>,
+        val files: Map<String, FileEntity>, val cards: Map<Long, TrackCard>,
+    )
+
+    private suspend fun suggestTables() = SuggestTables(dao.allTrackMeta(), dao.rejections(), dao.apart(),
+        repo.allFilesSnapshot().filter { it.deletedAt == null }.associateBy { it.id }, dao.allCards().associateBy { it.id })
+
+    private suspend fun suggestionsIn(t: SuggestTables, personId: Long, limit: Int, minMedia: Int): List<Suggestion> {
+        val rows = t.rows
         val own = rows.filter { it.personId == personId && it.state != "suggested" }
-        if (own.isEmpty() || own.map { it.fileId }.distinct().size < minMedia) return@withContext emptyList()
+        if (own.isEmpty() || own.map { it.fileId }.distinct().size < minMedia) return emptyList()
         val ownMedia = own.map { it.fileId }.toSet() + dao.linksOfPerson(personId)
         val ownIds = own.map { it.id }.toSet()
         // A face of theirs never counts against them (a "no" from before it was given to them).
-        val refused = dao.rejections().filter { it.personId == personId && it.trackId !in ownIds }.map { it.trackId }.toSet()
-        val apart = dao.apart().mapNotNull { p -> if (p.a in ownIds) p.b else if (p.b in ownIds) p.a else null }.toSet()
-        val files = repo.allFilesSnapshot().filter { it.deletedAt == null }.associateBy { it.id }
+        val refused = t.rejections.filter { it.personId == personId && it.trackId !in ownIds }.map { it.trackId }.toSet()
+        val apart = t.apart.mapNotNull { p -> if (p.a in ownIds) p.b else if (p.b in ownIds) p.a else null }.toSet()
+        val files = t.files
         // Faces the closer look of their video did not find again ([ASIDE]) are hardly faces: never offered.
         val candidates = rows.filter { it.personId == null && it.state != ASIDE && it.id !in refused && it.id !in apart &&
             it.fileId !in ownMedia && it.fileId in files }
         val emb = embeddings(own.map { it.id } + candidates.map { it.id } + refused + apart)
         val person = own.groupBy { it.fileId }.mapValues { (_, l) -> l.flatMap { emb[it.id].orEmpty() } }
         val negatives = (refused + apart).flatMap { emb[it].orEmpty() }
-        val cards = dao.allCards().associateBy { it.id }
+        val cards = t.cards
         val judged = candidates.mapNotNull { r ->
             val e = emb[r.id] ?: return@mapNotNull null
             val card = cards[r.id] ?: return@mapNotNull null
@@ -1192,7 +1205,7 @@ class FaceRepository @Inject constructor(
                 uncertain = uncertain(card, files[r.fileId]?.let { VaultRepository.isVideo(it.mimeType) } == true))
         }
         coroutineContext.ensureActive()
-        FaceSuggest.pick(person, judged, ownMedia, negatives).take(limit).mapNotNull { (c, sc) -> cards[c.id]?.let { Suggestion(it, sc) } }
+        return FaceSuggest.pick(person, judged, ownMedia, negatives).take(limit).mapNotNull { (c, sc) -> cards[c.id]?.let { Suggestion(it, sc) } }
     }
 
     /** A face of "Da confermare" and the known person it is most like. */
@@ -1204,8 +1217,11 @@ class FaceRepository @Inject constructor(
      */
     suspend fun knownSuggestions(minMedia: Int = 2, limit: Int = Int.MAX_VALUE): List<PersonSuggestion> = withContext(Dispatchers.Default) {
         val best = HashMap<Long, PersonSuggestion>()
+        // The tables once for everyone: each person read them all again.
+        val tables = suggestTables()
         for (p in dao.persons().filter { !it.ignored }) {
-            for (s in suggestionsFor(p.id, limit, minMedia)) {
+            coroutineContext.ensureActive()
+            for (s in suggestionsIn(tables, p.id, limit, minMedia)) {
                 val cur = best[s.card.id]
                 if (cur == null || s.similarity > cur.suggestion.similarity) best[s.card.id] = PersonSuggestion(p.id, s)
             }

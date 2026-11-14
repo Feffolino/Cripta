@@ -469,6 +469,8 @@ class IntroRepository @Inject constructor(
 
     /** Match the videos [ids] (just fingerprinted) against every other video. Returns how many videos got a segment. */
     suspend fun matchNew(ids: Collection<String>): Int = withContext(Dispatchers.Default) {
+        // Nothing new (every video of the chunk skipped or forgotten): no index of the whole vault to build.
+        if (ids.isEmpty()) return@withContext 0
         val touched = HashSet<String>()
         for (kind in SegmentKind.entries) {
             val index = indexFor(kind)

@@ -221,9 +221,14 @@ internal object BackupExtras {
             known.forEachIndexed { i, id -> if (id != null && id !in first && !has(id)) first[id] = i }
             return first.values.toSet()
         }
-        val noFaces = lacking { id -> faces.scanOf(id) != null || faces.trackRowsOf(listOf(id)).isNotEmpty() }
-        val noPrints = lacking { id -> intro.printsOf(id).isNotEmpty() }
-        val noDupPrint = db.dupPrintDao().all().mapTo(HashSet()) { it.fileId }.let { have -> lacking { it in have } }
+        // Only for the parts the archive has: each asked every file already here (and the prints
+        // read their audio blobs) before knowing whether there was anything to restore.
+        fun has(vararg parts: String) = parts.any { (o.optJSONArray(it)?.length() ?: 0) > 0 }
+        val noFaces = if (!has("scans", "tracks")) emptySet()
+            else lacking { id -> faces.scanOf(id) != null || faces.trackRowsOf(listOf(id)).isNotEmpty() }
+        val noPrints = if (!has("prints")) emptySet() else lacking { id -> intro.printsOf(id).isNotEmpty() }
+        val noDupPrint = if (!has("dupPrints")) emptySet()
+            else db.dupPrintDao().all().mapTo(HashSet()) { it.fileId }.let { have -> lacking { it in have } }
         /** A restored file, or one already here lacking that analysis ([missing]). */
         fun fileOr(i: Any?, missing: Set<Int>): String? = (i as? Number)?.toInt()?.let { newIds.getOrNull(it) ?: known.getOrNull(it)?.takeIf { _ -> it in missing } }
 
