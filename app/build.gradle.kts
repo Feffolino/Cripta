@@ -36,10 +36,10 @@ android {
         targetSdk = 34
         versionCode = ((project.findProperty("buildNumber") as String?)?.toIntOrNull()) ?: 1
         versionName = "0.1.0" + ((project.findProperty("buildLabel") as String?)?.let { "-$it" } ?: "")
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // yt-dlp ships native Python payloads per ABI; limit to the two real-device architectures
-        // to keep the APK from ballooning with x86 emulator binaries.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        // yt-dlp, ffmpeg, ONNX Runtime and SQLCipher ship native code per ABI: 64-bit ARM only.
+        // With minSdk 31 (Android 12) the phones are 64-bit; the 32-bit copies weighed about
+        // 54 MB of every APK and update, and x86 is only for emulators.
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     signingConfigs {
@@ -87,6 +87,9 @@ android {
     testOptions { unitTests.isIncludeAndroidResources = true }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // BouncyCastle comes with PDFBox; the tables of its post-quantum algorithms (several MB)
+        // are never read: PDFBox only opens PDFs, never with those algorithms.
+        resources.excludes += "org/bouncycastle/pqc/**"
         // youtubedl-android must be able to extract its Python .so payloads at runtime.
         jniLibs.useLegacyPackaging = true
     }
@@ -104,7 +107,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
@@ -127,7 +129,6 @@ dependencies {
     implementation(libs.media3.datasource)
     implementation(libs.media3.extractor)
     implementation(libs.media3.transformer)
-    implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.effect)
     implementation(libs.media3.common)
     implementation(libs.media3.inspector)
@@ -148,9 +149,6 @@ dependencies {
     testImplementation(libs.onnxruntime.jvm)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.room.testing)
 }
 
 kotlin {
