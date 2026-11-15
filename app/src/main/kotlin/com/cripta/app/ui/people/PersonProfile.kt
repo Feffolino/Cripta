@@ -409,6 +409,7 @@ private fun NotesAndLinks(p: FaceRepository.Person, vm: SettingsViewModel) {
     Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         com.cripta.app.ui.components.CriptaTextField(notes, { notes = it }, placeholder = { Text(str(R.string.person_notes_hint)) },
             minLines = 2, modifier = Modifier.fillMaxWidth())
+        if (links.isNotEmpty()) LaunchedEffect(Unit) { warmUpLinks(context) }
         links.toList().forEachIndexed { i, l ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(CriptaIcons.Link, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
@@ -451,13 +452,61 @@ internal fun hasScheme(link: String): Boolean {
     return hostWithPort == null || !(hostWithPort.contains('.') || hostWithPort.equals("localhost", ignoreCase = true))
 }
 
-/** A link opens in the user's browser (Cripta itself has no network access). */
+/**
+ * A web link opens in a Custom Tab: the browser draws the page over Cripta, in Cripta's task, and
+ * Back comes straight back here (no switch to the browser app). Started for a result so the
+ * auto-lock treats it like a picker (MainActivity's grace period), not like leaving the app.
+ * Other schemes (mailto:, tel:…) and a context without an activity open as a plain view.
+ */
 internal fun openLink(context: android.content.Context, link: String) {
     val url = if (hasScheme(link)) link else "https://$link"
+    val uri = android.net.Uri.parse(url)
+    val activity = context.findActivity()
     runCatching {
-        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        if (activity != null && uri.scheme?.lowercase() in setOf("http", "https")) {
+            val tab = androidx.browser.customtabs.CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setUrlBarHidingEnabled(true)
+                .setShareState(androidx.browser.customtabs.CustomTabsIntent.SHARE_STATE_ON)
+                .setColorScheme(androidx.browser.customtabs.CustomTabsIntent.COLOR_SCHEME_SYSTEM)
+                .setStartAnimations(activity, R.anim.link_enter, R.anim.link_hold)
+                .setExitAnimations(activity, R.anim.link_return, R.anim.link_exit)
+                .build()
+            tab.intent.data = uri
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(tab.intent, LINK_REQUEST, tab.startAnimationBundle)
+        } else {
+            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
     }.onFailure { android.widget.Toast.makeText(context, str(R.string.no_app_for_link), android.widget.Toast.LENGTH_SHORT).show() }
+}
+
+/** Not read back: the code only marks the launch as ours (see [openLink]). */
+private const val LINK_REQUEST = 0x4C4B
+
+private fun android.content.Context.findActivity(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
+}
+
+@Volatile private var linksWarmed = false
+
+/**
+ * Starts the browser's Custom Tabs engine in the background while a screen with a link is shown,
+ * so the page opens at once on a tap. Once per process; nothing is fetched (no URL is passed).
+ */
+internal fun warmUpLinks(context: android.content.Context) {
+    if (linksWarmed) return
+    linksWarmed = true
+    runCatching {
+        val pkg = androidx.browser.customtabs.CustomTabsClient.getPackageName(context, null) ?: return
+        androidx.browser.customtabs.CustomTabsClient.connectAndInitialize(context.applicationContext, pkg)
+    }
 }
 
 @Composable

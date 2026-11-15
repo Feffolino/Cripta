@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Back from a link page: Cripta comes back from the left (AppRoot pagePopEnter). -->
+<translate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@interpolator/cripta_ease_out_quart"
+    android:fromXDelta="-8%p" android:toXDelta="0" android:duration="280" />

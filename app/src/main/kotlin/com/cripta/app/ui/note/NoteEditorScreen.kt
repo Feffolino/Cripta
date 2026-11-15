@@ -241,6 +241,7 @@ fun NoteEditorScreen(
                         // The cursor in a web address: opening it is the user's explicit act (nothing is
                         // fetched to preview it), and it can go to the downloader (the note is saved first).
                         val link = NoteMarkdown.urlAt(body.text, body.selection.start)
+                        if (link != null) LaunchedEffect(Unit) { com.cripta.app.ui.people.warmUpLinks(context) }
                         if (link != null && !vm.loadFailed) Row(
                             Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,

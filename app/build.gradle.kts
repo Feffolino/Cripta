@@ -123,6 +123,8 @@ dependencies {
 
     implementation(libs.tink.android)
     implementation(libs.androidx.biometric)
+    // Links open in a Custom Tab over Cripta (Back returns here) instead of the browser app.
+    implementation(libs.androidx.browser)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)

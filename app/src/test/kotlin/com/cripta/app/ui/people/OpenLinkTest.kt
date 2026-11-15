@@ -3,8 +3,10 @@ package com.cripta.app.ui.people
 import android.app.Application
 import android.content.Intent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -39,5 +41,24 @@ class OpenLinkTest {
             openLink(app, link)
             assertEquals(link, shadowOf(app).nextStartedActivity.data.toString())
         }
+    }
+
+    @Test fun fromAnActivityAWebLinkOpensInACustomTabOverCripta() {
+        val activity = Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        openLink(activity, "example.com/a")
+        val started = shadowOf(activity).nextStartedActivityForResult
+        assertEquals("https://example.com/a", started.intent.data.toString())
+        assertTrue(started.intent.hasExtra(androidx.browser.customtabs.CustomTabsIntent.EXTRA_SESSION))
+        // Same task as Cripta: Back from the page returns here.
+        assertEquals(0, started.intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
+        assertTrue(started.requestCode >= 0)
+    }
+
+    @Test fun fromAnActivityOtherSchemesStillOpenAsAPlainView() {
+        val activity = Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        openLink(activity, "mailto:a@example.com")
+        val started = shadowOf(activity).nextStartedActivity
+        assertEquals("mailto:a@example.com", started.data.toString())
+        assertTrue(!started.hasExtra(androidx.browser.customtabs.CustomTabsIntent.EXTRA_SESSION))
     }
 }
