@@ -123,7 +123,12 @@ internal fun VideoPlayer(
     var buffering by remember(file.id) { mutableStateOf(true) }
     val player = remember(file.id) {
         // Headphones unplugged (or Bluetooth gone): paused, not played on aloud from the speaker.
-        ExoPlayer.Builder(ctx).setHandleAudioBecomingNoisy(true).build().apply {
+        // The player's own increments only name the buttons for TalkBack: their presses seek by the
+        // live step setting (setSeekButtons), the same as the double tap.
+        val stepMs = vm.playback.value.seekStepSec * 1000L
+        ExoPlayer.Builder(ctx).setHandleAudioBecomingNoisy(true)
+            .setSeekBackIncrementMs(stepMs).setSeekForwardIncrementMs(stepMs)
+            .build().apply {
             // Route audio properly and cooperate with other apps (pause on focus loss).
             setAudioAttributes(
                 AudioAttributes.Builder()
@@ -564,6 +569,7 @@ internal fun VideoPlayer(
         val max = if (dur > 0) dur else Long.MAX_VALUE
         player.seekTo((player.currentPosition + deltaMs).coerceIn(0L, max))
     }
+    LaunchedEffect(playerViewRef, player, prefs.seekStepSec) { playerViewRef?.setSeekButtons(prefs.seekStepSec, ::seekBy) }
     fun toggleController() {
         playerViewRef?.let { if (it.isControllerFullyVisible) it.hideController() else it.showController() }
     }
@@ -935,7 +941,12 @@ internal fun VideoPlayer(
             label = "seekHint",
         ) {
             Surface(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape) {
-                Text(seekText, color = Color.White, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val back = seekText.startsWith("-")
+                    if (!back) Text(seekText, color = Color.White, modifier = Modifier.padding(end = 6.dp))
+                    Icon(if (back) CriptaIcons.FastRewind else CriptaIcons.FastForward, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    if (back) Text(seekText, color = Color.White, modifier = Modifier.padding(start = 6.dp))
+                }
             }
         }
 
