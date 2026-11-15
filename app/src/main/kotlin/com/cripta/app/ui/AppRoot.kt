@@ -136,10 +136,13 @@ private val pushEnter: EnterTransition =
     fadeIn(Motion.enter(Motion.LONG)) + scaleIn(Motion.enter(Motion.LONG), initialScale = 0.94f)
 private val pushExit: ExitTransition =
     fadeOut(Motion.exit(Motion.LONG)) + scaleOut(Motion.exit(Motion.LONG), targetScale = 1.03f)
+// Back (also scrubbed by the predictive-back swipe): NavHost keeps the leaving screen on top, so
+// the page under it starts mostly opaque instead of fading up from nothing. Both used to fade at
+// once, and halfway through the background showed through both of them (a dip to black).
 private val popEnter: EnterTransition =
-    fadeIn(Motion.enter(Motion.LONG)) + scaleIn(Motion.enter(Motion.LONG), initialScale = 1.03f)
+    fadeIn(Motion.enter(POP), initialAlpha = 0.6f) + scaleIn(Motion.enter(POP), initialScale = 1.03f)
 private val popExit: ExitTransition =
-    fadeOut(Motion.exit(Motion.LONG)) + scaleOut(Motion.exit(Motion.LONG), targetScale = 0.94f)
+    fadeOut(tween(POP, 0, Motion.EaseOutQuart)) + scaleOut(tween(POP, 0, Motion.EaseOutQuart), targetScale = 0.92f)
 
 // Shared X axis for pages (people, a profile, favourites, a note): the new one slides in from
 // the right over a fading page that moves a little left; Back reverses it.
@@ -147,10 +150,17 @@ private val pageEnter: EnterTransition =
     fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> w / 8 }
 private val pageExit: ExitTransition =
     fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -w / 12 }
+// Back: the page leaves towards the right edge, shrinking a touch as it fades, and reveals the
+// previous one already in place (only its last w/12 of travel and a light fade left). Shorter than
+// the push: going back should feel immediate.
 private val pagePopEnter: EnterTransition =
-    fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) + slideInHorizontally(Motion.enter(Motion.LONG)) { w -> -w / 12 }
+    fadeIn(Motion.enter(POP), initialAlpha = 0.6f) + slideInHorizontally(Motion.enter(POP)) { w -> -w / 12 }
 private val pagePopExit: ExitTransition =
-    fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> w / 8 }
+    fadeOut(tween(POP, 0, Motion.EaseOutQuart)) + slideOutHorizontally(Motion.enter(POP)) { w -> w / 5 } +
+        scaleOut(Motion.enter(POP), targetScale = 0.96f)
+
+/** Back transitions: between MEDIUM and LONG. */
+private const val POP = 260
 
 @Composable
 fun AppRoot(
