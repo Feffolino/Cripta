@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.PageMotion
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -200,17 +201,10 @@ fun SettingsScreen(
         },
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
     ) { pad ->
-      // List <-> category page: a short crossfade, so the swap reads as one step deeper/back.
+      // List <-> category page: the same page motion as the rest of the app (Back included).
       androidx.compose.animation.AnimatedContent(
           targetState = current,
-          transitionSpec = {
-              // Into a page: it slides in from the right; back to the list: the reverse.
-              val dir = if (targetState != null) 1 else -1
-              (androidx.compose.animation.fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) +
-                  androidx.compose.animation.slideInHorizontally(Motion.enter(Motion.LONG)) { w -> dir * w / 10 }) togetherWith
-                  (androidx.compose.animation.fadeOut(tween(Motion.SHORT, 0, Motion.EaseOutQuart)) +
-                      androidx.compose.animation.slideOutHorizontally(Motion.exit(Motion.MEDIUM)) { w -> -dir * w / 14 })
-          },
+          transitionSpec = { PageMotion.transform(deeper = targetState != null) },
           label = "settingsPage",
       ) { current ->
         if (current == null) {

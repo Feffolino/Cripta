@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-16
+
+- Going back looks the same everywhere: the page you leave slides to the right fading out and the one under it comes back already in place, with no zoom towards the centre and no dip to black. The same movement is used by the app's pages, the viewer (which no longer zooms in and out), the Settings categories and the folder choice for a download
+
 ## 2026-11-14
 
 - A link with a port and no "https://" in a person's profile ("example.com:8080/page", "localhost:3000") opens in the browser: before, Cripta said no app could open it

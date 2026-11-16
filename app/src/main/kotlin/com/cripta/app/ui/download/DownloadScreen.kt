@@ -20,8 +20,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -100,6 +98,7 @@ import com.cripta.app.ui.components.formatBytes
 import com.cripta.app.ui.components.tagText
 import com.cripta.app.ui.theme.CoverShape
 import com.cripta.app.ui.theme.Motion
+import com.cripta.app.ui.theme.PageMotion
 import com.cripta.app.ui.theme.tagColor
 import kotlinx.coroutines.delay
 
@@ -595,19 +594,13 @@ private fun FolderPickerSheet(
                     TextButton(onClick = { at = f.id }, enabled = f.id != at) { Text(f.name, maxLines = 1) }
                 }
             }
-            // The level on screen slides in as a page (shared X axis, 320 ms ease-out), keyed by the
-            // folder it shows; every page scrolls on its own inside the fixed-height sheet.
+            // The level on screen slides in as a page (the app's page motion, Back included), keyed
+            // by the folder it shows; every page scrolls on its own inside the fixed-height sheet.
             fun depthOf(id: Long?): Int { var d = 0; var c = id?.let { byId[it] }; while (c != null && d < com.cripta.app.data.MAX_FOLDER_DEPTH) { d++; c = c.parentId?.let { byId[it] } }; return d }
             AnimatedContent(
                 targetState = at,
                 modifier = Modifier.weight(1f),
-                transitionSpec = {
-                    val dir = if (depthOf(targetState) >= depthOf(initialState)) 1 else -1
-                    (fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) +
-                        slideInHorizontally(Motion.enter(Motion.LONG)) { w -> dir * w / 8 }) togetherWith
-                        (fadeOut(tween(Motion.MEDIUM, 0, Motion.EaseOutQuart)) +
-                            slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -dir * w / 12 })
-                },
+                transitionSpec = { PageMotion.transform(deeper = depthOf(targetState) >= depthOf(initialState)) },
                 label = "folderLevel",
             ) { lvl ->
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {

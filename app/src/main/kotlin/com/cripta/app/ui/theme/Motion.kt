@@ -1,6 +1,13 @@
 package com.cripta.app.ui.theme
 
 import android.provider.Settings
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -142,4 +149,38 @@ fun Modifier.popIn(enabled: Boolean): Modifier = composed {
         scaleX = s
         scaleY = s
     }
+}
+
+/**
+ * The one page motion, shared X axis, wherever a page replaces another (the app's pages and the
+ * viewer, a Settings category, a level of the folder picker). No zoom, ease-out only.
+ *
+ * Forward: the new page slides in from the right while it fades in, over a page that fades out
+ * moving a little left.
+ * Back: the leaving page stays on top and heads for the right edge as it fades, over the previous
+ * page already in place (it starts at 60% and only has its last w/12 of travel left). Both fading
+ * up from nothing let the background show through halfway (a dip to black). Shorter than forward:
+ * going back should feel immediate. The predictive-back gesture scrubs [popExit].
+ */
+object PageMotion {
+    val enter: EnterTransition =
+        fadeIn(tween(Motion.MEDIUM, Motion.SHORT / 2, Motion.EaseOutQuart)) +
+            slideInHorizontally(Motion.enter(Motion.LONG)) { w -> w / 8 }
+    val exit: ExitTransition =
+        fadeOut(Motion.exit(Motion.MEDIUM)) +
+            slideOutHorizontally(Motion.exit(Motion.LONG)) { w -> -w / 12 }
+    val popEnter: EnterTransition =
+        fadeIn(Motion.enter(Motion.MEDIUM), initialAlpha = 0.6f) +
+            slideInHorizontally(Motion.enter(Motion.MEDIUM)) { w -> -w / 12 }
+    val popExit: ExitTransition =
+        fadeOut(Motion.enter(Motion.MEDIUM)) +
+            slideOutHorizontally(Motion.enter(Motion.MEDIUM)) { w -> w / 5 }
+
+    /**
+     * For an AnimatedContent that swaps pages: [deeper] pushes, otherwise Back. On Back the leaving
+     * page is drawn above the one coming back (AnimatedContent puts the new one on top otherwise).
+     */
+    fun transform(deeper: Boolean): ContentTransform =
+        if (deeper) ContentTransform(enter, exit)
+        else ContentTransform(popEnter, popExit, targetContentZIndex = -1f)
 }
