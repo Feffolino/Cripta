@@ -15,6 +15,43 @@ import javax.inject.Singleton
 enum class DownloadPhase { QUEUED, PREPARING, DOWNLOADING, DONE, FAILED, CANCELLED }
 
 /** One link in the downloader queue, with its destination and live progress. */
+/**
+ * A video stream (HLS playlist, MP4...) the in-app browser saw a page load, with what the site
+ * wants to hand it out: [headers] (referer, user agent, origin, cookies) and the page's [title],
+ * which names the file (the stream's own name is "master" or "index").
+ */
+data class StreamSource(val url: String, val headers: Map<String, String> = emptyMap(), val title: String? = null) {
+    fun toJson(): String = org.json.JSONObject().put("url", url).put("title", title ?: "")
+        .put("headers", org.json.JSONObject(headers)).toString()
+
+    companion object {
+        /** The only headers passed on to the downloader. */
+        private val ALLOWED = listOf("Referer", "User-Agent", "Origin", "Cookie")
+
+        /** [raw] with only the headers the downloader needs, under their usual names, on one line each. */
+        fun cleanHeaders(raw: Map<String, String>): Map<String, String> = buildMap {
+            for ((k, v) in raw) {
+                val name = ALLOWED.firstOrNull { it.equals(k.trim(), ignoreCase = true) } ?: continue
+                val value = v.filter { it >= ' ' && it != '\u007f' }.trim()
+                if (value.isNotEmpty()) put(name, value)
+            }
+        }
+
+        /** Null for no stream, or a record that is not one (not a web link). */
+        fun fromJson(json: String?): StreamSource? {
+            if (json.isNullOrBlank()) return null
+            return runCatching {
+                val o = org.json.JSONObject(json)
+                val url = o.getString("url").trim()
+                if (!url.startsWith("https://", true) && !url.startsWith("http://", true)) return null
+                val h = o.optJSONObject("headers")
+                val headers = h?.keys()?.asSequence()?.associateWith { h.optString(it) }.orEmpty()
+                StreamSource(url, cleanHeaders(headers), o.optString("title").trim().takeIf { it.isNotEmpty() })
+            }.getOrNull()
+        }
+    }
+}
+
 data class DownloadJob(
     val id: String,
     val url: String,
@@ -28,6 +65,8 @@ data class DownloadJob(
     val message: String? = null,
     /** Id of the imported file once done (for "Apri"). */
     val fileId: String? = null,
+    /** The stream found in the page ([url]) with the in-app browser, fetched in place of the page. */
+    val stream: StreamSource? = null,
 ) {
     val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
     val finished: Boolean get() = phase == DownloadPhase.DONE || phase == DownloadPhase.FAILED || phase == DownloadPhase.CANCELLED

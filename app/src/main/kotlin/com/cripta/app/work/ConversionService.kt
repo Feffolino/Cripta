@@ -302,12 +302,13 @@ class ConversionService : Service() {
                     maxHeight = intent.getIntExtra(EX_HEIGHT, 0).takeIf { it > 0 },
                     folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
                     tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
+                    stream = com.cripta.app.data.StreamSource.fromJson(intent.getStringExtra(EX_STREAM)),
                 )
                 downloadQueue.enqueueDownload(job)
                 // Persisted so a waiting link survives the app being killed (resumed at next unlock).
                 downloadQueue.persist(job, org.json.JSONObject()
                     .put("url", job.url).put("height", job.maxHeight ?: 0).put("folder", job.folderId ?: -1L)
-                    .put("tags", org.json.JSONArray(job.tagIds)).toString())
+                    .put("tags", org.json.JSONArray(job.tagIds)).put("stream", job.stream?.toJson() ?: "").toString())
             }
             // A worker already running picks the new link up from the queue.
             val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
@@ -1462,7 +1463,7 @@ class ConversionService : Service() {
             val eta = EtaEstimator()
             produced = withContext(Dispatchers.IO) {
                 var lastPct = -1
-                ytdlp.download(url, job.maxHeight, pid, isCancelled = { cancelRequested }) { pct, _ ->
+                ytdlp.download(job.stream?.url ?: url, job.maxHeight, pid, headers = job.stream?.headers.orEmpty(), isCancelled = { cancelRequested }) { pct, _ ->
                     // yt-dlp prints a progress line for every block; this runs on the thread that
                     // drains its output, so rebuilding the notification each time stalled yt-dlp
                     // on a full pipe. Only when the percentage moves.
@@ -1484,7 +1485,9 @@ class ConversionService : Service() {
                 return
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
-            val name = produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
+            // A stream found in a page is called "master" or "index": the page's title names the file.
+            val pageTitle = job.stream?.title?.filter { it >= ' ' && it !in "/\\:*?\"<>|" }?.trim()?.take(80)?.takeIf { it.isNotBlank() }
+            val name = pageTitle ?: produced.name.substringBeforeLast('.').takeIf { it.isNotBlank() } ?: "download"
             val file = repo.importDownloadedVideo(produced, name, folderId = job.folderId, sourceUrl = url, tagIds = job.tagIds,
                 pendingJobId = job.id, cancelled = { cancelRequested })
             set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = name, fileId = file.id) }
@@ -2011,7 +2014,7 @@ class ConversionService : Service() {
 
     /** "Riprova" for a failed download: queues the same link again, same quality, folder and tags. */
     private fun retryAction(job: com.cripta.app.data.DownloadJob): NotificationCompat.Action =
-        retryAction(downloadUrlIntent(this, job.url, job.maxHeight, job.folderId, job.tagIds))
+        retryAction(downloadUrlIntent(this, job.url, job.maxHeight, job.folderId, job.tagIds, job.stream))
 
     private fun retryAction(download: Intent): NotificationCompat.Action {
         val i = Intent(download).putExtra(EX_RETRY, true)
@@ -2181,6 +2184,7 @@ class ConversionService : Service() {
         private const val MODE_ORIGINALS_KEEP = "originals_keep"
         private const val EX_RETRY = "retry"
         private const val EX_JOB_ID = "job_id"
+        private const val EX_STREAM = "stream"
         private const val DONE_NOTIF_ID = 4212
         /** The summaries of the two stacks of results ([refreshSummary]). */
         private const val SUMMARY_ANALYSIS_ID = 4240
@@ -2376,18 +2380,21 @@ class ConversionService : Service() {
          */
         fun startDownloadUrl(ctx: Context, url: String, maxHeight: Int?, folderId: Long? = null, tagIds: List<Long> = emptyList(),
                              /** A saved job resumed: the link keeps its id (and its record). */
-                             jobId: String? = null): Boolean {
-            return startInForeground(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds)
+                             jobId: String? = null,
+                             /** The stream found in the page [url], fetched in its place. */
+                             stream: com.cripta.app.data.StreamSource? = null): Boolean {
+            return startInForeground(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds, stream)
                 .apply { jobId?.let { putExtra(EX_JOB_ID, it) } })
         }
 
-        private fun downloadUrlIntent(ctx: Context, url: String, maxHeight: Int?, folderId: Long?, tagIds: List<Long>) =
+        private fun downloadUrlIntent(ctx: Context, url: String, maxHeight: Int?, folderId: Long?, tagIds: List<Long>, stream: com.cripta.app.data.StreamSource? = null) =
             Intent(ctx, ConversionService::class.java).apply {
                 putExtra(EX_MODE, MODE_DOWNLOAD_URL)
                 putExtra(EX_URL, url)
                 maxHeight?.let { putExtra(EX_HEIGHT, it) }
                 folderId?.let { putExtra(EX_FOLDER, it) }
                 if (tagIds.isNotEmpty()) putExtra(EX_TAGS, tagIds.toLongArray())
+                stream?.let { putExtra(EX_STREAM, it.toJson()) }
             }
 
         /** Download the app update [rel] in the background (see [downloadUpdate]). */

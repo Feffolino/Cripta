@@ -87,6 +87,21 @@ class DownloadViewModel @Inject constructor(
     private val _existing = MutableStateFlow<FileEntity?>(null)
     val existing: StateFlow<FileEntity?> = _existing
 
+    /**
+     * The stream chosen in the page of a link (the link, then the stream): analysed and downloaded
+     * in the page's place, until the field holds another link.
+     */
+    private var stream: Pair<String, com.cripta.app.data.StreamSource>? = null
+    private fun streamOf(u: String) = stream?.takeIf { it.first == u }?.second
+
+    /** [s] was picked in the page [page] with the in-app browser: analyse it in the page's place. */
+    fun useStream(page: String, s: com.cripta.app.data.StreamSource, heights: List<Int?>) {
+        val u = page.trim()
+        stream = u to s
+        estimateJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle
+        estimate(u, heights)
+    }
+
     private var estimateJob: Job? = null
     private var existingJob: Job? = null
     private var estimatedUrl: String? = null
@@ -101,15 +116,17 @@ class DownloadViewModel @Inject constructor(
         existingJob = safeScope.launch { _existing.value = repo.fileBySourceUrl(u) }
         if (u == estimatedUrl && _estimate.value is Estimate.Ready) return
         estimatedUrl = u
+        val src = streamOf(u)
         estimateJob?.cancel()
         estimateJob = safeScope.launch {
             _estimate.value = Estimate.Loading
             val result = runInterruptible(Dispatchers.IO) {
                 runCatching {
-                    val info = ytdlp.info(u)
+                    val info = ytdlp.info(src?.url ?: u, src?.headers.orEmpty())
                     Estimate.Ready(
                         heights.associateWith { h -> ytdlp.estimateBytes(info, h) },
-                        title = info.title?.takeIf { it.isNotBlank() },
+                        // A stream is called "master" or "index": its page's title says what it is.
+                        title = src?.title ?: info.title?.takeIf { it.isNotBlank() },
                         thumbnailUrl = info.thumbnail?.takeIf { it.startsWith("https://") || it.startsWith("http://") },
                         durationSec = info.duration,
                     )
@@ -129,12 +146,14 @@ class DownloadViewModel @Inject constructor(
      * and its Open button, the size and preview) goes at once, not when the new check ends.
      */
     fun onLinkEdited(u: String) {
+        if (stream?.first != u) stream = null
         if (_existing.value?.sourceUrl?.trim() != u) { existingJob?.cancel(); _existing.value = null }
         if (u != estimatedUrl && _estimate.value !is Estimate.Idle) { estimateJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle }
     }
 
     fun resetEstimate() {
         estimateJob?.cancel(); existingJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle; _existing.value = null
+        stream = null
     }
 
     /** True when [url] is already waiting or running in the queue. */
@@ -143,7 +162,7 @@ class DownloadViewModel @Inject constructor(
 
     /** Queue [url] with its destination, and remember that destination for next time. */
     fun enqueue(ctx: Context, url: String, height: Int?, folderId: Long?, tagIds: List<Long>) {
-        ConversionService.startDownloadUrl(ctx, url.trim(), height, folderId, tagIds)
+        ConversionService.startDownloadUrl(ctx, url.trim(), height, folderId, tagIds, stream = streamOf(url.trim()))
         safeScope.launch { settings.setDownloadDefaults(DownloadDefaults(folderId, tagIds, height)) }
     }
 
@@ -154,7 +173,7 @@ class DownloadViewModel @Inject constructor(
     /** Queue a failed/cancelled link again with the same quality and destination. */
     fun retry(ctx: Context, job: com.cripta.app.data.DownloadJob) {
         // Refused to start: the failed link stays in the list, to try again.
-        if (ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds)) queue.removeDownload(job.id)
+        if (ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds, stream = job.stream)) queue.removeDownload(job.id)
     }
     fun clearFinished() = queue.clearFinishedDownloads()
 

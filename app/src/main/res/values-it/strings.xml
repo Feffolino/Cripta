@@ -609,6 +609,9 @@
     <string name="dl_already_in_vault">Già nel vault</string>
     <string name="quality">Qualità</string>
     <string name="dl_size_unknown_err">Dimensioni non stimabili: %1$s</string>
+    <string name="dl_find_in_page">Cerca il video nella pagina</string>
+    <string name="dl_find_hint">Avvia il video: quello che la pagina carica compare qui.</string>
+    <string name="dl_find_found">Video trovati nella pagina</string>
     <string name="dl_size_computing">Calcolo delle dimensioni…</string>
     <string name="dl_size_hint">Auto prende la migliore qualità disponibile. «—»: dimensione non stimabile.</string>
     <string name="folder">Cartella</string>

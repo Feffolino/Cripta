@@ -565,6 +565,9 @@
     <string name="dl_already_in_vault">이미 보관함에 있음</string>
     <string name="quality">화질</string>
     <string name="dl_size_unknown_err">크기를 추정할 수 없음: %1$s</string>
+    <string name="dl_find_in_page">페이지에서 동영상 찾기</string>
+    <string name="dl_find_hint">동영상을 재생하세요. 페이지가 불러오는 항목이 여기에 표시됩니다.</string>
+    <string name="dl_find_found">페이지에서 찾은 동영상</string>
     <string name="dl_size_computing">크기 계산 중…</string>
     <string name="dl_size_hint">“자동”은 가능한 최고 화질을 선택합니다. “—”는 크기를 추정할 수 없다는 뜻입니다.</string>
     <string name="folder">폴더</string>

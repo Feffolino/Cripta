@@ -587,6 +587,9 @@
     <string name="dl_already_in_vault">Already in the vault</string>
     <string name="quality">Quality</string>
     <string name="dl_size_unknown_err">Sizes can\'t be estimated: %1$s</string>
+    <string name="dl_find_in_page">Find the video in the page</string>
+    <string name="dl_find_hint">Start the video: what the page loads shows up here.</string>
+    <string name="dl_find_found">Videos found in the page</string>
     <string name="dl_size_computing">Working out the sizes…</string>
     <string name="dl_size_hint">Auto takes the best quality available. “—”: size can\'t be estimated.</string>
     <string name="folder">Folder</string>

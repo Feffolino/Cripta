@@ -6,8 +6,12 @@ import java.io.File
 internal object DownloadRequests {
     const val RESULT_FILE = "completed-path.txt"
 
-    fun common(url: String) = YoutubeDLRequest(checkedUrl(url)).apply {
+    /** [headers]: sent with every request (a stream found in a page: its referer, cookies...). */
+    fun common(url: String, headers: Map<String, String> = emptyMap()) = YoutubeDLRequest(checkedUrl(url)).apply {
         addOption("--ignore-config")
+        // Each is the value of its own option, never read as one; names and values come cleaned
+        // (StreamSource.cleanHeaders): a known name, one line.
+        for ((name, value) in headers) addOption("--add-header", "$name:$value")
         addOption("--no-playlist")
         addOption("--socket-timeout", 20)
         addOption("--extractor-retries", 2)
@@ -18,7 +22,7 @@ internal object DownloadRequests {
         addOption("--retry-sleep", "exp=1:8")
     }
 
-    fun download(url: String, height: Int?, dir: File) = common(url).apply {
+    fun download(url: String, height: Int?, dir: File, headers: Map<String, String> = emptyMap()) = common(url, headers).apply {
         require(height == null || height > 0)
         val cap = height?.let { "[height<=?$it]" }.orEmpty()
         // Prefer MP4 for Android, but keep working when a site only offers WebM/Matroska.

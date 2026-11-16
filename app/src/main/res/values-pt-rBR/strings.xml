@@ -609,6 +609,9 @@
     <string name="dl_already_in_vault">Já está no cofre</string>
     <string name="quality">Qualidade</string>
     <string name="dl_size_unknown_err">Não é possível estimar os tamanhos: %1$s</string>
+    <string name="dl_find_in_page">Procurar o vídeo na página</string>
+    <string name="dl_find_hint">Inicie o vídeo: o que a página carrega aparece aqui.</string>
+    <string name="dl_find_found">Vídeos encontrados na página</string>
     <string name="dl_size_computing">Calculando os tamanhos…</string>
     <string name="dl_size_hint">Auto usa a melhor qualidade disponível. “—”: não é possível estimar o tamanho.</string>
     <string name="folder">Pasta</string>

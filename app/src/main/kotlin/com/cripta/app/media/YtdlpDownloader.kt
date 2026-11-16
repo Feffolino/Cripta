@@ -68,6 +68,8 @@ class YtdlpDownloader @Inject constructor(
         url: String,
         maxHeight: Int?,
         processId: String,
+        /** Sent with every request: what the site wants for a stream found in its page. */
+        headers: Map<String, String> = emptyMap(),
         /** Annulla pressed: checked before starting and on every progress update. */
         isCancelled: () -> Boolean = { false },
         onProgress: (Int, Long) -> Unit,
@@ -77,7 +79,7 @@ class YtdlpDownloader @Inject constructor(
         // process to kill yet, so the download started anyway.
         if (isCancelled()) throw java.io.InterruptedIOException("cancelled")
         val dir = File(appContext.cacheDir, "ytdl-${UUID.randomUUID()}").apply { mkdirs() }
-        val request = DownloadRequests.download(url, maxHeight, dir)
+        val request = DownloadRequests.download(url, maxHeight, dir, headers)
         val progress = DownloadProgress()
         try {
             withEngine {
@@ -120,9 +122,9 @@ class YtdlpDownloader @Inject constructor(
     }
 
     /** Probe [url] for its available formats (no download). Blocking; call on IO. */
-    fun info(url: String): VideoInfo {
+    fun info(url: String, headers: Map<String, String> = emptyMap()): VideoInfo {
         ensureInit()
-        return withEngine { YoutubeDL.getInstance().getInfo(DownloadRequests.common(url)) }
+        return withEngine { YoutubeDL.getInstance().getInfo(DownloadRequests.common(url, headers)) }
     }
 
     private inline fun <T> withEngine(block: () -> T): T {

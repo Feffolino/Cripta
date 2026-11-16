@@ -148,6 +148,7 @@ class HomeViewModel @Inject constructor(
                         // the app is in the background) the record stays for the next launch.
                         val started = com.cripta.app.work.ConversionService.startDownloadUrl(
                             appContext, url, height, folder, tags, jobId = job.id,
+                            stream = com.cripta.app.data.StreamSource.fromJson(o.optString("stream")),
                         )
                         if (!started) complete = false
                     }

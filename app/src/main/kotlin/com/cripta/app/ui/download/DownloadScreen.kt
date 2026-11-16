@@ -183,6 +183,13 @@ fun DownloadScreen(
         }
     }
 
+    // The page of the link opened in the app, to pick the video the analysis did not find.
+    var findIn by rememberSaveable { mutableStateOf<String?>(null) }
+    findIn?.let { page ->
+        PageVideoFinder(page, onPick = { vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
+        return
+    }
+
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // Landscape: the top bar scrolls away (down hides, up reveals), like in Cartelle.
@@ -272,6 +279,17 @@ fun DownloadScreen(
             Crossfade(lastEstimateText, animationSpec = Motion.enter(), label = "estimateLine") { t ->
                 Text(t, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite })
+            }
+        }
+
+        // The analysis failed: the page can be opened here to take the video its player loads.
+        AnimatedVisibility(
+            visible = estimate is DownloadViewModel.Estimate.Error && urlValid,
+            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+            exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+        ) {
+            TextButton(onClick = { findIn = url.trim() }) {
+                com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page))
             }
         }
 
