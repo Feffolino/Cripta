@@ -1130,13 +1130,15 @@ fun VaultScreen(
                 }
             }
 
-            // Folder depth navigation: a new level slides in from the right (going up: from the
-            // left) and fades in. The old level is hidden at once and the slide waits (briefly) for
+            // Folder depth navigation: the app's page motion ([PageMotion]): a new level slides in from
+            // the right and fades in; going up, the level comes back already 60% there with the last
+            // w/12 of its travel from the left. The old level is hidden at once and the slide waits (briefly) for
             // the new level's data, so it's never the old content that moves. Each level's scroll
             // position is remembered and restored when coming back up.
             val density = LocalDensity.current
             val animOn = animationsEnabled()
             val levelX = remember { Animatable(0f) }
+            val levelWidthPx = with(density) { androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.toPx() }
             val levelAlpha = remember { Animatable(1f) }
             val scrollMemory = remember { mutableMapOf<Long, Pair<Int, Int>>() }
             var shownLevel by remember { mutableLongStateOf(path.lastOrNull()?.id ?: ROOT_KEY) }
@@ -1164,11 +1166,17 @@ fun VaultScreen(
                 // and Back landed at the top instead of where the user left.
                 repeat(2) { androidx.compose.runtime.withFrameNanos { } }
                 gridState.scrollToItem(restore?.first ?: 0, restore?.second ?: 0)
-                if (animOn) {
-                    levelX.snapTo(with(density) { 32.dp.toPx() } * horizontalSign * if (deeper) 1f else -1f)
-                    // Quick: the new level is already loaded, it only needs to say "deeper" / "back".
+                if (animOn && deeper) {
+                    // Same as PageMotion.enter.
+                    levelX.snapTo(levelWidthPx / 8f * horizontalSign)
+                    launch { levelX.animateTo(0f, Motion.enter(Motion.LONG)) }
+                    levelAlpha.animateTo(1f, Motion.enter(Motion.MEDIUM, delay = Motion.SHORT / 2))
+                } else if (animOn) {
+                    // Same as PageMotion.popEnter.
+                    levelAlpha.snapTo(0.6f)
+                    levelX.snapTo(-levelWidthPx / 12f * horizontalSign)
                     launch { levelX.animateTo(0f, Motion.enter(Motion.MEDIUM)) }
-                    levelAlpha.animateTo(1f, Motion.enter(Motion.SHORT))
+                    levelAlpha.animateTo(1f, Motion.enter(Motion.MEDIUM))
                 } else {
                     levelX.snapTo(0f); levelAlpha.snapTo(1f)
                 }
