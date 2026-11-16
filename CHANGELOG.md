@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-16
 
+- Manual order: holding a file near the top to scroll the list upwards works. Before, the list jumped a row, the file went off screen and the move was cancelled; the same happened with the finger over the top bar or between two files. The file now goes to the closest place and waits at the grid's edge while the list scrolls
 - Going back looks the same everywhere: the page you leave slides to the right fading out and the one under it comes back already in place, with no zoom towards the centre and no dip to black. The same movement is used by the app's pages, the viewer (which no longer zooms in and out), the Settings categories and the folder choice for a download
 - Opening a folder and going back up in Folders moves like the app's pages: the level slides in from the right, and going up it comes back already almost in place instead of appearing from nothing
 

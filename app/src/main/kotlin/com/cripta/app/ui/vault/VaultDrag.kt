@@ -94,3 +94,22 @@ internal fun <T : Any> endDrag(dropped: Boolean, dragged: List<T>, latest: List<
         val order = shown.map(key)
         DragEnd(shown, order.takeIf { it != latest.map(key) })
     }
+
+/** A file cell on screen during a reorder drag, in the grid viewport's pixels. */
+internal data class DragSlot(val key: String, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+/**
+ * The cell a reorder drag aims at: the one under the finger, else the closest one, with the finger
+ * taken back inside the viewport ([width] x [height]). A finger above or below the grid (over the
+ * top bar while the list auto-scrolls), in the gap between two cells or over the folders row still
+ * moves the held file, which so stays on screen while the list scrolls. Null: no cell is shown.
+ */
+internal fun nearestSlot(x: Float, y: Float, width: Float, height: Float, slots: List<DragSlot>): String? {
+    val px = x.coerceIn(0f, maxOf(0f, width))
+    val py = y.coerceIn(0f, maxOf(0f, height))
+    return slots.minByOrNull { s ->
+        val dx = maxOf(s.left - px, 0f, px - s.right)
+        val dy = maxOf(s.top - py, 0f, py - s.bottom)
+        dx * dx + dy * dy
+    }?.key
+}

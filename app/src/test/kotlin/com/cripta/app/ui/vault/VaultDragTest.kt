@@ -75,4 +75,24 @@ class VaultDragTest {
         assertEquals(DropTarget.Stay, moveDropTarget(hover = null, here = 3L, origin = 3L))
         assertEquals(DropTarget.Stay, moveDropTarget(hover = null, here = null, origin = null))
     }
+
+    private val slots = listOf(
+        DragSlot("a", 0f, 0f, 100f, 100f), DragSlot("b", 120f, 0f, 220f, 100f),
+        DragSlot("c", 0f, 120f, 100f, 220f), DragSlot("d", 120f, 120f, 220f, 220f),
+    )
+
+    @Test
+    fun `a reorder drag aims at the cell under the finger`() {
+        assertEquals("d", nearestSlot(150f, 200f, 220f, 400f, slots))
+    }
+
+    @Test
+    fun `a finger in a gap or past the grid aims at the closest cell`() {
+        assertEquals("b", nearestSlot(112f, 50f, 220f, 400f, slots))
+        // Above the grid (over the top bar while the list scrolls up): the first row.
+        assertEquals("b", nearestSlot(150f, -300f, 220f, 400f, slots))
+        // Below the last row: the last cell of that column.
+        assertEquals("c", nearestSlot(40f, 900f, 220f, 400f, slots))
+        assertEquals(null, nearestSlot(10f, 10f, 220f, 400f, emptyList()))
+    }
 }

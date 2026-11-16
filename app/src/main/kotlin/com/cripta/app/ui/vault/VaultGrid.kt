@@ -762,17 +762,30 @@ internal fun ReorderableFileGrid(
     val density = LocalDensity.current
     val itemShape = MaterialTheme.shapes.medium
 
-    /** Move the dragged item to the slot under the finger (file cells only, never the header). */
+    /**
+     * Move the dragged item to the slot under the finger, or the closest one ([nearestSlot]): file
+     * cells only, never the header.
+     */
     fun retarget() {
         val id = draggedId ?: return
         val from = list.indexOfFirst { it.file.id == id }
-        val hitKey = gridState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
-            info.key != FOLDERS_KEY &&
-                pointer.x >= info.offset.x && pointer.x <= info.offset.x + info.size.width &&
-                pointer.y >= info.offset.y && pointer.y <= info.offset.y + info.size.height
-        }?.key as? String ?: return
+        val layout = gridState.layoutInfo
+        val slots = layout.visibleItemsInfo.mapNotNull { info ->
+            (info.key as? String)?.takeIf { it != FOLDERS_KEY }?.let {
+                DragSlot(it, info.offset.x.toFloat(), info.offset.y.toFloat(),
+                    (info.offset.x + info.size.width).toFloat(), (info.offset.y + info.size.height).toFloat())
+            }
+        }
+        val hitKey = nearestSlot(pointer.x, pointer.y, layout.viewportSize.width.toFloat(),
+            layout.viewportSize.height.toFloat(), slots) ?: return
         val target = list.indexOfFirst { it.file.id == hitKey }
-        if (from >= 0 && target >= 0 && target != from) list.add(target, list.removeAt(from))
+        if (from >= 0 && target >= 0 && target != from) {
+            // The grid keeps its place by the key of its first visible cell: a move that involves
+            // that cell made the list jump a row, which sent the held file off screen and ended the
+            // drag (always, when dragging upwards). Keep the place by index instead.
+            gridState.requestScrollToItem(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+            list.add(target, list.removeAt(from))
+        }
     }
 
     /** Accessibility reorder: one step earlier (-1) or later (+1). */
@@ -849,8 +862,10 @@ internal fun ReorderableFileGrid(
                                 clip = false
                                 val info = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedId }
                                 if (info != null) {
+                                    // A finger past the grid's top or bottom: the cell waits at the edge.
+                                    val y = pointer.y.coerceIn(0f, gridState.layoutInfo.viewportSize.height.toFloat())
                                     translationX = pointer.x - pressLocal.x - info.offset.x
-                                    translationY = pointer.y - pressLocal.y - info.offset.y
+                                    translationY = y - pressLocal.y - info.offset.y
                                 }
                             }
                         }
