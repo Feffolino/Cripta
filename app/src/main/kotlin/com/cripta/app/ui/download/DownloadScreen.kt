@@ -185,10 +185,6 @@ fun DownloadScreen(
 
     // The page of the link opened in the app, to pick the video the analysis did not find.
     var findIn by rememberSaveable { mutableStateOf<String?>(null) }
-    findIn?.let { page ->
-        PageVideoFinder(page, onPick = { vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
-        return
-    }
 
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -394,13 +390,30 @@ fun DownloadScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
-                title = { com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download)) },
+                // Download is a tab root: the back arrow only appears on the page pushed over it.
+                title = {
+                    if (findIn == null) com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download))
+                    else com.cripta.app.ui.components.PageTitle(str(R.string.dl_find_in_page))
+                },
+                navigationIcon = {
+                    if (findIn != null) IconButton(onClick = { findIn = null }) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) }
+                },
                 scrollBehavior = scrollBehavior,
-                colors = com.cripta.app.ui.components.criptaTopBarColors(formScroll.canScrollBackward || (landscape && queueScroll.canScrollBackward)),
+                colors = com.cripta.app.ui.components.criptaTopBarColors(
+                    findIn == null && (formScroll.canScrollBackward || (landscape && queueScroll.canScrollBackward))),
             )
         },
     ) { pad ->
-        if (landscape) {
+        // Form <-> the link's page: the same page motion as the rest of the app (Back included).
+        AnimatedContent(
+            targetState = findIn,
+            transitionSpec = { PageMotion.transform(deeper = targetState != null) },
+            label = "findInPage",
+        ) { page ->
+        if (page != null) {
+            PageVideoFinder(page, Modifier.padding(pad).consumeWindowInsets(pad),
+                onPick = { vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
+        } else if (landscape) {
             // Landscape: the form on the left, the queue on the right, each scrolling on its own.
             Row(
                 Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().padding(horizontal = 16.dp),
@@ -430,6 +443,7 @@ fun DownloadScreen(
                 queue()
             }
         }
+        }
     }
 
     if (pickFolder) {
@@ -447,7 +461,7 @@ fun DownloadScreen(
 
 /** Section heading of this screen: the app's accent `titleSmall`, marked as a heading. */
 @Composable
-private fun Heading(text: String, modifier: Modifier = Modifier) {
+internal fun Heading(text: String, modifier: Modifier = Modifier) {
     Text(text, style = com.cripta.app.ui.theme.HeadingStyle, color = MaterialTheme.colorScheme.primary,
         modifier = modifier.semantics { heading() })
 }

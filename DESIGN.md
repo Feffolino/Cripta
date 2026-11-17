@@ -351,7 +351,11 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   button). The passphrase dialog shows a bar filling up to the minimum length.
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as a grid of three options per row with the size under each, destination as two plain rows
-  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. The
+  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. When
+  the analysis fails, a text button "Cerca il video nella pagina" pushes a page over Download
+  (`PageVideoFinder`: page motion, back arrow and `PageTitle` in Download's own top bar): the web
+  page fills it, the queue's thick bar shows it loading, and the streams found sit under it as
+  queue-like rows (round mark, kind and site, file name) under a heading, a hint until then. The
   folder row shows the full path from "Radice". Its sheet: the chosen path in the accent at the
   top ("Ora: Radice › …"), then one level at a time, like a file manager: a path of text buttons
   to go back, "Salva nella Radice" / "Salva in …" for the level on screen, each folder a row that

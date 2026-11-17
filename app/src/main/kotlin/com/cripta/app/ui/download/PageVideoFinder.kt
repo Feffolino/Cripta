@@ -9,6 +9,24 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.cripta.app.ui.theme.Motion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -16,13 +34,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -71,10 +86,13 @@ private const val MAX_STREAMS = 30
  *
  * The page runs its own scripts, so it gets nothing of the app: no access to files, no other
  * windows, only web links followed. Cookies, cache and storage are wiped when it closes.
+ *
+ * A page pushed over Download, under its top bar: the web page fills it, and what is found sits
+ * under it like the queue's entries (a heading, plain rows, no frame).
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-internal fun PageVideoFinder(pageUrl: String, onPick: (StreamSource) -> Unit, onClose: () -> Unit) {
+internal fun PageVideoFinder(pageUrl: String, modifier: Modifier = Modifier, onPick: (StreamSource) -> Unit, onClose: () -> Unit) {
     val found = remember { mutableStateListOf<StreamSource>() }
     var title by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableIntStateOf(0) }
@@ -89,17 +107,18 @@ internal fun PageVideoFinder(pageUrl: String, onPick: (StreamSource) -> Unit, on
         }
     }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(CriptaIcons.Close, str(R.string.close)) }
-            Column(Modifier.weight(1f)) {
-                Text(title ?: str(R.string.dl_find_in_page), style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(hostOf(pageUrl), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+    Column(modifier.fillMaxSize()) {
+        // The page loading: the queue's bar (thick, round ends), gone once it is in.
+        AnimatedVisibility(
+            visible = progress in 1..99,
+            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+            exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+        ) {
+            val smooth by animateFloatAsState(progress / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "pageLoad")
+            LinearProgressIndicator(progress = { smooth },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(6.dp).clip(CircleShape),
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
         }
-        if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
 
         AndroidView(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -151,30 +170,47 @@ internal fun PageVideoFinder(pageUrl: String, onPick: (StreamSource) -> Unit, on
             },
         )
 
-        if (found.isEmpty()) {
-            Text(str(R.string.dl_find_hint), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
-        } else {
-            Text(str(R.string.dl_find_found), style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp))
-            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
-                items(found, key = { it.url }) { s ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                            .clickable(role = Role.Button) { onPick(s.copy(title = title)) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(CriptaIcons.Movie, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Column(Modifier.padding(start = 14.dp).weight(1f)) {
-                            Text(streamKind(s.url).orEmpty() + " · " + hostOf(s.url), style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(s.url.substringBefore('?').substringAfterLast('/'), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+        // What the page loaded: a hint until something shows up, then the streams to pick from.
+        AnimatedContent(
+            targetState = found.isEmpty(),
+            transitionSpec = { fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit()) },
+            label = "foundStreams",
+        ) { none ->
+            if (none) {
+                Text(str(R.string.dl_find_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                        .semantics { liveRegion = LiveRegionMode.Polite })
+            } else {
+                Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                    Heading(str(R.string.dl_find_found), Modifier.padding(horizontal = 16.dp))
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 208.dp)) {
+                        items(found, key = { it.url }) { s -> StreamRow(s, Modifier.animateItem()) { onPick(s.copy(title = title)) } }
                     }
                 }
             }
+        }
+    }
+}
+
+/** One stream found, like a queue entry: a round mark, what it is and where from, its file under it. */
+@Composable
+private fun StreamRow(s: StreamSource, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center) {
+            Icon(CriptaIcons.Movie, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        }
+        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(streamKind(s.url).orEmpty() + " · " + hostOf(s.url), style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(s.url.substringBefore('?').substringAfterLast('/'), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
