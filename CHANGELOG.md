@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-17
+
+- Download: a link with only pictures (a post, a carousel, a gallery, an image board) is downloaded too. When no video is found in it, Cripta tries gallery-dl: the pictures, up to 200 per link, end up encrypted in the vault with the folder, tags and link chosen. The app grows by about 1.3 MB
+
 ## 2026-11-16
 
 - Download: when a link cannot be analysed, "Cerca il video nella pagina" opens the page inside Cripta and lists the videos its player loads (HLS playlists, MP4): tap one and it is analysed and downloaded like any link, with the referer and cookies the site asks for. For sites that hide the stream from the downloader, without going through another service. Nothing of the page stays: cookies and cache are wiped when it closes

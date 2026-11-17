@@ -51,6 +51,7 @@ class ConversionService : Service() {
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var converter: VideoConverter
     @Inject lateinit var ytdlp: com.cripta.app.media.YtdlpDownloader
+    @Inject lateinit var gallery: com.cripta.app.media.GalleryDownloader
     @Inject lateinit var thumbs: com.cripta.app.media.ThumbnailLoader
     @Inject lateinit var dupScanner: com.cripta.app.data.dedup.DuplicateScanner
     @Inject lateinit var dupStore: com.cripta.app.data.dedup.DupScanStore
@@ -1461,7 +1462,7 @@ class ConversionService : Service() {
             // The time left by our own estimate, not yt-dlp's (it swings on every fragment of a
             // stream); the download screen shows the same one.
             val eta = EtaEstimator()
-            produced = withContext(Dispatchers.IO) {
+            produced = try { withContext(Dispatchers.IO) {
                 var lastPct = -1
                 ytdlp.download(job.stream?.url ?: url, job.maxHeight, pid, headers = job.stream?.headers.orEmpty(), isCancelled = { cancelRequested }) { pct, _ ->
                     // yt-dlp prints a progress line for every block; this runs on the thread that
@@ -1475,6 +1476,13 @@ class ConversionService : Service() {
                     notify(build(str(R.string.n_download), pct, sub = str(R.string.n_downloading_pct, pct), eta = leftMs?.let(::formatEtaShort), header = queued(),
                         cancelable = true, kind = ResultKind.DOWNLOAD))
                 }
+            } } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // No video for yt-dlp: the link may be a post of pictures, which gallery-dl takes.
+                // Not for a stream picked in a page, and when it finds nothing the first error stands.
+                if (cancelRequested || job.stream != null || !downloadGallery(job, queued)) throw e
+                return
             }
             if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
             if (!isDownloadedVideo(produced)) {
@@ -1517,6 +1525,51 @@ class ConversionService : Service() {
             withContext(NonCancellable) {
                 produced?.let { repo.shredTempFile(it); it.parentFile?.deleteRecursively() }
             }
+        }
+    }
+
+    /**
+     * The pictures (and plain video files) of [job]'s link, with gallery-dl, each encrypted into
+     * the vault with the job's folder, tags and link. False when gallery-dl has nothing for the link.
+     */
+    private suspend fun downloadGallery(job: com.cripta.app.data.DownloadJob, queued: () -> String?): Boolean {
+        fun set(f: (com.cripta.app.data.DownloadJob) -> com.cripta.app.data.DownloadJob) = downloadQueue.updateDownload(job.id, f)
+        fun note() = notify(build(str(R.string.n_download), 0, sub = str(R.string.n_analysing_link), indeterminate = true,
+            header = queued(), cancelable = true, kind = ResultKind.DOWNLOAD))
+        set { it.copy(phase = com.cripta.app.data.DownloadPhase.PREPARING, pct = 0) }
+        note()
+        val dir = withContext(Dispatchers.IO) {
+            try {
+                gallery.download(job.url, isCancelled = { cancelRequested })
+            } catch (e: java.io.InterruptedIOException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("ConversionService", "gallery-dl failed (${e.javaClass.simpleName})")
+                null
+            }
+        } ?: return false
+        try {
+            val files = com.cripta.app.media.GalleryRequests.mediaFiles(dir)
+            if (files.isEmpty()) return false
+            var first: com.cripta.app.data.db.FileEntity? = null
+            files.forEachIndexed { i, f ->
+                if (cancelRequested) throw java.io.InterruptedIOException("cancelled")
+                val name = f.nameWithoutExtension.take(80).ifBlank { "download" }
+                val file = repo.importDownloadedVideo(f, name, folderId = job.folderId, sourceUrl = job.url, tagIds = job.tagIds,
+                    // The saved job goes with the last file: killed before, the link is fetched again.
+                    pendingJobId = job.id.takeIf { i == files.lastIndex }, cancelled = { cancelRequested },
+                    mime = com.cripta.app.media.GalleryRequests.mime(f))
+                if (first == null) first = file
+                val pct = (i + 1) * 100 / files.size
+                repo.setConversionProgress(pct)
+                set { it.copy(phase = com.cripta.app.data.DownloadPhase.DOWNLOADING, pct = pct) }
+            }
+            val shown = first?.originalName.orEmpty() + if (files.size > 1) " +${files.size - 1}" else ""
+            set { it.copy(phase = com.cripta.app.data.DownloadPhase.DONE, pct = 100, message = shown, fileId = first?.id) }
+            notifyResult(str(R.string.n_download_done), null, ResultKind.DOWNLOAD)
+            return true
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) { gallery.wipe(dir) }
         }
     }
 

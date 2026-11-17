@@ -1028,7 +1028,10 @@ class VaultRepository @Inject constructor(
         }
     }
 
-    /** Preserve the actual container of a completed download (MP4, WebM, Matroska, ...). */
+    /**
+     * Preserve the actual container of a completed download (MP4, WebM, Matroska, ...). [mime]:
+     * the type of a file that is not a video (a picture of a post), which is then not read as one.
+     */
     suspend fun importDownloadedVideo(
         video: File, displayName: String, folderId: Long?, sourceUrl: String?, tagIds: Collection<Long> = emptyList(),
         /** The download's saved job: gone in the same transaction, so a crash never downloads it twice. */
@@ -1038,6 +1041,7 @@ class VaultRepository @Inject constructor(
          * listed. Encrypting a large video takes a while, and an Annulla in that time was ignored.
          */
         cancelled: () -> Boolean = { false },
+        mime: String? = null,
     ): FileEntity =
         withContext(Dispatchers.IO) {
             val uuid = UUID.randomUUID().toString()
@@ -1063,7 +1067,8 @@ class VaultRepository @Inject constructor(
                     runCatching { blobs.blob(uuid).delete() }   // no partial ciphertext left behind
                     throw e
                 }
-                val duration = runCatching {
+                val picture = mime?.startsWith("image/") == true
+                val duration = if (picture) null else runCatching {
                     val r = android.media.MediaMetadataRetriever()
                     try {
                         r.setDataSource(video.absolutePath)
@@ -1071,13 +1076,16 @@ class VaultRepository @Inject constructor(
                             ?.toLongOrNull()?.takeIf { it > 0 }
                     } finally { runCatching { r.release() } }
                 }.getOrNull()
-                val downloadedRes = videoResolutionOf(video)
+                val downloadedRes = if (!picture) videoResolutionOf(video) else
+                    android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        .also { android.graphics.BitmapFactory.decodeFile(video.absolutePath, it) }
+                        .takeIf { it.outWidth > 0 && it.outHeight > 0 }?.let { it.outWidth to it.outHeight }
                 val extension = video.extension.lowercase()
                 val name = displayName.ifBlank { "download" } + "." + extension
                 val entity = FileEntity(
                     id = uuid,
                     originalName = name,
-                    mimeType = com.cripta.app.media.downloadedVideoMime(video),
+                    mimeType = mime ?: com.cripta.app.media.downloadedVideoMime(video),
                     sizeBytes = written,
                     folderId = folderId,
                     createdAt = now(),
