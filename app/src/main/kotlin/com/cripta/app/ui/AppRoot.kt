@@ -452,6 +452,11 @@ private fun VaultShell(session: SessionManager, locked: Boolean) {
                 exitTransition = { if (isTabSwitch()) tabExit(tabDirection()) else PageMotion.exit },
                 popEnterTransition = { if (isTabSwitch()) tabEnter(tabDirection()) else PageMotion.popEnter },
                 popExitTransition = { if (isTabSwitch()) tabExit(tabDirection()) else PageMotion.popExit },
+                // The back GESTURE (predictive back) has its own pair, whose default is Navigation's
+                // own shrink-to-centre + fade: without these the pop transitions above only ran for
+                // a tap on a back button.
+                predictivePopEnterTransition = { if (isTabSwitch()) tabEnter(tabDirection()) else PageMotion.popEnter },
+                predictivePopExitTransition = { if (isTabSwitch()) tabExit(tabDirection()) else PageMotion.popExit },
             ) {
             composable("home") { entry ->
                 HomeScreen(

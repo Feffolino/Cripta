@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-18
+
+- Going back with the swipe gesture slides the page to the right like the back button does: before, the gesture still shrank the page towards the centre while fading it. The shrink came from Navigation's own gesture animation, which the earlier change had not replaced
+
 ## 2026-11-17
 
 - Download: a link with only pictures (a post, a carousel, a gallery, an image board) is downloaded too. When no video is found in it, Cripta tries gallery-dl: the pictures, up to 200 per link, end up encrypted in the vault with the folder, tags and link chosen. The app grows by about 1.3 MB
