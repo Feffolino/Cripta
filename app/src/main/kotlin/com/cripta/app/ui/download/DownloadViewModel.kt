@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -100,6 +102,22 @@ class DownloadViewModel @Inject constructor(
         stream = u to s
         estimateJob?.cancel(); estimatedUrl = null; _estimate.value = Estimate.Idle
         estimate(u, heights)
+    }
+
+    /** One stream is read at a time: each reading starts a yt-dlp process, heavy for a phone. */
+    private val reading = Semaphore(1)
+
+    /**
+     * What [s], a stream the page search found, is: its tallest picture and its length, for its row.
+     * Null when it cannot be read; the row stays tappable all the same.
+     */
+    internal suspend fun briefOf(s: com.cripta.app.data.StreamSource): StreamBrief? = reading.withPermit {
+        runInterruptible(Dispatchers.IO) {
+            runCatching {
+                val info = ytdlp.info(s.url, s.headers)
+                StreamBrief(info.formats?.maxOfOrNull { it.height } ?: 0, info.duration)
+            }.getOrNull()
+        }
     }
 
     private var estimateJob: Job? = null

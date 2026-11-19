@@ -678,6 +678,7 @@
     <string name="dl_find_in_page">ابحث عن الفيديو في الصفحة</string>
     <string name="dl_find_hint">شغّل الفيديو: ما تحمّله الصفحة يظهر هنا.</string>
     <string name="dl_find_found">فيديوهات وُجدت في الصفحة</string>
+    <string name="dl_find_unreadable">تعذّرت القراءة</string>
     <string name="dl_size_computing">جارٍ حساب الأحجام…</string>
     <string name="dl_size_hint">يختار «تلقائي» أفضل جودة متاحة. «—»: لا يمكن تقدير الحجم.</string>
     <string name="folder">مجلد</string>

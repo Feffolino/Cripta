@@ -634,6 +634,7 @@
     <string name="dl_find_in_page">Найти видео на странице</string>
     <string name="dl_find_hint">Запустите видео: то, что загружает страница, появится здесь.</string>
     <string name="dl_find_found">Видео, найденные на странице</string>
+    <string name="dl_find_unreadable">Не удалось прочитать</string>
     <string name="dl_size_computing">Расчёт размеров…</string>
     <string name="dl_size_hint">Авто выбирает лучшее доступное качество. «—»: размер нельзя оценить.</string>
     <string name="folder">Папка</string>

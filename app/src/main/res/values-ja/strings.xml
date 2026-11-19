@@ -568,6 +568,7 @@
     <string name="dl_find_in_page">ページ内の動画を探す</string>
     <string name="dl_find_hint">動画を再生してください。ページが読み込んだものがここに表示されます。</string>
     <string name="dl_find_found">ページで見つかった動画</string>
+    <string name="dl_find_unreadable">読み取れません</string>
     <string name="dl_size_computing">サイズを計算中…</string>
     <string name="dl_size_hint">「自動」は利用可能な最高画質を選びます。「—」はサイズを推定できないことを示します。</string>
     <string name="folder">フォルダー</string>

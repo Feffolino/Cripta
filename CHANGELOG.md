@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-19
 
+- Download: each video found in a page now says what it is, "1080p · 42:10", read from the stream itself, so the one wanted is told from a trailer or an advertisement the page loads too; one that cannot be read says "Non leggibile" and can still be picked. They are read one at a time, only while their row is on screen. The "Cerca il video nella pagina" button of a failed link now sits under its row, aligned with the text and appearing like the progress bar, instead of stretching the row
 - Download: the page opened to find a video presents itself as a browser, not as an Android WebView. Many players check for that and refuse to start, so the stream was never requested and nothing was found
 - Download: a link the downloader failed on shows "Cerca il video nella pagina" on its row in the queue, not only while the size is being estimated. Before, a link sent with "Scarica" before its analysis ended (or after it failed) could only be retried with the same downloader, with no way to reach the in-app page search; the stream picked there now goes back into the link field to be downloaded
 

@@ -612,6 +612,7 @@
     <string name="dl_find_in_page">Chercher la vidéo dans la page</string>
     <string name="dl_find_hint">Lancez la vidéo : ce que la page charge apparaît ici.</string>
     <string name="dl_find_found">Vidéos trouvées dans la page</string>
+    <string name="dl_find_unreadable">Illisible</string>
     <string name="dl_size_computing">Estimation des tailles…</string>
     <string name="dl_size_hint">Auto choisit la meilleure qualité disponible. « — » : taille impossible à estimer.</string>
     <string name="folder">Dossier</string>

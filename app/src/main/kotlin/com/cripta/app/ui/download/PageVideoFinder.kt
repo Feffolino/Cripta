@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.cripta.app.R
 import com.cripta.app.data.StreamSource
+import com.cripta.app.ui.components.formatDuration
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.str
 
@@ -88,6 +90,13 @@ internal fun canFindInPage(job: com.cripta.app.data.DownloadJob): Boolean =
 internal fun browserUserAgent(webViewAgent: String): String =
     webViewAgent.replace(Regex(""";\s*wv\b"""), "").replace(Regex("""\sVersion/\d+(\.\d+)*"""), "")
 
+/** What a stream found in a page is, read from the stream itself: its tallest picture (0 = not told) and length. */
+internal data class StreamBrief(val height: Int, val durationSec: Int)
+
+/** "1080p · 42:10" for a stream's row; either part left out when unknown, null when neither is. */
+internal fun streamBrief(height: Int, durationText: String?): String? =
+    listOfNotNull(height.takeIf { it > 0 }?.let { "${it}p" }, durationText).joinToString(" · ").ifEmpty { null }
+
 /** The most streams listed for a page: one that streams in MP4 pieces asks for hundreds. */
 private const val MAX_STREAMS = 30
 
@@ -102,11 +111,19 @@ private const val MAX_STREAMS = 30
  * windows, only web links followed. Cookies, cache and storage are wiped when it closes.
  *
  * A page pushed over Download, under its top bar: the web page fills it, and what is found sits
- * under it like the queue's entries (a heading, plain rows, no frame).
+ * under it like the queue's entries (a heading, plain rows, no frame). Each one is read apart
+ * ([brief]) to say its picture height and length, so the video wanted is told from a trailer or an
+ * advertisement the page loads too.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-internal fun PageVideoFinder(pageUrl: String, modifier: Modifier = Modifier, onPick: (StreamSource) -> Unit, onClose: () -> Unit) {
+internal fun PageVideoFinder(
+    pageUrl: String,
+    modifier: Modifier = Modifier,
+    brief: suspend (StreamSource) -> StreamBrief?,
+    onPick: (StreamSource) -> Unit,
+    onClose: () -> Unit,
+) {
     val found = remember { mutableStateListOf<StreamSource>() }
     var title by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableIntStateOf(0) }
@@ -200,7 +217,7 @@ internal fun PageVideoFinder(pageUrl: String, modifier: Modifier = Modifier, onP
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     Heading(str(R.string.dl_find_found), Modifier.padding(horizontal = 16.dp))
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 208.dp)) {
-                        items(found, key = { it.url }) { s -> StreamRow(s, Modifier.animateItem()) { onPick(s.copy(title = title)) } }
+                        items(found, key = { it.url }) { s -> StreamRow(s, brief, Modifier.animateItem()) { onPick(s.copy(title = title)) } }
                     }
                 }
             }
@@ -210,7 +227,18 @@ internal fun PageVideoFinder(pageUrl: String, modifier: Modifier = Modifier, onP
 
 /** One stream found, like a queue entry: a round mark, what it is and where from, its file under it. */
 @Composable
-private fun StreamRow(s: StreamSource, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun StreamRow(s: StreamSource, brief: suspend (StreamSource) -> StreamBrief?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    // Read once the row is on screen, and dropped when it leaves: (false, null) until then, then
+    // (true, what it is) or (true, null) when it could not be read. Still tappable either way.
+    val read by produceState<Pair<Boolean, StreamBrief?>>(false to null, s.url) { value = true to brief(s) }
+    val file = s.url.substringBefore('?').substringAfterLast('/')
+    val caption = read.let { (done, b) ->
+        when {
+            !done -> file
+            b == null -> str(R.string.dl_find_unreadable) + " · " + file
+            else -> listOfNotNull(streamBrief(b.height, formatDuration(b.durationSec * 1000L)), file).joinToString(" · ")
+        }
+    }
     Row(
         modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -223,7 +251,7 @@ private fun StreamRow(s: StreamSource, modifier: Modifier = Modifier, onClick: (
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Text(streamKind(s.url).orEmpty() + " · " + hostOf(s.url), style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(s.url.substringBefore('?').substringAfterLast('/'), style = MaterialTheme.typography.bodySmall,
+            Text(caption, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp))
         }

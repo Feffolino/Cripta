@@ -568,6 +568,7 @@
     <string name="dl_find_in_page">在页面中查找视频</string>
     <string name="dl_find_hint">播放视频：页面加载的内容会显示在这里。</string>
     <string name="dl_find_found">在页面中找到的视频</string>
+    <string name="dl_find_unreadable">无法读取</string>
     <string name="dl_size_computing">正在计算大小…</string>
     <string name="dl_size_hint">“自动”会选择可用的最佳画质。“—”表示无法估算大小。</string>
     <string name="folder">文件夹</string>

@@ -590,6 +590,7 @@
     <string name="dl_find_in_page">Video auf der Seite suchen</string>
     <string name="dl_find_hint">Starte das Video: Was die Seite lädt, erscheint hier.</string>
     <string name="dl_find_found">Auf der Seite gefundene Videos</string>
+    <string name="dl_find_unreadable">Nicht lesbar</string>
     <string name="dl_size_computing">Größen werden ermittelt…</string>
     <string name="dl_size_hint">Auto nimmt die beste verfügbare Qualität. „—“: Größe nicht schätzbar.</string>
     <string name="folder">Ordner</string>

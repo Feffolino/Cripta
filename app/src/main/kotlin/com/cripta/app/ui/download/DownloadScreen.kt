@@ -412,7 +412,7 @@ fun DownloadScreen(
             label = "findInPage",
         ) { page ->
         if (page != null) {
-            PageVideoFinder(page, Modifier.padding(pad).consumeWindowInsets(pad),
+            PageVideoFinder(page, Modifier.padding(pad).consumeWindowInsets(pad), brief = vm::briefOf,
                 // The link goes back in the field: opened from a failed link of the queue, the field
                 // was empty, and the stream chosen would have had nothing to be downloaded from.
                 onPick = { url = page; vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
@@ -797,10 +797,6 @@ private fun JobRow(
                     color = if (job.phase == DownloadPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp).semantics { liveRegion = LiveRegionMode.Polite })
-                // The downloader could not take the link: its page can be opened to find the video.
-                if (canFindInPage(job)) {
-                    TextButton(onClick = onFind) { com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page)) }
-                }
             }
             // The action that fits the phase, swapped with a crossfade.
             AnimatedContent(
@@ -825,21 +821,36 @@ private fun JobRow(
                 }
             }
         }
-        // Progress: only while running; indeterminate while preparing, smoothed while downloading.
-        AnimatedVisibility(
-            visible = group == PhaseGroup.RUNNING,
-            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
-            exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
-        ) {
-            val smooth by animateFloatAsState(
-                targetValue = if (job.phase == DownloadPhase.DOWNLOADING) job.pct / 100f else 0f,
-                animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "jobProgress",
-            )
-            val bar = Modifier.fillMaxWidth().padding(start = 54.dp).height(6.dp).clip(CircleShape)
-            Crossfade(job.phase == DownloadPhase.DOWNLOADING, animationSpec = Motion.enter(), label = "jobBar") { determinate ->
-                if (determinate) LinearProgressIndicator(progress = { smooth }, modifier = bar,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                else LinearProgressIndicator(bar, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        // Under the row, in one place so the entry keeps its spacing: the progress while running, or,
+        // for a link the downloader could not take, the way to its page.
+        Column {
+            // Progress: only while running; indeterminate while preparing, smoothed while downloading.
+            AnimatedVisibility(
+                visible = group == PhaseGroup.RUNNING,
+                enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+                exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+            ) {
+                val smooth by animateFloatAsState(
+                    targetValue = if (job.phase == DownloadPhase.DOWNLOADING) job.pct / 100f else 0f,
+                    animationSpec = tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "jobProgress",
+                )
+                val bar = Modifier.fillMaxWidth().padding(start = 54.dp).height(6.dp).clip(CircleShape)
+                Crossfade(job.phase == DownloadPhase.DOWNLOADING, animationSpec = Motion.enter(), label = "jobBar") { determinate ->
+                    if (determinate) LinearProgressIndicator(progress = { smooth }, modifier = bar,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                    else LinearProgressIndicator(bar, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                }
+            }
+            // Its text starts where the row's text does: 54dp (the round mark and its gap) less the
+            // 12dp a text button keeps at its start.
+            AnimatedVisibility(
+                visible = canFindInPage(job),
+                enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+                exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+            ) {
+                TextButton(onClick = onFind, modifier = Modifier.padding(start = 42.dp)) {
+                    com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page))
+                }
             }
         }
     }

@@ -590,6 +590,7 @@
     <string name="dl_find_in_page">पेज में वीडियो खोजें</string>
     <string name="dl_find_hint">वीडियो चलाएँ: पेज जो लोड करता है वह यहाँ दिखेगा।</string>
     <string name="dl_find_found">पेज में मिले वीडियो</string>
+    <string name="dl_find_unreadable">पढ़ा नहीं जा सका</string>
     <string name="dl_size_computing">आकार गिने जा रहे हैं…</string>
     <string name="dl_size_hint">“अपने आप” में सबसे अच्छी उपलब्ध गुणवत्ता मिलती है। “—”: आकार का अनुमान नहीं हो सकता।</string>
     <string name="folder">फ़ोल्डर</string>

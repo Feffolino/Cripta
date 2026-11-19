@@ -58,6 +58,15 @@ class PageVideoFinderTest {
     }
 
     @Test
+    fun `a stream's row says its picture height and length, whichever is known`() {
+        assertEquals("1080p · 42:10", streamBrief(1080, "42:10"))
+        assertEquals("720p", streamBrief(720, null))
+        assertEquals("1:05:00", streamBrief(0, "1:05:00"))
+        // A bare media playlist or a live stream: no picture size and no length to tell.
+        assertNull(streamBrief(0, null))
+    }
+
+    @Test
     fun `the page sees a browser, not a WebView`() {
         val webView = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36"

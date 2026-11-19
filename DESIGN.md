@@ -353,9 +353,16 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   quality as a grid of three options per row with the size under each, destination as two plain rows
   opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. When
   the analysis fails, a text button "Cerca il video nella pagina" pushes a page over Download
-  (`PageVideoFinder`: page motion, back arrow and `PageTitle` in Download's own top bar): the web
-  page fills it, the queue's thick bar shows it loading, and the streams found sit under it as
-  queue-like rows (round mark, kind and site, file name) under a heading, a hint until then. The
+  (`PageVideoFinder`: page motion, back arrow and `PageTitle` in Download's own top bar); the same
+  button sits under the row of a link that failed in the queue (its text starting where the row's
+  does, appearing with the same short expand as the progress bar), since a link sent before its
+  analysis ended never shows the first. The web page fills it, the queue's thick bar shows it
+  loading, and the streams found sit under it as queue-like rows (round mark, kind and site, then
+  under it what the stream says of itself, "1080p · 42:10", and its file name; "Non leggibile"
+  when it cannot be read, the row still tappable) under a heading, a hint until then. The streams
+  are read one at a time and only while their row is on screen, each reading being a yt-dlp
+  process. The page presents itself as a browser, not an Android WebView, which many players
+  refuse to start in. The
   folder row shows the full path from "Radice". Its sheet: the chosen path in the accent at the
   top ("Ora: Radice › …"), then one level at a time, like a file manager: a path of text buttons
   to go back, "Salva nella Radice" / "Salva in …" for the level on screen, each folder a row that
