@@ -81,6 +81,13 @@ internal fun streamRank(kind: String?): Int = when (kind) { "HLS" -> 0; "DASH" -
 internal fun canFindInPage(job: com.cripta.app.data.DownloadJob): Boolean =
     job.phase == com.cripta.app.data.DownloadPhase.FAILED && job.stream == null
 
+/**
+ * [webViewAgent] without what tells a page it runs in a WebView ("; wv", "Version/4.0"): players
+ * that check for it refuse to start or serve another page, and the stream never gets requested.
+ */
+internal fun browserUserAgent(webViewAgent: String): String =
+    webViewAgent.replace(Regex(""";\s*wv\b"""), "").replace(Regex("""\sVersion/\d+(\.\d+)*"""), "")
+
 /** The most streams listed for a page: one that streams in MP4 pieces asks for hundreds. */
 private const val MAX_STREAMS = 30
 
@@ -142,6 +149,7 @@ internal fun PageVideoFinder(pageUrl: String, modifier: Modifier = Modifier, onP
                     settings.setGeolocationEnabled(false)
                     // Players embedded from another site keep their session in cookies of their own.
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    settings.userAgentString = browserUserAgent(settings.userAgentString)
                     val agent = settings.userAgentString
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }

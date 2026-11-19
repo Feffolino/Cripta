@@ -58,6 +58,17 @@ class PageVideoFinderTest {
     }
 
     @Test
+    fun `the page sees a browser, not a WebView`() {
+        val webView = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36"
+        val browser = "Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230901.001) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36"
+        assertEquals(browser, browserUserAgent(webView))
+        // A browser's own agent stays as it is.
+        assertEquals(browser, browserUserAgent(browser))
+    }
+
+    @Test
     fun `a stream's headers are each the value of their own downloader option`() {
         val cmd = DownloadRequests.common("https://cdn.example.com/master.m3u8", mapOf("Referer" to "https://example.com/")).buildCommand()
         val i = cmd.indexOf("--add-header")

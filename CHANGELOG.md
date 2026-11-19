@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-19
 
+- Download: the page opened to find a video presents itself as a browser, not as an Android WebView. Many players check for that and refuse to start, so the stream was never requested and nothing was found
 - Download: a link the downloader failed on shows "Cerca il video nella pagina" on its row in the queue, not only while the size is being estimated. Before, a link sent with "Scarica" before its analysis ended (or after it failed) could only be retried with the same downloader, with no way to reach the in-app page search; the stream picked there now goes back into the link field to be downloaded
 
 ## 2026-11-18
