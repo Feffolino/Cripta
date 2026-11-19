@@ -16,10 +16,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +25,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -72,21 +70,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Velocity
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 import com.cripta.app.R
 import com.cripta.app.data.StreamSource
 import com.cripta.app.str
@@ -348,13 +331,11 @@ internal fun PageVideoFinder(
 }
 
 /**
- * What the page loaded, on the raised ground of the app's sheets: a hint until a video shows up,
- * then the streams under a heading with their count. Under the page ([side] false) it is a
- * drawer that is part of the screen, like [com.cripta.app.ui.components.SplitPanel] (the page
- * above stays touchable, the player too): its grip and heading follow the finger, a pull down from
- * the top of the list folds it, and it settles open or folded to its heading, on a fling or past
- * halfway; a tap on the heading does the same. Beside the page ([side] true, landscape) it is a
- * panel as tall as the page, always open, its rows filling it.
+ * What the page loaded. Under the page ([side] false) a strip on the raised ground of the app's
+ * sheets: a hint until a video shows up, then how many were found and the likely one, with
+ * "Scegli" opening them in the app's own sheet ([com.cripta.app.ui.components.CriptaSheet]), as
+ * the folder and tag pickers do; the page stays free to start the video until then. Beside the
+ * page ([side] true, landscape) a panel as tall as the page with the streams listed in it.
  */
 @Composable
 private fun FoundSheet(
@@ -365,127 +346,115 @@ private fun FoundSheet(
     onPick: (StreamSource) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val drawer = rememberFoldState()
     val likely = likelyStream(found.map { it.url }) { u -> briefs[u]?.durationSec?.takeIf { it > 0 } }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = if (side) RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
-            else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = modifier,
-    ) {
+    if (side) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp), modifier = modifier) {
+            AnimatedContent(
+                targetState = found.isEmpty(),
+                transitionSpec = { fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit()) },
+                label = "foundStreams",
+            ) { none ->
+                if (none) NothingYet(Modifier.padding(top = 24.dp))
+                else Column(Modifier.fillMaxSize().padding(top = 18.dp)) {
+                    FoundHeading(found.size, MaterialTheme.typography.titleSmall, Modifier.padding(horizontal = 16.dp).padding(bottom = 6.dp))
+                    FoundList(found, briefs, brief, likely, onPick, Modifier.weight(1f))
+                }
+            }
+        }
+        return
+    }
+
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), modifier = modifier) {
         AnimatedContent(
             targetState = found.isEmpty(),
             transitionSpec = { (fadeIn(Motion.enter()) togetherWith fadeOut(Motion.exit())) using SizeTransform(clip = false) { _, _ -> Motion.enter() } },
             label = "foundStreams",
         ) { none ->
-            if (none) {
-                Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                    if (side) Spacer(Modifier.height(10.dp)) else Handle()
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 14.dp).semantics { liveRegion = LiveRegionMode.Polite },
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Mark { Icon(CriptaIcons.PlayArrow, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
-                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                            Text(str(R.string.dl_find_none), style = MaterialTheme.typography.bodyLarge)
-                            Text(str(R.string.dl_find_hint), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                        }
+            if (none) NothingYet(Modifier.padding(top = 20.dp))
+            else {
+                // How many, and the likely one once read; the whole strip opens the list.
+                val pick = likely?.let { u -> toldOf(briefs[u]) }?.let { str(R.string.dl_find_maybe) + " · " + it }
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = str(R.string.choose)) { choosing = true }
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Mark {
+                        Text(com.cripta.app.ui.components.formatCount(found.size), style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, maxLines = 1)
                     }
-                }
-            } else {
-                Column(Modifier.fillMaxWidth()) {
-                    val dragState = rememberDraggableState { d -> drawer.dragBy(d) }
-                    Column(Modifier.fillMaxWidth().then(
-                        if (side) Modifier.padding(top = 10.dp)
-                        else Modifier
-                            .clickable(role = Role.Button,
-                                onClickLabel = str(if (drawer.folded) R.string.expand else R.string.collapse)) { drawer.toggle() }
-                            .draggable(dragState, Orientation.Vertical, onDragStopped = { v -> drawer.settle(v) }),
-                    )) {
-                        if (!side) Handle()
-                        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Heading(str(R.string.dl_find_found), Modifier.weight(1f))
-                            Text(com.cripta.app.ui.components.formatCount(found.size), style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                        }
+                    Column(Modifier.weight(1f).padding(start = 14.dp, end = 12.dp)) {
+                        Text(str(R.string.dl_find_found), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (pick != null) Text(pick, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                     }
-                    Column(
-                        if (side) Modifier.weight(1f, fill = false)
-                        else Modifier.nestedScroll(drawer.nested).foldable(drawer),
-                    ) {
-                        LazyColumn(Modifier.fillMaxWidth().then(if (side) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 288.dp)),
-                            contentPadding = PaddingValues(bottom = 4.dp)) {
-                            items(found, key = { it.url }) { s ->
-                                StreamRow(s, briefs, brief, likely = s.url == likely, modifier = Modifier.animateItem()) { onPick(s) }
-                            }
-                        }
-                        Text(str(R.string.dl_find_footer), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp))
+                    com.cripta.app.ui.components.FilledTonalButton(onClick = { choosing = true }) {
+                        Text(str(R.string.choose), maxLines = 1, softWrap = false)
                     }
-                    // Folded, the heading keeps the room under it that the open list's end has.
-                    if (!side) Spacer(Modifier.height(14.dp * drawer.fold.value))
                 }
             }
         }
     }
-}
-
-/**
- * The drawer's fold: 0 open, 1 folded to its heading, following the finger in between. [body] is
- * the height in px of what folds away, measured as it is laid out.
- */
-@Stable
-private class FoldState(private val scope: kotlinx.coroutines.CoroutineScope, startFolded: Boolean) {
-    val fold = Animatable(if (startFolded) 1f else 0f)
-    var body = 1f
-    val folded: Boolean get() = fold.targetValue >= 0.5f
-
-    fun dragBy(px: Float) { scope.launch { fold.snapTo((fold.value + px / body).coerceIn(0f, 1f)) } }
-    fun toggle() = animateTo(if (folded) 0f else 1f)
-    /** End of a drag: a fling decides, else the nearer end. */
-    fun settle(velocityPx: Float) = animateTo(when {
-        velocityPx > 1200f -> 1f
-        velocityPx < -1200f -> 0f
-        else -> if (fold.value > 0.5f) 1f else 0f
-    })
-    private fun animateTo(target: Float) {
-        scope.launch { fold.animateTo(target, if (target > fold.value) Motion.exit(Motion.MEDIUM) else Motion.enter(Motion.LONG)) }
-    }
-
-    /** The list pulled down at its top folds the drawer; pushed up while it is folding, it opens first. */
-    val nested = object : NestedScrollConnection {
-        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (available.y < 0f && fold.value > 0f) { dragBy(available.y); return Offset(0f, available.y) }
-            return Offset.Zero
-        }
-        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (available.y > 0f && source == NestedScrollSource.UserInput) { dragBy(available.y); return Offset(0f, available.y) }
-            return Offset.Zero
-        }
-        override suspend fun onPreFling(available: Velocity): Velocity {
-            if (fold.value > 0f && fold.value < 1f) { settle(available.y); return available }
-            return Velocity.Zero
+    if (choosing && found.isNotEmpty()) {
+        com.cripta.app.ui.components.CriptaSheet(onDismissRequest = { choosing = false }) {
+            val afterClose = com.cripta.app.ui.components.rememberSheetAction()
+            FoundHeading(found.size, MaterialTheme.typography.titleMedium, Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp))
+            FoundList(found, briefs, brief, likely, onPick = { s -> afterClose { choosing = false; onPick(s) } })
         }
     }
 }
 
+/** Before any video shows up: start it in the page, and what it loads comes here. */
 @Composable
-private fun rememberFoldState(): FoldState {
-    val scope = rememberCoroutineScope()
-    var savedFolded by rememberSaveable { mutableStateOf(false) }
-    val state = remember { FoldState(scope, savedFolded) }
-    LaunchedEffect(state) { snapshotFlow { state.folded }.collect { savedFolded = it } }
-    return state
+private fun NothingYet(modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 24.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically) {
+        Mark { Icon(CriptaIcons.PlayArrow, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
+        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(str(R.string.dl_find_none), style = MaterialTheme.typography.bodyLarge)
+            Text(str(R.string.dl_find_hint), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+        }
+    }
 }
 
-/** Shows only the unfolded share of what it wraps, cut at its bottom; measures it for the drag. */
-private fun Modifier.foldable(state: FoldState): Modifier = clipToBounds().layout { measurable, constraints ->
-    val p = measurable.measure(constraints.copy(minHeight = 0))
-    state.body = p.height.toFloat().coerceAtLeast(1f)
-    val h = (p.height * (1f - state.fold.value)).roundToInt().coerceAtLeast(0)
-    layout(p.width, h) { p.place(0, 0) }
+/** "Video trovati nella pagina" with the count as a plain figure at its end. */
+@Composable
+private fun FoundHeading(count: Int, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(str(R.string.dl_find_found), style = style, modifier = Modifier.weight(1f).semantics { heading() })
+        Text(com.cripta.app.ui.components.formatCount(count), style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** The streams found, then what the "≈" means and what happens on picking one. */
+@Composable
+private fun FoundList(
+    found: List<StreamSource>,
+    briefs: MutableMap<String, StreamBrief?>,
+    brief: suspend (StreamSource) -> StreamBrief?,
+    likely: String?,
+    onPick: (StreamSource) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        items(found, key = { it.url }) { s ->
+            StreamRow(s, briefs, brief, likely = s.url == likely, modifier = Modifier.animateItem()) { onPick(s) }
+        }
+        item(key = "footer") {
+            Text(str(R.string.dl_find_footer), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp))
+        }
+    }
+}
+
+/** "42:10 · 1080p · ≈ 1.8 GB" for a stream read, null when it told nothing (or is not read yet). */
+private fun toldOf(b: StreamBrief?): String? = b?.let {
+    streamBrief(it.height, formatDuration(it.durationSec * 1000L).takeIf { _ -> it.durationSec > 0 }, it.bytes?.let(::formatBytes))
 }
 
 /** The page loading: a thin bar over its top edge, so the page never moves for it. */
@@ -499,15 +468,6 @@ private fun LoadBar(search: PageSearch, modifier: Modifier) {
         val smooth by animateFloatAsState(search.progress / 100f, tween(Motion.LONG, 0, Motion.EaseOutQuart), label = "pageLoad")
         LinearProgressIndicator(progress = { smooth }, modifier = Modifier.fillMaxWidth().height(4.dp),
             trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    }
-}
-
-/** The sheet's grip, as on the app's sheets. */
-@Composable
-private fun Handle() {
-    Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(32.dp).height(4.dp).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)))
     }
 }
 
@@ -537,9 +497,7 @@ private fun StreamRow(
     val read = s.url in briefs
     val host = hostOf(s.url)
     val file = s.url.substringBefore('?').substringAfterLast('/')
-    val told = briefs[s.url]?.let { b ->
-        streamBrief(b.height, formatDuration(b.durationSec * 1000L).takeIf { b.durationSec > 0 }, b.bytes?.let(::formatBytes))
-    }
+    val told = toldOf(briefs[s.url])
     val unreadable = read && told == null
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val primary = MaterialTheme.colorScheme.primary
