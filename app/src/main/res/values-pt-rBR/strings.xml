@@ -24,7 +24,7 @@
         <item quantity="other">%1$s segundos</item>
     </plurals>
     <plurals name="dl_download_links">
-        <item quantity="one">Baixar 1 link</item>
+        <item quantity="one">Baixar %1$s link</item>
         <item quantity="many">Baixar %1$s links</item>
         <item quantity="other">Baixar %1$s links</item>
     </plurals>
