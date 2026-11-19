@@ -501,33 +501,33 @@ private fun EmptyHome(
                         Button(modifier = Modifier.fillMaxWidth(), onClick = onImport) {
                             Icon(CriptaIcons.Upload, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(str(R.string.import_files), maxLines = 2)
+                            com.cripta.app.ui.components.ButtonText(str(R.string.import_files))
                         }
                         com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onDownload) {
                             Icon(CriptaIcons.Link, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(str(R.string.from_link), maxLines = 2)
+                            com.cripta.app.ui.components.ButtonText(str(R.string.from_link))
                         }
                     }
                 }
                 1 -> StartPage(CriptaIcons.Folder, str(R.string.start_order_title),
                     str(R.string.start_order_text)) {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { Text(str(R.string.open_folders), maxLines = 2) }
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenFolders) { com.cripta.app.ui.components.ButtonText(str(R.string.open_folders)) }
                 }
                 else -> StartPage(CriptaIcons.Lock, str(R.string.start_lock_title),
                     str(R.string.start_lock_text, lock)) {
-                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { Text(str(R.string.open_security), maxLines = 2) }
+                    com.cripta.app.ui.components.FilledTonalButton(modifier = Modifier.fillMaxWidth(), onClick = onOpenSecurity) { com.cripta.app.ui.components.ButtonText(str(R.string.open_security)) }
                 }
             }
         }
         // Indietro / dots / Avanti. Fixed slots so the dots never shift when a button hides.
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (pager.currentPage > 0) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage - 1) }) { Text(str(R.string.back), maxLines = 1) }
+                if (pager.currentPage > 0) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage - 1) }) { com.cripta.app.ui.components.ButtonText(str(R.string.back)) }
             }
             PageDots(pager.currentPage, 3)
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                if (pager.currentPage < 2) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage + 1) }) { Text(str(R.string.next), maxLines = 1) }
+                if (pager.currentPage < 2) com.cripta.app.ui.components.TextButton(onClick = { go(pager.currentPage + 1) }) { com.cripta.app.ui.components.ButtonText(str(R.string.next)) }
             }
         }
     }

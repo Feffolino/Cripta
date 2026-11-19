@@ -407,7 +407,7 @@ internal fun TrashDialog(
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteMany(selF.toList(), selD.toList()); clearSel(); confirmDeleteSel = false
-                    }) { Text(str(R.string.delete), color = MaterialTheme.colorScheme.error) }
+                    }) { com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = { TextButton(onClick = { confirmDeleteSel = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
             )

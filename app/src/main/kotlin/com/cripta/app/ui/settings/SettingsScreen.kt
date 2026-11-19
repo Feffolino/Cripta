@@ -915,7 +915,7 @@ fun SettingsScreen(
                                 com.cripta.app.ui.components.FilledTonalButton(
                                     onClick = { vm.checkUpdate(ctx) }, enabled = updateState !is SettingsViewModel.UpdateState.Checking,
                                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                    Text(str(R.string.check_updates))
+                                    com.cripta.app.ui.components.ButtonText(str(R.string.check_updates))
                                 }
                             }
                         }

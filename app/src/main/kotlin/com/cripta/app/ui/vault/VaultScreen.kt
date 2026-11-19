@@ -1712,7 +1712,7 @@ fun VaultScreen(
                     downloadAsk = null
                     downloadIds = ArrayList(ids)
                     downloadTreeLauncher.launch(null)
-                }) { Text(str(R.string.choose_folder)) }
+                }) { com.cripta.app.ui.components.ButtonText(str(R.string.choose_folder)) }
             },
             dismissButton = { TextButton(onClick = { downloadAsk = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
         )
@@ -1743,7 +1743,7 @@ fun VaultScreen(
                         )
                     }
                 }) {
-                    Text(str(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText(str(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmMultiDelete = false }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },
@@ -1797,7 +1797,7 @@ fun VaultScreen(
                         )
                     }
                 }) {
-                    Text(if (trashEnabled) str(R.string.move_to_trash) else if (n == 0) str(R.string.delete) else str(R.string.delete_all), color = MaterialTheme.colorScheme.error)
+                    com.cripta.app.ui.components.ButtonText(if (trashEnabled) str(R.string.move_to_trash) else if (n == 0) str(R.string.delete) else str(R.string.delete_all), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { folderToDelete = null }) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) } },

@@ -313,8 +313,11 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   may stay text buttons. Dialogs (`CriptaAlertDialog`) keep the platform convention: every
   action, a confirm that deletes too, is a text button, the deleting one in the error colour; the
   dialog itself is the weight. Menu items that delete are text in the error colour.
-- **Button labels** (`ButtonText`): one line, cut with "…" when the button is too narrow, never
-  broken mid-phrase. A label that would often be cut gets shorter words ("Inizio qui (1:23)"),
+- **Button labels** (`ButtonText`, in every button, never a bare `Text`): up to two lines, broken
+  only between words, so a long translation stays readable; a word is never split. When one word
+  has no room whole (large font, a narrow button beside another), the label keeps to one line as
+  `OneLineText` does: down to 80 % of its size, then cut with "…" ("Riprov" + "a" was the bug).
+  A label that would often be cut gets shorter words ("Inizio qui (1:23)"),
   and several buttons that may not fit side by side go in a `FlowRow`. Two lines only where the
   control is built for them (the details sheet's icon actions), and then balanced.
 - **Details panel** (viewer): the file (preview, name, type and date, its actions), its figures

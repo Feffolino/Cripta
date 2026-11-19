@@ -444,7 +444,7 @@ private fun PasswordEntry(busy: Boolean, autoFocus: Boolean, compact: Boolean, o
                 androidx.compose.material3.CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             }
-            Text(if (busy) str(R.string.auth_checking) else str(R.string.unlock))
+            com.cripta.app.ui.components.ButtonText(if (busy) str(R.string.auth_checking) else str(R.string.unlock))
         }
     }
 }

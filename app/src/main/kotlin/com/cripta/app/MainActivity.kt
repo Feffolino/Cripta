@@ -283,10 +283,10 @@ class MainActivity : FragmentActivity() {
                             )
                         },
                         confirmButton = {
-                            TextButton(onClick = { notificationRationaleAnswered(allow = true) }) { Text(str(R.string.allow)) }
+                            TextButton(onClick = { notificationRationaleAnswered(allow = true) }) { com.cripta.app.ui.components.ButtonText(str(R.string.allow)) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { notificationRationaleAnswered(allow = false) }) { Text(str(R.string.not_now)) }
+                            TextButton(onClick = { notificationRationaleAnswered(allow = false) }) { com.cripta.app.ui.components.ButtonText(str(R.string.not_now)) }
                         },
                     )
                 }

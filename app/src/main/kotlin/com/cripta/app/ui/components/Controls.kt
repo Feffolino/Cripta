@@ -350,14 +350,50 @@ fun OneLineText(
 }
 
 /**
- * A button's label: up to two lines so longer translations keep the action readable.
+ * The words of [text] that a line may not break inside: those of scripts written with spaces.
+ * Chinese and Japanese break between any two characters, so their runs are left out.
+ */
+internal fun unbreakableWords(text: String): List<String> =
+    text.split(Regex("""\s+""")).filter { w ->
+        w.isNotEmpty() && w.codePoints().noneMatch { cp ->
+            when (Character.UnicodeScript.of(cp)) {
+                Character.UnicodeScript.HAN, Character.UnicodeScript.HIRAGANA, Character.UnicodeScript.KATAKANA -> true
+                else -> false
+            }
+        }
+    }
+
+/**
+ * A button's label: up to two lines, broken between words, so a longer translation keeps the
+ * action readable. A word is never split: when one has no room whole (a large font, a narrow
+ * button beside another), the label keeps to one line as [OneLineText] does, a little smaller,
+ * then ending with "…", instead of dropping the word's last letter onto a line of its own
+ * ("Riprov" + "a").
  */
 @Composable
 fun ButtonText(text: String, modifier: Modifier = Modifier, color: Color = Color.Unspecified,
-               style: TextStyle = androidx.compose.material3.LocalTextStyle.current) =
-    androidx.compose.material3.Text(text, modifier, color = color, maxLines = 2,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = style)
+               style: TextStyle = androidx.compose.material3.LocalTextStyle.current) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val resolved = androidx.compose.material3.LocalTextStyle.current.merge(style)
+    // Each word's width at full size: the label's two shapes are both composed, and only the one
+    // that fits is measured and placed.
+    val longest = androidx.compose.runtime.remember(text, resolved, measurer) {
+        unbreakableWords(text).maxOfOrNull { w -> measurer.measure(w, resolved, maxLines = 1, softWrap = false).size.width } ?: 0
+    }
+    androidx.compose.ui.layout.Layout(
+        content = {
+            androidx.compose.material3.Text(text, color = color, maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = style)
+            OneLineText(text, color = color, style = resolved)
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val wraps = !constraints.hasBoundedWidth || longest <= constraints.maxWidth
+        val p = measurables[if (wraps) 0 else 1].measure(constraints)
+        layout(p.width, p.height) { p.place(0, 0) }
+    }
+}
 
 /**
  * A button that throws something away (delete, empty, start over): still a button, never bare

@@ -391,7 +391,7 @@ private fun FoundSheet(
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                     }
                     com.cripta.app.ui.components.FilledTonalButton(onClick = { choosing = true }) {
-                        Text(str(R.string.choose), maxLines = 1, softWrap = false)
+                        com.cripta.app.ui.components.ButtonText(str(R.string.choose))
                     }
                 }
             }

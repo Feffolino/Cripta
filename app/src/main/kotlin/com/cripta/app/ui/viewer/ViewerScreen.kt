@@ -688,7 +688,7 @@ fun ViewerScreen(
                     val orig = originalId
                     vm.resolveConvertedOriginal(delete = true)
                     if (orig != null && orig in vm.liveIds) removePage(orig)
-                }) { Text(str(R.string.n_delete_original), color = MaterialTheme.colorScheme.error) }
+                }) { com.cripta.app.ui.components.ButtonText(str(R.string.n_delete_original), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { vm.resolveConvertedOriginal(delete = false) }) { com.cripta.app.ui.components.ButtonText(str(R.string.keep)) } },
         )

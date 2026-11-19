@@ -363,7 +363,7 @@ fun DownloadScreen(
         ) {
             Icon(CriptaIcons.Download, null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text(
+            com.cripta.app.ui.components.ButtonText(
                 if (links.isNotEmpty()) com.cripta.app.plural(R.plurals.dl_download_links, links.size)
                 else if (downloads.any { it.active }) str(R.string.dl_add_to_queue) else if (existing != null) str(R.string.dl_download_anyway) else str(R.string.dl_download),
                 style = MaterialTheme.typography.titleSmall,
@@ -701,7 +701,7 @@ private fun FolderPickerSheet(
                     TextButton(onClick = { naming = true }, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                         Icon(CriptaIcons.Add, null, Modifier.size(ButtonDefaults.IconSize))
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(if (here == null) str(R.string.dl_new_folder_root) else str(R.string.dl_new_folder_in, here.name))
+                        com.cripta.app.ui.components.ButtonText(if (here == null) str(R.string.dl_new_folder_root) else str(R.string.dl_new_folder_in, here.name))
                     }
                 }
             }
@@ -902,9 +902,9 @@ private fun JobRow(
                         contentPadding = androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding) {
                         Icon(CriptaIcons.WorldSearch, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(str(R.string.dl_find_in_page_short), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page_short))
                     }
-                    TextButton(onClick = onRetry) { Text(str(R.string.retry), maxLines = 1, softWrap = false) }
+                    TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
                 }
             }
         }

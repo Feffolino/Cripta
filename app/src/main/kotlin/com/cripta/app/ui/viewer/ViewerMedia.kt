@@ -150,7 +150,7 @@ internal fun MediaPage(
                     ) {
                         Icon(CriptaIcons.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(str(R.string.retry))
+                        com.cripta.app.ui.components.ButtonText(str(R.string.retry))
                     }
                 }
             }
