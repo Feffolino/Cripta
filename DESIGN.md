@@ -365,13 +365,16 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   screen, never scrolling sideways; pinch to zoom); a 4dp bar over its top edge shows it loading
   without moving it. Under it a sheet (`surfaceContainer`, 28dp top corners, a grip): "Nessun
   video ancora" with the hint until a stream shows up, then "Video trovati nella pagina" with
-  the count as a plain figure at the end (a tap folds the sheet to that line and back) and the
+  the count as a plain figure at the end and the
   streams as queue-like rows: round mark with the kind (HLS, DASH, MP4), the line "42:10 · 1080p
   · ≈ 1,8 GB" (length, picture, estimated size of the best quality), under it the site and the
   file, "Forse è questo" in `primary` before them on the longest stream read; "Durata e peso non
   leggibili" (muted, the mark too) when it cannot be read, the row still tappable. A caption
   ends the sheet: the "≈" is an estimate, the video goes back to Download, page and cookies are
-  wiped on closing. In landscape the page takes the left at full height and the sheet becomes a
+  wiped on closing. The sheet is a drawer that is part of the screen (the page and its player stay
+  touchable): grip and heading follow the finger, a pull down from the top of the list folds it,
+  and it settles open or folded to its heading on a fling or past halfway; a tap on the heading
+  does the same. In landscape the page takes the left at full height and the sheet becomes a
   360dp panel on its right (28dp corners on its left side, no grip, always open, its rows filling
   its height), as Download keeps its queue on the right. The streams are read one at a time and only while their row is on screen,
   each reading being a yt-dlp process. The page presents itself as a browser, not an Android

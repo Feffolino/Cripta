@@ -72,6 +72,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Velocity
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import com.cripta.app.R
 import com.cripta.app.data.StreamSource
 import com.cripta.app.str
@@ -334,10 +349,12 @@ internal fun PageVideoFinder(
 
 /**
  * What the page loaded, on the raised ground of the app's sheets: a hint until a video shows up,
- * then the streams under a heading with their count. Under the page ([side] false) a tap on the
- * heading folds the sheet to it and opens it again, so more of the page shows while the video
- * plays; beside it ([side] true, landscape) it is a panel as tall as the page, always open, its
- * rows filling it.
+ * then the streams under a heading with their count. Under the page ([side] false) it is a
+ * drawer that is part of the screen, like [com.cripta.app.ui.components.SplitPanel] (the page
+ * above stays touchable, the player too): its grip and heading follow the finger, a pull down from
+ * the top of the list folds it, and it settles open or folded to its heading, on a fling or past
+ * halfway; a tap on the heading does the same. Beside the page ([side] true, landscape) it is a
+ * panel as tall as the page, always open, its rows filling it.
  */
 @Composable
 private fun FoundSheet(
@@ -348,8 +365,7 @@ private fun FoundSheet(
     onPick: (StreamSource) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var folded by rememberSaveable { mutableStateOf(false) }
-    val open = side || !folded
+    val drawer = rememberFoldState()
     val likely = likelyStream(found.map { it.url }) { u -> briefs[u]?.durationSec?.takeIf { it > 0 } }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -377,13 +393,16 @@ private fun FoundSheet(
                 }
             } else {
                 Column(Modifier.fillMaxWidth()) {
+                    val dragState = rememberDraggableState { d -> drawer.dragBy(d) }
                     Column(Modifier.fillMaxWidth().then(
                         if (side) Modifier.padding(top = 10.dp)
-                        else Modifier.clickable(role = Role.Button,
-                            onClickLabel = str(if (open) R.string.collapse else R.string.expand)) { folded = !folded },
+                        else Modifier
+                            .clickable(role = Role.Button,
+                                onClickLabel = str(if (drawer.folded) R.string.expand else R.string.collapse)) { drawer.toggle() }
+                            .draggable(dragState, Orientation.Vertical, onDragStopped = { v -> drawer.settle(v) }),
                     )) {
                         if (!side) Handle()
-                        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = if (open) 6.dp else 20.dp),
+                        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Heading(str(R.string.dl_find_found), Modifier.weight(1f))
                             Text(com.cripta.app.ui.components.formatCount(found.size), style = MaterialTheme.typography.titleSmall,
@@ -391,24 +410,82 @@ private fun FoundSheet(
                                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         }
                     }
-                    AnimatedVisibility(open, enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
-                        exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit())) {
-                        Column {
-                            LazyColumn(Modifier.fillMaxWidth().then(if (side) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 288.dp)),
-                                contentPadding = PaddingValues(bottom = 4.dp)) {
-                                items(found, key = { it.url }) { s ->
-                                    StreamRow(s, briefs, brief, likely = s.url == likely, modifier = Modifier.animateItem()) { onPick(s) }
-                                }
+                    Column(
+                        if (side) Modifier.weight(1f, fill = false)
+                        else Modifier.nestedScroll(drawer.nested).foldable(drawer),
+                    ) {
+                        LazyColumn(Modifier.fillMaxWidth().then(if (side) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 288.dp)),
+                            contentPadding = PaddingValues(bottom = 4.dp)) {
+                            items(found, key = { it.url }) { s ->
+                                StreamRow(s, briefs, brief, likely = s.url == likely, modifier = Modifier.animateItem()) { onPick(s) }
                             }
-                            Text(str(R.string.dl_find_footer), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp))
                         }
+                        Text(str(R.string.dl_find_footer), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp))
                     }
+                    // Folded, the heading keeps the room under it that the open list's end has.
+                    if (!side) Spacer(Modifier.height(14.dp * drawer.fold.value))
                 }
             }
         }
     }
+}
+
+/**
+ * The drawer's fold: 0 open, 1 folded to its heading, following the finger in between. [body] is
+ * the height in px of what folds away, measured as it is laid out.
+ */
+@Stable
+private class FoldState(private val scope: kotlinx.coroutines.CoroutineScope, startFolded: Boolean) {
+    val fold = Animatable(if (startFolded) 1f else 0f)
+    var body = 1f
+    val folded: Boolean get() = fold.targetValue >= 0.5f
+
+    fun dragBy(px: Float) { scope.launch { fold.snapTo((fold.value + px / body).coerceIn(0f, 1f)) } }
+    fun toggle() = animateTo(if (folded) 0f else 1f)
+    /** End of a drag: a fling decides, else the nearer end. */
+    fun settle(velocityPx: Float) = animateTo(when {
+        velocityPx > 1200f -> 1f
+        velocityPx < -1200f -> 0f
+        else -> if (fold.value > 0.5f) 1f else 0f
+    })
+    private fun animateTo(target: Float) {
+        scope.launch { fold.animateTo(target, if (target > fold.value) Motion.exit(Motion.MEDIUM) else Motion.enter(Motion.LONG)) }
+    }
+
+    /** The list pulled down at its top folds the drawer; pushed up while it is folding, it opens first. */
+    val nested = object : NestedScrollConnection {
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (available.y < 0f && fold.value > 0f) { dragBy(available.y); return Offset(0f, available.y) }
+            return Offset.Zero
+        }
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            if (available.y > 0f && source == NestedScrollSource.UserInput) { dragBy(available.y); return Offset(0f, available.y) }
+            return Offset.Zero
+        }
+        override suspend fun onPreFling(available: Velocity): Velocity {
+            if (fold.value > 0f && fold.value < 1f) { settle(available.y); return available }
+            return Velocity.Zero
+        }
+    }
+}
+
+@Composable
+private fun rememberFoldState(): FoldState {
+    val scope = rememberCoroutineScope()
+    var savedFolded by rememberSaveable { mutableStateOf(false) }
+    val state = remember { FoldState(scope, savedFolded) }
+    LaunchedEffect(state) { snapshotFlow { state.folded }.collect { savedFolded = it } }
+    return state
+}
+
+/** Shows only the unfolded share of what it wraps, cut at its bottom; measures it for the drag. */
+private fun Modifier.foldable(state: FoldState): Modifier = clipToBounds().layout { measurable, constraints ->
+    val p = measurable.measure(constraints.copy(minHeight = 0))
+    state.body = p.height.toFloat().coerceAtLeast(1f)
+    val h = (p.height * (1f - state.fold.value)).roundToInt().coerceAtLeast(0)
+    layout(p.width, h) { p.place(0, 0) }
 }
 
 /** The page loading: a thin bar over its top edge, so the page never moves for it. */

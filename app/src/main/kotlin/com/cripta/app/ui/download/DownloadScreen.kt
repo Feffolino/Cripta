@@ -894,15 +894,17 @@ private fun JobRow(
                 enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
                 exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
             ) {
-                Row(Modifier.padding(start = 54.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Labels on one line: the tonal button gives way (its label cut with "…") so "Riprova"
+                // always keeps its full width.
+                Row(Modifier.fillMaxWidth().padding(start = 54.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    com.cripta.app.ui.components.FilledTonalButton(onClick = onFind,
+                    com.cripta.app.ui.components.FilledTonalButton(onClick = onFind, modifier = Modifier.weight(1f, fill = false),
                         contentPadding = androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding) {
                         Icon(CriptaIcons.WorldSearch, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page_short))
+                        Text(str(R.string.dl_find_in_page_short), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
+                    TextButton(onClick = onRetry) { Text(str(R.string.retry), maxLines = 1, softWrap = false) }
                 }
             }
         }
