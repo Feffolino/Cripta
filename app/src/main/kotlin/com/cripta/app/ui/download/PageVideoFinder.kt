@@ -74,6 +74,13 @@ internal fun streamKind(url: String): String? {
 /** Playlists first (a page that streams also loads loose MP4 pieces), each kind in the order seen. */
 internal fun streamRank(kind: String?): Int = when (kind) { "HLS" -> 0; "DASH" -> 1; else -> 2 }
 
+/**
+ * A failed link whose page was never searched: the downloader alone could not take it, so its page
+ * can be opened to find the video its player loads. Not a stream already found in a page.
+ */
+internal fun canFindInPage(job: com.cripta.app.data.DownloadJob): Boolean =
+    job.phase == com.cripta.app.data.DownloadPhase.FAILED && job.stream == null
+
 /** The most streams listed for a page: one that streams in MP4 pieces asks for hundreds. */
 private const val MAX_STREAMS = 30
 

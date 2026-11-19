@@ -1,8 +1,11 @@
 package com.cripta.app.ui.download
 
+import com.cripta.app.data.DownloadJob
+import com.cripta.app.data.DownloadPhase
 import com.cripta.app.data.StreamSource
 import com.cripta.app.media.DownloadRequests
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,6 +44,17 @@ class PageVideoFinderTest {
             "Cookie" to "",
         ))
         assertEquals(mapOf("Referer" to "https://example.com/watch--exec: rm", "User-Agent" to "Mozilla/5.0"), h)
+    }
+
+    @Test
+    fun `a link the downloader failed on can be searched in its page, a stream or a running link cannot`() {
+        val failed = DownloadJob("1", "https://example.com/watch", phase = DownloadPhase.FAILED)
+        assertTrue(canFindInPage(failed))
+        // Already a stream from a page: its page was searched, retrying is all there is.
+        assertFalse(canFindInPage(failed.copy(stream = StreamSource("https://cdn.example.com/master.m3u8"))))
+        assertFalse(canFindInPage(failed.copy(phase = DownloadPhase.DOWNLOADING)))
+        assertFalse(canFindInPage(failed.copy(phase = DownloadPhase.CANCELLED)))
+        assertFalse(canFindInPage(failed.copy(phase = DownloadPhase.DONE)))
     }
 
     @Test

@@ -350,6 +350,7 @@ fun DownloadScreen(
                         onCancel = { vm.cancel(ctx) },
                         onRemove = { vm.remove(job.id) },
                         onRetry = { vm.retry(ctx, job) },
+                        onFind = { findIn = job.url },
                         onOpen = { id -> vm.prepareOpen(id); onOpenFile(id) },
                     )
                 }
@@ -412,7 +413,9 @@ fun DownloadScreen(
         ) { page ->
         if (page != null) {
             PageVideoFinder(page, Modifier.padding(pad).consumeWindowInsets(pad),
-                onPick = { vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
+                // The link goes back in the field: opened from a failed link of the queue, the field
+                // was empty, and the stream chosen would have had nothing to be downloaded from.
+                onPick = { url = page; vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
         } else if (landscape) {
             // Landscape: the form on the left, the queue on the right, each scrolling on its own.
             Row(
@@ -748,6 +751,7 @@ private fun JobRow(
     onCancel: () -> Unit,
     onRemove: () -> Unit,
     onRetry: () -> Unit,
+    onFind: () -> Unit,
     onOpen: (String) -> Unit,
 ) {
     val (icon, tint) = when (job.phase) {
@@ -793,6 +797,10 @@ private fun JobRow(
                     color = if (job.phase == DownloadPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                // The downloader could not take the link: its page can be opened to find the video.
+                if (canFindInPage(job)) {
+                    TextButton(onClick = onFind) { com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page)) }
+                }
             }
             // The action that fits the phase, swapped with a crossfade.
             AnimatedContent(

@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-19
+
+- Download: a link the downloader failed on shows "Cerca il video nella pagina" on its row in the queue, not only while the size is being estimated. Before, a link sent with "Scarica" before its analysis ended (or after it failed) could only be retried with the same downloader, with no way to reach the in-app page search; the stream picked there now goes back into the link field to be downloaded
+
 ## 2026-11-18
 
 - Going back with the swipe gesture slides the page to the right like the back button does: before, the gesture still shrank the page towards the centre while fading it. The shrink came from Navigation's own gesture animation, which the earlier change had not replaced
