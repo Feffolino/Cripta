@@ -161,7 +161,10 @@ internal fun PageVideoFinder(
                     settings.mediaPlaybackRequiresUserGesture = false
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
-                    settings.setSupportMultipleWindows(false)
+                    // On (with onCreateWindow refusing every window below): off, a window.open() or a
+                    // target="_blank" replaces the page itself, and the click that starts the player,
+                    // taken by an advertisement's popup, left the page behind.
+                    settings.setSupportMultipleWindows(true)
                     settings.javaScriptCanOpenWindowsAutomatically = false
                     settings.setGeolocationEnabled(false)
                     // Players embedded from another site keep their session in cookies of their own.
@@ -171,6 +174,9 @@ internal fun PageVideoFinder(
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
                         override fun onReceivedTitle(view: WebView, t: String?) { title = t?.takeIf { it.isNotBlank() } }
+
+                        // No other window, whoever asks: the page stays where it is and its player starts.
+                        override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean = false
                     }
                     webViewClient = object : WebViewClient() {
                         // Only web links: a page cannot open another app ("intent:", "market:") from here.
