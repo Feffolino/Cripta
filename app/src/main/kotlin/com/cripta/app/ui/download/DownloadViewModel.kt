@@ -204,8 +204,26 @@ class DownloadViewModel @Inject constructor(
  * text. Punctuation after the link goes; a closing bracket only when nothing in the link opened it,
  * so ".../video_(final)" keeps its ")". An apostrophe inside the path stays.
  */
-fun extractUrl(text: String): String {
-    var url = Regex("https?://[^\\s<>\"]+", RegexOption.IGNORE_CASE).find(text)?.value ?: return text.trim()
+fun extractUrl(text: String): String = LINK_IN_TEXT.find(text)?.value?.let(::trimLinkEnd) ?: text.trim()
+
+/**
+ * Every http(s) link inside [text], cut like [extractUrl], each once in the order found, one per
+ * line; else [extractUrl] of it. Several links (a selection of a note, a pasted list) are queued
+ * together by the downloader.
+ */
+fun extractUrls(text: String): String =
+    LINK_IN_TEXT.findAll(text).map { trimLinkEnd(it.value) }.distinct().joinToString("\n").ifEmpty { text.trim() }
+
+/** The links of the downloader's field when it holds more than one (one per line, all links), else empty. */
+fun linksOf(field: String): List<String> {
+    val lines = field.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    return if (lines.size > 1 && lines.all(::looksLikeUrl)) lines.distinct() else emptyList()
+}
+
+private val LINK_IN_TEXT = Regex("https?://[^\\s<>\"]+", RegexOption.IGNORE_CASE)
+
+private fun trimLinkEnd(link: String): String {
+    var url = link
     while (url.isNotEmpty()) {
         val last = url.last()
         url = when {

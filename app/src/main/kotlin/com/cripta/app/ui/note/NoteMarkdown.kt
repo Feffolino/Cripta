@@ -61,6 +61,16 @@ object NoteMarkdown {
     fun urlAt(text: String, cursor: Int): String? =
         URL.findAll(text).firstOrNull { cursor in it.range.first..it.range.last + 1 }?.value
 
+    /**
+     * The web addresses a selection from [start] to [end] (either order) covers or cuts into, each
+     * once, in the order written; a collapsed selection gives the one the cursor is in ([urlAt]).
+     */
+    fun urlsIn(text: String, start: Int, end: Int): List<String> {
+        if (start == end) return listOfNotNull(urlAt(text, start))
+        val from = minOf(start, end); val to = maxOf(start, end)
+        return URL.findAll(text).filter { it.range.first < to && it.range.last >= from }.map { it.value }.distinct().toList()
+    }
+
     fun render(text: String, p: Palette, keepMarkers: Boolean): AnnotatedString = buildAnnotatedString {
         val lines = text.split('\n')
         var inFence = false

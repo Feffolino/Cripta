@@ -19,6 +19,9 @@
     <plurals name="wait_seconds">
         <item quantity="other">%1$s 秒</item>
     </plurals>
+    <plurals name="dl_download_links">
+        <item quantity="other">下载 %1$s 个链接</item>
+    </plurals>
     <plurals name="wait_minutes">
         <item quantity="other">%1$s 分钟</item>
     </plurals>

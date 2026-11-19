@@ -21,6 +21,10 @@
         <item quantity="one">%1$s second</item>
         <item quantity="other">%1$s seconds</item>
     </plurals>
+    <plurals name="dl_download_links">
+        <item quantity="one">Download 1 link</item>
+        <item quantity="other">Download %1$s links</item>
+    </plurals>
     <plurals name="wait_minutes">
         <item quantity="one">%1$s minute</item>
         <item quantity="other">%1$s minutes</item>

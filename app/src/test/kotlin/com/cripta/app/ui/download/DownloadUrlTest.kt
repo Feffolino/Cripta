@@ -56,4 +56,19 @@ class DownloadUrlTest {
         assertFalse(looksLikeUrl("https://user@/path"))
         assertFalse(looksLikeUrl("-o https://example.com"))
     }
+
+    @Test
+    fun everyLinkOfATextGoesOnALineOfItsOwn() {
+        assertEquals("https://a.com/1\nhttps://b.com/2",
+            extractUrls("vedi https://a.com/1, poi (https://b.com/2). E di nuovo https://a.com/1!"))
+        assertEquals("https://a.com/1", extractUrls("Title https://a.com/1"))
+        assertEquals("not a link", extractUrls("  not a link "))
+    }
+
+    @Test
+    fun severalLinksAreAListOnlyWhenEveryLineIsALink() {
+        assertEquals(listOf("https://a.com/1", "https://b.com/2"), linksOf("https://a.com/1\n\n https://b.com/2 \n"))
+        assertEquals(emptyList<String>(), linksOf("https://a.com/1"))
+        assertEquals(emptyList<String>(), linksOf("https://a.com/1\nnot a link"))
+    }
 }

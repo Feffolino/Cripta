@@ -95,4 +95,17 @@ class NoteMarkdownTest {
         val link = out.getLinkAnnotations(0, out.length).single().item as androidx.compose.ui.text.LinkAnnotation.Url
         assertEquals(wiki, link.url)
     }
+
+    @Test fun aSelectionGivesEveryLinkItTouchesOnce() {
+        val t = "vedi https://a.com/1 e [due](https://b.com/2)\nancora https://a.com/1 poi https://c.com/3"
+        // Collapsed: the link the cursor is in, as urlAt.
+        assertEquals(listOf("https://a.com/1"), NoteMarkdown.urlsIn(t, 8, 8))
+        assertEquals(emptyList<String>(), NoteMarkdown.urlsIn(t, 1, 1))
+        // From the middle of the first link to the middle of the last, backwards too; repeats once.
+        val all = listOf("https://a.com/1", "https://b.com/2", "https://c.com/3")
+        assertEquals(all, NoteMarkdown.urlsIn(t, 10, t.length - 3))
+        assertEquals(all, NoteMarkdown.urlsIn(t, t.length - 3, 10))
+        // A selection of plain words only: nothing.
+        assertEquals(emptyList<String>(), NoteMarkdown.urlsIn(t, 0, 4))
+    }
 }

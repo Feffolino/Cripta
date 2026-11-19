@@ -82,8 +82,11 @@ class NoteEditorViewModel @Inject constructor(
         loaded = true
     }
 
-    /** Hands a link of the note to the downloader (AppRoot opens its tab); the user picks the quality there. */
-    fun sendToDownloader(url: String) = sharedLinks.set(url)
+    /**
+     * Hands links of the note to the downloader (AppRoot opens its tab), one per line; the user
+     * picks the quality and destination there, once for all of them.
+     */
+    fun sendToDownloader(urls: List<String>) = sharedLinks.set(urls.joinToString("\n"))
 
     /**
      * Save and then [onDone]. A new note goes into [folderId] (screen parameter) or else the folder
