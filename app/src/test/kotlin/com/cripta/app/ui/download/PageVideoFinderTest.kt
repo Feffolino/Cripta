@@ -58,12 +58,23 @@ class PageVideoFinderTest {
     }
 
     @Test
-    fun `a stream's row says its picture height and length, whichever is known`() {
-        assertEquals("1080p · 42:10", streamBrief(1080, "42:10"))
+    fun `a stream's row says its length, picture height and estimated size, whichever is known`() {
+        assertEquals("42:10 · 1080p · ≈ 1.8 GB", streamBrief(1080, "42:10", "1.8 GB"))
+        assertEquals("42:10 · 1080p", streamBrief(1080, "42:10"))
         assertEquals("720p", streamBrief(720, null))
-        assertEquals("1:05:00", streamBrief(0, "1:05:00"))
-        // A bare media playlist or a live stream: no picture size and no length to tell.
+        assertEquals("1:05:00 · ≈ 900 MB", streamBrief(0, "1:05:00", "900 MB"))
+        // A bare media playlist or a live stream: no picture size, no length and no size to tell.
         assertNull(streamBrief(0, null))
+    }
+
+    @Test
+    fun `the likely video is the longest stream read, the first on a tie, and none when there is no choice`() {
+        val durations = mapOf("trailer" to 30, "film" to 2530, "copy" to 2530)
+        assertEquals("film", likelyStream(listOf("trailer", "film", "copy", "unread"), durations::get))
+        // One stream: nothing to choose between.
+        assertNull(likelyStream(listOf("film"), durations::get))
+        // Nothing read yet.
+        assertNull(likelyStream(listOf("a", "b"), durations::get))
     }
 
     @Test

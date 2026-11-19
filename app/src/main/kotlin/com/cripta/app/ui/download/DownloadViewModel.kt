@@ -108,14 +108,15 @@ class DownloadViewModel @Inject constructor(
     private val reading = Semaphore(1)
 
     /**
-     * What [s], a stream the page search found, is: its tallest picture and its length, for its row.
+     * What [s], a stream the page search found, is: its tallest picture, its length and the size of
+     * its best quality (what "Auto" would download), for its row.
      * Null when it cannot be read; the row stays tappable all the same.
      */
     internal suspend fun briefOf(s: com.cripta.app.data.StreamSource): StreamBrief? = reading.withPermit {
         runInterruptible(Dispatchers.IO) {
             runCatching {
                 val info = ytdlp.info(s.url, s.headers)
-                StreamBrief(info.formats?.maxOfOrNull { it.height } ?: 0, info.duration)
+                StreamBrief(info.formats?.maxOfOrNull { it.height } ?: 0, info.duration, ytdlp.estimateBytes(info, null))
             }.getOrNull()
         }
     }

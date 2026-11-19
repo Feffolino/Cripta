@@ -124,6 +124,8 @@ object CriptaIcons {
     val ViewCarousel: ImageVector by lazy { load(R.drawable.tabler_carousel_horizontal) }
     val ViewList: ImageVector by lazy { load(R.drawable.tabler_list) }
     val Visibility: ImageVector by lazy { load(R.drawable.tabler_eye) }
+    val World: ImageVector by lazy { load(R.drawable.tabler_world) }
+    val WorldSearch: ImageVector by lazy { load(R.drawable.tabler_world_search) }
     val VisibilityOff: ImageVector by lazy { load(R.drawable.tabler_eye_off) }
     val VolumeDown: ImageVector by lazy { load(R.drawable.tabler_volume_2) }
     val VolumeOff: ImageVector by lazy { load(R.drawable.tabler_volume_off) }

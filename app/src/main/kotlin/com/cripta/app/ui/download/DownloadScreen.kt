@@ -185,6 +185,8 @@ fun DownloadScreen(
 
     // The page of the link opened in the app, to pick the video the analysis did not find.
     var findIn by rememberSaveable { mutableStateOf<String?>(null) }
+    // The page being searched, shared by the page and the top bar (its address, stop and reload).
+    val search = remember(findIn) { findIn?.let(::PageSearch) }
 
     val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -237,6 +239,37 @@ fun DownloadScreen(
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
+        // The analysis failed: why, in the error colour, then the way out as the page's tonal
+        // button (open the link's page and take the video its player loads) and what it does.
+        val failed = (estimate as? DownloadViewModel.Estimate.Error)?.takeIf { urlValid }
+        var lastFailure by remember { mutableStateOf("") }
+        if (failed != null) lastFailure = failed.message
+        AnimatedVisibility(
+            visible = failed != null,
+            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
+            exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                    Icon(CriptaIcons.ErrorOutline, null, tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 1.dp).size(16.dp))
+                    Text(str(R.string.dl_find_failed, lastFailure), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 8.dp))
+                }
+                com.cripta.app.ui.components.FilledTonalButton(
+                    onClick = { findIn = url.trim() },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding,
+                ) {
+                    Icon(CriptaIcons.WorldSearch, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page))
+                }
+                Text(str(R.string.dl_find_notice), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
         // Already downloaded from this link? One notice, in a tonal slab of its own.
         existing?.let { f ->
             Surface(color = MaterialTheme.colorScheme.accentTint, shape = com.cripta.app.ui.theme.RadiusMd,
@@ -260,7 +293,8 @@ fun DownloadScreen(
         QualitySelector(qualities, quality, estimate) { quality = it }
         // Estimate line: takes no space while idle, crossfades between "computing" / result / error.
         val estimateText = when (val e = estimate) {
-            is DownloadViewModel.Estimate.Error -> str(R.string.dl_size_unknown_err, e.message)
+            // A failed analysis says so in its own notice, with the way to the page.
+            is DownloadViewModel.Estimate.Error -> null
             DownloadViewModel.Estimate.Loading -> str(R.string.dl_size_computing)
             is DownloadViewModel.Estimate.Ready -> str(R.string.dl_size_hint)
             else -> null
@@ -275,17 +309,6 @@ fun DownloadScreen(
             Crossfade(lastEstimateText, animationSpec = Motion.enter(), label = "estimateLine") { t ->
                 Text(t, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite })
-            }
-        }
-
-        // The analysis failed: the page can be opened here to take the video its player loads.
-        AnimatedVisibility(
-            visible = estimate is DownloadViewModel.Estimate.Error && urlValid,
-            enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
-            exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
-        ) {
-            TextButton(onClick = { findIn = url.trim() }) {
-                com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page))
             }
         }
 
@@ -393,12 +416,18 @@ fun DownloadScreen(
             TopAppBar(windowInsets = com.cripta.app.ui.components.criptaTopBarInsets,
                 // Download is a tab root: the back arrow only appears on the page pushed over it.
                 title = {
-                    if (findIn == null) com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download))
-                    else com.cripta.app.ui.components.PageTitle(str(R.string.dl_find_in_page))
+                    // The page searched: what it is for, and under it where the page is now.
+                    if (search == null) com.cripta.app.ui.components.HeaderTitle(str(R.string.n_download))
+                    else Column {
+                        com.cripta.app.ui.components.PageTitle(str(R.string.dl_find_title))
+                        PageSearchAddress(search)
+                    }
                 },
                 navigationIcon = {
-                    if (findIn != null) IconButton(onClick = { findIn = null }) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) }
+                    if (search != null) IconButton(onClick = { findIn = null }) { Icon(CriptaIcons.ArrowBack, str(R.string.back)) }
                 },
+                // Stop while the page loads, reload once it has: one button, as in a browser.
+                actions = { if (search != null) PageSearchReload(search) },
                 scrollBehavior = scrollBehavior,
                 colors = com.cripta.app.ui.components.criptaTopBarColors(
                     findIn == null && (formScroll.canScrollBackward || (landscape && queueScroll.canScrollBackward))),
@@ -407,7 +436,7 @@ fun DownloadScreen(
     ) { pad ->
         // Form <-> the link's page: the same page motion as the rest of the app (Back included).
         AnimatedContent(
-            targetState = findIn,
+            targetState = search,
             transitionSpec = { PageMotion.transform(deeper = targetState != null) },
             label = "findInPage",
         ) { page ->
@@ -415,7 +444,7 @@ fun DownloadScreen(
             PageVideoFinder(page, Modifier.padding(pad).consumeWindowInsets(pad), brief = vm::briefOf,
                 // The link goes back in the field: opened from a failed link of the queue, the field
                 // was empty, and the stream chosen would have had nothing to be downloaded from.
-                onPick = { url = page; vm.useStream(page, it, heights); findIn = null }, onClose = { findIn = null })
+                onPick = { url = page.pageUrl; vm.useStream(page.pageUrl, it, heights); findIn = null }, onClose = { findIn = null })
         } else if (landscape) {
             // Landscape: the form on the left, the queue on the right, each scrolling on its own.
             Row(
@@ -809,6 +838,10 @@ private fun JobRow(
                 when {
                     g == PhaseGroup.RUNNING -> TextButton(onClick = onCancel) { com.cripta.app.ui.components.ButtonText(str(R.string.cancel)) }
                     g == PhaseGroup.DONE && job.fileId != null -> TextButton(onClick = { job.fileId?.let(onOpen) }) { com.cripta.app.ui.components.ButtonText(str(R.string.open)) }
+                    // A link whose page can be searched: its two ways on sit under the row.
+                    g == PhaseGroup.STOPPED && canFindInPage(job) -> IconButton(onClick = onRemove) {
+                        Icon(CriptaIcons.Close, str(R.string.dl_remove_from_queue), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     g == PhaseGroup.STOPPED -> Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
                         IconButton(onClick = onRemove) {
@@ -841,15 +874,22 @@ private fun JobRow(
                     else LinearProgressIndicator(bar, trackColor = MaterialTheme.colorScheme.surfaceContainerHigh)
                 }
             }
-            // Its text starts where the row's text does: 54dp (the round mark and its gap) less the
-            // 12dp a text button keeps at its start.
+            // A link the downloader could not take: its page as a tonal button, retry beside it,
+            // both starting where the row's text does (54dp: the round mark and its gap).
             AnimatedVisibility(
                 visible = canFindInPage(job),
                 enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
                 exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit()),
             ) {
-                TextButton(onClick = onFind, modifier = Modifier.padding(start = 42.dp)) {
-                    com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page))
+                Row(Modifier.padding(start = 54.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    com.cripta.app.ui.components.FilledTonalButton(onClick = onFind,
+                        contentPadding = androidx.compose.material3.ButtonDefaults.ButtonWithIconContentPadding) {
+                        Icon(CriptaIcons.WorldSearch, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        com.cripta.app.ui.components.ButtonText(str(R.string.dl_find_in_page_short))
+                    }
+                    TextButton(onClick = onRetry) { com.cripta.app.ui.components.ButtonText(str(R.string.retry)) }
                 }
             }
         }
