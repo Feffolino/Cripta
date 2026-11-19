@@ -376,7 +376,10 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   its height), as Download keeps its queue on the right. The streams are read one at a time and only while their row is on screen,
   each reading being a yt-dlp process. The page presents itself as a browser, not an Android
   WebView, which many players refuse to start in, and opens no other window: a popup (an
-  advertisement hooked on the player's first tap) is refused instead of taking the page's place. The
+  advertisement hooked on the player's first tap) is refused instead of taking the page's place.
+  Advertisements are blocked as a browser's blocker does, by EasyList's network rules (fetched
+  from easylist.to, kept 4 days in the cache): a player told to show one it cannot load waits on
+  it and never asks for the video, and an advertisement's video is not listed. The
   folder row shows the full path from "Radice". Its sheet: the chosen path in the accent at the
   top ("Ora: Radice › …"), then one level at a time, like a file manager: a path of text buttons
   to go back, "Salva nella Radice" / "Salva in …" for the level on screen, each folder a row that

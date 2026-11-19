@@ -79,6 +79,8 @@ import com.cripta.app.ui.components.formatBytes
 import com.cripta.app.ui.components.formatDuration
 import com.cripta.app.ui.theme.CriptaIcons
 import com.cripta.app.ui.theme.Motion
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** What kind of video a request is for, by the file its address names; null for anything else. */
 internal fun streamKind(url: String): String? {
@@ -222,6 +224,18 @@ internal fun PageVideoFinder(
     // What each stream turned out to be once read: absent until then, null when it could not be.
     val briefs = remember { mutableStateMapOf<String, StreamBrief?>() }
     var title by remember { mutableStateOf<String?>(null) }
+    // The advertisements a browser's blocker keeps off the page (AdFilter): the page opens once the
+    // list is read, a few seconds at most the first time it is fetched.
+    val ads = remember { java.util.concurrent.atomic.AtomicReference<AdFilter?>() }
+    val adsRead = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    val cacheDir = androidx.compose.ui.platform.LocalContext.current.cacheDir
+    LaunchedEffect(Unit) {
+        val list = async { EasyList.filter(cacheDir) }
+        ads.set(withTimeoutOrNull(6_000) { list.await() })
+        adsRead.set(true)
+        search.web?.loadUrl(search.pageUrl)
+        ads.set(list.await())
+    }
 
     BackHandler { search.web?.takeIf { it.canGoBack() }?.goBack() ?: onClose() }
     DisposableEffect(Unit) {
@@ -293,6 +307,9 @@ internal fun PageVideoFinder(
                             // Runs off the main thread for every request of the page; the page loads it as usual.
                             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                                 val url = request.url.toString()
+                                // An advertisement gets an empty refusal, as from a blocker: a player told to show
+                                // one it cannot load (its server blocked by a filtering DNS) never asks for the video.
+                                if (!request.isForMainFrame && ads.get()?.blocks(url) == true) return blockedResponse()
                                 if (request.url.scheme?.lowercase() in setOf("http", "https") && streamKind(url) != null) {
                                     val headers = HashMap(request.requestHeaders.orEmpty())
                                     if (headers.keys.none { it.equals("User-Agent", ignoreCase = true) }) headers["User-Agent"] = agent
@@ -309,8 +326,8 @@ internal fun PageVideoFinder(
                                 return null
                             }
                         }
-                        loadUrl(search.pageUrl)
                         search.web = this
+                        if (adsRead.get()) loadUrl(search.pageUrl) // else once the list is read, above
                     }
                 },
             )
