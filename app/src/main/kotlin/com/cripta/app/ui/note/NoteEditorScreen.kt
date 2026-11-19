@@ -240,16 +240,18 @@ fun NoteEditorScreen(
                         )
                         // The cursor in a web address: opening it is the user's explicit act (nothing is
                         // fetched to preview it), and it can go to the downloader (the note is saved first).
-                        val link = NoteMarkdown.urlAt(body.text, body.selection.start)
+                        // A selection over several links sends them all, to be queued together there.
+                        val links = NoteMarkdown.urlsIn(body.text, body.selection.start, body.selection.end)
+                        val link = links.firstOrNull()
                         if (link != null) LaunchedEffect(Unit) { com.cripta.app.ui.people.warmUpLinks(context) }
                         if (link != null && !vm.loadFailed) Row(
                             Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            TextButton(onClick = { com.cripta.app.ui.people.openLink(context, link) }) {
+                            if (links.size == 1) TextButton(onClick = { com.cripta.app.ui.people.openLink(context, link) }) {
                                 com.cripta.app.ui.components.ButtonText(str(R.string.open_link))
                             }
-                            TextButton(onClick = { leaveThen { vm.sendToDownloader(link) } }) {
+                            TextButton(onClick = { leaveThen { vm.sendToDownloader(links) } }) {
                                 com.cripta.app.ui.components.ButtonText(str(R.string.dl_download))
                             }
                         }

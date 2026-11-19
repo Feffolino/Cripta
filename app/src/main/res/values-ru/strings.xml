@@ -25,6 +25,12 @@
         <item quantity="many">%1$s секунд</item>
         <item quantity="other">%1$s секунды</item>
     </plurals>
+    <plurals name="dl_download_links">
+        <item quantity="one">Скачать %1$s ссылку</item>
+        <item quantity="few">Скачать %1$s ссылки</item>
+        <item quantity="many">Скачать %1$s ссылок</item>
+        <item quantity="other">Скачать %1$s ссылки</item>
+    </plurals>
     <plurals name="wait_minutes">
         <item quantity="one">%1$s минута</item>
         <item quantity="few">%1$s минуты</item>

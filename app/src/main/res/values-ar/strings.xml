@@ -29,6 +29,14 @@
         <item quantity="many">%1$s ثانية</item>
         <item quantity="other">%1$s ثانية</item>
     </plurals>
+    <plurals name="dl_download_links">
+        <item quantity="zero">تنزيل %1$s رابط</item>
+        <item quantity="one">تنزيل رابط واحد</item>
+        <item quantity="two">تنزيل رابطين (%1$s)</item>
+        <item quantity="few">تنزيل %1$s روابط</item>
+        <item quantity="many">تنزيل %1$s رابطًا</item>
+        <item quantity="other">تنزيل %1$s رابط</item>
+    </plurals>
     <plurals name="wait_minutes">
         <item quantity="zero">%1$s دقيقة</item>
         <item quantity="one">%1$s دقيقة</item>

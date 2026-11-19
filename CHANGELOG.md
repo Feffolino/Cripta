@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-19
 
+- Notes: selecting text that holds several links shows "Scarica" for all of them. The downloader opens with every link on a line of its own and a "Scarica 3 link" button: the quality, folder and tags are chosen once and the links are queued together, each one already in the queue left out. Pasting or sharing a text with several links into the downloader does the same; before, only the first link was kept
 - Download: the page opened to find a video no longer lets a popup take its place. A window opened by the page (an advertisement hooked on the player's first tap, a link meant for a new tab) used to replace the page itself, so the video seemed not to start until you went back; now such a window is refused and the page stays where it is
 - Download: each video found in a page now says what it is, "1080p · 42:10", read from the stream itself, so the one wanted is told from a trailer or an advertisement the page loads too; one that cannot be read says "Non leggibile" and can still be picked. They are read one at a time, only while their row is on screen. The "Cerca il video nella pagina" button of a failed link now sits under its row, aligned with the text and appearing like the progress bar, instead of stretching the row
 - Download: the page opened to find a video presents itself as a browser, not as an Android WebView. Many players check for that and refuse to start, so the stream was never requested and nothing was found

@@ -19,6 +19,9 @@
     <plurals name="wait_seconds">
         <item quantity="other">%1$s초</item>
     </plurals>
+    <plurals name="dl_download_links">
+        <item quantity="other">링크 %1$s개 다운로드</item>
+    </plurals>
     <plurals name="wait_minutes">
         <item quantity="other">%1$s분</item>
     </plurals>

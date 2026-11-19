@@ -153,7 +153,7 @@ fun DownloadScreen(
 
     // A link shared from another app: pre-fill the field so the user can pick a resolution.
     LaunchedEffect(pending) {
-        pending?.let { url = extractUrl(it); vm.consumeSharedLink() }
+        pending?.let { url = extractUrls(it); vm.consumeSharedLink() }
     }
     // Debounced size probe (and "already downloaded" check) whenever the link settles.
     LaunchedEffect(url) {
@@ -165,14 +165,24 @@ fun DownloadScreen(
 
     fun paste() {
         val clip = clipboard.getText()?.text?.trim().orEmpty()
-        if (clip.isNotBlank()) url = extractUrl(clip)
+        if (clip.isNotBlank()) url = extractUrls(clip)
         else Toast.makeText(ctx, str(R.string.clipboard_empty), Toast.LENGTH_SHORT).show()
     }
 
-    val urlValid = looksLikeUrl(url)
+    // Several links, one per line (a selection of a note, a pasted list): queued together, with the
+    // same quality and destination; none is analysed first.
+    val links = linksOf(url)
+    val urlValid = looksLikeUrl(url) || links.isNotEmpty()
     // Only complain once something has been typed that clearly isn't a link.
     val urlError = url.isNotBlank() && !urlValid
     fun submit() {
+        if (links.isNotEmpty()) {
+            val fresh = links.filterNot { vm.isQueued(it) }
+            if (fresh.isEmpty()) Toast.makeText(ctx, str(R.string.dl_already_queued), Toast.LENGTH_SHORT).show()
+            fresh.forEach { vm.enqueue(ctx, it, quality, effectiveFolder, effectiveTags) }
+            url = ""; vm.resetEstimate()
+            return
+        }
         val u = url.trim()
         if (!looksLikeUrl(u)) return
         if (vm.isQueued(u)) {
@@ -212,7 +222,9 @@ fun DownloadScreen(
                     IconButton(onClick = { url = ""; vm.resetEstimate() }) { Icon(CriptaIcons.Clear, str(R.string.dl_clear_link)) }
                 }
             },
-            singleLine = true,
+            // One line per link once there are several, up to a few before it scrolls.
+            singleLine = '\n' !in url,
+            maxLines = if ('\n' in url) 5 else 1,
             isError = urlError,
             supportingText = if (urlError) ({ Text(str(R.string.dl_not_a_link)) }) else null,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -352,7 +364,8 @@ fun DownloadScreen(
             Icon(CriptaIcons.Download, null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                if (downloads.any { it.active }) str(R.string.dl_add_to_queue) else if (existing != null) str(R.string.dl_download_anyway) else str(R.string.dl_download),
+                if (links.isNotEmpty()) com.cripta.app.plural(R.plurals.dl_download_links, links.size)
+                else if (downloads.any { it.active }) str(R.string.dl_add_to_queue) else if (existing != null) str(R.string.dl_download_anyway) else str(R.string.dl_download),
                 style = MaterialTheme.typography.titleSmall,
             )
         }
