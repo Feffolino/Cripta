@@ -371,7 +371,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   file, "Forse è questo" in `primary` before them on the longest stream read; "Durata e peso non
   leggibili" (muted, the mark too) when it cannot be read, the row still tappable. A caption
   ends the sheet: the "≈" is an estimate, the video goes back to Download, page and cookies are
-  wiped on closing. The streams are read one at a time and only while their row is on screen,
+  wiped on closing. In landscape the page takes the left at full height and the sheet becomes a
+  360dp panel on its right (28dp corners on its left side, no grip, always open, its rows filling
+  its height), as Download keeps its queue on the right. The streams are read one at a time and only while their row is on screen,
   each reading being a yt-dlp process. The page presents itself as a browser, not an Android
   WebView, which many players refuse to start in, and opens no other window: a popup (an
   advertisement hooked on the player's first tap) is refused instead of taking the page's place. The

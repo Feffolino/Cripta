@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -231,8 +233,12 @@ internal fun PageVideoFinder(
         }
     }
 
-    Column(modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().weight(1f)) {
+    // Landscape: the page on the left at full height, what is found in a panel on its right (as
+    // Download keeps its queue on the right); portrait: the page above, the sheet under it.
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val page: @Composable (Modifier) -> Unit = { pageModifier ->
+        Box(pageModifier) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -310,29 +316,46 @@ internal fun PageVideoFinder(
             )
             LoadBar(search, Modifier.align(Alignment.TopCenter))
         }
-
-        FoundSheet(found, briefs, brief, onPick = { onPick(it.copy(title = title)) })
+    }
+    val pick: (StreamSource) -> Unit = { onPick(it.copy(title = title)) }
+    if (landscape) {
+        Row(modifier.fillMaxSize()) {
+            page(Modifier.weight(1f).fillMaxHeight())
+            FoundSheet(found, briefs, brief, side = true, onPick = pick,
+                modifier = Modifier.padding(start = 8.dp).width(360.dp).fillMaxHeight())
+        }
+    } else {
+        Column(modifier.fillMaxSize()) {
+            page(Modifier.fillMaxWidth().weight(1f))
+            FoundSheet(found, briefs, brief, side = false, onPick = pick, modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
 /**
  * What the page loaded, on the raised ground of the app's sheets: a hint until a video shows up,
- * then the streams under a heading with their count. A tap on the heading folds the sheet to it
- * and opens it again, so more of the page shows while the video plays.
+ * then the streams under a heading with their count. Under the page ([side] false) a tap on the
+ * heading folds the sheet to it and opens it again, so more of the page shows while the video
+ * plays; beside it ([side] true, landscape) it is a panel as tall as the page, always open, its
+ * rows filling it.
  */
 @Composable
 private fun FoundSheet(
     found: List<StreamSource>,
     briefs: MutableMap<String, StreamBrief?>,
     brief: suspend (StreamSource) -> StreamBrief?,
+    side: Boolean,
     onPick: (StreamSource) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    var open by rememberSaveable { mutableStateOf(true) }
+    var folded by rememberSaveable { mutableStateOf(false) }
+    val open = side || !folded
     val likely = likelyStream(found.map { it.url }) { u -> briefs[u]?.durationSec?.takeIf { it > 0 } }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxWidth(),
+        shape = if (side) RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+            else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        modifier = modifier,
     ) {
         AnimatedContent(
             targetState = found.isEmpty(),
@@ -341,7 +364,7 @@ private fun FoundSheet(
         ) { none ->
             if (none) {
                 Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                    Handle()
+                    if (side) Spacer(Modifier.height(10.dp)) else Handle()
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 14.dp).semantics { liveRegion = LiveRegionMode.Polite },
                         verticalAlignment = Alignment.CenterVertically) {
                         Mark { Icon(CriptaIcons.PlayArrow, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
@@ -354,9 +377,12 @@ private fun FoundSheet(
                 }
             } else {
                 Column(Modifier.fillMaxWidth()) {
-                    Column(Modifier.fillMaxWidth().clickable(role = Role.Button,
-                        onClickLabel = str(if (open) R.string.collapse else R.string.expand)) { open = !open }) {
-                        Handle()
+                    Column(Modifier.fillMaxWidth().then(
+                        if (side) Modifier.padding(top = 10.dp)
+                        else Modifier.clickable(role = Role.Button,
+                            onClickLabel = str(if (open) R.string.collapse else R.string.expand)) { folded = !folded },
+                    )) {
+                        if (!side) Handle()
                         Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = if (open) 6.dp else 20.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Heading(str(R.string.dl_find_found), Modifier.weight(1f))
@@ -368,7 +394,8 @@ private fun FoundSheet(
                     AnimatedVisibility(open, enter = fadeIn(Motion.enter()) + expandVertically(Motion.enter()),
                         exit = fadeOut(Motion.exit()) + shrinkVertically(Motion.exit())) {
                         Column {
-                            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 288.dp), contentPadding = PaddingValues(bottom = 4.dp)) {
+                            LazyColumn(Modifier.fillMaxWidth().then(if (side) Modifier.weight(1f, fill = false) else Modifier.heightIn(max = 288.dp)),
+                                contentPadding = PaddingValues(bottom = 4.dp)) {
                                 items(found, key = { it.url }) { s ->
                                     StreamRow(s, briefs, brief, likely = s.url == likely, modifier = Modifier.animateItem()) { onPick(s) }
                                 }
