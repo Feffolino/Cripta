@@ -5,6 +5,7 @@ Entries marked **stable** went out as a stable release.
 
 ## 2026-11-24
 
+- Download: the page opened to find a video blocks its advertisements, as Brave or uBlock do, with EasyList's rules (downloaded from easylist.to and kept for 4 days). Many players play an advertisement before the video: when its server is blocked, for example by a filtering DNS such as AdGuard's, the player waited on it for good and never asked for the video, so nothing was found. Now the player skips straight to the video, and the advertisement's own video is no longer listed among those found. The first time, the page opens a few seconds later, while the list is downloaded
 - Download: a page opened to find its video can be used again when it sizes things to the screen. The page was laid out with a screen height of zero, so whatever is sized by it collapsed: YouTube's "Prima di continuare su YouTube" shrank to a thin strip with "Accetta tutto" and "Rifiuta tutto" out of reach, and the page could not be scrolled past it or used; players sized the same way stayed out of reach too. Now the page has the height it is shown at: the YouTube dialog can be scrolled and closed, and a video then plays
 
 ## 2026-11-23
