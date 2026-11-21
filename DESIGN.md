@@ -227,7 +227,10 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   tones. Star and count go with the name underneath, never on the picture. No "more" button: actions are on long-press,
   so the name keeps the whole width. In Raccolta and inside a folder the folders are a grid
   (2 columns, 4 in landscape) above the files, under a permanent search and quick chips (Foto,
-  Video, Altro, Preferiti); the files follow under a "File" heading. Typing a name in the search
+  Video, Altro, Preferiti); the files follow under a "File" heading. The quick chips and the
+  active-filter chips fold away with the finger as the grid scrolls down and unfold with it on the
+  way up, pixel for pixel (never a timed show/hide that holds the content still); released halfway,
+  they finish toward the nearer end. Typing a name in the search
   also shows the people it matches under the field (68dp faces, name below): a tap filters by that
   person and clears the text. The filter sheet's people follow the People page's order. The filter
   sheet opens with the order (short, most used), then type, people and the two switches, the tag

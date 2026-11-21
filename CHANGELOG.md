@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-21
+
+- Folders: the chips under the search (quick filters, active filters) fold away and come back with the finger, pixel for pixel, instead of appearing or disappearing in one go. Before, a slow drag down with the chips hidden first played their whole reappearance and only then moved the files, so a small adjustment was hard to make; now the files follow the finger from the first pixel, and chips left halfway finish folding or unfolding when the finger lifts (**stable**)
+
 ## 2026-11-19
 
 - Buttons: a label never splits a word any more. When a word has no room whole (a large font, a narrow button beside another) the label stays on one line, a little smaller, then ends with "…", instead of dropping the word's last letter onto a line of its own ("Riprov" + "a"). Labels whose words fit still take two lines for long translations, and the buttons that used a plain text now use the same label

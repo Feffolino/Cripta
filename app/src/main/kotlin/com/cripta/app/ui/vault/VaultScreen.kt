@@ -380,10 +380,12 @@ fun VaultScreen(
     // Collapse the secondary FABs while scrolling down so they don't cover the content
     // (they otherwise block dragging items in Manual reorder); bring them back on scroll up.
     var fabsVisible by remember { mutableStateOf(true) }
-    // The chips under the search (quick filters, the active ones) take room from the grid: they go
-    // away while the grid scrolls down, like the buttons, and come back on the way up or at the top.
+    // The chips under the search (quick filters, the active ones) take room from the grid: they fold
+    // away with the finger as the grid scrolls down and unfold with it on the way up (ChipsCollapse).
+    val chips = remember { ChipsCollapse(canHide = { gridState.canScrollForward }) }
     val gridAtTop by remember { derivedStateOf { !gridState.canScrollBackward } }
-    val chipsShown = fabsVisible || gridAtTop
+    // A jump to the top (another folder, a new filter) brings them back without a drag.
+    LaunchedEffect(gridAtTop, path) { if (gridAtTop) chips.settle(0f) }
     var fabExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(fabsVisible) { if (!fabsVisible) fabExpanded = false }
     val fabScroll = remember {
@@ -718,7 +720,7 @@ fun VaultScreen(
         },
     ) { pad ->
       Box(Modifier.fillMaxSize().padding(pad)) {
-        Column(Modifier.fillMaxSize().nestedScroll(fabScroll)) {
+        Column(Modifier.fillMaxSize().nestedScroll(fabScroll).nestedScroll(chips.connection)) {
             // Everything above the grid (search, chips, banners, strips) is one header with the top
             // bar: when the grid scrolls under it, the whole header lifts, not the bar alone.
             com.cripta.app.ui.components.LiftedHeader(topLift.lifted) {
@@ -754,12 +756,15 @@ fun VaultScreen(
                         .focusRequester(searchFocus),
                 )
             }
-            // Active filters make the header much taller: it folds more slowly then, not in a snap.
-            val chipsMs = if (filters.active) Motion.LONG + 180 else Motion.MEDIUM
-            // With the chips gone, the grid keeps the search's side margin (16dp) below it too.
-            val searchGap by androidx.compose.animation.core.animateDpAsState(
-                if (showSearch && !chipsShown && !landscape) 12.dp else 0.dp, Motion.enter(chipsMs), label = "searchGap")
-            Spacer(Modifier.height(searchGap))
+            // With the chips gone, the grid keeps the search's side margin (16dp) below it too: the
+            // gap opens as they fold.
+            val gapMax = if (showSearch && !landscape) 12.dp else 0.dp
+            chips.growingGapPx = with(LocalDensity.current) { gapMax.toPx() }
+            Spacer(Modifier.layout { m, c ->
+                val p = m.measure(c)
+                val h = (gapMax.roundToPx() * chips.fraction).roundToInt()
+                layout(p.width, h) { p.placeRelative(0, 0) }
+            })
             // Landscape: the banners/strips above the grid get a capped, scrollable area so an
             // import in progress plus active filters can't squeeze the grid down to nothing.
             Column(if (landscape) Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState()) else Modifier) {
@@ -771,11 +776,7 @@ fun VaultScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { heading() })
                 Box(Modifier.padding(horizontal = 8.dp)) { PeopleFaceRow(foundPeople, filters.personIds, { vm.faceCrop(it) }, vm::pickSearchedPerson) }
             }
-            AnimatedVisibility(
-                visible = chipsShown,
-                enter = expandVertically(Motion.enter(chipsMs)) + fadeIn(Motion.enter(chipsMs)),
-                exit = shrinkVertically(Motion.exit(chipsMs)) + fadeOut(Motion.exit(chipsMs)),
-            ) {
+            Box(with(chips) { Modifier.folding(0) }) {
                 ActiveFilterBar(filters, tags, vm::setType, { vm.setFavoritesOnly(false) },
                     { vm.setUntaggedOnly(false) }, vm::toggleTag, vm::toggleExcludedTag,
                     { vm.clearFilters(); searchExpanded = false }, onClearQuery = { vm.setQuery("") },
@@ -789,11 +790,7 @@ fun VaultScreen(
             ImportBanner(importState, onDismiss = vm::dismissImportResult)
             ConvertBanner(convertStatus, onCancel = vm::cancelConversion, onDismiss = vm::dismissConvertResult,
                 onResolveOriginal = vm::resolveOriginal)
-            AnimatedVisibility(
-                visible = chipsShown,
-                enter = expandVertically(Motion.enter(chipsMs)) + fadeIn(Motion.enter(chipsMs)),
-                exit = shrinkVertically(Motion.exit(chipsMs)) + fadeOut(Motion.exit(chipsMs)),
-            ) {
+            Box(with(chips) { Modifier.folding(1) }) {
                 QuickChips(
                     atRoot = path.isEmpty(), filters = filters, sortLabel = sortChipLabel(sortKey, sortAscending),
                     onType = vm::setType, onFavorites = { vm.setFavoritesOnly(!filters.favoritesOnly) },
