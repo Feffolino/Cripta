@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-24
+
+- Download: a page opened to find its video can be used again when it sizes things to the screen. The page was laid out with a screen height of zero, so whatever is sized by it collapsed: YouTube's "Prima di continuare su YouTube" shrank to a thin strip with "Accetta tutto" and "Rifiuta tutto" out of reach, and the page could not be scrolled past it or used; players sized the same way stayed out of reach too. Now the page has the height it is shown at: the YouTube dialog can be scrolled and closed, and a video then plays
+
 ## 2026-11-23
 
 - Download: links of one site queued together are told apart. Each entry in the queue showed its link cut at the end, so several links of the same site all read "https://www.site.com/video/…". Now an entry shows the video's title as soon as it is known (from the analysis, from the page a stream was picked in, or from yt-dlp as it starts writing), and until then the part of the link that differs from the others, then the site: "first-title · site.com", "v=abc123 · youtube.com"

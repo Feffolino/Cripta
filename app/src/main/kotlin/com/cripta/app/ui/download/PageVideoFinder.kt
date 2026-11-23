@@ -241,6 +241,13 @@ internal fun PageVideoFinder(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        // Fills its place, said in its own layout parameters too: AndroidView leaves them
+                        // WRAP_CONTENT, and a WebView whose height wraps lays the page out with a zero
+                        // viewport height, so 100vh is 0. A dialog or a player sized in vh then
+                        // collapses (YouTube's cookie consent shrank to 32 px, its buttons out of reach)
+                        // and the page cannot be used.
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         // The player starts on its own where the site allows it: the stream shows up sooner.
