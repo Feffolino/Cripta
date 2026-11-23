@@ -39,10 +39,23 @@ internal class DownloadProgress {
         else -> (1f - VIDEO_SHARE) / (streams - 1)
     }
 
-    private companion object {
-        const val VIDEO_SHARE = 0.9f
-        const val DESTINATION = "[download] Destination:"
-        val FORMATS = Regex("""^\[info] .*Downloading \d+ format\(s\): (\S+)""")
-        val PERCENT = Regex("""^\[download]\s+(\d+(?:\.\d+)?)%""")
+    companion object {
+        private const val VIDEO_SHARE = 0.9f
+        private const val DESTINATION = "[download] Destination:"
+        /** yt-dlp's name for one format of a merged download ("Title.f137.mp4"), and the extension. */
+        private val FORMAT_AND_EXT = Regex("""(\.f[\w-]+)?\.\w+$""")
+
+        /**
+         * The video's title from a "[download] Destination: …/Title.mp4" line (the output is named
+         * after the title), or null for any other line. Known as soon as yt-dlp starts writing,
+         * so the queue names the link long before it is done.
+         */
+        fun titleOf(line: String): String? {
+            if (!line.startsWith(DESTINATION)) return null
+            val name = line.removePrefix(DESTINATION).trim().substringAfterLast('/').substringAfterLast('\\')
+            return name.replace(FORMAT_AND_EXT, "").trim().takeIf { it.isNotEmpty() }
+        }
+        private val FORMATS = Regex("""^\[info] .*Downloading \d+ format\(s\): (\S+)""")
+        private val PERCENT = Regex("""^\[download]\s+(\d+(?:\.\d+)?)%""")
     }
 }

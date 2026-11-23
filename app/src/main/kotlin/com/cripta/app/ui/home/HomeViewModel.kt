@@ -149,6 +149,7 @@ class HomeViewModel @Inject constructor(
                         val started = com.cripta.app.work.ConversionService.startDownloadUrl(
                             appContext, url, height, folder, tags, jobId = job.id,
                             stream = com.cripta.app.data.StreamSource.fromJson(o.optString("stream")),
+                            title = o.optString("title").takeIf { it.isNotBlank() },
                         )
                         if (!started) complete = false
                     }

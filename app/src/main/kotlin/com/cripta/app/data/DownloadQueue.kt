@@ -67,6 +67,8 @@ data class DownloadJob(
     val fileId: String? = null,
     /** The stream found in the page ([url]) with the in-app browser, fetched in place of the page. */
     val stream: StreamSource? = null,
+    /** The video's title once known: from the analysis when queued, or from yt-dlp as it starts writing. */
+    val title: String? = null,
 ) {
     val active: Boolean get() = phase == DownloadPhase.PREPARING || phase == DownloadPhase.DOWNLOADING
     val finished: Boolean get() = phase == DownloadPhase.DONE || phase == DownloadPhase.FAILED || phase == DownloadPhase.CANCELLED

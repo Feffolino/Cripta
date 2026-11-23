@@ -357,7 +357,9 @@ Tags and folders show Fluent Emoji Flat instead, in colour (see Components).
   button). The passphrase dialog shows a bar filling up to the minimum length.
 - **Downloader**: link field first (paste inside it), the analysed video as a 16:9 cover with title,
   quality as a grid of three options per row with the size under each, destination as two plain rows
-  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti. When
+  opening sheets, one wide button; the queue grouped under In corso / In attesa / Finiti, each entry
+  named by its video's title, else by the part of its link the other links of its site do not share,
+  then the site ("first-title · site.com"; `queueLabel`), never the link cut at its end. When
   the analysis fails, under the field: why, one line in `error` with its icon ("Il downloader non
   legge questo link · …"), then a full-width tonal button "Cerca il video nella pagina" and a
   caption on what it does; the size line stays quiet. The button pushes a page over Download

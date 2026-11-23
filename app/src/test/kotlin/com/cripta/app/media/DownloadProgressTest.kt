@@ -63,4 +63,12 @@ class DownloadProgressTest {
         }
         assertEquals(100, p.update("[download] 100% of   72.80MiB in 00:00:12 at 5.95MiB/s"))
     }
+
+    @Test fun theDestinationLineNamesTheVideo() {
+        assertEquals("Il mio video", DownloadProgress.titleOf("[download] Destination: /cache/ytdl-1/Il mio video.mp4"))
+        assertEquals("Clip 2", DownloadProgress.titleOf("[download] Destination: /cache/ytdl-1/Clip 2.f137.mp4"))
+        assertEquals("Live", DownloadProgress.titleOf("[download] Destination: /cache/ytdl-1/Live.fhls-1080p.mp4"))
+        assertEquals(null, DownloadProgress.titleOf("[download]  12.0% of ~  72.76MiB"))
+        assertEquals(null, DownloadProgress.titleOf("[download] Destination: /cache/ytdl-1/.mp4"))
+    }
 }

@@ -304,12 +304,13 @@ class ConversionService : Service() {
                     folderId = if (intent.hasExtra(EX_FOLDER)) intent.getLongExtra(EX_FOLDER, -1).takeIf { it >= 0 } else null,
                     tagIds = intent.getLongArrayExtra(EX_TAGS)?.toList().orEmpty(),
                     stream = com.cripta.app.data.StreamSource.fromJson(intent.getStringExtra(EX_STREAM)),
+                    title = intent.getStringExtra(EX_TITLE)?.trim()?.takeIf { it.isNotEmpty() },
                 )
                 downloadQueue.enqueueDownload(job)
                 // Persisted so a waiting link survives the app being killed (resumed at next unlock).
                 downloadQueue.persist(job, org.json.JSONObject()
                     .put("url", job.url).put("height", job.maxHeight ?: 0).put("folder", job.folderId ?: -1L)
-                    .put("tags", org.json.JSONArray(job.tagIds)).put("stream", job.stream?.toJson() ?: "").toString())
+                    .put("tags", org.json.JSONArray(job.tagIds)).put("stream", job.stream?.toJson() ?: "").put("title", job.title ?: "").toString())
             }
             // A worker already running picks the new link up from the queue.
             val start = synchronized(workerLock) { if (downloadWorkerRunning) false else { downloadWorkerRunning = true; true } }
@@ -1464,7 +1465,10 @@ class ConversionService : Service() {
             val eta = EtaEstimator()
             produced = try { withContext(Dispatchers.IO) {
                 var lastPct = -1
-                ytdlp.download(job.stream?.url ?: url, job.maxHeight, pid, headers = job.stream?.headers.orEmpty(), isCancelled = { cancelRequested }) { pct, _ ->
+                ytdlp.download(job.stream?.url ?: url, job.maxHeight, pid, headers = job.stream?.headers.orEmpty(), isCancelled = { cancelRequested },
+                    // The queue names the link as soon as yt-dlp knows the title; one the analysis
+                    // gave stays, and a stream picked in a page keeps its page's title.
+                    onTitle = { t -> if (job.stream == null) set { if (it.title == null) it.copy(title = t) else it } }) { pct, _ ->
                     // yt-dlp prints a progress line for every block; this runs on the thread that
                     // drains its output, so rebuilding the notification each time stalled yt-dlp
                     // on a full pipe. Only when the percentage moves.
@@ -2238,6 +2242,7 @@ class ConversionService : Service() {
         private const val EX_RETRY = "retry"
         private const val EX_JOB_ID = "job_id"
         private const val EX_STREAM = "stream"
+        private const val EX_TITLE = "title"
         private const val DONE_NOTIF_ID = 4212
         /** The summaries of the two stacks of results ([refreshSummary]). */
         private const val SUMMARY_ANALYSIS_ID = 4240
@@ -2435,9 +2440,11 @@ class ConversionService : Service() {
                              /** A saved job resumed: the link keeps its id (and its record). */
                              jobId: String? = null,
                              /** The stream found in the page [url], fetched in its place. */
-                             stream: com.cripta.app.data.StreamSource? = null): Boolean {
+                             stream: com.cripta.app.data.StreamSource? = null,
+                             /** The video's title when the analysis already gave it, to name the link in the queue. */
+                             title: String? = null): Boolean {
             return startInForeground(ctx, downloadUrlIntent(ctx, url, maxHeight, folderId, tagIds, stream)
-                .apply { jobId?.let { putExtra(EX_JOB_ID, it) } })
+                .apply { jobId?.let { putExtra(EX_JOB_ID, it) }; title?.takeIf { it.isNotBlank() }?.let { putExtra(EX_TITLE, it) } })
         }
 
         private fun downloadUrlIntent(ctx: Context, url: String, maxHeight: Int?, folderId: Long?, tagIds: List<Long>, stream: com.cripta.app.data.StreamSource? = null) =

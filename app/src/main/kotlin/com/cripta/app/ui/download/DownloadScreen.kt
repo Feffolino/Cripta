@@ -382,6 +382,8 @@ fun DownloadScreen(
                 androidx.compose.runtime.key(job.id) {
                     JobRow(
                         job,
+                        // Told apart from the other links of its site: its title, else what differs in its link.
+                        label = queueLabel(job, downloads),
                         destination = dest(job),
                         onCancel = { vm.cancel(ctx) },
                         onRemove = { vm.remove(job.id) },
@@ -789,6 +791,7 @@ private fun TagPickerSheet(tags: List<TagEntity>, chosen: Set<Long>, onToggle: (
 @Composable
 private fun JobRow(
     job: DownloadJob,
+    label: String,
     destination: String,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
@@ -821,7 +824,7 @@ private fun JobRow(
             }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
-                    if (job.phase == DownloadPhase.DONE && job.message != null) job.message else job.url,
+                    label,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )

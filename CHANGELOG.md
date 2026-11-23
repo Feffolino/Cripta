@@ -3,6 +3,10 @@
 What changed in Cripta, day by day, newest first, generated from the commit history.
 Entries marked **stable** went out as a stable release.
 
+## 2026-11-23
+
+- Download: links of one site queued together are told apart. Each entry in the queue showed its link cut at the end, so several links of the same site all read "https://www.site.com/video/…". Now an entry shows the video's title as soon as it is known (from the analysis, from the page a stream was picked in, or from yt-dlp as it starts writing), and until then the part of the link that differs from the others, then the site: "first-title · site.com", "v=abc123 · youtube.com"
+
 ## 2026-11-21
 
 - Folders: the chips under the search (quick filters, active filters) fold away and come back with the finger, pixel for pixel, instead of appearing or disappearing in one go. Before, a slow drag down with the chips hidden first played their whole reappearance and only then moved the files, so a small adjustment was hard to make; now the files follow the finger from the first pixel, and chips left halfway finish folding or unfolding when the finger lifts (**stable**)

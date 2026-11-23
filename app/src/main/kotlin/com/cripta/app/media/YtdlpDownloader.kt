@@ -72,6 +72,8 @@ class YtdlpDownloader @Inject constructor(
         headers: Map<String, String> = emptyMap(),
         /** Annulla pressed: checked before starting and on every progress update. */
         isCancelled: () -> Boolean = { false },
+        /** The video's title, read from the file name yt-dlp starts writing (once per stream). */
+        onTitle: (String) -> Unit = {},
         onProgress: (Int, Long) -> Unit,
     ): File {
         ensureInit(update = true)
@@ -87,6 +89,7 @@ class YtdlpDownloader @Inject constructor(
                 YoutubeDL.getInstance().execute(request, processId) { _, etaInSeconds, line ->
                     // A cancel that came before the process was registered is honoured here.
                     if (isCancelled()) cancel(processId)
+                    DownloadProgress.titleOf(line)?.let(onTitle)
                     onProgress(progress.update(line), etaInSeconds)
                 }
             }

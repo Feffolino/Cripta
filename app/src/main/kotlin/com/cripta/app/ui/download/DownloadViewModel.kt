@@ -181,7 +181,10 @@ class DownloadViewModel @Inject constructor(
 
     /** Queue [url] with its destination, and remember that destination for next time. */
     fun enqueue(ctx: Context, url: String, height: Int?, folderId: Long?, tagIds: List<Long>) {
-        ConversionService.startDownloadUrl(ctx, url.trim(), height, folderId, tagIds, stream = streamOf(url.trim()))
+        val u = url.trim()
+        // The title the analysis of this link found names it in the queue at once.
+        val title = (_estimate.value as? Estimate.Ready)?.title?.takeIf { u == estimatedUrl }
+        ConversionService.startDownloadUrl(ctx, u, height, folderId, tagIds, stream = streamOf(u), title = title)
         safeScope.launch { settings.setDownloadDefaults(DownloadDefaults(folderId, tagIds, height)) }
     }
 
@@ -192,7 +195,7 @@ class DownloadViewModel @Inject constructor(
     /** Queue a failed/cancelled link again with the same quality and destination. */
     fun retry(ctx: Context, job: com.cripta.app.data.DownloadJob) {
         // Refused to start: the failed link stays in the list, to try again.
-        if (ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds, stream = job.stream)) queue.removeDownload(job.id)
+        if (ConversionService.startDownloadUrl(ctx, job.url, job.maxHeight, job.folderId, job.tagIds, stream = job.stream, title = job.title)) queue.removeDownload(job.id)
     }
     fun clearFinished() = queue.clearFinishedDownloads()
 
